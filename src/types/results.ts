@@ -21,28 +21,6 @@ export interface SimpleResult<T = unknown> {
 }
 
 /**
- * OperationResult - Extended result with additional metadata
- */
-export interface OperationResult<T = unknown> extends SimpleResult<T> {
-    duration?: number;
-    metadata?: Record<string, unknown>;
-}
-
-/**
- * createSuccess - Helper to create success result
- */
-export function createSuccess<T>(data?: T): SimpleResult<T> {
-    return { success: true, data };
-}
-
-/**
- * createFailure - Helper to create failure result
- */
-export function createFailure<T = unknown>(error: string): SimpleResult<T> {
-    return { success: false, error };
-}
-
-/**
  * DataResult - Type alias for SimpleResult
  *
  * Used in authentication handlers for typed responses.

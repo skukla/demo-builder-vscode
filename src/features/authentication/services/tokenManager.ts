@@ -4,6 +4,7 @@ import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS, formatMinutes } from '@/core/utils';
 import { toAppError, isTimeout } from '@/types/errors';
+import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
 
 /**
@@ -11,13 +12,21 @@ import { toError } from '@/types/typeGuards';
  * Handles token storage, retrieval, and expiry checking
  */
 export class TokenManager {
-    private logger = getLogger();
+    private logger: Logger;
     private cacheManager: AuthCacheManager | undefined;
 
+    /**
+     * Create a TokenManager
+     * @param commandManager - Command executor for running CLI commands
+     * @param cacheManager - Optional cache manager for token caching
+     * @param logger - Optional logger for dependency injection (defaults to getLogger())
+     */
     constructor(
         private commandManager: CommandExecutor,
         cacheManager?: AuthCacheManager,
+        logger?: Logger,
     ) {
+        this.logger = logger ?? getLogger();
         // Use provided cacheManager, or try to get from ServiceLocator
         if (cacheManager) {
             this.cacheManager = cacheManager;

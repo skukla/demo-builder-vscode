@@ -52,7 +52,7 @@ export const createStateWithFrontend = () => ({
         dependencies: ['commerce-mesh'],
         services: [],
         integrations: [],
-        appBuilderApps: []
+        appBuilder: []
     }
 });
 
@@ -68,7 +68,7 @@ export const createStateWithBackend = () => ({
         dependencies: [],
         services: ['catalog-service', 'live-search'],
         integrations: [],
-        appBuilderApps: []
+        appBuilder: []
     }
 });
 
@@ -84,7 +84,7 @@ export const createStateWithSelections = () => ({
         dependencies: ['commerce-mesh'],
         services: ['catalog-service', 'live-search'],
         integrations: [],
-        appBuilderApps: []
+        appBuilder: []
     }
 });
 
@@ -100,7 +100,7 @@ export const createStateNoFrontend = () => ({
         dependencies: [],
         services: ['catalog-service', 'live-search'],
         integrations: [],
-        appBuilderApps: []
+        appBuilder: []
     }
 });
 
@@ -116,7 +116,7 @@ export const createStateNoBackend = () => ({
         dependencies: ['commerce-mesh'],
         services: [],
         integrations: [],
-        appBuilderApps: []
+        appBuilder: []
     }
 });
 
@@ -132,7 +132,7 @@ export const createStateWithDefaults = () => ({
         dependencies: ['commerce-mesh'],
         services: ['catalog-service', 'live-search'],
         integrations: ['experience-platform'],
-        appBuilderApps: ['integration-service']
+        appBuilder: ['integration-service']
     }
 });
 
@@ -148,7 +148,7 @@ export const createStateInitial = () => ({
         dependencies: [],
         services: [],
         integrations: [],
-        appBuilderApps: []
+        appBuilder: []
     }
 });
 

@@ -9,6 +9,7 @@ import type {
     CacheEntry,
     AdobeConsoleWhereResponse,
 } from '@/features/authentication/services/types';
+import type { Logger } from '@/types/logger';
 
 /**
  * Manages caching strategies for authentication-related data
@@ -22,7 +23,15 @@ import type {
  * SECURITY: Cache TTLs include random jitter (±10%) to prevent timing attacks
  */
 export class AuthCacheManager {
-    private logger = getLogger();
+    private logger: Logger;
+
+    /**
+     * Create an AuthCacheManager
+     * @param logger - Optional logger for dependency injection (defaults to getLogger())
+     */
+    constructor(logger?: Logger) {
+        this.logger = logger ?? getLogger();
+    }
 
     // Session caching for current selections
     private cachedOrganization: AdobeOrg | undefined;

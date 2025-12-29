@@ -13,8 +13,9 @@
  */
 
 import { getLogger } from '@/core/logging';
-import type { GitHubService } from './githubService';
-import type { DaLiveService } from './daLiveService';
+import type { Logger } from '@/types/logger';
+import type { GitHubRepoOperations } from './githubRepoOperations';
+import type { DaLiveOrgOperations } from './daLiveOrgOperations';
 import type { HelixService } from './helixService';
 import type { ToolManager } from './toolManager';
 import type {
@@ -32,22 +33,32 @@ import type {
  * results for each operation.
  */
 export class CleanupService {
-    private logger = getLogger();
-    private githubService: GitHubService;
-    private daLiveService: DaLiveService;
+    private logger: Logger;
+    private githubRepoOps: GitHubRepoOperations;
+    private daLiveOrgOps: DaLiveOrgOperations;
     private helixService: HelixService;
     private toolManager: ToolManager;
 
+    /**
+     * Create a CleanupService
+     * @param githubRepoOps - GitHub repository operations for delete/archive
+     * @param daLiveOrgOps - DA.live org operations for site deletion
+     * @param helixService - Helix service for site unpublishing
+     * @param toolManager - Tool manager for backend cleanup
+     * @param logger - Optional logger for dependency injection (defaults to getLogger())
+     */
     constructor(
-        githubService: GitHubService,
-        daLiveService: DaLiveService,
+        githubRepoOps: GitHubRepoOperations,
+        daLiveOrgOps: DaLiveOrgOperations,
         helixService: HelixService,
         toolManager: ToolManager,
+        logger?: Logger,
     ) {
-        this.githubService = githubService;
-        this.daLiveService = daLiveService;
+        this.githubRepoOps = githubRepoOps;
+        this.daLiveOrgOps = daLiveOrgOps;
         this.helixService = helixService;
         this.toolManager = toolManager;
+        this.logger = logger ?? getLogger();
     }
 
     /**
@@ -191,7 +202,7 @@ export class CleanupService {
         this.logger.debug(`[Cleanup] Deleting DA.live content: ${metadata.daLiveOrg}/${metadata.daLiveSite}`);
 
         try {
-            const result = await this.daLiveService.deleteSite(metadata.daLiveOrg, metadata.daLiveSite);
+            const result = await this.daLiveOrgOps.deleteSite(metadata.daLiveOrg, metadata.daLiveSite);
 
             if (result.success) {
                 this.logger.debug('[Cleanup] DA.live content deleted successfully');
@@ -240,9 +251,9 @@ export class CleanupService {
 
         try {
             if (options.archiveInsteadOfDelete) {
-                await this.githubService.archiveRepository(owner, repo);
+                await this.githubRepoOps.archiveRepository(owner, repo);
             } else {
-                await this.githubService.deleteRepository(owner, repo);
+                await this.githubRepoOps.deleteRepository(owner, repo);
             }
 
             this.logger.debug(`[Cleanup] GitHub repository ${action}d successfully`);

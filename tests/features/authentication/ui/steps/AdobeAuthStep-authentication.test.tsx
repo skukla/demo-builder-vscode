@@ -71,7 +71,6 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 />
             );
 
-            expect(screen.getByText('Adobe Authentication')).toBeInTheDocument();
             expect(screen.getByText('Sign In with Adobe')).toBeInTheDocument();
         });
 

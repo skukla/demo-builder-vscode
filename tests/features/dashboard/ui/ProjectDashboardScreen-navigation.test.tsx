@@ -90,6 +90,11 @@ jest.mock('@spectrum-icons/workflow/Login', () => ({
 // Mock hooks
 jest.mock('@/core/ui/hooks', () => ({
     useFocusTrap: () => ({ current: null }),
+    useSingleTimer: () => ({
+        ref: { current: null },
+        set: jest.fn(),
+        clear: jest.fn(),
+    }),
 }));
 
 // Mock StatusCard and GridLayout

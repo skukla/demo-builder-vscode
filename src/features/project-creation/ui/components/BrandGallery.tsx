@@ -10,14 +10,14 @@
 import { Text, DialogContainer, Checkbox, Divider } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useMemo, useCallback } from 'react';
-import { Brand } from '@/types/brands';
+import { DemoPackage } from '@/types/demoPackages';
 import { Stack } from '@/types/stacks';
 import { cn } from '@/core/ui/utils/classNames';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
-import { filterBrandsBySearchQuery } from './brandGalleryHelpers';
+import { filterPackagesBySearchQuery } from './brandGalleryHelpers';
 
 /** Addon metadata for display */
 const ADDON_METADATA: Record<string, { name: string; description: string }> = {
@@ -28,20 +28,21 @@ const ADDON_METADATA: Record<string, { name: string; description: string }> = {
 };
 
 export interface BrandGalleryProps {
-    brands: Brand[];
+    /** Demo packages to display (renamed from brands) */
+    packages: DemoPackage[];
     stacks: Stack[];
-    selectedBrand?: string;
+    selectedPackage?: string;
     selectedStack?: string;
     selectedAddons?: string[];
-    onBrandSelect: (brandId: string) => void;
+    onPackageSelect: (packageId: string) => void;
     onStackSelect: (stackId: string) => void;
     onAddonsChange?: (addons: string[]) => void;
-    /** Optional content to render above the brand gallery (e.g., project name field) */
+    /** Optional content to render above the gallery (e.g., project name field) */
     headerContent?: React.ReactNode;
 }
 
-interface BrandCardProps {
-    brand: Brand;
+interface PackageCardProps {
+    pkg: DemoPackage;
     selectedStack?: Stack;
     isSelected: boolean;
     isDimmed: boolean;
@@ -49,10 +50,10 @@ interface BrandCardProps {
 }
 
 /**
- * BrandCard - displays brand info, expands to show selected architecture
+ * PackageCard - displays package info, expands to show selected architecture
  */
-const BrandCard: React.FC<BrandCardProps> = ({
-    brand,
+const PackageCard: React.FC<PackageCardProps> = ({
+    pkg,
     selectedStack,
     isSelected,
     isDimmed,
@@ -72,12 +73,12 @@ const BrandCard: React.FC<BrandCardProps> = ({
         [onCardClick],
     );
 
-    // Card is "complete" when brand is selected AND has a stack
+    // Card is "complete" when package is selected AND has a stack
     const isComplete = isSelected && selectedStack;
 
     const cardClasses = cn(
         'expandable-brand-card',
-        isSelected && 'selected',      // Blue border when brand selected
+        isSelected && 'selected',      // Blue border when package selected
         isComplete && 'expanded',       // Expanded when stack also selected
         isComplete && 'complete',
         isDimmed && 'dimmed',
@@ -87,27 +88,27 @@ const BrandCard: React.FC<BrandCardProps> = ({
         <div
             role="button"
             tabIndex={0}
-            data-testid="brand-card"
+            data-testid="package-card"
             data-selected={isSelected ? 'true' : 'false'}
             data-dimmed={isDimmed ? 'true' : 'false'}
             onClick={handleCardClick}
             onKeyDown={handleCardKeyDown}
             className={cardClasses}
             aria-pressed={isSelected}
-            aria-label={`${brand.name}: ${brand.description}`}
+            aria-label={`${pkg.name}: ${pkg.description}`}
         >
-            {/* Brand header - always visible */}
+            {/* Package header - always visible */}
             <div className="brand-card-header">
                 <div className="brand-card-title-row">
                     <Text UNSAFE_className="brand-card-name">
-                        {brand.name}
+                        {pkg.name}
                     </Text>
                     {isComplete && (
                         <CheckmarkCircle size="S" UNSAFE_className="brand-card-check" />
                     )}
                 </div>
                 <Text UNSAFE_className="brand-card-description">
-                    {brand.description}
+                    {pkg.description}
                 </Text>
             </div>
 
@@ -130,7 +131,7 @@ const BrandCard: React.FC<BrandCardProps> = ({
  * ArchitectureModal - modal for selecting architecture/stack and optional addons
  */
 interface ArchitectureModalProps {
-    brand: Brand;
+    pkg: DemoPackage;
     stacks: Stack[];
     selectedStackId?: string;
     selectedAddons?: string[];
@@ -141,7 +142,7 @@ interface ArchitectureModalProps {
 }
 
 const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
-    brand,
+    pkg,
     stacks,
     selectedStackId,
     selectedAddons = [],
@@ -150,13 +151,14 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     onDone,
     onClose,
 }) => {
-    // Filter stacks based on brand's compatibleStacks (if defined)
+    // Filter stacks based on package's storefronts (available stacks are the storefront keys)
     const filteredStacks = useMemo(() => {
-        if (!brand.compatibleStacks || brand.compatibleStacks.length === 0) {
+        const availableStackIds = Object.keys(pkg.storefronts || {});
+        if (availableStackIds.length === 0) {
             return stacks; // No restrictions - show all stacks
         }
-        return stacks.filter(stack => brand.compatibleStacks!.includes(stack.id));
-    }, [stacks, brand.compatibleStacks]);
+        return stacks.filter(stack => availableStackIds.includes(stack.id));
+    }, [stacks, pkg.storefronts]);
 
     // Use arrow key navigation hook for stack options
     const { getItemProps } = useArrowKeyNavigation({
@@ -185,10 +187,10 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         [selectedAddons, onAddonsChange],
     );
 
-    // Get available addons from brand's addons config (brand-driven, not stack-driven)
+    // Get available addons from package's addons config (package-driven, not stack-driven)
     const availableAddons = useMemo(() => {
-        return Object.keys(brand.addons || {});
-    }, [brand.addons]);
+        return Object.keys(pkg.addons || {});
+    }, [pkg.addons]);
 
     // Build action buttons - only show Done when a stack is selected
     const actionButtons = selectedStackId
@@ -197,7 +199,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
 
     return (
         <Modal
-            title={brand.name}
+            title={pkg.name}
             onClose={onClose}
             size="M"
             actionButtons={actionButtons}
@@ -240,7 +242,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                 })}
             </div>
 
-            {/* Services Section - only shown if stack supports addons */}
+            {/* Services Section - only shown if package supports addons */}
             {availableAddons.length > 0 && (
                 <>
                     <Divider size="S" marginTop="size-300" marginBottom="size-200" />
@@ -251,7 +253,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                         {availableAddons.map((addonId) => {
                             const addon = ADDON_METADATA[addonId];
                             if (!addon) return null;
-                            const isRequired = brand.addons?.[addonId] === 'required';
+                            const isRequired = pkg.addons?.[addonId] === 'required';
                             const isChecked = isRequired || selectedAddons.includes(addonId);
                             return (
                                 <Checkbox
@@ -275,31 +277,31 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
 };
 
 export const BrandGallery: React.FC<BrandGalleryProps> = ({
-    brands,
+    packages,
     stacks,
-    selectedBrand,
+    selectedPackage,
     selectedStack,
     selectedAddons = [],
-    onBrandSelect,
+    onPackageSelect,
     onStackSelect,
     onAddonsChange,
     headerContent,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [modalBrandId, setModalBrandId] = useState<string | null>(null);
+    const [modalPackageId, setModalPackageId] = useState<string | null>(null);
     // Track modal-local addon state (synced to parent on Done)
     const [modalAddons, setModalAddons] = useState<string[]>(selectedAddons);
 
-    const filteredBrands = useMemo(
-        () => filterBrandsBySearchQuery(brands, searchQuery),
-        [brands, searchQuery]
+    const filteredPackages = useMemo(
+        () => filterPackagesBySearchQuery(packages, searchQuery),
+        [packages, searchQuery]
     );
 
-    // Get the brand object for the modal
-    const modalBrand = useMemo(() => {
-        if (!modalBrandId) return null;
-        return brands.find(b => b.id === modalBrandId) || null;
-    }, [brands, modalBrandId]);
+    // Get the package object for the modal
+    const modalPackage = useMemo(() => {
+        if (!modalPackageId) return null;
+        return packages.find(p => p.id === modalPackageId) || null;
+    }, [packages, modalPackageId]);
 
     // Get the selected stack object
     const selectedStackObj = useMemo(() => {
@@ -307,32 +309,32 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         return stacks.find(s => s.id === selectedStack);
     }, [stacks, selectedStack]);
 
-    // Helper to get required addon IDs from brand's addons config
-    const getRequiredAddons = useCallback((brand: Brand): string[] => {
-        if (!brand.addons) return [];
-        return Object.entries(brand.addons)
+    // Helper to get required addon IDs from package's addons config
+    const getRequiredAddons = useCallback((pkg: DemoPackage): string[] => {
+        if (!pkg.addons) return [];
+        return Object.entries(pkg.addons)
             .filter(([_, mode]) => mode === 'required')
             .map(([id]) => id);
     }, []);
 
-    const handleCardClick = useCallback((brand: Brand) => {
+    const handleCardClick = useCallback((pkg: DemoPackage) => {
         // Always open modal when clicking a card (allows changing selection)
-        onBrandSelect(brand.id);
-        // Initialize modal addons with current state + brand's required addons
-        const requiredAddons = getRequiredAddons(brand);
+        onPackageSelect(pkg.id);
+        // Initialize modal addons with current state + package's required addons
+        const requiredAddons = getRequiredAddons(pkg);
         const initialAddons = [...new Set([...selectedAddons, ...requiredAddons])];
         setModalAddons(initialAddons);
-        setModalBrandId(brand.id);
-    }, [onBrandSelect, selectedAddons, getRequiredAddons]);
+        setModalPackageId(pkg.id);
+    }, [onPackageSelect, selectedAddons, getRequiredAddons]);
 
     const handleStackSelect = useCallback((stackId: string) => {
         onStackSelect(stackId);
         // When stack changes, keep only required addons (clear optional selections)
         setModalAddons(() => {
-            const currentBrand = brands.find(b => b.id === modalBrandId);
-            return currentBrand ? getRequiredAddons(currentBrand) : [];
+            const currentPackage = packages.find(p => p.id === modalPackageId);
+            return currentPackage ? getRequiredAddons(currentPackage) : [];
         });
-    }, [onStackSelect, brands, modalBrandId, getRequiredAddons]);
+    }, [onStackSelect, packages, modalPackageId, getRequiredAddons]);
 
     const handleModalAddonsChange = useCallback((addons: string[]) => {
         setModalAddons(addons);
@@ -340,22 +342,22 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
 
     const handleModalDone = useCallback(() => {
         // Sync addons to parent state (including required addons) and close modal
-        const currentBrand = brands.find(b => b.id === modalBrandId);
-        const requiredAddons = currentBrand ? getRequiredAddons(currentBrand) : [];
+        const currentPackage = packages.find(p => p.id === modalPackageId);
+        const requiredAddons = currentPackage ? getRequiredAddons(currentPackage) : [];
         const finalAddons = [...new Set([...modalAddons, ...requiredAddons])];
         onAddonsChange?.(finalAddons);
-        setModalBrandId(null);
-    }, [modalAddons, onAddonsChange, brands, modalBrandId, getRequiredAddons]);
+        setModalPackageId(null);
+    }, [modalAddons, onAddonsChange, packages, modalPackageId, getRequiredAddons]);
 
     const handleModalClose = useCallback(() => {
-        setModalBrandId(null);
+        setModalPackageId(null);
     }, []);
 
-    if (brands.length === 0) {
+    if (packages.length === 0) {
         return (
             <SingleColumnLayout>
                 <Text UNSAFE_className="text-gray-600">
-                    No brands available
+                    No packages available
                 </Text>
             </SingleColumnLayout>
         );
@@ -369,44 +371,44 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             <SearchHeader
                 searchQuery={searchQuery}
                 onSearchQueryChange={setSearchQuery}
-                searchPlaceholder="Filter brands..."
+                searchPlaceholder="Filter packages..."
                 searchThreshold={2}
-                totalCount={brands.length}
-                filteredCount={filteredBrands.length}
-                itemNoun="brand"
+                totalCount={packages.length}
+                filteredCount={filteredPackages.length}
+                itemNoun="package"
                 hasLoadedOnce={true}
             />
 
             <div className="expandable-brand-grid">
-                {filteredBrands.map(brand => {
-                    const isSelected = selectedBrand === brand.id;
-                    const isDimmed = selectedBrand !== undefined && !isSelected;
+                {filteredPackages.map(pkg => {
+                    const isSelected = selectedPackage === pkg.id;
+                    const isDimmed = selectedPackage !== undefined && !isSelected;
                     return (
-                        <BrandCard
-                            key={brand.id}
-                            brand={brand}
+                        <PackageCard
+                            key={pkg.id}
+                            pkg={pkg}
                             selectedStack={isSelected ? selectedStackObj : undefined}
                             isSelected={isSelected}
                             isDimmed={isDimmed}
-                            onCardClick={() => handleCardClick(brand)}
+                            onCardClick={() => handleCardClick(pkg)}
                         />
                     );
                 })}
             </div>
 
-            {searchQuery && filteredBrands.length === 0 && (
+            {searchQuery && filteredPackages.length === 0 && (
                 <Text UNSAFE_className="text-gray-500 py-4">
-                    No brands match "{searchQuery}"
+                    No packages match "{searchQuery}"
                 </Text>
             )}
 
             {/* Architecture selection modal */}
             <DialogContainer onDismiss={handleModalClose}>
-                {modalBrand && (
+                {modalPackage && (
                     <ArchitectureModal
-                        brand={modalBrand}
+                        pkg={modalPackage}
                         stacks={stacks}
-                        selectedStackId={selectedBrand === modalBrand.id ? selectedStack : undefined}
+                        selectedStackId={selectedPackage === modalPackage.id ? selectedStack : undefined}
                         selectedAddons={modalAddons}
                         onStackSelect={handleStackSelect}
                         onAddonsChange={handleModalAddonsChange}

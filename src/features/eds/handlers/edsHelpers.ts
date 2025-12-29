@@ -4,7 +4,7 @@
  * Helper functions for EDS handlers, extracted from edsHandlers.ts for better modularity.
  *
  * Contains:
- * - Service instance cache management (getGitHubService, getDaLiveService, getDaLiveAuthService)
+ * - Service instance cache management (getGitHubServices, getDaLiveServices, getDaLiveAuthService)
  * - clearServiceCache for cleanup
  * - validateDaLiveToken for JWT validation
  *
@@ -12,44 +12,98 @@
  */
 
 import type { HandlerContext } from '@/types/handlers';
-import { GitHubService } from '../services/githubService';
-import { DaLiveService } from '../services/daLiveService';
+import { GitHubTokenService } from '../services/githubTokenService';
+import { GitHubRepoOperations } from '../services/githubRepoOperations';
+import { GitHubFileOperations } from '../services/githubFileOperations';
+import { GitHubOAuthService } from '../services/githubOAuthService';
+import { DaLiveOrgOperations, type TokenProvider } from '../services/daLiveOrgOperations';
+import { DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { DaLiveAuthService } from '../services/daLiveAuthService';
+import { getLogger } from '@/core/logging';
 
 // ==========================================================
 // Service Instance Cache
 // ==========================================================
 
-/** Cached GitHubService instance (per extension context) */
-let cachedGitHubService: GitHubService | null = null;
+/**
+ * GitHub Services - composed from extracted modules
+ */
+export interface GitHubServices {
+    tokenService: GitHubTokenService;
+    repoOperations: GitHubRepoOperations;
+    fileOperations: GitHubFileOperations;
+    oauthService: GitHubOAuthService;
+}
 
-/** Cached DaLiveService instance */
-let cachedDaLiveService: DaLiveService | null = null;
+/**
+ * DA.live Services - composed from extracted modules
+ */
+export interface DaLiveServices {
+    orgOperations: DaLiveOrgOperations;
+    contentOperations: DaLiveContentOperations;
+}
+
+/** Cached GitHub services (per extension context) */
+let cachedGitHubServices: GitHubServices | null = null;
+
+/** Cached DA.live services */
+let cachedDaLiveServices: DaLiveServices | null = null;
 
 /** Cached DaLiveAuthService instance (for darkalley OAuth) */
 let cachedDaLiveAuthService: DaLiveAuthService | null = null;
 
 /**
- * Get or create GitHubService instance
+ * Get or create GitHub services
+ * Returns all GitHub-related services with explicit dependencies
  */
-export function getGitHubService(context: HandlerContext): GitHubService {
-    if (!cachedGitHubService) {
-        cachedGitHubService = new GitHubService(context.context.secrets);
+export function getGitHubServices(context: HandlerContext): GitHubServices {
+    if (!cachedGitHubServices) {
+        const logger = getLogger();
+        const tokenService = new GitHubTokenService(context.context.secrets, logger);
+        const repoOperations = new GitHubRepoOperations(tokenService, logger);
+        const fileOperations = new GitHubFileOperations(tokenService, logger);
+        const oauthService = new GitHubOAuthService(context.context.secrets, logger);
+
+        cachedGitHubServices = {
+            tokenService,
+            repoOperations,
+            fileOperations,
+            oauthService,
+        };
     }
-    return cachedGitHubService;
+    return cachedGitHubServices;
 }
 
 /**
- * Get or create DaLiveService instance
+ * Get or create DA.live services
+ * Returns all DA.live-related services with explicit dependencies
  */
-export function getDaLiveService(context: HandlerContext): DaLiveService {
-    if (!cachedDaLiveService) {
+export function getDaLiveServices(context: HandlerContext): DaLiveServices {
+    if (!cachedDaLiveServices) {
         if (!context.authManager) {
             throw new Error('Authentication service not available');
         }
-        cachedDaLiveService = new DaLiveService(context.authManager);
+
+        const logger = getLogger();
+
+        // Create token provider adapter from AuthenticationService
+        const tokenProvider: TokenProvider = {
+            getAccessToken: async () => {
+                const tokenManager = context.authManager!.getTokenManager();
+                const token = await tokenManager.getAccessToken();
+                return token ?? null;  // Convert undefined to null for TokenProvider interface
+            },
+        };
+
+        const orgOperations = new DaLiveOrgOperations(tokenProvider, logger);
+        const contentOperations = new DaLiveContentOperations(tokenProvider, logger);
+
+        cachedDaLiveServices = {
+            orgOperations,
+            contentOperations,
+        };
     }
-    return cachedDaLiveService;
+    return cachedDaLiveServices;
 }
 
 /**
@@ -68,8 +122,8 @@ export function getDaLiveAuthService(context: HandlerContext): DaLiveAuthService
  * Call this when extension is deactivated to clean up resources.
  */
 export function clearServiceCache(): void {
-    cachedGitHubService = null;
-    cachedDaLiveService = null;
+    cachedGitHubServices = null;
+    cachedDaLiveServices = null;
     if (cachedDaLiveAuthService) {
         cachedDaLiveAuthService.dispose();
         cachedDaLiveAuthService = null;

@@ -97,11 +97,10 @@ export {
     toAppError,
 } from './errors';
 
-// Demo template types
-export * from './templates';
-
-// Brand types (content/vertical configurations)
-export * from './brands';
-
 // Stack types (frontend + backend architecture combinations)
 export * from './stacks';
+
+// Demo package types (unified packages + storefronts)
+// Note: Replaces legacy brands + templates architecture
+// See: .rptc/plans/demo-packages-simplification/
+export * from './demoPackages';

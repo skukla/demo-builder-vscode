@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, Dispatch, SetStateAction } from 'react';
 import type { ServiceGroup } from '../configureTypes';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 interface UseFieldFocusTrackingProps {
     serviceGroups: ServiceGroup[];
@@ -94,7 +95,7 @@ export function useFieldFocusTracking({
                     if (navFieldElement) {
                         navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
-                }, 150);
+                }, FRONTEND_TIMEOUTS.SCROLL_ANIMATION);
             } else {
                 const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
                 if (navFieldElement) {

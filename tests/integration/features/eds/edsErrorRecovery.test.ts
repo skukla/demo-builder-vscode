@@ -46,8 +46,10 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Import types
-import type { GitHubService } from '@/features/eds/services/githubService';
-import type { DaLiveService } from '@/features/eds/services/daLiveService';
+import type { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import type { GitHubRepoOperations } from '@/features/eds/services/githubRepoOperations';
+import type { DaLiveOrgOperations } from '@/features/eds/services/daLiveOrgOperations';
+import type { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import type { GitHubRepo } from '@/features/eds/services/types';
@@ -55,6 +57,7 @@ import type {
     EdsProjectConfig,
     EdsSetupPhase,
 } from '@/features/eds/services/types';
+import type { GitHubServicesForProject, DaLiveServicesForProject } from '@/features/eds/services/edsProjectService';
 
 // Import error formatters (to be created)
 import {
@@ -68,8 +71,10 @@ type EdsProjectServiceType = import('@/features/eds/services/edsProjectService')
 
 describe('EDS Error Recovery - Integration Tests', () => {
     let service: EdsProjectServiceType;
-    let mockGitHubService: jest.Mocked<Partial<GitHubService>>;
-    let mockDaLiveService: jest.Mocked<Partial<DaLiveService>>;
+    let mockGitHubTokenService: jest.Mocked<Partial<GitHubTokenService>>;
+    let mockGitHubService: jest.Mocked<Partial<GitHubRepoOperations>>;
+    let mockDaLiveOrgOps: jest.Mocked<Partial<DaLiveOrgOperations>>;
+    let mockDaLiveContentOps: jest.Mocked<Partial<DaLiveContentOperations>>;
     let mockAuthService: jest.Mocked<Partial<AuthenticationService>>;
     let mockComponentManager: jest.Mocked<Partial<ComponentManager>>;
     let mockFetch: jest.Mock;
@@ -104,16 +109,31 @@ describe('EDS Error Recovery - Integration Tests', () => {
         jest.clearAllMocks();
         jest.useFakeTimers();
 
-        // Mock GitHubService - default successful
+        // Mock GitHubTokenService
+        mockGitHubTokenService = {
+            getToken: jest.fn(),
+            validateToken: jest.fn(),
+        };
+
+        // Mock GitHubRepoOperations (named mockGitHubService for minimal test changes)
         mockGitHubService = {
             createFromTemplate: jest.fn().mockResolvedValue(mockRepo),
             cloneRepository: jest.fn().mockResolvedValue(undefined),
-            getToken: jest.fn(),
-            getAuthenticatedUser: jest.fn(),
+            getRepository: jest.fn(),
+            deleteRepository: jest.fn(),
         };
 
-        // Mock DaLiveService - default successful
-        mockDaLiveService = {
+        // Mock DaLiveOrgOperations
+        mockDaLiveOrgOps = {
+            deleteSite: jest.fn(),
+            verifyOrgAccess: jest.fn().mockResolvedValue({
+                hasAccess: true,
+                orgName: defaultConfig.daLiveOrg,
+            }),
+        };
+
+        // Mock DaLiveContentOperations
+        mockDaLiveContentOps = {
             copyCitisignalContent: jest.fn().mockResolvedValue({
                 success: true,
                 copiedFiles: ['/index.html'],
@@ -121,10 +141,6 @@ describe('EDS Error Recovery - Integration Tests', () => {
                 totalFiles: 1,
             }),
             listDirectory: jest.fn(),
-            verifyOrgAccess: jest.fn().mockResolvedValue({
-                hasAccess: true,
-                orgName: defaultConfig.daLiveOrg,
-            }),
         };
 
         // Mock AuthenticationService
@@ -153,11 +169,22 @@ describe('EDS Error Recovery - Integration Tests', () => {
         // Progress callback
         mockProgressCallback = jest.fn();
 
+        // Create service interface objects
+        const githubServices: GitHubServicesForProject = {
+            tokenService: mockGitHubTokenService as unknown as GitHubTokenService,
+            repoOperations: mockGitHubService as unknown as GitHubRepoOperations,
+        };
+
+        const daLiveServices: DaLiveServicesForProject = {
+            orgOperations: mockDaLiveOrgOps as unknown as DaLiveOrgOperations,
+            contentOperations: mockDaLiveContentOps as unknown as DaLiveContentOperations,
+        };
+
         // Dynamically import to get fresh instance after mocks are set up
         const module = await import('@/features/eds/services/edsProjectService');
         service = new module.EdsProjectService(
-            mockGitHubService as unknown as GitHubService,
-            mockDaLiveService as unknown as DaLiveService,
+            githubServices,
+            daLiveServices,
             mockAuthService as unknown as AuthenticationService,
             mockComponentManager as unknown as ComponentManager,
         );
@@ -274,7 +301,7 @@ describe('EDS Error Recovery - Integration Tests', () => {
             const accessDeniedError = new Error('Organization access denied');
             (accessDeniedError as any).code = 'ACCESS_DENIED';
             (accessDeniedError as any).statusCode = 403;
-            mockDaLiveService.copyCitisignalContent!.mockRejectedValue(accessDeniedError);
+            mockDaLiveContentOps.copyCitisignalContent!.mockRejectedValue(accessDeniedError);
 
             // When: Running setup
             const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
@@ -296,7 +323,7 @@ describe('EDS Error Recovery - Integration Tests', () => {
             const timeoutError = new Error('The operation was aborted');
             (timeoutError as any).code = 'NETWORK_ERROR';
             (timeoutError as any).name = 'AbortError';
-            mockDaLiveService.copyCitisignalContent!.mockRejectedValue(timeoutError);
+            mockDaLiveContentOps.copyCitisignalContent!.mockRejectedValue(timeoutError);
 
             // When: Running setup
             const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
@@ -315,7 +342,7 @@ describe('EDS Error Recovery - Integration Tests', () => {
 
         it('should handle DA.live content copy failure for single file', async () => {
             // Given: Single file fails to copy
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: false,
                 copiedFiles: ['/index.html', '/about.html'],
                 failedFiles: [{ path: '/products.html', error: 'Network timeout' }],

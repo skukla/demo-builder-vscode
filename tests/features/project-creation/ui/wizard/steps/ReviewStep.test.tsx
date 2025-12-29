@@ -58,7 +58,7 @@ describe('ReviewStep', () => {
             backend: 'commerce-paas',
             dependencies: ['commerce-mesh'],
             integrations: [],
-            appBuilderApps: [],
+            appBuilder: [],
         },
         apiMesh: {
             isChecking: false,
@@ -315,7 +315,7 @@ describe('ReviewStep', () => {
                 ...completeState,
                 components: {
                     ...completeState.components!,
-                    appBuilderApps: ['custom-app-1', 'custom-app-2'],
+                    appBuilder: ['custom-app-1', 'custom-app-2'],
                 },
             };
 

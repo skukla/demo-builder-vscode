@@ -12,7 +12,7 @@ import { BaseHandlerRegistry } from '@/core/base/BaseHandlerRegistry';
 // Import all handler registries
 import { DashboardHandlerRegistry } from '@/features/dashboard/handlers';
 import { ProjectsListHandlerRegistry } from '@/features/projects-dashboard/handlers/ProjectsListHandlerRegistry';
-import { HandlerRegistry as ProjectCreationHandlerRegistry } from '@/features/project-creation/handlers/HandlerRegistry';
+import { ProjectCreationHandlerRegistry } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import { MeshHandlerRegistry } from '@/features/mesh/handlers/MeshHandlerRegistry';
 import { EdsHandlerRegistry } from '@/features/eds/handlers/EdsHandlerRegistry';
 import { PrerequisitesHandlerRegistry } from '@/features/prerequisites/handlers/PrerequisitesHandlerRegistry';

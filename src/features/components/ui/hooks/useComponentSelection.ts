@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useDebouncedValue, useSetToggle } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WizardState } from '@/types/webview';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 interface DependencyOption {
     id: string;
@@ -54,19 +55,19 @@ export function useComponentSelection({
         state.components?.integrations || [],
     );
     const [selectedAppBuilder, handleAppBuilderToggle] = useSetToggle<string>(
-        state.components?.appBuilderApps || [],
+        state.components?.appBuilder || [],
     );
 
     // Track last sent selection to prevent duplicate messages
     const lastSentSelectionRef = useRef<string>('');
 
-    // Create debounced versions (wait 500ms after last change)
-    const debouncedFrontend = useDebouncedValue(selectedFrontend, 500);
-    const debouncedBackend = useDebouncedValue(selectedBackend, 500);
-    const debouncedDependencies = useDebouncedValue(selectedDependencies, 500);
-    const debouncedServices = useDebouncedValue(selectedServices, 500);
-    const debouncedIntegrations = useDebouncedValue(selectedIntegrations, 500);
-    const debouncedAppBuilder = useDebouncedValue(selectedAppBuilder, 500);
+    // Create debounced versions (wait for debounce delay after last change)
+    const debouncedFrontend = useDebouncedValue(selectedFrontend, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
+    const debouncedBackend = useDebouncedValue(selectedBackend, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
+    const debouncedDependencies = useDebouncedValue(selectedDependencies, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
+    const debouncedServices = useDebouncedValue(selectedServices, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
+    const debouncedIntegrations = useDebouncedValue(selectedIntegrations, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
+    const debouncedAppBuilder = useDebouncedValue(selectedAppBuilder, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
 
     // Initialize required dependencies when frontend changes
     useEffect(() => {
@@ -107,7 +108,7 @@ export function useComponentSelection({
             dependencies: Array.from(debouncedDependencies),
             services: Array.from(debouncedServices),
             integrations: Array.from(debouncedIntegrations),
-            appBuilderApps: Array.from(debouncedAppBuilder),
+            appBuilder: Array.from(debouncedAppBuilder),
         };
 
         updateState({ components });

@@ -29,11 +29,10 @@ export type WizardStep =
 export interface WizardState {
     currentStep: WizardStep;
     projectName: string;
-    selectedTemplate?: string;  // Selected demo template ID (e.g., 'citisignal')
-    selectedBrand?: string;  // Selected brand ID (e.g., 'citisignal', 'default', 'buildright')
-    selectedStack?: string;  // Selected stack ID (e.g., 'headless', 'edge-delivery')
+    selectedPackage?: string;  // Selected package ID (e.g., 'citisignal', 'buildright')
+    selectedStack?: string;  // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
     selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
-    brandConfigDefaults?: Record<string, string>;  // Brand-specific config defaults (e.g., store codes)
+    packageConfigDefaults?: Record<string, string>;  // Package-specific config defaults (e.g., store codes)
     components?: ComponentSelection;
     componentConfigs?: ComponentConfigs;  // Component-specific environment configurations
     adobeAuth: AdobeAuthState;
@@ -265,7 +264,7 @@ export interface ComponentSelection {
     dependencies?: string[];
     services?: string[];
     integrations?: string[];
-    appBuilderApps?: string[];
+    appBuilder?: string[];
     preset?: string;
 }
 

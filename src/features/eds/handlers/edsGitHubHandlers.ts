@@ -15,7 +15,7 @@
 
 import * as vscode from 'vscode';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import { getGitHubService } from './edsHelpers';
+import { getGitHubServices } from './edsHelpers';
 
 // ==========================================================
 // Payload Types
@@ -46,14 +46,14 @@ export async function handleCheckGitHubAuth(
 ): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Checking GitHub auth status');
-        const githubService = getGitHubService(context);
+        const { tokenService } = getGitHubServices(context);
 
         // First, check if we have a stored token
-        const storedToken = await githubService.getToken();
+        const storedToken = await tokenService.getToken();
 
         if (storedToken) {
             // Validate stored token
-            const validation = await githubService.validateToken();
+            const validation = await tokenService.validateToken();
 
             if (validation.valid) {
                 context.logger.debug('[EDS] GitHub auth valid for user:', validation.user?.login);
@@ -79,22 +79,18 @@ export async function handleCheckGitHubAuth(
             context.logger.debug('[EDS] Found existing VS Code GitHub session:', existingSession.account.label);
 
             // Store the token for API operations
-            await githubService.storeToken({
+            await tokenService.storeToken({
                 token: existingSession.accessToken,
                 tokenType: 'bearer',
                 scopes: ['repo', 'user', 'read:org'],
             });
 
-            // Get full user info
-            const user = await githubService.getAuthenticatedUser();
+            // Get full user info by validating the new token
+            const validation = await tokenService.validateToken();
 
             await context.sendMessage('github-auth-status', {
                 isAuthenticated: true,
-                user: {
-                    login: user.login,
-                    avatarUrl: user.avatarUrl,
-                    email: user.email,
-                },
+                user: validation.user,
             });
             return { success: true };
         }
@@ -120,7 +116,7 @@ export async function handleCheckGitHubAuth(
  * Initiate GitHub OAuth flow
  *
  * Uses VS Code's built-in GitHub authentication provider for a seamless experience.
- * The token is stored in GitHubService for subsequent API calls.
+ * The token is stored in GitHubTokenService for subsequent API calls.
  *
  * @param context - Handler context with logging and messaging
  * @returns Success with user info or error
@@ -149,25 +145,21 @@ export async function handleGitHubOAuth(
 
         context.logger.debug('[EDS] GitHub session obtained for:', session.account.label);
 
-        // Store the token in GitHubService for API operations
-        const githubService = getGitHubService(context);
-        await githubService.storeToken({
+        // Store the token in GitHubTokenService for API operations
+        const { tokenService } = getGitHubServices(context);
+        await tokenService.storeToken({
             token: session.accessToken,
             tokenType: 'bearer',
             scopes: ['repo', 'user', 'read:org'],
         });
 
-        // Get full user info from GitHub API
-        const user = await githubService.getAuthenticatedUser();
+        // Get full user info by validating the token
+        const validation = await tokenService.validateToken();
 
-        context.logger.debug('[EDS] GitHub OAuth completed for user:', user.login);
+        context.logger.debug('[EDS] GitHub OAuth completed for user:', validation.user?.login);
         await context.sendMessage('github-auth-complete', {
             isAuthenticated: true,
-            user: {
-                login: user.login,
-                avatarUrl: user.avatarUrl,
-                email: user.email,
-            },
+            user: validation.user,
         });
 
         return { success: true };
@@ -194,10 +186,10 @@ export async function handleGitHubChangeAccount(
 ): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Changing GitHub account');
-        const githubService = getGitHubService(context);
+        const { tokenService } = getGitHubServices(context);
 
         // Clear stored token
-        await githubService.clearToken();
+        await tokenService.clearToken();
 
         // Initiate new OAuth - VS Code will prompt for account selection
         const session = await vscode.authentication.getSession(
@@ -215,23 +207,19 @@ export async function handleGitHubChangeAccount(
         }
 
         // Store new token
-        await githubService.storeToken({
+        await tokenService.storeToken({
             token: session.accessToken,
             tokenType: 'bearer',
             scopes: ['repo', 'user', 'read:org'],
         });
 
-        // Get user info
-        const user = await githubService.getAuthenticatedUser();
+        // Get user info by validating the token
+        const validation = await tokenService.validateToken();
 
-        context.logger.debug('[EDS] GitHub account changed to:', user.login);
+        context.logger.debug('[EDS] GitHub account changed to:', validation.user?.login);
         await context.sendMessage('github-auth-complete', {
             isAuthenticated: true,
-            user: {
-                login: user.login,
-                avatarUrl: user.avatarUrl,
-                email: user.email,
-            },
+            user: validation.user,
         });
 
         return { success: true };
@@ -258,9 +246,9 @@ export async function handleGetGitHubRepos(
 ): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Fetching GitHub repositories');
-        const githubService = getGitHubService(context);
+        const { repoOperations } = getGitHubServices(context);
 
-        const repos = await githubService.listUserRepositories();
+        const repos = await repoOperations.listUserRepositories();
 
         context.logger.debug(`[EDS] Found ${repos.length} repositories`);
         // Map to GitHubRepoItem format with string IDs for useSelectionStep hook
@@ -327,9 +315,9 @@ export async function handleVerifyGitHubRepo(
 
     try {
         context.logger.debug('[EDS] Verifying GitHub repo access:', repoFullName);
-        const githubService = getGitHubService(context);
+        const { repoOperations } = getGitHubServices(context);
 
-        const result = await githubService.checkRepositoryAccess(owner, repo);
+        const result = await repoOperations.checkRepositoryAccess(owner, repo);
 
         context.logger.debug('[EDS] GitHub repo verification result:', result);
         await context.sendMessage('github-repo-verified', {

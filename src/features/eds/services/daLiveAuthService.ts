@@ -333,6 +333,8 @@ export class DaLiveAuthService {
      * Generate error page HTML for browser
      */
     private getErrorPage(error: string): string {
+        // Escape HTML special characters to prevent XSS
+        const escapedError = this.escapeHtml(error);
         return `<!DOCTYPE html>
 <html>
 <head>
@@ -347,9 +349,9 @@ export class DaLiveAuthService {
 </head>
 <body>
     <div class="container">
-        <h1>✗ Authentication Failed</h1>
+        <h1>&#10007; Authentication Failed</h1>
         <p>Please close this window and try again in VS Code.</p>
-        <p class="error">${error}</p>
+        <p class="error">${escapedError}</p>
     </div>
 </body>
 </html>`;
@@ -526,5 +528,19 @@ export class DaLiveAuthService {
             clearTimeout(this.authTimeout);
             this.authTimeout = undefined;
         }
+    }
+
+    /**
+     * Escape HTML special characters to prevent XSS
+     */
+    private escapeHtml(text: string): string {
+        const htmlEscapeMap: Record<string, string> = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;',
+        };
+        return text.replace(/[&<>"']/g, char => htmlEscapeMap[char] || char);
     }
 }

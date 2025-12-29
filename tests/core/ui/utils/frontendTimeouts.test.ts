@@ -34,6 +34,19 @@ describe('FRONTEND_TIMEOUTS', () => {
         });
     });
 
+    describe('COMPONENT_DEBOUNCE', () => {
+        it('should export COMPONENT_DEBOUNCE constant with value 500', () => {
+            // Given: The FRONTEND_TIMEOUTS object
+            // When: Accessing COMPONENT_DEBOUNCE
+            // Then: It should be defined with value 500ms (debounce for component selection changes)
+            expect(FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE).toBe(500);
+        });
+
+        it('should have COMPONENT_DEBOUNCE as a number type', () => {
+            expect(typeof FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE).toBe('number');
+        });
+    });
+
     describe('existing constants remain unchanged', () => {
         it('should export SCROLL_ANIMATION constant', () => {
             expect(FRONTEND_TIMEOUTS.SCROLL_ANIMATION).toBe(150);

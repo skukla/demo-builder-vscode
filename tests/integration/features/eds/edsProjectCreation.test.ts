@@ -47,8 +47,10 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Import types
-import type { GitHubService } from '@/features/eds/services/githubService';
-import type { DaLiveService } from '@/features/eds/services/daLiveService';
+import type { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import type { GitHubRepoOperations } from '@/features/eds/services/githubRepoOperations';
+import type { DaLiveOrgOperations } from '@/features/eds/services/daLiveOrgOperations';
+import type { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import type { GitHubRepo } from '@/features/eds/services/types';
@@ -57,14 +59,17 @@ import type {
     EdsProgressCallback,
     EdsSetupPhase,
 } from '@/features/eds/services/types';
+import type { GitHubServicesForProject, DaLiveServicesForProject } from '@/features/eds/services/edsProjectService';
 
 // Type for the service we'll import dynamically
 type EdsProjectServiceType = import('@/features/eds/services/edsProjectService').EdsProjectService;
 
 describe('EDS Project Creation - Integration Tests', () => {
     let service: EdsProjectServiceType;
-    let mockGitHubService: jest.Mocked<Partial<GitHubService>>;
-    let mockDaLiveService: jest.Mocked<Partial<DaLiveService>>;
+    let mockGitHubTokenService: jest.Mocked<Partial<GitHubTokenService>>;
+    let mockGitHubRepoOps: jest.Mocked<Partial<GitHubRepoOperations>>;
+    let mockDaLiveOrgOps: jest.Mocked<Partial<DaLiveOrgOperations>>;
+    let mockDaLiveContentOps: jest.Mocked<Partial<DaLiveContentOperations>>;
     let mockAuthService: jest.Mocked<Partial<AuthenticationService>>;
     let mockComponentManager: jest.Mocked<Partial<ComponentManager>>;
     let mockFetch: jest.Mock;
@@ -99,16 +104,31 @@ describe('EDS Project Creation - Integration Tests', () => {
         jest.clearAllMocks();
         jest.useFakeTimers();
 
-        // Mock GitHubService
-        mockGitHubService = {
-            createFromTemplate: jest.fn().mockResolvedValue(mockRepo),
-            cloneRepository: jest.fn().mockResolvedValue(undefined),
+        // Mock GitHubTokenService
+        mockGitHubTokenService = {
             getToken: jest.fn(),
-            getAuthenticatedUser: jest.fn(),
+            validateToken: jest.fn(),
         };
 
-        // Mock DaLiveService
-        mockDaLiveService = {
+        // Mock GitHubRepoOperations
+        mockGitHubRepoOps = {
+            createFromTemplate: jest.fn().mockResolvedValue(mockRepo),
+            cloneRepository: jest.fn().mockResolvedValue(undefined),
+            getRepository: jest.fn(),
+            deleteRepository: jest.fn(),
+        };
+
+        // Mock DaLiveOrgOperations
+        mockDaLiveOrgOps = {
+            deleteSite: jest.fn(),
+            verifyOrgAccess: jest.fn().mockResolvedValue({
+                hasAccess: true,
+                orgName: defaultConfig.daLiveOrg,
+            }),
+        };
+
+        // Mock DaLiveContentOperations
+        mockDaLiveContentOps = {
             copyCitisignalContent: jest.fn().mockResolvedValue({
                 success: true,
                 copiedFiles: ['/index.html', '/about.html', '/products.html'],
@@ -116,10 +136,6 @@ describe('EDS Project Creation - Integration Tests', () => {
                 totalFiles: 3,
             }),
             listDirectory: jest.fn(),
-            verifyOrgAccess: jest.fn().mockResolvedValue({
-                hasAccess: true,
-                orgName: defaultConfig.daLiveOrg,
-            }),
         };
 
         // Mock AuthenticationService with TokenManager
@@ -151,11 +167,22 @@ describe('EDS Project Creation - Integration Tests', () => {
         // Progress callback
         mockProgressCallback = jest.fn();
 
+        // Create service interface objects
+        const githubServices: GitHubServicesForProject = {
+            tokenService: mockGitHubTokenService as unknown as GitHubTokenService,
+            repoOperations: mockGitHubRepoOps as unknown as GitHubRepoOperations,
+        };
+
+        const daLiveServices: DaLiveServicesForProject = {
+            orgOperations: mockDaLiveOrgOps as unknown as DaLiveOrgOperations,
+            contentOperations: mockDaLiveContentOps as unknown as DaLiveContentOperations,
+        };
+
         // Dynamically import to get fresh instance after mocks are set up
         const module = await import('@/features/eds/services/edsProjectService');
         service = new module.EdsProjectService(
-            mockGitHubService as unknown as GitHubService,
-            mockDaLiveService as unknown as DaLiveService,
+            githubServices,
+            daLiveServices,
             mockAuthService as unknown as AuthenticationService,
             mockComponentManager as unknown as ComponentManager,
         );
@@ -188,11 +215,11 @@ describe('EDS Project Creation - Integration Tests', () => {
             // Given: All services configured to succeed
             const callOrder: string[] = [];
 
-            mockGitHubService.createFromTemplate!.mockImplementation(async () => {
+            mockGitHubRepoOps.createFromTemplate!.mockImplementation(async () => {
                 callOrder.push('github-createFromTemplate');
                 return mockRepo;
             });
-            mockGitHubService.cloneRepository!.mockImplementation(async () => {
+            mockGitHubRepoOps.cloneRepository!.mockImplementation(async () => {
                 callOrder.push('github-cloneRepository');
             });
             mockFetch.mockImplementation(async (url: string) => {
@@ -203,7 +230,7 @@ describe('EDS Project Creation - Integration Tests', () => {
                 }
                 return { ok: true, status: 200 };
             });
-            mockDaLiveService.copyCitisignalContent!.mockImplementation(async () => {
+            mockDaLiveContentOps.copyCitisignalContent!.mockImplementation(async () => {
                 callOrder.push('dalive-copyContent');
                 return { success: true, copiedFiles: [], failedFiles: [], totalFiles: 0 };
             });
@@ -265,7 +292,7 @@ describe('EDS Project Creation - Integration Tests', () => {
 
             // Then: Should complete and use EDS-specific repo
             expect(result.success).toBe(true);
-            expect(mockGitHubService.createFromTemplate).toHaveBeenCalledWith(
+            expect(mockGitHubRepoOps.createFromTemplate).toHaveBeenCalledWith(
                 'skukla', // template owner
                 'citisignal-one', // EDS template
                 expect.any(String),
@@ -307,7 +334,7 @@ describe('EDS Project Creation - Integration Tests', () => {
             await resultPromise;
 
             // Then: DA.live should be called with correct org/site from config
-            expect(mockDaLiveService.copyCitisignalContent).toHaveBeenCalledWith(
+            expect(mockDaLiveContentOps.copyCitisignalContent).toHaveBeenCalledWith(
                 defaultConfig.daLiveOrg,
                 defaultConfig.daLiveSite,
                 expect.any(Function), // progress callback

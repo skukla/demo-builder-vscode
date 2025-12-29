@@ -88,11 +88,11 @@ describe('stacks.json', () => {
             expect(eds?.backend).toBe('adobe-commerce-accs');
         });
 
-        it('should NOT include commerce-mesh dependency', () => {
+        it('should include commerce-mesh dependency for Drop-ins integration', () => {
             const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;
             const eds = stacks.find(s => s.id === 'eds-accs');
             const deps = eds?.dependencies as string[];
-            expect(deps).not.toContain('commerce-mesh');
+            expect(deps).toContain('commerce-mesh');
         });
 
         it('should require GitHub OAuth', () => {

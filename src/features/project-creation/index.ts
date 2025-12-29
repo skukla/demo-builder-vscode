@@ -6,7 +6,7 @@
  *
  * Public API:
  * - CreateProjectWebviewCommand: Main wizard command
- * - HandlerRegistry: Message handler registry for wizard
+ * - ProjectCreationHandlerRegistry: Message handler registry for wizard
  * - Helper functions for project setup
  *
  * Internal Services (not exported):
@@ -18,8 +18,8 @@
 // Command
 export { CreateProjectWebviewCommand } from './commands/createProject';
 
-// Handler Registry
-export { HandlerRegistry } from './handlers/HandlerRegistry';
+// Handler Registry (with backward-compatible alias)
+export { ProjectCreationHandlerRegistry, HandlerRegistry } from './handlers/ProjectCreationHandlerRegistry';
 
 // Helpers - Public API for cross-feature use
 export { formatGroupName, generateComponentEnvFile } from './helpers';

@@ -9,7 +9,7 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import { checkApiMeshEnabled, checkMeshExistence, fallbackMeshCheck } from './checkHandlerHelpers';
+import { checkApiMeshEnabled, checkMeshExistence, fallbackMeshCheck } from '../services/meshCheckHelpers';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import { validateWorkspaceId } from '@/core/validation';

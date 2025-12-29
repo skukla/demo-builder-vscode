@@ -8,8 +8,9 @@ import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundle
 import { DashboardHandlerRegistry } from '@/features/dashboard/handlers';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { Project, ComponentInstance } from '@/types';
-import type { Brand, BrandsConfig } from '@/types/brands';
+import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack, StacksConfig } from '@/types/stacks';
+import { loadDemoPackages } from '@/features/project-creation/ui/helpers/demoPackageLoader';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import { getComponentInstanceValues } from '@/types/typeGuards';
 
@@ -69,7 +70,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         theme: string;
         project: { name: string; path: string } | null;
         hasMesh: boolean;
-        brandName?: string;
+        packageName?: string;
         stackName?: string;
     }> {
         const project = await this.stateManager.getCurrentProject();
@@ -77,8 +78,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
         const hasMesh = !!project?.componentInstances?.['commerce-mesh'];
 
-        // Resolve brand/stack names from IDs
-        const { brandName, stackName } = await this.resolveBrandStackNames(project ?? null);
+        // Resolve package/stack names from IDs
+        const { packageName, stackName } = await this.resolvePackageStackNames(project ?? null);
 
         return {
             theme,
@@ -87,34 +88,32 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
                 path: project.path,
             } : null,
             hasMesh,
-            brandName,
+            packageName,
             stackName,
         };
     }
 
     /**
-     * Resolve brand and stack IDs to human-readable names
+     * Resolve package and stack IDs to human-readable names
      * Returns undefined for each field if ID not found (hides field in UI)
      */
-    private async resolveBrandStackNames(project: Project | null): Promise<{
-        brandName?: string;
+    private async resolvePackageStackNames(project: Project | null): Promise<{
+        packageName?: string;
         stackName?: string;
     }> {
-        if (!project?.selectedBrand && !project?.selectedStack) {
+        if (!project?.selectedPackage && !project?.selectedStack) {
             return {};
         }
 
         try {
-            const result: { brandName?: string; stackName?: string } = {};
+            const result: { packageName?: string; stackName?: string } = {};
 
-            // Resolve brand name
-            if (project.selectedBrand) {
-                const brandsPath = path.join(this.context.extensionPath, 'templates', 'brands.json');
-                const brandsLoader = new ConfigurationLoader<BrandsConfig>(brandsPath);
-                const brandsConfig = await brandsLoader.load();
-                const brand = brandsConfig.brands.find((b: Brand) => b.id === project.selectedBrand);
-                if (brand) {
-                    result.brandName = brand.name;
+            // Resolve package name
+            if (project.selectedPackage) {
+                const packages = await loadDemoPackages();
+                const pkg = packages.find((p: DemoPackage) => p.id === project.selectedPackage);
+                if (pkg) {
+                    result.packageName = pkg.name;
                 }
             }
 
@@ -132,7 +131,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             return result;
         } catch (error) {
             // If loading fails, return empty (hide fields in UI)
-            this.logger.debug('[Dashboard] Failed to resolve brand/stack names:', error);
+            this.logger.debug('[Dashboard] Failed to resolve package/stack names:', error);
             return {};
         }
     }

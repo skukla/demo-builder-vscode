@@ -41,6 +41,7 @@ import type { PrerequisiteStatus, CachedPrerequisiteResult } from './types';
 import { getCacheTTLWithJitter } from '@/core/cache/AbstractCacheManager';
 import { getLogger } from '@/core/logging/debugLogger';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
+import type { Logger } from '@/types/logger';
 
 /**
  * Separator for cache keys with Node version suffix
@@ -52,7 +53,15 @@ import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 const CACHE_KEY_SEPARATOR = '##' as const;
 
 export class PrerequisitesCacheManager {
-    private logger = getLogger();
+    private logger: Logger;
+
+    /**
+     * Create a PrerequisitesCacheManager
+     * @param logger - Optional logger for dependency injection (defaults to getLogger())
+     */
+    constructor(logger?: Logger) {
+        this.logger = logger ?? getLogger();
+    }
 
     /**
      * Maximum cache size to prevent memory exhaustion

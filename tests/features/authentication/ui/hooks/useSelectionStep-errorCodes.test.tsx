@@ -35,7 +35,7 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { ErrorCode } from '@/types/errorCodes';
-import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
+import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import { WizardState } from '@/types/webview';
 
 describe('useSelectionStep error code handling', () => {

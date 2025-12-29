@@ -13,6 +13,7 @@ import { useFocusTrap } from '@/core/ui/hooks';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
+import { url, pattern } from '@/core/validation/Validator';
 import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
 import type { Project } from '@/types/base';
 import { hasEntries } from '@/types/typeGuards';
@@ -22,6 +23,9 @@ import {
     hasComponentEnvVars,
     discoverComponentsFromInstances,
 } from './configureHelpers';
+
+// Create validators with consistent error messages
+const urlValidator = url('Please enter a valid URL');
 
 export interface ComponentsData {
     frontends?: ComponentData[];
@@ -455,6 +459,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     }
                 }
 
+                // URL validation using core validator
                 if (field.type === 'url') {
                     const firstComponentWithValue = field.componentIds.find(compId =>
                         componentConfigs[compId]?.[field.key],
@@ -462,14 +467,14 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
                     if (firstComponentWithValue) {
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
-                        try {
-                            new URL(value);
-                        } catch {
-                            errors[field.key] = 'Please enter a valid URL';
+                        const result = urlValidator(value);
+                        if (!result.valid && result.error) {
+                            errors[field.key] = result.error;
                         }
                     }
                 }
 
+                // Pattern validation using core validator
                 if (field.validation?.pattern) {
                     const firstComponentWithValue = field.componentIds.find(compId =>
                         componentConfigs[compId]?.[field.key],
@@ -477,9 +482,13 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
                     if (firstComponentWithValue) {
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
-                        const pattern = new RegExp(field.validation.pattern);
-                        if (!pattern.test(value)) {
-                            errors[field.key] = field.validation.message || 'Invalid format';
+                        const patternValidator = pattern(
+                            new RegExp(field.validation.pattern),
+                            field.validation.message || 'Invalid format'
+                        );
+                        const result = patternValidator(value);
+                        if (!result.valid && result.error) {
+                            errors[field.key] = result.error;
                         }
                     }
                 }

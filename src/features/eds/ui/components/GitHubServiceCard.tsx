@@ -44,8 +44,6 @@ export interface GitHubServiceCardProps {
     onConnect: () => void;
     /** Called when change account clicked */
     onChangeAccount?: () => void;
-    /** Layout variant */
-    variant: 'card' | 'checklist';
     /** Show compact view (minimal details when another card is active) */
     compact?: boolean;
 }
@@ -71,126 +69,68 @@ export function GitHubServiceCard({
     error,
     onConnect,
     onChangeAccount,
-    variant,
     compact = false,
 }: GitHubServiceCardProps): React.ReactElement {
     const isLoading = isChecking || isAuthenticating;
 
-    // Render card variant
-    if (variant === 'card') {
-        return (
-            <div
-                className="service-card"
-                data-connected={isAuthenticated ? 'true' : 'false'}
-            >
-                <div className="service-card-header">
-                    <div className="service-icon github-icon">
-                        <GitHubIcon />
-                    </div>
-                    <div className="service-card-title">GitHub</div>
-                </div>
-                <div className="service-card-description">
-                    Repository for your project code
-                </div>
-                <div className="service-card-status">
-                    {isLoading ? (
-                        <Flex alignItems="center" gap="size-100">
-                            <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
-                            <Text UNSAFE_className="status-text">
-                                {isAuthenticating ? 'Connecting...' : 'Checking...'}
-                            </Text>
-                        </Flex>
-                    ) : isAuthenticated && user ? (
-                        compact ? (
-                            <Flex alignItems="center" gap="size-100">
-                                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                                <Text UNSAFE_className="status-text">Connected</Text>
-                            </Flex>
-                        ) : (
-                            <Flex alignItems="center" justifyContent="space-between">
-                                <Flex alignItems="center" gap="size-100">
-                                    <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                                    <Text UNSAFE_className="status-text">
-                                        {user.login}
-                                    </Text>
-                                </Flex>
-                                {onChangeAccount && (
-                                    <button className="service-action-link" onClick={onChangeAccount}>
-                                        Change
-                                    </button>
-                                )}
-                            </Flex>
-                        )
-                    ) : error ? (
-                        <Flex direction="column" gap="size-100">
-                            <Flex alignItems="center" gap="size-100">
-                                <Alert size="S" UNSAFE_className="status-icon-error" />
-                                <Text UNSAFE_className="status-text-error">{error}</Text>
-                            </Flex>
-                            <button className="service-action-button" onClick={onConnect}>
-                                Try Again
-                            </button>
-                        </Flex>
-                    ) : (
-                        <button className="service-action-button" onClick={onConnect}>
-                            Connect GitHub
-                        </button>
-                    )}
-                </div>
-            </div>
-        );
-    }
-
-    // Render checklist variant
     return (
         <div
-            className="checklist-item"
+            className="service-card"
             data-connected={isAuthenticated ? 'true' : 'false'}
         >
-            <div className="checklist-indicator">
-                {isLoading ? (
-                    <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
-                ) : isAuthenticated ? (
-                    <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                ) : (
-                    <div className="checklist-circle" />
-                )}
+            <div className="service-card-header">
+                <div className="service-icon github-icon">
+                    <GitHubIcon />
+                </div>
+                <div className="service-card-title">GitHub</div>
             </div>
-            <div className="checklist-content">
-                <div className="checklist-header">
-                    <div className="checklist-title">
-                        <div className="service-icon-small github-icon">
-                            <GitHubIcon />
-                        </div>
-                        GitHub
-                    </div>
-                    <div className="checklist-action">
-                        {isLoading ? (
-                            <span className="status-text-muted">
-                                {isAuthenticating ? 'Connecting...' : 'Checking...'}
-                            </span>
-                        ) : isAuthenticated ? (
-                            onChangeAccount && (
+            <div className="service-card-description">
+                Repository for your project code
+            </div>
+            <div className="service-card-status">
+                {isLoading ? (
+                    <Flex alignItems="center" gap="size-100">
+                        <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
+                        <Text UNSAFE_className="status-text">
+                            {isAuthenticating ? 'Connecting...' : 'Checking...'}
+                        </Text>
+                    </Flex>
+                ) : isAuthenticated && user ? (
+                    compact ? (
+                        <Flex alignItems="center" gap="size-100">
+                            <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                            <Text UNSAFE_className="status-text">Connected</Text>
+                        </Flex>
+                    ) : (
+                        <Flex alignItems="center" justifyContent="space-between">
+                            <Flex alignItems="center" gap="size-100">
+                                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                                <Text UNSAFE_className="status-text">
+                                    {user.login}
+                                </Text>
+                            </Flex>
+                            {onChangeAccount && (
                                 <button className="service-action-link" onClick={onChangeAccount}>
                                     Change
                                 </button>
-                            )
-                        ) : (
-                            <button className="service-action-button-small" onClick={onConnect}>
-                                Connect
-                            </button>
-                        )}
-                    </div>
-                </div>
-                <div className="checklist-description">
-                    {isAuthenticated && user ? (
-                        <span>Connected as <strong>{user.login}</strong></span>
-                    ) : error ? (
-                        <span className="status-text-error">{error}</span>
-                    ) : (
-                        'Repository for your project code'
-                    )}
-                </div>
+                            )}
+                        </Flex>
+                    )
+                ) : error ? (
+                    <Flex direction="column" gap="size-100">
+                        <Flex alignItems="center" gap="size-100">
+                            <Alert size="S" UNSAFE_className="status-icon-error" />
+                            <Text UNSAFE_className="status-text-error">{error}</Text>
+                        </Flex>
+                        <button className="service-action-button" onClick={onConnect}>
+                            Try Again
+                        </button>
+                    </Flex>
+                ) : (
+                    <button className="service-action-button" onClick={onConnect}>
+                        Connect GitHub
+                    </button>
+                )}
             </div>
         </div>
     );

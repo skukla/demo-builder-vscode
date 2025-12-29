@@ -281,14 +281,6 @@ export function EdsRepositoryConfigStep({
 
     return (
         <SingleColumnLayout>
-            <Heading level={2} marginBottom="size-200">
-                Repository Configuration
-            </Heading>
-
-            <Text marginBottom="size-400">
-                Configure your GitHub repository and DA.live content source for Edge Delivery Services.
-            </Text>
-
             {/* Repository Mode Selection */}
             <RadioGroup
                 label="GitHub Repository"

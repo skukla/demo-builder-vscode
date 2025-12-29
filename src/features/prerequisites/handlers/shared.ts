@@ -227,7 +227,9 @@ export async function getNodeVersionMapping(
         const { ComponentRegistryManager } = await import('../../components/services/ComponentRegistryManager');
         const registryManager = new ComponentRegistryManager(context.context.extensionPath);
         const params = getComponentSelectionParams(context.sharedState.currentComponentSelection);
-        return await registryManager.getNodeVersionToComponentMapping(...params);
+        const mapping = await registryManager.getNodeVersionToComponentMapping(...params);
+
+        return mapping;
     } catch (error) {
         // INTENTIONALLY RETURNS EMPTY: If component registry fails to load,
         // prerequisites check proceeds without Node version mapping. This is

@@ -2,7 +2,7 @@
  * Shared types for mesh module
  *
  * This is the canonical source for mesh-related types.
- * Now uses canonical OperationResult types for consistency.
+ * Uses canonical DataResult types from @/types/results for consistency.
  */
 
 import { DataResult } from '@/types/results';

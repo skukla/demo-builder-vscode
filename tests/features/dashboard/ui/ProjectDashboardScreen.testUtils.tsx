@@ -10,6 +10,11 @@ import '@testing-library/jest-dom';
 // Mock the webview-ui utilities and hooks
 jest.mock('@/core/ui/hooks', () => ({
     useFocusTrap: jest.fn(() => ({ current: null })),
+    useSingleTimer: jest.fn(() => ({
+        ref: { current: null },
+        set: jest.fn(),
+        clear: jest.fn(),
+    })),
 }));
 
 // Mock the WebviewClient

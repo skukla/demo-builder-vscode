@@ -20,7 +20,7 @@ import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
 import { StatusCard } from '@/core/ui/components/feedback';
 import { PageLayout, PageHeader } from '@/core/ui/components/layout';
-import { useFocusTrap } from '@/core/ui/hooks';
+import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
@@ -94,18 +94,19 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName 
         containFocus: true,  // Prevent focus escape (WCAG 2.1 AA)
     });
 
-    // Initial focus
+    // Timer for initial focus (with automatic cleanup on unmount)
+    const focusTimer = useSingleTimer();
+
+    // Initial focus - uses timer hook for proper cleanup
     useEffect(() => {
         if (projectStatus) {
-            const timer = setTimeout(() => {
+            focusTimer.set(() => {
                 const firstButton = document.querySelector('.dashboard-action-button') as HTMLElement;
                 if (firstButton) {
                     firstButton.focus();
                 }
             }, TIMEOUTS.UI_UPDATE_DELAY);
-            return () => clearTimeout(timer);
         }
-        return undefined;
     }, []); // Only on mount
 
     // Derived values

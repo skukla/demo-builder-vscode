@@ -1,4 +1,4 @@
-import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
+import { Text, Flex, Button } from '@adobe/react-spectrum';
 import Info from '@spectrum-icons/workflow/Info';
 import React, { useCallback } from 'react';
 import { useMeshOperations } from '../hooks/useMeshOperations';
@@ -9,7 +9,7 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
+import { ConfigurationSummary } from '@/core/ui/components/wizard';
 import { WizardStep } from '@/types/webview';
 import { BaseStepProps } from '@/types/wizard';
 
@@ -47,8 +47,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
         <TwoColumnLayout
             leftContent={
                 <>
-                    <Heading level={2} marginBottom="size-300">API Mesh</Heading>
-                    <Text marginBottom="size-400">
+                    <Text marginBottom="size-300">
                         Verifying API Mesh API availability for your selected workspace.
                     </Text>
 

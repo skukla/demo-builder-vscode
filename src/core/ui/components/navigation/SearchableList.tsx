@@ -5,6 +5,7 @@ import {
 } from '@adobe/react-spectrum';
 import React, { useEffect, useRef } from 'react';
 import { SearchHeader } from './SearchHeader';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 export interface SearchableListItem {
     id: string;
@@ -209,7 +210,7 @@ export function SearchableList<T extends SearchableListItem>({
                     behavior: 'smooth',
                 });
             }
-        }, 200);
+        }, FRONTEND_TIMEOUTS.SCROLL_SETTLE);
 
         return () => clearTimeout(timer);
     }, [selectedId]);

@@ -47,7 +47,7 @@ const DEFAULT_MESSAGES: Record<string, VerificationMessage> = {
  */
 export function useVerificationMessage(
     status: string,
-    message?: string
+    message?: string,
 ): VerificationMessage {
     return useMemo(() => {
         const defaultMessage = DEFAULT_MESSAGES[status];

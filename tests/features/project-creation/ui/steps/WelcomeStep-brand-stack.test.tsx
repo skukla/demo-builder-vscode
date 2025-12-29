@@ -1,7 +1,7 @@
 /**
- * WelcomeStep Brand + Stack Selection Tests
+ * WelcomeStep Package + Stack Selection Tests
  *
- * Tests for the redesigned Welcome step with vertical (brand) + stack selection.
+ * Tests for the redesigned Welcome step with package (vertical) + stack selection.
  * Follows TDD methodology - tests written before implementation.
  */
 
@@ -9,7 +9,7 @@ import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import { WizardState } from '@/types/webview';
-import { Brand } from '@/types/brands';
+import { DemoPackage } from '@/types/demoPackages';
 import { Stack } from '@/types/stacks';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
@@ -19,20 +19,26 @@ jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
     useSelectableDefault: () => ({}),
 }));
 
-describe('WelcomeStep - Brand + Stack Selection', () => {
+describe('WelcomeStep - Package + Stack Selection', () => {
     const mockUpdateState = jest.fn();
     const mockSetCanProceed = jest.fn();
     const mockOnNext = jest.fn();
     const mockOnBack = jest.fn();
 
-    const mockBrands: Brand[] = [
+    const mockPackages: DemoPackage[] = [
         {
             id: 'default',
             name: 'Default',
             description: 'Generic storefront with default content',
             icon: 'default',
             configDefaults: {},
-            contentSources: { eds: 'main--boilerplate--adobe-commerce.aem.live' },
+            storefronts: {
+                'headless': {
+                    name: 'Default Headless',
+                    description: 'Default NextJS storefront',
+                    source: { type: 'git', url: 'https://github.com/test/default', branch: 'main', gitOptions: { shallow: true, recursive: false } },
+                },
+            },
         },
         {
             id: 'citisignal',
@@ -45,7 +51,13 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
                 ADOBE_COMMERCE_STORE_CODE: 'citisignal_store',
                 ADOBE_COMMERCE_STORE_VIEW_CODE: 'citisignal_us',
             },
-            contentSources: { eds: 'main--accs-citisignal--demo-system-stores.aem.live' },
+            storefronts: {
+                'headless': {
+                    name: 'CitiSignal Headless',
+                    description: 'CitiSignal NextJS storefront',
+                    source: { type: 'git', url: 'https://github.com/test/citisignal', branch: 'main', gitOptions: { shallow: true, recursive: false } },
+                },
+            },
         },
     ];
 
@@ -96,13 +108,13 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
         jest.clearAllMocks();
     });
 
-    describe('Proceed Validation - Brand and Stack Required', () => {
-        it('should disable Continue until both brand AND stack are selected', () => {
-            // Given: A WelcomeStep with brands and stacks but neither selected
+    describe('Proceed Validation - Package and Stack Required', () => {
+        it('should disable Continue until both package AND stack are selected', () => {
+            // Given: A WelcomeStep with packages and stacks but neither selected
             const stateWithNoSelection = {
                 ...baseState,
                 projectName: 'valid-project',
-                selectedBrand: undefined,
+                selectedPackage: undefined,
                 selectedStack: undefined,
             };
 
@@ -113,7 +125,7 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
                     onNext={mockOnNext}
                     onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
-                    brands={mockBrands}
+                    packages={mockPackages}
                     stacks={mockStacks}
                 />
             );
@@ -122,23 +134,23 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
         });
 
-        it('should disable Continue when only brand is selected', () => {
-            // Given: A brand is selected but no stack
-            const stateWithBrandOnly = {
+        it('should disable Continue when only package is selected', () => {
+            // Given: A package is selected but no stack
+            const stateWithPackageOnly = {
                 ...baseState,
                 projectName: 'valid-project',
-                selectedBrand: 'citisignal',
+                selectedPackage: 'citisignal',
                 selectedStack: undefined,
             };
 
             renderWithProvider(
                 <WelcomeStep
-                    state={stateWithBrandOnly as WizardState}
+                    state={stateWithPackageOnly as WizardState}
                     updateState={mockUpdateState}
                     onNext={mockOnNext}
                     onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
-                    brands={mockBrands}
+                    packages={mockPackages}
                     stacks={mockStacks}
                 />
             );
@@ -148,11 +160,11 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
         });
 
         it('should disable Continue when only stack is selected', () => {
-            // Given: A stack is selected but no brand
+            // Given: A stack is selected but no package
             const stateWithStackOnly = {
                 ...baseState,
                 projectName: 'valid-project',
-                selectedBrand: undefined,
+                selectedPackage: undefined,
                 selectedStack: 'headless',
             };
 
@@ -163,7 +175,7 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
                     onNext={mockOnNext}
                     onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
-                    brands={mockBrands}
+                    packages={mockPackages}
                     stacks={mockStacks}
                 />
             );
@@ -172,12 +184,12 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
         });
 
-        it('should enable Continue when both brand AND stack are selected with valid project name', () => {
-            // Given: Both brand and stack are selected
+        it('should enable Continue when both package AND stack are selected with valid project name', () => {
+            // Given: Both package and stack are selected
             const stateWithBothSelected = {
                 ...baseState,
                 projectName: 'valid-project',
-                selectedBrand: 'citisignal',
+                selectedPackage: 'citisignal',
                 selectedStack: 'headless',
             };
 
@@ -188,7 +200,7 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
                     onNext={mockOnNext}
                     onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
-                    brands={mockBrands}
+                    packages={mockPackages}
                     stacks={mockStacks}
                 />
             );
@@ -197,12 +209,12 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);
         });
 
-        it('should disable Continue even with brand AND stack selected if project name is invalid', () => {
-            // Given: Both brand and stack are selected but project name is invalid
+        it('should disable Continue even with package AND stack selected if project name is invalid', () => {
+            // Given: Both package and stack are selected but project name is invalid
             const stateWithInvalidName = {
                 ...baseState,
                 projectName: 'AB', // Too short
-                selectedBrand: 'citisignal',
+                selectedPackage: 'citisignal',
                 selectedStack: 'headless',
             };
 
@@ -213,7 +225,7 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
                     onNext={mockOnNext}
                     onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
-                    brands={mockBrands}
+                    packages={mockPackages}
                     stacks={mockStacks}
                 />
             );
@@ -224,12 +236,12 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
     });
 
     describe('State Updates', () => {
-        it('should update wizardState with selectedBrand when brand is selected', () => {
-            // Given: A WelcomeStep with brands
+        it('should update wizardState with selectedPackage when package is selected', () => {
+            // Given: A WelcomeStep with packages
             const stateWithNoSelection = {
                 ...baseState,
                 projectName: 'valid-project',
-                selectedBrand: undefined,
+                selectedPackage: undefined,
                 selectedStack: undefined,
             };
 
@@ -240,60 +252,60 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
                     onNext={mockOnNext}
                     onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
-                    brands={mockBrands}
+                    packages={mockPackages}
                     stacks={mockStacks}
                 />
             );
 
-            // When: Brand cards are rendered and a brand is clicked
-            const brandCards = screen.getAllByTestId('brand-card');
-            const citisignalCard = brandCards.find(card =>
+            // When: Package cards are rendered and a package is clicked
+            const packageCards = screen.getAllByTestId('package-card');
+            const citisignalCard = packageCards.find(card =>
                 card.textContent?.includes('CitiSignal')
             );
             citisignalCard?.click();
 
-            // Then: updateState should be called with selectedBrand
+            // Then: updateState should be called with selectedPackage
             expect(mockUpdateState).toHaveBeenCalledWith(
-                expect.objectContaining({ selectedBrand: 'citisignal' })
+                expect.objectContaining({ selectedPackage: 'citisignal' })
             );
         });
 
         it('should update wizardState with selectedStack when stack is selected via modal', async () => {
             // Given: A WelcomeStep with stacks - uses BrandGallery with modal pattern
-            // Stack selection happens in a modal after clicking a brand card
-            const stateWithBrandSelected = {
+            // Stack selection happens in a modal after clicking a package card
+            const stateWithPackageSelected = {
                 ...baseState,
                 projectName: 'valid-project',
-                selectedBrand: 'citisignal',
+                selectedPackage: 'citisignal',
                 selectedStack: undefined,
             };
 
             renderWithProvider(
                 <WelcomeStep
-                    state={stateWithBrandSelected as WizardState}
+                    state={stateWithPackageSelected as WizardState}
                     updateState={mockUpdateState}
                     onNext={mockOnNext}
                     onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
-                    brands={mockBrands}
+                    packages={mockPackages}
                     stacks={mockStacks}
                 />
             );
 
-            // Note: Stack selection requires opening modal by clicking brand card
+            // Note: Stack selection requires opening modal by clicking package card
             // This is a simplified test - full modal interaction would require more setup
-            expect(screen.getAllByTestId('brand-card')).toHaveLength(2);
+            expect(screen.getAllByTestId('package-card')).toHaveLength(2);
         });
     });
 
-    describe('Featured Brand Display', () => {
-        it('should render all brand cards including featured brands', () => {
-            // Given: A fresh WelcomeStep with brands where one brand is featured
-            // BrandGallery renders all brands as clickable cards
+    describe('Featured Package Display', () => {
+        it('should render all package cards including featured packages', () => {
+            // Given: A fresh WelcomeStep with packages where one package is featured
+            // BrandGallery renders all packages as clickable cards
             const stateWithNoSelection = {
                 ...baseState,
                 projectName: 'valid-project',
-                selectedBrand: undefined,
+                selectedPackage: undefined,
                 selectedStack: undefined,
             };
 
@@ -304,22 +316,22 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
                     onNext={mockOnNext}
                     onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
-                    brands={mockBrands}
+                    packages={mockPackages}
                     stacks={mockStacks}
                 />
             );
 
-            // Then: All brand cards should be rendered
-            const brandCards = screen.getAllByTestId('brand-card');
-            expect(brandCards).toHaveLength(2);
+            // Then: All package cards should be rendered
+            const packageCards = screen.getAllByTestId('package-card');
+            expect(packageCards).toHaveLength(2);
             expect(screen.getByText('CitiSignal')).toBeInTheDocument();
             expect(screen.getByText('Default')).toBeInTheDocument();
         });
     });
 
-    describe('Brand Gallery Layout', () => {
+    describe('Package Gallery Layout', () => {
         it('should display project name field', () => {
-            // Given: A WelcomeStep with brands and stacks
+            // Given: A WelcomeStep with packages and stacks
             const stateWithNoSelection = {
                 ...baseState,
                 projectName: 'valid-project',
@@ -332,7 +344,7 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
                     onNext={mockOnNext}
                     onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
-                    brands={mockBrands}
+                    packages={mockPackages}
                     stacks={mockStacks}
                 />
             );
@@ -341,8 +353,8 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
             expect(screen.getByLabelText(/project name/i)).toBeInTheDocument();
         });
 
-        it('should display brand cards in a gallery layout', () => {
-            // Given: A WelcomeStep with brands and stacks
+        it('should display package cards in a gallery layout', () => {
+            // Given: A WelcomeStep with packages and stacks
             const stateWithNoSelection = {
                 ...baseState,
                 projectName: 'valid-project',
@@ -355,19 +367,19 @@ describe('WelcomeStep - Brand + Stack Selection', () => {
                     onNext={mockOnNext}
                     onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
-                    brands={mockBrands}
+                    packages={mockPackages}
                     stacks={mockStacks}
                 />
             );
 
-            // Then: Brand cards should be visible (BrandGallery pattern)
-            expect(screen.getAllByTestId('brand-card')).toHaveLength(2);
+            // Then: Package cards should be visible (BrandGallery pattern)
+            expect(screen.getAllByTestId('package-card')).toHaveLength(2);
         });
     });
 
     describe('Backward Compatibility', () => {
-        it('should work without brands/stacks props (legacy template mode)', () => {
-            // Given: A WelcomeStep without brands/stacks (legacy mode)
+        it('should work without packages/stacks props (legacy template mode)', () => {
+            // Given: A WelcomeStep without packages/stacks (legacy mode)
             renderWithProvider(
                 <WelcomeStep
                     state={baseState as WizardState}

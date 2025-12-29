@@ -17,14 +17,14 @@ export function setupWebviewClientMock() {
 
 // Setup useSelectionStep mock
 export function setupUseSelectionStepMock() {
-    jest.mock('@/features/authentication/ui/hooks/useSelectionStep', () => ({
+    jest.mock('@/core/ui/hooks/useSelectionStep', () => ({
         useSelectionStep: jest.fn(),
     }));
 }
 
 // Setup ConfigurationSummary mock
 export function setupConfigurationSummaryMock() {
-    jest.mock('@/features/project-creation/ui/components/ConfigurationSummary', () => ({
+    jest.mock('@/core/ui/components/wizard', () => ({
         ConfigurationSummary: () => <div data-testid="config-summary">Configuration Summary</div>,
     }));
 }

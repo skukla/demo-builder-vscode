@@ -131,8 +131,8 @@ export function extractSettingsFromProject(
                   workspaceTitle: project.adobe.workspaceTitle,
               }
             : undefined,
-        // Brand/Stack selections for import/copy retention
-        selectedBrand: project.selectedBrand,
+        // Package/Stack selections for import/copy retention
+        selectedPackage: project.selectedPackage,
         selectedStack: project.selectedStack,
     };
 }

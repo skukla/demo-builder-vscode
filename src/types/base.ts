@@ -32,9 +32,9 @@ export interface Project {
     };
     // Component configurations (environment variables and settings)
     componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
-    // Brand/Stack selections (vertical + architecture)
-    /** Brand ID selected during project creation (e.g., 'citisignal') */
-    selectedBrand?: string;
+    // Package/Stack selections (vertical + architecture)
+    /** Package ID selected during project creation (e.g., 'citisignal', 'buildright') */
+    selectedPackage?: string;
     /** Stack ID selected during project creation (e.g., 'headless-paas') */
     selectedStack?: string;
     // API Mesh deployment state (tracks changes that require redeployment)

@@ -1,16 +1,26 @@
+/**
+ * useConfigValidation Hook
+ *
+ * Validates component configuration fields using composable validators
+ * from @/core/validation for URL and pattern validation.
+ */
 import { useMemo } from 'react';
 import { ServiceGroup } from '../ComponentConfigStep';
 import { ComponentConfigs } from '@/types/webview';
+import { url, pattern } from '@/core/validation/Validator';
 
-interface ValidationResult {
+interface ConfigValidationResult {
     isValid: boolean;
     errors: Record<string, string>;
 }
 
+// Create validators with consistent error messages
+const urlValidator = url('Please enter a valid URL');
+
 export function useConfigValidation(
     serviceGroups: ServiceGroup[],
     componentConfigs: ComponentConfigs,
-): ValidationResult {
+): ConfigValidationResult {
     return useMemo(() => {
         let allValid = true;
         const errors: Record<string, string> = {};
@@ -46,22 +56,25 @@ export function useConfigValidation(
 
                 const value = componentConfigs[firstComponentWithValue][field.key] as string;
 
-                // URL validation
+                // URL validation using core validator
                 if (field.type === 'url') {
-                    try {
-                        new URL(value);
-                    } catch {
+                    const result = urlValidator(value);
+                    if (!result.valid && result.error) {
                         allValid = false;
-                        errors[field.key] = 'Please enter a valid URL';
+                        errors[field.key] = result.error;
                     }
                 }
 
-                // Custom pattern validation
+                // Custom pattern validation using core validator
                 if (field.validation?.pattern) {
-                    const pattern = new RegExp(field.validation.pattern);
-                    if (!pattern.test(value)) {
+                    const patternValidator = pattern(
+                        new RegExp(field.validation.pattern),
+                        field.validation.message || 'Invalid format'
+                    );
+                    const result = patternValidator(value);
+                    if (!result.valid && result.error) {
                         allValid = false;
-                        errors[field.key] = field.validation.message || 'Invalid format';
+                        errors[field.key] = result.error;
                     }
                 }
             }

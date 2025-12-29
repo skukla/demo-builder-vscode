@@ -1,0 +1,123 @@
+{
+  "$schema": "./demo-packages.schema.json",
+  "version": "1.0.0",
+  "packages": [
+    {
+      "id": "citisignal",
+      "name": "CitiSignal",
+      "description": "Telecommunications demo with CitiSignal branding",
+      "icon": "citisignal",
+      "featured": true,
+      "configDefaults": {
+        "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
+        "ADOBE_COMMERCE_STORE_CODE": "citisignal_store",
+        "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us"
+      },
+      "storefronts": {
+        "headless-paas": {
+          "name": "CitiSignal Headless",
+          "description": "Next.js headless storefront with Adobe Commerce API Mesh integration",
+          "icon": "nextjs",
+          "featured": true,
+          "tags": ["headless", "nextjs", "citisignal"],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/skukla/citisignal-nextjs",
+            "branch": "master",
+            "gitOptions": {
+              "shallow": false,
+              "recursive": false
+            }
+          },
+          "submodules": {
+            "demo-inspector": {
+              "path": "src/demo-inspector",
+              "repository": "skukla/demo-inspector"
+            }
+          }
+        },
+        "eds-paas": {
+          "name": "CitiSignal EDS + PaaS",
+          "description": "Edge Delivery Services storefront with Commerce PaaS backend",
+          "icon": "eds",
+          "featured": true,
+          "tags": ["eds", "citisignal", "paas"],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/skukla/citisignal-one",
+            "branch": "main",
+            "gitOptions": {
+              "shallow": true,
+              "recursive": false
+            }
+          }
+        },
+        "eds-accs": {
+          "name": "CitiSignal EDS + ACCS",
+          "description": "Edge Delivery Services storefront with Commerce Cloud Service backend",
+          "icon": "eds",
+          "featured": false,
+          "tags": ["eds", "citisignal", "accs"],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/skukla/citisignal-one",
+            "branch": "main",
+            "gitOptions": {
+              "shallow": true,
+              "recursive": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "buildright",
+      "name": "BuildRight",
+      "description": "Construction/hardware demo with BuildRight branding",
+      "icon": "buildright",
+      "featured": false,
+      "addons": {
+        "adobe-commerce-aco": "required"
+      },
+      "configDefaults": {
+        "ADOBE_COMMERCE_WEBSITE_CODE": "buildright",
+        "ADOBE_COMMERCE_STORE_CODE": "buildright_store",
+        "ADOBE_COMMERCE_STORE_VIEW_CODE": "buildright_us"
+      },
+      "storefronts": {
+        "eds-paas": {
+          "name": "BuildRight EDS + PaaS",
+          "description": "Edge Delivery Services storefront with Commerce PaaS backend",
+          "icon": "eds",
+          "featured": false,
+          "tags": ["eds", "buildright", "paas"],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/skukla/buildright-one",
+            "branch": "main",
+            "gitOptions": {
+              "shallow": true,
+              "recursive": false
+            }
+          }
+        },
+        "eds-accs": {
+          "name": "BuildRight EDS + ACCS",
+          "description": "Edge Delivery Services storefront with Commerce Cloud Service backend",
+          "icon": "eds",
+          "featured": false,
+          "tags": ["eds", "buildright", "accs"],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/skukla/buildright-one",
+            "branch": "main",
+            "gitOptions": {
+              "shallow": true,
+              "recursive": false
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -46,8 +46,10 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Import types
-import type { GitHubService } from '@/features/eds/services/githubService';
-import type { DaLiveService } from '@/features/eds/services/daLiveService';
+import type { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import type { GitHubRepoOperations } from '@/features/eds/services/githubRepoOperations';
+import type { DaLiveOrgOperations } from '@/features/eds/services/daLiveOrgOperations';
+import type { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import type { GitHubRepo } from '@/features/eds/services/types';
@@ -56,14 +58,17 @@ import type {
     EdsSetupPhase,
     EdsPartialState,
 } from '@/features/eds/services/types';
+import type { GitHubServicesForProject, DaLiveServicesForProject } from '@/features/eds/services/edsProjectService';
 
 // Type for the service we'll import dynamically
 type EdsProjectServiceType = import('@/features/eds/services/edsProjectService').EdsProjectService;
 
 describe('EDS Partial Failure - Integration Tests', () => {
     let service: EdsProjectServiceType;
-    let mockGitHubService: jest.Mocked<Partial<GitHubService>>;
-    let mockDaLiveService: jest.Mocked<Partial<DaLiveService>>;
+    let mockGitHubTokenService: jest.Mocked<Partial<GitHubTokenService>>;
+    let mockGitHubService: jest.Mocked<Partial<GitHubRepoOperations>>;
+    let mockDaLiveOrgOps: jest.Mocked<Partial<DaLiveOrgOperations>>;
+    let mockDaLiveContentOps: jest.Mocked<Partial<DaLiveContentOperations>>;
     let mockAuthService: jest.Mocked<Partial<AuthenticationService>>;
     let mockComponentManager: jest.Mocked<Partial<ComponentManager>>;
     let mockFetch: jest.Mock;
@@ -98,16 +103,31 @@ describe('EDS Partial Failure - Integration Tests', () => {
         jest.clearAllMocks();
         jest.useFakeTimers();
 
-        // Mock GitHubService
+        // Mock GitHubTokenService
+        mockGitHubTokenService = {
+            getToken: jest.fn(),
+            validateToken: jest.fn(),
+        };
+
+        // Mock GitHubRepoOperations (named mockGitHubService for minimal test changes)
         mockGitHubService = {
             createFromTemplate: jest.fn().mockResolvedValue(mockRepo),
             cloneRepository: jest.fn().mockResolvedValue(undefined),
-            getToken: jest.fn(),
-            getAuthenticatedUser: jest.fn(),
+            getRepository: jest.fn(),
+            deleteRepository: jest.fn(),
         };
 
-        // Mock DaLiveService
-        mockDaLiveService = {
+        // Mock DaLiveOrgOperations
+        mockDaLiveOrgOps = {
+            deleteSite: jest.fn(),
+            verifyOrgAccess: jest.fn().mockResolvedValue({
+                hasAccess: true,
+                orgName: defaultConfig.daLiveOrg,
+            }),
+        };
+
+        // Mock DaLiveContentOperations
+        mockDaLiveContentOps = {
             copyCitisignalContent: jest.fn().mockResolvedValue({
                 success: true,
                 copiedFiles: ['/index.html'],
@@ -115,10 +135,6 @@ describe('EDS Partial Failure - Integration Tests', () => {
                 totalFiles: 1,
             }),
             listDirectory: jest.fn(),
-            verifyOrgAccess: jest.fn().mockResolvedValue({
-                hasAccess: true,
-                orgName: defaultConfig.daLiveOrg,
-            }),
         };
 
         // Mock AuthenticationService
@@ -147,11 +163,22 @@ describe('EDS Partial Failure - Integration Tests', () => {
         // Progress callback
         mockProgressCallback = jest.fn();
 
+        // Create service interface objects
+        const githubServices: GitHubServicesForProject = {
+            tokenService: mockGitHubTokenService as unknown as GitHubTokenService,
+            repoOperations: mockGitHubService as unknown as GitHubRepoOperations,
+        };
+
+        const daLiveServices: DaLiveServicesForProject = {
+            orgOperations: mockDaLiveOrgOps as unknown as DaLiveOrgOperations,
+            contentOperations: mockDaLiveContentOps as unknown as DaLiveContentOperations,
+        };
+
         // Dynamically import to get fresh instance after mocks are set up
         const module = await import('@/features/eds/services/edsProjectService');
         service = new module.EdsProjectService(
-            mockGitHubService as unknown as GitHubService,
-            mockDaLiveService as unknown as DaLiveService,
+            githubServices,
+            daLiveServices,
             mockAuthService as unknown as AuthenticationService,
             mockComponentManager as unknown as ComponentManager,
         );
@@ -199,7 +226,7 @@ describe('EDS Partial Failure - Integration Tests', () => {
             mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
             mockGitHubService.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: true,
                 copiedFiles: ['/index.html'],
                 failedFiles: [],
@@ -251,7 +278,7 @@ describe('EDS Partial Failure - Integration Tests', () => {
             mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
             mockGitHubService.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: true,
                 copiedFiles: ['/index.html'],
                 failedFiles: [],
@@ -355,7 +382,7 @@ describe('EDS Partial Failure - Integration Tests', () => {
             mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
             mockGitHubService.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: false,
                 copiedFiles: ['/index.html'],
                 failedFiles: [{ path: '/about.html', error: 'Network error' }],

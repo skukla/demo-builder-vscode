@@ -1,30 +1,45 @@
+/**
+ * ComponentManager
+ *
+ * Handles the installation, lifecycle, and management of individual components
+ * within a Demo Builder project.
+ *
+ * This service composes specialized modules:
+ * - ComponentInstallation: Git cloning, version detection, submodule handling
+ * - ComponentDependencies: npm install, build scripts
+ *
+ * Provides a simple constructor interface (just Logger) while delegating
+ * to the specialized modules for implementation.
+ */
+
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ServiceLocator } from '@/core/di';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { ComponentInstallOptions, ComponentInstallResult } from '@/features/components/services/types';
 import { Project, ComponentInstance, TransformedComponentDefinition, ComponentStatus } from '@/types';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
 import { getComponentInstancesByType } from '@/types/typeGuards';
+import { ComponentInstallation } from './componentInstallation';
+import { ComponentDependencies } from './componentDependencies';
 
 export type { ComponentInstallOptions, ComponentInstallResult };
+
+// Re-export extracted services for direct use
+export { ComponentInstallation } from './componentInstallation';
+export { ComponentDependencies } from './componentDependencies';
 
 /**
  * ComponentManager handles the installation, lifecycle, and management
  * of individual components within a Demo Builder project.
- * 
- * This includes:
- * - Cloning Git repositories into components/ subdirectory
- * - Installing npm packages
- * - Tracking component status and metadata
- * - Managing component dependencies
  */
 export class ComponentManager {
     private logger: Logger;
+    private installation: ComponentInstallation;
+    private dependencies: ComponentDependencies;
 
     constructor(logger: Logger) {
         this.logger = logger;
+        this.installation = new ComponentInstallation(logger);
+        this.dependencies = new ComponentDependencies(logger);
     }
 
     /**
@@ -44,7 +59,7 @@ export class ComponentManager {
                 name: componentDef.name,
                 type: componentDef.type,
                 subType: componentDef.subType,
-                icon: componentDef.icon,  // Preserve icon from component definition
+                icon: componentDef.icon,
                 status: 'not-installed',
                 lastUpdated: new Date(),
             };
@@ -64,26 +79,23 @@ export class ComponentManager {
                         componentInstance,
                         options,
                     );
-                
+
                 case 'npm':
                     return await this.installNpmComponent(
-                        project,
                         componentDef,
                         componentInstance,
                         options,
                     );
-                
+
                 case 'local':
                     return await this.linkLocalComponent(
-                        project,
                         componentDef,
                         componentInstance,
                     );
-                
+
                 default:
                     throw new Error(`Unsupported source type: ${componentDef.source.type}`);
             }
-
         } catch (error) {
             this.logger.error(`[ComponentManager] Failed to install ${componentDef.name}`, error as Error);
             return {
@@ -102,278 +114,26 @@ export class ComponentManager {
         componentInstance: ComponentInstance,
         options: ComponentInstallOptions,
     ): Promise<ComponentInstallResult> {
-        if (!componentDef.source?.url) {
-            throw new Error('Git source URL not provided');
-        }
-
-        const componentsDir = path.join(project.path, 'components');
-        const componentPath = path.join(componentsDir, componentDef.id);
-
-        // Create components directory if it doesn't exist
-        await fs.mkdir(componentsDir, { recursive: true });
-
-        // Clean up any existing component directory (from previous failed attempts)
-        try {
-            await fs.access(componentPath);
-            this.logger.debug(`[ComponentManager] Removing existing component directory: ${componentPath}`);
-            await fs.rm(componentPath, { recursive: true, force: true });
-        } catch {
-            // Directory doesn't exist, no cleanup needed
-        }
-
-        // Update status
-        componentInstance.status = 'cloning';
-        componentInstance.repoUrl = componentDef.source.url;
-        componentInstance.branch = options.branch || componentDef.source.branch || 'main';
-        componentInstance.path = componentPath;
-
-        this.logger.debug(`[ComponentManager] Cloning ${componentDef.name} from ${componentDef.source.url}`);
-        
-        // Clone repository
-        const commandManager = ServiceLocator.getCommandExecutor();
-        
-        // Build git clone command with options
-        const cloneFlags: string[] = [];
-        
-        // Branch or tag
-        if (componentDef.source.gitOptions?.tag) {
-            cloneFlags.push(`--branch ${componentDef.source.gitOptions.tag}`);
-        } else if (componentInstance.branch) {
-            cloneFlags.push(`-b ${componentInstance.branch}`);
-        }
-        
-        // Shallow clone (faster, smaller)
-        if (componentDef.source.gitOptions?.shallow) {
-            cloneFlags.push('--depth=1');
-        }
-        
-        // Recursive (submodules)
-        if (componentDef.source.gitOptions?.recursive) {
-            cloneFlags.push('--recursive');
-        }
-        
-        const cloneCommand = `git clone ${cloneFlags.join(' ')} "${componentDef.source.url}" "${componentPath}"`.trim();
-
-        this.logger.trace(`[ComponentManager] Executing: ${cloneCommand}`);
-
-        // Use configurable timeout or default
-        const cloneTimeout = componentDef.source.timeouts?.clone || TIMEOUTS.COMPONENT_CLONE;
-
-        // SECURITY: shell is safe here because:
-        // - URL comes from validated component registry (templates/components.json)
-        // - Path constructed internally via path.join() (no user input)
-        // - Command structure is hardcoded (no injection risk)
-        // Shell is REQUIRED to parse quoted arguments correctly
-        const cloneStart = Date.now();
-        const result = await commandManager.execute(cloneCommand, {
-            timeout: cloneTimeout,
-            enhancePath: true,
-            shell: DEFAULT_SHELL,
-        });
-        const cloneDuration = Date.now() - cloneStart;
-
-        if (result.code !== 0) {
-            this.logger.error(`[ComponentManager] Git clone failed for ${componentDef.name}`);
-            this.logger.debug(`[ComponentManager] Clone failed: code=${result.code}, duration=${cloneDuration}ms`);
-            this.logger.trace(`[ComponentManager] Clone stderr: ${result.stderr}`);
-            this.logger.trace(`[ComponentManager] Clone stdout: ${result.stdout}`);
-            throw new Error(`Git clone failed: ${result.stderr}`);
-        }
-
-        this.logger.debug(`[ComponentManager] Clone completed for ${componentDef.name} in ${cloneDuration}ms`);
-
-        // Selectively initialize submodules based on user selection
-        // (only if component has submodules defined AND some are selected)
-        if (componentDef.submodules && options.selectedSubmodules?.length) {
-            const submodulesToInit: string[] = [];
-
-            for (const submoduleId of options.selectedSubmodules) {
-                const submoduleConfig = componentDef.submodules[submoduleId];
-                if (submoduleConfig?.path) {
-                    submodulesToInit.push(submoduleConfig.path);
-                }
-            }
-
-            if (submodulesToInit.length > 0) {
-                this.logger.debug(`[ComponentManager] Initializing selected submodules for ${componentDef.name}: ${submodulesToInit.join(', ')}`);
-
-                // Initialize each selected submodule
-                for (const submodulePath of submodulesToInit) {
-                    const submoduleCommand = `git submodule update --init "${submodulePath}"`;
-                    this.logger.trace(`[ComponentManager] Executing submodule command: ${submoduleCommand}`);
-                    this.logger.trace(`[ComponentManager] Working directory: ${componentPath}`);
-
-                    const submoduleStart = Date.now();
-                    const submoduleResult = await commandManager.execute(
-                        submoduleCommand,
-                        {
-                            cwd: componentPath,
-                            timeout: TIMEOUTS.COMPONENT_CLONE,
-                            enhancePath: true,
-                            shell: DEFAULT_SHELL,
-                        },
-                    );
-                    const submoduleDuration = Date.now() - submoduleStart;
-
-                    if (submoduleResult.code !== 0) {
-                        this.logger.warn(`[ComponentManager] Failed to initialize submodule ${submodulePath}`);
-                        this.logger.debug(`[ComponentManager] Submodule init failed: code=${submoduleResult.code}, duration=${submoduleDuration}ms`);
-                        this.logger.trace(`[ComponentManager] Submodule stderr: ${submoduleResult.stderr}`);
-                        this.logger.trace(`[ComponentManager] Submodule stdout: ${submoduleResult.stdout}`);
-                        // Continue with other submodules even if one fails
-                    } else {
-                        this.logger.debug(`[ComponentManager] Submodule ${submodulePath} initialized in ${submoduleDuration}ms`);
-                    }
-                }
-
-                this.logger.debug(`[ComponentManager] Submodules initialized for ${componentDef.name}`);
-            }
-        } else if (componentDef.submodules) {
-            // Component has submodules but none were selected - skip initialization
-            this.logger.debug(`[ComponentManager] Skipping submodule initialization for ${componentDef.name} (none selected)`);
-        }
-
-        // Detect component version using hybrid approach:
-        // 1. Try git tag (most accurate for releases)
-        // 2. Fallback to package.json version
-        // 3. Final fallback to commit hash
-
-        let detectedVersion: string | null = null;
-
-        // Strategy 1: Try git describe for tagged commits
-        const tagResult = await commandManager.execute(
-            'git describe --tags --exact-match HEAD',
-            {
-                cwd: componentPath,
-                enhancePath: true,
-                shell: DEFAULT_SHELL,
-            },
+        // Delegate to ComponentInstallation
+        const result = await this.installation.installGitComponent(
+            project.path,
+            componentDef,
+            componentInstance,
+            options,
         );
 
-        if (tagResult.code === 0 && tagResult.stdout.trim()) {
-            // On a tagged commit (e.g., "v1.0.0" or "1.0.0")
-            detectedVersion = tagResult.stdout.trim().replace(/^v/, ''); // Remove 'v' prefix
-            this.logger.debug(`[ComponentManager] Detected version from git tag: ${detectedVersion}`);
-        } else {
-            // No git tag found (expected for repos without tags) - try other strategies
-            this.logger.trace(`[ComponentManager] No git tag found, checking package.json`);
-            // Strategy 2: Try reading package.json version
-            const packageJsonPath = path.join(componentPath, 'package.json');
-            try {
-                await fs.access(packageJsonPath);
-                const packageJsonContent = await fs.readFile(packageJsonPath, 'utf-8');
-                const packageJson = JSON.parse(packageJsonContent);
-
-                if (packageJson.version) {
-                    detectedVersion = packageJson.version;
-                    this.logger.debug(`[ComponentManager] Detected version from package.json: ${detectedVersion}`);
-                }
-            } catch {
-                // package.json not readable, will try commit hash
-                this.logger.debug(`[ComponentManager] Could not read package.json version, falling back to commit hash`);
-            }
+        if (!result.success) {
+            return result;
         }
 
-        // Strategy 3: Final fallback to commit hash
-        if (!detectedVersion) {
-            const commitResult = await commandManager.execute(
-                'git rev-parse HEAD',
-                {
-                    cwd: componentPath,
-                    enhancePath: true,
-                    shell: DEFAULT_SHELL,
-                },
+        // Install dependencies if needed
+        if (!options.skipDependencies && componentInstance.path) {
+            componentInstance.status = 'installing';
+            await this.dependencies.installDependenciesForComponent(
+                componentInstance.path,
+                componentDef,
+                false,
             );
-
-            if (commitResult.code === 0) {
-                detectedVersion = commitResult.stdout.trim().substring(0, 8); // Short hash
-                this.logger.debug(`[ComponentManager] Using commit hash as version: ${detectedVersion}`);
-            }
-        }
-
-        // Set the detected version (or leave undefined if all strategies failed)
-        if (detectedVersion) {
-            componentInstance.version = detectedVersion;
-            this.logger.debug(`[ComponentManager] ${componentDef.name} version: ${detectedVersion}`);
-        } else {
-            this.logger.warn(`[ComponentManager] Could not detect version for ${componentDef.name}`);
-        }
-
-        // Store Node version in metadata for runtime use
-        if (componentDef.configuration?.nodeVersion) {
-            componentInstance.metadata = {
-                ...componentInstance.metadata,
-                nodeVersion: componentDef.configuration.nodeVersion,
-            };
-        }
-
-        // Create .node-version file if configured (enables fnm auto-switching)
-        const configuredNodeVersion = componentDef.configuration?.nodeVersion;
-        if (configuredNodeVersion) {
-            const nodeVersionFile = path.join(componentPath, '.node-version');
-            try {
-                // Check if file already exists
-                await fs.access(nodeVersionFile);
-            } catch {
-                // File doesn't exist, create it
-                await fs.writeFile(nodeVersionFile, `${configuredNodeVersion}\n`, 'utf-8');
-            }
-        }
-
-        // Install dependencies if package.json exists
-        const packageJsonPath = path.join(componentPath, 'package.json');
-        try {
-            await fs.access(packageJsonPath);
-            
-            if (!options.skipDependencies) {
-                this.logger.debug(`[ComponentManager] Installing dependencies for ${componentDef.name}`);
-                componentInstance.status = 'installing';
-
-                // Use the configured Node version
-                const nodeVersion = componentDef.configuration?.nodeVersion;
-                
-                // Don't include fnm use in command - CommandManager handles it via useNodeVersion option
-                const installCommand = 'npm install';
-
-                this.logger.debug(`[ComponentManager] Running: ${installCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`);
-
-                // Use configurable timeout or default
-                const installTimeout = componentDef.source.timeouts?.install || TIMEOUTS.COMPONENT_INSTALL;
-
-                const installResult = await commandManager.execute(installCommand, {
-                    cwd: componentPath,  // Run from component directory
-                    timeout: installTimeout,
-                    enhancePath: true,
-                    useNodeVersion: nodeVersion || null,  // CommandManager handles fnm use
-                    shell: DEFAULT_SHELL,
-                });
-                
-                if (installResult.code !== 0) {
-                    this.logger.warn(`[ComponentManager] npm install had warnings for ${componentDef.name}`);
-                }
-
-                // Run build script if configured
-                const buildScript = componentDef.configuration?.buildScript;
-                if (buildScript && !options.skipDependencies) {
-                    const buildCommand = `npm run ${buildScript}`;
-                    const buildTimeout = TIMEOUTS.COMPONENT_BUILD;
-
-                    const buildResult = await commandManager.execute(buildCommand, {
-                        cwd: componentPath,
-                        timeout: buildTimeout,
-                        enhancePath: true,
-                        useNodeVersion: nodeVersion || null,
-                        shell: DEFAULT_SHELL,
-                    });
-
-                    if (buildResult.code !== 0) {
-                        this.logger.warn(`[ComponentManager] Build failed for ${componentDef.name}`);
-                        this.logger.trace(`[ComponentManager] Build stderr: ${buildResult.stderr?.substring(0, 500)}`);
-                    }
-                }
-            }
-        } catch {
-            // No package.json, skip dependency installation
         }
 
         // Mark as ready
@@ -394,7 +154,6 @@ export class ComponentManager {
      * Install an npm package component
      */
     private async installNpmComponent(
-        project: Project,
         componentDef: TransformedComponentDefinition,
         componentInstance: ComponentInstance,
         options: ComponentInstallOptions,
@@ -429,7 +188,6 @@ export class ComponentManager {
      * Link a local component (for development)
      */
     private async linkLocalComponent(
-        project: Project,
         componentDef: TransformedComponentDefinition,
         componentInstance: ComponentInstance,
     ): Promise<ComponentInstallResult> {
@@ -467,60 +225,7 @@ export class ComponentManager {
         componentPath: string,
         componentDef: TransformedComponentDefinition,
     ): Promise<{ success: boolean; error?: string }> {
-        const packageJsonPath = path.join(componentPath, 'package.json');
-
-        try {
-            await fs.access(packageJsonPath);
-        } catch {
-            // No package.json, nothing to install
-            this.logger.debug(`[ComponentManager] No package.json found for ${componentDef.name}, skipping npm install`);
-            return { success: true };
-        }
-
-        this.logger.debug(`[ComponentManager] Installing dependencies for ${componentDef.name}`);
-
-        const commandManager = ServiceLocator.getCommandExecutor();
-        const nodeVersion = componentDef.configuration?.nodeVersion;
-        const installCommand = 'npm install';
-
-        this.logger.debug(`[ComponentManager] Running: ${installCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`);
-
-        const installTimeout = componentDef.source?.timeouts?.install || TIMEOUTS.COMPONENT_INSTALL;
-
-        const installResult = await commandManager.execute(installCommand, {
-            cwd: componentPath,
-            timeout: installTimeout,
-            enhancePath: true,
-            useNodeVersion: nodeVersion || null,
-            shell: DEFAULT_SHELL,
-        });
-
-        if (installResult.code !== 0) {
-            this.logger.warn(`[ComponentManager] npm install had warnings for ${componentDef.name}`);
-        }
-
-        // Run build script if configured
-        const buildScript = componentDef.configuration?.buildScript;
-        if (buildScript) {
-            const buildCommand = `npm run ${buildScript}`;
-            const buildTimeout = TIMEOUTS.COMPONENT_BUILD;
-
-            const buildResult = await commandManager.execute(buildCommand, {
-                cwd: componentPath,
-                timeout: buildTimeout,
-                enhancePath: true,
-                useNodeVersion: nodeVersion || null,
-                shell: DEFAULT_SHELL,
-            });
-
-            if (buildResult.code !== 0) {
-                this.logger.warn(`[ComponentManager] Build failed for ${componentDef.name}`);
-                this.logger.trace(`[ComponentManager] Build stderr: ${buildResult.stderr?.substring(0, 500)}`);
-            }
-        }
-
-        this.logger.debug(`[ComponentManager] Dependencies installed for ${componentDef.name}`);
-        return { success: true };
+        return this.dependencies.installNpmDependencies(componentPath, componentDef);
     }
 
     /**
@@ -562,7 +267,7 @@ export class ComponentManager {
 
     /**
      * Get all components of a specific type
-     * SOP §4: Using helper instead of inline Object.values with filter
+     * SOP sec 4: Using helper instead of inline Object.values with filter
      */
     public getComponentsByType(
         project: Project,
@@ -580,7 +285,7 @@ export class ComponentManager {
         deleteFiles = false,
     ): Promise<void> {
         const component = this.getComponent(project, componentId);
-        
+
         if (!component) {
             throw new Error(`Component ${componentId} not found`);
         }
@@ -618,6 +323,4 @@ export class ComponentManager {
     public static getComponentPath(project: Project, componentId: string): string {
         return path.join(ComponentManager.getComponentsDirectory(project), componentId);
     }
-
 }
-

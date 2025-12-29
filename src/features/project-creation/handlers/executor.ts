@@ -33,6 +33,19 @@ import type { MeshPhaseState } from '@/types/webview';
 // ============================================================================
 
 /**
+ * Frontend source from template (same shape as TemplateSource)
+ */
+interface FrontendSource {
+    type: string;
+    url: string;
+    branch: string;
+    gitOptions?: {
+        shallow?: boolean;
+        recursive?: boolean;
+    };
+}
+
+/**
  * ProjectCreationConfig - Configuration passed to project creation
  */
 interface ProjectCreationConfig {
@@ -43,7 +56,7 @@ interface ProjectCreationConfig {
         backend?: string;
         dependencies?: string[];
         integrations?: string[];
-        appBuilderApps?: string[];
+        appBuilder?: string[];
     };
     componentConfigs?: Record<string, Record<string, unknown>>;
     apiMesh?: {
@@ -56,9 +69,11 @@ interface ProjectCreationConfig {
     // For detecting same-workspace imports to skip mesh deployment
     importedWorkspaceId?: string;
     importedMeshEndpoint?: string;
-    // Brand/Stack selections
-    selectedBrand?: string;
+    // Package/Stack selections
+    selectedPackage?: string;
     selectedStack?: string;
+    // Frontend source from template (templates are source of truth for repos)
+    frontendSource?: FrontendSource;
     // Edit mode: re-use existing project directory
     editMode?: boolean;
     editProjectPath?: string;
@@ -136,10 +151,10 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             backend: typedConfig.components?.backend,
             dependencies: typedConfig.components?.dependencies || [],
             integrations: typedConfig.components?.integrations || [],
-            appBuilder: typedConfig.components?.appBuilderApps || [],
+            appBuilder: typedConfig.components?.appBuilder || [],
         },
         componentConfigs: (typedConfig.componentConfigs || {}) as Record<string, Record<string, string | number | boolean | undefined>>,
-        selectedBrand: typedConfig.selectedBrand,
+        selectedPackage: typedConfig.selectedPackage,
         selectedStack: typedConfig.selectedStack,
     };
 
@@ -355,7 +370,7 @@ async function loadComponentDefinitions(
     const allComponents = [
         ...(typedConfig.components?.frontend ? [{ id: typedConfig.components.frontend, type: 'frontend' }] : []),
         ...filteredDependencies.map((id: string) => ({ id, type: 'dependency' })),
-        ...(typedConfig.components?.appBuilderApps || []).map((id: string) => ({ id, type: 'app-builder' })),
+        ...(typedConfig.components?.appBuilder || []).map((id: string) => ({ id, type: 'app-builder' })),
     ];
 
     const componentDefinitions: Map<string, ComponentDefinitionEntry> = new Map();
@@ -377,6 +392,35 @@ async function loadComponentDefinitions(
         if (!componentDef) {
             context.logger.warn(`[Project Creation] Component ${comp.id} not found in registry`);
             continue;
+        }
+
+        // For frontend components, use frontendSource from config (template is source of truth)
+        // This allows abstract component types in components.json without hardcoded repos
+        if (comp.type === 'frontend' && typedConfig.frontendSource) {
+            // Override component source with template source
+            componentDef = {
+                ...componentDef,
+                source: {
+                    type: typedConfig.frontendSource.type as 'git' | 'npm' | 'local',
+                    url: typedConfig.frontendSource.url,
+                    branch: typedConfig.frontendSource.branch,
+                    gitOptions: typedConfig.frontendSource.gitOptions,
+                },
+            };
+            context.logger.debug(`[Project Creation] Using template source for ${componentDef.name}: ${typedConfig.frontendSource.url}`);
+        }
+
+        // Validate that installable components have a source defined
+        // Frontends get source from template (above), dependencies/app-builder from components.json
+        // Backends are configuration-only (remote systems) and don't need a source
+        if (!componentDef.source) {
+            const errorMsg = comp.type === 'frontend'
+                ? `No storefront found for stack "${typedConfig.selectedStack}" and package "${typedConfig.selectedPackage}". ` +
+                  `Please ensure a matching storefront exists in demo-packages.json.`
+                : `Component "${componentDef.name}" (${comp.id}) has no installation source defined. ` +
+                  `This is a configuration error in components.json - installable components must have a "source" property.`;
+            context.logger.error(`[Project Creation] ${errorMsg}`);
+            throw new Error(errorMsg);
         }
 
         // Determine submodules for frontend components

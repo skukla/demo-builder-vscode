@@ -4,6 +4,12 @@
  * Validates wizard steps based on the current wizard state.
  * Returns whether the step is valid and if the user can proceed.
  *
+ * Note: This hook validates wizard step state (boolean existence checks),
+ * NOT string field values. The core @/core/validation/Validator.ts validators
+ * (url, pattern, required, etc.) are designed for string field validation.
+ * The StepValidation type here serves a different purpose: determining
+ * if a wizard step has been completed based on state conditions.
+ *
  * @module features/project-creation/ui/hooks/useStepValidation
  */
 

@@ -12,6 +12,7 @@ import {
     generateUniqueProjectName,
     initializeProjectName,
     getFirstEnabledStep,
+    shouldShowWizardFooter,
     WizardStepConfig,
     ImportedSettings,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
@@ -227,6 +228,14 @@ describe('wizardHelpers', () => {
             expect(getNextButtonText(false, 1, 5)).toBe('Continue');
             expect(getNextButtonText(false, 2, 5)).toBe('Continue');
         });
+
+        it('should return "Save Changes" on second-to-last step in edit mode', () => {
+            expect(getNextButtonText(false, 3, 5, true)).toBe('Save Changes');
+        });
+
+        it('should return "Create Project" on second-to-last step when not in edit mode', () => {
+            expect(getNextButtonText(false, 3, 5, false)).toBe('Create Project');
+        });
     });
 
     describe('hasMeshComponentSelected', () => {
@@ -346,7 +355,7 @@ describe('wizardHelpers', () => {
                 backend: 'commerce',
                 dependencies: ['mesh'],
                 integrations: ['aem'],
-                appBuilderApps: ['app1'],
+                appBuilder: ['app1'],
             });
         });
 
@@ -376,7 +385,7 @@ describe('wizardHelpers', () => {
                 backend: undefined,
                 dependencies: [],
                 integrations: [],
-                appBuilderApps: [],
+                appBuilder: [],
             });
         });
     });
@@ -535,6 +544,37 @@ describe('wizardHelpers', () => {
             ];
 
             expect(getFirstEnabledStep(steps)).toBe('adobe-auth');
+        });
+    });
+
+    describe('shouldShowWizardFooter', () => {
+        it('should return true for normal step (not last, not mesh-deployment, not preparing review)', () => {
+            expect(shouldShowWizardFooter(false, 'adobe-auth', false)).toBe(true);
+            expect(shouldShowWizardFooter(false, 'component-selection', false)).toBe(true);
+            expect(shouldShowWizardFooter(false, 'prerequisites', false)).toBe(true);
+        });
+
+        it('should return false when on last step', () => {
+            expect(shouldShowWizardFooter(true, 'review', false)).toBe(false);
+            expect(shouldShowWizardFooter(true, 'project-creation', false)).toBe(false);
+        });
+
+        it('should return false when on mesh-deployment step', () => {
+            expect(shouldShowWizardFooter(false, 'mesh-deployment', false)).toBe(false);
+        });
+
+        it('should return false when preparing review', () => {
+            expect(shouldShowWizardFooter(false, 'component-selection', true)).toBe(false);
+            expect(shouldShowWizardFooter(false, 'review', true)).toBe(false);
+        });
+
+        it('should return false when multiple conditions are true', () => {
+            // Last step + preparing review
+            expect(shouldShowWizardFooter(true, 'review', true)).toBe(false);
+            // Mesh-deployment + preparing review
+            expect(shouldShowWizardFooter(false, 'mesh-deployment', true)).toBe(false);
+            // All conditions true (edge case)
+            expect(shouldShowWizardFooter(true, 'mesh-deployment', true)).toBe(false);
         });
     });
 });

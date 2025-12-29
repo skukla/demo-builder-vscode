@@ -155,6 +155,8 @@ export interface RawComponentRegistry {
     dependencies?: Record<string, RawComponentDefinition>;
     /** v3.0.0: App Builder apps (e.g., integration-service) */
     appBuilderApps?: Record<string, RawComponentDefinition>;
+    /** v3.0.0: Integrations (e.g., experience-platform) */
+    integrations?: Record<string, RawComponentDefinition>;
     infrastructure?: Record<string, RawComponentDefinition>;
     services?: Record<string, ServiceDefinition>;
     envVars?: Record<string, Omit<EnvVarDefinition, 'key'>>;

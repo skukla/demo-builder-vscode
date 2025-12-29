@@ -10,8 +10,8 @@
  * - Single-purpose: authentication only (no form fields)
  */
 
-import React, { useEffect } from 'react';
-import { Avatar, Heading, Text } from '@adobe/react-spectrum';
+import React from 'react';
+import { Avatar, Text } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Code from '@spectrum-icons/workflow/Code';
@@ -21,6 +21,7 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { useCanProceed } from '@/core/ui/hooks';
 import { useGitHubAuth } from '../hooks/useGitHubAuth';
 import type { BaseStepProps } from '@/types/wizard';
 
@@ -43,27 +44,20 @@ export function GitHubSetupStep({
     } = useGitHubAuth({ state, updateState });
 
     // Update canProceed based on authentication status
-    useEffect(() => {
-        setCanProceed(isAuthenticated);
-    }, [isAuthenticated, setCanProceed]);
+    useCanProceed(isAuthenticated, setCanProceed);
 
-    // Shared header matching AdobeAuthStep pattern
-    const stepHeader = (
-        <>
-            <Heading level={2} marginBottom="size-300">
-                GitHub Authentication
-            </Heading>
-            <Text marginBottom="size-400">
-                Connect your GitHub account to create Edge Delivery Services repositories.
-            </Text>
-        </>
+    // Step description (header removed - timeline shows step name)
+    const stepDescription = (
+        <Text marginBottom="size-300">
+            Connect your GitHub account to create Edge Delivery Services repositories.
+        </Text>
     );
 
     // Loading state - show centered loading display
     if (isAuthenticating) {
         return (
             <SingleColumnLayout>
-                {stepHeader}
+                {stepDescription}
                 <CenteredFeedbackContainer>
                     <LoadingDisplay
                         size="L"
@@ -80,7 +74,7 @@ export function GitHubSetupStep({
     if (authError && !isAuthenticated) {
         return (
             <SingleColumnLayout>
-                {stepHeader}
+                {stepDescription}
                 <StatusDisplay
                     variant="error"
                     icon={<Alert UNSAFE_className="text-red-500" size="L" />}
@@ -116,7 +110,7 @@ export function GitHubSetupStep({
 
         return (
             <SingleColumnLayout>
-                {stepHeader}
+                {stepDescription}
                 <StatusDisplay
                     variant="success"
                     icon={avatarWithBadge}
@@ -133,7 +127,7 @@ export function GitHubSetupStep({
     // Not authenticated - show sign in prompt
     return (
         <SingleColumnLayout>
-            {stepHeader}
+            {stepDescription}
             <StatusDisplay
                 variant="info"
                 icon={<Code UNSAFE_className="text-gray-500" size="L" />}

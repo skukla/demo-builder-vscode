@@ -221,7 +221,7 @@ describe('DataSourceConfigStep', () => {
             });
         });
 
-        it('should display org name in header', async () => {
+        it('should display site count in header', async () => {
             const initialState = createDefaultState();
 
             const { DataSourceConfigStep } = await import('@/features/eds/ui/steps/DataSourceConfigStep');
@@ -246,7 +246,8 @@ describe('DataSourceConfigStep', () => {
             await simulateSitesResponse(mockSites);
 
             await waitFor(() => {
-                expect(screen.getByText(/test-org/)).toBeInTheDocument();
+                // Site count is displayed in the SearchHeader
+                expect(screen.getByText(/3 sites/i)).toBeInTheDocument();
             });
         });
     });

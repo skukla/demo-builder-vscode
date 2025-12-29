@@ -23,7 +23,7 @@ export interface ProjectManifest {
     componentConfigs?: Project['componentConfigs'];
     componentVersions?: Project['componentVersions'];
     meshState?: Project['meshState'];
-    selectedBrand?: string;
+    selectedPackage?: string;
     selectedStack?: string;
 }
 
@@ -78,7 +78,7 @@ export class ProjectFileLoader {
                 componentConfigs: manifest.componentConfigs,
                 componentVersions,
                 meshState: manifest.meshState,
-                selectedBrand: manifest.selectedBrand,
+                selectedPackage: manifest.selectedPackage,
                 selectedStack: manifest.selectedStack,
             };
 

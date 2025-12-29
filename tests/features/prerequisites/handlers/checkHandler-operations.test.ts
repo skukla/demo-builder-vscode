@@ -211,9 +211,15 @@ describe('Prerequisites Check Handler - Core Operations', () => {
         (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
             mockConfig.prerequisites
         );
+        // Node uses component-driven check path
+        (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
+        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({ '20': 'frontend' });
+        // Node is installed but npm is not
+        (context.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+            { version: 'Node 20', component: 'frontend', installed: true },
+        ]);
         (context.prereqManager!.checkPrerequisite as jest.Mock)
-            .mockResolvedValueOnce(mockNodeResult)
-            .mockResolvedValueOnce({ installed: false, canInstall: true });
+            .mockResolvedValueOnce({ installed: false, canInstall: true }); // npm not installed
 
         await handleCheckPrerequisites(context);
 

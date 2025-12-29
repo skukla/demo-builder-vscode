@@ -26,11 +26,13 @@ export {
     clearServiceCache,
 } from './edsHandlers';
 
-// Export helpers for direct access
+// Export helpers for direct access (clearServiceCache already exported from edsHandlers)
 export {
-    getGitHubService,
-    getDaLiveService,
+    getGitHubServices,
+    getDaLiveServices,
     getDaLiveAuthService,
     validateDaLiveToken,
+    type GitHubServices,
+    type DaLiveServices,
     type DaLiveTokenValidationResult,
 } from './edsHelpers';

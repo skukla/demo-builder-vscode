@@ -1,7 +1,7 @@
 /**
- * Tests for ConfigurationSummary helper functions (SOP §3 compliance)
+ * Tests for ConfigurationSummary helper functions (SOP 3 compliance)
  */
-import { getStepStatus } from '@/features/project-creation/ui/components/stepStatusHelpers';
+import { getStepStatus } from '@/core/ui/components/wizard/stepStatusHelpers';
 
 describe('getStepStatus', () => {
     it('returns empty when no value', () => {

@@ -95,8 +95,8 @@ describe('GitHubRepoSelectionStep', () => {
                 </TestWrapper>
             );
 
-            // Then: Should show Create New button
-            expect(screen.getByRole('button', { name: /create new repository/i })).toBeInTheDocument();
+            // Then: Should show New button (with Add icon)
+            expect(screen.getByRole('button', { name: /new/i })).toBeInTheDocument();
         });
 
         it('should show repository name input in new mode', async () => {

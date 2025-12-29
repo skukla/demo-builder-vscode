@@ -1,94 +1,100 @@
 /**
  * BrandGallery Helper Tests
  *
- * Tests for filterBrandsBySearchQuery helper that extracts the brand filtering logic
+ * Tests for filterPackagesBySearchQuery helper that extracts the package filtering logic
  * from the BrandGallery component's useMemo.
  *
  * Follows TDD methodology - tests written BEFORE implementation.
  */
 
-import { filterBrandsBySearchQuery } from '@/features/project-creation/ui/components/brandGalleryHelpers';
-import type { Brand } from '@/types/brands';
+import { filterPackagesBySearchQuery } from '@/features/project-creation/ui/components/brandGalleryHelpers';
+import type { DemoPackage } from '@/types/demoPackages';
 
 describe('brandGalleryHelpers', () => {
-    // Test fixtures - realistic brand data
-    const mockBrands: Brand[] = [
+    // Test fixtures - realistic package data
+    const mockPackages: DemoPackage[] = [
         {
             id: 'citisignal',
             name: 'CitiSignal',
             description: 'Digital signage solution for urban displays',
+            configDefaults: {},
+            storefronts: {},
         },
         {
             id: 'outdoors',
             name: 'Luma Outdoors',
             description: 'Adventure and camping equipment store',
+            configDefaults: {},
+            storefronts: {},
         },
         {
             id: 'electronics',
             name: 'Tech Haven',
             description: 'Consumer electronics and gadgets retailer',
+            configDefaults: {},
+            storefronts: {},
         },
     ];
 
-    describe('filterBrandsBySearchQuery', () => {
+    describe('filterPackagesBySearchQuery', () => {
         describe('empty or whitespace query', () => {
-            it('should return all brands when search query is empty', () => {
+            it('should return all packages when search query is empty', () => {
                 // Given: An empty search query
                 const searchQuery = '';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
-                // Then: Should return all brands unchanged
-                expect(result).toEqual(mockBrands);
+                // Then: Should return all packages unchanged
+                expect(result).toEqual(mockPackages);
                 expect(result).toHaveLength(3);
             });
 
-            it('should return all brands when search query is only whitespace', () => {
+            it('should return all packages when search query is only whitespace', () => {
                 // Given: A whitespace-only search query
                 const searchQuery = '   ';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
-                // Then: Should return all brands unchanged
-                expect(result).toEqual(mockBrands);
+                // Then: Should return all packages unchanged
+                expect(result).toEqual(mockPackages);
                 expect(result).toHaveLength(3);
             });
 
-            it('should return all brands when search query is tabs and newlines', () => {
+            it('should return all packages when search query is tabs and newlines', () => {
                 // Given: Tabs and newlines only
                 const searchQuery = '\t\n  \t';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
-                // Then: Should return all brands unchanged
-                expect(result).toEqual(mockBrands);
+                // Then: Should return all packages unchanged
+                expect(result).toEqual(mockPackages);
             });
         });
 
         describe('name matching', () => {
-            it('should filter brands by name (case-insensitive)', () => {
-                // Given: A query matching a brand name
+            it('should filter packages by name (case-insensitive)', () => {
+                // Given: A query matching a package name
                 const searchQuery = 'citisignal';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
-                // Then: Should return only the matching brand
+                // Then: Should return only the matching package
                 expect(result).toHaveLength(1);
                 expect(result[0].id).toBe('citisignal');
             });
 
-            it('should filter brands by name with mixed case', () => {
+            it('should filter packages by name with mixed case', () => {
                 // Given: A mixed-case query
                 const searchQuery = 'LUMA';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
-                // Then: Should find the brand regardless of case
+                // Then: Should find the package regardless of case
                 expect(result).toHaveLength(1);
                 expect(result[0].id).toBe('outdoors');
             });
@@ -97,24 +103,24 @@ describe('brandGalleryHelpers', () => {
                 // Given: A partial name query
                 const searchQuery = 'tech';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
-                // Then: Should return brands with partial name match
+                // Then: Should return packages with partial name match
                 expect(result).toHaveLength(1);
                 expect(result[0].id).toBe('electronics');
             });
         });
 
         describe('description matching', () => {
-            it('should filter brands by description (case-insensitive)', () => {
-                // Given: A query matching a brand description
+            it('should filter packages by description (case-insensitive)', () => {
+                // Given: A query matching a package description
                 const searchQuery = 'signage';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
-                // Then: Should return brand with matching description
+                // Then: Should return package with matching description
                 expect(result).toHaveLength(1);
                 expect(result[0].id).toBe('citisignal');
             });
@@ -123,10 +129,10 @@ describe('brandGalleryHelpers', () => {
                 // Given: A partial description query
                 const searchQuery = 'equipment';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
-                // Then: Should return brand with partial description match
+                // Then: Should return package with partial description match
                 expect(result).toHaveLength(1);
                 expect(result[0].id).toBe('outdoors');
             });
@@ -134,23 +140,23 @@ describe('brandGalleryHelpers', () => {
 
         describe('combined name and description matching', () => {
             it('should match if query appears in either name or description', () => {
-                // Given: A query that matches description of multiple brands
+                // Given: A query that matches description of multiple packages
                 const searchQuery = 'store';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
-                // Then: Should return brands where description contains 'store'
+                // Then: Should return packages where description contains 'store'
                 expect(result).toHaveLength(1);
                 expect(result[0].id).toBe('outdoors');
             });
 
-            it('should match brands where query appears in name but not description', () => {
+            it('should match packages where query appears in name but not description', () => {
                 // Given: A query only in name
                 const searchQuery = 'haven';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
                 // Then: Should match by name
                 expect(result).toHaveLength(1);
@@ -159,12 +165,12 @@ describe('brandGalleryHelpers', () => {
         });
 
         describe('no matches', () => {
-            it('should return empty array when no brands match', () => {
+            it('should return empty array when no packages match', () => {
                 // Given: A query that matches nothing
                 const searchQuery = 'nonexistent';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
                 // Then: Should return empty array
                 expect(result).toEqual([]);
@@ -173,13 +179,13 @@ describe('brandGalleryHelpers', () => {
         });
 
         describe('edge cases', () => {
-            it('should return empty array when brands array is empty', () => {
-                // Given: An empty brands array
-                const emptyBrands: Brand[] = [];
+            it('should return empty array when packages array is empty', () => {
+                // Given: An empty packages array
+                const emptyPackages: DemoPackage[] = [];
                 const searchQuery = 'anything';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(emptyBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(emptyPackages, searchQuery);
 
                 // Then: Should return empty array
                 expect(result).toEqual([]);
@@ -189,24 +195,24 @@ describe('brandGalleryHelpers', () => {
                 // Given: A query with special regex characters
                 const searchQuery = 'tech.haven';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
                 // Then: Should treat as literal characters, no match expected
                 expect(result).toEqual([]);
             });
 
             it('should preserve original array order in results', () => {
-                // Given: A broad query matching multiple brands
-                const brandList: Brand[] = [
-                    { id: 'a', name: 'Alpha Tech', description: 'First' },
-                    { id: 'b', name: 'Beta Tech', description: 'Second' },
-                    { id: 'c', name: 'Gamma Tech', description: 'Third' },
+                // Given: A broad query matching multiple packages
+                const packageList: DemoPackage[] = [
+                    { id: 'a', name: 'Alpha Tech', description: 'First', configDefaults: {}, storefronts: {} },
+                    { id: 'b', name: 'Beta Tech', description: 'Second', configDefaults: {}, storefronts: {} },
+                    { id: 'c', name: 'Gamma Tech', description: 'Third', configDefaults: {}, storefronts: {} },
                 ];
                 const searchQuery = 'tech';
 
-                // When: Filtering brands
-                const result = filterBrandsBySearchQuery(brandList, searchQuery);
+                // When: Filtering packages
+                const result = filterPackagesBySearchQuery(packageList, searchQuery);
 
                 // Then: Should preserve original order
                 expect(result).toHaveLength(3);
@@ -215,16 +221,16 @@ describe('brandGalleryHelpers', () => {
                 expect(result[2].id).toBe('c');
             });
 
-            it('should not modify the original brands array', () => {
-                // Given: A brands array
-                const originalBrands = [...mockBrands];
+            it('should not modify the original packages array', () => {
+                // Given: A packages array
+                const originalPackages = [...mockPackages];
                 const searchQuery = 'citi';
 
-                // When: Filtering brands
-                filterBrandsBySearchQuery(mockBrands, searchQuery);
+                // When: Filtering packages
+                filterPackagesBySearchQuery(mockPackages, searchQuery);
 
                 // Then: Original array should be unchanged
-                expect(mockBrands).toEqual(originalBrands);
+                expect(mockPackages).toEqual(originalPackages);
             });
         });
     });

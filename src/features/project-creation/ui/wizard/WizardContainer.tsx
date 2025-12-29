@@ -20,11 +20,11 @@ import {
     EditProjectConfig,
     WizardStepConfigWithRequirements,
 } from './wizardHelpers';
-import { loadBrands, loadStacks } from '../helpers/brandStackLoader';
-import { loadDemoTemplates } from '../helpers/templateLoader';
-import type { Brand } from '@/types/brands';
+import { loadStacks } from '../helpers/brandStackLoader';
+import { loadDemoPackages } from '../helpers/demoPackageLoader';
+import { filterComponentConfigsForStackChange } from '../helpers/stackHelpers';
+import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
-import type { DemoTemplate } from '@/types/templates';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay, LoadingDisplay } from '@/core/ui/components/feedback';
 import { PageHeader, PageFooter, CenteredFeedbackContainer, SingleColumnLayout } from '@/core/ui/components/layout';
@@ -74,18 +74,12 @@ export function WizardContainer({
     editProject,
     projectsViewMode,
 }: WizardContainerProps) {
-    // Demo templates - loaded once on mount
-    const [templates, setTemplates] = useState<DemoTemplate[]>([]);
-    useEffect(() => {
-        loadDemoTemplates().then(setTemplates);
-    }, []);
-
-    // Brands and stacks - loaded once on mount
+    // Packages and stacks - loaded once on mount
     // NOTE: Must be declared BEFORE useWizardState so stacks can be passed for step filtering
-    const [brands, setBrands] = useState<Brand[]>([]);
+    const [packages, setPackages] = useState<DemoPackage[]>([]);
     const [stacks, setStacks] = useState<Stack[]>([]);
     useEffect(() => {
-        loadBrands().then(setBrands);
+        loadDemoPackages().then(setPackages);
         loadStacks().then(setStacks);
     }, []);
 
@@ -145,7 +139,7 @@ export function WizardContainer({
         setIsConfirmingSelection,
         setIsPreparingReview,
         importedSettings,
-        templates,
+        packages,
     });
 
     // Focus trap for keyboard navigation (replaces manual implementation)
@@ -188,23 +182,45 @@ export function WizardContainer({
 
     /**
      * Called when user changes architecture (stack) on WelcomeStep
-     * Resets dependent state to force user through new architecture's steps
+     * Intelligently filters dependent state based on component overlap between stacks
+     *
+     * Components REMOVED by the new stack → Clear their configs
+     * Components RETAINED in the new stack → Keep their configs
+     * Components NEW in the new stack → Will be initialized with defaults later
      *
      * Note: Import mode fast-forward is controlled by comparing state.selectedStack
      * with importedSettings.selectedStack - no flag needed.
      */
-    const handleArchitectureChange = () => {
-        log.info('Architecture changed - resetting dependent state');
+    const handleArchitectureChange = (oldStackId: string, newStackId: string) => {
+        log.info(`Architecture changed: ${oldStackId} → ${newStackId}`);
+
+        // Find the old and new stack definitions
+        const oldStack = stacks?.find(s => s.id === oldStackId);
+        const newStack = stacks?.find(s => s.id === newStackId);
+
+        if (!newStack) {
+            log.warn(`New stack not found: ${newStackId}`);
+            return;
+        }
 
         // Clear completed steps (keep only 'welcome' since user is on that step)
         setCompletedSteps(['welcome']);
 
-        // Clear component configs (they're for the old architecture's components)
-        // Clear EDS-specific state (GitHub, repository, etc.)
+        // Filter component configs - retain configs for components that exist in both stacks
+        const filteredConfigs = filterComponentConfigsForStackChange(
+            oldStack,
+            newStack,
+            state.componentConfigs || {},
+        );
+
+        log.info(`Retained configs for components: ${Object.keys(filteredConfigs).join(', ') || 'none'}`);
+
+        // Update state with filtered configs
+        // Clear EDS-specific state (GitHub, repository, etc.) since it's architecture-dependent
         // Preserve: projectName, selectedBrand, Adobe auth/org (still valid)
         setState(prev => ({
             ...prev,
-            componentConfigs: {},
+            componentConfigs: filteredConfigs,
             // Clear EDS state
             githubAuth: undefined,
             githubUser: undefined,
@@ -246,7 +262,7 @@ export function WizardContainer({
 
         switch (state.currentStep) {
             case 'welcome':
-                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} templates={templates} initialViewMode={projectsViewMode} brands={brands} stacks={stacks} onArchitectureChange={handleArchitectureChange} />;
+                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} initialViewMode={projectsViewMode} packages={packages} stacks={stacks} onArchitectureChange={handleArchitectureChange} />;
             case 'component-selection':
                 return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
             case 'prerequisites':
@@ -270,7 +286,7 @@ export function WizardContainer({
             case 'settings':
                 return <ComponentConfigStep {...props} />;
             case 'review':
-                return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} brands={brands} stacks={stacks} />;
+                return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} packages={packages} stacks={stacks} />;
             case 'project-creation':
                 return <ProjectCreationStep state={state} onBack={goBack} />;
             default:
@@ -291,6 +307,7 @@ export function WizardContainer({
     const currentStepIndex = getCurrentStepIndex();
     const isLastStep = state.currentStep === 'project-creation';
     const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
+    const currentStepDescription = WIZARD_STEPS[currentStepIndex]?.description;
 
     return (
         <View
@@ -306,6 +323,7 @@ export function WizardContainer({
                     <PageHeader
                         title={state.editMode ? "Edit Project" : "Create Demo Project"}
                         subtitle={currentStepName}
+                        description={currentStepDescription}
                     />
 
                     {/* Step Content */}

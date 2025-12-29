@@ -1,7 +1,3 @@
-import {
-    Heading,
-    Text,
-} from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Key from '@spectrum-icons/workflow/Key';
@@ -38,14 +34,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
 
     return (
         <SingleColumnLayout>
-            <Heading level={2} marginBottom="size-300">
-                Adobe Authentication
-            </Heading>
-
-            <Text marginBottom="size-400">
-                We need to authenticate with Adobe to deploy your API Mesh and access Adobe services.
-            </Text>
-
             {/* Loading state */}
             {(showLoadingSpinner || adobeAuth.isAuthenticated === undefined) && !authTimeout && (
                 <AuthLoadingState

@@ -1,9 +1,10 @@
 import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { hasRequiredReviewData } from './reviewPredicates';
 import { resolveServiceNames, buildComponentInfoList } from './reviewStepHelpers';
+import { useCanProceed } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
-import type { Brand } from '@/types/brands';
+import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import { BaseStepProps } from '@/types/wizard';
 
@@ -26,8 +27,8 @@ export interface ComponentsData {
 
 interface ReviewStepProps extends BaseStepProps {
     componentsData?: ComponentsData;
-    /** Available brands for name resolution */
-    brands?: Brand[];
+    /** Available packages for name resolution */
+    packages?: DemoPackage[];
     /** Available stacks for name resolution */
     stacks?: Stack[];
 }
@@ -81,11 +82,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     );
 }
 
-export function ReviewStep({ state, setCanProceed, componentsData, brands, stacks }: ReviewStepProps) {
-    useEffect(() => {
-        const canProceed = hasRequiredReviewData(state);
-        setCanProceed(canProceed);
-    }, [state, setCanProceed]);
+export function ReviewStep({ state, setCanProceed, componentsData, packages, stacks }: ReviewStepProps) {
+    // Use custom validator for review step requirements
+    useCanProceed(state, setCanProceed, hasRequiredReviewData);
 
     // Check if Demo Inspector is enabled as explicit dependency
     const hasDemoInspector = state.components?.dependencies?.includes('demo-inspector') ?? false;
@@ -125,14 +124,14 @@ export function ReviewStep({ state, setCanProceed, componentsData, brands, stack
         : state.adobeWorkspace?.name;
     const hasAdobeContext = adobeOrgName || adobeProjectName || adobeWorkspaceName;
 
-    // Resolve brand/stack names
-    const brandName = state.selectedBrand
-        ? brands?.find(b => b.id === state.selectedBrand)?.name
+    // Resolve package/stack names
+    const packageName = state.selectedPackage
+        ? packages?.find(p => p.id === state.selectedPackage)?.name
         : undefined;
     const stackName = state.selectedStack
         ? stacks?.find(s => s.id === state.selectedStack)?.name
         : undefined;
-    const hasBrandStackContext = brandName || stackName;
+    const hasPackageStackContext = packageName || stackName;
 
     return (
         <div className="container-wizard">
@@ -143,11 +142,11 @@ export function ReviewStep({ state, setCanProceed, componentsData, brands, stack
 
             <Divider size="S" marginBottom="size-200" />
 
-            {/* Brand/Stack Configuration Section */}
-            {hasBrandStackContext && (
+            {/* Package/Stack Configuration Section */}
+            {hasPackageStackContext && (
                 <>
                     <Section title="PROJECT CONFIGURATION">
-                        {brandName && <LabelValue label="Brand" value={brandName} />}
+                        {packageName && <LabelValue label="Package" value={packageName} />}
                         {stackName && <LabelValue label="Architecture" value={stackName} />}
                     </Section>
                     <Divider size="S" marginBottom="size-200" />

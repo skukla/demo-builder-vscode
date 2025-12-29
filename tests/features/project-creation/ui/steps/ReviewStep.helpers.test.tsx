@@ -507,7 +507,7 @@ describe('reviewStepHelpers', () => {
                 // Given: State with app builder apps
                 const state = {
                     components: {
-                        appBuilderApps: ['custom-app'],
+                        appBuilder: ['custom-app'],
                     },
                 };
 
@@ -607,7 +607,7 @@ describe('reviewStepHelpers', () => {
                         backend: 'adobe-commerce',
                         dependencies: ['commerce-mesh', 'other-dep'],
                         integrations: ['analytics'],
-                        appBuilderApps: ['custom-app'],
+                        appBuilder: ['custom-app'],
                     },
                 };
 

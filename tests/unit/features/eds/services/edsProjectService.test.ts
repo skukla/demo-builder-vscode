@@ -50,8 +50,10 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Import types
-import type { GitHubService } from '@/features/eds/services/githubService';
-import type { DaLiveService } from '@/features/eds/services/daLiveService';
+import type { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import type { GitHubRepoOperations } from '@/features/eds/services/githubRepoOperations';
+import type { DaLiveOrgOperations } from '@/features/eds/services/daLiveOrgOperations';
+import type { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import type { GitHubRepo } from '@/features/eds/services/types';
@@ -61,14 +63,17 @@ import {
     type EdsProgressCallback,
     type EdsSetupPhase,
 } from '@/features/eds/services/types';
+import type { GitHubServicesForProject, DaLiveServicesForProject } from '@/features/eds/services/edsProjectService';
 
 // Type for the service we'll import dynamically
 type EdsProjectServiceType = import('@/features/eds/services/edsProjectService').EdsProjectService;
 
 describe('EdsProjectService', () => {
     let service: EdsProjectServiceType;
-    let mockGitHubService: jest.Mocked<Partial<GitHubService>>;
-    let mockDaLiveService: jest.Mocked<Partial<DaLiveService>>;
+    let mockGitHubTokenService: jest.Mocked<Partial<GitHubTokenService>>;
+    let mockGitHubRepoOps: jest.Mocked<Partial<GitHubRepoOperations>>;
+    let mockDaLiveOrgOps: jest.Mocked<Partial<DaLiveOrgOperations>>;
+    let mockDaLiveContentOps: jest.Mocked<Partial<DaLiveContentOperations>>;
     let mockAuthService: jest.Mocked<Partial<AuthenticationService>>;
     let mockComponentManager: jest.Mocked<Partial<ComponentManager>>;
     let mockFetch: jest.Mock;
@@ -103,16 +108,28 @@ describe('EdsProjectService', () => {
         jest.clearAllMocks();
         jest.useFakeTimers();
 
-        // Mock GitHubService
-        mockGitHubService = {
-            createFromTemplate: jest.fn(),
-            cloneRepository: jest.fn(),
+        // Mock GitHubTokenService
+        mockGitHubTokenService = {
             getToken: jest.fn(),
-            getAuthenticatedUser: jest.fn(),
+            validateToken: jest.fn(),
         };
 
-        // Mock DaLiveService
-        mockDaLiveService = {
+        // Mock GitHubRepoOperations
+        mockGitHubRepoOps = {
+            createFromTemplate: jest.fn(),
+            cloneRepository: jest.fn(),
+            getRepository: jest.fn(),
+            deleteRepository: jest.fn(),
+        };
+
+        // Mock DaLiveOrgOperations
+        mockDaLiveOrgOps = {
+            deleteSite: jest.fn(),
+            listOrgSites: jest.fn(),
+        };
+
+        // Mock DaLiveContentOperations
+        mockDaLiveContentOps = {
             copyCitisignalContent: jest.fn(),
             listDirectory: jest.fn(),
         };
@@ -143,11 +160,22 @@ describe('EdsProjectService', () => {
         // Progress callback
         mockProgressCallback = jest.fn();
 
+        // Create service interface objects
+        const githubServices: GitHubServicesForProject = {
+            tokenService: mockGitHubTokenService as unknown as GitHubTokenService,
+            repoOperations: mockGitHubRepoOps as unknown as GitHubRepoOperations,
+        };
+
+        const daLiveServices: DaLiveServicesForProject = {
+            orgOperations: mockDaLiveOrgOps as unknown as DaLiveOrgOperations,
+            contentOperations: mockDaLiveContentOps as unknown as DaLiveContentOperations,
+        };
+
         // Dynamically import to get fresh instance after mocks are set up
         const module = await import('@/features/eds/services/edsProjectService');
         service = new module.EdsProjectService(
-            mockGitHubService as unknown as GitHubService,
-            mockDaLiveService as unknown as DaLiveService,
+            githubServices,
+            daLiveServices,
             mockAuthService as unknown as AuthenticationService,
             mockComponentManager as unknown as ComponentManager,
         );
@@ -166,10 +194,20 @@ describe('EdsProjectService', () => {
             // Given: All required dependencies provided
             const module = await import('@/features/eds/services/edsProjectService');
 
+            // Create service interface objects
+            const githubServices: GitHubServicesForProject = {
+                tokenService: mockGitHubTokenService as unknown as GitHubTokenService,
+                repoOperations: mockGitHubRepoOps as unknown as GitHubRepoOperations,
+            };
+            const daLiveServices: DaLiveServicesForProject = {
+                orgOperations: mockDaLiveOrgOps as unknown as DaLiveOrgOperations,
+                contentOperations: mockDaLiveContentOps as unknown as DaLiveContentOperations,
+            };
+
             // When: Creating service
             const newService = new module.EdsProjectService(
-                mockGitHubService as unknown as GitHubService,
-                mockDaLiveService as unknown as DaLiveService,
+                githubServices,
+                daLiveServices,
                 mockAuthService as unknown as AuthenticationService,
                 mockComponentManager as unknown as ComponentManager,
             );
@@ -178,32 +216,40 @@ describe('EdsProjectService', () => {
             expect(newService).toBeDefined();
         });
 
-        it('should throw error if GitHubService not provided', async () => {
-            // Given: No GitHubService
+        it('should throw error if GitHubServices not provided', async () => {
+            // Given: No GitHubServices
             const module = await import('@/features/eds/services/edsProjectService');
+            const daLiveServices: DaLiveServicesForProject = {
+                orgOperations: mockDaLiveOrgOps as unknown as DaLiveOrgOperations,
+                contentOperations: mockDaLiveContentOps as unknown as DaLiveContentOperations,
+            };
 
-            // When: Creating service without GitHub service
+            // When: Creating service without GitHub services
             // Then: Should throw error
             expect(() => {
                 new module.EdsProjectService(
-                    null as unknown as GitHubService,
-                    mockDaLiveService as unknown as DaLiveService,
+                    null as unknown as GitHubServicesForProject,
+                    daLiveServices,
                     mockAuthService as unknown as AuthenticationService,
                     mockComponentManager as unknown as ComponentManager,
                 );
             }).toThrow('GitHubService is required');
         });
 
-        it('should throw error if DaLiveService not provided', async () => {
-            // Given: No DaLiveService
+        it('should throw error if DaLiveServices not provided', async () => {
+            // Given: No DaLiveServices
             const module = await import('@/features/eds/services/edsProjectService');
+            const githubServices: GitHubServicesForProject = {
+                tokenService: mockGitHubTokenService as unknown as GitHubTokenService,
+                repoOperations: mockGitHubRepoOps as unknown as GitHubRepoOperations,
+            };
 
-            // When: Creating service without DA.live service
+            // When: Creating service without DA.live services
             // Then: Should throw error
             expect(() => {
                 new module.EdsProjectService(
-                    mockGitHubService as unknown as GitHubService,
-                    null as unknown as DaLiveService,
+                    githubServices,
+                    null as unknown as DaLiveServicesForProject,
                     mockAuthService as unknown as AuthenticationService,
                     mockComponentManager as unknown as ComponentManager,
                 );
@@ -217,14 +263,14 @@ describe('EdsProjectService', () => {
     describe('Sequential Setup Orchestration', () => {
         beforeEach(() => {
             // Setup successful mocks for all phases
-            mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
-            mockGitHubService.cloneRepository!.mockResolvedValue(undefined);
+            mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
+            mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockResolvedValue({
                 ok: true,
                 status: 200,
                 json: async () => ({}),
             });
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: true,
                 copiedFiles: ['/index.html'],
                 failedFiles: [],
@@ -265,7 +311,7 @@ describe('EdsProjectService', () => {
 
         it('should stop execution on phase failure', async () => {
             // Given: GitHub repo creation fails
-            mockGitHubService.createFromTemplate!.mockRejectedValue(
+            mockGitHubRepoOps.createFromTemplate!.mockRejectedValue(
                 new Error('Repository name already exists'),
             );
 
@@ -278,7 +324,7 @@ describe('EdsProjectService', () => {
             expect(result.error).toContain('Repository');
 
             // And subsequent phases should not be called
-            expect(mockGitHubService.cloneRepository).not.toHaveBeenCalled();
+            expect(mockGitHubRepoOps.cloneRepository).not.toHaveBeenCalled();
         });
 
         it('should report progress through callback', async () => {
@@ -323,18 +369,18 @@ describe('EdsProjectService', () => {
     // ==========================================================
     describe('GitHub Repository Creation', () => {
         beforeEach(() => {
-            mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
+            mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
         });
 
         it('should create repository from citisignal template', async () => {
             // Given: Valid config
-            mockGitHubService.cloneRepository!.mockRejectedValue(new Error('stop here'));
+            mockGitHubRepoOps.cloneRepository!.mockRejectedValue(new Error('stop here'));
 
             // When: Running setup (will fail after repo creation)
             await service.setupProject(defaultConfig, mockProgressCallback);
 
             // Then: Should call createFromTemplate
-            expect(mockGitHubService.createFromTemplate).toHaveBeenCalledWith(
+            expect(mockGitHubRepoOps.createFromTemplate).toHaveBeenCalledWith(
                 expect.any(String), // template owner
                 expect.any(String), // template repo
                 defaultConfig.repoName,
@@ -344,13 +390,13 @@ describe('EdsProjectService', () => {
 
         it('should use skukla/citisignal-one as template', async () => {
             // Given: Valid config
-            mockGitHubService.cloneRepository!.mockRejectedValue(new Error('stop here'));
+            mockGitHubRepoOps.cloneRepository!.mockRejectedValue(new Error('stop here'));
 
             // When: Running setup
             await service.setupProject(defaultConfig, mockProgressCallback);
 
             // Then: Should use correct template
-            expect(mockGitHubService.createFromTemplate).toHaveBeenCalledWith(
+            expect(mockGitHubRepoOps.createFromTemplate).toHaveBeenCalledWith(
                 'skukla',
                 'citisignal-one',
                 expect.any(String),
@@ -367,7 +413,7 @@ describe('EdsProjectService', () => {
             await service.setupProject(defaultConfig, mockProgressCallback);
 
             // Then: Should clone to project path
-            expect(mockGitHubService.cloneRepository).toHaveBeenCalledWith(
+            expect(mockGitHubRepoOps.cloneRepository).toHaveBeenCalledWith(
                 mockRepo.cloneUrl,
                 defaultConfig.projectPath,
             );
@@ -375,7 +421,7 @@ describe('EdsProjectService', () => {
 
         it('should handle repository name conflict', async () => {
             // Given: Repository name already exists
-            mockGitHubService.createFromTemplate!.mockRejectedValue(
+            mockGitHubRepoOps.createFromTemplate!.mockRejectedValue(
                 new Error('Repository name already exists'),
             );
 
@@ -394,8 +440,8 @@ describe('EdsProjectService', () => {
     // ==========================================================
     describe('Helix 5 Configuration', () => {
         beforeEach(() => {
-            mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
-            mockGitHubService.cloneRepository!.mockResolvedValue(undefined);
+            mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
+            mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
         });
 
         it('should configure site via admin.hlx.page API', async () => {
@@ -473,7 +519,7 @@ describe('EdsProjectService', () => {
                 .mockResolvedValueOnce({ ok: true, status: 200 }); // code sync poll 3 - success!
 
             // Setup remaining mocks
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: true,
                 copiedFiles: [],
                 failedFiles: [],
@@ -505,8 +551,8 @@ describe('EdsProjectService', () => {
     // ==========================================================
     describe('Code Bus Verification', () => {
         beforeEach(() => {
-            mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
-            mockGitHubService.cloneRepository!.mockResolvedValue(undefined);
+            mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
+            mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // helix config
         });
 
@@ -554,7 +600,7 @@ describe('EdsProjectService', () => {
         it('should generate preview URL on sync success', async () => {
             // Given: Code sync succeeds on first try
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: true,
                 copiedFiles: [],
                 failedFiles: [],
@@ -577,7 +623,7 @@ describe('EdsProjectService', () => {
                 .mockResolvedValueOnce({ ok: false, status: 404 }) // code sync poll 1
                 .mockResolvedValue({ ok: true, status: 200 }); // code sync poll 2 + rest
 
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: true,
                 copiedFiles: [],
                 failedFiles: [],
@@ -602,14 +648,14 @@ describe('EdsProjectService', () => {
     // ==========================================================
     describe('DA.live Content', () => {
         beforeEach(() => {
-            mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
-            mockGitHubService.cloneRepository!.mockResolvedValue(undefined);
+            mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
+            mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockResolvedValue({ ok: true, status: 200 }); // helix config + code sync
         });
 
         it('should copy CitiSignal content to DA.live', async () => {
             // Given: Code sync complete
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: true,
                 copiedFiles: ['/index.html', '/about.html'],
                 failedFiles: [],
@@ -623,7 +669,7 @@ describe('EdsProjectService', () => {
             await resultPromise;
 
             // Then: Should copy content to destination org/site
-            expect(mockDaLiveService.copyCitisignalContent).toHaveBeenCalledWith(
+            expect(mockDaLiveContentOps.copyCitisignalContent).toHaveBeenCalledWith(
                 defaultConfig.daLiveOrg,
                 defaultConfig.daLiveSite,
                 expect.any(Function), // progress callback
@@ -632,7 +678,7 @@ describe('EdsProjectService', () => {
 
         it('should report content copy progress', async () => {
             // Given: Content copy with progress reporting
-            mockDaLiveService.copyCitisignalContent!.mockImplementation(
+            mockDaLiveContentOps.copyCitisignalContent!.mockImplementation(
                 async (_org, _site, progressCallback) => {
                     if (progressCallback) {
                         progressCallback({ processed: 1, total: 2, percentage: 50 });
@@ -658,7 +704,7 @@ describe('EdsProjectService', () => {
 
         it('should handle partial content copy failure', async () => {
             // Given: Some files fail to copy
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: false,
                 copiedFiles: ['/index.html'],
                 failedFiles: [{ path: '/about.html', error: 'Copy failed' }],
@@ -677,7 +723,7 @@ describe('EdsProjectService', () => {
 
         it('should skip content copy if already populated', async () => {
             // Given: Site already has content
-            mockDaLiveService.listDirectory!.mockResolvedValue([
+            mockDaLiveContentOps.listDirectory!.mockResolvedValue([
                 { name: 'index.html', path: '/index.html', type: 'file' },
             ]);
             const configWithSkip = { ...defaultConfig, skipContent: true };
@@ -690,7 +736,7 @@ describe('EdsProjectService', () => {
             await resultPromise;
 
             // Then: Should not copy content
-            expect(mockDaLiveService.copyCitisignalContent).not.toHaveBeenCalled();
+            expect(mockDaLiveContentOps.copyCitisignalContent).not.toHaveBeenCalled();
         });
     });
 
@@ -699,10 +745,10 @@ describe('EdsProjectService', () => {
     // ==========================================================
     describe('Tools Cloning', () => {
         beforeEach(() => {
-            mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
-            mockGitHubService.cloneRepository!.mockResolvedValue(undefined);
+            mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
+            mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: true,
                 copiedFiles: [],
                 failedFiles: [],
@@ -795,10 +841,10 @@ describe('EdsProjectService', () => {
     // ==========================================================
     describe('Environment Configuration', () => {
         beforeEach(() => {
-            mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
-            mockGitHubService.cloneRepository!.mockResolvedValue(undefined);
+            mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
+            mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: true,
                 copiedFiles: [],
                 failedFiles: [],
@@ -888,7 +934,7 @@ describe('EdsProjectService', () => {
     describe('Error Handling', () => {
         it('should provide detailed error on GitHub failure', async () => {
             // Given: GitHub API returns specific error
-            mockGitHubService.createFromTemplate!.mockRejectedValue(
+            mockGitHubRepoOps.createFromTemplate!.mockRejectedValue(
                 new Error('Repository creation failed: rate limit exceeded'),
             );
 
@@ -903,8 +949,8 @@ describe('EdsProjectService', () => {
 
         it('should provide rollback info on partial failure', async () => {
             // Given: Failure happens after repo creation
-            mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
-            mockGitHubService.cloneRepository!.mockRejectedValue(
+            mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
+            mockGitHubRepoOps.cloneRepository!.mockRejectedValue(
                 new Error('Git clone failed: permission denied'),
             );
 
@@ -919,8 +965,8 @@ describe('EdsProjectService', () => {
 
         it('should handle network timeout gracefully', async () => {
             // Given: Network timeout on Helix config
-            mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
-            mockGitHubService.cloneRepository!.mockResolvedValue(undefined);
+            mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
+            mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockRejectedValue(new Error('Network timeout'));
 
             // When: Running setup
@@ -933,7 +979,7 @@ describe('EdsProjectService', () => {
 
         it('should log detailed debugging info on failure', async () => {
             // Given: Setup fails
-            mockGitHubService.createFromTemplate!.mockRejectedValue(
+            mockGitHubRepoOps.createFromTemplate!.mockRejectedValue(
                 new Error('API error'),
             );
 
@@ -953,10 +999,10 @@ describe('EdsProjectService', () => {
     // ==========================================================
     describe('Branch Coverage', () => {
         beforeEach(() => {
-            mockGitHubService.createFromTemplate!.mockResolvedValue(mockRepo);
-            mockGitHubService.cloneRepository!.mockResolvedValue(undefined);
+            mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
+            mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: true,
                 copiedFiles: [],
                 failedFiles: [],
@@ -975,7 +1021,7 @@ describe('EdsProjectService', () => {
             await resultPromise;
 
             // Then: Should pass isPrivate=true to createFromTemplate
-            expect(mockGitHubService.createFromTemplate).toHaveBeenCalledWith(
+            expect(mockGitHubRepoOps.createFromTemplate).toHaveBeenCalledWith(
                 expect.any(String),
                 expect.any(String),
                 expect.any(String),
@@ -1100,7 +1146,7 @@ describe('EdsProjectService', () => {
 
         it('should handle content copy without progress callback', async () => {
             // Given: Config without progress callback
-            mockDaLiveService.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
                 success: true,
                 copiedFiles: ['/index.html'],
                 failedFiles: [],
@@ -1114,7 +1160,7 @@ describe('EdsProjectService', () => {
 
             // Then: Should complete successfully
             expect(result.success).toBe(true);
-            expect(mockDaLiveService.copyCitisignalContent).toHaveBeenCalled();
+            expect(mockDaLiveContentOps.copyCitisignalContent).toHaveBeenCalled();
         });
     });
 });

@@ -41,8 +41,8 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Import types
-import type { GitHubService } from '@/features/eds/services/githubService';
-import type { DaLiveService } from '@/features/eds/services/daLiveService';
+import type { GitHubRepoOperations } from '@/features/eds/services/githubRepoOperations';
+import type { DaLiveOrgOperations } from '@/features/eds/services/daLiveOrgOperations';
 import type { ToolManager } from '@/features/eds/services/toolManager';
 import type {
     EdsMetadata,
@@ -56,8 +56,8 @@ type HelixServiceType = import('@/features/eds/services/helixService').HelixServ
 
 describe('CleanupService', () => {
     let cleanupService: CleanupServiceType;
-    let mockGitHubService: jest.Mocked<Partial<GitHubService>>;
-    let mockDaLiveService: jest.Mocked<Partial<DaLiveService>>;
+    let mockGitHubRepoOps: jest.Mocked<Partial<GitHubRepoOperations>>;
+    let mockDaLiveOrgOps: jest.Mocked<Partial<DaLiveOrgOperations>>;
     let mockHelixService: jest.Mocked<Partial<HelixServiceType>>;
     let mockToolManager: jest.Mocked<Partial<ToolManager>>;
 
@@ -68,8 +68,8 @@ describe('CleanupService', () => {
         jest.clearAllMocks();
         operationOrder = [];
 
-        // Mock GitHubService
-        mockGitHubService = {
+        // Mock GitHubRepoOperations
+        mockGitHubRepoOps = {
             deleteRepository: jest.fn().mockImplementation(async () => {
                 operationOrder.push('github');
                 return { success: true };
@@ -80,8 +80,8 @@ describe('CleanupService', () => {
             }),
         };
 
-        // Mock DaLiveService
-        mockDaLiveService = {
+        // Mock DaLiveOrgOperations
+        mockDaLiveOrgOps = {
             deleteSite: jest.fn().mockImplementation(async () => {
                 operationOrder.push('dalive');
                 return { success: true };
@@ -111,8 +111,8 @@ describe('CleanupService', () => {
         // Dynamically import to get fresh instance after mocks are set up
         const module = await import('@/features/eds/services/cleanupService');
         cleanupService = new module.CleanupService(
-            mockGitHubService as unknown as GitHubService,
-            mockDaLiveService as unknown as DaLiveService,
+            mockGitHubRepoOps as unknown as GitHubRepoOperations,
+            mockDaLiveOrgOps as unknown as DaLiveOrgOperations,
             mockHelixService as unknown as HelixServiceType,
             mockToolManager as unknown as ToolManager,
         );
@@ -145,9 +145,9 @@ describe('CleanupService', () => {
             expect(mockToolManager.executeAcoCleanup).not.toHaveBeenCalled();
             expect(mockToolManager.executeCommerceCleanup).not.toHaveBeenCalled();
             expect(mockHelixService.unpublishSite).not.toHaveBeenCalled();
-            expect(mockDaLiveService.deleteSite).not.toHaveBeenCalled();
-            expect(mockGitHubService.deleteRepository).not.toHaveBeenCalled();
-            expect(mockGitHubService.archiveRepository).not.toHaveBeenCalled();
+            expect(mockDaLiveOrgOps.deleteSite).not.toHaveBeenCalled();
+            expect(mockGitHubRepoOps.deleteRepository).not.toHaveBeenCalled();
+            expect(mockGitHubRepoOps.archiveRepository).not.toHaveBeenCalled();
         });
 
         it('should cleanup all resources when all options enabled', async () => {
@@ -190,13 +190,13 @@ describe('CleanupService', () => {
             await cleanupService.cleanupEdsResources(metadata, options);
 
             // Then: Should archive, not delete
-            expect(mockGitHubService.archiveRepository).toHaveBeenCalledWith('testuser', 'my-site');
-            expect(mockGitHubService.deleteRepository).not.toHaveBeenCalled();
+            expect(mockGitHubRepoOps.archiveRepository).toHaveBeenCalledWith('testuser', 'my-site');
+            expect(mockGitHubRepoOps.deleteRepository).not.toHaveBeenCalled();
         });
 
         it('should continue cleanup even if one service fails', async () => {
             // Given: DA.live service fails
-            mockDaLiveService.deleteSite = jest.fn().mockRejectedValue(new Error('DA.live error'));
+            mockDaLiveOrgOps.deleteSite = jest.fn().mockRejectedValue(new Error('DA.live error'));
 
             const metadata: EdsMetadata = {
                 githubRepo: 'testuser/my-site',
@@ -370,7 +370,7 @@ describe('CleanupService', () => {
             await cleanupService.cleanupEdsResources(metadata, options);
 
             // Then: Should call delete with owner and repo
-            expect(mockGitHubService.deleteRepository).toHaveBeenCalledWith('testuser', 'my-site');
+            expect(mockGitHubRepoOps.deleteRepository).toHaveBeenCalledWith('testuser', 'my-site');
         });
 
         it('should archive repository via PATCH with archived: true', async () => {
@@ -387,12 +387,12 @@ describe('CleanupService', () => {
             await cleanupService.cleanupEdsResources(metadata, options);
 
             // Then: Should call archive with owner and repo
-            expect(mockGitHubService.archiveRepository).toHaveBeenCalledWith('owner', 'repo-name');
+            expect(mockGitHubRepoOps.archiveRepository).toHaveBeenCalledWith('owner', 'repo-name');
         });
 
         it('should throw error when delete_repo scope missing for delete', async () => {
             // Given: Delete fails due to missing scope
-            mockGitHubService.deleteRepository = jest.fn().mockRejectedValue(
+            mockGitHubRepoOps.deleteRepository = jest.fn().mockRejectedValue(
                 new Error('Resource not accessible by personal access token (missing delete_repo scope)'),
             );
 
@@ -414,7 +414,7 @@ describe('CleanupService', () => {
 
         it('should work with repo scope for archive', async () => {
             // Given: Archive only needs repo scope (which we have)
-            mockGitHubService.archiveRepository = jest.fn().mockResolvedValue({ success: true });
+            mockGitHubRepoOps.archiveRepository = jest.fn().mockResolvedValue({ success: true });
 
             const metadata: EdsMetadata = {
                 githubRepo: 'testuser/my-site',
@@ -450,12 +450,12 @@ describe('CleanupService', () => {
             await cleanupService.cleanupEdsResources(metadata, options);
 
             // Then: Should call deleteSite with org and site
-            expect(mockDaLiveService.deleteSite).toHaveBeenCalledWith('myorg', 'mysite');
+            expect(mockDaLiveOrgOps.deleteSite).toHaveBeenCalledWith('myorg', 'mysite');
         });
 
         it('should handle 404 as success (already deleted)', async () => {
             // Given: Site already deleted (returns success for 404)
-            mockDaLiveService.deleteSite = jest.fn().mockResolvedValue({
+            mockDaLiveOrgOps.deleteSite = jest.fn().mockResolvedValue({
                 success: true,
                 alreadyDeleted: true,
             });
@@ -477,7 +477,7 @@ describe('CleanupService', () => {
 
         it('should throw error on 403 access denied', async () => {
             // Given: Access denied
-            mockDaLiveService.deleteSite = jest.fn().mockRejectedValue(
+            mockDaLiveOrgOps.deleteSite = jest.fn().mockRejectedValue(
                 new Error('Access denied to organization'),
             );
 
@@ -601,8 +601,8 @@ describe('CleanupService', () => {
             // Given: Multiple services fail
             mockToolManager.executeAcoCleanup = jest.fn().mockRejectedValue(new Error('Backend failed'));
             mockHelixService.unpublishSite = jest.fn().mockRejectedValue(new Error('Helix failed'));
-            mockDaLiveService.deleteSite = jest.fn().mockRejectedValue(new Error('DA.live failed'));
-            mockGitHubService.deleteRepository = jest.fn().mockRejectedValue(new Error('GitHub failed'));
+            mockDaLiveOrgOps.deleteSite = jest.fn().mockRejectedValue(new Error('DA.live failed'));
+            mockGitHubRepoOps.deleteRepository = jest.fn().mockRejectedValue(new Error('GitHub failed'));
 
             const metadata: EdsMetadata = {
                 githubRepo: 'testuser/my-site',

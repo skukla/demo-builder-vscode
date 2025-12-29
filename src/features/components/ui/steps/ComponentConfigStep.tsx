@@ -1,8 +1,8 @@
 import {
-    Heading,
     Text,
     Flex,
     Form,
+    Heading,
     Divider,
 } from '@adobe/react-spectrum';
 import React from 'react';
@@ -116,9 +116,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         <TwoColumnLayout
             leftContent={
                 <div className="flex-column h-full">
-                    <Heading level={2} marginBottom="size-300">Settings Collection</Heading>
                     <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
-                        Configure the settings for your selected components. Required fields are marked with an asterisk.
+                        Required fields are marked with an asterisk.
                     </Text>
 
                     {renderContent()}

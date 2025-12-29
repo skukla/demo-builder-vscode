@@ -10,13 +10,13 @@
  */
 
 import * as vscode from 'vscode';
-import { extractSettingsFromProject } from '../services/settingsSerializer';
 import {
+    extractSettingsFromProject,
     importSettingsFromFile,
     copySettingsFromProject,
     exportProjectSettings,
     deleteProject,
-} from './services';
+} from '../services';
 import { BaseWebviewCommand } from '@/core/base';
 import { executeCommandForProject } from '@/core/handlers';
 import { sessionUIState } from '@/core/state/sessionUIState';

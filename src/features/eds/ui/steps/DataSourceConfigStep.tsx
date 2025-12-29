@@ -25,6 +25,7 @@ import {
     TextField,
     View,
 } from '@adobe/react-spectrum';
+// Note: Heading is still used for the "Create New Site" subsection (level={3})
 import Add from '@spectrum-icons/workflow/Add';
 import Close from '@spectrum-icons/workflow/Close';
 import Info from '@spectrum-icons/workflow/Info';
@@ -34,7 +35,7 @@ import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
-import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
+import { useSelectionStep } from '@/core/ui/hooks';
 import type { DaLiveSiteItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 
@@ -177,12 +178,6 @@ export function DataSourceConfigStep({
     if (showLoading || (isLoading && !hasLoadedOnce)) {
         return (
             <SingleColumnLayout>
-                <Heading level={2} marginBottom="size-100">
-                    DA.live Project Configuration
-                </Heading>
-                <Text marginBottom="size-300" UNSAFE_className="text-sm text-gray-600">
-                    Select an existing site or create a new one in <strong>{daLiveOrg}</strong>.
-                </Text>
                 <CenteredFeedbackContainer>
                     <LoadingDisplay
                         size="L"
@@ -198,12 +193,6 @@ export function DataSourceConfigStep({
     if (error && !isLoading) {
         return (
             <SingleColumnLayout>
-                <Heading level={2} marginBottom="size-100">
-                    DA.live Project Configuration
-                </Heading>
-                <Text marginBottom="size-300" UNSAFE_className="text-sm text-gray-600">
-                    Select an existing site or create a new one in <strong>{daLiveOrg}</strong>.
-                </Text>
                 <StatusDisplay
                     variant="error"
                     title="Error Loading Sites"
@@ -218,12 +207,6 @@ export function DataSourceConfigStep({
     if (sites.length === 0 && !isLoading && !isCreatingNew) {
         return (
             <SingleColumnLayout>
-                <Heading level={2} marginBottom="size-100">
-                    DA.live Project Configuration
-                </Heading>
-                <Text marginBottom="size-300" UNSAFE_className="text-sm text-gray-600">
-                    Select an existing site or create a new one in <strong>{daLiveOrg}</strong>.
-                </Text>
                 <EmptyState
                     title="No Sites Found"
                     description={`No existing sites found in ${daLiveOrg}.`}
@@ -239,16 +222,7 @@ export function DataSourceConfigStep({
 
     return (
         <SingleColumnLayout>
-            {/* Header */}
-            <Heading level={2} marginBottom="size-100">
-                DA.live Project Configuration
-            </Heading>
-
-            <Text marginBottom="size-300" UNSAFE_className="text-sm text-gray-600">
-                Select an existing site or create a new one in <strong>{daLiveOrg}</strong>.
-            </Text>
-
-            {/* Site Selection - similar to projects dashboard */}
+            {/* Site Selection */}
             {!isCreatingNew && (
                 <>
                     {/* Search + New button row */}

@@ -56,29 +56,3 @@ export interface TrackableStepProps extends BaseStepProps {
     /** List of completed steps (for navigation restrictions) */
     completedSteps?: WizardStep[];
 }
-
-/**
- * Step props with external data.
- *
- * Used by steps that receive data from the wizard container
- * (e.g., ComponentSelectionStep receives componentsData).
- *
- * @template T - The type of data passed to the step
- */
-export interface DataStepProps<T = unknown> extends BaseStepProps {
-    /** Data passed from parent (e.g., componentsData, meshConfig) */
-    data?: T;
-}
-
-/**
- * Full step props combining all optional features.
- *
- * Used when a step needs all possible functionality:
- * navigation, tracking, and external data.
- */
-export interface FullStepProps<T = unknown> extends NavigableStepProps, TrackableStepProps {
-    /** Data passed from parent (e.g., componentsData) */
-    data?: T;
-    /** Current step identifier for context */
-    currentStep?: string;
-}

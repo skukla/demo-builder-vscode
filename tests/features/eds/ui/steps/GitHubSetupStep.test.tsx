@@ -95,9 +95,9 @@ describe('GitHubSetupStep', () => {
                 </TestWrapper>
             );
 
-            // Then: Should show sign-in button and page heading
+            // Then: Should show sign-in button and title
             expect(screen.getByRole('button', { name: /sign in with github/i })).toBeInTheDocument();
-            expect(screen.getByRole('heading', { name: /github authentication/i })).toBeInTheDocument();
+            expect(screen.getByText(/sign in to github/i)).toBeInTheDocument();
         });
 
         it('should initiate OAuth flow on sign-in button click', async () => {

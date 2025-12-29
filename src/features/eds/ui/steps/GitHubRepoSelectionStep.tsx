@@ -25,6 +25,7 @@ import {
     TextField,
     View,
 } from '@adobe/react-spectrum';
+import Add from '@spectrum-icons/workflow/Add';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Info from '@spectrum-icons/workflow/Info';
@@ -34,8 +35,8 @@ import {
     getRepositoryNameError,
     normalizeRepositoryName,
 } from '@/core/validation/normalizers';
-import { SelectionStepContent } from '@/features/authentication/ui/components/SelectionStepContent';
-import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
+import { SelectionStepContent } from '@/core/ui/components/selection';
+import { useSelectionStep } from '@/core/ui/hooks';
 import type { GitHubRepoItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 
@@ -347,13 +348,13 @@ export function GitHubRepoSelectionStep({
             {/* Use Existing Repository mode */}
             {repoMode === 'existing' && (
                 <>
-                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-                        <Button variant="secondary" onPress={handleCreateNew}>
-                            Create New Repository
-                        </Button>
-                    </Flex>
-
                     <SelectionStepContent
+                        headerAction={
+                            <Button variant="accent" onPress={handleCreateNew}>
+                                <Add size="S" />
+                                <Text>New</Text>
+                            </Button>
+                        }
                         items={repos}
                         filteredItems={filteredRepos}
                         showLoading={showLoading}

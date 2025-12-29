@@ -2,18 +2,27 @@
  * EDS (Edge Delivery Services) Feature
  *
  * Exports public API for EDS integration including:
- * - GitHub service for authentication and repository operations
- * - DA.live service for content management
+ * - GitHub services for authentication and repository operations (extracted modules)
+ * - DA.live services for content management (extracted modules)
  * - EDS Project service for complete project setup orchestration
  * - UI components for wizard steps
  * - Message handlers for wizard operations
  * - Types for GitHub, DA.live, and EDS entities
  */
 
-// Services
-export { GitHubService } from './services/githubService';
-export { DaLiveService } from './services/daLiveService';
-export { EdsProjectService } from './services/edsProjectService';
+// GitHub Services (extracted modules - explicit dependencies, locality of behavior)
+export { GitHubTokenService } from './services/githubTokenService';
+export { GitHubRepoOperations } from './services/githubRepoOperations';
+export { GitHubFileOperations } from './services/githubFileOperations';
+export { GitHubOAuthService } from './services/githubOAuthService';
+
+// DA.live Services (extracted modules - explicit dependencies, locality of behavior)
+export { DaLiveOrgOperations, type TokenProvider } from './services/daLiveOrgOperations';
+export { DaLiveContentOperations } from './services/daLiveContentOperations';
+export { DaLiveAuthService } from './services/daLiveAuthService';
+
+// Project Orchestration Services
+export { EdsProjectService, type GitHubServicesForProject, type DaLiveServicesForProject } from './services/edsProjectService';
 export { ToolManager } from './services/toolManager';
 export { HelixService, type UnpublishResult } from './services/helixService';
 export { CleanupService } from './services/cleanupService';

@@ -3,17 +3,22 @@
  *
  * Extracts the field validation logic from ConfigureScreen.
  * Handles validation of all fields based on their types and requirements.
+ * Uses composable validators from @/core/validation for URL and pattern validation.
  */
 
 import { useEffect, Dispatch, SetStateAction } from 'react';
 import type { ServiceGroup } from '../configureTypes';
 import { ComponentConfigs } from '@/types/webview';
+import { url, pattern } from '@/core/validation/Validator';
 
 interface UseFieldValidationProps {
     serviceGroups: ServiceGroup[];
     componentConfigs: ComponentConfigs;
     setValidationErrors: Dispatch<SetStateAction<Record<string, string>>>;
 }
+
+// Create validators with consistent error messages
+const urlValidator = url('Please enter a valid URL');
 
 /**
  * Hook to validate all fields and update validation errors
@@ -41,7 +46,7 @@ export function useFieldValidation({
                     }
                 }
 
-                // URL validation
+                // URL validation using core validator
                 if (field.type === 'url') {
                     const firstComponentWithValue = field.componentIds.find(compId =>
                         componentConfigs[compId]?.[field.key],
@@ -49,15 +54,14 @@ export function useFieldValidation({
 
                     if (firstComponentWithValue) {
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
-                        try {
-                            new URL(value);
-                        } catch {
-                            errors[field.key] = 'Please enter a valid URL';
+                        const result = urlValidator(value);
+                        if (!result.valid && result.error) {
+                            errors[field.key] = result.error;
                         }
                     }
                 }
 
-                // Pattern validation
+                // Pattern validation using core validator
                 if (field.validation?.pattern) {
                     const firstComponentWithValue = field.componentIds.find(compId =>
                         componentConfigs[compId]?.[field.key],
@@ -65,9 +69,13 @@ export function useFieldValidation({
 
                     if (firstComponentWithValue) {
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
-                        const pattern = new RegExp(field.validation.pattern);
-                        if (!pattern.test(value)) {
-                            errors[field.key] = field.validation.message || 'Invalid format';
+                        const patternValidator = pattern(
+                            new RegExp(field.validation.pattern),
+                            field.validation.message || 'Invalid format'
+                        );
+                        const result = patternValidator(value);
+                        if (!result.valid && result.error) {
+                            errors[field.key] = result.error;
                         }
                     }
                 }

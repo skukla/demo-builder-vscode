@@ -2,7 +2,7 @@
  * Unit Tests: GitHubServiceCard
  *
  * Tests for the GitHub service card presentational component.
- * Used in ConnectServicesStep for card and checklist layouts.
+ * Used in ConnectServicesStep for side-by-side card layout.
  *
  * Coverage:
  * - Checking state
@@ -49,7 +49,6 @@ describe('GitHubServiceCard', () => {
                         isAuthenticating={false}
                         isAuthenticated={false}
                         onConnect={mockOnConnect}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -73,7 +72,6 @@ describe('GitHubServiceCard', () => {
                         isAuthenticating={true}
                         isAuthenticated={false}
                         onConnect={mockOnConnect}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -100,7 +98,6 @@ describe('GitHubServiceCard', () => {
                         user={{ login: 'testuser' }}
                         onConnect={mockOnConnect}
                         onChangeAccount={mockOnChangeAccount}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -125,7 +122,6 @@ describe('GitHubServiceCard', () => {
                         user={{ login: 'testuser' }}
                         onConnect={mockOnConnect}
                         onChangeAccount={mockOnChangeAccount}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -150,7 +146,6 @@ describe('GitHubServiceCard', () => {
                         user={{ login: 'testuser' }}
                         onConnect={mockOnConnect}
                         onChangeAccount={mockOnChangeAccount}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -178,7 +173,6 @@ describe('GitHubServiceCard', () => {
                         isAuthenticating={false}
                         isAuthenticated={false}
                         onConnect={mockOnConnect}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -201,7 +195,6 @@ describe('GitHubServiceCard', () => {
                         isAuthenticating={false}
                         isAuthenticated={false}
                         onConnect={mockOnConnect}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -230,7 +223,6 @@ describe('GitHubServiceCard', () => {
                         isAuthenticated={false}
                         error="Authentication failed"
                         onConnect={mockOnConnect}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -241,9 +233,9 @@ describe('GitHubServiceCard', () => {
         });
     });
 
-    describe('Variant Display', () => {
-        it('should render card variant with GitHub icon', async () => {
-            // Given: Card variant
+    describe('Card Display', () => {
+        it('should render card with GitHub icon and title', async () => {
+            // Given: Service card component
             const { GitHubServiceCard } = await import(
                 '@/features/eds/ui/components/GitHubServiceCard'
             );
@@ -256,7 +248,6 @@ describe('GitHubServiceCard', () => {
                         isAuthenticating={false}
                         isAuthenticated={false}
                         onConnect={mockOnConnect}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -264,29 +255,6 @@ describe('GitHubServiceCard', () => {
             // Then: Should have card class and GitHub title
             expect(container.querySelector('.service-card')).toBeInTheDocument();
             expect(screen.getByText('GitHub')).toBeInTheDocument();
-        });
-
-        it('should render checklist variant', async () => {
-            // Given: Checklist variant
-            const { GitHubServiceCard } = await import(
-                '@/features/eds/ui/components/GitHubServiceCard'
-            );
-
-            // When: Component renders
-            const { container } = render(
-                <TestWrapper>
-                    <GitHubServiceCard
-                        isChecking={false}
-                        isAuthenticating={false}
-                        isAuthenticated={false}
-                        onConnect={mockOnConnect}
-                        variant="checklist"
-                    />
-                </TestWrapper>
-            );
-
-            // Then: Should have checklist class
-            expect(container.querySelector('.checklist-item')).toBeInTheDocument();
         });
     });
 });

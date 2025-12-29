@@ -15,6 +15,7 @@
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Constants
@@ -44,14 +45,20 @@ export interface UnpublishResult {
  * Helix Service for admin operations
  */
 export class HelixService {
-    private logger = getLogger();
+    private logger: Logger;
     private authService: AuthenticationService;
 
-    constructor(authService: AuthenticationService) {
+    /**
+     * Create a HelixService
+     * @param authService - Authentication service for IMS token access
+     * @param logger - Optional logger for dependency injection (defaults to getLogger())
+     */
+    constructor(authService: AuthenticationService, logger?: Logger) {
         if (!authService) {
             throw new Error('AuthenticationService is required');
         }
         this.authService = authService;
+        this.logger = logger ?? getLogger();
     }
 
     // ==========================================================

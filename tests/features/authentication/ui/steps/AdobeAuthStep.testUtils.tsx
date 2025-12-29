@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup } from '@testing-library/react';
+import { cleanup, act } from '@testing-library/react';
 import { WizardState } from '@/types/webview';
 
 // Cleanup function that should be called in afterEach
@@ -34,8 +34,13 @@ export function setupAuthStatusMock() {
         }
         return jest.fn();
     });
-    // Return a function that calls the captured callback
-    return (data: any) => messageCallback(data);
+    // Return a function that calls the captured callback wrapped in act()
+    // This prevents React "not wrapped in act()" warnings when simulating messages
+    return (data: any) => {
+        act(() => {
+            messageCallback(data);
+        });
+    };
 }
 
 // Reset all mocks

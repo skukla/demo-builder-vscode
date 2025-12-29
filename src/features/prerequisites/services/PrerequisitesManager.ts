@@ -87,7 +87,7 @@ export class PrerequisitesManager {
             frontend?: string;
             backend?: string;
             dependencies?: string[];
-            appBuilderApps?: string[];
+            appBuilder?: string[];
         },
     ): Promise<PrerequisiteDefinition[]> {
         const config = await this.loadConfig();
@@ -109,7 +109,7 @@ export class PrerequisitesManager {
                 checkComponent(selectedComponents.backend);
             }
             selectedComponents.dependencies?.forEach(checkComponent);
-            selectedComponents.appBuilderApps?.forEach(checkComponent);
+            selectedComponents.appBuilder?.forEach(checkComponent);
         }
 
         // Return all non-optional prerequisites plus any required by components

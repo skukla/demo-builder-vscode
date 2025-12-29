@@ -46,6 +46,9 @@ export interface WizardStepWithCondition {
     /** Display name for the step */
     name: string;
 
+    /** Optional description for the step */
+    description?: string;
+
     /** Optional condition for showing this step */
     condition?: StepCondition;
 }

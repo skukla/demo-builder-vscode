@@ -28,21 +28,20 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
-// Mock brandStackLoader to prevent undefined components access in tests
-jest.mock('@/features/project-creation/ui/helpers/brandStackLoader', () => ({
+// Mock demoPackageLoader to prevent JSON import issues in tests
+jest.mock('@/features/project-creation/ui/helpers/demoPackageLoader', () => ({
     __esModule: true,
-    loadBrands: async () => [
-        { id: 'test-brand', name: 'Test Brand', description: 'Test', logo: '/test.svg', stacks: ['test-stack'] },
-    ],
-    loadStacks: async () => [
-        { id: 'test-stack', name: 'Test Stack', frontend: 'test-frontend', backend: 'test-backend' },
+    loadDemoPackages: async () => [
+        { id: 'test-package', name: 'Test Package', description: 'Test', configDefaults: {}, storefronts: {} },
     ],
 }));
 
-// Mock templateLoader
-jest.mock('@/features/project-creation/ui/helpers/templateLoader', () => ({
+// Mock brandStackLoader for loadStacks()
+jest.mock('@/features/project-creation/ui/helpers/brandStackLoader', () => ({
     __esModule: true,
-    loadDemoTemplates: async () => [{ id: 'test-template', name: 'Test Template', description: 'Test' }],
+    loadStacks: async () => [
+        { id: 'test-stack', name: 'Test Stack', frontend: 'test-frontend', backend: 'test-backend' },
+    ],
 }));
 
 // Store mock implementations so we can change them per test

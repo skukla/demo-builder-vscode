@@ -3,8 +3,12 @@ import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { toServiceGroupWithSortedFields, ServiceGroupDef } from '@/features/components/services/serviceGroupTransforms';
 import { ComponentEnvVar, ComponentConfigs, WizardState } from '@/types/webview';
+import { url, pattern } from '@/core/validation/Validator';
 
 const log = webviewLogger('useComponentConfig');
+
+// Create validators with consistent error messages
+const urlValidator = url('Please enter a valid URL');
 
 interface ComponentData {
     id: string;
@@ -198,7 +202,7 @@ export function useComponentConfig({
             if (sys) components.push({ id: sys.id, data: sys, type: 'External System' });
         });
 
-        state.components?.appBuilderApps?.forEach(appId => {
+        state.components?.appBuilder?.forEach(appId => {
             const app = componentsData.appBuilder?.find(a => a.id === appId);
             if (app) addComponentWithDeps(app, 'App Builder');
         });
@@ -259,20 +263,20 @@ export function useComponentConfig({
             const newConfigs = { ...prevConfigs };
             let hasChanges = false;
 
-            // Get brand-specific defaults from state (e.g., CitiSignal store codes)
-            const brandDefaults = state.brandConfigDefaults || {};
+            // Get package-specific defaults from state (e.g., CitiSignal store codes)
+            const packageDefaults = state.packageConfigDefaults || {};
 
             serviceGroups.forEach(group => {
                 group.fields.forEach(field => {
-                    // Priority: 1) Brand defaults, 2) Field defaults
-                    const brandValue = brandDefaults[field.key];
-                    const defaultValue = brandValue ?? field.default;
+                    // Priority: 1) Package defaults, 2) Field defaults
+                    const packageValue = packageDefaults[field.key];
+                    const defaultValue = packageValue ?? field.default;
 
                     if (defaultValue !== undefined && defaultValue !== '') {
                         field.componentIds.forEach(componentId => {
                             if (!newConfigs[componentId]) newConfigs[componentId] = {};
-                            // Apply if field is empty OR if brand default should override
-                            if (!newConfigs[componentId][field.key] || brandValue) {
+                            // Apply if field is empty OR if package default should override
+                            if (!newConfigs[componentId][field.key] || packageValue) {
                                 newConfigs[componentId][field.key] = defaultValue;
                                 hasChanges = true;
                             }
@@ -283,7 +287,7 @@ export function useComponentConfig({
 
             return hasChanges ? newConfigs : prevConfigs;
         });
-    }, [serviceGroups, state.brandConfigDefaults]);
+    }, [serviceGroups, state.packageConfigDefaults]);
 
     // Note: Auto-fill mesh endpoint effect removed - MESH_ENDPOINT is now auto-configured
     // during project creation (after mesh deployment), not collected in Settings Collection
@@ -308,21 +312,32 @@ export function useComponentConfig({
                     }
                 }
 
+                // URL validation using core validator
                 if (field.type === 'url') {
                     const firstComponentWithValue = field.componentIds.find(compId => componentConfigs[compId]?.[field.key]);
                     if (firstComponentWithValue) {
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
-                        try { new URL(value); } catch { allValid = false; errors[field.key] = 'Please enter a valid URL'; }
+                        const result = urlValidator(value);
+                        if (!result.valid && result.error) {
+                            allValid = false;
+                            errors[field.key] = result.error;
+                        }
                     }
                 }
 
+                // Pattern validation using core validator
                 if (field.validation?.pattern) {
                     const firstComponentWithValue = field.componentIds.find(compId => componentConfigs[compId]?.[field.key]);
                     if (firstComponentWithValue) {
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
-                        if (!new RegExp(field.validation.pattern).test(value)) {
+                        const patternValidator = pattern(
+                            new RegExp(field.validation.pattern),
+                            field.validation.message || 'Invalid format'
+                        );
+                        const result = patternValidator(value);
+                        if (!result.valid && result.error) {
                             allValid = false;
-                            errors[field.key] = field.validation.message || 'Invalid format';
+                            errors[field.key] = result.error;
                         }
                     }
                 }

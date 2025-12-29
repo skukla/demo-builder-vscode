@@ -5,14 +5,14 @@
  * Follows TDD methodology - tests written BEFORE implementation.
  *
  * Tested functions:
- * - Service cache getters (getGitHubService, getDaLiveService, getDaLiveAuthService)
+ * - Service cache getters (getGitHubServices, getDaLiveServices, getDaLiveAuthService)
  * - clearServiceCache
  * - validateDaLiveToken (JWT validation for DA.live tokens)
  */
 
 import {
-    getGitHubService,
-    getDaLiveService,
+    getGitHubServices,
+    getDaLiveServices,
     getDaLiveAuthService,
     clearServiceCache,
     validateDaLiveToken,
@@ -20,18 +20,46 @@ import {
 import type { HandlerContext } from '@/types/handlers';
 import type { ExtensionContext } from 'vscode';
 
-// Mock the service classes
-jest.mock('@/features/eds/services/githubService', () => ({
-    GitHubService: jest.fn().mockImplementation((secrets) => ({
+// Mock the extracted service classes
+jest.mock('@/features/eds/services/githubTokenService', () => ({
+    GitHubTokenService: jest.fn().mockImplementation((secrets) => ({
         secrets,
-        mockType: 'GitHubService',
+        mockType: 'GitHubTokenService',
     })),
 }));
 
-jest.mock('@/features/eds/services/daLiveService', () => ({
-    DaLiveService: jest.fn().mockImplementation((authManager) => ({
-        authManager,
-        mockType: 'DaLiveService',
+jest.mock('@/features/eds/services/githubRepoOperations', () => ({
+    GitHubRepoOperations: jest.fn().mockImplementation((tokenService) => ({
+        tokenService,
+        mockType: 'GitHubRepoOperations',
+    })),
+}));
+
+jest.mock('@/features/eds/services/githubFileOperations', () => ({
+    GitHubFileOperations: jest.fn().mockImplementation((tokenService) => ({
+        tokenService,
+        mockType: 'GitHubFileOperations',
+    })),
+}));
+
+jest.mock('@/features/eds/services/githubOAuthService', () => ({
+    GitHubOAuthService: jest.fn().mockImplementation((secrets) => ({
+        secrets,
+        mockType: 'GitHubOAuthService',
+    })),
+}));
+
+jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
+    DaLiveOrgOperations: jest.fn().mockImplementation((tokenProvider) => ({
+        tokenProvider,
+        mockType: 'DaLiveOrgOperations',
+    })),
+}));
+
+jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+    DaLiveContentOperations: jest.fn().mockImplementation((tokenProvider) => ({
+        tokenProvider,
+        mockType: 'DaLiveContentOperations',
     })),
 }));
 
@@ -40,6 +68,16 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => ({
         context,
         mockType: 'DaLiveAuthService',
         dispose: jest.fn(),
+    })),
+}));
+
+// Mock logging
+jest.mock('@/core/logging', () => ({
+    getLogger: jest.fn(() => ({
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
     })),
 }));
 
@@ -98,85 +136,88 @@ describe('edsHelpers', () => {
         jest.clearAllMocks();
     });
 
-    describe('Service Cache - getGitHubService', () => {
-        it('should create GitHubService on first call', () => {
-            // Given: A fresh context with no cached service
+    describe('Service Cache - getGitHubServices', () => {
+        it('should create GitHub services on first call', () => {
+            // Given: A fresh context with no cached services
             const context = createMockHandlerContext();
 
-            // When: Getting the GitHub service
-            const service = getGitHubService(context);
+            // When: Getting the GitHub services
+            const services = getGitHubServices(context);
 
-            // Then: Should return a GitHubService instance
-            expect(service).toBeDefined();
-            expect((service as unknown as { mockType: string }).mockType).toBe('GitHubService');
+            // Then: Should return an object with all GitHub services
+            expect(services).toBeDefined();
+            expect(services.tokenService).toBeDefined();
+            expect(services.repoOperations).toBeDefined();
+            expect(services.fileOperations).toBeDefined();
+            expect(services.oauthService).toBeDefined();
         });
 
-        it('should return cached GitHubService on subsequent calls', () => {
-            // Given: A context with previously created service
+        it('should return cached GitHub services on subsequent calls', () => {
+            // Given: A context with previously created services
             const context = createMockHandlerContext();
-            const firstService = getGitHubService(context);
+            const firstServices = getGitHubServices(context);
 
-            // When: Getting the service again
-            const secondService = getGitHubService(context);
+            // When: Getting the services again
+            const secondServices = getGitHubServices(context);
 
             // Then: Should return the same cached instance
-            expect(secondService).toBe(firstService);
+            expect(secondServices).toBe(firstServices);
         });
 
-        it('should use context.secrets for GitHubService', () => {
+        it('should use context.secrets for GitHubTokenService', () => {
             // Given: A context with specific secrets
             const context = createMockHandlerContext();
 
-            // When: Getting the GitHub service
-            const service = getGitHubService(context);
+            // When: Getting the GitHub services
+            const services = getGitHubServices(context);
 
-            // Then: Should pass secrets to the service
-            expect((service as unknown as { secrets: unknown }).secrets).toBe(context.context.secrets);
+            // Then: Should pass secrets to the token service
+            expect((services.tokenService as unknown as { secrets: unknown }).secrets).toBe(context.context.secrets);
         });
     });
 
-    describe('Service Cache - getDaLiveService', () => {
-        it('should create DaLiveService on first call', () => {
-            // Given: A fresh context with authManager
-            const context = createMockHandlerContext();
+    describe('Service Cache - getDaLiveServices', () => {
+        it('should create DA.live services on first call', () => {
+            // Given: A fresh context with authManager that has getTokenManager
+            const mockTokenManager = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };
+            const context = createMockHandlerContext({
+                authManager: {
+                    getTokenManager: jest.fn().mockReturnValue(mockTokenManager),
+                } as unknown as HandlerContext['authManager'],
+            });
 
-            // When: Getting the DaLive service
-            const service = getDaLiveService(context);
+            // When: Getting the DA.live services
+            const services = getDaLiveServices(context);
 
-            // Then: Should return a DaLiveService instance
-            expect(service).toBeDefined();
-            expect((service as unknown as { mockType: string }).mockType).toBe('DaLiveService');
+            // Then: Should return an object with all DA.live services
+            expect(services).toBeDefined();
+            expect(services.orgOperations).toBeDefined();
+            expect(services.contentOperations).toBeDefined();
         });
 
-        it('should return cached DaLiveService on subsequent calls', () => {
-            // Given: A context with previously created service
-            const context = createMockHandlerContext();
-            const firstService = getDaLiveService(context);
+        it('should return cached DA.live services on subsequent calls', () => {
+            // Given: A context with previously created services
+            const mockTokenManager = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };
+            const context = createMockHandlerContext({
+                authManager: {
+                    getTokenManager: jest.fn().mockReturnValue(mockTokenManager),
+                } as unknown as HandlerContext['authManager'],
+            });
+            const firstServices = getDaLiveServices(context);
 
-            // When: Getting the service again
-            const secondService = getDaLiveService(context);
+            // When: Getting the services again
+            const secondServices = getDaLiveServices(context);
 
             // Then: Should return the same cached instance
-            expect(secondService).toBe(firstService);
+            expect(secondServices).toBe(firstServices);
         });
 
         it('should throw error when authManager is not available', () => {
             // Given: A context without authManager
             const context = createMockHandlerContext({ authManager: undefined });
 
-            // When/Then: Getting the service should throw
-            expect(() => getDaLiveService(context)).toThrow('Authentication service not available');
-        });
-
-        it('should use authManager for DaLiveService', () => {
-            // Given: A context with specific authManager
-            const context = createMockHandlerContext();
-
-            // When: Getting the DaLive service
-            const service = getDaLiveService(context);
-
-            // Then: Should pass authManager to the service
-            expect((service as unknown as { authManager: unknown }).authManager).toBe(context.authManager);
+            // When/Then: Getting the services should throw
+            expect(() => getDaLiveServices(context)).toThrow('Authentication service not available');
         });
     });
 
@@ -218,30 +259,35 @@ describe('edsHelpers', () => {
     });
 
     describe('clearServiceCache', () => {
-        it('should clear cached GitHubService', () => {
-            // Given: A cached GitHubService
+        it('should clear cached GitHubServices', () => {
+            // Given: Cached GitHub services
             const context = createMockHandlerContext();
-            const firstService = getGitHubService(context);
+            const firstServices = getGitHubServices(context);
 
             // When: Clearing the cache
             clearServiceCache();
 
-            // Then: Next call should create a new instance
-            const secondService = getGitHubService(context);
-            expect(secondService).not.toBe(firstService);
+            // Then: Next call should create new instances
+            const secondServices = getGitHubServices(context);
+            expect(secondServices).not.toBe(firstServices);
         });
 
-        it('should clear cached DaLiveService', () => {
-            // Given: A cached DaLiveService
-            const context = createMockHandlerContext();
-            const firstService = getDaLiveService(context);
+        it('should clear cached DaLiveServices', () => {
+            // Given: Cached DA.live services
+            const mockTokenManager = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };
+            const context = createMockHandlerContext({
+                authManager: {
+                    getTokenManager: jest.fn().mockReturnValue(mockTokenManager),
+                } as unknown as HandlerContext['authManager'],
+            });
+            const firstServices = getDaLiveServices(context);
 
             // When: Clearing the cache
             clearServiceCache();
 
-            // Then: Next call should create a new instance
-            const secondService = getDaLiveService(context);
-            expect(secondService).not.toBe(firstService);
+            // Then: Next call should create new instances
+            const secondServices = getDaLiveServices(context);
+            expect(secondServices).not.toBe(firstServices);
         });
 
         it('should clear cached DaLiveAuthService and call dispose', () => {

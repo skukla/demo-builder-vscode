@@ -77,9 +77,9 @@ describe('PrerequisitesManager - Progress Tracking', () => {
             expect(ids).toContain('git');
         });
 
-        it('should handle appBuilderApps array', async () => {
+        it('should handle appBuilder array', async () => {
             const required = await manager.getRequiredPrerequisites({
-                appBuilderApps: ['react-app'],
+                appBuilder: ['react-app'],
             });
 
             const ids = required.map(p => p.id);

@@ -2,7 +2,7 @@
  * Unit Tests: DaLiveServiceCard
  *
  * Tests for the DA.live service card presentational component.
- * Used in ConnectServicesStep for card and checklist layouts.
+ * Used in ConnectServicesStep for side-by-side card layout.
  *
  * Coverage:
  * - Authenticated state with org display
@@ -58,7 +58,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -85,7 +84,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -115,7 +113,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -142,7 +139,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -169,7 +165,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -196,7 +191,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -228,7 +222,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -255,7 +248,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -282,7 +274,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -309,7 +300,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -339,7 +329,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -367,7 +356,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -393,7 +381,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -425,7 +412,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -436,9 +422,9 @@ describe('DaLiveServiceCard', () => {
         });
     });
 
-    describe('Variant Display', () => {
-        it('should render card variant with DA icon', async () => {
-            // Given: Card variant
+    describe('Card Display', () => {
+        it('should render card with DA icon and title', async () => {
+            // Given: Service card component
             const { DaLiveServiceCard } = await import(
                 '@/features/eds/ui/components/DaLiveServiceCard'
             );
@@ -455,7 +441,6 @@ describe('DaLiveServiceCard', () => {
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
                         onCancelInput={mockOnCancelInput}
-                        variant="card"
                     />
                 </TestWrapper>
             );
@@ -463,33 +448,6 @@ describe('DaLiveServiceCard', () => {
             // Then: Should have card class and DA.live title
             expect(container.querySelector('.service-card')).toBeInTheDocument();
             expect(screen.getByText('DA.live')).toBeInTheDocument();
-        });
-
-        it('should render checklist variant', async () => {
-            // Given: Checklist variant
-            const { DaLiveServiceCard } = await import(
-                '@/features/eds/ui/components/DaLiveServiceCard'
-            );
-
-            // When: Component renders
-            const { container } = render(
-                <TestWrapper>
-                    <DaLiveServiceCard
-                        isChecking={false}
-                        isAuthenticating={false}
-                        isAuthenticated={false}
-                        showInput={false}
-                        onSetup={mockOnSetup}
-                        onSubmit={mockOnSubmit}
-                        onReset={mockOnReset}
-                        onCancelInput={mockOnCancelInput}
-                        variant="checklist"
-                    />
-                </TestWrapper>
-            );
-
-            // Then: Should have checklist class
-            expect(container.querySelector('.checklist-item')).toBeInTheDocument();
         });
     });
 });

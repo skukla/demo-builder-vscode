@@ -20,37 +20,36 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
-// Mock brandStackLoader to prevent undefined components access in tests
-// WizardContainer calls loadBrands() and loadStacks() which access components.json
-jest.mock('@/features/project-creation/ui/helpers/brandStackLoader', () => ({
+// Mock demoPackageLoader to prevent JSON import issues in tests
+// WizardContainer calls loadDemoPackages() which loads from demo-packages.json
+jest.mock('@/features/project-creation/ui/helpers/demoPackageLoader', () => ({
     __esModule: true,
-    loadBrands: async () => [
+    loadDemoPackages: async () => [
         {
-            id: 'test-brand',
-            name: 'Test Brand',
-            description: 'Test brand for unit tests',
-            logo: '/test-logo.svg',
-            stacks: ['test-stack'],
+            id: 'test-package',
+            name: 'Test Package',
+            description: 'Test package for unit tests',
+            configDefaults: {},
+            storefronts: {
+                'test-stack': {
+                    name: 'Test Storefront',
+                    description: 'Test storefront for tests',
+                    source: { type: 'git', url: 'https://github.com/test/repo', branch: 'main' },
+                },
+            },
         },
     ],
+}));
+
+// Mock brandStackLoader for loadStacks() which access components.json
+jest.mock('@/features/project-creation/ui/helpers/brandStackLoader', () => ({
+    __esModule: true,
     loadStacks: async () => [
         {
             id: 'test-stack',
             name: 'Test Stack',
             frontend: 'test-frontend',
             backend: 'test-backend',
-        },
-    ],
-}));
-
-// Mock templateLoader to prevent JSON import issues in tests
-jest.mock('@/features/project-creation/ui/helpers/templateLoader', () => ({
-    __esModule: true,
-    loadDemoTemplates: async () => [
-        {
-            id: 'test-template',
-            name: 'Test Template',
-            description: 'Test template for unit tests',
         },
     ],
 }));

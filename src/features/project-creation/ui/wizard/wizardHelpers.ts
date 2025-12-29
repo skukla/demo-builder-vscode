@@ -2,6 +2,7 @@
  * Helper functions for WizardContainer component (SOP §3, §4 compliance)
  */
 
+import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, ComponentSelection } from '@/types/webview';
 
 /**
@@ -10,6 +11,7 @@ import type { WizardStep, WizardState, ComponentSelection } from '@/types/webvie
 export interface WizardStepConfig {
     id: WizardStep;
     name: string;
+    description?: string;
 }
 
 /**
@@ -19,6 +21,7 @@ export interface WizardStepConfig {
 export interface WizardStepConfigWithRequirements {
     id: string;
     name: string;
+    description?: string;
     enabled: boolean;
     /** Optional: Component IDs that must ALL be selected for this step to appear (AND logic) */
     requiredComponents?: string[];
@@ -41,7 +44,7 @@ export interface WizardStepConfigWithRequirements {
  * Check if a specific component is selected in the component selection state.
  *
  * Searches across all component categories: frontend, backend, dependencies,
- * integrations, and appBuilderApps.
+ * integrations, and appBuilder.
  *
  * @param componentId - The component ID to check
  * @param selectedComponents - Current component selection state
@@ -57,10 +60,10 @@ export function isComponentSelected(
     if (selectedComponents.frontend === componentId) return true;
     if (selectedComponents.backend === componentId) return true;
 
-    // Check array fields (dependencies, integrations, appBuilderApps)
+    // Check array fields (dependencies, integrations, appBuilder)
     if (selectedComponents.dependencies?.includes(componentId)) return true;
     if (selectedComponents.integrations?.includes(componentId)) return true;
-    if (selectedComponents.appBuilderApps?.includes(componentId)) return true;
+    if (selectedComponents.appBuilder?.includes(componentId)) return true;
 
     return false;
 }
@@ -78,7 +81,7 @@ export function isComponentSelected(
 export function filterStepsByComponents(
     allSteps: WizardStepConfigWithRequirements[],
     selectedComponents: ComponentSelection | undefined,
-): Array<{ id: WizardStep; name: string }> {
+): Array<{ id: WizardStep; name: string; description?: string }> {
     return allSteps
         .filter(step => {
             // Disabled steps never shown
@@ -104,6 +107,7 @@ export function filterStepsByComponents(
         .map(step => ({
             id: step.id as WizardStep,
             name: step.name,
+            description: step.description,
         }));
 }
 
@@ -247,8 +251,8 @@ export interface ImportedSettings {
         workspaceName?: string;
         workspaceTitle?: string;
     };
-    /** Brand ID from the source project (e.g., 'citisignal') */
-    selectedBrand?: string;
+    /** Package ID from the source project (e.g., 'citisignal', 'buildright') */
+    selectedPackage?: string;
     /** Stack ID from the source project (e.g., 'headless-paas') */
     selectedStack?: string;
 }
@@ -279,7 +283,7 @@ export function initializeComponentsFromImport(
             backend: importedSettings.selections.backend,
             dependencies: importedSettings.selections.dependencies || [],
             integrations: importedSettings.selections.integrations || [],
-            appBuilderApps: importedSettings.selections.appBuilder || [],
+            appBuilder: importedSettings.selections.appBuilder || [],
         };
     }
     return componentDefaults || undefined;
@@ -467,14 +471,14 @@ export function getCompletedStepIndices(
  * `wizardSteps.filter(step => step.enabled).map(step => ({ id: step.id as WizardStep, name: step.name }))`
  */
 export function getEnabledWizardSteps(
-    wizardSteps: Array<{ id: string; name: string; enabled: boolean }> | undefined,
-): Array<{ id: WizardStep; name: string }> {
+    wizardSteps: Array<{ id: string; name: string; description?: string; enabled: boolean }> | undefined,
+): Array<{ id: WizardStep; name: string; description?: string }> {
     if (!wizardSteps || wizardSteps.length === 0) {
         return [];
     }
     return wizardSteps
         .filter(step => step.enabled)
-        .map(step => ({ id: step.id as WizardStep, name: step.name }));
+        .map(step => ({ id: step.id as WizardStep, name: step.name, description: step.description }));
 }
 
 // ============================================================================
@@ -483,8 +487,16 @@ export function getEnabledWizardSteps(
 
 /**
  * Build project configuration from wizard state for project creation
+ *
+ * @param wizardState - Current wizard state
+ * @param importedSettings - Optional imported settings for mesh reuse detection
+ * @param packages - Optional packages array to resolve frontend source from storefronts
  */
-export function buildProjectConfig(wizardState: WizardState, importedSettings?: ImportedSettings | null) {
+export function buildProjectConfig(
+    wizardState: WizardState,
+    importedSettings?: ImportedSettings | null,
+    packages?: DemoPackage[],
+) {
     // Extract MESH_ENDPOINT from componentConfigs if it exists (from imported settings)
     let importedMeshEndpoint: string | undefined;
     if (wizardState.componentConfigs) {
@@ -493,6 +505,17 @@ export function buildProjectConfig(wizardState: WizardState, importedSettings?: 
                 importedMeshEndpoint = componentConfig.MESH_ENDPOINT;
                 break;
             }
+        }
+    }
+
+    // Resolve frontend source from selected package/storefront
+    // Packages contain storefronts keyed by stack ID (e.g., 'headless-paas', 'eds-paas')
+    let frontendSource: GitSource | undefined;
+    if (packages && wizardState.selectedStack && wizardState.selectedPackage) {
+        const pkg = packages.find(p => p.id === wizardState.selectedPackage);
+        const storefront = pkg?.storefronts?.[wizardState.selectedStack];
+        if (storefront?.source) {
+            frontendSource = storefront.source;
         }
     }
 
@@ -512,7 +535,7 @@ export function buildProjectConfig(wizardState: WizardState, importedSettings?: 
             backend: wizardState.components?.backend,
             dependencies: wizardState.components?.dependencies || [],
             integrations: wizardState.components?.integrations || [],
-            appBuilderApps: wizardState.components?.appBuilderApps || [],
+            appBuilder: wizardState.components?.appBuilder || [],
         },
         apiMesh: wizardState.apiMesh,
         componentConfigs: wizardState.componentConfigs,
@@ -522,9 +545,11 @@ export function buildProjectConfig(wizardState: WizardState, importedSettings?: 
         importedMeshEndpoint,
         // Mesh deployment happens during Project Creation (Phase 3), not as separate wizard step
         meshStepEnabled: false,
-        // Brand/Stack selections
-        selectedBrand: wizardState.selectedBrand,
+        // Package/Stack selections
+        selectedPackage: wizardState.selectedPackage,
         selectedStack: wizardState.selectedStack,
+        // Frontend source from package storefront (source of truth for repos)
+        frontendSource,
         // Edit mode: re-use existing project directory
         editMode: wizardState.editMode,
         editProjectPath: wizardState.editProjectPath,

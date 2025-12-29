@@ -6,4 +6,4 @@
  */
 
 // Only export the registry - individual handlers are internal
-export { DashboardHandlerRegistry } from './HandlerRegistry';
+export { DashboardHandlerRegistry } from './DashboardHandlerRegistry';

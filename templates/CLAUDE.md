@@ -14,8 +14,12 @@ templates/
 ├── defaults.json          # Default component selections
 ├── wizard-steps.json      # Wizard timeline configuration
 ├── logging.json           # Logging message templates
-├── demo-templates.json    # Demo template definitions (pre-configured selections)
-├── demo-templates.schema.json # JSON schema for demo templates
+├── stacks.json            # Technology stack definitions (frontend + backend)
+├── stacks.schema.json     # JSON schema for stacks
+├── demo-packages.json     # Demo packages with storefronts (brands + content)
+├── demo-packages.schema.json # JSON schema for demo packages
+├── templates.json         # Pre-configured demo templates (stack + package combinations)
+├── templates.schema.json  # JSON schema for templates
 ├── project-templates/      # Project scaffolding templates
 └── scripts/               # Installation and setup scripts
 ```
@@ -172,123 +176,181 @@ templates/
 }
 ```
 
-## Demo Templates System
+## Demo Packages System (Vertical Stack Architecture)
 
 ### Overview
 
-The demo templates system enables a "demo-first" workflow where users select a pre-configured template on the Welcome step, which automatically pre-populates component selections. This streamlines the wizard for common demo scenarios.
+The demo packages system follows a "vertical stack architecture" where:
+1. **Stacks** define the technology combination (frontend + backend + dependencies)
+2. **Demo Packages** define the brand/content (storefronts keyed by stack ID)
+3. **Templates** combine a stack + package for pre-configured demo scenarios
 
-### demo-templates.json Structure
+This enables a "demo-first" workflow where users select a package and stack on the Welcome step, which automatically pre-populates component selections.
 
-**Top-level Structure**:
+### stacks.json Structure
+
+Defines technology stack combinations:
+
 ```json
 {
-  "$schema": "./demo-templates.schema.json",
+  "$schema": "./stacks.schema.json",
   "version": "1.0.0",
-  "templates": [...]
+  "stacks": [
+    {
+      "id": "headless-paas",
+      "name": "Headless + PaaS",
+      "description": "NextJS storefront with API Mesh and Commerce PaaS",
+      "frontend": "headless",
+      "backend": "adobe-commerce-paas",
+      "dependencies": ["commerce-mesh", "demo-inspector"],
+      "optionalAddons": ["adobe-commerce-aco"]
+    }
+  ]
 }
 ```
 
-**Template Definition**:
+### demo-packages.json Structure
+
+Defines demo packages with storefronts per stack:
+
 ```json
 {
-  "id": "citisignal",
-  "name": "CitiSignal Storefront",
-  "description": "Next.js headless storefront with Adobe Commerce API Mesh integration",
-  "icon": "nextjs",
-  "featured": true,
-  "tags": ["headless", "nextjs", "storefront"],
-  "defaults": {
-    "frontend": "citisignal-nextjs",
-    "backend": "adobe-commerce-paas",
-    "dependencies": ["commerce-mesh", "demo-inspector"]
-  }
+  "$schema": "./demo-packages.schema.json",
+  "version": "1.0.0",
+  "packages": [
+    {
+      "id": "citisignal",
+      "name": "CitiSignal",
+      "description": "Telecommunications demo with CitiSignal branding",
+      "featured": true,
+      "configDefaults": {
+        "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
+        "ADOBE_COMMERCE_STORE_CODE": "citisignal_store"
+      },
+      "storefronts": {
+        "headless-paas": {
+          "name": "CitiSignal Headless",
+          "description": "NextJS storefront with API Mesh",
+          "source": {
+            "type": "git",
+            "url": "https://github.com/example/citisignal-headless",
+            "branch": "main"
+          }
+        },
+        "eds-paas": {
+          "name": "CitiSignal EDS",
+          "description": "Edge Delivery Services storefront",
+          "source": {
+            "type": "git",
+            "url": "https://github.com/example/citisignal-eds",
+            "branch": "main"
+          }
+        }
+      }
+    }
+  ]
 }
 ```
 
-### Template Properties
+### Demo Package Properties
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
 | `id` | string | Yes | Unique identifier (lowercase, hyphen-separated) |
-| `name` | string | Yes | Display name for the template |
-| `description` | string | Yes | Description of what this template includes |
-| `defaults` | object | Yes | Default component selections |
-| `icon` | string | No | Icon identifier for the template card |
-| `tags` | string[] | No | Tags for filtering and categorization |
-| `featured` | boolean | No | Whether to highlight this template |
+| `name` | string | Yes | Display name for the package |
+| `description` | string | Yes | Description of the package |
+| `featured` | boolean | No | Whether to highlight this package |
+| `configDefaults` | object | No | Environment variable defaults |
+| `storefronts` | object | Yes | Storefront definitions keyed by stack ID |
 
-### Template Defaults Object
+### Storefront Properties
 
-The `defaults` object maps to component IDs from `components.json`:
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | string | Yes | Display name for the storefront |
+| `description` | string | Yes | Description of the storefront |
+| `source` | object | Yes | Git source configuration |
+| `source.type` | string | Yes | Always "git" |
+| `source.url` | string | Yes | Git repository URL |
+| `source.branch` | string | Yes | Branch to clone |
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `frontend` | string | Frontend component ID (e.g., 'citisignal-nextjs') |
-| `backend` | string | Backend component ID (e.g., 'adobe-commerce-paas') |
-| `dependencies` | string[] | Array of dependency component IDs |
-| `integrations` | string[] | Array of integration component IDs |
-| `appBuilder` | string[] | Array of App Builder app component IDs |
+### Adding a New Demo Package
 
-### Adding a New Demo Template
-
-1. **Define the template in demo-templates.json**:
+1. **Define the package in demo-packages.json**:
 ```json
 {
-  "id": "my-demo",
-  "name": "My Custom Demo",
-  "description": "Description of what this demo includes",
-  "defaults": {
-    "frontend": "my-frontend-component",
-    "backend": "adobe-commerce-paas",
-    "dependencies": ["commerce-mesh"]
+  "id": "my-brand",
+  "name": "My Brand",
+  "description": "Description of this brand/demo",
+  "configDefaults": {
+    "ADOBE_COMMERCE_WEBSITE_CODE": "my_brand"
+  },
+  "storefronts": {
+    "headless-paas": {
+      "name": "My Brand Headless",
+      "description": "NextJS storefront",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/org/my-brand-headless",
+        "branch": "main"
+      }
+    }
   }
 }
 ```
 
-2. **Ensure component IDs exist**: All component IDs in `defaults` must match IDs defined in `components.json`.
+2. **Ensure stack IDs exist**: All storefront keys must match stack IDs in `stacks.json`.
 
-3. **Validate the template**: The schema (`demo-templates.schema.json`) validates:
-   - Required fields are present
-   - ID follows lowercase hyphen pattern
-   - All properties have correct types
+3. **Validate the package**: The schema (`demo-packages.schema.json`) validates structure.
 
-### Template Loader
+### Package Loader
 
-Templates are loaded via `src/features/project-creation/ui/helpers/templateLoader.ts`:
+Packages are loaded via `src/features/project-creation/ui/helpers/demoPackageLoader.ts`:
 
 ```typescript
-import { loadDemoTemplates, validateTemplate } from './templateLoader';
+import { loadDemoPackages } from './demoPackageLoader';
 
-// Load all templates
-const templates = await loadDemoTemplates();
+// Load all packages
+const packages = await loadDemoPackages();
 
-// Validate a template against known components
-const result = validateTemplate(template, knownComponentIds);
-if (!result.valid) {
-  console.error('Validation errors:', result.errors);
-}
-```
-
-### Template Defaults Application
-
-When a user selects a template, its defaults are applied via `templateDefaults.ts`:
-
-```typescript
-import { applyTemplateDefaults } from './templateDefaults';
-
-// Apply template defaults to wizard state
-const newState = applyTemplateDefaults(currentState, templates);
+// Get storefront for a specific stack
+const storefront = packages.find(p => p.id === 'citisignal')?.storefronts['headless-paas'];
 ```
 
 ### Type Definitions
 
-Template types are defined in `src/types/templates.ts`:
+Package types are defined in `src/types/demoPackages.ts`:
 
-- `DemoTemplate` - Single template definition
-- `TemplateDefaults` - Component selection defaults
-- `DemoTemplatesConfig` - Root configuration structure
-- `TemplateValidationResult` - Validation result with errors
+- `DemoPackage` - Single package definition with storefronts
+- `Storefront` - Storefront configuration for a specific stack
+- `GitSource` - Git source configuration
+- `DemoPackagesConfig` - Root configuration structure
+
+### templates.json Structure
+
+Pre-configured templates combining stack + package:
+
+```json
+{
+  "$schema": "./templates.schema.json",
+  "version": "1.0.0",
+  "templates": [
+    {
+      "id": "citisignal-headless",
+      "name": "CitiSignal Headless",
+      "description": "CitiSignal with NextJS and API Mesh",
+      "stack": "headless-paas",
+      "brand": "citisignal",
+      "featured": true,
+      "source": {
+        "type": "git",
+        "url": "https://github.com/example/citisignal-headless",
+        "branch": "main"
+      }
+    }
+  ]
+}
+```
 
 ## Wizard Steps Configuration
 

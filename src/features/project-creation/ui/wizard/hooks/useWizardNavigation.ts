@@ -7,12 +7,11 @@ import {
     buildProjectConfig,
     ImportedSettings,
 } from '../wizardHelpers';
-import { applyTemplateDefaults } from '../../helpers/templateDefaults';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { DemoPackage } from '@/types/demoPackages';
 import type { WizardState, WizardStep } from '@/types/webview';
-import type { DemoTemplate } from '@/types/templates';
 
 const log = webviewLogger('useWizardNavigation');
 
@@ -32,8 +31,8 @@ interface UseWizardNavigationProps {
     setIsConfirmingSelection: React.Dispatch<React.SetStateAction<boolean>>;
     setIsPreparingReview: React.Dispatch<React.SetStateAction<boolean>>;
     importedSettings?: ImportedSettings | null;
-    /** Demo templates for applying defaults when leaving welcome step */
-    templates?: DemoTemplate[];
+    /** Demo packages for resolving frontend source from storefronts */
+    packages?: DemoPackage[];
 }
 
 interface UseWizardNavigationReturn {
@@ -59,6 +58,7 @@ async function handleStepBackendCalls(
     nextStepId: string,
     wizardState: WizardState,
     importedSettings?: ImportedSettings | null,
+    packages?: DemoPackage[],
 ): Promise<void> {
     // Project selection: Commit the UI selection to backend
     if (currentStep === 'adobe-project' && wizardState.adobeProject?.id) {
@@ -79,7 +79,8 @@ async function handleStepBackendCalls(
     // Project creation: Trigger project creation when moving from review to project-creation step
     if (currentStep === 'review' && nextStepId === 'project-creation') {
         // Pass importedSettings so we can detect same-workspace imports and skip mesh deployment
-        const projectConfig = buildProjectConfig(wizardState, importedSettings);
+        // Pass packages so we can resolve the storefront source for frontend cloning
+        const projectConfig = buildProjectConfig(wizardState, importedSettings, packages);
         vscode.createProject(projectConfig);
     }
 }
@@ -108,7 +109,7 @@ export function useWizardNavigation({
     setIsConfirmingSelection,
     setIsPreparingReview,
     importedSettings,
-    templates,
+    packages,
 }: UseWizardNavigationProps): UseWizardNavigationReturn {
     // Refs for tracking navigation transition timeout (prevents race conditions)
     const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -197,12 +198,12 @@ export function useWizardNavigation({
         // IMPORT MODE: Skip to review when clicking Continue on auth step
         // Only valid if:
         // 1. We have imported settings
-        // 2. User hasn't changed the architecture (brand AND stack match)
+        // 2. User hasn't changed the architecture (package AND stack match)
         // 3. We're on the adobe-auth step
         const hasImportedSettings = Boolean(importedSettings);
-        const brandMatches = state.selectedBrand === importedSettings?.selectedBrand;
+        const packageMatches = state.selectedPackage === importedSettings?.selectedPackage;
         const stackMatches = state.selectedStack === importedSettings?.selectedStack;
-        const architectureUnchanged = brandMatches && stackMatches;
+        const architectureUnchanged = packageMatches && stackMatches;
 
         if (hasImportedSettings && architectureUnchanged && state.currentStep === 'adobe-auth') {
             const reviewIndex = WIZARD_STEPS.findIndex(step => step.id === 'review');
@@ -235,14 +236,9 @@ export function useWizardNavigation({
         if (currentIndex < WIZARD_STEPS.length - 1) {
             const nextStep = WIZARD_STEPS[currentIndex + 1];
 
-            // Apply template defaults when leaving welcome step with template selected
-            if (state.currentStep === 'welcome' && state.selectedTemplate && templates) {
-                setState(prev => applyTemplateDefaults(prev, templates));
-            }
-
             try {
                 setIsConfirmingSelection(true);
-                await handleStepBackendCalls(state.currentStep, nextStep.id, state, importedSettings);
+                await handleStepBackendCalls(state.currentStep, nextStep.id, state, importedSettings, packages);
 
                 if (!completedSteps.includes(state.currentStep)) {
                     setCompletedSteps(prev => [...prev, state.currentStep]);
@@ -271,7 +267,7 @@ export function useWizardNavigation({
         navigateToStep,
         WIZARD_STEPS,
         importedSettings,
-        templates,
+        packages,
         setCompletedSteps,
         setConfirmedSteps,
         setHighestCompletedStepIndex,

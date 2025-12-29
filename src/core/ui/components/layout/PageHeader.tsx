@@ -25,7 +25,7 @@
  * ```
  */
 
-import { View, Flex, Heading, Button } from '@adobe/react-spectrum';
+import { View, Flex, Heading, Text, Button } from '@adobe/react-spectrum';
 import React from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
@@ -39,8 +39,10 @@ export interface BackButtonConfig {
 export interface PageHeaderProps {
     /** Main title displayed as H1 */
     title: string;
-    /** Optional subtitle displayed as H3 with gray styling */
+    /** Optional subtitle displayed as H3 with gray styling (typically step name) */
     subtitle?: string;
+    /** Optional description text displayed below subtitle (typically step description) */
+    description?: string;
     /** Optional action element (typically a Button) displayed right-aligned */
     action?: React.ReactNode;
     /** Optional back button configuration */
@@ -63,13 +65,14 @@ export interface PageHeaderProps {
 export const PageHeader: React.FC<PageHeaderProps> = ({
     title,
     subtitle,
+    description,
     action,
     backButton,
     constrainWidth = false,
     className,
 }) => {
     const headerContent = (
-        <Flex justifyContent="space-between" alignItems="center">
+        <Flex justifyContent="space-between" alignItems="start">
             <View>
                 {backButton && (
                     <Button
@@ -84,9 +87,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                     {title}
                 </Heading>
                 {subtitle && (
-                    <Heading level={3} UNSAFE_className={cn('font-normal', 'text-gray-600')}>
+                    <Heading level={3} marginBottom="size-0" UNSAFE_className={cn('font-normal', 'text-gray-600')}>
                         {subtitle}
                     </Heading>
+                )}
+                {description && (
+                    <Text UNSAFE_className={cn('text-gray-500', 'text-sm')}>
+                        {description}
+                    </Text>
                 )}
             </View>
             {action}

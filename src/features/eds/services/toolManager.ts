@@ -19,6 +19,7 @@ import * as path from 'path';
 import { getLogger } from '@/core/logging';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { Logger } from '@/types/logger';
 import {
     ToolManagerError,
     type ACOConfig,
@@ -88,12 +89,17 @@ const NPM_INSTALL_FLAGS = '--no-fund --prefer-offline';
  * ```
  */
 export class ToolManager {
-    private logger = getLogger();
+    private logger: Logger;
     private toolsBasePath: string;
     private toolPath: string;
     private dataRepoPath: string;
 
-    constructor() {
+    /**
+     * Create a ToolManager
+     * @param logger - Optional logger for dependency injection (defaults to getLogger())
+     */
+    constructor(logger?: Logger) {
+        this.logger = logger ?? getLogger();
         const homeDir = os.homedir();
         this.toolsBasePath = path.join(homeDir, '.demo-builder', 'tools');
         this.toolPath = path.join(this.toolsBasePath, TOOL_CONFIG.name);

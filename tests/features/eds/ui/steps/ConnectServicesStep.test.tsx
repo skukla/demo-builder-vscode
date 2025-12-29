@@ -108,7 +108,7 @@ describe('ConnectServicesStep', () => {
     });
 
     describe('rendering', () => {
-        it('should render both service cards', () => {
+        it('should render both service cards side-by-side', () => {
             // Given: Default state
             const state = createDefaultState();
 
@@ -124,25 +124,6 @@ describe('ConnectServicesStep', () => {
             // Then: Both cards should be visible
             expect(screen.getByText('GitHub')).toBeInTheDocument();
             expect(screen.getByText('DA.live')).toBeInTheDocument();
-        });
-
-        it('should render layout toggle buttons', () => {
-            // Given: Default state
-            const state = createDefaultState();
-
-            // When: Rendering the component
-            renderWithProvider(
-                <ConnectServicesStep
-                    state={state}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
-
-            // Then: Layout toggles should be visible
-            expect(screen.getByLabelText('Side-by-side cards')).toBeInTheDocument();
-            expect(screen.getByLabelText('Vertical cards')).toBeInTheDocument();
-            expect(screen.getByLabelText('Checklist view')).toBeInTheDocument();
         });
     });
 

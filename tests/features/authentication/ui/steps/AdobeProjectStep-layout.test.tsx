@@ -20,12 +20,12 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 }));
 
 // Mock useSelectionStep hook
-jest.mock('@/features/authentication/ui/hooks/useSelectionStep', () => ({
+jest.mock('@/core/ui/hooks/useSelectionStep', () => ({
     useSelectionStep: jest.fn(),
 }));
 
 // Mock ConfigurationSummary component
-jest.mock('@/features/project-creation/ui/components/ConfigurationSummary', () => ({
+jest.mock('@/core/ui/components/wizard', () => ({
     ConfigurationSummary: () => <div data-testid="config-summary">Configuration Summary</div>,
 }));
 
@@ -44,7 +44,7 @@ jest.mock('@/core/ui/components/ui/FadeTransition', () => ({
     FadeTransition: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
+import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 
 const mockUseSelectionStep = useSelectionStep as jest.Mock;
 

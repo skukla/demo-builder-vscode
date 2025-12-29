@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
@@ -9,6 +9,7 @@ import {
     baseState,
     resetMocks,
     cleanupTests,
+    setupAuthStatusMock,
 } from './AdobeAuthStep.testUtils';
 
 // Mock WebviewClient
@@ -145,13 +146,17 @@ describe('AdobeAuthStep - Organization Selection', () => {
             expect(mockRequestAuth).toHaveBeenCalledWith(true); // force = true
         });
 
-        it('should clear dependent state when switching organizations', async () => {
+        it('should clear dependent state when org changes after re-auth', async () => {
+            // Setup: User is authenticated with org1, has project/workspace selected
+            const messageCallback = setupAuthStatusMock();
             const user = userEvent.setup();
             const mockUpdate = jest.fn();
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: true, isChecking: false },
                 adobeOrg: { id: 'org1', code: 'ORG1', name: 'Test Organization' },
+                adobeProject: { id: 'proj1', name: 'Test Project' },
+                adobeWorkspace: { id: 'ws1', name: 'Test Workspace' },
             };
 
             render(
@@ -162,16 +167,75 @@ describe('AdobeAuthStep - Organization Selection', () => {
                 />
             );
 
+            // Action: Click Switch Organizations
             const switchButton = screen.getByText('Switch Organizations');
             await user.click(switchButton);
 
-            expect(mockUpdate).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    adobeOrg: undefined,
-                    adobeProject: undefined,
-                    adobeWorkspace: undefined,
-                })
+            // Verify: requestAuth is called with force=true
+            expect(mockRequestAuth).toHaveBeenCalledWith(true);
+
+            // Simulate: Auth completes with a DIFFERENT org
+            messageCallback({
+                isAuthenticated: true,
+                isChecking: false,
+                organization: { id: 'org2', code: 'ORG2', name: 'Different Organization' },
+            });
+
+            // Result: Dependent state should be cleared because org changed
+            await waitFor(() => {
+                expect(mockUpdate).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        adobeProject: undefined,
+                        adobeWorkspace: undefined,
+                    })
+                );
+            });
+        });
+
+        it('should preserve dependent state when re-authenticating with same org', async () => {
+            // Setup: User is authenticated with org1, has project/workspace selected
+            const messageCallback = setupAuthStatusMock();
+            const user = userEvent.setup();
+            const mockUpdate = jest.fn();
+            const state = {
+                ...baseState,
+                adobeAuth: { isAuthenticated: true, isChecking: false },
+                adobeOrg: { id: 'org1', code: 'ORG1', name: 'Test Organization' },
+                adobeProject: { id: 'proj1', name: 'Test Project' },
+                adobeWorkspace: { id: 'ws1', name: 'Test Workspace' },
+            };
+
+            render(
+                <AdobeAuthStep
+                    state={state as WizardState}
+                    updateState={mockUpdate}
+                    setCanProceed={mockSetCanProceed}
+                />
             );
+
+            // Action: Click Switch Organizations (but will re-auth with same org)
+            const switchButton = screen.getByText('Switch Organizations');
+            await user.click(switchButton);
+
+            // Simulate: Auth completes with SAME org
+            messageCallback({
+                isAuthenticated: true,
+                isChecking: false,
+                organization: { id: 'org1', code: 'ORG1', name: 'Test Organization' },
+            });
+
+            // Result: Dependent state should NOT be cleared (no adobeProject/adobeWorkspace in update)
+            await waitFor(() => {
+                // Get the last call to mockUpdate that has auth info
+                const authUpdateCalls = mockUpdate.mock.calls.filter(
+                    (call) => call[0].adobeAuth !== undefined
+                );
+                const lastAuthUpdate = authUpdateCalls[authUpdateCalls.length - 1]?.[0];
+
+                // Should NOT have adobeProject: undefined in the update
+                expect(lastAuthUpdate?.adobeProject).toBeUndefined();
+                expect(lastAuthUpdate?.adobeWorkspace).toBeUndefined();
+            });
         });
     });
 });

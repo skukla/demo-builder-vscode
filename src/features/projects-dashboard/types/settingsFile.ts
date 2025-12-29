@@ -68,8 +68,8 @@ export interface SettingsFile {
     configs: SettingsConfigs;
     /** Adobe org/project/workspace context */
     adobe?: SettingsAdobeContext;
-    /** Brand ID selected during project creation (e.g., 'citisignal') */
-    selectedBrand?: string;
+    /** Package ID selected during project creation (e.g., 'citisignal', 'buildright') */
+    selectedPackage?: string;
     /** Stack ID selected during project creation (e.g., 'headless-paas') */
     selectedStack?: string;
 }

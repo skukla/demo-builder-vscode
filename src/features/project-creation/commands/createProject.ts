@@ -14,7 +14,7 @@ import { AuthenticationService } from '@/features/authentication';
 import { ComponentHandler } from '@/features/components/handlers/componentHandler';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 // Extracted helper functions
-import { HandlerRegistry } from '@/features/project-creation/handlers/HandlerRegistry';
+import { ProjectCreationHandlerRegistry } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import {
     formatGroupName as formatGroupNameHelper,
     getSetupInstructions as getSetupInstructionsHelper,
@@ -93,7 +93,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private stepLogger: StepLogger | null = null;
     private stepLoggerInitPromise: Promise<StepLogger> | null = null;
     private templatesPath: string;
-    private handlerRegistry: HandlerRegistry;  // Handler registry for message dispatch
+    private handlerRegistry: ProjectCreationHandlerRegistry;  // Handler registry for message dispatch
     private wizardNavigateCommand: vscode.Disposable | null = null;  // Command for sidebar navigation
     private wizardSteps: WizardStep[] | null = null;  // Loaded wizard steps for sidebar
     private importedSettings: SettingsFile | null = null;  // Settings imported from file or copied from project
@@ -124,8 +124,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         this.errorLogger = new ErrorLogger(context);
         this.progressUnifier = new ProgressUnifier(logger);
 
-        // Initialize HandlerRegistry for message dispatch
-        this.handlerRegistry = new HandlerRegistry();
+        // Initialize ProjectCreationHandlerRegistry for message dispatch
+        this.handlerRegistry = new ProjectCreationHandlerRegistry();
 
         // Store templates path for lazy initialization
         this.templatesPath = path.join(context.extensionPath, 'templates', 'logging.json');
@@ -345,10 +345,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             return { success: true };
         });
 
-        // Auto-register all handlers from HandlerRegistry
+        // Auto-register all handlers from ProjectCreationHandlerRegistry
         // This eliminates boilerplate by automatically discovering and registering
         // all message handlers. Special cases (like progress callbacks) are handled
-        // via HandlerRegistry.needsProgressCallback().
+        // via ProjectCreationHandlerRegistry.needsProgressCallback().
         //
         // SharedState is passed by reference, so handlers can modify state directly
         // without manual synchronization. Changes to context.sharedState automatically persist.

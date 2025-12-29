@@ -361,9 +361,9 @@ describe('isComponentSelected', () => {
         expect(isComponentSelected('aem-integration', selection)).toBe(true);
     });
 
-    it('should find component in appBuilderApps array', () => {
+    it('should find component in appBuilder array', () => {
         const selection: ComponentSelection = {
-            appBuilderApps: ['kukla-integration'],
+            appBuilder: ['kukla-integration'],
         };
 
         expect(isComponentSelected('kukla-integration', selection)).toBe(true);
@@ -400,7 +400,7 @@ describe('isComponentSelected', () => {
             backend: 'backend-app',
             dependencies: ['dep1', 'dep2'],
             integrations: ['int1'],
-            appBuilderApps: ['app1', 'app2'],
+            appBuilder: ['app1', 'app2'],
         };
 
         expect(isComponentSelected('frontend-app', selection)).toBe(true);

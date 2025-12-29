@@ -19,7 +19,7 @@ export const createMockComponentDefaults = (): ComponentSelection => ({
     backend: 'commerce-paas',
     dependencies: [],
     integrations: [],
-    appBuilderApps: [],
+    appBuilder: [],
 });
 
 // Note: Welcome step removed in Step 3 - wizard starts at adobe-auth

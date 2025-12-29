@@ -5,26 +5,26 @@
  * testability and reduce inline complexity.
  */
 
-import type { Brand } from '@/types/brands';
+import type { DemoPackage } from '@/types/demoPackages';
 
 /**
- * Filters brands based on a search query.
+ * Filters packages based on a search query.
  *
- * Matches brands where the name OR description contains the search query
- * (case-insensitive). Returns all brands if the query is empty or whitespace-only.
+ * Matches packages where the name OR description contains the search query
+ * (case-insensitive). Returns all packages if the query is empty or whitespace-only.
  *
- * @param brands - Array of brands to filter
+ * @param packages - Array of packages to filter
  * @param searchQuery - Search query string to match against name and description
- * @returns Filtered array of brands matching the query
+ * @returns Filtered array of packages matching the query
  */
-export function filterBrandsBySearchQuery(brands: Brand[], searchQuery: string): Brand[] {
+export function filterPackagesBySearchQuery(packages: DemoPackage[], searchQuery: string): DemoPackage[] {
     if (!searchQuery.trim()) {
-        return brands;
+        return packages;
     }
     const query = searchQuery.toLowerCase();
-    return brands.filter(
-        (b) =>
-            b.name.toLowerCase().includes(query) ||
-            b.description.toLowerCase().includes(query)
+    return packages.filter(
+        (p) =>
+            p.name.toLowerCase().includes(query) ||
+            p.description.toLowerCase().includes(query)
     );
 }

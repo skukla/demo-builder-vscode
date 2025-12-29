@@ -107,7 +107,7 @@ export class ProjectConfigWriter {
                 componentVersions: project.componentVersions,
                 meshState: project.meshState,
                 components: getComponentIds(project.componentInstances),
-                selectedBrand: project.selectedBrand,
+                selectedPackage: project.selectedPackage,
                 selectedStack: project.selectedStack,
             };
 

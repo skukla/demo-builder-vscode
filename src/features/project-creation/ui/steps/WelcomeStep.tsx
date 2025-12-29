@@ -1,7 +1,6 @@
 import { TextField, Text } from '@adobe/react-spectrum';
 import React, { useEffect, useCallback } from 'react';
 import { BrandGallery } from '../components/BrandGallery';
-import { TemplateGallery } from '../components/TemplateGallery';
 import { deriveComponentsFromStack } from '../helpers/stackHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
@@ -9,31 +8,32 @@ import { cn } from '@/core/ui/utils/classNames';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
 import { normalizeProjectName } from '@/features/project-creation/helpers/formatters';
-import { Brand } from '@/types/brands';
+import { DemoPackage } from '@/types/demoPackages';
 import { Stack } from '@/types/stacks';
-import { DemoTemplate } from '@/types/templates';
 import { BaseStepProps } from '@/types/wizard';
 
 interface WelcomeStepProps extends BaseStepProps {
     existingProjectNames?: string[];
-    /** Available demo templates for selection */
-    templates?: DemoTemplate[];
     /** Initial view mode from extension settings */
     initialViewMode?: 'cards' | 'rows';
-    /** Available brands for selection (vertical + stack architecture) */
-    brands?: Brand[];
+    /** Available packages for selection (unified package + stack architecture) */
+    packages?: DemoPackage[];
     /** Available stacks/architectures for selection */
     stacks?: Stack[];
-    /** Called when architecture changes - allows wizard to reset dependent state */
-    onArchitectureChange?: () => void;
+    /**
+     * Called when architecture changes - allows wizard to filter dependent state.
+     * Passes old and new stack IDs so wizard can intelligently retain configs
+     * for components that exist in both stacks.
+     */
+    onArchitectureChange?: (oldStackId: string, newStackId: string) => void;
 }
 
-export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], templates, initialViewMode, brands, stacks, onArchitectureChange }: WelcomeStepProps) {
+export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], initialViewMode, packages, stacks, onArchitectureChange }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
 
-    // Check if brands are provided (new vertical + stack architecture)
-    const hasBrands = brands && brands.length > 0;
+    // Check if packages are provided (unified package + stack architecture)
+    const hasPackages = packages && packages.length > 0;
     const hasStacks = stacks && stacks.length > 0;
 
     // Custom validator for duplicate project name check
@@ -101,45 +101,39 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount
 
-    // Handler for template selection
-    const handleTemplateSelect = useCallback(
-        (templateId: string) => {
-            // Toggle selection: if already selected, deselect; otherwise select
-            updateState({
-                selectedTemplate: state.selectedTemplate === templateId ? undefined : templateId,
-            });
-        },
-        [updateState, state.selectedTemplate],
-    );
-
-    // Handler for brand selection
-    // When brand changes, clears stack and triggers architecture change reset
-    const handleBrandSelect = useCallback(
-        (brandId: string) => {
-            // When brand changes, clear any previously selected stack
-            // (user may have selected a stack that's not compatible with new brand)
-            if (brandId !== state.selectedBrand) {
-                // If there was a previous selection (brand change, not initial), reset dependent state
-                const isBrandChange = state.selectedBrand && state.selectedBrand !== brandId;
-                if (isBrandChange && onArchitectureChange) {
-                    onArchitectureChange();
+    // Handler for package selection
+    // When package changes, clears stack and triggers architecture change reset
+    const handlePackageSelect = useCallback(
+        (packageId: string) => {
+            // When package changes, clear any previously selected stack
+            // (user may have selected a stack that's not compatible with new package)
+            if (packageId !== state.selectedPackage) {
+                // If there was a previous selection (package change, not initial), reset dependent state
+                // Note: When package changes, we clear stack - so we pass the old stack ID
+                // to allow config retention for any components that might remain
+                const isPackageChange = state.selectedPackage && state.selectedPackage !== packageId;
+                if (isPackageChange && state.selectedStack && onArchitectureChange) {
+                    // Package change clears stack, so there's no "new" stack yet
+                    // The next stack selection will trigger another onArchitectureChange
+                    // For now, we need to clear configs for components not in any stack
+                    // But since we're clearing selectedStack, this will be handled by the stack selection
                 }
 
-                // Find the brand to get its configDefaults
-                const brand = brands?.find(b => b.id === brandId);
+                // Find the package to get its configDefaults
+                const pkg = packages?.find(p => p.id === packageId);
                 updateState({
-                    selectedBrand: brandId,
+                    selectedPackage: packageId,
                     selectedStack: undefined,
-                    brandConfigDefaults: brand?.configDefaults,
+                    packageConfigDefaults: pkg?.configDefaults,
                 });
             }
         },
-        [updateState, state.selectedBrand, brands, onArchitectureChange],
+        [updateState, state.selectedPackage, packages, state.selectedStack, onArchitectureChange],
     );
 
     // Handler for stack/architecture selection
     // Derives components from the selected stack and updates wizard state
-    // When stack CHANGES (not initial selection), notifies wizard to reset dependent state
+    // When stack CHANGES (not initial selection), notifies wizard to filter dependent state
     const handleStackSelect = useCallback(
         (stackId: string) => {
             const stack = stacks?.find(s => s.id === stackId);
@@ -148,10 +142,10 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
             // Detect if this is a CHANGE (different stack, not initial selection)
             const isStackChange = state.selectedStack && state.selectedStack !== stackId;
 
-            // If changing architecture, notify wizard to reset dependent state
-            // This clears completedSteps, componentConfigs, EDS state, etc.
-            if (isStackChange && onArchitectureChange) {
-                onArchitectureChange();
+            // If changing architecture, notify wizard to filter dependent state
+            // Passes old/new stack IDs so wizard can retain configs for shared components
+            if (isStackChange && onArchitectureChange && state.selectedStack) {
+                onArchitectureChange(state.selectedStack, stackId);
             }
 
             updateState({
@@ -175,15 +169,15 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
             state.projectName.length >= 3 &&
             validateProjectName(state.projectName) === undefined;
 
-        // If brands are provided, both brand AND stack must be selected
+        // If packages are provided, both package AND stack must be selected
         // (expandable cards pattern - both selections happen on this step)
         // Otherwise, fall back to legacy behavior (templates optional)
-        const isBrandStackValid = hasBrands && hasStacks
-            ? Boolean(state.selectedBrand) && Boolean(state.selectedStack)
+        const isPackageStackValid = hasPackages && hasStacks
+            ? Boolean(state.selectedPackage) && Boolean(state.selectedStack)
             : true;
 
-        setCanProceed(isProjectNameValid && isBrandStackValid);
-    }, [state.projectName, state.selectedBrand, state.selectedStack, setCanProceed, validateProjectName, hasBrands, hasStacks]);
+        setCanProceed(isProjectNameValid && isPackageStackValid);
+    }, [state.projectName, state.selectedPackage, state.selectedStack, setCanProceed, validateProjectName, hasPackages, hasStacks]);
 
     // Project Name Input - shared between both layouts
     const projectNameField = (
@@ -206,17 +200,17 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         </div>
     );
 
-    // Brand mode: Expandable cards with architecture selection built-in
-    // When importing, brand/stack are pre-selected in state - gallery handles display
-    if (hasBrands && hasStacks) {
+    // Package mode: Expandable cards with architecture selection built-in
+    // When importing, package/stack are pre-selected in state - gallery handles display
+    if (hasPackages && hasStacks) {
         return (
             <BrandGallery
-                brands={brands!}
+                packages={packages!}
                 stacks={stacks!}
-                selectedBrand={state.selectedBrand}
+                selectedPackage={state.selectedPackage}
                 selectedStack={state.selectedStack}
                 selectedAddons={state.selectedAddons}
-                onBrandSelect={handleBrandSelect}
+                onPackageSelect={handlePackageSelect}
                 onStackSelect={handleStackSelect}
                 onAddonsChange={handleAddonsChange}
                 headerContent={projectNameField}
@@ -224,24 +218,13 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         );
     }
 
-    // Legacy template mode: Use SingleColumnLayout
+    // Fallback: No packages/stacks available - show project name only
     return (
         <SingleColumnLayout>
             {projectNameField}
-
-            {templates !== undefined && (
-                <>
-                    <TemplateGallery
-                        templates={templates}
-                        selectedTemplateId={state.selectedTemplate}
-                        onSelect={handleTemplateSelect}
-                        initialViewMode={initialViewMode}
-                    />
-                    <Text UNSAFE_className="text-gray-500 text-sm mt-4">
-                        Select a template to pre-configure components, or continue to choose manually.
-                    </Text>
-                </>
-            )}
+            <Text UNSAFE_className="text-gray-500 text-sm mt-4">
+                No demo packages available. Configure demo-packages.json to add packages.
+            </Text>
         </SingleColumnLayout>
     );
 }

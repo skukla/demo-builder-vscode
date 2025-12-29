@@ -14,34 +14,51 @@
 import type { HandlerContext } from '@/types/handlers';
 
 // Mock the EDS services at module level
-const mockGitHubService = {
+const mockGitHubTokenService = {
     getToken: jest.fn(),
     validateToken: jest.fn(),
-    startOAuthFlow: jest.fn(),
-    exchangeCodeForToken: jest.fn(),
     storeToken: jest.fn(),
-    getAuthenticatedUser: jest.fn(),
     clearToken: jest.fn(),
 };
 
-const mockDaLiveService = {
+const mockGitHubRepoOps = {
+    listUserRepositories: jest.fn(),
+    checkRepositoryAccess: jest.fn(),
+};
+
+const mockGitHubFileOps = {
+    getFileContent: jest.fn(),
+};
+
+const mockGitHubOAuthService = {
+    startOAuthFlow: jest.fn(),
+};
+
+const mockDaLiveOrgOps = {
     verifyOrgAccess: jest.fn(),
 };
 
-// Mock GitHubService constructor
-jest.mock('@/features/eds/services/githubService', () => ({
-    GitHubService: jest.fn().mockImplementation(() => mockGitHubService),
-}));
+const mockDaLiveContentOps = {
+    listDirectory: jest.fn(),
+};
 
-// Mock DaLiveService constructor
-jest.mock('@/features/eds/services/daLiveService', () => ({
-    DaLiveService: jest.fn().mockImplementation(() => mockDaLiveService),
-}));
+// Mock the services as used by edsHelpers
+const mockGitHubServices = {
+    tokenService: mockGitHubTokenService,
+    repoOperations: mockGitHubRepoOps,
+    fileOperations: mockGitHubFileOps,
+    oauthService: mockGitHubOAuthService,
+};
+
+const mockDaLiveServices = {
+    orgOperations: mockDaLiveOrgOps,
+    contentOperations: mockDaLiveContentOps,
+};
 
 // Mock edsHelpers - service getters use caching pattern
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubService: jest.fn(() => mockGitHubService),
-    getDaLiveService: jest.fn(() => mockDaLiveService),
+    getGitHubServices: jest.fn(() => mockGitHubServices),
+    getDaLiveServices: jest.fn(() => mockDaLiveServices),
     getDaLiveAuthService: jest.fn(() => ({})),
     validateDaLiveToken: jest.fn(() => ({ valid: true })),
     clearServiceCache: jest.fn(),
@@ -104,8 +121,8 @@ describe('EDS Handlers', () => {
     describe('handleCheckGitHubAuth', () => {
         it('should check token validity and return authenticated status', async () => {
             // Given: Valid GitHub token exists
-            mockGitHubService.getToken.mockResolvedValue({ token: 'test-token', scopes: ['repo'] });
-            mockGitHubService.validateToken.mockResolvedValue({
+            mockGitHubTokenService.getToken.mockResolvedValue({ token: 'test-token', scopes: ['repo'] });
+            mockGitHubTokenService.validateToken.mockResolvedValue({
                 valid: true,
                 user: { login: 'testuser', email: 'test@example.com', avatarUrl: 'https://example.com/avatar' },
                 scopes: ['repo', 'user:email'],
@@ -127,7 +144,7 @@ describe('EDS Handlers', () => {
 
         it('should handle missing token gracefully', async () => {
             // Given: No GitHub token exists
-            mockGitHubService.getToken.mockResolvedValue(undefined);
+            mockGitHubTokenService.getToken.mockResolvedValue(undefined);
 
             const { handleCheckGitHubAuth } = await import('@/features/eds/handlers/edsHandlers');
 
@@ -143,8 +160,8 @@ describe('EDS Handlers', () => {
 
         it('should handle invalid token', async () => {
             // Given: Invalid/expired token
-            mockGitHubService.getToken.mockResolvedValue({ token: 'expired-token', scopes: [] });
-            mockGitHubService.validateToken.mockResolvedValue({ valid: false });
+            mockGitHubTokenService.getToken.mockResolvedValue({ token: 'expired-token', scopes: [] });
+            mockGitHubTokenService.validateToken.mockResolvedValue({ valid: false });
 
             const { handleCheckGitHubAuth } = await import('@/features/eds/handlers/edsHandlers');
 
@@ -167,10 +184,14 @@ describe('EDS Handlers', () => {
                 accessToken: 'new-token',
                 account: { label: 'testuser' },
             });
-            mockGitHubService.getAuthenticatedUser.mockResolvedValue({
-                login: 'newuser',
-                email: 'new@example.com',
-                avatarUrl: 'https://example.com/new-avatar',
+            // validateToken returns { valid, user } structure
+            mockGitHubTokenService.validateToken.mockResolvedValue({
+                valid: true,
+                user: {
+                    login: 'newuser',
+                    email: 'new@example.com',
+                    avatarUrl: 'https://example.com/new-avatar',
+                },
             });
 
             const { handleGitHubOAuth } = await import('@/features/eds/handlers/edsHandlers');
@@ -180,7 +201,7 @@ describe('EDS Handlers', () => {
 
             // Then: Should send auth-complete message
             expect(result.success).toBe(true);
-            expect(mockGitHubService.storeToken).toHaveBeenCalled();
+            expect(mockGitHubTokenService.storeToken).toHaveBeenCalled();
             expect(mockContext.sendMessage).toHaveBeenCalledWith('github-auth-complete', expect.objectContaining({
                 isAuthenticated: true,
                 user: expect.objectContaining({ login: 'newuser' }),

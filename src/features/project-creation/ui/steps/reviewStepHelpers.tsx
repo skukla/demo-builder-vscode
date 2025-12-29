@@ -28,7 +28,7 @@ interface ComponentsState {
     backend?: string;
     dependencies?: string[];
     integrations?: string[];
-    appBuilderApps?: string[];
+    appBuilder?: string[];
 }
 
 /**
@@ -163,8 +163,8 @@ export function buildComponentInfoList(
     }
 
     // App Builder
-    if (components.appBuilderApps && componentsData.appBuilder) {
-        const apps = components.appBuilderApps
+    if (components.appBuilder && componentsData.appBuilder) {
+        const apps = components.appBuilder
             .map((id) => componentsData.appBuilder?.find((a) => a.id === id))
             .filter(Boolean);
 

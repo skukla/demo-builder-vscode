@@ -58,4 +58,11 @@ export const FRONTEND_TIMEOUTS = {
      * Prevents multiple browser tabs from opening on rapid clicks.
      */
     DOUBLE_CLICK_PREVENTION: 1000,
+
+    /**
+     * Debounce delay for component selection changes.
+     * Used by useComponentSelection hook to batch rapid selection changes
+     * before updating state and sending to backend.
+     */
+    COMPONENT_DEBOUNCE: 500,
 } as const;

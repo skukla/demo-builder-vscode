@@ -33,7 +33,7 @@ jest.mock('@/core/ui/components/ui/FadeTransition', () => ({
 }));
 
 // Mock ConfigurationSummary
-jest.mock('@/features/project-creation/ui/components/ConfigurationSummary', () => ({
+jest.mock('@/core/ui/components/wizard', () => ({
     ConfigurationSummary: () => <div data-testid="config-summary">Summary</div>,
 }));
 

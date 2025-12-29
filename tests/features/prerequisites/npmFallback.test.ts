@@ -141,47 +141,6 @@ describe('npm --prefer-offline Fallback Logic', () => {
             }
         });
 
-        it.skip('should retry npm install without --prefer-offline on cache miss (UNIMPLEMENTED)', async () => {
-            // SKIPPED: Feature not implemented - npm fallback retry logic
-            // When implemented, this test should:
-            // 1. Try installation with --prefer-offline
-            // 2. Detect ENOTCACHED error
-            // 3. Retry without --prefer-offline
-            // 4. Return success
-
-            const cacheError: any = new Error('npm ERR! code ENOTCACHED');
-            cacheError.code = 'ENOTCACHED';
-            cacheError.stderr = 'npm ERR! code ENOTCACHED\nnpm ERR! cache mode is offline but no cached response is available';
-
-            mockExecutor.execute
-                .mockRejectedValueOnce(cacheError)
-                .mockResolvedValueOnce({
-                    stdout: 'added 150 packages',
-                    stderr: '',
-                    code: 0,
-                    duration: 45000,
-                });
-        });
-
-        it.skip('should only remove --prefer-offline flag, keeping other performance flags (UNIMPLEMENTED)', async () => {
-            // SKIPPED: Feature not implemented - npm fallback retry logic
-            // When implemented, verify fallback command contains:
-            // --no-audit --no-fund --verbose
-            // but NOT --prefer-offline
-
-            const cacheError: any = new Error('npm ERR! code ENOTCACHED');
-            cacheError.code = 'ENOTCACHED';
-
-            mockExecutor.execute
-                .mockRejectedValueOnce(cacheError)
-                .mockResolvedValueOnce({
-                    stdout: 'added 150 packages',
-                    stderr: '',
-                    code: 0,
-                    duration: 50000,
-                });
-        });
-
         it('should not retry if error is not cache-related', async () => {
             // Non-cache errors (network failures, permission errors, etc.)
             // should NOT trigger fallback logic
@@ -200,24 +159,6 @@ describe('npm --prefer-offline Fallback Logic', () => {
 
             // Should NOT have attempted a second execution
             expect(mockExecutor.execute).toHaveBeenCalledTimes(1);
-        });
-
-        it.skip('should log fallback attempt for debugging (UNIMPLEMENTED)', async () => {
-            // SKIPPED: Feature not implemented - npm fallback retry logic
-            // When implemented, verify logger.warn or logger.info is called with fallback message
-            // e.g., "npm cache miss detected, retrying without --prefer-offline"
-
-            const cacheError: any = new Error('npm ERR! code ENOTCACHED');
-            cacheError.code = 'ENOTCACHED';
-
-            mockExecutor.execute
-                .mockRejectedValueOnce(cacheError)
-                .mockResolvedValueOnce({
-                    stdout: 'added 150 packages',
-                    stderr: '',
-                    code: 0,
-                    duration: 48000,
-                });
         });
     });
 });

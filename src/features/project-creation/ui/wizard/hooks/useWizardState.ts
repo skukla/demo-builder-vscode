@@ -35,7 +35,7 @@ interface UseWizardStateReturn {
     /** Function to directly set state (for message handlers) */
     setState: React.Dispatch<React.SetStateAction<WizardState>>;
     /** The filtered list of enabled wizard steps */
-    WIZARD_STEPS: Array<{ id: WizardStep; name: string }>;
+    WIZARD_STEPS: Array<{ id: WizardStep; name: string; description?: string }>;
     /** Steps that have been completed by the user */
     completedSteps: WizardStep[];
     /** Update completed steps */
@@ -113,7 +113,7 @@ function computeInitialState(
                 backend: editSettings.selections.backend,
                 dependencies: editSettings.selections.dependencies || [],
                 integrations: editSettings.selections.integrations || [],
-                appBuilderApps: editSettings.selections.appBuilder || [],
+                appBuilder: editSettings.selections.appBuilder || [],
             } : undefined,
             adobeOrg: editSettings.adobe?.orgId ? {
                 id: editSettings.adobe.orgId,
@@ -130,8 +130,8 @@ function computeInitialState(
                 name: editSettings.adobe.workspaceName || '',
                 title: editSettings.adobe.workspaceTitle,
             } : undefined,
-            // Brand/Stack from source project
-            selectedBrand: editSettings.selectedBrand,
+            // Package/Stack from source project
+            selectedPackage: editSettings.selectedPackage,
             selectedStack: editSettings.selectedStack,
         };
     }
@@ -165,8 +165,8 @@ function computeInitialState(
         adobeOrg: adobeContext.org,
         adobeProject: adobeContext.project,
         adobeWorkspace: adobeContext.workspace,
-        // Brand/Stack from imported settings
-        selectedBrand: importedSettings?.selectedBrand,
+        // Package/Stack from imported settings
+        selectedPackage: importedSettings?.selectedPackage,
         selectedStack: importedSettings?.selectedStack,
     };
 }
@@ -212,6 +212,7 @@ export function useWizardState({
             return {
                 id: step.id,
                 name: step.name,
+                description: step.description,
                 condition: originalStep?.condition,
             };
         });
@@ -222,6 +223,7 @@ export function useWizardState({
         return filteredSteps.map(step => ({
             id: step.id as WizardStep,
             name: step.name,
+            description: step.description,
         }));
     }, [wizardSteps, stacks, state.selectedStack]);
 

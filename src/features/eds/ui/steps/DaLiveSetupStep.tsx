@@ -10,8 +10,8 @@
  * 4. Paste token in VS Code → Token validated and stored
  */
 
-import React, { useEffect, useState } from 'react';
-import { Heading, Text, TextField, Flex, DialogContainer } from '@adobe/react-spectrum';
+import React, { useState } from 'react';
+import { Text, TextField, Flex, DialogContainer } from '@adobe/react-spectrum';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -19,6 +19,7 @@ import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { Modal } from '@/core/ui/components/ui/Modal';
+import { useCanProceed } from '@/core/ui/hooks';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
 import type { BaseStepProps } from '@/types/wizard';
@@ -188,9 +189,7 @@ export function DaLiveSetupStep({
     const [showTokenInput, setShowTokenInput] = useState(false);
 
     // Update canProceed based on authentication status
-    useEffect(() => {
-        setCanProceed(isAuthenticated);
-    }, [isAuthenticated, setCanProceed]);
+    useCanProceed(isAuthenticated, setCanProceed);
 
     // Handle sign in button - open setup page (first time) or da.live directly (returning user)
     const handleSignIn = () => {
@@ -218,23 +217,18 @@ export function DaLiveSetupStep({
         setTokenInput('');
     };
 
-    // Step header - consistent across all states
-    const stepHeader = (
-        <>
-            <Heading level={2} marginBottom="size-200">
-                DA.live Authentication
-            </Heading>
-            <Text marginBottom="size-400">
-                Connect to DA.live to manage content for Edge Delivery Services.
-            </Text>
-        </>
+    // Step description (header removed - timeline shows step name)
+    const stepDescription = (
+        <Text marginBottom="size-300">
+            Connect to DA.live to manage content for Edge Delivery Services.
+        </Text>
     );
 
     // Loading state - checking auth
     if (isAuthenticating && !showTokenInput) {
         return (
             <SingleColumnLayout>
-                {stepHeader}
+                {stepDescription}
                 <CenteredFeedbackContainer>
                     <LoadingDisplay
                         size="L"
@@ -250,7 +244,7 @@ export function DaLiveSetupStep({
     if (authError && !isAuthenticated && !showTokenInput) {
         return (
             <SingleColumnLayout>
-                {stepHeader}
+                {stepDescription}
                 <CenteredFeedbackContainer>
                     <StatusDisplay
                         variant="error"
@@ -269,7 +263,7 @@ export function DaLiveSetupStep({
     if (isAuthenticated) {
         return (
             <SingleColumnLayout>
-                {stepHeader}
+                {stepDescription}
                 <CenteredFeedbackContainer>
                     <StatusDisplay
                         variant="success"
@@ -287,7 +281,7 @@ export function DaLiveSetupStep({
     // Not authenticated - show sign in prompt with modal
     return (
         <SingleColumnLayout>
-            {stepHeader}
+            {stepDescription}
             <CenteredFeedbackContainer>
                 <StatusDisplay
                     variant="info"

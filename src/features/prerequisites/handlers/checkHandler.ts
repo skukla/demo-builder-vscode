@@ -146,16 +146,16 @@ export async function handleCheckPrerequisites(
                             version: installedVersions || undefined,
                         };
                     } else {
-                        // No components selected - shouldn't happen in normal flow
-                        // Mark as not installed since we can't determine required versions
-                        context.logger.warn('[Prerequisites] Node check with no component selection - cannot determine required versions');
+                        // No components require Node.js (e.g., EDS + PaaS without mesh)
+                        // Mark as satisfied - Node is not needed for this configuration
+                        context.logger.debug('[Prerequisites] Node.js not required for selected components');
                         checkResult = {
                             id: prereq.id,
                             name: prereq.name,
-                            description: prereq.description,
-                            installed: false,
+                            description: 'Not required for selected components',
+                            installed: true, // Requirement is satisfied (nothing needed)
                             optional: prereq.optional || false,
-                            canInstall: false, // Can't install without knowing versions
+                            canInstall: false,
                         };
                     }
                 } else {

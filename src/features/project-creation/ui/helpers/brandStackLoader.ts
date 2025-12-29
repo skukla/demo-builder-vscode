@@ -1,15 +1,15 @@
 /**
- * Brand and Stack Loader
+ * Stack Loader
  *
- * Utility for loading brands and stacks from JSON configuration files.
+ * Utility for loading stacks from JSON configuration files.
  * Filters stacks based on component compatibility matrix from components.json.
- * Used by WelcomeStep to populate the brand and stack selectors.
+ * Used by WelcomeStep to populate the stack selectors.
+ *
+ * NOTE: loadBrands was replaced by loadDemoPackages in demoPackageLoader.ts
  */
 
-import brandsConfig from '../../../../../templates/brands.json';
 import stacksConfig from '../../../../../templates/stacks.json';
 import componentsConfig from '../../../../../templates/components.json';
-import type { Brand, BrandsConfig } from '@/types/brands';
 import type { Stack, StacksConfig } from '@/types/stacks';
 
 interface ComponentDefinition {
@@ -39,16 +39,6 @@ function isStackCompatible(stack: Stack, components: Record<string, ComponentDef
     }
 
     return compatibleBackends.includes(stack.backend);
-}
-
-/**
- * Load brands from brands.json
- *
- * @returns Promise resolving to array of brands
- */
-export async function loadBrands(): Promise<Brand[]> {
-    const config = brandsConfig as BrandsConfig;
-    return config.brands;
 }
 
 /**
