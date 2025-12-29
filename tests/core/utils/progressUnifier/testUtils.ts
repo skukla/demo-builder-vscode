@@ -5,7 +5,7 @@
  * progressUnifier test files.
  */
 
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { UnifiedProgress } from '@/core/utils/progressUnifier';
 
@@ -67,6 +67,10 @@ export const createProgressCollector = () => {
  *
  * @returns Mock Logger instance
  */
-export const createMockLogger = (): Logger => {
-    return new Logger('ProgressUnifier-Test');
-};
+export const createMockLogger = (): Logger => ({
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    trace: jest.fn(),
+});

@@ -5,7 +5,7 @@ import { formatAdobeCliError, extractMeshErrorSummary } from '@/features/mesh/ut
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';

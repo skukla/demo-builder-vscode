@@ -17,7 +17,8 @@
  * - Logger/StepLogger for logging
  */
 
-import { getLogger, Logger, StepLogger } from '@/core/logging';
+import { getLogger, StepLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
 import { formatDuration } from '@/core/utils';
 import type { AdobeSDKClient } from './adobeSDKClient';

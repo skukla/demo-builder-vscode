@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { Logger } from './logger';
+import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
 /**

@@ -7,7 +7,8 @@
 
 import { getConsoleWhereContext, clearConsoleContext, type ContextOperationsDeps } from './contextOperations';
 import { mapOrganizations } from './entityMappers';
-import { getLogger, Logger, StepLogger } from '@/core/logging';
+import { getLogger, StepLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { validateOrgId } from '@/core/validation';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';

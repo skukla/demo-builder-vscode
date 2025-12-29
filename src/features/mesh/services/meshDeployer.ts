@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ServiceLocator } from '@/core/di';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import { validateMeshId } from '@/core/validation';
 import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';

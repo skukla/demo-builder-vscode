@@ -11,9 +11,6 @@ export { DebugLogger, initializeLogger, getLogger } from './debugLogger';
 // Extended CommandResult for logging with context
 export type { CommandResultWithContext } from './debugLogger';
 
-// Logger (backward-compatible wrapper)
-export { Logger } from './logger';
-
 // LogLevel type (re-exported from canonical source)
 export type { LogLevel } from '@/types/logger';
 

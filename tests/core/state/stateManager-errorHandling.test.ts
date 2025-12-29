@@ -30,6 +30,17 @@ jest.mock('os', () => ({
     homedir: jest.fn(() => '/mock/home'),
 }));
 
+// Mock logger - StateManager uses getLogger() internally
+jest.mock('@/core/logging', () => ({
+    getLogger: jest.fn(() => ({
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        debug: jest.fn(),
+        trace: jest.fn(),
+    })),
+}));
+
 // Import mocked fs/promises after jest.mock
 import * as fs from 'fs/promises';
 

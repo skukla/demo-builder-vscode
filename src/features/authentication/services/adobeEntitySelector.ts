@@ -19,7 +19,8 @@
  * - Logger/StepLogger for logging
  */
 
-import { getLogger, Logger, StepLogger } from '@/core/logging';
+import { getLogger, StepLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils';
 import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';

@@ -16,7 +16,7 @@ import { ProjectConfigWriter } from './projectConfigWriter';
 import { ProjectDirectoryScanner, ProjectSummary } from './projectDirectoryScanner';
 import { ProjectFileLoader } from './projectFileLoader';
 import { RecentProjectsManager, RecentProject } from './recentProjectsManager';
-import { Logger } from '@/core/logging';
+import { getLogger } from '@/core/logging';
 import { Project, StateData, ProcessInfo } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -26,7 +26,7 @@ export class StateManager {
     private stateFile: string;
     private _onProjectChanged = new vscode.EventEmitter<Project | undefined>();
     readonly onProjectChanged = this._onProjectChanged.event;
-    private logger = new Logger('StateManager');
+    private logger = getLogger();
 
     // Delegated services
     private projectFileLoader: ProjectFileLoader;

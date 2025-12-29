@@ -14,27 +14,26 @@ jest.mock('vscode');
 jest.mock('fs/promises');
 jest.mock('os');
 
-// Mock Logger - StateManager uses Logger internally
-const mockLoggerInstance = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    setOutputChannel: jest.fn(),
-};
-
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => mockLoggerInstance),
-    getLogger: jest.fn().mockReturnValue({
+// Mock Logger - StateManager uses getLogger() internally
+// Note: jest.mock() is hoisted, so we define the logger mock object inline
+jest.mock('@/core/logging', () => {
+    const mockLogger = {
         info: jest.fn(),
         warn: jest.fn(),
         error: jest.fn(),
         debug: jest.fn(),
-    }),
-}));
+        trace: jest.fn(),
+    };
+    return {
+        getLogger: jest.fn(() => mockLogger),
+        __mockLoggerInstance: mockLogger, // Export for tests to access
+    };
+});
 
-// Export mock logger for tests to verify calls
-export { mockLoggerInstance };
+// Access the mock logger instance via the mocked module
+import { getLogger } from '@/core/logging';
+const loggingModule = jest.requireMock('@/core/logging') as { __mockLoggerInstance: typeof mockLoggerInstance };
+export const mockLoggerInstance = loggingModule.__mockLoggerInstance;
 
 export const mockHomedir = '/mock/home';
 export const mockStateFile = path.join(mockHomedir, '.demo-builder', 'state.json');

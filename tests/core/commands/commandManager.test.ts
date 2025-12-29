@@ -10,7 +10,7 @@ import { CommandManager } from '@/commands/commandManager';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
@@ -71,7 +71,13 @@ describe('CommandManager', () => {
         // Create mock dependencies
         mockStateManager = new StateManager(mockContext);
         mockStatusBar = new StatusBarManager(mockContext, mockStateManager);
-        mockLogger = new Logger('CommandManagerTest');
+        mockLogger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            trace: jest.fn(),
+        } as Logger;
 
         // Mock disposable
         mockDisposable = {

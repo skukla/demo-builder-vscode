@@ -9,7 +9,7 @@ import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import type { SidebarContext } from '../types';
 import { BaseWebviewCommand } from '@/core/base';
-import type { Logger } from '@/core/logging/logger';
+import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state/stateManager';
 
 /**

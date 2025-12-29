@@ -7,7 +7,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
 import { getComponentIds } from '@/types/typeGuards';
 

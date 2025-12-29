@@ -7,7 +7,7 @@
  */
 
 import * as fs from 'fs';
-import { Logger } from '@/core/logging/logger';
+import type { Logger } from '@/types/logger';
 import { StepLogger, StepLoggerContext, getStepLogger } from '@/core/logging/stepLogger';
 
 // Mock fs module

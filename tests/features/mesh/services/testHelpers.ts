@@ -6,7 +6,7 @@
 
 import { Project } from '@/types';
 import { CommandExecutor } from '@/core/shell';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 /**
  * Creates a test project with Commerce configuration
@@ -51,7 +51,13 @@ export function createMockCommandExecutor(): jest.Mocked<CommandExecutor> {
  * Creates a real Logger instance for testing (no mocking needed)
  */
 export function createTestLogger(): Logger {
-    return new Logger('Test');
+    return {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        trace: jest.fn(),
+    };
 }
 
 /**

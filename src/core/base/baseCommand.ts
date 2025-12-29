@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import { DisposableStore } from '@/core/utils/disposableStore';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

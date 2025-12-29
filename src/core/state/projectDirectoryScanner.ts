@@ -7,7 +7,7 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 export interface ProjectSummary {
     name: string;

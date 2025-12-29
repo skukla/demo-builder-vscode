@@ -3,7 +3,7 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
 import { ServiceLocator } from '@/core/di';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project, SubmoduleConfig } from '@/types';
 import { DEFAULT_SHELL } from '@/types/shell';

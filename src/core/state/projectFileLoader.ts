@@ -8,7 +8,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
 

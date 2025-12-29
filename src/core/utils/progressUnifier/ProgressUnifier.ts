@@ -23,7 +23,7 @@ import type {
     ProgressHandler,
     ExecutionContext,
 } from './types';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 
 /**

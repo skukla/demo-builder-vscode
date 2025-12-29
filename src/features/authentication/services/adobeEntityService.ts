@@ -26,7 +26,8 @@
  * - Maintain backward-compatible API
  */
 
-import { Logger, StepLogger } from '@/core/logging';
+import { StepLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';

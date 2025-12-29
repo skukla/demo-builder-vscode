@@ -3,7 +3,7 @@ import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';

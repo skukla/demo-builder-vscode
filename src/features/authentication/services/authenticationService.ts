@@ -1,6 +1,7 @@
 import * as path from 'path';
 import { isValidTokenResponse } from './authPredicates';
-import { getLogger, Logger, StepLogger } from '@/core/logging';
+import { getLogger, StepLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS, CACHE_TTL } from '@/core/utils/timeoutConfig';
 import { AdobeEntityService } from '@/features/authentication/services/adobeEntityService';

@@ -114,7 +114,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         context: vscode.ExtensionContext,
         stateManager: import('@/core/state').StateManager,
         statusBar: import('@/core/vscode/StatusBarManager').StatusBarManager,
-        logger: import('@/core/logging').Logger,
+        logger: import('@/types/logger').Logger,
     ) {
         super(context, stateManager, statusBar, logger);
         // PrerequisitesManager is initialized with proper path

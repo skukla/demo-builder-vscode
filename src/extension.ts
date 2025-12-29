@@ -5,7 +5,8 @@ import * as vscode from 'vscode';
 import { CommandManager } from '@/commands/commandManager';
 import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
-import { initializeLogger, Logger } from '@/core/logging';
+import { initializeLogger, getLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -76,7 +77,7 @@ export async function activate(context: vscode.ExtensionContext) {
         // Silently ignore errors (flag file might not exist, which is fine)
     }
     
-    logger = new Logger('Demo Builder');
+    logger = getLogger();
     const version = context.extension.packageJSON.version || '1.0.0';
     logger.debug(`[Extension] Adobe Demo Builder v${version} starting...`);
 

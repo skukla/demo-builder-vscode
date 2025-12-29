@@ -4,7 +4,7 @@ import * as path from 'path';
 import axios from 'axios';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { UpdateInfo } from '@/types';
 
