@@ -38,7 +38,7 @@ export class AuthenticationService {
         this.logger = logger;
 
         // Store templates path for lazy initialization
-        this.templatesPath = path.join(extensionPath, 'templates', 'logging.json');
+        this.templatesPath = path.join(extensionPath, 'src', 'core', 'logging', 'config', 'logging.json');
 
         // Initialize all submodules
         this.performanceTracker = new PerformanceTracker();

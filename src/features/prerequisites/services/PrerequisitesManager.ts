@@ -58,7 +58,7 @@ export class PrerequisitesManager {
     private cacheManager = new PrerequisitesCacheManager();
 
     constructor(extensionPath: string, logger: Logger) {
-        const configPath = path.join(extensionPath, 'templates', 'prerequisites.json');
+        const configPath = path.join(extensionPath, 'src', 'features', 'prerequisites', 'config', 'prerequisites.json');
         this.configLoader = new ConfigurationLoader<PrerequisitesConfig>(configPath);
         this.logger = logger;
     }

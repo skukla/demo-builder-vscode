@@ -13,7 +13,7 @@
  * with a unified loader for the simplified demo-packages architecture.
  */
 
-import demoPackagesConfig from '../../../../../templates/demo-packages.json';
+import demoPackagesConfig from '../../config/demo-packages.json';
 import type { DemoPackage, DemoPackagesConfig, Storefront } from '@/types/demoPackages';
 
 /**

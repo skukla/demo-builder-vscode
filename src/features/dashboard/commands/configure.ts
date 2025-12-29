@@ -276,7 +276,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         // Handle get components data
         comm.onStreaming('get-components-data', async () => {
-            const componentsPath = path.join(this.context.extensionPath, 'templates', 'components.json');
+            const componentsPath = path.join(this.context.extensionPath, 'src', 'features', 'components', 'config', 'components.json');
             const componentsContent = await fs.readFile(componentsPath, 'utf-8');
             const componentsData = parseJSON<Record<string, unknown>>(componentsContent);
             if (!componentsData) {

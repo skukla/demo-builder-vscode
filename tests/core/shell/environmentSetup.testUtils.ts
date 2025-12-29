@@ -72,7 +72,7 @@ export function mockVSCodeExtension(componentConfig?: any) {
     (vscode.extensions.getExtension as jest.Mock).mockReturnValue(mockExtension);
 
     if (componentConfig !== undefined) {
-        const componentsPath = require('path').join(mockExtension.extensionPath, 'templates', 'components.json');
+        const componentsPath = require('path').join(mockExtension.extensionPath, 'src', 'features', 'components', 'config', 'components.json');
         (fsSync.existsSync as jest.Mock).mockImplementation((p) => p === componentsPath);
         (fsSync.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(componentConfig));
     }

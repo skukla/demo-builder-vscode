@@ -73,9 +73,9 @@ describe('demo-packages.json', () => {
     let stacksConfig: { stacks: Array<{ id: string }> };
 
     beforeAll(() => {
-        const packagesPath = path.join(__dirname, '../../templates/demo-packages.json');
-        const schemaPath = path.join(__dirname, '../../templates/demo-packages.schema.json');
-        const stacksPath = path.join(__dirname, '../../templates/stacks.json');
+        const packagesPath = path.join(__dirname, '../../src/features/project-creation/config/demo-packages.json');
+        const schemaPath = path.join(__dirname, '../../src/features/project-creation/config/demo-packages.schema.json');
+        const stacksPath = path.join(__dirname, '../../src/features/project-creation/config/stacks.json');
 
         packagesConfig = JSON.parse(fs.readFileSync(packagesPath, 'utf-8'));
         schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
@@ -396,7 +396,7 @@ describe('demo-packages.schema.json - validation rules', () => {
     let schema: Record<string, unknown>;
 
     beforeAll(() => {
-        const schemaPath = path.join(__dirname, '../../templates/demo-packages.schema.json');
+        const schemaPath = path.join(__dirname, '../../src/features/project-creation/config/demo-packages.schema.json');
         schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
     });
 

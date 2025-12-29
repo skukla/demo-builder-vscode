@@ -66,7 +66,7 @@ describe('Prerequisites Install Handler - Adobe I/O CLI Unified Progress Message
         // Given: Read actual prerequisites.json configuration
         const fs = require('fs');
         const path = require('path');
-        const configPath = path.join(__dirname, '../../../../templates/prerequisites.json');
+        const configPath = path.join(__dirname, '../../../../src/features/prerequisites/config/prerequisites.json');
         const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
         // When: Find Adobe I/O CLI prerequisite

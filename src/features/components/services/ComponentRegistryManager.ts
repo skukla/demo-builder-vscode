@@ -1,7 +1,7 @@
 /**
  * Component Registry Manager
  *
- * Manages loading and accessing component definitions from templates/components.json.
+ * Manages loading and accessing component definitions from src/features/components/config/components.json.
  * Provides methods for:
  * - Loading and transforming component registry
  * - Accessing frontends, backends, dependencies, integrations, and app builder components
@@ -34,7 +34,7 @@ export class ComponentRegistryManager {
     private transformedRegistry: ComponentRegistry | null = null;
 
     constructor(extensionPath: string) {
-        const registryPath = path.join(extensionPath, 'templates', 'components.json');
+        const registryPath = path.join(extensionPath, 'src', 'features', 'components', 'config', 'components.json');
         this.rawLoader = new ConfigurationLoader<RawComponentRegistry>(registryPath);
     }
 
@@ -56,7 +56,7 @@ export class ComponentRegistryManager {
     ): Error {
         return new Error(
             `Invalid Node version in ${componentType} "${componentName}": ${originalError.message}\n` +
-            `Please edit templates/components.json and ensure nodeVersion uses valid format (e.g., "20", "20.11.0").`,
+            `Please edit src/features/components/config/components.json and ensure nodeVersion uses valid format (e.g., "20", "20.11.0").`,
         );
     }
 

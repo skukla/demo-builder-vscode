@@ -58,7 +58,7 @@ export function getMeshNodeVersion(): string {
             return '20'; // Fallback to known default
         }
 
-        const componentsPath = path.join(extension.extensionPath, 'templates', 'components.json');
+        const componentsPath = path.join(extension.extensionPath, 'src', 'features', 'components', 'config', 'components.json');
         if (!fs.existsSync(componentsPath)) {
             return '20'; // Fallback to known default
         }

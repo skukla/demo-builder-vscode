@@ -128,7 +128,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         this.handlerRegistry = new ProjectCreationHandlerRegistry();
 
         // Store templates path for lazy initialization
-        this.templatesPath = path.join(context.extensionPath, 'templates', 'logging.json');
+        this.templatesPath = path.join(context.extensionPath, 'src', 'core', 'logging', 'config', 'logging.json');
 
         // Initialize shared state object (passed by reference to handlers)
         this.sharedState = {
@@ -145,7 +145,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
         // Load API services configuration into shared state
         try {
-            const apiServicesPath = path.join(context.extensionPath, 'templates', 'api-services.json');
+            const apiServicesPath = path.join(context.extensionPath, 'src', 'features', 'project-creation', 'config', 'api-services.json');
             if (fs.existsSync(apiServicesPath)) {
                 const servicesContent = fs.readFileSync(apiServicesPath, 'utf8');
                 const apiServicesConfig = parseJSON<Record<string, unknown>>(servicesContent);
@@ -177,7 +177,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Try to load wizard steps for better step names
             let wizardSteps: { id: string; name: string; [key: string]: unknown }[] | undefined;
             try {
-                const stepsPath = path.join(this.context.extensionPath, 'templates', 'wizard-steps.json');
+                const stepsPath = path.join(this.context.extensionPath, 'src', 'features', 'project-creation', 'config', 'wizard-steps.json');
                 if (fs.existsSync(stepsPath)) {
                     const stepsContent = fs.readFileSync(stepsPath, 'utf8');
                     const stepsConfig = parseJSON<{ steps: unknown[] }>(stepsContent);
@@ -235,7 +235,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         // Load component defaults from defaults.json
         let componentDefaults: ComponentDefaults | null = null;
         try {
-            const defaultsPath = path.join(this.context.extensionPath, 'templates', 'defaults.json');
+            const defaultsPath = path.join(this.context.extensionPath, 'src', 'features', 'project-creation', 'config', 'defaults.json');
             if (fs.existsSync(defaultsPath)) {
                 const defaultsContent = fs.readFileSync(defaultsPath, 'utf8');
                 const defaults = parseJSON<{ componentSelection: ComponentDefaults }>(defaultsContent);
@@ -251,7 +251,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         // Load wizard steps configuration
         let wizardSteps: WizardStep[] | null = null;
         try {
-            const stepsPath = path.join(this.context.extensionPath, 'templates', 'wizard-steps.json');
+            const stepsPath = path.join(this.context.extensionPath, 'src', 'features', 'project-creation', 'config', 'wizard-steps.json');
             if (fs.existsSync(stepsPath)) {
                 const stepsContent = fs.readFileSync(stepsPath, 'utf8');
                 const stepsConfig = parseJSON<{ steps: WizardStep[] }>(stepsContent);

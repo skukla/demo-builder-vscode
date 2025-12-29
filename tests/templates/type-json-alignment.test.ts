@@ -373,10 +373,10 @@ describe('Type/JSON Alignment Validation', () => {
     let loggingConfig: Record<string, unknown>;
 
     beforeAll(() => {
-        const stacksPath = path.join(__dirname, '../../templates/stacks.json');
-        const componentsPath = path.join(__dirname, '../../templates/components.json');
-        const prerequisitesPath = path.join(__dirname, '../../templates/prerequisites.json');
-        const loggingPath = path.join(__dirname, '../../templates/logging.json');
+        const stacksPath = path.join(__dirname, '../../src/features/project-creation/config/stacks.json');
+        const componentsPath = path.join(__dirname, '../../src/features/components/config/components.json');
+        const prerequisitesPath = path.join(__dirname, '../../src/features/prerequisites/config/prerequisites.json');
+        const loggingPath = path.join(__dirname, '../../src/core/logging/config/logging.json');
 
         stacksConfig = JSON.parse(fs.readFileSync(stacksPath, 'utf-8'));
         componentsConfig = JSON.parse(fs.readFileSync(componentsPath, 'utf-8'));

@@ -119,7 +119,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
             // Resolve stack name
             if (project.selectedStack) {
-                const stacksPath = path.join(this.context.extensionPath, 'templates', 'stacks.json');
+                const stacksPath = path.join(this.context.extensionPath, 'src', 'features', 'project-creation', 'config', 'stacks.json');
                 const stacksLoader = new ConfigurationLoader<StacksConfig>(stacksPath);
                 const stacksConfig = await stacksLoader.load();
                 const stack = stacksConfig.stacks.find((s: Stack) => s.id === project.selectedStack);

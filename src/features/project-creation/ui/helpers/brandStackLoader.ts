@@ -8,8 +8,8 @@
  * NOTE: loadBrands was replaced by loadDemoPackages in demoPackageLoader.ts
  */
 
-import stacksConfig from '../../../../../templates/stacks.json';
-import componentsConfig from '../../../../../templates/components.json';
+import stacksConfig from '../../config/stacks.json';
+import componentsConfig from '@/features/components/config/components.json';
 import type { Stack, StacksConfig } from '@/types/stacks';
 
 interface ComponentDefinition {

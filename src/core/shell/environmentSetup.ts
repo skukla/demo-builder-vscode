@@ -221,7 +221,7 @@ export class EnvironmentSetup {
                 return null;
             }
 
-            const componentsPath = path.join(extension.extensionPath, 'templates', 'components.json');
+            const componentsPath = path.join(extension.extensionPath, 'src', 'features', 'components', 'config', 'components.json');
 
             if (!fsSync.existsSync(componentsPath)) {
                 this.logger.debug('[Env Setup] components.json not found');

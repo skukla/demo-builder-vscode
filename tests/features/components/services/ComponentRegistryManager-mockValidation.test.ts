@@ -22,7 +22,7 @@ describe('Mock Structure Validation', () => {
     let actualComponentsJson: Record<string, unknown>;
 
     beforeAll(() => {
-        const componentsPath = path.join(__dirname, '../../../../templates/components.json');
+        const componentsPath = path.join(__dirname, '../../../../src/features/components/config/components.json');
         actualComponentsJson = JSON.parse(fs.readFileSync(componentsPath, 'utf-8'));
     });
 

@@ -4,6 +4,10 @@
 src/**
 webview-ui/**
 
+# Include feature config files (JSON configs distributed across features)
+!src/features/*/config/**/*.json
+!src/core/*/config/**/*.json
+
 # Dependencies (bundled by esbuild)
 node_modules/**
 
@@ -39,7 +43,6 @@ report/**
 scripts/keys.json
 
 # Documentation (keep README)
-templates/**/*.md
 *.md
 !README.md
 !CHANGELOG.md

@@ -83,7 +83,7 @@ export async function handleCreateApiMesh(
 
         // Load minimal mesh configuration from template
         onProgress?.('Creating API Mesh...', 'Loading mesh configuration template');
-        const templatePath = path.join(context.context.extensionPath, 'templates', 'mesh-config.json');
+        const templatePath = path.join(context.context.extensionPath, 'src', 'features', 'mesh', 'config', 'mesh-config.json');
         const templateContent = await fsPromises.readFile(templatePath, 'utf-8');
         const minimalMeshConfig = parseJSON<Record<string, unknown>>(templateContent);
         if (!minimalMeshConfig) {

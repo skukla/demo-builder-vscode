@@ -389,6 +389,13 @@ async function loadComponentDefinitions(
             componentDef = appBuilder.find((a: { id: string }) => a.id === comp.id);
         }
 
+        // Fallback: If not found in type-specific section, search all sections
+        // This handles components that are in different sections (e.g., mesh components
+        // selected as dependencies are stored in the "mesh" section of components.json)
+        if (!componentDef) {
+            componentDef = await registryManager.getComponentById(comp.id) as TransformedComponentDefinition | undefined;
+        }
+
         if (!componentDef) {
             context.logger.warn(`[Project Creation] Component ${comp.id} not found in registry`);
             continue;

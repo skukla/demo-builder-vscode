@@ -11,7 +11,7 @@ describe('npm Performance Flags', () => {
 
     beforeAll(async () => {
         // Load prerequisites.json to verify npm flags
-        const configPath = path.join(__dirname, '../../../templates/prerequisites.json');
+        const configPath = path.join(__dirname, '../../../src/features/prerequisites/config/prerequisites.json');
         const content = await fs.readFile(configPath, 'utf-8');
         prerequisitesConfig = JSON.parse(content);
     });

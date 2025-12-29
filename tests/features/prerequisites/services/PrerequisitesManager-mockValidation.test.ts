@@ -37,7 +37,7 @@ describe('Mock Structure Validation - Prerequisites', () => {
     };
 
     beforeAll(() => {
-        const prereqPath = path.join(__dirname, '../../../../templates/prerequisites.json');
+        const prereqPath = path.join(__dirname, '../../../../src/features/prerequisites/config/prerequisites.json');
         actualPrerequisitesJson = JSON.parse(fs.readFileSync(prereqPath, 'utf-8'));
     });
 
