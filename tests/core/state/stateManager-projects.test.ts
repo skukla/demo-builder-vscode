@@ -29,8 +29,8 @@ describe('StateManager - Project Management', () => {
 
             const project = createMockProject('new-project');
             project.componentSelections = {
-                frontend: 'citisignal-nextjs',
-                backend: 'magento-platform'
+                frontend: 'headless',
+                backend: 'adobe-commerce-paas'
             };
 
             await stateManager.saveProject(project as Project);

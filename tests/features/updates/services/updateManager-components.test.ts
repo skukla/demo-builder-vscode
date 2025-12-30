@@ -77,8 +77,9 @@ describe('UpdateManager - Component Updates', () => {
 
     describe('component update checking', () => {
         it('should check updates for all components', async () => {
+            // NOTE: Component IDs must match keys in components.json (e.g., 'headless', not 'citisignal-nextjs')
             const mockProject = createMockProject([
-                { id: 'citisignal-nextjs', version: '1.0.0' },
+                { id: 'headless', version: '1.0.0' },
                 { id: 'commerce-mesh', version: '1.0.0' },
             ]);
 
@@ -97,7 +98,7 @@ describe('UpdateManager - Component Updates', () => {
             const results = await updateManager.checkComponentUpdates(mockProject as any);
 
             expect(results.size).toBe(2);
-            expect(results.get('citisignal-nextjs')?.hasUpdate).toBe(true);
+            expect(results.get('headless')?.hasUpdate).toBe(true);
             expect(results.get('commerce-mesh')?.hasUpdate).toBe(true);
         });
 
@@ -113,7 +114,7 @@ describe('UpdateManager - Component Updates', () => {
 
         it('should treat unknown version as needing update', async () => {
             const mockProject = createMockProject([
-                { id: 'citisignal-nextjs', version: 'unknown' },
+                { id: 'headless', version: 'unknown' },
             ]);
 
             const mockRelease = createMockRelease({
@@ -130,12 +131,12 @@ describe('UpdateManager - Component Updates', () => {
 
             const results = await updateManager.checkComponentUpdates(mockProject as any);
 
-            expect(results.get('citisignal-nextjs')?.hasUpdate).toBe(true);
+            expect(results.get('headless')?.hasUpdate).toBe(true);
         });
 
         it('should use zipball_url for component downloads', async () => {
             const mockProject = createMockProject([
-                { id: 'citisignal-nextjs', version: '1.0.0' },
+                { id: 'headless', version: '1.0.0' },
             ]);
 
             const mockRelease = {
@@ -156,7 +157,7 @@ describe('UpdateManager - Component Updates', () => {
 
             const results = await updateManager.checkComponentUpdates(mockProject as any);
 
-            const releaseInfo = results.get('citisignal-nextjs')?.releaseInfo;
+            const releaseInfo = results.get('headless')?.releaseInfo;
             expect(releaseInfo?.downloadUrl).toBe('https://api.github.com/repos/test/repo/zipball/v1.1.0');
         });
 
@@ -173,10 +174,10 @@ describe('UpdateManager - Component Updates', () => {
         it('should handle components with missing version info', async () => {
             const mockProject = {
                 componentInstances: {
-                    'citisignal-nextjs': { id: 'citisignal-nextjs' },
+                    'headless': { id: 'headless' },
                 },
                 componentVersions: {
-                    // Missing version for citisignal-nextjs
+                    // Missing version for headless
                 },
             };
 

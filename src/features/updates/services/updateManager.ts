@@ -34,8 +34,9 @@ export class UpdateManager {
   
     // Repository configurations
     private readonly EXTENSION_REPO = 'skukla/demo-builder-vscode';
+    // Component ID → GitHub repository mapping (IDs must match keys in components.json)
     private readonly COMPONENT_REPOS: Record<string, string> = {
-        'citisignal-nextjs': 'skukla/citisignal-nextjs',
+        'headless': 'skukla/citisignal-nextjs',
         'commerce-mesh': 'skukla/commerce-mesh',
         'integration-service': 'skukla/kukla-integration-service',
         'demo-inspector': 'skukla/demo-inspector',

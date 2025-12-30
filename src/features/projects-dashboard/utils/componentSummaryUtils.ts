@@ -16,13 +16,11 @@ import { getComponentInstanceValues } from '@/types/typeGuards';
  */
 const COMPONENT_DISPLAY_NAMES: Record<string, string> = {
     // Frontends
-    'citisignal-nextjs': 'CitiSignal',
-    'carvelo-nextjs': 'Carvelo',
-    'lagunitas-nextjs': 'Lagunitas',
-    // App Builder
+    'eds': 'EDS',
+    'headless': 'Headless',
+    // Mesh & Dependencies
     'commerce-mesh': 'API Mesh',
     'demo-inspector': 'Inspector',
-    // Add more as needed
 };
 
 /**

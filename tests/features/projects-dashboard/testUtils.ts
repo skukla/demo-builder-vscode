@@ -29,8 +29,8 @@ export function createMockProject(overrides?: Partial<Project>): Project {
         status: 'stopped' as ProjectStatus,
         organization: 'Test Org',
         componentInstances: {
-            'citisignal-nextjs': createMockComponentInstance({
-                id: 'citisignal-nextjs',
+            'headless': createMockComponentInstance({
+                id: 'headless',
                 name: 'CitiSignal',
                 status: 'ready',
             }),
@@ -65,8 +65,8 @@ export function createRunningProject(overrides?: Partial<Project>): Project {
     return createMockProject({
         status: 'running',
         componentInstances: {
-            'citisignal-nextjs': createMockComponentInstance({
-                id: 'citisignal-nextjs',
+            'headless': createMockComponentInstance({
+                id: 'headless',
                 name: 'CitiSignal',
                 status: 'running',
                 port: 3000,

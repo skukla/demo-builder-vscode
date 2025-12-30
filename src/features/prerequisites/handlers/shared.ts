@@ -258,10 +258,10 @@ function getComponentSelectionParams(
  *
  * @example
  * // User selected:
- * // - frontend: citisignal-nextjs (requires Node 18)
- * // - backend: commerce-paas (requires Node 20)
+ * // - frontend: headless (requires Node 18)
+ * // - backend: adobe-commerce-paas (requires Node 20)
  * const mapping = await getNodeVersionMapping(context);
- * // Returns: { '18': 'citisignal-nextjs', '20': 'commerce-paas' }
+ * // Returns: { '18': 'headless', '20': 'adobe-commerce-paas' }
  */
 export async function getNodeVersionMapping(
     context: HandlerContext,

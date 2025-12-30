@@ -66,7 +66,7 @@ export interface CustomIconPaths {
 }
 
 export interface ComponentInstance {
-    id: string;              // Component ID (e.g., "citisignal-nextjs")
+    id: string;              // Component ID (e.g., "headless")
     name: string;            // Human-readable name
     type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder'; // Legacy field, not used with selectionGroups
     subType?: 'mesh' | 'inspector' | 'utility' | 'service';

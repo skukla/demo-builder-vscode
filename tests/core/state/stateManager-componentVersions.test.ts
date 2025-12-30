@@ -33,7 +33,7 @@ describe('StateManager - componentVersions Persistence', () => {
 
             const project = createMockProject();
             project.componentVersions = {
-                'citisignal-nextjs': {
+                'headless': {
                     version: '1.0.0-beta.2',
                     lastUpdated: '2025-11-20T00:00:00.000Z',
                 },
@@ -55,7 +55,7 @@ describe('StateManager - componentVersions Persistence', () => {
             // Verify componentVersions is included in manifest
             const manifestContent = JSON.parse(manifestCall![1] as string);
             expect(manifestContent.componentVersions).toBeDefined();
-            expect(manifestContent.componentVersions['citisignal-nextjs']).toEqual({
+            expect(manifestContent.componentVersions['headless']).toEqual({
                 version: '1.0.0-beta.2',
                 lastUpdated: '2025-11-20T00:00:00.000Z',
             });
@@ -146,8 +146,8 @@ describe('StateManager - componentVersions Persistence', () => {
                 created: '2025-11-20T00:00:00.000Z',
                 lastModified: '2025-11-20T00:00:00.000Z',
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal Next.js',
                         type: 'frontend',
                         status: 'ready',
@@ -156,7 +156,7 @@ describe('StateManager - componentVersions Persistence', () => {
                     },
                 },
                 componentVersions: {
-                    'citisignal-nextjs': {
+                    'headless': {
                         version: '1.0.0-beta.2',
                         lastUpdated: '2025-11-20T00:00:00.000Z',
                     },
@@ -171,7 +171,7 @@ describe('StateManager - componentVersions Persistence', () => {
 
             expect(project).not.toBeNull();
             expect(project?.componentVersions).toBeDefined();
-            expect(project?.componentVersions?.['citisignal-nextjs']).toEqual({
+            expect(project?.componentVersions?.['headless']).toEqual({
                 version: '1.0.0-beta.2',
                 lastUpdated: '2025-11-20T00:00:00.000Z',
             });

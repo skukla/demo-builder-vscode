@@ -206,7 +206,7 @@
       "prerequisites": ["aio-cli"],
       "plugins": ["api-mesh"]
     },
-    "citisignal-nextjs": {
+    "headless": {
       "prerequisites": ["node", "git"]
     },
     "integration-service": {

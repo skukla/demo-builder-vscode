@@ -52,7 +52,7 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
                 lastModified: '2025-11-20T00:00:00.000Z',
                 componentInstances: {},
                 componentVersions: {
-                    'citisignal-nextjs': {
+                    'headless': {
                         version: '1.0.0-beta.2',
                         lastUpdated: '2025-11-20T00:00:00.000Z',
                     },
@@ -97,7 +97,7 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
                 lastModified: '2025-11-20T00:00:00.000Z',
                 componentInstances: {},
                 componentVersions: {
-                    'citisignal-nextjs': {
+                    'headless': {
                         version: '1.0.0-beta.2',
                         lastUpdated: '2025-11-20T00:00:00.000Z',
                     },

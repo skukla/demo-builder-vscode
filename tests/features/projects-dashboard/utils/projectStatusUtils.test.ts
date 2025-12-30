@@ -216,7 +216,7 @@ describe('projectStatusUtils', () => {
         it('should return port from first component instance with a port', () => {
             // Given: Running project with component that has port
             const project = createRunningProject();
-            // createRunningProject sets status: 'running' and has citisignal-nextjs with port: 3000
+            // createRunningProject sets status: 'running' and has headless with port: 3000
 
             // When: Getting frontend port
             const result = getFrontendPort(project);
@@ -236,9 +236,9 @@ describe('projectStatusUtils', () => {
                         status: 'deployed',
                         // No port property
                     },
-                    'commerce-backend': {
-                        id: 'commerce-backend',
-                        name: 'Commerce Backend',
+                    'adobe-commerce-paas': {
+                        id: 'adobe-commerce-paas',
+                        name: 'Adobe Commerce PaaS',
                         status: 'running',
                         // No port property
                     },

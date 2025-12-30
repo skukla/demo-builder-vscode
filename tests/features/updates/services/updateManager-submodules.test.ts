@@ -85,7 +85,7 @@ describe('UpdateManager - Submodule Updates', () => {
     });
 
     describe('checkSubmoduleUpdates', () => {
-        const parentPath = '/test/project/components/citisignal-nextjs';
+        const parentPath = '/test/project/components/headless';
         const submodules: Record<string, SubmoduleConfig> = {
             'demo-inspector': {
                 path: 'src/demo-inspector',
@@ -253,7 +253,7 @@ describe('UpdateManager - Submodule Updates', () => {
             expect(mockExecute).toHaveBeenCalledWith(
                 'git rev-parse HEAD',
                 expect.objectContaining({
-                    cwd: '/test/project/components/citisignal-nextjs/src/demo-inspector',
+                    cwd: '/test/project/components/headless/src/demo-inspector',
                 })
             );
         });

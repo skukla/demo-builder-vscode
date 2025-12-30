@@ -85,7 +85,7 @@ describe('StateManager - Utilities', () => {
                 return Promise.reject(new Error('File not found'));
             });
 
-            (fs.readdir as jest.Mock).mockResolvedValue(['citisignal-nextjs', 'magento-platform']);
+            (fs.readdir as jest.Mock).mockResolvedValue(['headless', 'commerce-mesh']);
             (fs.stat as jest.Mock).mockResolvedValue({ isDirectory: () => true });
 
             await stateManager.initialize();
@@ -101,8 +101,8 @@ describe('StateManager - Utilities', () => {
                 name: 'Test Project',
                 created: '2024-01-01',
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal Next.js',
                         status: 'ready'
                     }
@@ -132,7 +132,7 @@ describe('StateManager - Utilities', () => {
             // The key assertions: status should be 'running' when terminal is detected
             // Note: No log is emitted for this routine detection (removed to prevent log spam)
             expect(project?.status).toBe('running');
-            expect(project?.componentInstances?.['citisignal-nextjs']?.status).toBe('running');
+            expect(project?.componentInstances?.['headless']?.status).toBe('running');
         });
 
         it('should set status to stopped when no matching terminal found', async () => {
@@ -142,8 +142,8 @@ describe('StateManager - Utilities', () => {
                 name: 'Test Project',
                 created: '2024-01-01',
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal Next.js',
                         status: 'ready'
                     }
@@ -172,7 +172,7 @@ describe('StateManager - Utilities', () => {
 
             // Status should be 'stopped' when no matching terminal found
             expect(project?.status).toBe('stopped');
-            expect(project?.componentInstances?.['citisignal-nextjs']?.status).toBe('ready');
+            expect(project?.componentInstances?.['headless']?.status).toBe('ready');
         });
 
         it('should handle corrupted manifest gracefully', async () => {
