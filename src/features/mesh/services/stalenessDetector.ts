@@ -17,7 +17,7 @@ import { getFrontendEnvVars } from '@/core/state';
 import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
 import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
-import { parseJSON, hasEntries } from '@/types/typeGuards';
+import { parseJSON, hasEntries, getComponentInstancesByType } from '@/types/typeGuards';
 
 export type { MeshState, MeshChanges };
 
@@ -150,6 +150,57 @@ function getMeshEnvVarsImpl(componentConfig: Record<string, unknown>): Record<st
  */
 export function getMeshEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
     return getMeshEnvVarsImpl(componentConfig);
+}
+
+/**
+ * Read mesh-related environment variables from the .env file in a mesh component directory.
+ * Returns only the MESH_ENV_VARS keys, filtering out all other variables.
+ *
+ * @param meshComponentPath - Path to the mesh component directory
+ * @returns Record of mesh env var key-value pairs (empty object if file doesn't exist)
+ */
+export async function readMeshEnvVarsFromFile(meshComponentPath: string): Promise<Record<string, string>> {
+    const result: Record<string, string> = {};
+
+    try {
+        const envFilePath = path.join(meshComponentPath, '.env');
+        const content = await fs.readFile(envFilePath, 'utf-8');
+
+        // Parse each line of the .env file
+        for (const line of content.split('\n')) {
+            const trimmedLine = line.trim();
+
+            // Skip empty lines and comments
+            if (!trimmedLine || trimmedLine.startsWith('#')) {
+                continue;
+            }
+
+            // Find the first equals sign (value may contain additional equals signs)
+            const equalsIndex = trimmedLine.indexOf('=');
+            if (equalsIndex <= 0) {
+                continue; // Skip lines without key=value format
+            }
+
+            const key = trimmedLine.substring(0, equalsIndex).trim();
+            let value = trimmedLine.substring(equalsIndex + 1).trim();
+
+            // Remove surrounding quotes if present
+            if ((value.startsWith('"') && value.endsWith('"')) ||
+                (value.startsWith("'") && value.endsWith("'"))) {
+                value = value.slice(1, -1);
+            }
+
+            // Only include mesh-related env vars
+            if (MESH_ENV_VARS.includes(key)) {
+                result[key] = value;
+            }
+        }
+    } catch (error) {
+        // Return empty object if file doesn't exist or can't be read
+        // This is expected for new projects or projects without mesh
+    }
+
+    return result;
 }
 
 /**
@@ -455,8 +506,9 @@ async function updateMeshStateImpl(project: Project, logger: Logger): Promise<vo
         return;
     }
 
-    const meshConfig = project.componentConfigs?.['commerce-mesh'] || {};
-    const envVars = getMeshEnvVarsImpl(meshConfig);
+    // Read env vars from the mesh component's .env file (not componentConfigs)
+    // This is the actual deployed state since .env file is used during mesh deployment
+    const envVars = await readMeshEnvVarsFromFile(meshInstance.path);
     const sourceHash = await calculateMeshSourceHashImpl(meshInstance.path, logger);
 
     project.meshState = {
@@ -480,12 +532,12 @@ export async function updateMeshState(project: Project): Promise<void> {
  * Implementation: Detect if frontend env vars have changed since demo started
  */
 function detectFrontendChangesImpl(project: Project): boolean {
-    const frontendInstance = project.componentInstances?.['citisignal-nextjs'];
+    const frontendInstance = getComponentInstancesByType(project, 'frontend')[0];
     if (!frontendInstance || !project.frontendEnvState) {
         return false;
     }
 
-    const currentConfig = project.componentConfigs?.['citisignal-nextjs'] || {};
+    const currentConfig = project.componentConfigs?.[frontendInstance.id] || {};
     const currentEnvVars = getFrontendEnvVars(currentConfig);
     const deployedEnvVars = project.frontendEnvState.envVars;
 

@@ -130,7 +130,7 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
         it('should return component tree items when a project is loaded', async () => {
             // Given: A project is loaded in state with components
             const project = createMockProjectWithComponents('Acme Corp', {
-                'citisignal-nextjs': {
+                'headless': {
                     name: 'CitiSignal NextJS',
                     type: 'frontend',
                     icon: 'symbol-color',
@@ -158,7 +158,7 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
         it('should return items with appropriate icons and labels', async () => {
             // Given: A project with components is loaded
             const project = createMockProjectWithComponents('Acme Corp', {
-                'citisignal-nextjs': {
+                'headless': {
                     name: 'CitiSignal NextJS',
                     type: 'frontend',
                     icon: 'symbol-color',
@@ -226,7 +226,7 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
         it('should trigger tree refresh when project files change', async () => {
             // Given: ComponentTreeProvider and project is loaded
             const project = createMockProjectWithComponents('Acme Corp', {
-                'citisignal-nextjs': { name: 'CitiSignal NextJS' },
+                'headless': { name: 'CitiSignal NextJS' },
             });
             mockGetCurrentProject.mockResolvedValue(project);
             provider = new ComponentTreeProvider(mockStateManager, '/test/extension/path');

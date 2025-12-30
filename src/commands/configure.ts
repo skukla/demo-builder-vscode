@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
 import { Project } from '@/types';
+import { getComponentInstancesByType } from '@/types/typeGuards';
 
 export class ConfigureCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -13,7 +14,8 @@ export class ConfigureCommand extends BaseCommand {
             }
 
             const inspectorComponent = project.componentInstances?.['demo-inspector'];
-            const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+            // Find frontend component dynamically by type (not hardcoded ID)
+            const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
             
             const options = [
                 {
@@ -95,7 +97,8 @@ export class ConfigureCommand extends BaseCommand {
         const status = newStatus === 'running' ? 'enabled' : 'disabled';
         await this.showInfo(`Demo Inspector ${status}`);
 
-        const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+        // Find frontend component dynamically by type (not hardcoded ID)
+        const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
         if (frontendComponent?.status === 'running') {
             const selection = await vscode.window.showInformationMessage(
                 'Restart the demo to apply changes',
@@ -125,7 +128,8 @@ export class ConfigureCommand extends BaseCommand {
     }
 
     private async changePort(project: Project): Promise<void> {
-        const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+        // Find frontend component dynamically by type (not hardcoded ID)
+        const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
         if (!frontendComponent) {
             await this.showWarning('Frontend component not found in project');
             return;

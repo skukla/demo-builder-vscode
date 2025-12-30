@@ -54,7 +54,7 @@ const BACKEND_SERVICES: DependencyOption[] = [
 
 // Default options (used if componentsData not provided)
 const DEFAULT_FRONTENDS: ComponentOption[] = [
-    { id: 'citisignal-nextjs', name: 'Headless CitiSignal', description: 'NextJS-based storefront with Adobe mesh integration' },
+    { id: 'headless', name: 'Headless Storefront', description: 'Next.js-based headless storefront with Adobe mesh integration' },
 ];
 
 const DEFAULT_BACKENDS: ComponentOption[] = [

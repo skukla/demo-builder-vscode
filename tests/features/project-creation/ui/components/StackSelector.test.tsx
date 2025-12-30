@@ -17,7 +17,7 @@ const mockStacks: Stack[] = [
         name: 'Headless',
         description: 'NextJS storefront with API Mesh and Commerce PaaS',
         icon: 'nextjs',
-        frontend: 'citisignal-nextjs',
+        frontend: 'headless',
         backend: 'adobe-commerce-paas',
         dependencies: ['commerce-mesh', 'demo-inspector'],
         features: ['Server-side rendering', 'API Mesh integration', 'Full customization'],

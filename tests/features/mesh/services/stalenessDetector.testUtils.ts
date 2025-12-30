@@ -113,15 +113,15 @@ export function createMockProjectWithMesh(overrides?: Partial<Project>): Project
 export function createMockProjectWithFrontend(overrides?: Partial<Project>): Project {
     return createMockProject({
         componentInstances: {
-            'citisignal-nextjs': {
-                id: 'citisignal-nextjs',
+            'headless': {
+                id: 'headless',
                 name: 'Frontend',
                 path: '/test/frontend',
                 status: 'running',
             },
         },
         componentConfigs: {
-            'citisignal-nextjs': {
+            'headless': {
                 MESH_ENDPOINT: 'https://example.com',
                 OTHER_VAR: 'value',
             },

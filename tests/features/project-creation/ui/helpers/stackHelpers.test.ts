@@ -18,7 +18,7 @@ const headlessStack: Stack = {
     name: 'Headless',
     description: 'NextJS storefront with API Mesh and Commerce PaaS',
     icon: 'nextjs',
-    frontend: 'citisignal-nextjs',
+    frontend: 'headless',
     backend: 'adobe-commerce-paas',
     dependencies: ['commerce-mesh', 'demo-inspector'],
     features: ['Server-side rendering', 'API Mesh integration', 'Full customization'],
@@ -50,7 +50,7 @@ describe('stackHelpers', () => {
             const result = deriveComponentsFromStack(stack);
 
             // Then: Should have correct frontend
-            expect(result.frontend).toBe('citisignal-nextjs');
+            expect(result.frontend).toBe('headless');
 
             // And: Should have correct backend
             expect(result.backend).toBe('adobe-commerce-paas');

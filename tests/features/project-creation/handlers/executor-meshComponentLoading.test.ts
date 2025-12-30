@@ -48,11 +48,11 @@ jest.mock('@/features/components/services/componentManager', () => ({
         installComponent: jest.fn().mockResolvedValue({
             success: true,
             component: {
-                id: 'citisignal-nextjs',
+                id: 'headless',
                 name: 'CitiSignal Next.js',
                 type: 'frontend',
                 status: 'installed',
-                path: '/tmp/test-project/components/citisignal-nextjs',
+                path: '/tmp/test-project/components/headless',
                 lastUpdated: new Date(),
             },
         }),
@@ -65,10 +65,10 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         loadRegistry: jest.fn().mockResolvedValue({ envVars: {} }),
         getFrontends: jest.fn().mockResolvedValue([{
-            id: 'citisignal-nextjs',
+            id: 'headless',
             name: 'CitiSignal Next.js',
             type: 'frontend',
-            source: { type: 'git', url: 'https://github.com/test/citisignal-nextjs' },
+            source: { type: 'git', url: 'https://github.com/test/headless' },
         }]),
         // IMPORTANT: commerce-mesh is NOT in dependencies (this is the bug scenario)
         getDependencies: jest.fn().mockResolvedValue([{
@@ -130,6 +130,7 @@ jest.mock('vscode', () => ({
 const mockDeployMeshComponent = meshDeployment.deployMeshComponent as jest.Mock;
 const mockUpdateMeshState = stalenessDetector.updateMeshState as jest.Mock;
 const mockFetchDeployedMeshConfig = stalenessDetector.fetchDeployedMeshConfig as jest.Mock;
+const mockReadMeshEnvVarsFromFile = stalenessDetector.readMeshEnvVarsFromFile as jest.Mock;
 
 // Import executor AFTER mocks are set up (top-level import gets mocked modules)
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
@@ -169,6 +170,9 @@ describe('Executor - Mesh Component Loading', () => {
         mockFetchDeployedMeshConfig.mockResolvedValue({
             ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
         });
+        mockReadMeshEnvVarsFromFile.mockResolvedValue({
+            ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+        });
     });
 
     describe('loadComponentDefinitions mesh handling', () => {
@@ -177,7 +181,7 @@ describe('Executor - Mesh Component Loading', () => {
                 projectName: 'test-project',
                 projectPath: '/tmp/test-project',
                 components: {
-                    frontend: 'citisignal-nextjs',
+                    frontend: 'headless',
                     backend: 'adobe-commerce-paas',
                     dependencies: ['commerce-mesh', 'demo-inspector'],
                 },
@@ -200,7 +204,7 @@ describe('Executor - Mesh Component Loading', () => {
                 projectName: 'test-project',
                 projectPath: '/tmp/test-project',
                 components: {
-                    frontend: 'citisignal-nextjs',
+                    frontend: 'headless',
                     backend: 'adobe-commerce-paas',
                     dependencies: ['commerce-mesh'],
                 },
@@ -228,7 +232,7 @@ describe('Executor - Mesh Component Loading', () => {
                 projectName: 'test-project',
                 projectPath: '/tmp/test-project',
                 components: {
-                    frontend: 'citisignal-nextjs',
+                    frontend: 'headless',
                     backend: 'adobe-commerce-paas',
                     dependencies: ['commerce-mesh'],
                 },

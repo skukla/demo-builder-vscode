@@ -106,7 +106,7 @@ describe('ComponentSelectionStep - Selection', () => {
             expect(mockUpdateState).toHaveBeenCalledWith(
                 expect.objectContaining({
                     components: expect.objectContaining({
-                        frontend: 'citisignal-nextjs',
+                        frontend: 'headless',
                         backend: 'adobe-commerce-paas'
                     })
                 })

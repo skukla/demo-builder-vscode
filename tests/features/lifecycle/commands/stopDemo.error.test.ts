@@ -100,9 +100,10 @@ describe('StopDemoCommand - Error Handling', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
-                        name: 'CitiSignal Frontend',
+                    eds: {
+                        id: 'eds',
+                        name: 'Edge Delivery Services',
+                        type: 'frontend',
                         status: 'running',
                         port: 3000,
                     },
@@ -248,9 +249,10 @@ describe('StopDemoCommand - Error Handling', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
-                        name: 'CitiSignal Frontend',
+                    eds: {
+                        id: 'eds',
+                        name: 'Edge Delivery Services',
+                        type: 'frontend',
                         status: 'running',
                         port: 3000,
                     },
@@ -315,9 +317,10 @@ describe('StopDemoCommand - Error Handling', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
-                        name: 'CitiSignal Frontend',
+                    eds: {
+                        id: 'eds',
+                        name: 'Edge Delivery Services',
+                        type: 'frontend',
                         status: 'stopped',
                         port: 3000,
                     },

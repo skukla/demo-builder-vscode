@@ -312,6 +312,22 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     };
 
     await generateEnvironmentFiles(finalizationContext);
+
+    // Populate componentConfigs['commerce-mesh'] from the generated .env file
+    // This enables Configure UI to save mesh env var changes
+    const meshInstanceForConfig = project.componentInstances?.['commerce-mesh'];
+    if (meshInstanceForConfig?.path) {
+        const { readMeshEnvVarsFromFile } = await import('@/features/mesh/services/stalenessDetector');
+        const meshEnvVars = await readMeshEnvVarsFromFile(meshInstanceForConfig.path);
+        if (meshEnvVars && Object.keys(meshEnvVars).length > 0) {
+            if (!project.componentConfigs) {
+                project.componentConfigs = {};
+            }
+            project.componentConfigs['commerce-mesh'] = meshEnvVars;
+            context.logger.debug(`[Project Creation] Populated componentConfigs['commerce-mesh'] with ${Object.keys(meshEnvVars).length} env vars`);
+        }
+    }
+
     await finalizeProject(finalizationContext);
     await sendCompletionAndCleanup(finalizationContext);
 }
@@ -329,7 +345,8 @@ async function handlePortConflicts(
     if (existingProject && existingProject.status === 'running') {
         const runningPort = getProjectFrontendPort(existingProject);
         const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
-        const targetPort = getComponentConfigPort(typedConfig.componentConfigs, 'citisignal-nextjs') || defaultPort;
+        const frontendId = typedConfig.components?.frontend;
+        const targetPort = (frontendId && getComponentConfigPort(typedConfig.componentConfigs, frontendId)) || defaultPort;
 
         if (runningPort === targetPort) {
             context.logger.debug(`[Project Creation] Stopping running demo on port ${runningPort}`);

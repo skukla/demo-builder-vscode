@@ -13,7 +13,7 @@ describe('ReviewStep', () => {
 
     const mockComponentsData = {
         frontends: [
-            { id: 'citisignal-nextjs', name: 'CitiSignal Next.js', description: 'Next.js frontend' }
+            { id: 'headless', name: 'CitiSignal Next.js', description: 'Next.js frontend' }
         ],
         backends: [
             { id: 'commerce-paas', name: 'Commerce PaaS', description: 'Commerce backend' }
@@ -54,7 +54,7 @@ describe('ReviewStep', () => {
             name: 'Test Workspace',
         },
         components: {
-            frontend: 'citisignal-nextjs',
+            frontend: 'headless',
             backend: 'commerce-paas',
             dependencies: ['commerce-mesh'],
             integrations: [],

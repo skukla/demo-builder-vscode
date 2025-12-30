@@ -6,6 +6,7 @@
  */
 
 import { Project } from '@/types';
+import { getComponentInstancesByType } from '@/types/typeGuards';
 
 /**
  * Frontend environment variables that affect runtime
@@ -44,12 +45,12 @@ export function getFrontendEnvVars(componentConfig: Record<string, unknown>): Re
  * Captures the env vars that were active when demo started
  */
 export function updateFrontendState(project: Project): void {
-    const frontendInstance = project.componentInstances?.['citisignal-nextjs'];
+    const frontendInstance = getComponentInstancesByType(project, 'frontend')[0];
     if (!frontendInstance || !project.componentConfigs) {
         return;
     }
 
-    const frontendConfig = project.componentConfigs['citisignal-nextjs'] || {};
+    const frontendConfig = project.componentConfigs[frontendInstance.id] || {};
     const envVars = getFrontendEnvVars(frontendConfig);
 
     project.frontendEnvState = {

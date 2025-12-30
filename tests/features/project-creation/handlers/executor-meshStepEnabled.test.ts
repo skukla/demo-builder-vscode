@@ -40,11 +40,11 @@ jest.mock('@/features/components/services/componentManager', () => ({
         installComponent: jest.fn().mockResolvedValue({
             success: true,
             component: {
-                id: 'citisignal-nextjs',
+                id: 'headless',
                 name: 'CitiSignal Next.js',
                 type: 'frontend',
                 status: 'installed',
-                path: '/tmp/test-project/components/citisignal-nextjs',
+                path: '/tmp/test-project/components/headless',
                 lastUpdated: new Date(),
             },
         }),
@@ -56,10 +56,10 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         loadRegistry: jest.fn().mockResolvedValue({ envVars: {} }),
         getFrontends: jest.fn().mockResolvedValue([{
-            id: 'citisignal-nextjs',
+            id: 'headless',
             name: 'CitiSignal Next.js',
             type: 'frontend',
-            source: { type: 'git', url: 'https://github.com/test/citisignal-nextjs' },
+            source: { type: 'git', url: 'https://github.com/test/headless' },
         }]),
         getDependencies: jest.fn().mockResolvedValue([{
             id: 'commerce-mesh',
@@ -95,6 +95,7 @@ jest.mock('vscode', () => ({
 const mockDeployMeshComponent = meshDeployment.deployMeshComponent as jest.Mock;
 const mockUpdateMeshState = stalenessDetector.updateMeshState as jest.Mock;
 const mockFetchDeployedMeshConfig = stalenessDetector.fetchDeployedMeshConfig as jest.Mock;
+const mockReadMeshEnvVarsFromFile = stalenessDetector.readMeshEnvVarsFromFile as jest.Mock;
 
 describe('Executor - meshStepEnabled Flag', () => {
     let mockContext: Partial<HandlerContext>;
@@ -139,6 +140,9 @@ describe('Executor - meshStepEnabled Flag', () => {
         mockFetchDeployedMeshConfig.mockResolvedValue({
             ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
         });
+        mockReadMeshEnvVarsFromFile.mockResolvedValue({
+            ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+        });
     });
 
     describe('when meshStepEnabled is true', () => {
@@ -146,7 +150,7 @@ describe('Executor - meshStepEnabled Flag', () => {
             projectName: 'test-project',
             meshStepEnabled: true,
             components: {
-                frontend: 'citisignal-nextjs',
+                frontend: 'headless',
                 dependencies: ['commerce-mesh'],
             },
             componentConfigs: {},

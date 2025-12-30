@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types';
-import { parseJSON } from '@/types/typeGuards';
+import { getComponentInstancesByType, parseJSON } from '@/types/typeGuards';
 
 export interface ProjectManifest {
     name?: string;
@@ -185,7 +185,8 @@ export class ProjectFileLoader {
         project: Project,
         terminalProvider: () => readonly vscode.Terminal[],
     ): void {
-        const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+        // Use dynamic lookup to find frontend component (not hardcoded ID)
+        const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
         if (frontendComponent) {
             try {
                 const projectTerminalName = `${project.name} - Frontend`;

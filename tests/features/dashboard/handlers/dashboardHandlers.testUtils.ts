@@ -58,8 +58,8 @@ export function createMockProject(overrides?: Partial<Project>): Project {
             authenticated: true,
         },
         componentInstances: {
-            'citisignal-nextjs': {
-                id: 'citisignal-nextjs',
+            'headless': {
+                id: 'headless',
                 name: 'CitiSignal Next.js',
                 status: 'ready',
                 path: '/path/to/frontend',

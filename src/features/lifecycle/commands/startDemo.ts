@@ -1,14 +1,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/core/base';
+import { BaseCommand, BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { updateFrontendState } from '@/core/state';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { validateNodeVersion } from '@/core/validation';
 import { DEFAULT_SHELL } from '@/types/shell';
-import { getComponentIds, getComponentInstanceValues } from '@/types/typeGuards';
+import { getComponentIds, getComponentInstancesByType, getComponentInstanceValues } from '@/types/typeGuards';
 
 /**
  * Command to start the demo frontend server
@@ -175,7 +175,8 @@ export class StartDemoCommand extends BaseCommand {
 
             // Pre-flight check: port availability (outside progress to allow user interaction)
             const commandManager = ServiceLocator.getCommandExecutor();
-            const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+            // Find frontend component dynamically by type (not hardcoded ID)
+            const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
             
             // Get port: use component's configured port, fallback to extension setting, then 3000
             const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
@@ -353,6 +354,17 @@ export class StartDemoCommand extends BaseCommand {
                 
                 // Update status bar
                 this.statusBar.updateProject(project);
+
+                // Notify Projects Dashboard if it's open (so card status updates to "STARTED")
+                const projectsPanel = BaseWebviewCommand.getActivePanel('demoBuilder.projectsList');
+                this.logger.debug(`[Start Demo] Projects panel found: ${!!projectsPanel}`);
+                if (projectsPanel) {
+                    this.logger.debug(`[Start Demo] Sending demoStateChanged with runningProjectPath: ${project.path}`);
+                    await projectsPanel.webview.postMessage({
+                        type: 'demoStateChanged',
+                        payload: { runningProjectPath: project.path },
+                    });
+                }
 
                 // Update notification in place and pause briefly so user can see success
                 progress.report({ message: `✓ Started at http://localhost:${port}` });

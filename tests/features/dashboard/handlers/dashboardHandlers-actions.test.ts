@@ -137,8 +137,8 @@ describe('Dashboard Action Handlers', () => {
         it('should use correct port from frontend component', async () => {
             const projectWithCustomPort = createMockProject({
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal Next.js',
                         status: 'running',
                         path: '/path/to/frontend',

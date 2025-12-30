@@ -59,7 +59,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             // Arrange: Mock registry data
             const mockFrontends = [
                 {
-                    id: 'citisignal-nextjs',
+                    id: 'headless',
                     name: 'CitiSignal Next.js',
                     description: 'Next.js storefront',
                     dependencies: { required: ['commerce-mesh'], optional: [] },
@@ -135,7 +135,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                 data: {
                     frontends: [
                         {
-                            id: 'citisignal-nextjs',
+                            id: 'headless',
                             name: 'CitiSignal Next.js',
                             description: 'Next.js storefront',
                             dependencies: { required: ['commerce-mesh'], optional: [] },

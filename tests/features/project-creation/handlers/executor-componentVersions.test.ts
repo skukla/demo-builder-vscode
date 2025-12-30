@@ -26,12 +26,12 @@ describe('Executor - Component Version Initialization', () => {
             lastModified: new Date(),
             status: 'ready',
             componentInstances: {
-                'citisignal-nextjs': {
-                    id: 'citisignal-nextjs',
+                'headless': {
+                    id: 'headless',
                     name: 'CitiSignal Next.js',
                     type: 'frontend',
                     status: 'ready',
-                    path: '/tmp/test-project/components/citisignal-nextjs',
+                    path: '/tmp/test-project/components/headless',
                     lastUpdated: new Date(),
                     version: '1.0.0', // Version detected from git tag
                 },
@@ -77,7 +77,7 @@ describe('Executor - Component Version Initialization', () => {
             }
 
             // Verify versions were copied correctly
-            expect(project.componentVersions['citisignal-nextjs'].version).toBe('1.0.0');
+            expect(project.componentVersions['headless'].version).toBe('1.0.0');
             expect(project.componentVersions['commerce-mesh'].version).toBe('2.5.3');
             expect(project.componentVersions['demo-inspector'].version).toBe('^1.0.0');
         });
@@ -116,7 +116,7 @@ describe('Executor - Component Version Initialization', () => {
 
         it('should handle commit hash versions', () => {
             // Component with commit hash (not on tagged release)
-            mockProject.componentInstances!['citisignal-nextjs']!.version = 'abc123de';
+            mockProject.componentInstances!['headless']!.version = 'abc123de';
 
             // Simulate executor logic
             const project = mockProject;
@@ -136,7 +136,7 @@ describe('Executor - Component Version Initialization', () => {
             }
 
             // Verify commit hash is preserved
-            expect(project.componentVersions['citisignal-nextjs'].version).toBe('abc123de');
+            expect(project.componentVersions['headless'].version).toBe('abc123de');
         });
 
         it('should handle beta/pre-release versions', () => {
@@ -204,7 +204,7 @@ describe('Executor - Component Version Initialization', () => {
             // Before fix: version would be 'unknown' even though component has version
             // After fix: version should match component instance
 
-            const component = mockProject.componentInstances!['citisignal-nextjs']!;
+            const component = mockProject.componentInstances!['headless']!;
             expect(component.version).toBe('1.0.0');
 
             // Simulate executor logic
@@ -225,7 +225,7 @@ describe('Executor - Component Version Initialization', () => {
             }
 
             // After fix: Version should be actual version, not 'unknown'
-            expect(project.componentVersions['citisignal-nextjs'].version).toBe('1.0.0');
+            expect(project.componentVersions['headless'].version).toBe('1.0.0');
 
             // Update check would now show: "1.0.0 → 1.0.0-beta.2"
             // Instead of: "vunknown → 1.0.0-beta.2"

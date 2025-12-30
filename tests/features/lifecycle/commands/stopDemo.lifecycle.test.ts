@@ -100,9 +100,10 @@ describe('StopDemoCommand - Lifecycle', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
-                        name: 'CitiSignal Frontend',
+                    eds: {
+                        id: 'eds',
+                        name: 'Edge Delivery Services',
+                        type: 'frontend',
                         status: 'running',
                         port: 3000,
                     },
@@ -264,9 +265,10 @@ describe('StopDemoCommand - Lifecycle', () => {
                 lastModified: new Date(),
                 frontendEnvState: { envVars: { TEST: 'value' }, capturedAt: new Date().toISOString() },
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
-                        name: 'CitiSignal Frontend',
+                    eds: {
+                        id: 'eds',
+                        name: 'Edge Delivery Services',
+                        type: 'frontend',
                         status: 'running',
                         port: 3000,
                     },

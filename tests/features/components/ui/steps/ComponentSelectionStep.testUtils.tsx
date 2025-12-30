@@ -27,7 +27,7 @@ export const baseState: Partial<WizardState> = {
 
 export const mockComponentsData = {
     frontends: [
-        { id: 'citisignal-nextjs', name: 'Headless CitiSignal', description: 'NextJS storefront' }
+        { id: 'headless', name: 'Headless CitiSignal', description: 'NextJS storefront' }
     ],
     backends: [
         { id: 'adobe-commerce-paas', name: 'Adobe Commerce PaaS', description: 'Commerce DSN' }
@@ -47,7 +47,7 @@ export const mockComponentsData = {
 export const createStateWithFrontend = () => ({
     ...baseState,
     components: {
-        frontend: 'citisignal-nextjs',
+        frontend: 'headless',
         backend: '',
         dependencies: ['commerce-mesh'],
         services: [],
@@ -79,7 +79,7 @@ export const createStateWithBackend = () => ({
 export const createStateWithSelections = () => ({
     ...baseState,
     components: {
-        frontend: 'citisignal-nextjs',
+        frontend: 'headless',
         backend: 'adobe-commerce-paas',
         dependencies: ['commerce-mesh'],
         services: ['catalog-service', 'live-search'],
@@ -111,7 +111,7 @@ export const createStateNoFrontend = () => ({
 export const createStateNoBackend = () => ({
     ...baseState,
     components: {
-        frontend: 'citisignal-nextjs',
+        frontend: 'headless',
         backend: '',
         dependencies: ['commerce-mesh'],
         services: [],
@@ -127,7 +127,7 @@ export const createStateNoBackend = () => ({
 export const createStateWithDefaults = () => ({
     ...baseState,
     components: {
-        frontend: 'citisignal-nextjs',
+        frontend: 'headless',
         backend: 'adobe-commerce-paas',
         dependencies: ['commerce-mesh'],
         services: ['catalog-service', 'live-search'],

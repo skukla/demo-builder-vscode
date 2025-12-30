@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
 import type { Project } from '@/types/base';
+import { getComponentInstancesByType } from '@/types/typeGuards';
 
 export class ViewStatusCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -31,8 +32,8 @@ export class ViewStatusCommand extends BaseCommand {
     }
 
     private buildStatusReport(project: Project): string {
-        const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
-        const meshComponent = project.componentInstances?.['commerce-mesh'];
+        const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
+        const meshComponent = getComponentInstancesByType(project, 'mesh')[0];
         const inspectorComponent = project.componentInstances?.['demo-inspector'];
 
         return [
@@ -115,7 +116,7 @@ export class ViewStatusCommand extends BaseCommand {
     }
 
     private async openBrowser(project: Project): Promise<void> {
-        const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+        const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
         const url = `http://localhost:${frontendComponent?.port || 3000}`;
         await vscode.env.openExternal(vscode.Uri.parse(url));
     }

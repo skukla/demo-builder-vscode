@@ -84,7 +84,7 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
         const presets = await registryManager.getPresets();
 
         const componentsData = {
-            frontends: toComponentDataArray(frontends, { recommendedId: 'citisignal-nextjs', includeFeatures: true }),
+            frontends: toComponentDataArray(frontends, { recommendedId: 'headless', includeFeatures: true }),
             backends: toComponentDataArray(backends),
             integrations: toComponentDataArray(integrations),
             appBuilder: toComponentDataArray(appBuilder),

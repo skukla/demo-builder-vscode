@@ -171,14 +171,11 @@ describe('StalenessDetector - Edge Cases', () => {
                         status: 'deployed',
                     },
                 },
-                componentConfigs: {
-                    'commerce-mesh': {
-                        ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
-                    },
-                },
             });
 
-            setupMockFileSystemWithHash('abc123');
+            // Now reads from .env file instead of componentConfigs
+            const envFileContent = 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql\n';
+            setupMockFileSystemWithHash('abc123', envFileContent);
 
             await updateMeshState(project);
 
@@ -215,7 +212,7 @@ describe('StalenessDetector - Edge Cases', () => {
 
             const project = createMockProjectWithFrontend({
                 componentConfigs: {
-                    'citisignal-nextjs': {
+                    'headless': {
                         MESH_ENDPOINT: 'https://new.com',
                         OTHER_VAR: 'value',
                     },
@@ -244,7 +241,7 @@ describe('StalenessDetector - Edge Cases', () => {
 
             const project = createMockProjectWithFrontend({
                 componentConfigs: {
-                    'citisignal-nextjs': {
+                    'headless': {
                         MESH_ENDPOINT: 'https://example.com',
                         OTHER_VAR: 'value',
                     },

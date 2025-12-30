@@ -100,9 +100,10 @@ describe('StopDemoCommand - Process Discovery', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
-                        name: 'CitiSignal Frontend',
+                    eds: {
+                        id: 'eds',
+                        name: 'Edge Delivery Services',
+                        type: 'frontend',
                         status: 'running',
                         port: 3000,
                     },
@@ -243,9 +244,10 @@ describe('StopDemoCommand - Process Discovery', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
-                        name: 'CitiSignal Frontend',
+                    eds: {
+                        id: 'eds',
+                        name: 'Edge Delivery Services',
+                        type: 'frontend',
                         status: 'running',
                         port: -1, // Invalid
                     },
@@ -271,9 +273,10 @@ describe('StopDemoCommand - Process Discovery', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
-                        name: 'CitiSignal Frontend',
+                    eds: {
+                        id: 'eds',
+                        name: 'Edge Delivery Services',
+                        type: 'frontend',
                         status: 'running',
                         port: 70000, // Invalid
                     },
@@ -304,9 +307,10 @@ describe('StopDemoCommand - Process Discovery', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
-                        name: 'CitiSignal Frontend',
+                    eds: {
+                        id: 'eds',
+                        name: 'Edge Delivery Services',
+                        type: 'frontend',
                         status: 'running',
                         port: undefined, // No port set, will use defaultPort
                     },

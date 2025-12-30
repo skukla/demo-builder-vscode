@@ -113,8 +113,8 @@ describe('StartDemoCommand - Lifecycle', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal Frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
@@ -241,8 +241,8 @@ describe('StartDemoCommand - Lifecycle', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal Frontend',
                         status: 'running',
                         path: '/test/path/frontend',

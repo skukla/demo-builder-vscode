@@ -516,12 +516,11 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     }, []);
 
     const getFieldValue = useCallback((field: UniqueField): string | boolean | undefined => {
+        // Special handling for MESH_ENDPOINT - read from mesh component's endpoint
         if (field.key === 'MESH_ENDPOINT') {
-            const projectData = project as unknown as Record<string, unknown>;
-            const apiMeshData = projectData.apiMesh as Record<string, unknown> | undefined;
-            const meshEndpoint = apiMeshData?.endpoint as string | undefined;
-            if (meshEndpoint) {
-                return meshEndpoint;
+            const meshComponent = project.componentInstances?.['commerce-mesh'];
+            if (meshComponent?.endpoint) {
+                return meshComponent.endpoint;
             }
         }
 

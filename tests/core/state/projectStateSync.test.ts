@@ -158,14 +158,14 @@ describe('projectStateSync', () => {
         it('should update frontendEnvState with valid config', () => {
             const project = createProject({
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal NextJS',
                         status: 'running',
                     },
                 },
                 componentConfigs: {
-                    'citisignal-nextjs': {
+                    'headless': {
                         MESH_ENDPOINT: 'https://mesh.example.com',
                         ADOBE_COMMERCE_URL: 'https://commerce.example.com',
                     },
@@ -184,14 +184,14 @@ describe('projectStateSync', () => {
 
             const project = createProject({
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal NextJS',
                         status: 'running',
                     },
                 },
                 componentConfigs: {
-                    'citisignal-nextjs': {},
+                    'headless': {},
                 },
             });
 
@@ -214,7 +214,7 @@ describe('projectStateSync', () => {
                     },
                 },
                 componentConfigs: {
-                    'citisignal-nextjs': {
+                    'headless': {
                         MESH_ENDPOINT: 'https://mesh.example.com',
                     },
                 },
@@ -228,8 +228,8 @@ describe('projectStateSync', () => {
         it('should be no-op when componentConfigs is missing', () => {
             const project = createProject({
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal NextJS',
                         status: 'running',
                     },
@@ -244,7 +244,7 @@ describe('projectStateSync', () => {
         it('should be no-op when componentInstances is missing', () => {
             const project = createProject({
                 componentConfigs: {
-                    'citisignal-nextjs': {
+                    'headless': {
                         MESH_ENDPOINT: 'https://mesh.example.com',
                     },
                 },
@@ -258,8 +258,8 @@ describe('projectStateSync', () => {
         it('should use empty config when frontend config is missing', () => {
             const project = createProject({
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal NextJS',
                         status: 'running',
                     },
@@ -281,14 +281,14 @@ describe('projectStateSync', () => {
         it('should mutate project in place', () => {
             const project = createProject({
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal NextJS',
                         status: 'running',
                     },
                 },
                 componentConfigs: {
-                    'citisignal-nextjs': {
+                    'headless': {
                         MESH_ENDPOINT: 'https://mesh.example.com',
                     },
                 },
@@ -305,14 +305,14 @@ describe('projectStateSync', () => {
         it('should overwrite existing frontendEnvState', () => {
             const project = createProject({
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal NextJS',
                         status: 'running',
                     },
                 },
                 componentConfigs: {
-                    'citisignal-nextjs': {
+                    'headless': {
                         MESH_ENDPOINT: 'https://new-mesh.example.com',
                     },
                 },

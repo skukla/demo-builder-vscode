@@ -6,14 +6,14 @@ export const mockProject = {
     name: 'Test Project',
     path: '/test/path',
     componentSelections: {
-        frontend: 'venia',
-        backend: 'commerce-backend',
+        frontend: 'headless',
+        backend: 'adobe-commerce-paas',
         dependencies: ['catalog-service'],
         integrations: [],
         appBuilder: [],
     },
     componentConfigs: {
-        venia: {
+        headless: {
             ADOBE_COMMERCE_URL: 'https://example.com',
         },
     },
@@ -23,8 +23,8 @@ export const mockProject = {
 export const mockComponentsData = {
     frontends: [
         {
-            id: 'venia',
-            name: 'Venia Storefront',
+            id: 'headless',
+            name: 'Headless Storefront',
             configuration: {
                 requiredEnvVars: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT'],
                 optionalEnvVars: [],
@@ -33,8 +33,8 @@ export const mockComponentsData = {
     ],
     backends: [
         {
-            id: 'commerce-backend',
-            name: 'Commerce Backend',
+            id: 'adobe-commerce-paas',
+            name: 'Adobe Commerce PaaS',
             configuration: {
                 requiredEnvVars: ['ADOBE_COMMERCE_ADMIN_USERNAME'],
                 optionalEnvVars: [],

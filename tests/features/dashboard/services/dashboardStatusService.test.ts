@@ -18,7 +18,7 @@ describe('dashboardStatusService', () => {
     describe('buildStatusPayload', () => {
         it('should build a complete status payload with all required fields', () => {
             // Given: A project with complete data
-            // Note: getProjectFrontendPort() looks specifically for 'citisignal-nextjs'
+            // Note: getProjectFrontendPort() looks specifically for 'headless'
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
@@ -30,7 +30,7 @@ describe('dashboardStatusService', () => {
                     workspace: 'Production',
                 },
                 componentInstances: {
-                    'citisignal-nextjs': {
+                    'headless': {
                         path: '/path/to/frontend',
                         status: 'ready',
                         port: 3000,

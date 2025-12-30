@@ -77,8 +77,8 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         // Arrange: Project without mesh
         const { mockContext } = setupMocks({
             componentInstances: {
-                'citisignal-nextjs': {
-                    id: 'citisignal-nextjs',
+                'headless': {
+                    id: 'headless',
                     name: 'CitiSignal Next.js',
                     status: 'ready',
                     path: '/path/to/frontend',

@@ -158,7 +158,7 @@ describe('configureHelpers accessor functions', () => {
             it('should handle typical frontend component with API endpoint vars', () => {
                 // Given: A typical frontend component configuration
                 const componentDef: ComponentData = {
-                    id: 'citisignal-nextjs',
+                    id: 'headless',
                     name: 'CitiSignal NextJS Frontend',
                     configuration: {
                         requiredEnvVars: ['NEXT_PUBLIC_API_URL', 'NEXT_PUBLIC_MESH_ENDPOINT'],

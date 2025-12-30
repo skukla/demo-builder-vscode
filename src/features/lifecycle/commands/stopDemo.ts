@@ -14,11 +14,12 @@
  */
 
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/core/base';
+import { BaseCommand, BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { DEFAULT_SHELL } from '@/types/shell';
+import { getComponentInstancesByType } from '@/types/typeGuards';
 
 export class StopDemoCommand extends BaseCommand {
     private _processCleanup: ProcessCleanup | null = null;
@@ -114,8 +115,8 @@ export class StopDemoCommand extends BaseCommand {
                 return;
             }
 
-            // Check if demo is running
-            const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+            // Check if demo is running - use dynamic lookup (not hardcoded ID)
+            const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
             if (!frontendComponent) {
                 this.logger.debug('[Stop Demo] No frontend component, nothing to stop');
                 return;
@@ -184,6 +185,15 @@ export class StopDemoCommand extends BaseCommand {
 
                 // Update status bar
                 this.statusBar.updateProject(project);
+
+                // Notify Projects Dashboard if it's open (so card status updates to "STOPPED")
+                const projectsPanel = BaseWebviewCommand.getActivePanel('demoBuilder.projectsList');
+                if (projectsPanel) {
+                    await projectsPanel.webview.postMessage({
+                        type: 'demoStateChanged',
+                        payload: { runningProjectPath: undefined },
+                    });
+                }
 
                 // Update notification in place and pause briefly so user can see success
                 progress.report({ message: '✓ Demo stopped' });

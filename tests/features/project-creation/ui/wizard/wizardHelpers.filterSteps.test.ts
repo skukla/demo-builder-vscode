@@ -62,10 +62,10 @@ describe('filterStepsByComponents', () => {
 
         it('should show step when required component is frontend', () => {
             const stepsWithFrontend: WizardStepConfigWithRequirements[] = [
-                { id: 'storefront-config', name: 'Storefront', enabled: true, requiredComponents: ['citisignal-nextjs'] },
+                { id: 'storefront-config', name: 'Storefront', enabled: true, requiredComponents: ['headless'] },
             ];
             const selectedComponents: ComponentSelection = {
-                frontend: 'citisignal-nextjs',
+                frontend: 'headless',
             };
 
             const result = filterStepsByComponents(stepsWithFrontend, selectedComponents);
@@ -76,10 +76,10 @@ describe('filterStepsByComponents', () => {
 
         it('should show step when required component is backend', () => {
             const stepsWithBackend: WizardStepConfigWithRequirements[] = [
-                { id: 'backend-config', name: 'Backend', enabled: true, requiredComponents: ['commerce-backend'] },
+                { id: 'backend-config', name: 'Backend', enabled: true, requiredComponents: ['adobe-commerce-paas'] },
             ];
             const selectedComponents: ComponentSelection = {
-                backend: 'commerce-backend',
+                backend: 'adobe-commerce-paas',
             };
 
             const result = filterStepsByComponents(stepsWithBackend, selectedComponents);
@@ -89,7 +89,7 @@ describe('filterStepsByComponents', () => {
 
         it('should hide step when required component is NOT selected', () => {
             const selectedComponents: ComponentSelection = {
-                frontend: 'citisignal-nextjs',
+                frontend: 'headless',
             };
 
             const result = filterStepsByComponents(mockSteps, selectedComponents);
@@ -119,13 +119,13 @@ describe('filterStepsByComponents', () => {
                 id: 'advanced-config',
                 name: 'Advanced Config',
                 enabled: true,
-                requiredComponents: ['commerce-mesh', 'citisignal-nextjs'],
+                requiredComponents: ['commerce-mesh', 'headless'],
             },
         ];
 
         it('should show step when ALL required components are selected', () => {
             const selectedComponents: ComponentSelection = {
-                frontend: 'citisignal-nextjs',
+                frontend: 'headless',
                 dependencies: ['commerce-mesh'],
             };
 
@@ -137,7 +137,7 @@ describe('filterStepsByComponents', () => {
         it('should hide step when only SOME required components are selected', () => {
             const selectedComponents: ComponentSelection = {
                 dependencies: ['commerce-mesh'],
-                // citisignal-nextjs NOT selected
+                // headless NOT selected
             };
 
             const result = filterStepsByComponents(mockSteps, selectedComponents);
@@ -160,7 +160,7 @@ describe('filterStepsByComponents', () => {
         const mockSteps: WizardStepConfigWithRequirements[] = [
             { id: 'welcome', name: 'Welcome', enabled: true },
             { id: 'mesh-config', name: 'Mesh', enabled: true, requiredComponents: ['commerce-mesh'] },
-            { id: 'storefront-config', name: 'Storefront', enabled: true, requiredComponents: ['citisignal-nextjs'] },
+            { id: 'storefront-config', name: 'Storefront', enabled: true, requiredComponents: ['headless'] },
             { id: 'review', name: 'Review', enabled: true },
         ];
 
@@ -176,7 +176,7 @@ describe('filterStepsByComponents', () => {
 
         it('should show multiple component-specific steps when multiple components selected', () => {
             const selectedComponents: ComponentSelection = {
-                frontend: 'citisignal-nextjs',
+                frontend: 'headless',
                 dependencies: ['commerce-mesh'],
             };
 
@@ -242,13 +242,13 @@ describe('requiredAny OR logic', () => {
             id: 'backend-config',
             name: 'Backend Config',
             enabled: true,
-            requiredAny: ['commerce-backend', 'custom-backend'],
+            requiredAny: ['adobe-commerce-paas', 'custom-backend'],
         },
     ];
 
     it('should show step when first component in requiredAny is selected', () => {
         const selectedComponents: ComponentSelection = {
-            backend: 'commerce-backend',
+            backend: 'adobe-commerce-paas',
         };
 
         const result = filterStepsByComponents(mockSteps, selectedComponents);
@@ -314,11 +314,11 @@ describe('requiredAny OR logic', () => {
                 id: 'storefront-config',
                 name: 'Storefront Config',
                 enabled: true,
-                requiredAny: ['citisignal-nextjs', 'eds-storefront'],
+                requiredAny: ['headless', 'eds-storefront'],
             },
         ];
         const selectedComponents: ComponentSelection = {
-            frontend: 'citisignal-nextjs',
+            frontend: 'headless',
         };
 
         const result = filterStepsByComponents(stepsWithFrontend, selectedComponents);
@@ -330,18 +330,18 @@ describe('requiredAny OR logic', () => {
 describe('isComponentSelected', () => {
     it('should find component in frontend', () => {
         const selection: ComponentSelection = {
-            frontend: 'citisignal-nextjs',
+            frontend: 'headless',
         };
 
-        expect(isComponentSelected('citisignal-nextjs', selection)).toBe(true);
+        expect(isComponentSelected('headless', selection)).toBe(true);
     });
 
     it('should find component in backend', () => {
         const selection: ComponentSelection = {
-            backend: 'commerce-backend',
+            backend: 'adobe-commerce-paas',
         };
 
-        expect(isComponentSelected('commerce-backend', selection)).toBe(true);
+        expect(isComponentSelected('adobe-commerce-paas', selection)).toBe(true);
     });
 
     it('should find component in dependencies array', () => {
@@ -371,7 +371,7 @@ describe('isComponentSelected', () => {
 
     it('should return false for unselected component', () => {
         const selection: ComponentSelection = {
-            frontend: 'citisignal-nextjs',
+            frontend: 'headless',
             dependencies: ['commerce-mesh'],
         };
 

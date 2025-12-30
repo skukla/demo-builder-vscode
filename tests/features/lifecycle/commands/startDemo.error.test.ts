@@ -112,8 +112,8 @@ describe('StartDemoCommand - Error Handling', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal Frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
@@ -180,8 +180,8 @@ describe('StartDemoCommand - Error Handling', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal Frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
@@ -221,8 +221,8 @@ describe('StartDemoCommand - Error Handling', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal Frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
@@ -260,8 +260,8 @@ describe('StartDemoCommand - Error Handling', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal Frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
@@ -296,8 +296,8 @@ describe('StartDemoCommand - Error Handling', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal Frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
@@ -322,7 +322,7 @@ describe('StartDemoCommand - Error Handling', () => {
     });
 
     describe('Test 3.2: Frontend Component Missing', () => {
-        it('should show error when project has no citisignal-nextjs component', async () => {
+        it('should show error when project has no headless component', async () => {
             // Given: Project has no frontend component
             mockStateManager.getCurrentProject.mockResolvedValue({
                 name: 'test-project',
@@ -331,7 +331,7 @@ describe('StartDemoCommand - Error Handling', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    // No citisignal-nextjs component
+                    // No headless component
                     'some-other-component': {
                         id: 'some-other-component',
                         name: 'Other Component',
@@ -362,8 +362,8 @@ describe('StartDemoCommand - Error Handling', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 componentInstances: {
-                    'citisignal-nextjs': {
-                        id: 'citisignal-nextjs',
+                    'headless': {
+                        id: 'headless',
                         name: 'CitiSignal Frontend',
                         status: 'ready',
                         path: undefined, // No path

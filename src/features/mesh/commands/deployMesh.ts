@@ -261,6 +261,26 @@ export class DeployMeshCommand extends BaseCommand {
                         await updateMeshState(project);
                         this.logger.debug('[Mesh Deployment] Updated mesh state after successful deployment');
 
+                        // Persist MESH_ENDPOINT to componentConfigs for frontend
+                        // Dashboard checks componentConfigs for MESH_ENDPOINT (not meshComponent.endpoint)
+                        if (deployedEndpoint) {
+                            // Find frontend component (type starts with 'frontend')
+                            const frontendEntry = getComponentInstanceEntries(project)
+                                .find(([, instance]) => instance.type?.startsWith('frontend'));
+
+                            if (frontendEntry) {
+                                const [frontendId] = frontendEntry;
+                                if (!project.componentConfigs) {
+                                    project.componentConfigs = {};
+                                }
+                                if (!project.componentConfigs[frontendId]) {
+                                    project.componentConfigs[frontendId] = {};
+                                }
+                                project.componentConfigs[frontendId]['MESH_ENDPOINT'] = deployedEndpoint;
+                                this.logger.debug(`[Mesh Deployment] Persisted MESH_ENDPOINT to componentConfigs.${frontendId}`);
+                            }
+                        }
+
                         await this.stateManager.saveProject(project);
                         
                         // Send final "deployed" status to Project Dashboard

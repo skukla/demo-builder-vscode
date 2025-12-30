@@ -36,8 +36,8 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         // When we can't verify the deployed state, we assume not-deployed as a safe default
         const { mockContext } = setupMocks({
             componentInstances: {
-                'citisignal-nextjs': {
-                    id: 'citisignal-nextjs',
+                'headless': {
+                    id: 'headless',
                     name: 'CitiSignal Next.js',
                     status: 'ready',
                     path: '/path/to/frontend',
@@ -116,8 +116,8 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         // Given: Empty meshState.envVars, fetch success scenario
         const { mockContext } = setupMocks({
             componentInstances: {
-                'citisignal-nextjs': {
-                    id: 'citisignal-nextjs',
+                'headless': {
+                    id: 'headless',
                     name: 'CitiSignal Next.js',
                     status: 'ready',
                     path: '/path/to/frontend',
@@ -179,8 +179,8 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         // Given: Project with deployed mesh and known changes
         const { mockContext } = setupMocks({
             componentInstances: {
-                'citisignal-nextjs': {
-                    id: 'citisignal-nextjs',
+                'headless': {
+                    id: 'headless',
                     name: 'CitiSignal Next.js',
                     status: 'ready',
                     path: '/path/to/frontend',
@@ -252,8 +252,8 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         // Given: Project with deployed mesh and no changes (matching endpoints!)
         const { mockContext } = setupMocks({
             componentInstances: {
-                'citisignal-nextjs': {
-                    id: 'citisignal-nextjs',
+                'headless': {
+                    id: 'headless',
                     name: 'CitiSignal Next.js',
                     status: 'ready',
                     path: '/path/to/frontend',

@@ -156,7 +156,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             createdAt: new Date(),
             status: 'ready',
             componentConfigs: {
-                'citisignal-nextjs': {
+                'headless': {
                     MESH_ENDPOINT: mockMeshEndpoint,
                 },
             },
@@ -169,7 +169,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             createdAt: new Date(),
             status: 'ready',
             componentConfigs: {
-                'citisignal-nextjs': {
+                'headless': {
                     // No MESH_ENDPOINT here
                 },
             },

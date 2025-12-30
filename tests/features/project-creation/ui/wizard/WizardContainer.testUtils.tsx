@@ -15,7 +15,7 @@ export const mockCreateProject = jest.fn();
 
 // Test data factories - CRITICAL: Return functions, not variables
 export const createMockComponentDefaults = (): ComponentSelection => ({
-    frontend: 'citisignal-nextjs',
+    frontend: 'headless',
     backend: 'commerce-paas',
     dependencies: [],
     integrations: [],
@@ -76,14 +76,14 @@ export const createMockEditProject = (
     settings: {
         version: 1,
         selections: {
-            frontend: 'citisignal-nextjs',
+            frontend: 'headless',
             backend: 'commerce-paas',
             dependencies: ['commerce-mesh'],
             integrations: [],
             appBuilder: [],
         },
         configs: {
-            'citisignal-nextjs': { port: 3000 },
+            'headless': { port: 3000 },
         },
         adobe: {
             orgId: 'org123',
@@ -112,14 +112,14 @@ export const createMockImportedSettings = () => ({
         workspaceName: 'Test Workspace',
     },
     selections: {
-        frontend: 'citisignal-nextjs',
+        frontend: 'headless',
         backend: 'commerce-paas',
         dependencies: ['commerce-mesh'],
         integrations: [],
         appBuilder: [],
     },
     configs: {
-        'citisignal-nextjs': { port: 3000 },
+        'headless': { port: 3000 },
     },
     source: {
         project: 'my-existing-project',
@@ -132,7 +132,7 @@ export const createMockComponentsDataResponse = () => ({
     data: {
         frontends: [
             {
-                id: 'citisignal-nextjs',
+                id: 'headless',
                 name: 'CitiSignal Next.js',
                 description: 'Frontend application',
                 configuration: { services: [] }

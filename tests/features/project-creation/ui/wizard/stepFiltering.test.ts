@@ -16,7 +16,7 @@ const headlessStack: Stack = {
     id: 'headless',
     name: 'Headless',
     description: 'NextJS storefront with API Mesh and Commerce PaaS',
-    frontend: 'citisignal-nextjs',
+    frontend: 'headless',
     backend: 'adobe-commerce-paas',
     dependencies: ['commerce-mesh', 'demo-inspector'],
     // Note: NO requiresGitHub or requiresDaLive
