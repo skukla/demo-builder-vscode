@@ -250,6 +250,23 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             context.logger.debug(`[Mesh Setup] Imported workspace differs from selected - deploying new mesh`);
             context.logger.debug(`[Mesh Setup] Imported: ${typedConfig.importedWorkspaceId}, Selected: ${typedConfig.adobe?.workspace}`);
         }
+
+        // CRITICAL: Ensure workspace context is correct before mesh deployment
+        // The Adobe CLI mesh commands operate on the currently-selected workspace.
+        // CLI context can drift from other sessions/operations, causing mesh to deploy
+        // to wrong workspace. This validates and restores context before deployment.
+        if (context.authManager && typedConfig.adobe?.workspace && typedConfig.adobe?.projectId) {
+            context.logger.debug(`[Mesh Setup] Ensuring workspace context: ${typedConfig.adobe.workspace}`);
+            const contextOk = await context.authManager.selectWorkspace(
+                typedConfig.adobe.workspace,
+                typedConfig.adobe.projectId,
+            );
+            if (!contextOk) {
+                context.logger.error('[Mesh Setup] Failed to set workspace context - mesh may deploy to wrong workspace');
+                // Continue anyway - the mesh command may still work if context happens to be correct
+            }
+        }
+
         await deployNewMesh(meshContext, typedConfig.apiMesh);
     } else if (meshComponent?.path && typedConfig.meshStepEnabled && typedConfig.apiMesh?.endpoint) {
         // Mesh was deployed via wizard step - update component instance with wizard data
@@ -442,6 +459,10 @@ async function loadComponentDefinitions(
                 context.logger.debug(`[Project Creation] Selected submodules for ${componentDef.name}: ${selectedSubmodules.join(', ')}`);
             }
         }
+
+        // Ensure type is set on the definition for ComponentInstance creation
+        // This enables dynamic lookup by type (e.g., finding the frontend component)
+        componentDef = { ...componentDef, type: comp.type as TransformedComponentDefinition['type'] };
 
         componentDefinitions.set(comp.id, { definition: componentDef, type: comp.type, installOptions });
     }
