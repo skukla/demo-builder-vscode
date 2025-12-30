@@ -366,7 +366,8 @@ describe('ProjectCreationStep', () => {
             );
 
             // Component doesn't display logs - renders without crashing
-            expect(screen.getByText('Creating Your Demo Project')).toBeInTheDocument();
+            // With progress active, shows current operation from creationProgress
+            expect(screen.getByText('Creating project directory')).toBeInTheDocument();
         });
     });
 

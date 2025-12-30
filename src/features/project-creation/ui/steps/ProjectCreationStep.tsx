@@ -1,4 +1,4 @@
-import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
+import { Text, Flex, Button } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -145,13 +145,6 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
             {/* Main content area */}
             <div className="flex-1 flex w-full">
                 <SingleColumnLayout>
-                    <Heading level={2} marginBottom="size-300">
-                        Creating Your Demo Project
-                    </Heading>
-                    <Text marginBottom="size-400">
-                        Setting up your project with all selected components and configurations.
-                    </Text>
-
                     {/* Checking API Mesh access */}
                     {isCheckingMesh && (
                         <CenteredFeedbackContainer>
