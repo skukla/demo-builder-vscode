@@ -9,7 +9,7 @@
 
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys, getPluginNodeVersions } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, getNodeVersionIdMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys, getPluginNodeVersions, NodeVersionIdMapping } from '@/features/prerequisites/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
 import type { PrerequisiteCheckState } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
@@ -84,7 +84,9 @@ export async function handleCheckPrerequisites(
         context.sharedState.currentPrerequisiteStates = new Map();
 
         // Get Node version to component mapping if we have components selected
+        // Two mappings: one with display names (for UI), one with IDs (for filtering)
         const nodeVersionMapping = await getNodeVersionMapping(context);
+        const nodeVersionIdMapping = await getNodeVersionIdMapping(context);
 
         context.stepLogger?.log('prerequisites', `Found ${prerequisites?.length ?? 0} prerequisites to check`, 'info');
 
@@ -192,9 +194,8 @@ export async function handleCheckPrerequisites(
 
                 const requiredMajors = requiredForComponents && requiredForComponents.length > 0
                     ? getPluginNodeVersions(
-                        nodeVersionMapping,
+                        nodeVersionIdMapping,
                         requiredForComponents,
-                        context.sharedState.currentComponentSelection?.dependencies,
                     )
                     : getNodeVersionKeys(nodeVersionMapping);
 

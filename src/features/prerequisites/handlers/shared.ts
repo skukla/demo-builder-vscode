@@ -20,6 +20,12 @@ import { toError } from '@/types/typeGuards';
 export type NodeVersionMapping = Record<string, string>;
 
 /**
+ * Type alias for Node version ID mapping (major version → component ID)
+ * Used for programmatic filtering (e.g., matching against plugin requiredFor arrays)
+ */
+export type NodeVersionIdMapping = Record<string, string>;
+
+/**
  * Check if node version mapping has any entries
  *
  * Extracts the common pattern `Object.keys(nodeVersionMapping).length > 0`
@@ -45,32 +51,37 @@ export function getNodeVersionKeys(mapping: NodeVersionMapping): string[] {
 /**
  * Get Node versions that require a specific plugin
  *
- * Filters the nodeVersionMapping to find which Node versions are used by
+ * Filters the nodeVersionIdMapping to find which Node versions are used by
  * components that require this plugin (via requiredFor array).
  *
- * @param nodeVersionMapping - Mapping of Node major version to component ID
+ * Note: Uses nodeVersionIdMapping (component IDs) for filtering, NOT
+ * nodeVersionMapping (display names). This distinction is critical because
+ * requiredForComponents contains component IDs like 'commerce-mesh', not
+ * display names like 'Adobe Commerce API Mesh'.
+ *
+ * @param nodeVersionIdMapping - Mapping of Node major version to component IDs (comma-separated if multiple)
  * @param requiredForComponents - Array of component IDs that require this plugin
- * @param _dependencies - Unused parameter kept for API compatibility
  * @returns Array of Node major versions that need this plugin installed
  *
  * @example
- * // Plugin required by 'eds' component, which uses Node 18
+ * // Plugin required by 'commerce-mesh' component, which uses Node 20
  * const versions = getPluginNodeVersions(
- *     { '18': 'eds', '20': 'commerce-paas' },
- *     ['eds']
+ *     { '20': 'commerce-mesh', '24': 'headless' },  // ID mapping
+ *     ['commerce-mesh']                              // plugin's requiredFor
  * );
- * // Returns: ['18']
+ * // Returns: ['20']
  */
 export function getPluginNodeVersions(
-    nodeVersionMapping: NodeVersionMapping,
+    nodeVersionIdMapping: NodeVersionIdMapping,
     requiredForComponents: string[],
-    _dependencies?: string[],
 ): string[] {
     const pluginNodeVersions: string[] = [];
 
-    // Check component matches in nodeVersionMapping
-    for (const [nodeVersion, componentId] of Object.entries(nodeVersionMapping)) {
-        if (requiredForComponents.includes(componentId)) {
+    // Check component ID matches in nodeVersionIdMapping
+    // Value may contain multiple IDs comma-separated (e.g., "eds,commerce-mesh")
+    for (const [nodeVersion, componentIds] of Object.entries(nodeVersionIdMapping)) {
+        const ids = componentIds.split(',');
+        if (ids.some(id => requiredForComponents.includes(id))) {
             pluginNodeVersions.push(nodeVersion);
         }
     }
@@ -272,6 +283,45 @@ export async function getNodeVersionMapping(
         // acceptable because Node versions will still be detected via system
         // check - we just lose the component-to-version association display.
         context.logger.warn('Failed to get Node version mapping:', error as Error);
+        return {};
+    }
+}
+
+/**
+ * Get Node version to component ID mapping from component selection
+ *
+ * Returns a map of Node major versions to component IDs that require them.
+ * Unlike getNodeVersionMapping which returns display names for UI,
+ * this returns component IDs for programmatic filtering (e.g., matching
+ * against plugin requiredFor arrays).
+ *
+ * @param context - Handler context with component selection
+ * @returns Mapping of Node major version to component IDs (e.g., {'20': 'commerce-mesh', '24': 'headless'})
+ *
+ * @example
+ * // User selected:
+ * // - frontend: headless (requires Node 24)
+ * // - dependencies: commerce-mesh (requires Node 20)
+ * const mapping = await getNodeVersionIdMapping(context);
+ * // Returns: { '20': 'commerce-mesh', '24': 'headless' }
+ */
+export async function getNodeVersionIdMapping(
+    context: HandlerContext,
+): Promise<NodeVersionIdMapping> {
+    if (!context.sharedState.currentComponentSelection) {
+        return {};
+    }
+
+    try {
+        const { ComponentRegistryManager } = await import('../../components/services/ComponentRegistryManager');
+        const registryManager = new ComponentRegistryManager(context.context.extensionPath);
+        const params = getComponentSelectionParams(context.sharedState.currentComponentSelection);
+        const mapping = await registryManager.getNodeVersionToComponentIdMapping(...params);
+
+        return mapping;
+    } catch (error) {
+        // INTENTIONALLY RETURNS EMPTY: Same graceful degradation as getNodeVersionMapping.
+        context.logger.warn('Failed to get Node version ID mapping:', error as Error);
         return {};
     }
 }

@@ -522,4 +522,99 @@ export class ComponentRegistryManager {
 
         return mapping;
     }
+
+    /**
+     * Gets a mapping of Node.js versions to component IDs
+     *
+     * SECURITY: Validates all Node.js versions from components.json to prevent
+     * command injection attacks (CWE-77). This provides defense-in-depth by
+     * catching malicious versions at the source before they reach CommandExecutor.
+     *
+     * Unlike getNodeVersionToComponentMapping which returns display names for UI,
+     * this method returns component IDs for programmatic filtering (e.g., matching
+     * against plugin requiredFor arrays).
+     *
+     * @param frontendId - Frontend component ID (optional)
+     * @param backendId - Backend component ID (optional)
+     * @param dependencies - Array of dependency component IDs (optional)
+     * @param integrations - Array of integration component IDs (optional)
+     * @param appBuilder - Array of App Builder component IDs (optional)
+     * @returns Record mapping Node.js versions to component IDs (e.g., {"20": "commerce-mesh", "24": "headless"})
+     * @throws Error if any component has an invalid nodeVersion format
+     */
+    async getNodeVersionToComponentIdMapping(
+        frontendId?: string,
+        backendId?: string,
+        dependencies?: string[],
+        integrations?: string[],
+        appBuilder?: string[],
+    ): Promise<Record<string, string>> {
+        const mapping: Record<string, string> = {};
+
+        // Helper to add ID to mapping (validates Node version for security)
+        const addIdMapping = (nodeVersion: string, componentId: string) => {
+            try {
+                validateNodeVersion(nodeVersion);
+                // Aggregate component IDs when multiple components share same Node version
+                if (mapping[nodeVersion]) {
+                    const existingIds = mapping[nodeVersion].split(',');
+                    if (!existingIds.includes(componentId)) {
+                        mapping[nodeVersion] = `${mapping[nodeVersion]},${componentId}`;
+                    }
+                } else {
+                    mapping[nodeVersion] = componentId;
+                }
+            } catch (error) {
+                throw this.formatNodeVersionError(componentId, 'component', error as Error);
+            }
+        };
+
+        // Check infrastructure node versions (always required)
+        const registry = await this.loadRegistry();
+        if (registry.infrastructure) {
+            for (const infra of registry.infrastructure) {
+                if (infra.configuration?.nodeVersion) {
+                    addIdMapping(infra.configuration.nodeVersion, infra.id);
+                }
+            }
+        }
+
+        // Check frontend node version
+        if (frontendId) {
+            const frontend = await this.getComponentById(frontendId);
+            if (frontend?.configuration?.nodeVersion) {
+                addIdMapping(frontend.configuration.nodeVersion, frontendId);
+            }
+        }
+
+        // Check backend node version
+        if (backendId) {
+            const backend = await this.getComponentById(backendId);
+            if (backend?.configuration?.nodeVersion) {
+                addIdMapping(backend.configuration.nodeVersion, backendId);
+            }
+        }
+
+        // Check dependencies node versions
+        if (dependencies) {
+            for (const depId of dependencies) {
+                const dep = await this.getComponentById(depId);
+                if (dep?.configuration?.nodeVersion) {
+                    addIdMapping(dep.configuration.nodeVersion, depId);
+                }
+            }
+        }
+
+        // Check app builder node versions
+        if (appBuilder) {
+            for (const appId of appBuilder) {
+                const app = await this.getComponentById(appId);
+                if (app?.configuration?.nodeVersion) {
+                    addIdMapping(app.configuration.nodeVersion, appId);
+                }
+            }
+        }
+
+        return mapping;
+    }
 }

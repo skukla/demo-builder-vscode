@@ -28,6 +28,7 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
     return {
         ...actual,
         getNodeVersionMapping: jest.fn(),
+        getNodeVersionIdMapping: jest.fn(),
         checkPerNodeVersionStatus: jest.fn(),
         areDependenciesInstalled: jest.fn(),
         hasNodeVersions: jest.fn(),
@@ -284,7 +285,9 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
 
         // Node 18 for eds, Node 20 for commerce-paas
         const nodeVersionMapping = { '18': 'eds', '20': 'commerce-paas' };
+        const nodeVersionIdMapping = { '18': 'eds', '20': 'commerce-paas' };
         (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue(nodeVersionMapping);
+        (shared.getNodeVersionIdMapping as jest.Mock).mockResolvedValue(nodeVersionIdMapping);
         (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
         (shared.getNodeVersionKeys as jest.Mock).mockReturnValue(['18', '20']);
         // getPluginNodeVersions should return only Node 20 (commerce-paas)
@@ -310,10 +313,10 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         await handleCheckPrerequisites(context);
 
         // Then: getPluginNodeVersions should be called with the correct parameters
+        // Uses nodeVersionIdMapping (component IDs) for matching against requiredFor
         expect(shared.getPluginNodeVersions).toHaveBeenCalledWith(
-            nodeVersionMapping,
+            nodeVersionIdMapping,
             ['commerce-paas'],
-            [], // dependencies
         );
 
         // Then: prerequisite-status should contain nodeVersionStatus with only Node 20 entry
@@ -371,7 +374,9 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         );
 
         const nodeVersionMapping = { '18': 'eds' };
+        const nodeVersionIdMapping = { '18': 'eds' };
         (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue(nodeVersionMapping);
+        (shared.getNodeVersionIdMapping as jest.Mock).mockResolvedValue(nodeVersionIdMapping);
         (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
         (shared.getNodeVersionKeys as jest.Mock).mockReturnValue(['18']);
         // getPluginNodeVersions returns empty array (no matching components)
@@ -399,11 +404,10 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         // When: handleCheckPrerequisites is called
         await handleCheckPrerequisites(context);
 
-        // Then: getPluginNodeVersions should be called
+        // Then: getPluginNodeVersions should be called with ID mapping
         expect(shared.getPluginNodeVersions).toHaveBeenCalledWith(
-            nodeVersionMapping,
+            nodeVersionIdMapping,
             ['api-mesh'],
-            [], // dependencies
         );
 
         // Then: prerequisite-status should contain empty nodeVersionStatus array
@@ -449,10 +453,12 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         );
 
         const nodeVersionMapping = { '20': 'commerce-paas' };
+        const nodeVersionIdMapping = { '20': 'commerce-mesh' };
         (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue(nodeVersionMapping);
+        (shared.getNodeVersionIdMapping as jest.Mock).mockResolvedValue(nodeVersionIdMapping);
         (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
         (shared.getNodeVersionKeys as jest.Mock).mockReturnValue(['20']);
-        // getPluginNodeVersions should be called with dependencies and return Node 20
+        // getPluginNodeVersions should be called with ID mapping and return Node 20
         (shared.getPluginNodeVersions as jest.Mock).mockReturnValue(['20']);
 
         // Plugin is installed
@@ -472,11 +478,11 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         // When: handleCheckPrerequisites is called
         await handleCheckPrerequisites(context);
 
-        // Then: getPluginNodeVersions should be called with dependencies
+        // Then: getPluginNodeVersions should be called with ID mapping
+        // The function now uses nodeVersionIdMapping for matching component IDs
         expect(shared.getPluginNodeVersions).toHaveBeenCalledWith(
-            nodeVersionMapping,
+            nodeVersionIdMapping,
             ['commerce-mesh'],
-            ['commerce-mesh'], // dependencies passed
         );
 
         // Then: prerequisite-status should contain nodeVersionStatus with Node 20
@@ -522,7 +528,9 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         );
 
         const nodeVersionMapping = { '18': 'eds', '20': 'commerce-paas' };
+        const nodeVersionIdMapping = { '18': 'eds', '20': 'commerce-paas' };
         (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue(nodeVersionMapping);
+        (shared.getNodeVersionIdMapping as jest.Mock).mockResolvedValue(nodeVersionIdMapping);
         (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
         // getNodeVersionKeys returns all versions
         (shared.getNodeVersionKeys as jest.Mock).mockReturnValue(['18', '20']);
