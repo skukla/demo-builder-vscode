@@ -119,14 +119,15 @@ export function getEntryCount(obj: Record<string, unknown> | undefined | null): 
 /**
  * Get frontend component port from project
  *
- * Replaces inline: `project?.componentInstances?.['citisignal-nextjs']?.port`
+ * Finds frontend component dynamically by type (not hardcoded ID)
  * SOP §4: Extracted deep optional chain to named getter
  *
  * @param project - Project to extract port from (can be undefined/null)
  * @returns Port number if available, undefined otherwise
  */
 export function getProjectFrontendPort(project: Project | undefined | null): number | undefined {
-    return project?.componentInstances?.['citisignal-nextjs']?.port;
+    const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
+    return frontendComponent?.port;
 }
 
 /**

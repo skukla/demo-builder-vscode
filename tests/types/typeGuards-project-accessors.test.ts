@@ -28,18 +28,18 @@ describe('typeGuards - Project Accessors', () => {
         it('should return version when component exists', () => {
             const project = {
                 componentVersions: {
-                    'citisignal-nextjs': { version: '1.2.3' }
+                    'headless': { version: '1.2.3' }
                 }
             } as Project;
-            expect(getComponentVersion(project, 'citisignal-nextjs')).toBe('1.2.3');
+            expect(getComponentVersion(project, 'headless')).toBe('1.2.3');
         });
 
         it('should return undefined for undefined project', () => {
-            expect(getComponentVersion(undefined, 'citisignal-nextjs')).toBeUndefined();
+            expect(getComponentVersion(undefined, 'headless')).toBeUndefined();
         });
 
         it('should return undefined for null project', () => {
-            expect(getComponentVersion(null, 'citisignal-nextjs')).toBeUndefined();
+            expect(getComponentVersion(null, 'headless')).toBeUndefined();
         });
 
         it('should return undefined when component not found', () => {
@@ -48,12 +48,12 @@ describe('typeGuards - Project Accessors', () => {
                     'other-component': { version: '1.0.0' }
                 }
             } as Project;
-            expect(getComponentVersion(project, 'citisignal-nextjs')).toBeUndefined();
+            expect(getComponentVersion(project, 'headless')).toBeUndefined();
         });
 
         it('should return undefined when componentVersions is undefined', () => {
             const project = {} as Project;
-            expect(getComponentVersion(project, 'citisignal-nextjs')).toBeUndefined();
+            expect(getComponentVersion(project, 'headless')).toBeUndefined();
         });
     });
 
@@ -65,7 +65,7 @@ describe('typeGuards - Project Accessors', () => {
         it('should return port when frontend component exists', () => {
             const project = {
                 componentInstances: {
-                    'citisignal-nextjs': { port: 3000 }
+                    'headless': { port: 3000 }
                 }
             } as Project;
             expect(getProjectFrontendPort(project)).toBe(3000);
@@ -101,10 +101,10 @@ describe('typeGuards - Project Accessors', () => {
     describe('getComponentIds', () => {
         it('should return component IDs when instances exist', () => {
             const instances = {
-                'citisignal-nextjs': { status: 'running' },
+                'headless': { status: 'running' },
                 'commerce-mesh': { status: 'deployed' }
             } as Record<string, any>;
-            expect(getComponentIds(instances)).toEqual(['citisignal-nextjs', 'commerce-mesh']);
+            expect(getComponentIds(instances)).toEqual(['headless', 'commerce-mesh']);
         });
 
         it('should return empty array for undefined', () => {
@@ -127,31 +127,31 @@ describe('typeGuards - Project Accessors', () => {
     describe('getComponentConfigPort', () => {
         it('should return port when component config exists', () => {
             const configs = {
-                'citisignal-nextjs': { PORT: 3000 }
+                'headless': { PORT: 3000 }
             };
-            expect(getComponentConfigPort(configs, 'citisignal-nextjs')).toBe(3000);
+            expect(getComponentConfigPort(configs, 'headless')).toBe(3000);
         });
 
         it('should return undefined for undefined configs', () => {
-            expect(getComponentConfigPort(undefined, 'citisignal-nextjs')).toBeUndefined();
+            expect(getComponentConfigPort(undefined, 'headless')).toBeUndefined();
         });
 
         it('should return undefined when component not found', () => {
             const configs = {
                 'other-component': { PORT: 8080 }
             };
-            expect(getComponentConfigPort(configs, 'citisignal-nextjs')).toBeUndefined();
+            expect(getComponentConfigPort(configs, 'headless')).toBeUndefined();
         });
 
         it('should return undefined when PORT not set', () => {
             const configs = {
-                'citisignal-nextjs': { OTHER_PROP: 'value' }
+                'headless': { OTHER_PROP: 'value' }
             };
-            expect(getComponentConfigPort(configs, 'citisignal-nextjs')).toBeUndefined();
+            expect(getComponentConfigPort(configs, 'headless')).toBeUndefined();
         });
 
         it('should handle empty configs object', () => {
-            expect(getComponentConfigPort({}, 'citisignal-nextjs')).toBeUndefined();
+            expect(getComponentConfigPort({}, 'headless')).toBeUndefined();
         });
     });
 });
