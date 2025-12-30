@@ -80,6 +80,7 @@ export interface PrerequisiteDefinition {
     optional?: boolean;
     depends?: string[];
     perNodeVersion?: boolean; // Install in each Node.js version
+    requiredFor?: string[]; // Components that require this prerequisite (for per-node-version filtering)
     check: PrerequisiteCheck;
     install?: PrerequisiteInstall; // Installation configuration
     uninstall?: {
