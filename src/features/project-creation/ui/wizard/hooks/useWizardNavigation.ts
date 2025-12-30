@@ -198,12 +198,17 @@ export function useWizardNavigation({
         // IMPORT MODE: Skip to review when clicking Continue on auth step
         // Only valid if:
         // 1. We have imported settings
-        // 2. User hasn't changed the architecture (package AND stack match)
+        // 2. User hasn't changed the architecture (package AND stack match OR weren't specified)
         // 3. We're on the adobe-auth step
         const hasImportedSettings = Boolean(importedSettings);
-        const packageMatches = state.selectedPackage === importedSettings?.selectedPackage;
-        const stackMatches = state.selectedStack === importedSettings?.selectedStack;
-        const architectureUnchanged = packageMatches && stackMatches;
+        // Architecture is "unchanged" if:
+        // - Imported file had no package/stack (old project format) → nothing to change from
+        // - OR imported values match current state (user didn't modify)
+        const packageUnchanged = !importedSettings?.selectedPackage ||
+            state.selectedPackage === importedSettings.selectedPackage;
+        const stackUnchanged = !importedSettings?.selectedStack ||
+            state.selectedStack === importedSettings.selectedStack;
+        const architectureUnchanged = packageUnchanged && stackUnchanged;
 
         if (hasImportedSettings && architectureUnchanged && state.currentStep === 'adobe-auth') {
             const reviewIndex = WIZARD_STEPS.findIndex(step => step.id === 'review');
