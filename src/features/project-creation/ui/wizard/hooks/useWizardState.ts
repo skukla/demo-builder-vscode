@@ -165,9 +165,10 @@ function computeInitialState(
         adobeOrg: adobeContext.org,
         adobeProject: adobeContext.project,
         adobeWorkspace: adobeContext.workspace,
-        // Package/Stack from imported settings
+        // Package/Stack/Addons from imported settings
         selectedPackage: importedSettings?.selectedPackage,
         selectedStack: importedSettings?.selectedStack,
+        selectedAddons: importedSettings?.selectedAddons,
     };
 }
 

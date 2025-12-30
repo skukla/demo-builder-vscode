@@ -8,6 +8,9 @@
       "description": "Telecommunications demo with CitiSignal branding",
       "icon": "citisignal",
       "featured": true,
+      "addons": {
+        "demo-inspector": "optional"
+      },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
         "ADOBE_COMMERCE_STORE_CODE": "citisignal_store",
@@ -77,6 +80,7 @@
       "icon": "buildright",
       "featured": false,
       "addons": {
+        "demo-inspector": "optional",
         "adobe-commerce-aco": "required"
       },
       "configDefaults": {

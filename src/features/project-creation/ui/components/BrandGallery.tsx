@@ -21,6 +21,10 @@ import { filterPackagesBySearchQuery } from './brandGalleryHelpers';
 
 /** Addon metadata for display */
 const ADDON_METADATA: Record<string, { name: string; description: string }> = {
+    'demo-inspector': {
+        name: 'Demo Inspector',
+        description: 'Interactive overlay for exploring demo components and features',
+    },
     'adobe-commerce-aco': {
         name: 'Adobe Commerce Optimizer',
         description: 'Catalog optimization service for enhanced product discovery',
@@ -187,10 +191,17 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         [selectedAddons, onAddonsChange],
     );
 
-    // Get available addons from package's addons config (package-driven, not stack-driven)
+    // Get the selected stack object
+    const selectedStack = useMemo(() => {
+        if (!selectedStackId) return null;
+        return stacks.find(s => s.id === selectedStackId) || null;
+    }, [stacks, selectedStackId]);
+
+    // Get available addons from selected stack's optionalAddons (stack-driven)
     const availableAddons = useMemo(() => {
-        return Object.keys(pkg.addons || {});
-    }, [pkg.addons]);
+        if (!selectedStack) return [];
+        return (selectedStack.optionalAddons || []).filter(id => ADDON_METADATA[id]);
+    }, [selectedStack]);
 
     // Build action buttons - only show Done when a stack is selected
     const actionButtons = selectedStackId

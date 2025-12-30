@@ -255,6 +255,8 @@ export interface ImportedSettings {
     selectedPackage?: string;
     /** Stack ID from the source project (e.g., 'headless-paas') */
     selectedStack?: string;
+    /** Selected optional addons (e.g., ['demo-inspector']) */
+    selectedAddons?: string[];
 }
 
 /**

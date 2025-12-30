@@ -72,6 +72,8 @@ export interface SettingsFile {
     selectedPackage?: string;
     /** Stack ID selected during project creation (e.g., 'headless-paas') */
     selectedStack?: string;
+    /** Optional addons selected during project creation (e.g., ['demo-inspector']) */
+    selectedAddons?: string[];
 }
 
 /** Current schema version */
