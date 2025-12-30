@@ -43,6 +43,42 @@ export function getNodeVersionKeys(mapping: NodeVersionMapping): string[] {
 }
 
 /**
+ * Get Node versions that require a specific plugin
+ *
+ * Filters the nodeVersionMapping to find which Node versions are used by
+ * components that require this plugin (via requiredFor array).
+ *
+ * @param nodeVersionMapping - Mapping of Node major version to component ID
+ * @param requiredForComponents - Array of component IDs that require this plugin
+ * @param _dependencies - Unused parameter kept for API compatibility
+ * @returns Array of Node major versions that need this plugin installed
+ *
+ * @example
+ * // Plugin required by 'eds' component, which uses Node 18
+ * const versions = getPluginNodeVersions(
+ *     { '18': 'eds', '20': 'commerce-paas' },
+ *     ['eds']
+ * );
+ * // Returns: ['18']
+ */
+export function getPluginNodeVersions(
+    nodeVersionMapping: NodeVersionMapping,
+    requiredForComponents: string[],
+    _dependencies?: string[],
+): string[] {
+    const pluginNodeVersions: string[] = [];
+
+    // Check component matches in nodeVersionMapping
+    for (const [nodeVersion, componentId] of Object.entries(nodeVersionMapping)) {
+        if (requiredForComponents.includes(componentId)) {
+            pluginNodeVersions.push(nodeVersion);
+        }
+    }
+
+    return pluginNodeVersions;
+}
+
+/**
  * Format progress message for prerequisite checking
  *
  * For Node.js with multiple required versions, shows which versions are being checked.

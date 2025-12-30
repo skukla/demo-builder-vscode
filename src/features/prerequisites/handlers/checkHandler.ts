@@ -9,7 +9,7 @@
 
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys, getPluginNodeVersions } from '@/features/prerequisites/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
 import type { PrerequisiteCheckState } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
@@ -177,7 +177,26 @@ export async function handleCheckPrerequisites(
             const missingVariantMajors: string[] = [];
             const perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[] = [];
             if (prereq.perNodeVersion && hasNodeVersions(nodeVersionMapping)) {
-                const requiredMajors = getNodeVersionKeys(nodeVersionMapping);
+                // Filter Node versions by requiredFor array if specified, else use all Node versions
+                // Note: For CLI tools with plugins (e.g., aio-cli), the requiredFor is on the plugin, not the prereq
+                let requiredForComponents: string[] | undefined = prereq.requiredFor;
+                if ((!requiredForComponents || requiredForComponents.length === 0) && prereq.plugins) {
+                    // Collect all requiredFor from plugins
+                    const allPluginRequired = prereq.plugins
+                        .filter(p => p.requiredFor && p.requiredFor.length > 0)
+                        .flatMap(p => p.requiredFor!);
+                    if (allPluginRequired.length > 0) {
+                        requiredForComponents = [...new Set(allPluginRequired)];
+                    }
+                }
+
+                const requiredMajors = requiredForComponents && requiredForComponents.length > 0
+                    ? getPluginNodeVersions(
+                        nodeVersionMapping,
+                        requiredForComponents,
+                        context.sharedState.currentComponentSelection?.dependencies,
+                    )
+                    : getNodeVersionKeys(nodeVersionMapping);
 
                 if (!checkResult.installed) {
                     // Main tool not installed: populate with all NOT installed
