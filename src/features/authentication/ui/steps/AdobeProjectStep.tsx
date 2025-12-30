@@ -59,6 +59,9 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                 // Clear dependent state when parent selection changes
                 // This maintains state consistency in the UI layer
                 adobeWorkspace: undefined,
+                // Clear workspace cache so it reloads for the new project
+                // This ensures auto-select (Stage workspace) runs on fresh data
+                workspacesCache: undefined,
             });
         },
         validateBeforeLoad: () => {

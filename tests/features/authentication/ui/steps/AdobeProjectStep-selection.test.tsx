@@ -135,6 +135,7 @@ describe('AdobeProjectStep - Project Selection', () => {
             expect(mockUpdateState).toHaveBeenCalledWith(
                 expect.objectContaining({
                     adobeWorkspace: undefined,
+                    workspacesCache: undefined, // Cache must also be cleared to trigger reload
                 })
             );
         });
