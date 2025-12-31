@@ -4,6 +4,11 @@
  * Kebab menu (⋮) for project actions like Start/Stop, Open, Export, and Delete.
  * Handles click propagation to prevent triggering parent selection.
  * Used by both ProjectCard and ProjectRow components.
+ *
+ * For EDS projects:
+ * - Start/Stop actions are hidden (EDS sites are always published)
+ * - "Open Live Site" replaces "Open in Browser"
+ * - Edit is always available (no need to stop first)
  */
 
 import { Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum';
@@ -16,6 +21,7 @@ import Play from '@spectrum-icons/workflow/Play';
 import Stop from '@spectrum-icons/workflow/Stop';
 import React, { useCallback, useMemo } from 'react';
 import type { Project } from '@/types/base';
+import { isEdsProject } from '@/types/typeGuards';
 
 /** Menu item configuration */
 interface MenuItem {
@@ -33,8 +39,10 @@ export interface ProjectActionsMenuProps {
     onStartDemo?: (project: Project) => void;
     /** Callback to stop the demo */
     onStopDemo?: (project: Project) => void;
-    /** Callback to open the demo in browser */
+    /** Callback to open the demo in browser (for non-EDS projects) */
     onOpenBrowser?: (project: Project) => void;
+    /** Callback to open the live site (for EDS projects) */
+    onOpenLiveSite?: (project: Project) => void;
     /** Callback to edit project settings */
     onEdit?: (project: Project) => void;
     /** Callback to export project settings */
@@ -57,11 +65,14 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     onStartDemo,
     onStopDemo,
     onOpenBrowser,
+    onOpenLiveSite,
     onEdit,
     onExport,
     onDelete,
     className,
 }) => {
+    const isEds = isEdsProject(project);
+
     const handleMenuAction = useCallback((key: React.Key) => {
         switch (key) {
             case 'start':
@@ -73,6 +84,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             case 'open':
                 onOpenBrowser?.(project);
                 break;
+            case 'openLive':
+                onOpenLiveSite?.(project);
+                break;
             case 'edit':
                 onEdit?.(project);
                 break;
@@ -83,35 +97,46 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 onDelete?.(project);
                 break;
         }
-    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onEdit, onExport, onDelete]);
+    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onEdit, onExport, onDelete]);
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
     }, []);
 
-    // Build menu items dynamically based on project state
+    // Build menu items dynamically based on project state and type
     const menuItems = useMemo<MenuItem[]>(() => {
         const items: MenuItem[] = [];
 
-        // Start/Stop based on running state
-        if (isRunning && onStopDemo) {
-            items.push({ key: 'stop', label: 'Stop Demo', icon: 'stop' });
-        } else if (!isRunning && onStartDemo) {
-            items.push({ key: 'start', label: 'Start Demo', icon: 'play' });
+        if (isEds) {
+            // EDS projects: No Start/Stop, always show "Open Live Site"
+            if (onOpenLiveSite) {
+                items.push({ key: 'openLive', label: 'Open Live Site', icon: 'globe' });
+            }
+            // Edit is always available for EDS (no running state)
+            if (onEdit) {
+                items.push({ key: 'edit', label: 'Edit Project', icon: 'edit' });
+            }
+        } else {
+            // Non-EDS projects: Start/Stop based on running state
+            if (isRunning && onStopDemo) {
+                items.push({ key: 'stop', label: 'Stop Demo', icon: 'stop' });
+            } else if (!isRunning && onStartDemo) {
+                items.push({ key: 'start', label: 'Start Demo', icon: 'play' });
+            }
+
+            // Open in Browser (only when running)
+            if (isRunning && onOpenBrowser) {
+                items.push({ key: 'open', label: 'Open in Browser', icon: 'globe' });
+            }
+
+            // Edit (only when NOT running - must stop demo first)
+            if (!isRunning && onEdit) {
+                items.push({ key: 'edit', label: 'Edit Project', icon: 'edit' });
+            }
         }
 
-        // Open in Browser (only when running)
-        if (isRunning && onOpenBrowser) {
-            items.push({ key: 'open', label: 'Open in Browser', icon: 'globe' });
-        }
-
-        // Edit (only when NOT running - must stop demo first)
-        if (!isRunning && onEdit) {
-            items.push({ key: 'edit', label: 'Edit Project', icon: 'edit' });
-        }
-
-        // Export and Delete always available
+        // Export and Delete always available for all project types
         if (onExport) {
             items.push({ key: 'export', label: 'Export Project', icon: 'export' });
         }
@@ -119,7 +144,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             items.push({ key: 'delete', label: 'Delete Project', icon: 'delete' });
         }
         return items;
-    }, [isRunning, onStartDemo, onStopDemo, onOpenBrowser, onEdit, onExport, onDelete]);
+    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onEdit, onExport, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {

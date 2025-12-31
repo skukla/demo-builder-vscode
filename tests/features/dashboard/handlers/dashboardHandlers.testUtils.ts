@@ -61,6 +61,7 @@ export function createMockProject(overrides?: Partial<Project>): Project {
             'headless': {
                 id: 'headless',
                 name: 'CitiSignal Next.js',
+                type: 'frontend',
                 status: 'ready',
                 path: '/path/to/frontend',
                 port: 3000,
@@ -68,6 +69,8 @@ export function createMockProject(overrides?: Partial<Project>): Project {
             'commerce-mesh': {
                 id: 'commerce-mesh',
                 name: 'API Mesh',
+                type: 'backend',
+                subType: 'mesh',
                 status: 'deployed',
                 path: '/path/to/mesh',
                 endpoint: 'https://mesh.example.com/graphql',

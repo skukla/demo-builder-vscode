@@ -99,16 +99,6 @@ export function extractSettingsFromProject(
     project: Project,
     includeSecrets = true,
 ): SettingsFile {
-    // Debug: Log what we're extracting
-    console.log('[settingsSerializer] Extracting settings from project:', {
-        projectName: project.name,
-        hasComponentConfigs: !!project.componentConfigs,
-        configKeys: project.componentConfigs ? Object.keys(project.componentConfigs) : [],
-        sampleConfigs: project.componentConfigs ? JSON.stringify(project.componentConfigs).slice(0, 500) : 'none',
-        hasSelections: !!project.componentSelections,
-        selections: project.componentSelections,
-    });
-
     return {
         version: SETTINGS_FILE_VERSION,
         exportedAt: new Date().toISOString(),

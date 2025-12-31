@@ -51,14 +51,16 @@ export async function deleteProject(
         };
     }
 
-    // Show progress notification during deletion
+    // Show progress notification during deletion (self-dismissing)
     await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: `Deleting "${project.name}"...`,
+            title: 'Demo Builder',
             cancellable: false,
         },
-        async () => {
+        async (progress) => {
+            progress.report({ message: `Deleting "${project.name}"...` });
+
             // Stop demo if running
             if (project.status === 'running') {
                 // Set as current project so stopDemo knows which to stop
@@ -88,13 +90,14 @@ export async function deleteProject(
             if (currentProject?.path === projectPath) {
                 await context.stateManager.clearProject();
             }
+
+            context.logger.info(`Deleted project: ${project.name}`);
+
+            // Show success message (self-dismissing after delay)
+            progress.report({ message: `"${project.name}" deleted` });
+            await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UPDATE_RESULT_DISPLAY));
         },
     );
-
-    context.logger.info(`Deleted project: ${project.name}`);
-
-    // Show success message
-    vscode.window.showInformationMessage(`"${project.name}" deleted.`);
 
     return {
         success: true,

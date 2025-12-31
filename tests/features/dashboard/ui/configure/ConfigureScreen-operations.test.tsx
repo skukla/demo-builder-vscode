@@ -96,12 +96,13 @@ describe('ConfigureScreen - Operations', () => {
             const user = userEvent.setup();
             mockRequest.mockResolvedValue({ success: true });
 
+            // Use component IDs that match mockComponentsData: headless, adobe-commerce-paas, catalog-service
             const validConfig = {
-                venia: {
+                headless: {
                     ADOBE_COMMERCE_URL: 'https://example.com',
                     ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
                 },
-                'commerce-backend': {
+                'adobe-commerce-paas': {
                     ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
                 },
                 'catalog-service': {
@@ -138,12 +139,13 @@ describe('ConfigureScreen - Operations', () => {
                 () => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 100))
             );
 
+            // Use component IDs that match mockComponentsData
             const validConfig = {
-                venia: {
+                headless: {
                     ADOBE_COMMERCE_URL: 'https://example.com',
                     ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
                 },
-                'commerce-backend': {
+                'adobe-commerce-paas': {
                     ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
                 },
                 'catalog-service': {
@@ -176,12 +178,13 @@ describe('ConfigureScreen - Operations', () => {
             const user = userEvent.setup();
             mockRequest.mockRejectedValue(new Error('Save failed'));
 
+            // Use component IDs that match mockComponentsData
             const validConfig = {
-                venia: {
+                headless: {
                     ADOBE_COMMERCE_URL: 'https://example.com',
                     ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
                 },
-                'commerce-backend': {
+                'adobe-commerce-paas': {
                     ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
                 },
                 'catalog-service': {

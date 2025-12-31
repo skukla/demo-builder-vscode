@@ -269,3 +269,69 @@ export function canProceedFromAuth(
     return true;
 }
 
+// =============================================================================
+// EDS (Edge Delivery Services) Project Functions
+// =============================================================================
+// SOP §4: Centralized EDS detection for use across features
+// Used by: projects-dashboard, dashboard, project-creation
+
+/**
+ * Check if a stack ID represents an EDS (Edge Delivery Services) stack
+ *
+ * EDS stacks use static site hosting and don't have start/stop functionality.
+ * This is the low-level check used by isEdsProject and executor.
+ *
+ * @param stackId - The stack ID to check (e.g., 'eds-dalive', 'headless')
+ * @returns true if the stack ID starts with 'eds-'
+ */
+export function isEdsStackId(stackId: string | undefined | null): boolean {
+    return stackId?.startsWith('eds-') ?? false;
+}
+
+/**
+ * Check if a project is an EDS (Edge Delivery Services) project
+ *
+ * EDS projects use static site hosting and don't have start/stop functionality.
+ * They are always "live" once deployed.
+ *
+ * SOP §4: Extracted stack detection to named predicate for cross-feature use
+ *
+ * @param project - The project to check (can be undefined/null)
+ * @returns true if the project is an EDS project
+ */
+export function isEdsProject(project: Project | undefined | null): boolean {
+    return isEdsStackId(project?.selectedStack);
+}
+
+/**
+ * Get the live URL for an EDS project
+ *
+ * The live URL is stored in the 'eds' component instance metadata.
+ *
+ * SOP §4: Extracted deep optional chain to named getter
+ *
+ * @param project - The EDS project (can be undefined/null)
+ * @returns The live URL, or undefined if not available
+ */
+export function getEdsLiveUrl(project: Project | undefined | null): string | undefined {
+    if (!isEdsProject(project)) return undefined;
+    const edsInstance = project?.componentInstances?.['eds'];
+    return edsInstance?.metadata?.liveUrl as string | undefined;
+}
+
+/**
+ * Get the preview URL for an EDS project
+ *
+ * The preview URL is stored in the 'eds' component instance metadata.
+ *
+ * SOP §4: Extracted deep optional chain to named getter
+ *
+ * @param project - The EDS project (can be undefined/null)
+ * @returns The preview URL, or undefined if not available
+ */
+export function getEdsPreviewUrl(project: Project | undefined | null): string | undefined {
+    if (!isEdsProject(project)) return undefined;
+    const edsInstance = project?.componentInstances?.['eds'];
+    return edsInstance?.metadata?.previewUrl as string | undefined;
+}
+

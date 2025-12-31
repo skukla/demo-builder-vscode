@@ -19,9 +19,15 @@ export type StatusVariant = 'success' | 'neutral' | 'warning' | 'error';
  *
  * @param status - The project status
  * @param port - Optional port number for running projects
+ * @param isEds - Whether the project is an EDS project
  * @returns Human-readable status text
  */
-export function getStatusText(status: ProjectStatus, port?: number): string {
+export function getStatusText(status: ProjectStatus, port?: number, isEds?: boolean): string {
+    // EDS projects are always "Published" - they don't have start/stop
+    if (isEds) {
+        return 'Published';
+    }
+
     switch (status) {
         case 'running':
             return port ? `Running on port ${port}` : 'Running';
@@ -43,9 +49,15 @@ export function getStatusText(status: ProjectStatus, port?: number): string {
  * Gets the StatusDot variant for visual status indication
  *
  * @param status - The project status
+ * @param isEds - Whether the project is an EDS project
  * @returns StatusDot variant for color coding
  */
-export function getStatusVariant(status: ProjectStatus): StatusVariant {
+export function getStatusVariant(status: ProjectStatus, isEds?: boolean): StatusVariant {
+    // EDS projects are always "success" (green) since they're always published
+    if (isEds) {
+        return 'success';
+    }
+
     switch (status) {
         case 'running':
             return 'success';

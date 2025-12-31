@@ -2,9 +2,12 @@
  * Unit tests for projectStatusUtils
  *
  * Tests the shared utility functions for project status display:
- * - getStatusText: Returns human-readable status text
- * - getStatusVariant: Returns StatusDot variant for visual indication
+ * - getStatusText: Returns human-readable status text (with isEds parameter)
+ * - getStatusVariant: Returns StatusDot variant for visual indication (with isEds parameter)
  * - getFrontendPort: Extracts port from running project's component instances
+ *
+ * Note: isEdsProject, getEdsLiveUrl, getEdsPreviewUrl are re-exported from @/types/typeGuards.
+ * Tests for those functions are in tests/types/typeGuards-project-accessors.test.ts.
  */
 
 import type { Project, ProjectStatus } from '@/types/base';
@@ -250,6 +253,37 @@ describe('projectStatusUtils', () => {
 
             // Then: Should be undefined (no ports)
             expect(result).toBeUndefined();
+        });
+    });
+
+    // Note: isEdsProject, getEdsLiveUrl, getEdsPreviewUrl tests moved to
+    // tests/types/typeGuards-project-accessors.test.ts (canonical source)
+
+    describe('getStatusText with isEds', () => {
+        it('should return "Published" for EDS projects regardless of status', () => {
+            expect(getStatusText('running', 3000, true)).toBe('Published');
+            expect(getStatusText('stopped', undefined, true)).toBe('Published');
+            expect(getStatusText('ready', undefined, true)).toBe('Published');
+            expect(getStatusText('error', undefined, true)).toBe('Published');
+        });
+
+        it('should return normal status text when isEds is false', () => {
+            expect(getStatusText('running', 3000, false)).toBe('Running on port 3000');
+            expect(getStatusText('stopped', undefined, false)).toBe('Stopped');
+        });
+    });
+
+    describe('getStatusVariant with isEds', () => {
+        it('should return "success" for EDS projects regardless of status', () => {
+            expect(getStatusVariant('running', true)).toBe('success');
+            expect(getStatusVariant('stopped', true)).toBe('success');
+            expect(getStatusVariant('error', true)).toBe('success');
+        });
+
+        it('should return normal variant when isEds is false', () => {
+            expect(getStatusVariant('running', false)).toBe('success');
+            expect(getStatusVariant('stopped', false)).toBe('neutral');
+            expect(getStatusVariant('error', false)).toBe('error');
         });
     });
 });

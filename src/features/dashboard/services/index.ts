@@ -8,7 +8,7 @@
 export {
     buildStatusPayload,
     hasMeshDeploymentRecord,
-    getMeshEndpointFromConfigs,
+    getMeshEndpoint,
     type MeshStatusInfo,
     type StatusPayload,
 } from './dashboardStatusService';

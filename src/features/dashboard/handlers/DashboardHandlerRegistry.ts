@@ -31,6 +31,7 @@ export class DashboardHandlerRegistry extends BaseHandlerRegistry {
 
         // Navigation handlers
         this.handlers.set('openBrowser', handlers.handleOpenBrowser);
+        this.handlers.set('openLiveSite', handlers.handleOpenLiveSite);
         this.handlers.set('viewLogs', handlers.handleViewLogs);
         this.handlers.set('viewDebugLogs', handlers.handleViewDebugLogs);
         this.handlers.set('configure', handlers.handleConfigure);

@@ -27,11 +27,13 @@ import { GridLayout } from '@/core/ui/components/layout';
  * Props for the ActionGrid component
  */
 export interface ActionGridProps {
-    /** Whether demo is currently running */
+    /** Whether this is an EDS project (always published, no start/stop) */
+    isEds?: boolean;
+    /** Whether demo is currently running (ignored for EDS projects) */
     isRunning: boolean;
-    /** Whether Start button should be disabled */
+    /** Whether Start button should be disabled (ignored for EDS projects) */
     isStartDisabled: boolean;
-    /** Whether Stop button should be disabled */
+    /** Whether Stop button should be disabled (ignored for EDS projects) */
     isStopDisabled: boolean;
     /** Whether mesh-related actions should be disabled */
     isMeshActionDisabled: boolean;
@@ -39,12 +41,14 @@ export interface ActionGridProps {
     isOpeningBrowser: boolean;
     /** Whether to suppress hover on Logs button */
     isLogsHoverSuppressed: boolean;
-    /** Handler for Start button */
+    /** Handler for Start button (non-EDS only) */
     handleStartDemo: () => void;
-    /** Handler for Stop button */
+    /** Handler for Stop button (non-EDS only) */
     handleStopDemo: () => void;
-    /** Handler for Open in Browser button */
+    /** Handler for Open in Browser button (non-EDS only) */
     handleOpenBrowser: () => void;
+    /** Handler for Open Live Site button (EDS only) */
+    handleOpenLiveSite?: () => void;
     /** Handler for Logs button */
     handleViewLogs: () => void;
     /** Handler for Deploy Mesh button */
@@ -68,6 +72,7 @@ export interface ActionGridProps {
  * @param props - Component props
  */
 export function ActionGrid({
+    isEds = false,
     isRunning,
     isStartDisabled,
     isStopDisabled,
@@ -77,6 +82,7 @@ export function ActionGrid({
     handleStartDemo,
     handleStopDemo,
     handleOpenBrowser,
+    handleOpenLiveSite,
     handleViewLogs,
     handleDeployMesh,
     handleConfigure,
@@ -86,8 +92,8 @@ export function ActionGrid({
 }: ActionGridProps): React.ReactElement {
     return (
         <GridLayout columns={4} gap="size-400" className="dashboard-grid">
-            {/* Start/Stop */}
-            {!isRunning && (
+            {/* Start/Stop - Hidden for EDS projects (always published) */}
+            {!isEds && !isRunning && (
                 <ActionButton
                     onPress={handleStartDemo}
                     isQuiet
@@ -98,7 +104,7 @@ export function ActionGrid({
                     <Text UNSAFE_className="icon-label">Start</Text>
                 </ActionButton>
             )}
-            {isRunning && (
+            {!isEds && isRunning && (
                 <ActionButton
                     onPress={handleStopDemo}
                     isQuiet
@@ -110,16 +116,31 @@ export function ActionGrid({
                 </ActionButton>
             )}
 
-            {/* Open Browser */}
-            <ActionButton
-                onPress={handleOpenBrowser}
-                isQuiet
-                isDisabled={!isRunning || isOpeningBrowser}
-                UNSAFE_className="dashboard-action-button"
-            >
-                <Globe size="L" />
-                <Text UNSAFE_className="icon-label">Open in Browser</Text>
-            </ActionButton>
+            {/* Open Live Site - EDS projects only (always enabled) */}
+            {isEds && (
+                <ActionButton
+                    onPress={handleOpenLiveSite}
+                    isQuiet
+                    isDisabled={isOpeningBrowser}
+                    UNSAFE_className="dashboard-action-button"
+                >
+                    <Globe size="L" />
+                    <Text UNSAFE_className="icon-label">Open Live Site</Text>
+                </ActionButton>
+            )}
+
+            {/* Open Browser - Non-EDS projects only (requires running) */}
+            {!isEds && (
+                <ActionButton
+                    onPress={handleOpenBrowser}
+                    isQuiet
+                    isDisabled={!isRunning || isOpeningBrowser}
+                    UNSAFE_className="dashboard-action-button"
+                >
+                    <Globe size="L" />
+                    <Text UNSAFE_className="icon-label">Open in Browser</Text>
+                </ActionButton>
+            )}
 
             {/* Logs */}
             <ActionButton

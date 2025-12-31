@@ -32,11 +32,14 @@ export function createMockProject(overrides?: Partial<Project>): Project {
             'headless': createMockComponentInstance({
                 id: 'headless',
                 name: 'CitiSignal',
+                type: 'frontend',
                 status: 'ready',
             }),
             'api-mesh': createMockComponentInstance({
                 id: 'api-mesh',
                 name: 'API Mesh',
+                type: 'backend',
+                subType: 'mesh',
                 status: 'deployed',
             }),
         },
@@ -53,6 +56,7 @@ export function createMockComponentInstance(
     return {
         id: 'test-component',
         name: 'Test Component',
+        type: 'frontend',
         status: 'ready',
         ...overrides,
     };
@@ -68,12 +72,15 @@ export function createRunningProject(overrides?: Partial<Project>): Project {
             'headless': createMockComponentInstance({
                 id: 'headless',
                 name: 'CitiSignal',
+                type: 'frontend',
                 status: 'running',
                 port: 3000,
             }),
             'api-mesh': createMockComponentInstance({
                 id: 'api-mesh',
                 name: 'API Mesh',
+                type: 'backend',
+                subType: 'mesh',
                 status: 'deployed',
             }),
         },

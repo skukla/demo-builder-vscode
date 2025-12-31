@@ -301,7 +301,7 @@ export const handleStopDemo: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'openBrowser' message - Open demo in browser
+ * Handle 'openBrowser' message - Open demo in browser (non-EDS projects)
  */
 export const handleOpenBrowser: MessageHandler = async (context) => {
     const currentProject = await context.stateManager.getCurrentProject();
@@ -312,6 +312,31 @@ export const handleOpenBrowser: MessageHandler = async (context) => {
         await vscode.env.openExternal(vscode.Uri.parse(url));
         context.logger.debug(`[Dashboard] Opening browser: ${url}`);
     }
+
+    return { success: true };
+};
+
+/**
+ * Handle 'openLiveSite' message - Open EDS live site in browser
+ */
+export const handleOpenLiveSite: MessageHandler = async (context, data) => {
+    const payload = data as { url?: string };
+
+    if (!payload?.url) {
+        context.logger.warn('[Dashboard] openLiveSite called without URL');
+        return { success: false, error: 'No URL provided', code: ErrorCode.CONFIG_INVALID };
+    }
+
+    // Validate URL before opening (security: prevents malicious URL injection)
+    try {
+        validateURL(payload.url);
+    } catch (validationError) {
+        context.logger.error('[Dashboard] Live site URL validation failed', validationError as Error);
+        return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
+    }
+
+    await vscode.env.openExternal(vscode.Uri.parse(payload.url));
+    context.logger.debug(`[Dashboard] Opening live site: ${payload.url}`);
 
     return { success: true };
 };

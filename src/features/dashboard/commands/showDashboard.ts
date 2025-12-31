@@ -12,7 +12,7 @@ import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack, StacksConfig } from '@/types/stacks';
 import { loadDemoPackages } from '@/features/project-creation/ui/helpers/demoPackageLoader';
 import { HandlerContext, SharedState } from '@/types/handlers';
-import { getComponentInstanceValues } from '@/types/typeGuards';
+import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl } from '@/types/typeGuards';
 
 /**
  * Command to show the "Project Dashboard" after project creation
@@ -72,6 +72,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         hasMesh: boolean;
         packageName?: string;
         stackName?: string;
+        isEds: boolean;
+        edsLiveUrl?: string;
     }> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
@@ -80,6 +82,10 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
         // Resolve package/stack names from IDs
         const { packageName, stackName } = await this.resolvePackageStackNames(project ?? null);
+
+        // Detect EDS projects and get live URL (using shared typeGuards functions)
+        const isEds = isEdsProject(project);
+        const edsLiveUrl = getEdsLiveUrl(project);
 
         return {
             theme,
@@ -90,6 +96,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             hasMesh,
             packageName,
             stackName,
+            isEds,
+            edsLiveUrl,
         };
     }
 

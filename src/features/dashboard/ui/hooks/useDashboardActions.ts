@@ -24,6 +24,8 @@ export interface UseDashboardActionsProps {
     setIsOpeningBrowser: Dispatch<SetStateAction<boolean>>;
     /** Setter for logs hover suppression state */
     setIsLogsHoverSuppressed: Dispatch<SetStateAction<boolean>>;
+    /** Live URL for EDS projects (opens in browser) */
+    edsLiveUrl?: string;
 }
 
 /**
@@ -40,8 +42,10 @@ export interface UseDashboardActionsReturn {
     handleViewLogs: () => void;
     /** Deploy API Mesh */
     handleDeployMesh: () => void;
-    /** Open demo in browser */
+    /** Open demo in browser (non-EDS projects) */
     handleOpenBrowser: () => void;
+    /** Open live site in browser (EDS projects) */
+    handleOpenLiveSite: () => void;
     /** Open configure screen */
     handleConfigure: () => void;
     /** Open Adobe Developer Console */
@@ -68,6 +72,7 @@ export function useDashboardActions({
     setIsTransitioning,
     setIsOpeningBrowser,
     setIsLogsHoverSuppressed,
+    edsLiveUrl,
 }: UseDashboardActionsProps): UseDashboardActionsReturn {
     const handleStartDemo = useCallback(() => {
         setIsTransitioning(true);
@@ -105,6 +110,14 @@ export function useDashboardActions({
         setTimeout(() => setIsOpeningBrowser(false), FRONTEND_TIMEOUTS.DOUBLE_CLICK_PREVENTION);
     }, [isOpeningBrowser, setIsOpeningBrowser]);
 
+    const handleOpenLiveSite = useCallback(() => {
+        if (isOpeningBrowser || !edsLiveUrl) return; // Prevent double-click or missing URL
+        setIsOpeningBrowser(true);
+        webviewClient.postMessage('openLiveSite', { url: edsLiveUrl });
+        // Re-enable after delay
+        setTimeout(() => setIsOpeningBrowser(false), FRONTEND_TIMEOUTS.DOUBLE_CLICK_PREVENTION);
+    }, [isOpeningBrowser, setIsOpeningBrowser, edsLiveUrl]);
+
     const handleConfigure = useCallback(() => {
         webviewClient.postMessage('configure');
     }, []);
@@ -132,6 +145,7 @@ export function useDashboardActions({
         handleViewLogs,
         handleDeployMesh,
         handleOpenBrowser,
+        handleOpenLiveSite,
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,

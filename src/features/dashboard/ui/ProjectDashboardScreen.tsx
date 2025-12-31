@@ -36,6 +36,10 @@ interface ProjectDashboardScreenProps {
     brandName?: string;
     /** Resolved stack/architecture name (e.g., "Headless + PaaS") */
     stackName?: string;
+    /** Whether this is an EDS project (always published, no start/stop) */
+    isEds?: boolean;
+    /** Live URL for EDS projects */
+    edsLiveUrl?: string;
 }
 
 /**
@@ -49,7 +53,7 @@ interface ProjectDashboardScreenProps {
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl }: ProjectDashboardScreenProps) {
     // State for browser opening and logs hover suppression (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
@@ -75,6 +79,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName 
         handleViewLogs,
         handleDeployMesh,
         handleOpenBrowser,
+        handleOpenLiveSite,
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,
@@ -85,6 +90,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName 
         setIsTransitioning,
         setIsOpeningBrowser,
         setIsLogsHoverSuppressed,
+        edsLiveUrl,
     });
 
     // Focus trap for accessibility
@@ -187,6 +193,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName 
                     {/* Center the grid of fixed-width buttons */}
                     <div className="dashboard-grid-container">
                         <ActionGrid
+                            isEds={isEds}
                             isRunning={isRunning}
                             isStartDisabled={isStartDisabled}
                             isStopDisabled={isStopDisabled}
@@ -196,6 +203,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName 
                             handleStartDemo={handleStartDemo}
                             handleStopDemo={handleStopDemo}
                             handleOpenBrowser={handleOpenBrowser}
+                            handleOpenLiveSite={handleOpenLiveSite}
                             handleViewLogs={handleViewLogs}
                             handleDeployMesh={handleDeployMesh}
                             handleConfigure={handleConfigure}

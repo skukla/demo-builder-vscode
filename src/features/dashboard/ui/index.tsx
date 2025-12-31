@@ -24,6 +24,8 @@ root.render(
                     hasMesh={data?.hasMesh}
                     brandName={data?.brandName}
                     stackName={data?.stackName}
+                    isEds={data?.isEds}
+                    edsLiveUrl={data?.edsLiveUrl}
                 />
             )}
         </WebviewApp>

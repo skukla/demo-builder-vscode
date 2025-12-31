@@ -16,6 +16,7 @@ import {
     getStatusVariant,
     getFrontendPort,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
+import { isEdsProject } from '@/types/typeGuards';
 import { ProjectActionsMenu } from './ProjectActionsMenu';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import type { Project } from '@/types/base';
@@ -31,8 +32,10 @@ export interface ProjectCardProps {
     onStartDemo?: (project: Project) => void;
     /** Callback to stop the demo */
     onStopDemo?: (project: Project) => void;
-    /** Callback to open the demo in browser */
+    /** Callback to open the demo in browser (for non-EDS projects) */
     onOpenBrowser?: (project: Project) => void;
+    /** Callback to open the live site (for EDS projects) */
+    onOpenLiveSite?: (project: Project) => void;
     /** Callback to edit project settings */
     onEdit?: (project: Project) => void;
     /** Callback to export project settings */
@@ -53,6 +56,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     onStartDemo,
     onStopDemo,
     onOpenBrowser,
+    onOpenLiveSite,
     onEdit,
     onExport,
     onDelete,
@@ -71,9 +75,10 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         [project, onSelect],
     );
 
+    const isEds = isEdsProject(project);
     const port = getFrontendPort(project);
-    const statusText = getStatusText(project.status, port);
-    const statusVariant = getStatusVariant(project.status);
+    const statusText = getStatusText(project.status, port, isEds);
+    const statusVariant = getStatusVariant(project.status, isEds);
     const componentSummary = useMemo(() => getComponentSummary(project), [project]);
 
     const ariaLabel = `${project.name}, ${statusText}${componentSummary ? `, ${componentSummary}` : ''}`;
@@ -98,6 +103,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                     onStartDemo={onStartDemo}
                     onStopDemo={onStopDemo}
                     onOpenBrowser={onOpenBrowser}
+                    onOpenLiveSite={onOpenLiveSite}
                     onEdit={onEdit}
                     onExport={onExport}
                     onDelete={onDelete}

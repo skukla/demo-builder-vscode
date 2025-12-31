@@ -140,6 +140,7 @@ describe('Dashboard Action Handlers', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal Next.js',
+                        type: 'frontend',
                         status: 'running',
                         path: '/path/to/frontend',
                         port: 8080,
