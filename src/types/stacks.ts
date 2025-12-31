@@ -6,6 +6,17 @@
  */
 
 /**
+ * OptionalAddon - An addon that can be optionally enabled for a stack
+ */
+export interface OptionalAddon {
+    /** Addon component ID from components.json */
+    id: string;
+
+    /** Whether this addon should be pre-selected (default: false) */
+    default?: boolean;
+}
+
+/**
  * Stack - Frontend + Backend architecture combination
  *
  * A stack defines the technical architecture including frontend framework,
@@ -34,8 +45,8 @@ export interface Stack {
     /** Dependency component IDs from components.json */
     dependencies: string[];
 
-    /** Optional addon component IDs that can be enabled for this stack */
-    optionalAddons?: string[];
+    /** Optional addons available for this stack */
+    optionalAddons?: OptionalAddon[];
 
     /** Feature highlights for UI display */
     features?: string[];

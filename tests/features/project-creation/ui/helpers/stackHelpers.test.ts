@@ -140,7 +140,7 @@ describe('stackHelpers', () => {
             frontend: 'headless',
             backend: 'adobe-commerce-paas',
             dependencies: ['commerce-mesh', 'demo-inspector'],
-            optionalAddons: ['adobe-commerce-aco'],
+            optionalAddons: [{ id: 'adobe-commerce-aco' }],
         };
 
         const edsPaasStack: Stack = {
@@ -150,7 +150,7 @@ describe('stackHelpers', () => {
             frontend: 'eds',
             backend: 'adobe-commerce-paas',
             dependencies: ['commerce-mesh', 'demo-inspector'],
-            optionalAddons: ['adobe-commerce-aco'],
+            optionalAddons: [{ id: 'adobe-commerce-aco' }],
             requiresGitHub: true,
             requiresDaLive: true,
         };
@@ -212,7 +212,7 @@ describe('stackHelpers', () => {
             frontend: 'headless',
             backend: 'adobe-commerce-paas',
             dependencies: ['commerce-mesh', 'demo-inspector'],
-            optionalAddons: ['adobe-commerce-aco'],
+            optionalAddons: [{ id: 'adobe-commerce-aco' }],
         };
 
         const headlessAccsStack: Stack = {
@@ -222,7 +222,7 @@ describe('stackHelpers', () => {
             frontend: 'headless',
             backend: 'adobe-commerce-accs',
             dependencies: ['commerce-mesh', 'demo-inspector'],
-            optionalAddons: ['adobe-commerce-aco'],
+            optionalAddons: [{ id: 'adobe-commerce-aco' }],
         };
 
         const edsPaasStack: Stack = {
@@ -232,7 +232,7 @@ describe('stackHelpers', () => {
             frontend: 'eds',
             backend: 'adobe-commerce-paas',
             dependencies: ['commerce-mesh', 'demo-inspector'],
-            optionalAddons: ['adobe-commerce-aco'],
+            optionalAddons: [{ id: 'adobe-commerce-aco' }],
             requiresGitHub: true,
             requiresDaLive: true,
         };
@@ -244,7 +244,7 @@ describe('stackHelpers', () => {
             frontend: 'eds',
             backend: 'adobe-commerce-accs',
             dependencies: ['commerce-mesh', 'demo-inspector'],
-            optionalAddons: ['adobe-commerce-aco'],
+            optionalAddons: [{ id: 'adobe-commerce-aco' }],
             requiresGitHub: true,
             requiresDaLive: true,
         };

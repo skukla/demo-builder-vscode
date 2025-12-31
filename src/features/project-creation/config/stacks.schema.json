@@ -61,6 +61,24 @@
           },
           "description": "Array of dependency component IDs from components.json"
         },
+        "optionalAddons": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Addon component ID from components.json"
+              },
+              "default": {
+                "type": "boolean",
+                "description": "Whether this addon should be pre-selected (default: false)"
+              }
+            }
+          },
+          "description": "Array of optional addons available for this stack"
+        },
         "features": {
           "type": "array",
           "items": {

@@ -10,7 +10,9 @@
       "frontend": "headless",
       "backend": "adobe-commerce-paas",
       "dependencies": ["commerce-mesh"],
-      "optionalAddons": ["demo-inspector"],
+      "optionalAddons": [
+        { "id": "demo-inspector", "default": true }
+      ],
       "features": ["Server-side rendering", "API Mesh integration", "Full customization"]
     },
     {
@@ -21,7 +23,9 @@
       "frontend": "headless",
       "backend": "adobe-commerce-accs",
       "dependencies": ["commerce-mesh"],
-      "optionalAddons": ["demo-inspector"],
+      "optionalAddons": [
+        { "id": "demo-inspector", "default": true }
+      ],
       "features": ["Server-side rendering", "API Mesh integration", "Managed backend"]
     },
     {
@@ -32,7 +36,9 @@
       "frontend": "eds",
       "backend": "adobe-commerce-paas",
       "dependencies": ["commerce-mesh"],
-      "optionalAddons": ["adobe-commerce-aco"],
+      "optionalAddons": [
+        { "id": "adobe-commerce-aco" }
+      ],
       "features": ["Ultra-fast delivery", "DA.live content", "Self-managed backend"],
       "requiresGitHub": true,
       "requiresDaLive": true
@@ -45,7 +51,9 @@
       "frontend": "eds",
       "backend": "adobe-commerce-accs",
       "dependencies": ["commerce-mesh"],
-      "optionalAddons": ["adobe-commerce-aco"],
+      "optionalAddons": [
+        { "id": "adobe-commerce-aco" }
+      ],
       "features": ["Ultra-fast delivery", "DA.live content", "Managed backend"],
       "requiresGitHub": true,
       "requiresDaLive": true

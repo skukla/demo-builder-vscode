@@ -39,7 +39,7 @@ export function getStackComponentIds(stack: Stack): string[] {
         stack.frontend,
         stack.backend,
         ...stack.dependencies,
-        ...(stack.optionalAddons || []),
+        ...(stack.optionalAddons || []).map(addon => addon.id),
     ];
 }
 
