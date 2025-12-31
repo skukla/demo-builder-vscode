@@ -9,7 +9,7 @@ export { useVSCodeMessage } from './useVSCodeMessage';
 export { useVSCodeRequest } from './useVSCodeRequest';
 
 // State Management Hooks
-export { useLoadingState } from './useLoadingState';
+// Note: useLoadingState is internal (used by useAsyncData) - not exported
 export { useSelection } from './useSelection';
 export { useAsyncData } from './useAsyncData';
 export { useAsyncOperation } from './useAsyncOperation';
@@ -29,7 +29,6 @@ export { useSelectableDefault, useSelectableDefaultWhen } from './useSelectableD
 // Utility Hooks
 export { useDebouncedLoading } from './useDebouncedLoading';
 export { useDebouncedValue } from './useDebouncedValue';
-export { useMinimumLoadingTime } from './useMinimumLoadingTime';
 export { useIsMounted } from './useIsMounted';
 export { useSetToggle } from './useSetToggle';
 export { useTimerCleanup, useSingleTimer } from './useTimerCleanup';

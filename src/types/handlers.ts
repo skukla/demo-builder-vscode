@@ -42,23 +42,6 @@ export interface ProjectConfig {
 }
 
 /**
- * IComponentHandler - Interface for component handling operations
- *
- * Defines the contract for component handlers.
- * The actual implementation is in features/components/handlers/componentHandler.ts
- *
- * Note: Message handling has been migrated to MessageHandler pattern.
- * See features/components/handlers/componentHandlers.ts for handler implementations.
- */
-export interface IComponentHandler {
-    generateProjectConfig(
-        frontend: string,
-        backend: string,
-        dependencies: string[]
-    ): Promise<ProjectConfig>;
-}
-
-/**
  * PrerequisiteCheckState - State for a single prerequisite check including check result
  *
  * This is what's actually stored in currentPrerequisiteStates during prerequisite checking.
@@ -149,7 +132,6 @@ export interface HandlerContext {
     // Managers (optional - not all handlers need all managers)
     prereqManager?: PrerequisitesManager;
     authManager?: AuthenticationService;
-    componentHandler?: IComponentHandler;
     errorLogger?: ErrorLogger;
     progressUnifier?: ProgressUnifier;
     stepLogger?: StepLogger;
