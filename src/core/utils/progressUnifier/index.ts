@@ -2,11 +2,14 @@
  * Progress Unifier Module
  *
  * Provides unified progress tracking for install step execution.
- * Uses strategy pattern for different progress tracking approaches.
+ * Uses config-driven approach (Step 6 of over-engineering remediation).
+ *
+ * Note: Strategy pattern and helper classes (CommandResolver, ElapsedTimeTracker)
+ * were removed in Step 8 cleanup. Logic is now inlined in ProgressUnifier.
  */
 
 // Main orchestrator
-export { ProgressUnifier } from './ProgressUnifier';
+export { ProgressUnifier, formatElapsedTime } from './ProgressUnifier';
 
 // Types
 export {
@@ -17,17 +20,3 @@ export {
     ProgressHandler,
     ExecutionContext,
 } from './types';
-
-// Strategies
-export {
-    IProgressStrategy,
-    StrategyDependencies,
-    ExactProgressStrategy,
-    MilestoneProgressStrategy,
-    SyntheticProgressStrategy,
-    ImmediateProgressStrategy,
-} from './strategies';
-
-// Utilities
-export { ElapsedTimeTracker, formatElapsedTime } from './ElapsedTimeTracker';
-export { CommandResolver, CommandResolveOptions } from './CommandResolver';
