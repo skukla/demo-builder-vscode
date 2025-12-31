@@ -366,9 +366,8 @@ grep -rn "?: (.*) =>" src/features/**/ui/components/*.tsx | grep -v "on[A-Z]"
 src/features/[feature-name]/
 ├── commands/           # VS Code commands (if any)
 ├── handlers/           # Message handlers
-│   ├── index.ts       # Re-exports
-│   ├── [Name]HandlerRegistry.ts
-│   └── [domain]Handlers.ts
+│   ├── index.ts       # Barrel exports + dispatchHandler re-export
+│   └── [domain]Handlers.ts  # Object literal handler maps
 ├── services/          # Business logic (if complex)
 ├── ui/                # React components (if webview)
 │   ├── index.tsx      # Entry point
@@ -683,29 +682,31 @@ Pattern A: Single file                 Pattern B: Split by domain
 │       (all handlers in one file)     │   ├── statusHandlers.ts
                                        │   └── index.ts
 
-Pattern C: Registry class              Pattern D: Direct exports
+Pattern C: Object literals (CURRENT)   Pattern D: One handler per file
 ├── handlers/                          ├── handlers/
-│   ├── DashboardRegistry.ts           │   ├── handleStart.ts
-│   └── handlers/                      │   ├── handleStop.ts
-│       ├── projectHandlers.ts         │   └── index.ts
-│       └── statusHandlers.ts
+│   ├── meshHandlers.ts                │   ├── handleStart.ts
+│   ├── index.ts                       │   ├── handleStop.ts
+│   └── (dispatchHandler from core)    │   └── index.ts
 ```
 
 ### Pick ONE Pattern
 
 ```typescript
-// This project's established pattern: Registry class
-// In [Feature]HandlerRegistry.ts:
-export class DashboardHandlerRegistry {
-    private handlers = new Map<string, MessageHandler>();
+// This project's established pattern: Object literal + dispatchHandler
+// In [domain]Handlers.ts:
+import { defineHandlers } from '@/core/handlers';
 
-    constructor() {
-        this.handlers.set('getProjects', handlers.handleGetProjects);
-        this.handlers.set('startDemo', handlers.handleStartDemo);
-    }
+export const meshHandlers = defineHandlers({
+    'check-api-mesh': handleCheckApiMesh,
+    'deploy-api-mesh': handleDeployApiMesh,
+    'get-mesh-status': handleGetMeshStatus,
+});
 
-    public getHandlers() { return this.handlers; }
-}
+// In command file:
+import { dispatchHandler } from '@/core/handlers';
+import { meshHandlers } from '@/features/mesh/handlers';
+
+const result = await dispatchHandler(meshHandlers, context, messageType, data);
 ```
 
 ### Handler Signature Consistency
@@ -734,14 +735,18 @@ for dir in src/features/*/handlers; do
     ls -la "$dir" 2>/dev/null | head -10
 done
 
-# Find registry patterns
-grep -l "Registry" src/features/*/handlers/*.ts
+# Find handler object literals (should exist)
+grep -l "defineHandlers\|= {$" src/features/*/handlers/*Handlers.ts
+
+# Find OLD registry patterns (should NOT exist)
+grep -l "class.*Registry\|extends.*Registry" src/features/*/handlers/*.ts
 ```
 
 ### Violations to Check
 
 - [ ] Different handler organization across features
-- [ ] Some use Registry class, others use direct exports
+- [ ] Using class-based Registry instead of object literals
+- [ ] Missing `dispatchHandler` usage in command files
 - [ ] Inconsistent handler function signatures
 - [ ] Shared helpers in different locations (`shared.ts` vs inline)
 
@@ -821,7 +826,7 @@ When implementing new features:
 ### Before Creating New Feature
 
 - [ ] Check if sibling features have `services/` directory
-- [ ] Use same handler organization pattern (Registry class)
+- [ ] Use same handler organization pattern (object literals + dispatchHandler)
 - [ ] Create index.ts with curated public API
 - [ ] Use context-based dependency injection
 - [ ] Prefer hooks over HOCs for React components
@@ -860,7 +865,7 @@ When implementing new features:
 | 12 | Dependency Injection | context vs new | Use context-based injection |
 | 13 | Composition vs Inheritance | extends vs composition | Prefer composition, be consistent |
 | 14 | Module Boundaries | index.ts exports | Curated public API per feature |
-| 15 | Handler Architecture | Registry vs exports | Use established pattern |
+| 15 | Handler Architecture | Object literals | Use dispatchHandler pattern |
 
 ---
 
