@@ -70,7 +70,7 @@ export function Modal({
             <Divider />
             <Content>
                 {children}
-                <div className="mt-6 pt-4 flex justify-end gap-2 border-t border-gray-200">
+                <div className="modal-footer-actions">
                     {/* Close/Cancel on left, primary actions on right (per Spectrum design guidelines) */}
                     <FocusableButton variant="secondary" onPress={onClose}>
                         Close

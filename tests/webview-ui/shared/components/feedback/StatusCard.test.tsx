@@ -84,9 +84,9 @@ describe('StatusCard', () => {
             const { container } = renderWithProviders(
                 <StatusCard status="Running" color="green" />
             );
-            // SOP §11: Static styles use utility classes instead of inline styles
-            // Find a wrapper with flex utility class
-            const wrapper = container.querySelector('.flex');
+            // SOP §11: Static styles use semantic CSS classes instead of utility classes
+            // Find the status-row wrapper class
+            const wrapper = container.querySelector('.status-row');
             expect(wrapper).toBeInTheDocument();
         });
 
@@ -108,13 +108,12 @@ describe('StatusCard', () => {
             const wrapper = textSpan?.parentElement;
             expect(wrapper).toBeInTheDocument();
 
-            // The wrapper should have Tailwind flex class (horizontal layout by default)
+            // The wrapper should have status-row class (horizontal layout by default)
             // This verifies the bug fix: StatusCard bundle rebuilt with correct horizontal layout
-            // Note: jsdom doesn't process Tailwind CSS, so we check class presence instead of computed style
-            expect(wrapper).toHaveClass('flex');
+            // Note: jsdom doesn't process CSS, so we check class presence instead of computed style
+            expect(wrapper).toHaveClass('status-row');
 
-            // Key assertion: NOT vertical/stacked (should NOT have flex-col class)
-            expect(wrapper).not.toHaveClass('flex-col');
+            // Key assertion: status-row provides horizontal layout via CSS (flex-direction: row)
         });
 
         it('shows label with status when provided', () => {

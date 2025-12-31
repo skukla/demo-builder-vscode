@@ -71,4 +71,18 @@ export const FRONTEND_TIMEOUTS = {
      * Same as TIMEOUTS.POLL.INITIAL from backend (500ms).
      */
     COMPONENT_DEBOUNCE: 500,
+
+    /**
+     * Duration for CSS animations and transitions to complete.
+     * Used for step transitions, modal animations, etc.
+     * Standard animation duration for smooth visual feedback.
+     */
+    ANIMATION_SETTLE: 300,
+
+    /**
+     * Delay before enabling animations after initial render.
+     * Prevents animation triggers during initial page load.
+     * Same as CONTINUE_CHECK_DELAY (500ms).
+     */
+    INIT_ANIMATION_DELAY: 500,
 } as const;

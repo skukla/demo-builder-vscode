@@ -215,7 +215,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
             size="M"
             actionButtons={actionButtons}
         >
-            <Text UNSAFE_className="text-gray-600 mb-4 block">
+            <Text UNSAFE_className="description-block">
                 How should it be built?
             </Text>
             <div className="architecture-modal-options" role="radiogroup" aria-label="Architecture options">
@@ -257,7 +257,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
             {availableAddons.length > 0 && (
                 <div className="animate-fade-in">
                     <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-                    <Text UNSAFE_className="text-gray-600 text-sm mb-2 block">
+                    <Text UNSAFE_className="description-block-sm">
                         Optional Services
                     </Text>
                     <div className="architecture-addons">
@@ -413,7 +413,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             </div>
 
             {searchQuery && filteredPackages.length === 0 && (
-                <Text UNSAFE_className="text-gray-500 py-4">
+                <Text UNSAFE_className="empty-state-text">
                     No packages match "{searchQuery}"
                 </Text>
             )}

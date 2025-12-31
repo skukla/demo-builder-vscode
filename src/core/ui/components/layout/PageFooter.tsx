@@ -69,18 +69,10 @@ export const PageFooter: React.FC<PageFooterProps> = ({
     className,
 }) => {
     const footerContent = (
-        <div
-            style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr auto 1fr',
-                alignItems: 'center',
-                width: '100%',
-                minHeight: 32, // Match Spectrum button height for consistent footer height
-            }}
-        >
-            <div style={{ justifySelf: 'start' }}>{leftContent}</div>
-            <div style={{ justifySelf: 'center' }}>{centerContent}</div>
-            <div style={{ justifySelf: 'end' }}>{rightContent}</div>
+        <div className="footer-grid">
+            <div className="grid-align-start">{leftContent}</div>
+            <div className="grid-align-center">{centerContent}</div>
+            <div className="grid-align-end">{rightContent}</div>
         </div>
     );
 
@@ -90,7 +82,7 @@ export const PageFooter: React.FC<PageFooterProps> = ({
             UNSAFE_className={cn('border-t', 'bg-gray-75', className)}
         >
             {constrainWidth ? (
-                <div className="max-w-800 w-full">
+                <div className="footer-content-container">
                     {footerContent}
                 </div>
             ) : (

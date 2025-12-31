@@ -273,8 +273,8 @@ export function DataSourceConfigStep({
 
                     {/* No results */}
                     {searchQuery && filteredSites.length === 0 && (
-                        <Flex justifyContent="center" UNSAFE_className="py-4">
-                            <Text UNSAFE_className="text-gray-500">
+                        <Flex justifyContent="center" UNSAFE_className="centered-padding-md">
+                            <Text UNSAFE_className="description-text">
                                 No sites match "{searchQuery}"
                             </Text>
                         </Flex>

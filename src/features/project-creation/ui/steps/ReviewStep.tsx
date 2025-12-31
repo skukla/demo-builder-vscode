@@ -46,7 +46,7 @@ function LabelValue({ label, value, icon, subItems }: {
 }) {
     return (
         <Flex gap="size-200" alignItems="start">
-            <Text UNSAFE_className={cn('text-md', 'text-gray-500', 'min-w-100')}>{label}</Text>
+            <Text UNSAFE_className="review-label">{label}</Text>
             <Flex direction="column" gap="size-50" flex={1}>
                 <Flex gap="size-100" alignItems="center">
                     {icon}
@@ -57,7 +57,7 @@ function LabelValue({ label, value, icon, subItems }: {
                     )}
                 </Flex>
                 {subItems && subItems.length > 0 && (
-                    <Text UNSAFE_className={cn('text-sm', 'text-gray-500')}>
+                    <Text UNSAFE_className="description-text">
                         {subItems.join(' · ')}
                     </Text>
                 )}

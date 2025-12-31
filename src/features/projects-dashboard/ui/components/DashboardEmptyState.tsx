@@ -53,12 +53,12 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
                 direction="column"
                 alignItems="center"
                 gap="size-300"
-                UNSAFE_className="max-w-400 text-center"
+                UNSAFE_className="centered-content-narrow"
             >
                 <Text UNSAFE_className="text-lg">
                     <strong>{title}</strong>
                 </Text>
-                <Text UNSAFE_className="text-sm text-gray-600">
+                <Text UNSAFE_className="description-text">
                     Get started by creating your first demo project.
                 </Text>
                 <Flex gap="size-200" alignItems="center">

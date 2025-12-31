@@ -181,7 +181,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
 
     // Project Name Input - shared between both layouts
     const projectNameField = (
-        <div className={cn('mb-8', 'min-h-96')}>
+        <div className="brand-section">
             <TextField
                 label="Project Name"
                 placeholder="Enter project name..."
@@ -222,7 +222,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     return (
         <SingleColumnLayout>
             {projectNameField}
-            <Text UNSAFE_className="text-gray-500 text-sm mt-4">
+            <Text UNSAFE_className="description-text-spaced">
                 No demo packages available. Configure demo-packages.json to add packages.
             </Text>
         </SingleColumnLayout>

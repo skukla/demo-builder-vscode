@@ -318,7 +318,7 @@ export function WizardContainer({
         >
             <div ref={wizardContainerRef} className="flex h-full w-full">
                 {/* Content Area - Timeline moved to sidebar */}
-                <div className="flex-column flex-1 h-full w-full">
+                <div className="wizard-main-content">
                     {/* Header */}
                     <PageHeader
                         title={state.editMode ? "Edit Project" : "Create Demo Project"}

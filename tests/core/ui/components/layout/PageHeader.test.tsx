@@ -187,8 +187,8 @@ describe('PageHeader', () => {
                 />
             );
 
-            // Then: Content wrapped in max-w-800 mx-auto div
-            const constrainedDiv = container.querySelector('.max-w-800.mx-auto');
+            // Then: Content wrapped in page-container div
+            const constrainedDiv = container.querySelector('.page-container');
             expect(constrainedDiv).toBeInTheDocument();
         });
 
@@ -201,8 +201,8 @@ describe('PageHeader', () => {
                 />
             );
 
-            // Then: No max-w-800 mx-auto div
-            const constrainedDiv = container.querySelector('.max-w-800.mx-auto');
+            // Then: No page-container div
+            const constrainedDiv = container.querySelector('.page-container');
             expect(constrainedDiv).not.toBeInTheDocument();
         });
 
@@ -212,8 +212,8 @@ describe('PageHeader', () => {
                 <PageHeader title="Page Title" />
             );
 
-            // Then: No max-w-800 mx-auto div (default is false)
-            const constrainedDiv = container.querySelector('.max-w-800.mx-auto');
+            // Then: No page-container div (default is false)
+            const constrainedDiv = container.querySelector('.page-container');
             expect(constrainedDiv).not.toBeInTheDocument();
         });
     });

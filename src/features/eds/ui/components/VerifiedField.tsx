@@ -50,6 +50,16 @@ export interface VerifiedFieldProps {
 }
 
 /**
+ * Check if verified indicator should be shown (SOP §10 extraction)
+ *
+ * Condition: isVerified && !isVerifying && !error
+ * Shows checkmark only when verified, not currently verifying, and no error
+ */
+function shouldShowVerified(isVerified: boolean, isVerifying: boolean, error: string | undefined): boolean {
+    return isVerified && !isVerifying && !error;
+}
+
+/**
  * VerifiedField Component
  *
  * TextField with verification status indicators.
@@ -98,7 +108,7 @@ export function VerifiedField({
                     />
                 )}
 
-                {isVerified && !isVerifying && !error && (
+                {shouldShowVerified(isVerified, isVerifying, error) && (
                     <Flex alignItems="center" gap="size-100">
                         <CheckmarkCircle
                             size="S"

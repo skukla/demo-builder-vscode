@@ -194,7 +194,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
         >
             {/* Sticky controls - search, view toggle, and new project button */}
             <div className="projects-sticky-header">
-                <div className="max-w-800 mx-auto px-4 pt-6 pb-4">
+                <div className="page-container-padded page-header-section">
                     <Flex alignItems="start" gap="size-300">
                         {/* Search Header with view mode toggle */}
                         <View flex>
@@ -248,7 +248,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             </div>
 
             {/* Freely scrolling content */}
-            <div className="max-w-800 mx-auto px-4 pb-6">
+            <div className="page-container-padded pb-6">
                 {/* Render active view */}
                 {viewMode === 'cards' && (
                     <ProjectsGrid
@@ -282,7 +282,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                     <Flex
                         justifyContent="center"
                         alignItems="center"
-                        UNSAFE_className="py-8"
+                        UNSAFE_className="centered-padding-lg"
                     >
                         <Text UNSAFE_className="text-gray-500">
                             No projects match "{searchQuery}"

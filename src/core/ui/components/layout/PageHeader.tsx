@@ -107,7 +107,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             UNSAFE_className={cn('border-b', 'bg-gray-75', className)}
         >
             {constrainWidth ? (
-                <div className="max-w-800 mx-auto">
+                <div className="page-container">
                     {headerContent}
                 </div>
             ) : (

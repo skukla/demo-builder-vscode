@@ -280,9 +280,9 @@ describe('ProjectsDashboard', () => {
                 />
             );
 
-            // Then: Header area has max-w-800 class for width constraint
-            // PageHeader with constrainWidth={true} adds max-w-800 mx-auto wrapper
-            const constrainedHeaderContent = container.querySelector('.max-w-800.mx-auto');
+            // Then: Header area has page-container class for width constraint
+            // PageHeader with constrainWidth={true} adds page-container wrapper
+            const constrainedHeaderContent = container.querySelector('.page-container');
             expect(constrainedHeaderContent).toBeInTheDocument();
         });
     });

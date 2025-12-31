@@ -81,7 +81,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                         <div
                             key={check.name}
                             ref={el => { itemRefs.current[index] = el; }}
-                            className={cn('prerequisite-item', 'prerequisite-item-grid', index !== checks.length - 1 && 'mb-2')}
+                            className={cn('prerequisite-item', 'prerequisite-item-grid', index !== checks.length - 1 && 'prerequisite-item-spacing')}
                         >
                             {/* Icon - spans both rows, centered vertically in the entire item */}
                             <div className="prerequisite-icon">
@@ -128,7 +128,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                                             value={getProgressValue(check.unifiedProgress)}
                                             maxValue={100}
                                             size="S"
-                                            UNSAFE_className="mb-2 progress-bar-small-label progress-bar-full-width"
+                                            UNSAFE_className="progress-bar-spacing progress-bar-small-label progress-bar-full-width"
                                         />
                                     </View>
                                 )}

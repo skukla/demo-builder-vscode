@@ -549,6 +549,219 @@ button[class*="spectrum-Button"][disabled],
 .max-w-900 { max-width: 900px !important; }
 
 /* ===========================================
+   Semantic Layout Classes
+   Replace utility class combinations with meaningful names
+   =========================================== */
+
+/* Page container - centers content at 800px max-width */
+.page-container {
+    max-width: 800px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* Page container with horizontal padding */
+.page-container-padded {
+    max-width: 800px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+}
+
+/* Page header section spacing */
+.page-header-section {
+    padding-top: 24px !important;
+    padding-bottom: 16px !important;
+}
+
+/* Page body section spacing */
+.page-body-section {
+    padding-bottom: 16px !important;
+}
+
+/* Page body section with larger bottom spacing */
+.page-body-section-lg {
+    padding-bottom: 24px !important;
+}
+
+/* Step container - full width with max constraint */
+.step-content-container {
+    max-width: 800px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+}
+
+/* Footer content container */
+.footer-content-container {
+    max-width: 800px !important;
+    width: 100% !important;
+}
+
+/* Footer grid - 3 column layout for left/center/right content */
+.footer-grid {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-height: 32px !important;
+}
+
+/* Footer grid cell alignment */
+.grid-align-start { justify-self: start !important; }
+.grid-align-center { justify-self: center !important; }
+.grid-align-end { justify-self: end !important; }
+
+/* Modal footer - separator with action buttons */
+.modal-footer-actions {
+    margin-top: 24px !important;
+    padding-top: 16px !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+}
+
+/* Wizard main content area */
+.wizard-main-content {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    height: 100% !important;
+    width: 100% !important;
+}
+
+/* Step main content area */
+.step-main-content {
+    flex: 1 !important;
+    display: flex !important;
+    width: 100% !important;
+}
+
+/* Status row - inline status indicator with gap */
+.status-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+/* Status text - standard status label styling */
+.status-text {
+    font-size: 14px !important;
+    color: var(--spectrum-global-color-gray-800) !important;
+    font-weight: normal !important;
+}
+
+/* Navigation item row - larger gap for nav items */
+.nav-item-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+/* Description text - muted secondary text */
+.description-text {
+    color: var(--spectrum-global-color-gray-500) !important;
+    font-size: 12px !important;
+}
+
+/* Description text with top margin */
+.description-text-spaced {
+    color: var(--spectrum-global-color-gray-500) !important;
+    font-size: 12px !important;
+    margin-top: 16px !important;
+}
+
+/* Section label - uppercase heading for sections */
+.section-label {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    margin-bottom: 8px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* Review label - label/value pair label */
+.review-label {
+    font-size: 14px !important;
+    color: var(--spectrum-global-color-gray-500) !important;
+    min-width: 100px !important;
+}
+
+/* Brand section container */
+.brand-section {
+    margin-bottom: 32px !important;
+    min-height: 384px !important;
+}
+
+/* Small loading spinner size */
+.loading-spinner-small {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+/* Centered narrow content */
+.centered-content-narrow {
+    max-width: 400px !important;
+    text-align: center !important;
+}
+
+/* Centered padding variations */
+.centered-padding-lg {
+    padding-top: 32px !important;
+    padding-bottom: 32px !important;
+}
+
+.centered-padding-md {
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+}
+
+/* Help content area minimum height */
+.help-content-area {
+    min-height: 192px !important;
+}
+
+/* Checkbox item spacing */
+.checkbox-spacing {
+    margin-bottom: 4px !important;
+}
+
+/* Progress bar spacing */
+.progress-bar-spacing {
+    margin-bottom: 8px !important;
+}
+
+/* Description block with bottom margin */
+.description-block {
+    color: var(--spectrum-global-color-gray-600) !important;
+    margin-bottom: 16px !important;
+    display: block !important;
+}
+
+/* Description block small variant */
+.description-block-sm {
+    color: var(--spectrum-global-color-gray-600) !important;
+    font-size: 12px !important;
+    margin-bottom: 8px !important;
+    display: block !important;
+}
+
+/* Empty state text with padding */
+.empty-state-text {
+    color: var(--spectrum-global-color-gray-500) !important;
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+}
+
+/* Prerequisite item spacing */
+.prerequisite-item-spacing {
+    margin-bottom: 8px !important;
+}
+
+/* ===========================================
    Projects Dashboard Specific
    =========================================== */
 /* Sticky header for search/filter controls - middle layer between header and content */

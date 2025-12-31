@@ -140,7 +140,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
             >
                 {/* Status Header - matches Projects List header design */}
                 <div className="dashboard-status-header">
-                    <div className="max-w-800 mx-auto px-4 pt-6 pb-4">
+                    <div className="page-container-padded page-header-section">
                         {/* Content wrapper matches grid width for alignment */}
                         <div className="dashboard-status-content">
                             <Flex alignItems="center" gap="size-300">
@@ -174,7 +174,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                                         )}
 
                                         {meshStatus === 'authenticating' && (
-                                            <ProgressCircle size="S" isIndeterminate UNSAFE_className="w-4 h-4" />
+                                            <ProgressCircle size="S" isIndeterminate UNSAFE_className="loading-spinner-small" />
                                         )}
                                     </Flex>
                                 )}
@@ -188,7 +188,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                     </div>
                 </div>
 
-                <div className="w-full max-w-800 mx-auto px-4 pb-4">
+                <div className="page-container-padded pb-4">
 
                     {/* Center the grid of fixed-width buttons */}
                     <div className="dashboard-grid-container">

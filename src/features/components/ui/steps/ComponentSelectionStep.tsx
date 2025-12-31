@@ -103,13 +103,13 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     const backendOptions = dataTyped.backends || DEFAULT_BACKENDS;
 
     return (
-        <div className="max-w-800 w-full m-0 p-5">
+        <div className="step-main-content">
             {/* Frontend and Backend Selection */}
             <Flex gap="size-300" wrap>
                 {/* Frontend */}
                 <View flex="1" minWidth="300px">
                     <div ref={frontendPickerRef}>
-                        <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
+                        <Text UNSAFE_className="section-label">
                             Frontend
                         </Text>
                         <ErrorBoundary onError={(error) => log.error('Picker error:', error)}>
@@ -143,7 +143,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                         isSelected={selectedDependencies.has(dep.id)}
                                         isDisabled={true}
                                         onChange={(sel) => handleDependencyToggle(dep.id, sel)}
-                                        UNSAFE_className="mb-1"
+                                        UNSAFE_className="checkbox-spacing"
                                     >
                                         <Flex alignItems="center" gap="size-50">
                                             <LockClosed size="XS" UNSAFE_className="text-gray-600" />
@@ -158,7 +158,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                         isSelected={selectedDependencies.has(addon.id)}
                                         isDisabled={false}
                                         onChange={(sel) => handleDependencyToggle(addon.id, sel)}
-                                        UNSAFE_className="mb-1"
+                                        UNSAFE_className="checkbox-spacing"
                                     >
                                         <Flex alignItems="center" gap="size-50">
                                             <Text UNSAFE_className="text-md">{addon.name}</Text>
@@ -172,7 +172,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
 
                 {/* Backend */}
                 <View flex="1" minWidth="300px">
-                    <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
+                    <Text UNSAFE_className="section-label">
                         Backend
                     </Text>
                     <ErrorBoundary onError={(error) => log.error('Picker error:', error)}>
@@ -206,7 +206,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                     isSelected={selectedServices.has(svc.id)}
                                     isDisabled={true}
                                     onChange={(sel) => handleServiceToggle(svc.id, sel)}
-                                    UNSAFE_className="mb-1"
+                                    UNSAFE_className="checkbox-spacing"
                                 >
                                     <Flex alignItems="center" gap="size-50">
                                         <LockClosed size="XS" UNSAFE_className="text-gray-600" />

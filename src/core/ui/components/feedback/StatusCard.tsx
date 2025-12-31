@@ -78,9 +78,9 @@ export const StatusCard = React.memo<StatusCardProps>(({
     };
 
     return (
-        <div className={className ? `flex items-center gap-2 ${className}` : 'flex items-center gap-2'}>
+        <div className={className ? `status-row ${className}` : 'status-row'}>
             <StatusDot variant={getVariant()} size={getSizeInPixels()} />
-            <span className="text-md text-gray-800 font-normal">
+            <span className="status-text">
                 {renderContent()}
             </span>
         </div>

@@ -9,6 +9,7 @@ import { View, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useRef, useEffect, useState } from 'react';
 import { cn } from '@/core/ui/utils/classNames';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 /**
  * Timeline step status type
@@ -124,8 +125,8 @@ export interface TimelineNavProps {
     isEditMode?: boolean;
 }
 
-/** Animation duration in milliseconds */
-const ANIMATION_DURATION = 300;
+/** Animation duration in milliseconds - uses semantic constant */
+const ANIMATION_DURATION = FRONTEND_TIMEOUTS.ANIMATION_SETTLE;
 
 /** Exiting step with its original position */
 interface ExitingStep extends TimelineStep {
@@ -146,7 +147,6 @@ export function TimelineNav({
     // Track previous steps for detecting changes
     const prevStepsRef = useRef<TimelineStep[]>([]);
     // Delay before enabling animations (lets initial load settle)
-    const INIT_DELAY_MS = 500;
     const [animationsEnabled, setAnimationsEnabled] = useState(false);
 
     // Animation states
@@ -158,7 +158,7 @@ export function TimelineNav({
         if (steps.length > 0 && !animationsEnabled) {
             const timer = setTimeout(() => {
                 setAnimationsEnabled(true);
-            }, INIT_DELAY_MS);
+            }, FRONTEND_TIMEOUTS.INIT_ANIMATION_DELAY);
             return () => clearTimeout(timer);
         }
         return undefined;
@@ -319,7 +319,7 @@ export function TimelineNav({
                                 onClick={() => !step.isExiting && handleStepClick(actualIndex)}
                             >
                                 <View
-                                    UNSAFE_className={cn('flex', 'items-center', 'gap-3')}
+                                    UNSAFE_className="nav-item-row"
                                 >
                                     {/* Step indicator dot */}
                                     <View

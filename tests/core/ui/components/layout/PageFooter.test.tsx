@@ -108,8 +108,8 @@ describe('PageFooter', () => {
                 />
             );
 
-            // Then: Inner container has max-w-800 class
-            const constrainedDiv = container.querySelector('.max-w-800');
+            // Then: Inner container has footer-content-container class
+            const constrainedDiv = container.querySelector('.footer-content-container');
             expect(constrainedDiv).toBeInTheDocument();
         });
 
@@ -121,8 +121,8 @@ describe('PageFooter', () => {
                 />
             );
 
-            // Then: max-w-800 class applied by default
-            const constrainedDiv = container.querySelector('.max-w-800');
+            // Then: footer-content-container class applied by default
+            const constrainedDiv = container.querySelector('.footer-content-container');
             expect(constrainedDiv).toBeInTheDocument();
         });
 
@@ -135,8 +135,8 @@ describe('PageFooter', () => {
                 />
             );
 
-            // Then: No max-w-800 class applied
-            const constrainedDiv = container.querySelector('.max-w-800');
+            // Then: No footer-content-container class applied
+            const constrainedDiv = container.querySelector('.footer-content-container');
             expect(constrainedDiv).not.toBeInTheDocument();
         });
     });
@@ -152,7 +152,7 @@ describe('PageFooter', () => {
             );
 
             // Then: Grid container with 3 columns exists
-            // PageFooter uses CSS Grid (gridTemplateColumns: '1fr auto 1fr')
+            // PageFooter uses CSS Grid via footer-grid class
             const cancelButton = screen.getByRole('button', { name: 'Cancel' });
             const continueButton = screen.getByRole('button', { name: 'Continue' });
 
@@ -160,8 +160,8 @@ describe('PageFooter', () => {
             expect(cancelButton).toBeInTheDocument();
             expect(continueButton).toBeInTheDocument();
 
-            // The grid container should exist (checking for display: grid in style)
-            const gridContainer = container.querySelector('[style*="grid"]');
+            // The grid container should exist (checking for footer-grid class)
+            const gridContainer = container.querySelector('.footer-grid');
             expect(gridContainer).toBeInTheDocument();
         });
     });
