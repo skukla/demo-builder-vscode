@@ -22,15 +22,14 @@ import { HandlerContext } from '@/types/handlers';
 import {
     buildStatusPayload,
     hasMeshDeploymentRecord,
-    getMeshEndpointFromConfigs,
-    type MeshStatusInfo,
+    getMeshEndpoint,
 } from '../services/dashboardStatusService';
 
 // Re-export for backward compatibility
 export {
     buildStatusPayload,
     hasMeshDeploymentRecord,
-    getMeshEndpointFromConfigs,
+    getMeshEndpoint,
     type MeshStatusInfo,
     type StatusPayload,
 } from '../services/dashboardStatusService';
@@ -119,14 +118,10 @@ const REQUIRED_MESH_ENV_VARS = [
  *
  * Checks both:
  * 1. The .env file for INPUT variables (commerce URLs, credentials)
- * 2. The mesh endpoint (OUTPUT of deployment) - must be persisted to componentConfigs
- *
- * Note: We check componentConfigs for MESH_ENDPOINT rather than just meshComponent.endpoint
- * because componentConfigs is what gets written to the frontend's .env file. If MESH_ENDPOINT
- * is in component state but not in componentConfigs, the frontend can't use it.
+ * 2. The mesh endpoint (OUTPUT of deployment) from componentInstances
  *
  * @param meshPath - Path to the mesh component directory
- * @param meshEndpointFromConfigs - MESH_ENDPOINT value from componentConfigs (what frontend uses)
+ * @param meshEndpoint - Mesh endpoint from componentInstances['commerce-mesh'].endpoint
  * @returns Object with isComplete flag and list of missing fields
  */
 export async function checkMeshConfigCompleteness(
@@ -162,8 +157,7 @@ export async function checkMeshConfigCompleteness(
         }
     }
 
-    // Check OUTPUT variable (mesh endpoint)
-    // Must be in componentConfigs so frontend .env has it - component state alone isn't enough
+    // Check OUTPUT variable (mesh endpoint from componentInstances)
     if (!meshEndpointFromConfigs) {
         missingFields.push('MESH_ENDPOINT');
     }
@@ -174,8 +168,6 @@ export async function checkMeshConfigCompleteness(
     };
 }
 
-// getMeshEndpointFromConfigs is now in dashboardStatusService and re-exported above
-
 /**
  * Determine mesh status based on changes, component state, and config completeness
  */
@@ -184,11 +176,10 @@ export async function determineMeshStatus(
     meshComponent: ComponentInstance,
     project: Project,
 ): Promise<'deployed' | 'config-changed' | 'config-incomplete' | 'update-declined' | 'error' | 'checking'> {
-    // Get MESH_ENDPOINT from componentConfigs (what frontend .env will have)
-    // Not meshComponent.endpoint - that's component state which may not be in .env
-    const meshEndpointFromConfigs = getMeshEndpointFromConfigs(project);
+    // Get MESH_ENDPOINT from componentInstances (single source of truth)
+    const meshEndpointFromConfigs = getMeshEndpoint(project);
 
-    // Check if configuration is complete (both .env INPUT vars and mesh endpoint in componentConfigs)
+    // Check if configuration is complete (both .env INPUT vars and mesh endpoint)
     const configCheck = await checkMeshConfigCompleteness(meshComponent.path, meshEndpointFromConfigs);
     if (!configCheck.isComplete) {
         return 'config-incomplete';

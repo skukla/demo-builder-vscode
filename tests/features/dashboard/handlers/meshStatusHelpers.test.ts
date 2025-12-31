@@ -149,30 +149,31 @@ ADOBE_CATALOG_API_KEY=api-key-123
             lastUpdated: new Date(),
         };
 
-        // Project with MESH_ENDPOINT in componentConfigs (complete config)
+        // Project with mesh endpoint in componentInstances (single source of truth)
         const mockProjectWithMeshEndpoint: Project = {
             name: 'Test Project',
             path: '/projects/demo',
             createdAt: new Date(),
             status: 'ready',
-            componentConfigs: {
-                'headless': {
-                    MESH_ENDPOINT: mockMeshEndpoint,
+            componentInstances: {
+                'commerce-mesh': {
+                    id: 'commerce-mesh',
+                    name: 'Commerce Mesh',
+                    type: 'dependency',
+                    path: mockMeshPath,
+                    status: 'deployed',
+                    endpoint: mockMeshEndpoint,
                 },
             },
         };
 
-        // Project WITHOUT MESH_ENDPOINT in componentConfigs (incomplete config)
+        // Project WITHOUT mesh endpoint in componentInstances (incomplete config)
         const mockProjectWithoutMeshEndpoint: Project = {
             name: 'Test Project',
             path: '/projects/demo',
             createdAt: new Date(),
             status: 'ready',
-            componentConfigs: {
-                'headless': {
-                    // No MESH_ENDPOINT here
-                },
-            },
+            // No commerce-mesh in componentInstances means no endpoint
         };
 
         it('returns config-incomplete when .env file is missing', async () => {
@@ -187,7 +188,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             expect(result).toBe('config-incomplete');
         });
 
-        it('returns config-incomplete when MESH_ENDPOINT is missing from componentConfigs', async () => {
+        it('returns config-incomplete when no commerce-mesh in componentInstances', async () => {
             mockFs.readFile.mockResolvedValue(`
 ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
 ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
@@ -209,7 +210,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             expect(result).toBe('config-incomplete');
         });
 
-        it('returns config-incomplete even when meshComponent.endpoint is set but not in componentConfigs', async () => {
+        it('returns config-incomplete when meshComponent has endpoint but project has no commerce-mesh in componentInstances', async () => {
             mockFs.readFile.mockResolvedValue(`
 ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
 ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
@@ -221,14 +222,14 @@ ADOBE_COMMERCE_STORE_CODE=main_store
 ADOBE_CATALOG_API_KEY=api-key-123
 `);
 
-            // Component has endpoint in state, but componentConfigs doesn't have MESH_ENDPOINT
-            // This simulates the user's issue: mesh deployed but MESH_ENDPOINT not in frontend .env
+            // Component passed to determineMeshStatus has endpoint, but project has no commerce-mesh in componentInstances
+            // getMeshEndpoint() reads from project.componentInstances, not from component arg
             const componentWithEndpoint = { ...mockMeshComponent, endpoint: mockMeshEndpoint };
 
             const result = await determineMeshStatus(
                 { hasChanges: false },
                 componentWithEndpoint,
-                mockProjectWithoutMeshEndpoint, // Missing MESH_ENDPOINT in componentConfigs
+                mockProjectWithoutMeshEndpoint, // No commerce-mesh in componentInstances
             );
 
             expect(result).toBe('config-incomplete');
@@ -249,7 +250,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = await determineMeshStatus(
                 { hasChanges: false },
                 mockMeshComponent,
-                mockProjectWithMeshEndpoint, // Has MESH_ENDPOINT in componentConfigs
+                mockProjectWithMeshEndpoint, // Has endpoint in componentInstances
             );
 
             expect(result).toBe('deployed');

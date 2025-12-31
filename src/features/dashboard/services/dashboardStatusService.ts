@@ -72,20 +72,16 @@ export function hasMeshDeploymentRecord(project: Project): boolean {
 }
 
 /**
- * Get MESH_ENDPOINT from componentConfigs (checks all component configs)
+ * Get mesh endpoint from componentInstances (single source of truth)
  *
  * @param project - The project to check
- * @returns The MESH_ENDPOINT value if found, undefined otherwise
+ * @returns The mesh endpoint value if found, undefined otherwise
  */
-export function getMeshEndpointFromConfigs(project: Project): string | undefined {
-    if (!project.componentConfigs) return undefined;
-
-    // Check all component configs for MESH_ENDPOINT (usually in frontend config)
-    for (const configValues of Object.values(project.componentConfigs)) {
-        const endpoint = configValues?.MESH_ENDPOINT;
-        if (endpoint && typeof endpoint === 'string' && endpoint.trim() !== '') {
-            return endpoint;
-        }
+export function getMeshEndpoint(project: Project): string | undefined {
+    const meshEndpoint = project.componentInstances?.['commerce-mesh']?.endpoint;
+    if (meshEndpoint && typeof meshEndpoint === 'string' && meshEndpoint.trim() !== '') {
+        return meshEndpoint;
     }
+
     return undefined;
 }

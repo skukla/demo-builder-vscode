@@ -11,7 +11,7 @@ import type { Project } from '@/types';
 import {
     buildStatusPayload,
     hasMeshDeploymentRecord,
-    getMeshEndpointFromConfigs,
+    getMeshEndpoint,
 } from '@/features/dashboard/services/dashboardStatusService';
 
 describe('dashboardStatusService', () => {
@@ -31,6 +31,9 @@ describe('dashboardStatusService', () => {
                 },
                 componentInstances: {
                     'headless': {
+                        id: 'headless',
+                        name: 'CitiSignal NextJS',
+                        type: 'frontend',
                         path: '/path/to/frontend',
                         status: 'ready',
                         port: 3000,
@@ -176,99 +179,175 @@ describe('dashboardStatusService', () => {
         });
     });
 
-    describe('getMeshEndpointFromConfigs', () => {
-        it('should return MESH_ENDPOINT from componentConfigs', () => {
-            // Given: A project with MESH_ENDPOINT in componentConfigs
+    describe('getMeshEndpoint', () => {
+        it('should return endpoint from componentInstances commerce-mesh', () => {
+            // Given: A project with componentInstances['commerce-mesh'].endpoint
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
-                componentConfigs: {
-                    frontend: {
-                        MESH_ENDPOINT: 'https://mesh.adobe.io/graphql',
-                        OTHER_VAR: 'value',
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'API Mesh',
+                        type: 'mesh',
+                        path: '/path/to/mesh',
+                        status: 'ready',
+                        endpoint: 'https://mesh.adobe.io/graphql',
                     },
                 },
             };
 
-            // When: Getting mesh endpoint from configs
-            const result = getMeshEndpointFromConfigs(project);
+            // When: Getting mesh endpoint
+            const result = getMeshEndpoint(project);
 
-            // Then: Should return the endpoint
+            // Then: Should return the endpoint from componentInstances
             expect(result).toBe('https://mesh.adobe.io/graphql');
         });
 
-        it('should return undefined when componentConfigs is undefined', () => {
-            // Given: A project without componentConfigs
+        it('should return undefined when no commerce-mesh instance exists', () => {
+            // Given: A project without commerce-mesh in componentInstances
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                componentInstances: {
+                    headless: {
+                        id: 'headless',
+                        name: 'CitiSignal NextJS',
+                        type: 'frontend',
+                        path: '/path/to/frontend',
+                        status: 'ready',
+                    },
+                },
             };
 
-            // When: Getting mesh endpoint from configs
-            const result = getMeshEndpointFromConfigs(project);
+            // When: Getting mesh endpoint
+            const result = getMeshEndpoint(project);
 
             // Then: Should return undefined
             expect(result).toBeUndefined();
         });
 
-        it('should return undefined when MESH_ENDPOINT is not present', () => {
-            // Given: A project with componentConfigs but no MESH_ENDPOINT
+        it('should return undefined when componentInstances is undefined', () => {
+            // Given: A project without componentInstances
+            const project: Project = {
+                name: 'test-project',
+                path: '/path/to/project',
+            };
+
+            // When: Getting mesh endpoint
+            const result = getMeshEndpoint(project);
+
+            // Then: Should return undefined
+            expect(result).toBeUndefined();
+        });
+
+        it('should return undefined when endpoint is empty string', () => {
+            // Given: A project with empty commerce-mesh endpoint
+            const project: Project = {
+                name: 'test-project',
+                path: '/path/to/project',
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'API Mesh',
+                        type: 'mesh',
+                        path: '/path/to/mesh',
+                        status: 'ready',
+                        endpoint: '',
+                    },
+                },
+            };
+
+            // When: Getting mesh endpoint
+            const result = getMeshEndpoint(project);
+
+            // Then: Should return undefined
+            expect(result).toBeUndefined();
+        });
+
+        it('should return undefined when endpoint is whitespace only', () => {
+            // Given: A project with whitespace-only commerce-mesh endpoint
+            const project: Project = {
+                name: 'test-project',
+                path: '/path/to/project',
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'API Mesh',
+                        type: 'mesh',
+                        path: '/path/to/mesh',
+                        status: 'ready',
+                        endpoint: '   ',
+                    },
+                },
+            };
+
+            // When: Getting mesh endpoint
+            const result = getMeshEndpoint(project);
+
+            // Then: Should return undefined
+            expect(result).toBeUndefined();
+        });
+
+        it('should ignore MESH_ENDPOINT in componentConfigs (single source of truth)', () => {
+            // Given: A project with MESH_ENDPOINT in componentConfigs but NO commerce-mesh instance
+            // This tests the breaking change - we now ONLY use componentInstances
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
                 componentConfigs: {
                     frontend: {
+                        MESH_ENDPOINT: 'https://old-mesh.adobe.io/graphql',
                         OTHER_VAR: 'value',
                     },
                 },
+                componentInstances: {
+                    headless: {
+                        id: 'headless',
+                        name: 'CitiSignal NextJS',
+                        type: 'frontend',
+                        path: '/path/to/frontend',
+                        status: 'ready',
+                    },
+                },
             };
 
-            // When: Getting mesh endpoint from configs
-            const result = getMeshEndpointFromConfigs(project);
+            // When: Getting mesh endpoint
+            const result = getMeshEndpoint(project);
 
-            // Then: Should return undefined
+            // Then: Should return undefined (NOT the componentConfigs value)
+            // This validates the single source of truth behavior
             expect(result).toBeUndefined();
         });
 
-        it('should return undefined when MESH_ENDPOINT is empty string', () => {
-            // Given: A project with empty MESH_ENDPOINT
+        it('should return componentInstances endpoint even when componentConfigs has different value', () => {
+            // Given: A project with MESH_ENDPOINT in both componentConfigs and componentInstances
+            // This tests that componentInstances is the ONLY source (not a fallback)
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
                 componentConfigs: {
                     frontend: {
-                        MESH_ENDPOINT: '',
+                        MESH_ENDPOINT: 'https://old-stale-endpoint.adobe.io/graphql',
+                    },
+                },
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'API Mesh',
+                        type: 'mesh',
+                        path: '/path/to/mesh',
+                        status: 'ready',
+                        endpoint: 'https://correct-endpoint.adobe.io/graphql',
                     },
                 },
             };
 
-            // When: Getting mesh endpoint from configs
-            const result = getMeshEndpointFromConfigs(project);
+            // When: Getting mesh endpoint
+            const result = getMeshEndpoint(project);
 
-            // Then: Should return undefined
-            expect(result).toBeUndefined();
-        });
-
-        it('should find MESH_ENDPOINT in any component config', () => {
-            // Given: A project with MESH_ENDPOINT in a non-frontend component
-            const project: Project = {
-                name: 'test-project',
-                path: '/path/to/project',
-                componentConfigs: {
-                    frontend: {
-                        OTHER_VAR: 'value',
-                    },
-                    backend: {
-                        MESH_ENDPOINT: 'https://backend-mesh.adobe.io/graphql',
-                    },
-                },
-            };
-
-            // When: Getting mesh endpoint from configs
-            const result = getMeshEndpointFromConfigs(project);
-
-            // Then: Should return the endpoint from any component
-            expect(result).toBe('https://backend-mesh.adobe.io/graphql');
+            // Then: Should return the componentInstances endpoint
+            expect(result).toBe('https://correct-endpoint.adobe.io/graphql');
         });
     });
 });
