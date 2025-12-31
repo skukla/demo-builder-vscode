@@ -1,11 +1,14 @@
 /**
  * Project Creation Handlers - Public API
  *
- * Exports the handler registry and individual handlers for backward compatibility.
+ * Exports the handler map and individual handlers.
  */
 
-// Export registry (preferred) - with backward-compatible alias
-export { ProjectCreationHandlerRegistry, HandlerRegistry } from './ProjectCreationHandlerRegistry';
+// Export handler map (object literal with all handlers)
+export { projectCreationHandlers } from './ProjectCreationHandlerRegistry';
+
+// Export progress callback config
+export { needsProgressCallback } from './progressCallbackConfig';
 
 // Export individual handlers (backward compatibility)
 export * from './validateHandler';

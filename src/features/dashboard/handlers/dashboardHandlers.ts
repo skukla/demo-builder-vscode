@@ -169,10 +169,12 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         }
     }
 
+    // Read endpoint from meshState (authoritative) with fallback to componentInstance (legacy)
+    const meshEndpoint = project.meshState?.endpoint || meshComponent?.endpoint;
     const statusData = buildStatusPayload(
         project,
         frontendConfigChanged,
-        meshComponent ? { status: meshStatus, endpoint: meshComponent.endpoint } : undefined,
+        meshComponent ? { status: meshStatus, endpoint: meshEndpoint } : undefined,
     );
 
     context.panel.webview.postMessage({
@@ -508,3 +510,44 @@ export const handleNavigateBack: MessageHandler = async (context) => {
         };
     }
 };
+
+// ============================================================================
+// Handler Map Export (Step 3: Handler Registry Simplification)
+// ============================================================================
+
+import { defineHandlers } from '@/types/handlers';
+
+/**
+ * Dashboard feature handler map
+ * Maps message types to handler functions for the Project Dashboard
+ *
+ * Replaces DashboardHandlerRegistry class with simple object literal.
+ */
+export const dashboardHandlers = defineHandlers({
+    // Initialization handlers
+    'ready': handleReady,
+    'requestStatus': handleRequestStatus,
+
+    // Authentication handlers
+    're-authenticate': handleReAuthenticate,
+
+    // Demo lifecycle handlers
+    'startDemo': handleStartDemo,
+    'stopDemo': handleStopDemo,
+
+    // Navigation handlers
+    'openBrowser': handleOpenBrowser,
+    'openLiveSite': handleOpenLiveSite,
+    'viewLogs': handleViewLogs,
+    'viewDebugLogs': handleViewDebugLogs,
+    'configure': handleConfigure,
+    'openDevConsole': handleOpenDevConsole,
+    'navigateBack': handleNavigateBack,
+    'viewComponents': handleViewComponents,
+
+    // Mesh handlers
+    'deployMesh': handleDeployMesh,
+
+    // Project management handlers
+    'deleteProject': handleDeleteProject,
+});

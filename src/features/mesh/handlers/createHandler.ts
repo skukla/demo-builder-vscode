@@ -108,7 +108,7 @@ export async function handleCreateApiMesh(
             `aio api-mesh create "${meshConfigPath}" --autoConfirmAction`,
             {
                 streaming: true,
-                timeout: TIMEOUTS.API_MESH_CREATE,
+                timeout: TIMEOUTS.LONG,
                 onOutput: createProgressCallback('create', onProgress, lastOutput),
                 configureTelemetry: false,
                 useNodeVersion: getMeshNodeVersion(),
@@ -146,8 +146,8 @@ export async function handleCreateApiMesh(
         onProgress?.('Waiting for mesh deployment...', 'Mesh is being provisioned (typically takes 60-90 seconds)');
 
         const maxRetries = 10; // 10 attempts with strategic timing = ~2 minutes max
-        const pollInterval = TIMEOUTS.MESH_VERIFY_POLL_INTERVAL;
-        const initialWait = TIMEOUTS.MESH_VERIFY_INITIAL_WAIT;
+        const pollInterval = TIMEOUTS.POLL.INTERVAL;
+        const initialWait = TIMEOUTS.POLL.INITIAL;
         let attempt = 0;
         let meshDeployed = false;
         let deployedMeshId: string | undefined;
@@ -179,7 +179,7 @@ export async function handleCreateApiMesh(
                 const verifyResult = await commandManager.execute(
                     'aio api-mesh get',
                     {
-                        timeout: TIMEOUTS.API_CALL,
+                        timeout: TIMEOUTS.NORMAL,
                         configureTelemetry: false,
                         useNodeVersion: getMeshNodeVersion(),
                         enhancePath: true,

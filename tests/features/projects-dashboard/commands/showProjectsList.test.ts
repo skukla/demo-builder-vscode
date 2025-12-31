@@ -11,7 +11,8 @@
 
 import * as vscode from 'vscode';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
-import { ProjectsListHandlerRegistry } from '@/features/projects-dashboard/handlers';
+import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
+import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { StateManager } from '@/core/state';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
@@ -243,47 +244,39 @@ describe('ShowProjectsListCommand', () => {
     });
 });
 
-describe('ProjectsListHandlerRegistry', () => {
+describe('projectsListHandlers', () => {
     describe('Handler Registration', () => {
         it('should register getProjects handler', () => {
-            // Given: A new handler registry
-            const registry = new ProjectsListHandlerRegistry();
-
+            // Given: projectsListHandlers map
             // When: Checking registered handlers
-            const hasHandler = registry.hasHandler('getProjects');
+            const handlerExists = hasHandler(projectsListHandlers, 'getProjects');
 
             // Then: Should have getProjects handler
-            expect(hasHandler).toBe(true);
+            expect(handlerExists).toBe(true);
         });
 
         it('should register selectProject handler', () => {
-            // Given: A new handler registry
-            const registry = new ProjectsListHandlerRegistry();
-
+            // Given: projectsListHandlers map
             // When: Checking registered handlers
-            const hasHandler = registry.hasHandler('selectProject');
+            const handlerExists = hasHandler(projectsListHandlers, 'selectProject');
 
             // Then: Should have selectProject handler
-            expect(hasHandler).toBe(true);
+            expect(handlerExists).toBe(true);
         });
 
         it('should register createProject handler', () => {
-            // Given: A new handler registry
-            const registry = new ProjectsListHandlerRegistry();
-
+            // Given: projectsListHandlers map
             // When: Checking registered handlers
-            const hasHandler = registry.hasHandler('createProject');
+            const handlerExists = hasHandler(projectsListHandlers, 'createProject');
 
             // Then: Should have createProject handler
-            expect(hasHandler).toBe(true);
+            expect(handlerExists).toBe(true);
         });
 
         it('should return all registered message types', () => {
-            // Given: A handler registry
-            const registry = new ProjectsListHandlerRegistry();
-
+            // Given: projectsListHandlers map
             // When: Getting registered types
-            const types = registry.getRegisteredTypes();
+            const types = getRegisteredTypes(projectsListHandlers);
 
             // Then: Should contain expected handlers
             expect(types).toContain('getProjects');

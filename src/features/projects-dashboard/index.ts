@@ -20,7 +20,10 @@ export type {
     DashboardEmptyStateProps,
 } from './ui/components';
 
-// Handlers
+// Handler map (Step 3: Handler Registry Simplification)
+export { projectsListHandlers } from './handlers';
+
+// Handlers (backward compatibility)
 export {
     handleGetProjects,
     handleSelectProject,
@@ -29,9 +32,6 @@ export {
     handleCopyFromExisting,
     handleExportProject,
 } from './handlers/dashboardHandlers';
-
-// Handler Registry
-export { ProjectsListHandlerRegistry } from './handlers/ProjectsListHandlerRegistry';
 
 // Commands
 export { ShowProjectsListCommand } from './commands/showProjectsList';

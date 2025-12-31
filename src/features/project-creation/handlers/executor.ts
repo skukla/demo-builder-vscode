@@ -414,14 +414,28 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         await deployNewMesh(meshContext, typedConfig.apiMesh);
     } else if (meshComponent?.path && typedConfig.meshStepEnabled && typedConfig.apiMesh?.endpoint) {
         // Mesh was deployed via wizard step - update component instance with wizard data
+        // Note: endpoint is stored in meshState (authoritative), not componentInstance
         context.logger.debug('[Project Creation] Mesh deployed via wizard step, updating component instance');
-        meshComponent.endpoint = typedConfig.apiMesh.endpoint;
         meshComponent.status = 'deployed';
         meshComponent.metadata = {
             meshId: typedConfig.apiMesh.meshId || '',
             meshStatus: 'deployed',
         };
         project.componentInstances!['commerce-mesh'] = meshComponent;
+
+        // Store endpoint in meshState as single source of truth
+        // See docs/architecture/state-ownership.md
+        if (!project.meshState) {
+            project.meshState = {
+                envVars: {},
+                sourceHash: null,
+                lastDeployed: new Date().toISOString(),
+                endpoint: typedConfig.apiMesh.endpoint,
+            };
+        } else {
+            project.meshState.endpoint = typedConfig.apiMesh.endpoint;
+            project.meshState.lastDeployed = new Date().toISOString();
+        }
     }
 
     // ========================================================================

@@ -261,7 +261,8 @@ export async function checkMeshStatusAsync(
 
             if (hasMeshDeploymentRecord(project)) {
                 meshStatus = await determineMeshStatus(meshChanges, meshComponent, project);
-                meshEndpoint = meshComponent.endpoint;
+                // Read endpoint from meshState (authoritative) with fallback to componentInstance (legacy)
+                meshEndpoint = project.meshState?.endpoint || meshComponent.endpoint;
 
                 verifyMeshDeployment(context, project).catch(() => {
                     // Background verification - errors logged internally
@@ -319,19 +320,21 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
         } else if (meshComponent.status === 'error') {
             meshStatus = { status: 'error', message: 'Deployment error' };
         } else if (hasMeshDeploymentRecord(project)) {
+            // Read endpoint from meshState (authoritative) with fallback to componentInstance (legacy)
+            const endpoint = project.meshState?.endpoint || meshComponent.endpoint;
             if (project.componentConfigs) {
                 const meshChanges = await detectMeshChanges(project, project.componentConfigs);
                 // Use determineMeshStatus for consistent config completeness checking
                 const status = await determineMeshStatus(meshChanges, meshComponent, project);
                 meshStatus = {
                     status,
-                    endpoint: meshComponent.endpoint,
+                    endpoint,
                 };
             } else {
                 // No componentConfigs - MESH_ENDPOINT definitely missing from frontend .env
                 meshStatus = {
                     status: 'config-incomplete',
-                    endpoint: meshComponent.endpoint,
+                    endpoint,
                 };
             }
         } else {

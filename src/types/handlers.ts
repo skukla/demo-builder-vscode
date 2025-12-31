@@ -194,5 +194,49 @@ export interface HandlerResponse {
 
 /**
  * HandlerRegistry - Maps message types to handler functions
+ * @deprecated Use HandlerMap (object literal) instead
  */
 export type HandlerRegistryMap = Map<string, MessageHandler>;
+
+/**
+ * AnyMessageHandler - Permissive type for handler functions
+ *
+ * Allows handlers with specific payload types to be used in handler maps.
+ * The payload is typed as `any` to allow specific handler implementations.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyMessageHandler = (context: HandlerContext, payload?: any) => Promise<any>;
+
+/**
+ * HandlerMap - Simple object literal mapping message types to handlers
+ *
+ * Replaces class-based handler registries with plain objects.
+ * Provides the same functionality with less ceremony.
+ *
+ * Uses AnyMessageHandler to allow handlers with specific payload types.
+ *
+ * Usage:
+ * ```typescript
+ * export const myHandlers: HandlerMap = {
+ *   'action-a': handleActionA,
+ *   'action-b': handleActionB,
+ * };
+ * ```
+ */
+export type HandlerMap = Record<string, AnyMessageHandler>;
+
+/**
+ * Helper function to create typed handler maps
+ * Provides compile-time validation without runtime overhead
+ *
+ * Usage:
+ * ```typescript
+ * export const myHandlers = defineHandlers({
+ *   'action-a': handleActionA,
+ *   'action-b': handleActionB,
+ * });
+ * ```
+ */
+export function defineHandlers<T extends HandlerMap>(handlers: T): T {
+    return handlers;
+}

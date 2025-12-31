@@ -1,9 +1,8 @@
 /**
  * Dashboard Handlers - Public API
  *
- * Exports only the handler registry.
- * Individual handlers are internal and should not be exported.
+ * Exports the handler map for the Project Dashboard.
  */
 
-// Only export the registry - individual handlers are internal
-export { DashboardHandlerRegistry } from './DashboardHandlerRegistry';
+// Export handler map (Step 3: Handler Registry Simplification)
+export { dashboardHandlers } from './dashboardHandlers';

@@ -21,11 +21,19 @@ describe('Feature Barrel Exports', () => {
             expect(typeof exports.CreateProjectWebviewCommand).toBe('function');
         });
 
-        it('should export HandlerRegistry', async () => {
+        it('should export projectCreationHandlers map and needsProgressCallback', async () => {
             const exports = await import('@/features/project-creation');
 
-            expect(exports.HandlerRegistry).toBeDefined();
-            expect(typeof exports.HandlerRegistry).toBe('function');
+            // Handler map (object literal) should be exported
+            expect(exports.projectCreationHandlers).toBeDefined();
+            expect(typeof exports.projectCreationHandlers).toBe('object');
+
+            // needsProgressCallback function should be exported
+            expect(exports.needsProgressCallback).toBeDefined();
+            expect(typeof exports.needsProgressCallback).toBe('function');
+
+            // Deprecated class should NOT be exported
+            expect((exports as Record<string, unknown>).ProjectCreationHandlerRegistry).toBeUndefined();
         });
 
         it('should export helper functions for cross-feature use', async () => {
@@ -62,11 +70,11 @@ describe('Feature Barrel Exports', () => {
             expect(typeof exports.ConfigureProjectWebviewCommand).toBe('function');
         });
 
-        it('should export DashboardHandlerRegistry', async () => {
+        it('should export dashboardHandlers map', async () => {
             const exports = await import('@/features/dashboard');
 
-            expect(exports.DashboardHandlerRegistry).toBeDefined();
-            expect(typeof exports.DashboardHandlerRegistry).toBe('function');
+            expect(exports.dashboardHandlers).toBeDefined();
+            expect(typeof exports.dashboardHandlers).toBe('object');
         });
 
         it('should NOT export internal mesh status helpers', async () => {
@@ -245,11 +253,11 @@ describe('Feature Barrel Exports', () => {
             expect(typeof exports.StopDemoCommand).toBe('function');
         });
 
-        it('should export LifecycleHandlerRegistry', async () => {
+        it('should export lifecycleHandlers map', async () => {
             const exports = await import('@/features/lifecycle');
 
-            expect(exports.LifecycleHandlerRegistry).toBeDefined();
-            expect(typeof exports.LifecycleHandlerRegistry).toBe('function');
+            expect(exports.lifecycleHandlers).toBeDefined();
+            expect(typeof exports.lifecycleHandlers).toBe('object');
         });
 
         it('should NOT export internal process cleanup helpers', async () => {

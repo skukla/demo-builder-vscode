@@ -1,108 +1,86 @@
 /**
- * Registry Pattern Consistency Tests
+ * Handler Map Pattern Consistency Tests
  *
- * Tests that all handler registries follow the standardized pattern:
- * - Extend BaseHandlerRegistry
- * - Implement registerHandlers()
- * - Have consistent constructor behavior
+ * Tests that all handler maps follow the standardized pattern:
+ * - Use object literal pattern (defineHandlers)
+ * - Have consistent API (via dispatchHandler, hasHandler, getRegisteredTypes)
+ *
+ * Step 3: Handler Registry Simplification
  */
 
-import { BaseHandlerRegistry } from '@/core/base/BaseHandlerRegistry';
+import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 
-// Import all handler registries
-import { DashboardHandlerRegistry } from '@/features/dashboard/handlers';
-import { ProjectsListHandlerRegistry } from '@/features/projects-dashboard/handlers/ProjectsListHandlerRegistry';
-import { ProjectCreationHandlerRegistry } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
-import { MeshHandlerRegistry } from '@/features/mesh/handlers/MeshHandlerRegistry';
-import { EdsHandlerRegistry } from '@/features/eds/handlers/EdsHandlerRegistry';
-import { PrerequisitesHandlerRegistry } from '@/features/prerequisites/handlers/PrerequisitesHandlerRegistry';
-import { LifecycleHandlerRegistry } from '@/features/lifecycle/handlers/LifecycleHandlerRegistry';
+// Import all handler maps
+import { dashboardHandlers } from '@/features/dashboard/handlers';
+import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
+import { meshHandlers } from '@/features/mesh/handlers';
+import { edsHandlers } from '@/features/eds/handlers';
+import { prerequisitesHandlers } from '@/features/prerequisites/handlers';
+import { lifecycleHandlers } from '@/features/lifecycle/handlers';
 
-describe('Registry Pattern Consistency', () => {
-    const registryClasses = [
-        { name: 'DashboardHandlerRegistry', RegistryClass: DashboardHandlerRegistry },
-        { name: 'ProjectsListHandlerRegistry', RegistryClass: ProjectsListHandlerRegistry },
-        { name: 'ProjectCreationHandlerRegistry', RegistryClass: ProjectCreationHandlerRegistry },
-        { name: 'MeshHandlerRegistry', RegistryClass: MeshHandlerRegistry },
-        { name: 'EdsHandlerRegistry', RegistryClass: EdsHandlerRegistry },
-        { name: 'PrerequisitesHandlerRegistry', RegistryClass: PrerequisitesHandlerRegistry },
-        { name: 'LifecycleHandlerRegistry', RegistryClass: LifecycleHandlerRegistry },
+describe('Handler Map Pattern Consistency', () => {
+    const handlerMaps = [
+        { name: 'dashboardHandlers', handlers: dashboardHandlers },
+        { name: 'projectsListHandlers', handlers: projectsListHandlers },
+        { name: 'meshHandlers', handlers: meshHandlers },
+        { name: 'edsHandlers', handlers: edsHandlers },
+        { name: 'prerequisitesHandlers', handlers: prerequisitesHandlers },
+        { name: 'lifecycleHandlers', handlers: lifecycleHandlers },
     ];
 
-    describe('Inheritance', () => {
-        it.each(registryClasses)(
-            '$name should extend BaseHandlerRegistry',
-            ({ RegistryClass }) => {
-                const registry = new RegistryClass();
-                expect(registry).toBeInstanceOf(BaseHandlerRegistry);
+    describe('Object Literal Pattern', () => {
+        it.each(handlerMaps)(
+            '$name should be a plain object',
+            ({ handlers }) => {
+                expect(handlers).toBeDefined();
+                expect(typeof handlers).toBe('object');
+                expect(handlers).not.toBeNull();
             },
         );
     });
 
     describe('Handler Registration', () => {
-        it.each(registryClasses)(
-            '$name should register at least one handler on construction',
-            ({ RegistryClass }) => {
-                const registry = new RegistryClass();
-                const registeredTypes = registry.getRegisteredTypes();
-
+        it.each(handlerMaps)(
+            '$name should have at least one handler',
+            ({ handlers }) => {
+                const registeredTypes = getRegisteredTypes(handlers);
                 expect(registeredTypes.length).toBeGreaterThan(0);
             },
         );
 
-        it.each(registryClasses)(
-            '$name should have hasHandler method working correctly',
-            ({ RegistryClass }) => {
-                const registry = new RegistryClass();
-                const registeredTypes = registry.getRegisteredTypes();
+        it.each(handlerMaps)(
+            '$name should have hasHandler working correctly',
+            ({ handlers }) => {
+                const registeredTypes = getRegisteredTypes(handlers);
 
                 // First registered type should be findable
                 if (registeredTypes.length > 0) {
-                    expect(registry.hasHandler(registeredTypes[0])).toBe(true);
+                    expect(hasHandler(handlers, registeredTypes[0])).toBe(true);
                 }
 
                 // Non-existent type should not be findable
-                expect(registry.hasHandler('non-existent-handler-type')).toBe(false);
+                expect(hasHandler(handlers, 'non-existent-handler-type')).toBe(false);
             },
         );
     });
 
-    describe('API Consistency', () => {
-        it.each(registryClasses)(
-            '$name should have getRegisteredTypes method',
-            ({ RegistryClass }) => {
-                const registry = new RegistryClass();
-
-                expect(typeof registry.getRegisteredTypes).toBe('function');
-                expect(Array.isArray(registry.getRegisteredTypes())).toBe(true);
-            },
-        );
-
-        it.each(registryClasses)(
-            '$name should have hasHandler method',
-            ({ RegistryClass }) => {
-                const registry = new RegistryClass();
-
-                expect(typeof registry.hasHandler).toBe('function');
-            },
-        );
-
-        it.each(registryClasses)(
-            '$name should have handle method',
-            ({ RegistryClass }) => {
-                const registry = new RegistryClass();
-
-                expect(typeof registry.handle).toBe('function');
+    describe('Handler Types', () => {
+        it.each(handlerMaps)(
+            '$name should have all handlers as functions',
+            ({ handlers }) => {
+                const registeredTypes = getRegisteredTypes(handlers);
+                for (const type of registeredTypes) {
+                    expect(typeof handlers[type]).toBe('function');
+                }
             },
         );
     });
 });
 
-describe('Feature-Specific Registry Tests', () => {
-    describe('MeshHandlerRegistry', () => {
+describe('Feature-Specific Handler Map Tests', () => {
+    describe('meshHandlers', () => {
         it('should register mesh-specific handlers', () => {
-            const registry = new MeshHandlerRegistry();
-            const types = registry.getRegisteredTypes();
+            const types = getRegisteredTypes(meshHandlers);
 
             expect(types).toContain('check-api-mesh');
             expect(types).toContain('create-api-mesh');
@@ -110,10 +88,9 @@ describe('Feature-Specific Registry Tests', () => {
         });
     });
 
-    describe('EdsHandlerRegistry', () => {
+    describe('edsHandlers', () => {
         it('should register EDS-specific handlers', () => {
-            const registry = new EdsHandlerRegistry();
-            const types = registry.getRegisteredTypes();
+            const types = getRegisteredTypes(edsHandlers);
 
             // GitHub handlers
             expect(types).toContain('check-github-auth');
@@ -124,10 +101,9 @@ describe('Feature-Specific Registry Tests', () => {
         });
     });
 
-    describe('PrerequisitesHandlerRegistry', () => {
+    describe('prerequisitesHandlers', () => {
         it('should register prerequisites-specific handlers', () => {
-            const registry = new PrerequisitesHandlerRegistry();
-            const types = registry.getRegisteredTypes();
+            const types = getRegisteredTypes(prerequisitesHandlers);
 
             expect(types).toContain('check-prerequisites');
             expect(types).toContain('continue-prerequisites');
@@ -135,14 +111,35 @@ describe('Feature-Specific Registry Tests', () => {
         });
     });
 
-    describe('LifecycleHandlerRegistry', () => {
+    describe('lifecycleHandlers', () => {
         it('should register lifecycle-specific handlers', () => {
-            const registry = new LifecycleHandlerRegistry();
-            const types = registry.getRegisteredTypes();
+            const types = getRegisteredTypes(lifecycleHandlers);
 
             expect(types).toContain('ready');
             expect(types).toContain('cancel');
             expect(types).toContain('openProject');
+        });
+    });
+
+    describe('dashboardHandlers', () => {
+        it('should register dashboard-specific handlers', () => {
+            const types = getRegisteredTypes(dashboardHandlers);
+
+            expect(types).toContain('ready');
+            expect(types).toContain('requestStatus');
+            expect(types).toContain('startDemo');
+            expect(types).toContain('stopDemo');
+            expect(types).toContain('deployMesh');
+        });
+    });
+
+    describe('projectsListHandlers', () => {
+        it('should register projects-list-specific handlers', () => {
+            const types = getRegisteredTypes(projectsListHandlers);
+
+            expect(types).toContain('getProjects');
+            expect(types).toContain('selectProject');
+            expect(types).toContain('createProject');
         });
     });
 });

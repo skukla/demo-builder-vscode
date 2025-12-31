@@ -189,7 +189,7 @@ export async function handleCreateProject(
                 try {
                     const commandManager = ServiceLocator.getCommandExecutor();
                     const deleteResult = await commandManager.execute('aio api-mesh:delete --autoConfirmAction', {
-                        timeout: TIMEOUTS.API_MESH_UPDATE,
+                        timeout: TIMEOUTS.LONG,
                         configureTelemetry: false,
                         enhancePath: true,
                     });

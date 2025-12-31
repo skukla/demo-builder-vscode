@@ -1,12 +1,12 @@
 /**
  * Lifecycle Handlers - Public API
  *
- * Exports the handler registry and individual handlers.
- * Individual handlers are exported for use by project-creation HandlerRegistry.
+ * Exports the handler map and individual handlers.
+ * Individual handlers are exported for use by project-creation handlers.
  */
 
-// Export registry (preferred for new code)
-export { LifecycleHandlerRegistry } from './LifecycleHandlerRegistry';
+// Export handler map (preferred - Step 3: Handler Registry Simplification)
+export { lifecycleHandlers } from './lifecycleHandlers';
 
 // Export individual handlers (for backward compatibility with project-creation)
 export {

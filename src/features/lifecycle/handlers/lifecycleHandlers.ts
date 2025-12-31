@@ -372,3 +372,36 @@ async function loadComponents(context: HandlerContext): Promise<void> {
         context.logger.error('Failed to load components:', error as Error);
     }
 }
+
+// ============================================================================
+// Handler Map Export (Step 3: Handler Registry Simplification)
+// ============================================================================
+
+import { defineHandlers } from '@/types/handlers';
+
+/**
+ * Lifecycle feature handler map
+ * Maps message types to handler functions for wizard lifecycle operations
+ *
+ * Replaces LifecycleHandlerRegistry class with simple object literal.
+ */
+export const lifecycleHandlers = defineHandlers({
+    // Core lifecycle handlers
+    'ready': handleReady,
+    'cancel': handleCancel,
+
+    // Cancellation handlers
+    'cancel-project-creation': handleCancelProjectCreation,
+    'cancel-mesh-creation': handleCancelMeshCreation,
+    'cancel-auth-polling': handleCancelAuthPolling,
+
+    // Project actions
+    'openProject': handleOpenProject,
+    'browseFiles': handleBrowseFiles,
+
+    // Utilities
+    'log': handleLog,
+    'open-adobe-console': handleOpenAdobeConsole,
+    'show-logs': handleShowLogs,
+    'openExternal': handleOpenExternal,
+});

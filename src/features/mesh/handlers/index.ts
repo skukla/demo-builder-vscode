@@ -1,11 +1,11 @@
 /**
  * Mesh Handlers - Public API
  *
- * Exports the handler registry and individual handlers for backward compatibility.
+ * Exports the handler map and individual handlers.
  */
 
-// Export registry (preferred)
-export { MeshHandlerRegistry } from './MeshHandlerRegistry';
+// Export handler map (preferred - Step 3: Handler Registry Simplification)
+export { meshHandlers } from './meshHandlers';
 
 // Export individual handlers (backward compatibility)
 export * from './checkHandler';

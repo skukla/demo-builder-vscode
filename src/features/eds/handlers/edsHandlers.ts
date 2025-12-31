@@ -135,3 +135,54 @@ export async function handleValidateAccsCredentials(
         return { success: true }; // Handler succeeded, validation failed
     }
 }
+
+// ============================================================================
+// Handler Map Export (Step 3: Handler Registry Simplification)
+// ============================================================================
+
+import { defineHandlers } from '@/types/handlers';
+import {
+    handleCheckGitHubAuth,
+    handleGitHubOAuth,
+    handleGitHubChangeAccount,
+    handleGetGitHubRepos,
+    handleVerifyGitHubRepo,
+} from './edsGitHubHandlers';
+import {
+    handleVerifyDaLiveOrg,
+    handleGetDaLiveSites,
+    handleDaLiveOAuth,
+    handleCheckDaLiveAuth,
+    handleOpenDaLiveLogin,
+    handleStoreDaLiveToken,
+    handleStoreDaLiveTokenWithOrg,
+    handleClearDaLiveAuth,
+} from './edsDaLiveHandlers';
+
+/**
+ * EDS feature handler map
+ * Maps message types to handler functions for EDS operations
+ *
+ * Replaces EdsHandlerRegistry class with simple object literal.
+ */
+export const edsHandlers = defineHandlers({
+    // GitHub handlers
+    'check-github-auth': handleCheckGitHubAuth,
+    'github-oauth': handleGitHubOAuth,
+    'github-change-account': handleGitHubChangeAccount,
+    'get-github-repos': handleGetGitHubRepos,
+    'verify-github-repo': handleVerifyGitHubRepo,
+
+    // DA.live handlers
+    'check-dalive-auth': handleCheckDaLiveAuth,
+    'dalive-oauth': handleDaLiveOAuth,
+    'open-dalive-login': handleOpenDaLiveLogin,
+    'store-dalive-token': handleStoreDaLiveToken,
+    'store-dalive-token-with-org': handleStoreDaLiveTokenWithOrg,
+    'clear-dalive-auth': handleClearDaLiveAuth,
+    'get-dalive-sites': handleGetDaLiveSites,
+    'verify-dalive-org': handleVerifyDaLiveOrg,
+
+    // ACCS handlers
+    'validate-accs-credentials': handleValidateAccsCredentials,
+});

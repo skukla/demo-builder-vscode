@@ -2,10 +2,11 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { createBundleUris } from '@/core/utils/bundleUri';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
-import { DashboardHandlerRegistry } from '@/features/dashboard/handlers';
+import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { Project, ComponentInstance } from '@/types';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -19,10 +20,9 @@ import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl } from '@/types
  * This provides a control panel for demo management and quick actions
  *
  * Refactored in Phase 3.8 to use BaseWebviewCommand pattern with HandlerRegistry.
+ * Updated in Step 3 to use object literal handler maps with dispatchHandler.
  */
 export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
-    private handlerRegistry: DashboardHandlerRegistry;
-
     // Static reference to active instance for refreshStatus
     private static activeInstance: ProjectDashboardWebviewCommand | null = null;
 
@@ -33,7 +33,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         logger: import('@/types/logger').Logger,
     ) {
         super(context, stateManager, statusBar, logger);
-        this.handlerRegistry = new DashboardHandlerRegistry();
     }
 
     // ============================================================================
@@ -153,13 +152,13 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
-        // Auto-register all handlers from DashboardHandlerRegistry
-        const messageTypes = this.handlerRegistry.getRegisteredTypes();
+        // Auto-register all handlers from dashboardHandlers map
+        const messageTypes = getRegisteredTypes(dashboardHandlers);
 
         for (const messageType of messageTypes) {
             comm.onStreaming(messageType, async (data: unknown) => {
                 const context = this.createHandlerContext();
-                return await this.handlerRegistry.handle(context, messageType, data);
+                return await dispatchHandler(dashboardHandlers, context, messageType, data);
             });
         }
     }
@@ -218,7 +217,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
         // Directly invoke the handler with proper context
         const context = instance.createHandlerContext();
-        await instance.handlerRegistry.handle(context, 'requestStatus', {});
+        await dispatchHandler(dashboardHandlers, context, 'requestStatus', {});
     }
 
     // ============================================================================

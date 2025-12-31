@@ -1,11 +1,11 @@
 /**
  * EDS Handlers - Public API
  *
- * Exports the handler registry and individual handlers for backward compatibility.
+ * Exports the handler map and individual handlers.
  */
 
-// Export registry (preferred)
-export { EdsHandlerRegistry } from './EdsHandlerRegistry';
+// Export handler map (preferred - Step 3: Handler Registry Simplification)
+export { edsHandlers } from './edsHandlers';
 
 // Export individual handlers (backward compatibility)
 export {

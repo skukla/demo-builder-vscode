@@ -1,12 +1,13 @@
 /**
- * ProjectCreationHandlerRegistry - Central message dispatcher for all wizard handlers
+ * Project Creation Handlers - Composite handler map for wizard
  *
- * Maps message types to handler functions and provides centralized dispatch logic.
+ * Maps message types to handler functions from multiple features.
+ * Used by createProject command for message dispatch.
  */
 
+import { defineHandlers } from '@/types/handlers';
+
 import * as creation from './';
-import { MessageHandler } from '@/commands/handlers/HandlerContext';
-import { BaseHandlerRegistry } from '@/core/base';
 import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
 
@@ -17,103 +18,79 @@ import * as mesh from '@/features/mesh/handlers';
 import * as prerequisites from '@/features/prerequisites/handlers';
 
 /**
- * ProjectCreationHandlerRegistry class
+ * Composite handler map for project creation wizard
  *
- * Provides centralized registration and dispatching of message handlers
- * for the project creation wizard.
+ * Combines handlers from multiple features into a single map.
+ * Use with dispatchHandler() from @/core/handlers for message dispatch.
  */
-export class ProjectCreationHandlerRegistry extends BaseHandlerRegistry {
-    /**
-     * Register all message handlers
-     */
-    protected registerHandlers(): void {
-        // Lifecycle handlers
-        this.handlers.set('ready', lifecycle.handleReady as MessageHandler);
-        this.handlers.set('cancel', lifecycle.handleCancel as MessageHandler);
-        this.handlers.set('openProject', lifecycle.handleOpenProject as MessageHandler);
-        this.handlers.set('browseFiles', lifecycle.handleBrowseFiles as MessageHandler);
-        this.handlers.set('log', lifecycle.handleLog as MessageHandler);
-        this.handlers.set('cancel-project-creation', lifecycle.handleCancelProjectCreation as MessageHandler);
-        this.handlers.set('cancel-mesh-creation', lifecycle.handleCancelMeshCreation as MessageHandler);
-        this.handlers.set('cancel-auth-polling', lifecycle.handleCancelAuthPolling as MessageHandler);
-        this.handlers.set('open-adobe-console', lifecycle.handleOpenAdobeConsole as MessageHandler);
-        this.handlers.set('show-logs', lifecycle.handleShowLogs as MessageHandler);
-        this.handlers.set('openExternal', lifecycle.handleOpenExternal as MessageHandler);
+export const projectCreationHandlers = defineHandlers({
+    // Lifecycle handlers
+    'ready': lifecycle.handleReady,
+    'cancel': lifecycle.handleCancel,
+    'openProject': lifecycle.handleOpenProject,
+    'browseFiles': lifecycle.handleBrowseFiles,
+    'log': lifecycle.handleLog,
+    'cancel-project-creation': lifecycle.handleCancelProjectCreation,
+    'cancel-mesh-creation': lifecycle.handleCancelMeshCreation,
+    'cancel-auth-polling': lifecycle.handleCancelAuthPolling,
+    'open-adobe-console': lifecycle.handleOpenAdobeConsole,
+    'show-logs': lifecycle.handleShowLogs,
+    'openExternal': lifecycle.handleOpenExternal,
 
-        // Prerequisite handlers
-        this.handlers.set('check-prerequisites', prerequisites.handleCheckPrerequisites as MessageHandler);
-        this.handlers.set('continue-prerequisites', prerequisites.handleContinuePrerequisites as MessageHandler);
-        this.handlers.set('install-prerequisite', prerequisites.handleInstallPrerequisite as MessageHandler);
+    // Prerequisite handlers
+    'check-prerequisites': prerequisites.handleCheckPrerequisites,
+    'continue-prerequisites': prerequisites.handleContinuePrerequisites,
+    'install-prerequisite': prerequisites.handleInstallPrerequisite,
 
-        // Component handlers
-        this.handlers.set('update-component-selection', components.handleUpdateComponentSelection as MessageHandler);
-        this.handlers.set('update-components-data', components.handleUpdateComponentsData as MessageHandler);
-        this.handlers.set('loadComponents', components.handleLoadComponents as MessageHandler);
-        this.handlers.set('get-components-data', components.handleGetComponentsData as MessageHandler);
-        this.handlers.set('checkCompatibility', components.handleCheckCompatibility as MessageHandler);
-        this.handlers.set('loadDependencies', components.handleLoadDependencies as MessageHandler);
-        this.handlers.set('loadPreset', components.handleLoadPreset as MessageHandler);
-        this.handlers.set('validateSelection', components.handleValidateSelection as MessageHandler);
+    // Component handlers
+    'update-component-selection': components.handleUpdateComponentSelection,
+    'update-components-data': components.handleUpdateComponentsData,
+    'loadComponents': components.handleLoadComponents,
+    'get-components-data': components.handleGetComponentsData,
+    'checkCompatibility': components.handleCheckCompatibility,
+    'loadDependencies': components.handleLoadDependencies,
+    'loadPreset': components.handleLoadPreset,
+    'validateSelection': components.handleValidateSelection,
 
-        // Authentication handlers
-        this.handlers.set('check-auth', authentication.handleCheckAuth as MessageHandler);
-        this.handlers.set('authenticate', authentication.handleAuthenticate as MessageHandler);
+    // Authentication handlers
+    'check-auth': authentication.handleCheckAuth,
+    'authenticate': authentication.handleAuthenticate,
 
-        // Project handlers
-        this.handlers.set('ensure-org-selected', authentication.handleEnsureOrgSelected as MessageHandler);
-        this.handlers.set('get-projects', authentication.handleGetProjects as MessageHandler);
-        this.handlers.set('select-project', authentication.handleSelectProject as MessageHandler);
-        this.handlers.set('check-project-apis', authentication.handleCheckProjectApis as MessageHandler);
+    // Project handlers
+    'ensure-org-selected': authentication.handleEnsureOrgSelected,
+    'get-projects': authentication.handleGetProjects,
+    'select-project': authentication.handleSelectProject,
+    'check-project-apis': authentication.handleCheckProjectApis,
 
-        // Workspace handlers
-        this.handlers.set('get-workspaces', authentication.handleGetWorkspaces as MessageHandler);
-        this.handlers.set('select-workspace', authentication.handleSelectWorkspace as MessageHandler);
+    // Workspace handlers
+    'get-workspaces': authentication.handleGetWorkspaces,
+    'select-workspace': authentication.handleSelectWorkspace,
 
-        // Mesh handlers
-        this.handlers.set('check-api-mesh', mesh.handleCheckApiMesh as MessageHandler);
-        this.handlers.set('create-api-mesh', mesh.handleCreateApiMesh as MessageHandler);
-        this.handlers.set('delete-api-mesh', mesh.handleDeleteApiMesh as MessageHandler);
+    // Mesh handlers
+    'check-api-mesh': mesh.handleCheckApiMesh,
+    'create-api-mesh': mesh.handleCreateApiMesh,
+    'delete-api-mesh': mesh.handleDeleteApiMesh,
 
-        // EDS handlers - GitHub
-        this.handlers.set('check-github-auth', eds.handleCheckGitHubAuth as MessageHandler);
-        this.handlers.set('github-oauth', eds.handleGitHubOAuth as MessageHandler);
-        this.handlers.set('github-change-account', eds.handleGitHubChangeAccount as MessageHandler);
-        this.handlers.set('get-github-repos', eds.handleGetGitHubRepos as MessageHandler);
-        this.handlers.set('verify-github-repo', eds.handleVerifyGitHubRepo as MessageHandler);
+    // EDS handlers - GitHub
+    'check-github-auth': eds.handleCheckGitHubAuth,
+    'github-oauth': eds.handleGitHubOAuth,
+    'github-change-account': eds.handleGitHubChangeAccount,
+    'get-github-repos': eds.handleGetGitHubRepos,
+    'verify-github-repo': eds.handleVerifyGitHubRepo,
 
-        // EDS handlers - DA.live
-        this.handlers.set('check-dalive-auth', eds.handleCheckDaLiveAuth as MessageHandler);
-        this.handlers.set('open-dalive-login', eds.handleOpenDaLiveLogin as MessageHandler);
-        this.handlers.set('store-dalive-token', eds.handleStoreDaLiveToken as MessageHandler);
-        this.handlers.set('store-dalive-token-with-org', eds.handleStoreDaLiveTokenWithOrg as MessageHandler);
-        this.handlers.set('clear-dalive-auth', eds.handleClearDaLiveAuth as MessageHandler);
-        this.handlers.set('get-dalive-sites', eds.handleGetDaLiveSites as MessageHandler);
-        this.handlers.set('verify-dalive-org', eds.handleVerifyDaLiveOrg as MessageHandler);
+    // EDS handlers - DA.live
+    'check-dalive-auth': eds.handleCheckDaLiveAuth,
+    'open-dalive-login': eds.handleOpenDaLiveLogin,
+    'store-dalive-token': eds.handleStoreDaLiveToken,
+    'store-dalive-token-with-org': eds.handleStoreDaLiveTokenWithOrg,
+    'clear-dalive-auth': eds.handleClearDaLiveAuth,
+    'get-dalive-sites': eds.handleGetDaLiveSites,
+    'verify-dalive-org': eds.handleVerifyDaLiveOrg,
 
-        // EDS handlers - ACCS
-        this.handlers.set('validate-accs-credentials', eds.handleValidateAccsCredentials as MessageHandler);
+    // EDS handlers - ACCS
+    'validate-accs-credentials': eds.handleValidateAccsCredentials,
 
-        // Project creation handlers
-        this.handlers.set('validate', creation.handleValidate as MessageHandler);
-        this.handlers.set('create-project', creation.handleCreateProject as MessageHandler);
-    }
-
-    /**
-     * Check if a message type requires progress callback
-     *
-     * Some handlers (like create-api-mesh) need a progress callback to send
-     * incremental updates to the UI during long-running operations.
-     *
-     * @param messageType - Message type to check
-     * @returns True if handler needs progress callback
-     */
-    public needsProgressCallback(messageType: string): boolean {
-        return messageType === 'create-api-mesh';
-    }
-}
-
-/**
- * @deprecated Use ProjectCreationHandlerRegistry instead
- * Alias for backward compatibility during migration
- */
-export { ProjectCreationHandlerRegistry as HandlerRegistry };
+    // Project creation handlers
+    'validate': creation.handleValidate,
+    'create-project': creation.handleCreateProject,
+});

@@ -57,7 +57,7 @@ export async function handleDeleteApiMesh(
         const result = await commandManager.execute(
             'aio api-mesh delete --autoConfirmAction',
             {
-                timeout: TIMEOUTS.API_CALL,
+                timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
                 useNodeVersion: getMeshNodeVersion(),
                 enhancePath: true,

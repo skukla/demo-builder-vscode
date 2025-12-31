@@ -7,4 +7,5 @@
 
 export { BaseCommand } from './baseCommand';
 export { BaseWebviewCommand } from './baseWebviewCommand';
-export { BaseHandlerRegistry } from './BaseHandlerRegistry';
+// Note: BaseHandlerRegistry removed in Step 3: Handler Registry Simplification
+// Use object literal handler maps with dispatchHandler() instead

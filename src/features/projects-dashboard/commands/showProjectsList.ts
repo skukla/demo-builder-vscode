@@ -10,21 +10,21 @@
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createBundleUris } from '@/core/utils/bundleUri';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
-import { ProjectsListHandlerRegistry } from '@/features/projects-dashboard/handlers';
+import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
 import { HandlerContext, SharedState } from '@/types/handlers';
 
 /**
  * Command to show the "Projects List" as the home screen
  * This provides a card grid view of all projects with search/filter.
  *
- * Follows BaseWebviewCommand pattern with HandlerRegistry.
+ * Follows BaseWebviewCommand pattern with object literal handler maps.
+ * Updated in Step 3 to use dispatchHandler instead of class-based registry.
  */
 export class ShowProjectsListCommand extends BaseWebviewCommand {
-    private handlerRegistry: ProjectsListHandlerRegistry;
-
     constructor(
         context: vscode.ExtensionContext,
         stateManager: import('@/core/state').StateManager,
@@ -32,7 +32,6 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
         logger: import('@/types/logger').Logger,
     ) {
         super(context, stateManager, statusBar, logger);
-        this.handlerRegistry = new ProjectsListHandlerRegistry();
     }
 
     // ============================================================================
@@ -84,13 +83,13 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
     }
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
-        // Auto-register all handlers from ProjectsListHandlerRegistry
-        const messageTypes = this.handlerRegistry.getRegisteredTypes();
+        // Auto-register all handlers from projectsListHandlers map
+        const messageTypes = getRegisteredTypes(projectsListHandlers);
 
         for (const messageType of messageTypes) {
             comm.onStreaming(messageType, async (data: unknown) => {
                 const context = this.createHandlerContext();
-                return this.handlerRegistry.handle(context, messageType, data);
+                return dispatchHandler(projectsListHandlers, context, messageType, data);
             });
         }
 

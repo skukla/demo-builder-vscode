@@ -13,8 +13,9 @@ import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
 import { ComponentHandler } from '@/features/components/handlers/componentHandler';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
-// Extracted helper functions
-import { ProjectCreationHandlerRegistry } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
+// Handler utilities and handlers
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
+import { projectCreationHandlers, needsProgressCallback } from '@/features/project-creation/handlers';
 import {
     formatGroupName as formatGroupNameHelper,
     getSetupInstructions as getSetupInstructionsHelper,
@@ -93,7 +94,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private stepLogger: StepLogger | null = null;
     private stepLoggerInitPromise: Promise<StepLogger> | null = null;
     private templatesPath: string;
-    private handlerRegistry: ProjectCreationHandlerRegistry;  // Handler registry for message dispatch
     private wizardNavigateCommand: vscode.Disposable | null = null;  // Command for sidebar navigation
     private wizardSteps: WizardStep[] | null = null;  // Loaded wizard steps for sidebar
     private importedSettings: SettingsFile | null = null;  // Settings imported from file or copied from project
@@ -123,9 +123,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         this.componentHandler = new ComponentHandler(context);
         this.errorLogger = new ErrorLogger(context);
         this.progressUnifier = new ProgressUnifier(logger);
-
-        // Initialize ProjectCreationHandlerRegistry for message dispatch
-        this.handlerRegistry = new ProjectCreationHandlerRegistry();
 
         // Store templates path for lazy initialization
         this.templatesPath = path.join(context.extensionPath, 'src', 'core', 'logging', 'config', 'logging.json');
@@ -345,19 +342,19 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             return { success: true };
         });
 
-        // Auto-register all handlers from ProjectCreationHandlerRegistry
+        // Auto-register all handlers from projectCreationHandlers object literal
         // This eliminates boilerplate by automatically discovering and registering
         // all message handlers. Special cases (like progress callbacks) are handled
-        // via ProjectCreationHandlerRegistry.needsProgressCallback().
+        // via needsProgressCallback() utility function.
         //
         // SharedState is passed by reference, so handlers can modify state directly
         // without manual synchronization. Changes to context.sharedState automatically persist.
 
-        const messageTypes = this.handlerRegistry.getRegisteredTypes();
+        const messageTypes = getRegisteredTypes(projectCreationHandlers);
 
         for (const messageType of messageTypes) {
             // Check if this handler needs special progress callback handling
-            if (this.handlerRegistry.needsProgressCallback(messageType)) {
+            if (needsProgressCallback(messageType)) {
                 // Special case: create-api-mesh needs progress updates
                 comm.onStreaming(messageType, async (data: unknown) => {
                     const onProgress = (message: string, subMessage?: string) => {
@@ -366,13 +363,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         });
                     };
                     const context = await this.createHandlerContext();
-                    return await this.handlerRegistry.handle(context, messageType, { ...(data as object), onProgress });
+                    return await dispatchHandler(projectCreationHandlers, context, messageType, { ...(data as object), onProgress });
                 });
             } else {
                 // Standard handler registration (all other handlers)
                 comm.onStreaming(messageType, async (data: unknown) => {
                     const context = await this.createHandlerContext();
-                    return await this.handlerRegistry.handle(context, messageType, data);
+                    return await dispatchHandler(projectCreationHandlers, context, messageType, data);
                 });
             }
         }

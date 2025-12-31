@@ -122,7 +122,7 @@ export async function handleMeshAlreadyExists(
             {
                 streaming: true,
                 shell: true, // Required for command string with arguments and quoted paths
-                timeout: TIMEOUTS.API_MESH_UPDATE,
+                timeout: TIMEOUTS.LONG,
                 onOutput: createProgressCallback('update', onProgress),
                 configureTelemetry: false,
                 useNodeVersion: getMeshNodeVersion(),
