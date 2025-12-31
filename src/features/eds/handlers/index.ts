@@ -26,13 +26,6 @@ export {
     clearServiceCache,
 } from './edsHandlers';
 
-// Export helpers for direct access (clearServiceCache already exported from edsHandlers)
-export {
-    getGitHubServices,
-    getDaLiveServices,
-    getDaLiveAuthService,
-    validateDaLiveToken,
-    type GitHubServices,
-    type DaLiveServices,
-    type DaLiveTokenValidationResult,
-} from './edsHelpers';
+// Note: edsHelpers are internal implementation details
+// They should not be exported from the public API
+// Use relative imports within eds/handlers instead
