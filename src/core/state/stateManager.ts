@@ -138,14 +138,12 @@ export class StateManager {
                 const freshProject = await this.loadProjectFromPath(this.state.currentProject.path);
 
                 if (freshProject === null) {
-                    this.logger.debug('Project files not found on disk, using cached version');
                     return this.state.currentProject;
                 }
 
                 this.state.currentProject = freshProject;
                 return freshProject;
             } catch {
-                this.logger.debug('Failed to reload project from disk, using cached version');
                 return this.state.currentProject;
             }
         }
@@ -156,7 +154,6 @@ export class StateManager {
         // GUARD: Prevent stale background saves from recreating deleted projects
         const projectPathExists = await this.checkPathExists(project.path);
         if (!projectPathExists && !this.state.currentProject) {
-            this.logger.debug(`[StateManager] Blocking save for deleted project: ${project.name}`);
             return;
         }
 
@@ -240,6 +237,10 @@ export class StateManager {
 
     /**
      * Load a project from a directory path
+     *
+     * IMPORTANT: Preserves selectedPackage and selectedStack from cached project
+     * when reloading from disk. This prevents data loss during async reload cycles
+     * (e.g., mesh status polling) where the disk manifest might be stale or incomplete.
      */
     public async loadProjectFromPath(
         projectPath: string,
@@ -248,6 +249,22 @@ export class StateManager {
         const project = await this.projectFileLoader.loadProject(projectPath, terminalProvider);
 
         if (project) {
+            // CRITICAL: Preserve selectedPackage/selectedStack from cached project
+            // when disk version has them as undefined. This prevents data loss during
+            // async reload cycles (mesh status polling, etc.)
+            const cachedProject = this.state.currentProject;
+            if (cachedProject && cachedProject.path === projectPath) {
+                if (project.selectedPackage === undefined && cachedProject.selectedPackage !== undefined) {
+                    project.selectedPackage = cachedProject.selectedPackage;
+                }
+                if (project.selectedStack === undefined && cachedProject.selectedStack !== undefined) {
+                    project.selectedStack = cachedProject.selectedStack;
+                }
+                if (project.selectedAddons === undefined && cachedProject.selectedAddons !== undefined) {
+                    project.selectedAddons = cachedProject.selectedAddons;
+                }
+            }
+
             // Set as current project
             await this.saveProject(project);
 

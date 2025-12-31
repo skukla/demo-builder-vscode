@@ -116,6 +116,7 @@ describe('StartDemoCommand - Lifecycle', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal Frontend',
+                        type: 'frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
                         port: 3000,
@@ -244,6 +245,7 @@ describe('StartDemoCommand - Lifecycle', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal Frontend',
+                        type: 'frontend',
                         status: 'running',
                         path: '/test/path/frontend',
                         port: 3000,

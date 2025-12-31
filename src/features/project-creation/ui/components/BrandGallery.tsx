@@ -200,7 +200,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     // Get available addons from selected stack's optionalAddons (stack-driven)
     const availableAddons = useMemo(() => {
         if (!selectedStack) return [];
-        return (selectedStack.optionalAddons || []).filter(id => ADDON_METADATA[id]);
+        return (selectedStack.optionalAddons || []).filter(addon => ADDON_METADATA[addon.id]);
     }, [selectedStack]);
 
     // Build action buttons - only show Done when a stack is selected
@@ -255,33 +255,33 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
 
             {/* Services Section - only shown if package supports addons */}
             {availableAddons.length > 0 && (
-                <>
+                <div className="animate-fade-in">
                     <Divider size="S" marginTop="size-300" marginBottom="size-200" />
                     <Text UNSAFE_className="text-gray-600 text-sm mb-2 block">
                         Optional Services
                     </Text>
                     <div className="architecture-addons">
-                        {availableAddons.map((addonId) => {
-                            const addon = ADDON_METADATA[addonId];
-                            if (!addon) return null;
-                            const isRequired = pkg.addons?.[addonId] === 'required';
-                            const isChecked = isRequired || selectedAddons.includes(addonId);
+                        {availableAddons.map((optionalAddon) => {
+                            const addonMeta = ADDON_METADATA[optionalAddon.id];
+                            if (!addonMeta) return null;
+                            const isRequired = pkg.addons?.[optionalAddon.id] === 'required';
+                            const isChecked = isRequired || selectedAddons.includes(optionalAddon.id);
                             return (
                                 <Checkbox
-                                    key={addonId}
+                                    key={optionalAddon.id}
                                     isSelected={isChecked}
                                     isDisabled={isRequired}
-                                    onChange={(isSelected) => handleAddonToggle(addonId, isSelected)}
+                                    onChange={(isSelected) => handleAddonToggle(optionalAddon.id, isSelected)}
                                 >
                                     <span className="addon-label">
-                                        <span className="addon-name">{addon.name}</span>
-                                        <span className="addon-description">{addon.description}</span>
+                                        <span className="addon-name">{addonMeta.name}</span>
+                                        <span className="addon-description">{addonMeta.description}</span>
                                     </span>
                                 </Checkbox>
                             );
                         })}
                     </div>
-                </>
+                </div>
             )}
         </Modal>
     );
@@ -340,12 +340,17 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
 
     const handleStackSelect = useCallback((stackId: string) => {
         onStackSelect(stackId);
-        // When stack changes, keep only required addons (clear optional selections)
+        // When stack changes, set addons to: required (from package) + default (from stack)
         setModalAddons(() => {
             const currentPackage = packages.find(p => p.id === modalPackageId);
-            return currentPackage ? getRequiredAddons(currentPackage) : [];
+            const requiredAddons = currentPackage ? getRequiredAddons(currentPackage) : [];
+            const selectedStack = stacks.find(s => s.id === stackId);
+            const defaultAddons = (selectedStack?.optionalAddons || [])
+                .filter(addon => addon.default)
+                .map(addon => addon.id);
+            return [...new Set([...requiredAddons, ...defaultAddons])];
         });
-    }, [onStackSelect, packages, modalPackageId, getRequiredAddons]);
+    }, [onStackSelect, packages, stacks, modalPackageId, getRequiredAddons]);
 
     const handleModalAddonsChange = useCallback((addons: string[]) => {
         setModalAddons(addons);

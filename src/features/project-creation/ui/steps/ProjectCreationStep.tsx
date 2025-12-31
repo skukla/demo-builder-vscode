@@ -258,15 +258,13 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                         </Button>
                     }
                     centerContent={
-                        !isCheckingMesh && (
-                            <Button
-                                variant="secondary"
-                                onPress={handleShowLogs}
-                                isQuiet
-                            >
-                                Logs
-                            </Button>
-                        )
+                        <Button
+                            variant="secondary"
+                            onPress={handleShowLogs}
+                            isQuiet
+                        >
+                            Logs
+                        </Button>
                     }
                     constrainWidth={true}
                 />

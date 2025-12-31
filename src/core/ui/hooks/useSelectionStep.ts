@@ -252,15 +252,24 @@ export function useSelectionStep<T extends { id: string }>(
           }
         }
 
-        // Hydrate pre-selected item with full data from loaded list
-        // (e.g., when imported settings only have ID, populate title/name/description)
+        // Sync selected item with fresh data from loaded list
+        // This handles two cases:
+        // 1. Hydration: imported settings only have ID, populate title/name/description
+        // 2. Refresh: project was renamed externally, sync the new name
         if (selectedItem?.id && onSelect) {
           const matchingItem = (data as T[]).find(item => item.id === selectedItem.id);
           if (matchingItem) {
-            // Only update if we have more complete data (e.g., title exists in list but not in selectedItem)
-            const selectedHasTitle = 'title' in selectedItem && selectedItem.title;
-            const matchingHasTitle = 'title' in matchingItem && matchingItem.title;
-            if (!selectedHasTitle && matchingHasTitle) {
+            // Check if fresh data differs from selected item (name/title changed externally)
+            const selectedTitle = 'title' in selectedItem ? selectedItem.title : undefined;
+            const matchingTitle = 'title' in matchingItem ? matchingItem.title : undefined;
+            const selectedName = 'name' in selectedItem ? (selectedItem as { name?: string }).name : undefined;
+            const matchingName = 'name' in matchingItem ? (matchingItem as { name?: string }).name : undefined;
+
+            const titleChanged = matchingTitle && selectedTitle !== matchingTitle;
+            const nameChanged = matchingName && selectedName !== matchingName;
+            const needsHydration = !selectedTitle && matchingTitle;
+
+            if (titleChanged || nameChanged || needsHydration) {
               onSelect(matchingItem);
             }
           }

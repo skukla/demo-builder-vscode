@@ -21,43 +21,48 @@ interface ComponentSelectionStepProps extends BaseStepProps {
     componentsData?: Record<string, unknown>;
 }
 
-interface DependencyOption {
+/** Simple option for dependencies, addons, and services (no description needed) */
+interface ComponentOption {
     id: string;
     name: string;
-    required: boolean;
 }
 
-interface ComponentOption {
+/** Picker option with description for frontend/backend selection */
+interface PickerOption {
     id: string;
     name: string;
     description: string;
 }
 
 interface ComponentsData {
-    frontends?: ComponentOption[];
-    backends?: ComponentOption[];
-    integrations?: ComponentOption[];
-    appBuilder?: ComponentOption[];
+    frontends?: PickerOption[];
+    backends?: PickerOption[];
+    integrations?: PickerOption[];
+    appBuilder?: PickerOption[];
 }
 
-// Frontend dependencies
-const FRONTEND_DEPENDENCIES: DependencyOption[] = [
-    { id: 'commerce-mesh', name: 'API Mesh', required: true },
-    { id: 'demo-inspector', name: 'Demo Inspector', required: false },
+// Required frontend dependencies (always selected, locked)
+const FRONTEND_DEPENDENCIES: ComponentOption[] = [
+    { id: 'commerce-mesh', name: 'API Mesh' },
 ];
 
-// Backend services (required for PaaS)
-const BACKEND_SERVICES: DependencyOption[] = [
-    { id: 'catalog-service', name: 'Catalog Service', required: true },
-    { id: 'live-search', name: 'Live Search', required: true },
+// Optional frontend addons (pre-selected by default, user can uncheck)
+const FRONTEND_ADDONS: ComponentOption[] = [
+    { id: 'demo-inspector', name: 'Demo Inspector' },
+];
+
+// Required backend services (always selected, locked)
+const BACKEND_SERVICES: ComponentOption[] = [
+    { id: 'catalog-service', name: 'Catalog Service' },
+    { id: 'live-search', name: 'Live Search' },
 ];
 
 // Default options (used if componentsData not provided)
-const DEFAULT_FRONTENDS: ComponentOption[] = [
+const DEFAULT_FRONTENDS: PickerOption[] = [
     { id: 'headless', name: 'Headless Storefront', description: 'Next.js-based headless storefront with Adobe mesh integration' },
 ];
 
-const DEFAULT_BACKENDS: ComponentOption[] = [
+const DEFAULT_BACKENDS: PickerOption[] = [
     { id: 'adobe-commerce-paas', name: 'Adobe Commerce PaaS', description: 'Adobe Commerce DSN instance' },
 ];
 
@@ -88,6 +93,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         updateState,
         setCanProceed,
         frontendDependencies: FRONTEND_DEPENDENCIES,
+        frontendAddons: FRONTEND_ADDONS,
         backendServices: BACKEND_SERVICES,
     });
 
@@ -130,17 +136,32 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         </ErrorBoundary>
                         {selectedFrontend && (
                             <View marginTop="size-150">
+                                {/* Required dependencies (locked) */}
                                 {FRONTEND_DEPENDENCIES.map(dep => (
                                     <Checkbox
                                         key={dep.id}
                                         isSelected={selectedDependencies.has(dep.id)}
-                                        isDisabled={dep.required}
+                                        isDisabled={true}
                                         onChange={(sel) => handleDependencyToggle(dep.id, sel)}
                                         UNSAFE_className="mb-1"
                                     >
                                         <Flex alignItems="center" gap="size-50">
-                                            {dep.required && <LockClosed size="XS" UNSAFE_className="text-gray-600" />}
+                                            <LockClosed size="XS" UNSAFE_className="text-gray-600" />
                                             <Text UNSAFE_className="text-md">{dep.name}</Text>
+                                        </Flex>
+                                    </Checkbox>
+                                ))}
+                                {/* Optional addons (pre-selected, user can uncheck) */}
+                                {FRONTEND_ADDONS.map(addon => (
+                                    <Checkbox
+                                        key={addon.id}
+                                        isSelected={selectedDependencies.has(addon.id)}
+                                        isDisabled={false}
+                                        onChange={(sel) => handleDependencyToggle(addon.id, sel)}
+                                        UNSAFE_className="mb-1"
+                                    >
+                                        <Flex alignItems="center" gap="size-50">
+                                            <Text UNSAFE_className="text-md">{addon.name}</Text>
                                         </Flex>
                                     </Checkbox>
                                 ))}
@@ -178,16 +199,17 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     </ErrorBoundary>
                     {selectedBackend && (
                         <View marginTop="size-150">
+                            {/* All backend services are required (locked) */}
                             {BACKEND_SERVICES.map(svc => (
                                 <Checkbox
                                     key={svc.id}
                                     isSelected={selectedServices.has(svc.id)}
-                                    isDisabled={svc.required}
+                                    isDisabled={true}
                                     onChange={(sel) => handleServiceToggle(svc.id, sel)}
                                     UNSAFE_className="mb-1"
                                 >
                                     <Flex alignItems="center" gap="size-50">
-                                        {svc.required && <LockClosed size="XS" UNSAFE_className="text-gray-600" />}
+                                        <LockClosed size="XS" UNSAFE_className="text-gray-600" />
                                         <Text UNSAFE_className="text-md">{svc.name}</Text>
                                     </Flex>
                                 </Checkbox>

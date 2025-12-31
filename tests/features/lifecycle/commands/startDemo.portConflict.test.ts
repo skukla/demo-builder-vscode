@@ -126,6 +126,7 @@ describe('StartDemoCommand - Port Conflict', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal Frontend',
+                        type: 'frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
                         port: 3000,

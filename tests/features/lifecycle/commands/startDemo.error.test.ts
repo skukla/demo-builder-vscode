@@ -115,6 +115,7 @@ describe('StartDemoCommand - Error Handling', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal Frontend',
+                        type: 'frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
                         port: 3000,
@@ -183,6 +184,7 @@ describe('StartDemoCommand - Error Handling', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal Frontend',
+                        type: 'frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
                         port: -1, // Invalid port
@@ -224,6 +226,7 @@ describe('StartDemoCommand - Error Handling', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal Frontend',
+                        type: 'frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
                         port: 99999, // Invalid port (> 65535)
@@ -263,6 +266,7 @@ describe('StartDemoCommand - Error Handling', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal Frontend',
+                        type: 'frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
                         port: 3000,
@@ -299,6 +303,7 @@ describe('StartDemoCommand - Error Handling', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal Frontend',
+                        type: 'frontend',
                         status: 'ready',
                         path: '/test/path/frontend',
                         port: 3000,
@@ -365,6 +370,7 @@ describe('StartDemoCommand - Error Handling', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal Frontend',
+                        type: 'frontend',
                         status: 'ready',
                         path: undefined, // No path
                         port: 3000,

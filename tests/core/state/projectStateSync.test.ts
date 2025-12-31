@@ -161,6 +161,7 @@ describe('projectStateSync', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal NextJS',
+                        type: 'frontend',
                         status: 'running',
                     },
                 },
@@ -187,6 +188,7 @@ describe('projectStateSync', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal NextJS',
+                        type: 'frontend',
                         status: 'running',
                     },
                 },
@@ -231,6 +233,7 @@ describe('projectStateSync', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal NextJS',
+                        type: 'frontend',
                         status: 'running',
                     },
                 },
@@ -261,6 +264,7 @@ describe('projectStateSync', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal NextJS',
+                        type: 'frontend',
                         status: 'running',
                     },
                 },
@@ -284,6 +288,7 @@ describe('projectStateSync', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal NextJS',
+                        type: 'frontend',
                         status: 'running',
                     },
                 },
@@ -308,6 +313,7 @@ describe('projectStateSync', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal NextJS',
+                        type: 'frontend',
                         status: 'running',
                     },
                 },

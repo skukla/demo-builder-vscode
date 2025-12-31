@@ -116,6 +116,7 @@ export function createMockProjectWithFrontend(overrides?: Partial<Project>): Pro
             'headless': {
                 id: 'headless',
                 name: 'Frontend',
+                type: 'frontend',
                 path: '/test/frontend',
                 status: 'running',
             },

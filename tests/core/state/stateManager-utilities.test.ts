@@ -104,7 +104,8 @@ describe('StateManager - Utilities', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal Next.js',
-                        status: 'ready'
+                        status: 'ready',
+                        type: 'frontend'
                     }
                 }
             };
@@ -145,7 +146,8 @@ describe('StateManager - Utilities', () => {
                     'headless': {
                         id: 'headless',
                         name: 'CitiSignal Next.js',
-                        status: 'ready'
+                        status: 'ready',
+                        type: 'frontend'
                     }
                 }
             };

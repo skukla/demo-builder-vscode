@@ -4,18 +4,22 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WizardState } from '@/types/webview';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
-interface DependencyOption {
+/** Component option for required dependencies or services */
+interface ComponentOption {
     id: string;
     name: string;
-    required: boolean;
 }
 
 interface UseComponentSelectionProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
     setCanProceed: (canProceed: boolean) => void;
-    frontendDependencies: DependencyOption[];
-    backendServices: DependencyOption[];
+    /** Required frontend dependencies (always selected, locked) */
+    frontendDependencies: ComponentOption[];
+    /** Optional frontend addons (pre-selected by default, user can uncheck) */
+    frontendAddons: ComponentOption[];
+    /** Required backend services (always selected, locked) */
+    backendServices: ComponentOption[];
 }
 
 interface UseComponentSelectionReturn {
@@ -38,6 +42,7 @@ export function useComponentSelection({
     updateState,
     setCanProceed,
     frontendDependencies,
+    frontendAddons,
     backendServices,
 }: UseComponentSelectionProps): UseComponentSelectionReturn {
     // Initialize from state (includes defaults from init)
@@ -69,29 +74,30 @@ export function useComponentSelection({
     const debouncedIntegrations = useDebouncedValue(selectedIntegrations, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
     const debouncedAppBuilder = useDebouncedValue(selectedAppBuilder, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
 
-    // Initialize required dependencies when frontend changes
+    // Initialize dependencies and addons when frontend changes
     useEffect(() => {
         if (selectedFrontend) {
-            const requiredDeps = frontendDependencies
-                .filter(d => d.required)
-                .map(d => d.id);
+            // Add all required dependencies (locked) + all addons (pre-selected but optional)
+            const depsToAdd = [
+                ...frontendDependencies.map(d => d.id),
+                ...frontendAddons.map(a => a.id),
+            ];
             setSelectedDependencies(prev => {
                 const newSet = new Set(prev);
-                requiredDeps.forEach(dep => newSet.add(dep));
+                depsToAdd.forEach(dep => newSet.add(dep));
                 return newSet;
             });
         }
-    }, [selectedFrontend, frontendDependencies]);
+    }, [selectedFrontend, frontendDependencies, frontendAddons]);
 
     // Initialize required services when backend changes
     useEffect(() => {
         if (selectedBackend) {
-            const requiredSvcs = backendServices
-                .filter(s => s.required)
-                .map(s => s.id);
+            // All backend services are required (locked)
+            const servicesToAdd = backendServices.map(s => s.id);
             setSelectedServices(prev => {
                 const newSet = new Set(prev);
-                requiredSvcs.forEach(service => newSet.add(service));
+                servicesToAdd.forEach(service => newSet.add(service));
                 return newSet;
             });
         }
