@@ -26,7 +26,7 @@ jest.mock('@/features/mesh/services/meshConfig', () => ({
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        MESH_DESCRIBE: 30000,
+        NORMAL: 30000, // Standard operations (replaces MESH_DESCRIBE)
     },
 }));
 
@@ -195,7 +195,7 @@ describe('MeshVerifierService - DI Pattern', () => {
             expect(result.data?.exists).toBe(false);
         });
 
-        it('should sync mesh status correctly', async () => {
+        it('should sync mesh status correctly (status only, not endpoint)', async () => {
             const project = createMockProject({
                 componentInstances: {
                     'commerce-mesh': {
@@ -204,6 +204,11 @@ describe('MeshVerifierService - DI Pattern', () => {
                         path: '/test/mesh',
                         status: 'ready',
                     },
+                },
+                meshState: {
+                    envVars: {},
+                    sourceHash: 'abc123',
+                    lastDeployed: '2024-01-01',
                 },
             });
 
@@ -218,9 +223,11 @@ describe('MeshVerifierService - DI Pattern', () => {
 
             await service.syncMeshStatus(project, verificationResult);
 
-            expect(project.componentInstances?.['commerce-mesh'].endpoint).toBe(
-                'https://example.com/graphql'
-            );
+            // Note: syncMeshStatus does NOT write endpoint - that's managed by deployMesh.ts
+            // The single source of truth for endpoint writes is the deployment command
+            expect(project.componentInstances?.['commerce-mesh'].endpoint).toBeUndefined();
+            // But status should be updated
+            expect(project.componentInstances?.['commerce-mesh'].status).toBe('deployed');
         });
     });
 });

@@ -33,7 +33,7 @@ function toVersionedInstallStep(
         progressStrategy: templateStep.progressStrategy || 'synthetic',
         progressParser: templateStep.progressParser,
         // SOP §1: Using TIMEOUTS constant for default step duration
-        estimatedDuration: templateStep.estimatedDuration || TIMEOUTS.COMMAND_DEFAULT,
+        estimatedDuration: templateStep.estimatedDuration || TIMEOUTS.NORMAL,
         milestones: templateStep.milestones,
         continueOnError: templateStep.continueOnError,
     };

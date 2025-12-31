@@ -22,10 +22,10 @@ export class PollingService {
     ): Promise<void> {
         const {
             maxAttempts = 60,
-            initialDelay = TIMEOUTS.POLL_INITIAL_DELAY,
-            maxDelay = TIMEOUTS.POLL_MAX_DELAY,
+            initialDelay = TIMEOUTS.POLL.INITIAL,
+            maxDelay = TIMEOUTS.POLL.MAX,
             backoffFactor = 1.5,
-            timeout = TIMEOUTS.API_MESH_UPDATE,
+            timeout = TIMEOUTS.LONG,
             name = 'condition',
         } = options;
 

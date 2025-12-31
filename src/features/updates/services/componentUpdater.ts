@@ -231,7 +231,7 @@ export class ComponentUpdater {
             this.logger.debug('[Updates] Installing dependencies...');
             const installResult = await commandManager.execute('npm install --no-fund --prefer-offline', {
                 cwd: componentPath,
-                timeout: TIMEOUTS.NPM_INSTALL,
+                timeout: TIMEOUTS.VERY_LONG,
                 shell: DEFAULT_SHELL,
                 enhancePath: true,
                 useNodeVersion: nodeVersion,
@@ -246,7 +246,7 @@ export class ComponentUpdater {
             this.logger.debug(`[Updates] Running build script: ${buildScript}`);
             const buildResult = await commandManager.execute(`npm run ${buildScript} -- --force`, {
                 cwd: componentPath,
-                timeout: TIMEOUTS.NPM_INSTALL,
+                timeout: TIMEOUTS.VERY_LONG,
                 shell: DEFAULT_SHELL,
                 enhancePath: true,
                 useNodeVersion: nodeVersion,
@@ -312,7 +312,7 @@ export class ComponentUpdater {
             this.logger.debug(`[Updates] Downloading from ${downloadUrl}`);
 
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), TIMEOUTS.UPDATE_DOWNLOAD);
+            const timeout = setTimeout(() => controller.abort(), TIMEOUTS.AUTH.BROWSER);
 
             try {
                 const response = await fetch(downloadUrl, { signal: controller.signal });
@@ -341,7 +341,7 @@ export class ComponentUpdater {
                 `unzip -q "${tempZip}" -d "${targetPath}" && mv "${targetPath}"/*/* "${targetPath}"/ && rmdir "${targetPath}"/*/`,
                 {
                     shell: DEFAULT_SHELL,    // CRITICAL FIX: Required for command chaining (&&) and glob expansion (*/*)
-                    timeout: TIMEOUTS.UPDATE_EXTRACT,
+                    timeout: TIMEOUTS.NORMAL,
                     enhancePath: true,
                 },
             );

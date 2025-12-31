@@ -22,7 +22,13 @@ jest.mock('@/core/validation', () => ({
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        API_MESH_UPDATE: 180000, // 3 minutes
+        LONG: 180000, // 3 minutes - semantic category for mesh operations
+        POLL: {
+            INITIAL: 500,
+            MAX: 5000,
+            INTERVAL: 1000,
+            PROCESS_CHECK: 100,
+        },
     },
 }));
 
@@ -137,7 +143,7 @@ describe('MeshDeploymentVerifier - Edge Cases', () => {
             jest.advanceTimersByTime(1000);
             await Promise.resolve();
 
-            // Should have calculated maxRetries based on TIMEOUTS.API_MESH_UPDATE
+            // Should have calculated maxRetries based on TIMEOUTS.LONG
             // (180000 - 1000) / 1000 = 179 retries
             expect(mockCommandManager.execute).toHaveBeenCalled();
         });

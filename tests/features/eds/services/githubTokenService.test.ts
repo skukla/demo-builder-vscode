@@ -20,10 +20,11 @@ jest.mock('@octokit/plugin-retry', () => ({
     retry: jest.fn(() => ({})),
 }));
 
-// Mock timeoutConfig
+// Mock timeoutConfig - includes custom TTL for tokens
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        TOKEN_VALIDATION_TTL: 1000,
+        TOKEN_VALIDATION_TTL: 1000, // Custom TTL for token validation
+        QUICK: 5000, // Fast operations
     },
 }));
 

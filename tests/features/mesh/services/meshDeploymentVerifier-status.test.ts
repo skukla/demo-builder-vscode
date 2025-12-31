@@ -23,7 +23,13 @@ jest.mock('@/core/validation', () => ({
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        API_MESH_UPDATE: 180000, // 3 minutes
+        LONG: 180000, // 3 minutes - semantic category for mesh operations
+        POLL: {
+            INITIAL: 500,
+            MAX: 5000,
+            INTERVAL: 1000,
+            PROCESS_CHECK: 100,
+        },
     },
 }));
 

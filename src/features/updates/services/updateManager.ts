@@ -257,7 +257,7 @@ export class UpdateManager {
             const executor = ServiceLocator.getCommandExecutor();
             const result = await executor.execute('git rev-parse HEAD', {
                 cwd: repoPath,
-                timeout: TIMEOUTS.QUICK_SHELL,
+                timeout: TIMEOUTS.QUICK,
                 shell: DEFAULT_SHELL,
             });
             return result.code === 0 ? result.stdout.trim() : null;
@@ -281,7 +281,7 @@ export class UpdateManager {
 
             // Create timeout controller
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), TIMEOUTS.UPDATE_CHECK);
+            const timeout = setTimeout(() => controller.abort(), TIMEOUTS.QUICK);
       
             try {
                 const response = await fetch(url, { signal: controller.signal });

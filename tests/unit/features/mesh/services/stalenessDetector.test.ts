@@ -37,7 +37,7 @@ jest.mock('@/core/di', () => ({
 }));
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        API_CALL: 5000,
+        NORMAL: 30000, // Standard API calls (replaces API_CALL)
     },
 }));
 jest.mock('@/types/typeGuards', () => ({

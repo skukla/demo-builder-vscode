@@ -150,7 +150,7 @@ export class AuthenticationService {
             this.debugLogger.error('[Auth] Quick authentication check failed', error as Error);
 
             // Cache the failed result (short TTL for errors)
-            this.cacheManager.setCachedAuthStatus(false, CACHE_TTL.AUTH_STATUS_ERROR);
+            this.cacheManager.setCachedAuthStatus(false, CACHE_TTL.SHORT);
 
             this.performanceTracker.endTiming('isAuthenticated');
             return false;
@@ -208,7 +208,7 @@ export class AuthenticationService {
             // Format error with user-friendly message
             const formatted = AuthenticationErrorFormatter.formatError(error, {
                 operation: 'authentication-check',
-                timeout: TIMEOUTS.CONFIG_READ,
+                timeout: TIMEOUTS.QUICK,
             });
 
             // Log formatted error to user
@@ -221,7 +221,7 @@ export class AuthenticationService {
             stepLogger.logTemplate('adobe-setup', 'error', { item: 'Authentication check', error: formatted.title });
 
             // Cache the failed result (shorter TTL for errors to allow retry)
-            this.cacheManager.setCachedAuthStatus(false, CACHE_TTL.AUTH_STATUS_ERROR);
+            this.cacheManager.setCachedAuthStatus(false, CACHE_TTL.SHORT);
 
             this.performanceTracker.endTiming('isFullyAuthenticated');
             return false;
@@ -261,7 +261,7 @@ export class AuthenticationService {
                 loginCommand,
                 {
                     encoding: 'utf8',
-                    timeout: TIMEOUTS.BROWSER_AUTH,
+                    timeout: TIMEOUTS.AUTH.BROWSER,
                 },
             ).catch(error => {
                 this.debugLogger.error('[Auth] Login command failed', error);
@@ -269,7 +269,7 @@ export class AuthenticationService {
                 // Format error with user-friendly message
                 const formatted = AuthenticationErrorFormatter.formatError(error, {
                     operation: 'browser-auth',
-                    timeout: TIMEOUTS.BROWSER_AUTH,
+                    timeout: TIMEOUTS.AUTH.BROWSER,
                 });
 
                 // Log formatted error to user

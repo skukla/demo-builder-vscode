@@ -61,30 +61,40 @@ jest.mock('@/core/logging/debugLogger', () => ({
 }));
 
 // Mock cache utilities
-jest.mock('@/core/cache/AbstractCacheManager', () => ({
+jest.mock('@/core/cache/cacheUtils', () => ({
     getCacheTTLWithJitter: jest.fn((ttl: number) => ttl),
 }));
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        DA_LIVE_API: 30000,
-        OAUTH_FLOW: 120000,
-        TOKEN_VALIDATION_TTL: 300000,
-        CONFIG_READ: 5000,
-        TOKEN_RETRY_BASE: 500,
-        TOOL_CLONE: 60000,
-        TOOL_INSTALL: 120000,
-        DATA_INGESTION: 300000,
-        EDS_HELIX_CONFIG: 30000,
-        EDS_CODE_SYNC_POLL: 5000,
+        NORMAL: 30000, // Standard API calls
+        LONG: 180000, // Complex operations
+        EXTENDED: 300000, // Extended operations
+        QUICK: 5000, // Fast operations
+        UI: {
+            ANIMATION: 150,
+            UPDATE_DELAY: 100,
+            TRANSITION: 300,
+            NOTIFICATION: 2000,
+            MIN_LOADING: 1500,
+            FOCUS_FALLBACK: 1000,
+        },
+        AUTH: {
+            OAUTH: 120000,
+            BROWSER: 60000,
+        },
+        POLL: {
+            INITIAL: 500,
+            MAX: 5000,
+            INTERVAL: 1000,
+            PROCESS_CHECK: 100,
+        },
+        WEBVIEW_INIT_DELAY: 50, // For loadingHTML.ts
+        TOKEN_VALIDATION_TTL: 300000, // Custom TTL for tokens
     },
     CACHE_TTL: {
-        PREREQUISITE_CHECK: 300000,
-        AUTH_STATUS: 60000,
-        VALIDATION: 300000,
-        ORG_LIST: 300000,
-        CONSOLE_WHERE: 300000,
-        TOKEN_INSPECTION: 120000,
+        MEDIUM: 300000, // 5 minutes (replaces PREREQUISITE_CHECK, VALIDATION, ORG_LIST, CONSOLE_WHERE)
+        SHORT: 60000, // 1 minute (replaces AUTH_STATUS)
     },
     formatMinutes: jest.fn((min: number) => `${min} minutes`),
 }));

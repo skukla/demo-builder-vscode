@@ -24,11 +24,10 @@ jest.mock('@/core/di');
 jest.mock('vscode');
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        API_MESH_CREATE: 1000,
-        MESH_VERIFY_POLL_INTERVAL: 100,
-        MESH_VERIFY_INITIAL_WAIT: 100,
-        API_CALL: 1000,
-        MESH_DESCRIBE: 1000,
+        LONG: 180000, // Complex operations (replaces API_MESH_CREATE)
+        NORMAL: 30000, // Standard operations (replaces API_CALL, MESH_DESCRIBE)
+        MESH_VERIFY_POLL_INTERVAL: 10000, // Kept for mesh-specific polling
+        MESH_VERIFY_INITIAL_WAIT: 20000, // Kept for mesh-specific polling
     },
 }));
 jest.mock('@/features/mesh/services/meshConfig', () => ({

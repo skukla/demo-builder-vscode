@@ -43,7 +43,7 @@ export class OrganizationValidator {
             // Try to list projects - this will fail with 403 if org is invalid
             const result = await this.commandManager.execute(
                 'aio console project list --json',
-                { encoding: 'utf8', timeout: TIMEOUTS.PROJECT_LIST },
+                { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
             );
 
             // If we get here without error, check the result
@@ -83,7 +83,7 @@ export class OrganizationValidator {
             // Check if we have an organization context
             const result = await this.commandManager.execute(
                 'aio console where --json',
-                { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
+                { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
             );
 
             if (result.code === 0 && result.stdout) {
@@ -169,7 +169,7 @@ export class OrganizationValidator {
             // Try to list App Builder projects - this requires Developer or System Admin role
             const result = await this.commandManager.execute(
                 'aio app list --json',
-                { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
+                { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
             );
 
             if (result.code === 0) {

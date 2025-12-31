@@ -249,7 +249,7 @@ export async function doSelectProject(
             `aio console project select ${projectId}`,
             {
                 encoding: 'utf8',
-                timeout: TIMEOUTS.CONFIG_WRITE,
+                timeout: TIMEOUTS.NORMAL,
             },
         );
 

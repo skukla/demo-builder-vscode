@@ -16,8 +16,7 @@ export const setupMocks = () => {
     }));
     jest.mock('@/core/utils/timeoutConfig', () => ({
         TIMEOUTS: {
-            PROJECT_LIST: 30000,
-            WORKSPACE_LIST: 30000
+            NORMAL: 30000 // Standard API calls (replaces PROJECT_LIST, WORKSPACE_LIST)
         }
     }));
     jest.mock('@/core/utils/promiseUtils', () => ({

@@ -59,7 +59,7 @@ export class AdobeContextResolver {
             this.debugLogger.debug('[Context Resolver] Fetching context from Adobe CLI');
             const result = await this.commandManager.execute(
                 'aio console where --json',
-                { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
+                { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
             );
 
             if (result.code === 0 && result.stdout) {

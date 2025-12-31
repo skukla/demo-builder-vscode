@@ -68,7 +68,7 @@ export class GitHubOAuthService {
         });
 
         // Set timeout for OAuth flow
-        const timeoutMs = TIMEOUTS.OAUTH_FLOW || DEFAULT_OAUTH_TIMEOUT_MS;
+        const timeoutMs = TIMEOUTS.LONG || DEFAULT_OAUTH_TIMEOUT_MS;
         const timeoutPromise = new Promise<never>((_, reject) => {
             setTimeout(() => {
                 this.oauthResolve = null;

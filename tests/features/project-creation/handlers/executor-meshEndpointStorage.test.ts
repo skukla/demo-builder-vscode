@@ -2,12 +2,11 @@
  * Tests for mesh endpoint single source of truth in executor
  *
  * These tests verify that mesh endpoint is stored ONLY in
- * componentInstances['commerce-mesh'].endpoint (single source of truth),
- * NOT duplicated in componentConfigs[frontendId]['MESH_ENDPOINT'].
+ * meshState.endpoint (single source of truth),
+ * NOT duplicated in componentConfigs or componentInstances.endpoint.
  *
- * Related fix: Remove redundant MESH_ENDPOINT write to componentConfigs
- * Root cause: Duplicate storage caused bugs when readers used wrong source
- * Solution: Store endpoint only in componentInstances['commerce-mesh'].endpoint
+ * The mesh endpoint is now stored in project.meshState.endpoint as the
+ * authoritative location. See docs/architecture/state-ownership.md for details.
  */
 
 import * as stalenessDetector from '@/features/mesh/services/stalenessDetector';
@@ -152,7 +151,7 @@ describe('Executor - Mesh Endpoint Single Source of Truth', () => {
             componentConfigs: {},
         };
 
-        it('should store mesh endpoint in componentInstances[commerce-mesh].endpoint (single source)', async () => {
+        it('should store mesh endpoint in meshState.endpoint (single source of truth)', async () => {
             // Given: Project with mesh deployed via wizard step
             const { executeProjectCreation } = await import(
                 '@/features/project-creation/handlers/executor'
@@ -164,9 +163,11 @@ describe('Executor - Mesh Endpoint Single Source of Truth', () => {
                 configWithMeshStepEnabled
             );
 
-            // Then: componentInstances['commerce-mesh'].endpoint IS set correctly
+            // Then: meshState.endpoint IS set correctly (single source of truth)
             expect(savedProject).not.toBeNull();
-            expect(savedProject.componentInstances?.['commerce-mesh']?.endpoint).toBe(meshEndpoint);
+            expect(savedProject.meshState?.endpoint).toBe(meshEndpoint);
+            // And: componentInstances should NOT have endpoint (deprecated)
+            expect(savedProject.componentInstances?.['commerce-mesh']?.endpoint).toBeUndefined();
         });
 
         it('should set correct mesh status in componentInstances', async () => {
@@ -263,11 +264,13 @@ describe('Executor - Mesh Endpoint Single Source of Truth', () => {
                 config
             );
 
-            // Then: Endpoint exists ONLY in componentInstances
-            // Check the single source of truth IS populated
-            expect(savedProject.componentInstances?.['commerce-mesh']?.endpoint).toBe(meshEndpoint);
+            // Then: Endpoint exists ONLY in meshState (single source of truth)
+            expect(savedProject.meshState?.endpoint).toBe(meshEndpoint);
 
-            // Check the duplicate location is NOT populated with this endpoint
+            // Check deprecated location is NOT populated
+            expect(savedProject.componentInstances?.['commerce-mesh']?.endpoint).toBeUndefined();
+
+            // Check componentConfigs is NOT populated with this endpoint
             const allConfigs = savedProject.componentConfigs || {};
             const allMeshEndpoints: string[] = [];
 

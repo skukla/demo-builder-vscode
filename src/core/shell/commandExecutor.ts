@@ -49,7 +49,7 @@ export class CommandExecutor {
      * SECURITY: Prevents denial-of-service via extremely low timeout values
      */
     private validateTimeout(timeout?: number): number {
-        const effectiveTimeout = timeout !== undefined ? timeout : TIMEOUTS.COMMAND_DEFAULT;
+        const effectiveTimeout = timeout !== undefined ? timeout : TIMEOUTS.NORMAL;
 
         if (effectiveTimeout < TIMEOUTS.MIN_COMMAND_TIMEOUT) {
             throw new Error(`Timeout must be at least ${TIMEOUTS.MIN_COMMAND_TIMEOUT}ms (got ${effectiveTimeout}ms)`);

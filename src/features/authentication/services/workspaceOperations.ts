@@ -209,7 +209,7 @@ export async function doSelectWorkspace(
             `aio console workspace select ${workspaceId}`,
             {
                 encoding: 'utf8',
-                timeout: TIMEOUTS.CONFIG_WRITE,
+                timeout: TIMEOUTS.NORMAL,
             },
         );
 

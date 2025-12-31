@@ -1,4 +1,4 @@
-import { getCacheTTLWithJitter } from '@/core/cache/AbstractCacheManager';
+import { getCacheTTLWithJitter } from '@/core/cache/cacheUtils';
 import { getLogger } from '@/core/logging';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import type {
@@ -113,7 +113,7 @@ export class AuthCacheManager {
     /**
      * Set cached authentication status
      */
-    setCachedAuthStatus(isAuthenticated: boolean, ttlMs: number = CACHE_TTL.AUTH_STATUS): void {
+    setCachedAuthStatus(isAuthenticated: boolean, ttlMs: number = CACHE_TTL.MEDIUM): void {
         this.cachedAuthStatus = isAuthenticated;
         const jitteredTTL = getCacheTTLWithJitter(ttlMs);
         this.authCacheExpiry = Date.now() + jitteredTTL;
@@ -149,7 +149,7 @@ export class AuthCacheManager {
      */
     setValidationCache(org: string, isValid: boolean): void {
         const now = Date.now();
-        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.VALIDATION);
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.MEDIUM);
         this.validationCache = {
             org,
             isValid,
@@ -186,7 +186,7 @@ export class AuthCacheManager {
      */
     setCachedOrgList(orgs: AdobeOrg[]): void {
         const now = Date.now();
-        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.ORG_LIST);
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.SHORT);
         this.orgListCache = {
             data: orgs,
             expiry: now + jitteredTTL,
@@ -215,7 +215,7 @@ export class AuthCacheManager {
      */
     setCachedConsoleWhere(context: AdobeConsoleWhereResponse): void {
         const now = Date.now();
-        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.CONSOLE_WHERE);
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.MEDIUM);
         this.consoleWhereCache = {
             data: context,
             expiry: now + jitteredTTL,
@@ -253,7 +253,7 @@ export class AuthCacheManager {
      */
     setCachedTokenInspection(result: { valid: boolean; expiresIn: number; token?: string }): void {
         const now = Date.now();
-        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.TOKEN_INSPECTION);
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.MEDIUM);
         this.tokenInspectionCache = {
             data: result,
             expiry: now + jitteredTTL,

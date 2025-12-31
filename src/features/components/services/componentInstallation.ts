@@ -89,7 +89,7 @@ export class ComponentInstallation {
         this.logger.trace(`[ComponentManager] Executing: ${cloneCommand}`);
 
         // Use configurable timeout or default
-        const cloneTimeout = componentDef.source.timeouts?.clone || TIMEOUTS.COMPONENT_CLONE;
+        const cloneTimeout = componentDef.source.timeouts?.clone || TIMEOUTS.LONG;
 
         const cloneStart = Date.now();
         const result = await commandManager.execute(cloneCommand, {
@@ -181,7 +181,7 @@ export class ComponentInstallation {
                 submoduleCommand,
                 {
                     cwd: componentPath,
-                    timeout: TIMEOUTS.COMPONENT_CLONE,
+                    timeout: TIMEOUTS.LONG,
                     enhancePath: true,
                     shell: DEFAULT_SHELL,
                 },

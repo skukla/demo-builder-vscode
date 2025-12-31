@@ -72,15 +72,26 @@ export function hasMeshDeploymentRecord(project: Project): boolean {
 }
 
 /**
- * Get mesh endpoint from componentInstances (single source of truth)
+ * Get mesh endpoint from meshState (single source of truth)
+ *
+ * Falls back to componentInstances['commerce-mesh'].endpoint for backward
+ * compatibility with old project files.
+ *
+ * See docs/architecture/state-ownership.md for details.
  *
  * @param project - The project to check
  * @returns The mesh endpoint value if found, undefined otherwise
  */
 export function getMeshEndpoint(project: Project): string | undefined {
-    const meshEndpoint = project.componentInstances?.['commerce-mesh']?.endpoint;
-    if (meshEndpoint && typeof meshEndpoint === 'string' && meshEndpoint.trim() !== '') {
-        return meshEndpoint;
+    // Primary: meshState.endpoint (authoritative location)
+    if (project.meshState?.endpoint && typeof project.meshState.endpoint === 'string' && project.meshState.endpoint.trim() !== '') {
+        return project.meshState.endpoint;
+    }
+
+    // Fallback: componentInstances['commerce-mesh'].endpoint (deprecated, for old projects)
+    const legacyEndpoint = project.componentInstances?.['commerce-mesh']?.endpoint;
+    if (legacyEndpoint && typeof legacyEndpoint === 'string' && legacyEndpoint.trim() !== '') {
+        return legacyEndpoint;
     }
 
     return undefined;

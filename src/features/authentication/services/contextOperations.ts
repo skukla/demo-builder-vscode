@@ -49,7 +49,7 @@ export async function getConsoleWhereContext(
         debugLogger.debug('[Context Ops] Fetching context from Adobe CLI');
         const result = await deps.commandManager.execute(
             'aio console where --json',
-            { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
+            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
         );
 
         if (result.code === 0 && result.stdout) {

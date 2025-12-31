@@ -108,9 +108,12 @@ export class StalenessDetectorService {
 
     /**
      * Update mesh state after deployment
+     *
+     * @param project - The project to update
+     * @param endpoint - The deployed mesh endpoint URL
      */
-    async updateMeshState(project: Project): Promise<void> {
-        return updateMeshStateImpl(project, this.logger);
+    async updateMeshState(project: Project, endpoint?: string): Promise<void> {
+        return updateMeshStateImpl(project, endpoint, this.logger);
     }
 
     /**
@@ -231,7 +234,7 @@ async function fetchDeployedMeshConfigImpl(logger: Logger): Promise<Record<strin
 
         // Query the deployed mesh configuration
         const result = await commandManager.execute('aio api-mesh:get --active --json', {
-            timeout: TIMEOUTS.MESH_DESCRIBE,
+            timeout: TIMEOUTS.NORMAL,
         });
 
         // Parse the JSON response
@@ -499,8 +502,15 @@ export async function detectMeshChanges(
 
 /**
  * Implementation: Update mesh state after deployment
+ *
+ * Sets meshState with env vars, source hash, and endpoint (single source of truth).
+ * See docs/architecture/state-ownership.md for details.
+ *
+ * @param project - The project to update
+ * @param endpoint - The deployed mesh endpoint URL (authoritative)
+ * @param logger - Logger instance
  */
-async function updateMeshStateImpl(project: Project, logger: Logger): Promise<void> {
+async function updateMeshStateImpl(project: Project, endpoint: string | undefined, logger: Logger): Promise<void> {
     const meshInstance = project.componentInstances?.['commerce-mesh'];
     if (!meshInstance?.path) {
         return;
@@ -515,6 +525,7 @@ async function updateMeshStateImpl(project: Project, logger: Logger): Promise<vo
         envVars,
         sourceHash,
         lastDeployed: new Date().toISOString(),
+        endpoint, // AUTHORITATIVE location for mesh endpoint
         // Clear any previous decline state since mesh is now deployed
         userDeclinedUpdate: undefined,
         declinedAt: undefined,
@@ -522,10 +533,16 @@ async function updateMeshStateImpl(project: Project, logger: Logger): Promise<vo
 }
 
 /**
- * Backward-compatible export: Update mesh state after deployment
+ * Update mesh state after deployment
+ *
+ * Sets meshState.endpoint as the single source of truth for mesh endpoint.
+ * See docs/architecture/state-ownership.md for details.
+ *
+ * @param project - The project to update
+ * @param endpoint - The deployed mesh endpoint URL (optional, for backward compatibility)
  */
-export async function updateMeshState(project: Project): Promise<void> {
-    return updateMeshStateImpl(project, getDefaultLogger());
+export async function updateMeshState(project: Project, endpoint?: string): Promise<void> {
+    return updateMeshStateImpl(project, endpoint, getDefaultLogger());
 }
 
 /**

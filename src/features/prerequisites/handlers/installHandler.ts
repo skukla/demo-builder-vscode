@@ -367,7 +367,7 @@ export async function handleInstallPrerequisite(
                         try {
                             const commandManager = await import('@/core/di').then(m => m.ServiceLocator.getCommandExecutor());
                             await commandManager.execute(cmd, {
-                                timeout: TIMEOUTS.PREREQUISITE_INSTALL,
+                                timeout: TIMEOUTS.LONG,
                                 useNodeVersion: nodeVer,
                             });
                             context.logger.debug(`[Prerequisites] Plugin ${plugin.name} installed${versionLabel}`);
@@ -407,9 +407,9 @@ export async function handleInstallPrerequisite(
 
             // Log to all appropriate channels
             if (isTimeoutErr) {
-                context.logger.warn(`[Prerequisites] ${prereq.name} verification timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`);
-                context.stepLogger?.log('prerequisites', `⏱️ ${prereq.name} verification timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s) - installation may have succeeded`, 'warn');
-                context.debugLogger.debug('[Prerequisites] Verification timeout details:', { prereq: prereq.id, timeout: TIMEOUTS.PREREQUISITE_CHECK, error: errorMessage });
+                context.logger.warn(`[Prerequisites] ${prereq.name} verification timed out after ${TIMEOUTS.POLL.INTERVAL / 1000}s`);
+                context.stepLogger?.log('prerequisites', `⏱️ ${prereq.name} verification timed out (${TIMEOUTS.POLL.INTERVAL / 1000}s) - installation may have succeeded`, 'warn');
+                context.debugLogger.debug('[Prerequisites] Verification timeout details:', { prereq: prereq.id, timeout: TIMEOUTS.POLL.INTERVAL, error: errorMessage });
             } else {
                 context.logger.error(`[Prerequisites] Failed to verify ${prereq.name} after installation:`, error as Error);
                 context.stepLogger?.log('prerequisites', `✗ ${prereq.name} verification failed: ${errorMessage}`, 'error');
@@ -431,7 +431,7 @@ export async function handleInstallPrerequisite(
                 required: !prereq.optional,
                 installed: false,
                 message: isTimeoutErr
-                    ? `Installation completed but verification timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000} seconds. Click Recheck to verify.`
+                    ? `Installation completed but verification timed out after ${TIMEOUTS.POLL.INTERVAL / 1000} seconds. Click Recheck to verify.`
                     : `Installation completed but verification failed: ${errorMessage}. Click Recheck to verify.`,
                 canInstall: false,
             });

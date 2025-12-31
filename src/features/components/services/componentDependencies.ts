@@ -49,7 +49,7 @@ export class ComponentDependencies {
 
         this.logger.debug(`[ComponentManager] Running: ${installCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`);
 
-        const installTimeout = componentDef.source?.timeouts?.install || TIMEOUTS.COMPONENT_INSTALL;
+        const installTimeout = componentDef.source?.timeouts?.install || TIMEOUTS.VERY_LONG;
 
         const installResult = await commandManager.execute(installCommand, {
             cwd: componentPath,
@@ -67,7 +67,7 @@ export class ComponentDependencies {
         const buildScript = componentDef.configuration?.buildScript;
         if (buildScript) {
             const buildCommand = `npm run ${buildScript}`;
-            const buildTimeout = TIMEOUTS.COMPONENT_BUILD;
+            const buildTimeout = TIMEOUTS.LONG;
 
             const buildResult = await commandManager.execute(buildCommand, {
                 cwd: componentPath,
@@ -118,7 +118,7 @@ export class ComponentDependencies {
         this.logger.debug(`[ComponentManager] Running: ${installCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`);
 
         // Use configurable timeout or default
-        const installTimeout = componentDef.source?.timeouts?.install || TIMEOUTS.COMPONENT_INSTALL;
+        const installTimeout = componentDef.source?.timeouts?.install || TIMEOUTS.VERY_LONG;
 
         const installResult = await commandManager.execute(installCommand, {
             cwd: componentPath,
@@ -136,7 +136,7 @@ export class ComponentDependencies {
         const buildScript = componentDef.configuration?.buildScript;
         if (buildScript) {
             const buildCommand = `npm run ${buildScript}`;
-            const buildTimeout = TIMEOUTS.COMPONENT_BUILD;
+            const buildTimeout = TIMEOUTS.LONG;
 
             const buildResult = await commandManager.execute(buildCommand, {
                 cwd: componentPath,

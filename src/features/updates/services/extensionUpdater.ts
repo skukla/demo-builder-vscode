@@ -73,7 +73,7 @@ export class ExtensionUpdater {
         }
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), TIMEOUTS.UPDATE_DOWNLOAD);
+        const timeout = setTimeout(() => controller.abort(), TIMEOUTS.AUTH.BROWSER);
 
         try {
             const response = await fetch(url, { signal: controller.signal });

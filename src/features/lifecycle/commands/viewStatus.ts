@@ -48,7 +48,7 @@ export class ViewStatusCommand extends BaseCommand {
             '',
             '### API Mesh',
             `- **Status:** ${meshComponent?.status || 'Not deployed'}`,
-            `- **Endpoint:** ${meshComponent?.endpoint || 'N/A'}`,
+            `- **Endpoint:** ${project.meshState?.endpoint || meshComponent?.endpoint || 'N/A'}`,
             '',
             '### Commerce',
             `- **Type:** ${project.commerce?.type || 'Not configured'}`,

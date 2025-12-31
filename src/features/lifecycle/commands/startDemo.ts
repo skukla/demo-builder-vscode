@@ -30,10 +30,10 @@ export class StartDemoCommand extends BaseCommand {
     private static lock = new ExecutionLock('StartDemo');
 
     /** Maximum time to wait for demo to start */
-    private readonly STARTUP_TIMEOUT = TIMEOUTS.DEMO_STARTUP_TIMEOUT;
+    private readonly STARTUP_TIMEOUT = TIMEOUTS.NORMAL;
 
     /** Interval between port availability checks */
-    private readonly PORT_CHECK_INTERVAL = TIMEOUTS.PORT_CHECK_INTERVAL;
+    private readonly PORT_CHECK_INTERVAL = TIMEOUTS.POLL.INTERVAL;
 
     /**
      * Get ProcessCleanup instance (lazy initialization)
@@ -90,7 +90,7 @@ export class StartDemoCommand extends BaseCommand {
 
         // Find PID(s) using lsof - may return multiple PIDs
         const result = await commandManager.execute(`lsof -ti:${port}`, {
-            timeout: TIMEOUTS.PORT_CHECK,
+            timeout: TIMEOUTS.QUICK,
             configureTelemetry: false,
             useNodeVersion: null,
             enhancePath: false,
@@ -127,8 +127,8 @@ export class StartDemoCommand extends BaseCommand {
         }
 
         // Verify port is actually free now (wait up to 2 seconds)
-        const maxWait = TIMEOUTS.DEMO_STOP_WAIT;
-        const checkInterval = TIMEOUTS.PROCESS_CHECK_INTERVAL;
+        const maxWait = TIMEOUTS.POLL.MAX;
+        const checkInterval = TIMEOUTS.POLL.PROCESS_CHECK;
         const startTime = Date.now();
 
         while (Date.now() - startTime < maxWait) {
@@ -197,7 +197,7 @@ export class StartDemoCommand extends BaseCommand {
                 try {
                     // SECURITY: port is validated above as a valid integer
                     const result = await commandManager.execute(`lsof -i:${port}`, {
-                        timeout: TIMEOUTS.PORT_CHECK,
+                        timeout: TIMEOUTS.QUICK,
                         configureTelemetry: false,
                         useNodeVersion: null,
                         enhancePath: false,
@@ -368,7 +368,7 @@ export class StartDemoCommand extends BaseCommand {
 
                 // Update notification in place and pause briefly so user can see success
                 progress.report({ message: `✓ Started at http://localhost:${port}` });
-                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.LOADING_MIN_DISPLAY));
+                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.MIN_LOADING));
             });
 
             // Reset restart notification flag (user has restarted)

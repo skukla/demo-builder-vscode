@@ -33,7 +33,7 @@ jest.mock('fs', () => ({
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        API_MESH_UPDATE: 180000,
+        LONG: 180000, // Mesh operations (replaces API_MESH_UPDATE)
     },
 }));
 

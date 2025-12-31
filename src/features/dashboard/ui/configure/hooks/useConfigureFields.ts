@@ -50,8 +50,14 @@ export function useConfigureFields({
     }, [setComponentConfigs, setTouchedFields]);
 
     const getFieldValue = useCallback((field: UniqueField): string | boolean | undefined => {
-        // Special handling for MESH_ENDPOINT - read from mesh component's endpoint
+        // Special handling for MESH_ENDPOINT - read from meshState (authoritative)
+        // with fallback to componentInstance for backward compatibility
         if (field.key === 'MESH_ENDPOINT') {
+            // Primary: meshState.endpoint (authoritative location)
+            if (project.meshState?.endpoint) {
+                return project.meshState.endpoint;
+            }
+            // Fallback: componentInstances (legacy, for old projects)
             const meshComponent = project.componentInstances?.['commerce-mesh'];
             if (meshComponent?.endpoint) {
                 return meshComponent.endpoint;

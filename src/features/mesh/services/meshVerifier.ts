@@ -74,7 +74,7 @@ async function fetchMeshInfoFromAdobeIOImpl(logger: Logger): Promise<{ meshId?: 
         const result = await commandManager.execute(
             'aio api-mesh:describe',
             {
-                timeout: TIMEOUTS.MESH_DESCRIBE,
+                timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
                 useNodeVersion: getMeshNodeVersion(),
                 enhancePath: true,
@@ -148,10 +148,8 @@ async function tryRecoverMeshIdImpl(meshComponent: ComponentInstance, logger: Lo
             meshStatus: 'deployed',
         };
 
-        // Update endpoint if we got one
-        if (meshInfo.endpoint) {
-            meshComponent.endpoint = meshInfo.endpoint;
-        }
+        // Note: Endpoint is NOT written here - that's handled by deployMesh.ts
+        // meshComponent.endpoint is the single source of truth, written only during actual deployment
 
         return meshInfo.meshId;
     }
@@ -196,7 +194,7 @@ async function verifyMeshDeploymentImpl(project: Project, logger: Logger): Promi
         const result = await commandManager.execute(
             'aio api-mesh:describe',
             {
-                timeout: TIMEOUTS.MESH_DESCRIBE,
+                timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
                 useNodeVersion: getMeshNodeVersion(),
                 enhancePath: true,
@@ -292,12 +290,12 @@ function syncMeshStatusImpl(
         // Mesh doesn't exist in Adobe I/O - clear meshState
         project.meshState = undefined;
         meshComponent.status = 'ready'; // Mesh component exists but not deployed
-        meshComponent.endpoint = undefined;
+        // Note: Endpoint is NOT cleared here - that's managed by deployMesh.ts
+        // The single source of truth for endpoint writes is the deployment command
     } else {
-        // Mesh exists - update endpoint if needed
-        if (verificationResult.data.endpoint && verificationResult.data.endpoint !== meshComponent.endpoint) {
-            meshComponent.endpoint = verificationResult.data.endpoint;
-        }
+        // Mesh exists - status reflects deployment state
+        // Note: Endpoint is NOT updated here - that's managed by deployMesh.ts
+        // The single source of truth for endpoint writes is the deployment command
 
         // Ensure status reflects reality
         if (meshComponent.status !== 'deployed' && project.meshState) {

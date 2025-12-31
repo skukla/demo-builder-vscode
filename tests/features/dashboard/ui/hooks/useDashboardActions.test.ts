@@ -9,10 +9,15 @@
 
 import { renderHook, act } from '@testing-library/react';
 
-// Mock TIMEOUTS - must be before import
+// Mock TIMEOUTS - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        HOVER_SUPPRESSION_DELAY: 500,
+        UI: {
+            UPDATE_DELAY: 100,
+            ANIMATION: 150,
+            TRANSITION: 300,
+        },
+        HOVER_SUPPRESSION_DELAY: 500, // Custom UI timing
     },
 }));
 

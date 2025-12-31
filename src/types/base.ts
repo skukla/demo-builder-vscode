@@ -40,10 +40,12 @@ export interface Project {
     /** Optional addons selected during project creation (e.g., ['demo-inspector']) */
     selectedAddons?: string[];
     // API Mesh deployment state (tracks changes that require redeployment)
+    // AUTHORITATIVE location for mesh endpoint - see docs/architecture/state-ownership.md
     meshState?: {
         envVars: Record<string, string>;
         sourceHash: string | null;
         lastDeployed: string; // ISO date string
+        endpoint?: string; // AUTHORITATIVE mesh GraphQL endpoint URL
         userDeclinedUpdate?: boolean; // User clicked "Later" on redeploy prompt
         declinedAt?: string; // ISO date string when user declined
     };
@@ -80,7 +82,10 @@ export interface ComponentInstance {
     status: ComponentStatus;
     port?: number;           // For components that run locally
     pid?: number;            // Process ID if running
-    endpoint?: string;       // For deployed components (e.g., API Mesh endpoint)
+    // DEPRECATED: Use project.meshState.endpoint instead
+    // Kept for backward compatibility with old project files only
+    /** @deprecated Use project.meshState.endpoint instead */
+    endpoint?: string;
     lastUpdated?: Date;
     metadata?: Record<string, unknown>; // Additional component-specific data
 }

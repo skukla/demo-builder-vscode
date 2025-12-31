@@ -258,8 +258,8 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         // SOP §1: Using TIMEOUTS constants instead of magic numbers
         this.communicationManager = await createWebviewCommunication(this.panel, {
             enableLogging: true,
-            handshakeTimeout: TIMEOUTS.WEBVIEW_HANDSHAKE_EXTENDED,
-            messageTimeout: TIMEOUTS.WEBVIEW_MESSAGE_TIMEOUT,
+            handshakeTimeout: TIMEOUTS.NORMAL,
+            messageTimeout: TIMEOUTS.NORMAL,
             maxRetries: 3,
         });
 
@@ -397,7 +397,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
             // SOP §1: Using TIMEOUTS.UI_UPDATE_DELAY
             setTimeout(() => {
                 disposalCallback(webviewId);
-            }, TIMEOUTS.UI_UPDATE_DELAY);
+            }, TIMEOUTS.UI.UPDATE_DELAY);
         }
     }
 

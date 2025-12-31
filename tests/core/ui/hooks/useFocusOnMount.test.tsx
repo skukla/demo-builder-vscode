@@ -103,7 +103,7 @@ describe('useFocusOnMount', () => {
             });
 
             // Advance to timeout
-            jest.advanceTimersByTime(TIMEOUTS.FOCUS_FALLBACK);
+            jest.advanceTimersByTime(TIMEOUTS.UI.FOCUS_FALLBACK);
 
             expect(focusSpy).toHaveBeenCalled();
         });
@@ -226,7 +226,7 @@ describe('useFocusOnMount', () => {
                     return ref;
                 });
 
-                jest.advanceTimersByTime(TIMEOUTS.FOCUS_FALLBACK);
+                jest.advanceTimersByTime(TIMEOUTS.UI.FOCUS_FALLBACK);
             }).not.toThrow();
         });
     });

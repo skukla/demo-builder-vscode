@@ -6,30 +6,34 @@
  *
  * IMPORTANT: Keep these values in sync with the backend timeoutConfig.ts
  *
+ * Step 4: Timeout Simplification
+ * - Values now align with TIMEOUTS.UI and TIMEOUTS.POLL sub-objects
+ * - Comments reference the new semantic structure
+ *
  * @see src/core/utils/timeoutConfig.ts for the authoritative backend constants
  */
 export const FRONTEND_TIMEOUTS = {
     /**
      * Delay for scroll animations to complete before secondary actions.
-     * Matches TIMEOUTS.SCROLL_ANIMATION from backend.
+     * Matches TIMEOUTS.UI.ANIMATION from backend (150ms).
      */
     SCROLL_ANIMATION: 150,
 
     /**
      * Delay for UI state updates to settle before DOM operations.
-     * Matches TIMEOUTS.UI_UPDATE_DELAY from backend.
+     * Matches TIMEOUTS.UI.UPDATE_DELAY from backend (100ms).
      */
     UI_UPDATE_DELAY: 100,
 
     /**
      * Standard debounce delay for UI interactions.
-     * Matches TIMEOUTS.UI_DEBOUNCE from backend.
+     * Same as TIMEOUTS.UI.UPDATE_DELAY from backend (100ms).
      */
     UI_DEBOUNCE: 100,
 
     /**
      * Delay before continuing prerequisite checks after installation.
-     * Matches TIMEOUTS.PROGRESS_MESSAGE_DELAY from backend.
+     * Matches TIMEOUTS.POLL.INITIAL from backend (500ms).
      */
     CONTINUE_CHECK_DELAY: 500,
 
@@ -48,7 +52,7 @@ export const FRONTEND_TIMEOUTS = {
 
     /**
      * Minimum display duration for loading indicators and feedback states.
-     * Matches TIMEOUTS.LOADING_MIN_DISPLAY from backend.
+     * Matches TIMEOUTS.UI.MIN_LOADING from backend (1500ms).
      * Used for copy-to-clipboard feedback, loading spinners, etc.
      */
     LOADING_MIN_DISPLAY: 1500,
@@ -56,6 +60,7 @@ export const FRONTEND_TIMEOUTS = {
     /**
      * Double-click prevention delay for buttons that open external resources.
      * Prevents multiple browser tabs from opening on rapid clicks.
+     * Same as TIMEOUTS.POLL.INTERVAL from backend (1000ms).
      */
     DOUBLE_CLICK_PREVENTION: 1000,
 
@@ -63,6 +68,7 @@ export const FRONTEND_TIMEOUTS = {
      * Debounce delay for component selection changes.
      * Used by useComponentSelection hook to batch rapid selection changes
      * before updating state and sending to backend.
+     * Same as TIMEOUTS.POLL.INITIAL from backend (500ms).
      */
     COMPONENT_DEBOUNCE: 500,
 } as const;

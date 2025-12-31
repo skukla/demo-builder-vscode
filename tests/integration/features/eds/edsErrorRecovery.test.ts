@@ -33,17 +33,17 @@ jest.mock('@/core/logging', () => ({
     Logger: jest.fn(() => mockLogger),
 }));
 
-// Mock timeout config
+// Mock timeout config - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        EDS_HELIX_CONFIG: 30000,
-        EDS_CODE_SYNC_POLL: 5000,
-        EDS_CODE_SYNC_TOTAL: 125000,
-        COMPONENT_CLONE: 120000,
-        DA_LIVE_COPY: 120000,
-        DA_LIVE_API: 30000,
-        POLL_INITIAL_DELAY: 1000,
-        POLL_MAX_DELAY: 10000,
+        NORMAL: 30000, // Standard API calls
+        LONG: 180000, // Complex operations
+        POLL: {
+            INITIAL: 500,
+            MAX: 5000,
+            INTERVAL: 1000,
+            PROCESS_CHECK: 100,
+        },
     },
 }));
 

@@ -252,7 +252,7 @@ export async function selectOrganization(
             `aio console org select ${orgId}`,
             {
                 encoding: 'utf8',
-                timeout: TIMEOUTS.CONFIG_WRITE,
+                timeout: TIMEOUTS.NORMAL,
             },
         );
 

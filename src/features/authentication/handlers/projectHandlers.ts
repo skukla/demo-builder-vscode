@@ -69,7 +69,7 @@ export async function handleGetProjects(
         const projects = await withTimeout(
             projectsPromise,
             {
-                timeoutMs: TIMEOUTS.PROJECT_LIST,
+                timeoutMs: TIMEOUTS.NORMAL,
                 timeoutMessage: 'Request timed out. Please check your connection and try again.',
             },
         );

@@ -17,13 +17,17 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     },
 }));
 
-// Mock TIMEOUTS
+// Mock TIMEOUTS - uses semantic categories plus mesh-specific timing
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        MESH_DEPLOY_TOTAL: 180000,
-        MESH_VERIFY_POLL_INTERVAL: 10000,
-        MESH_VERIFY_INITIAL_WAIT: 20000,
-        PROGRESS_UPDATE_INTERVAL: 1000,
+        LONG: 180000, // Semantic category for mesh deployments
+        MESH_DEPLOY_TOTAL: 180000, // Total mesh deployment timeout (source uses this)
+        MESH_VERIFY_POLL_INTERVAL: 10000, // Mesh-specific polling interval
+        MESH_VERIFY_INITIAL_WAIT: 20000, // Mesh-specific initial wait
+        PROGRESS_UPDATE_INTERVAL: 1000, // Elapsed time tracking interval (source uses this)
+        POLL: {
+            INTERVAL: 1000, // Standard polling
+        },
     },
 }));
 

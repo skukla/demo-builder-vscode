@@ -237,7 +237,7 @@ export class DaLiveOrgOperations {
     private async fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
         for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try {
-                const response = await fetch(url, { ...options, signal: AbortSignal.timeout(TIMEOUTS.DA_LIVE_API) });
+                const response = await fetch(url, { ...options, signal: AbortSignal.timeout(TIMEOUTS.NORMAL) });
 
                 if (response.status === 429) {
                     const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);

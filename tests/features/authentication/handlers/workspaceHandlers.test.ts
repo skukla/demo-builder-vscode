@@ -17,7 +17,7 @@ import * as securityValidation from '@/core/validation';
 jest.mock('@/core/validation');
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        WORKSPACE_LIST: 30000
+        NORMAL: 30000 // Standard API calls (replaces WORKSPACE_LIST)
     }
 }));
 jest.mock('@/core/utils/promiseUtils', () => ({

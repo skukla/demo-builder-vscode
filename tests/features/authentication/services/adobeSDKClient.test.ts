@@ -35,7 +35,8 @@ jest.mock('@/core/validation', () => ({
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        API_CALL: 10000,
+        NORMAL: 30000, // Standard API calls (replaces API_CALL)
+        QUICK: 5000, // Fast operations (replaces SDK_INIT, TOKEN_READ)
     },
 }));
 

@@ -263,7 +263,7 @@ export class HelixConfigPhase {
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify(configBody),
-                signal: AbortSignal.timeout(TIMEOUTS.EDS_HELIX_CONFIG),
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
             });
 
             if (!response.ok) {
@@ -306,7 +306,7 @@ export class HelixConfigPhase {
                     try {
                         const response = await fetch(configUrl, {
                             method: 'GET',
-                            signal: AbortSignal.timeout(TIMEOUTS.EDS_CODE_SYNC_POLL),
+                            signal: AbortSignal.timeout(TIMEOUTS.POLL.INTERVAL),
                         });
                         return response.ok;
                     } catch {
@@ -316,9 +316,9 @@ export class HelixConfigPhase {
                 {
                     name: 'helix-config-verify',
                     maxAttempts: 10,
-                    initialDelay: TIMEOUTS.POLL_INITIAL_DELAY,
-                    maxDelay: TIMEOUTS.POLL_MAX_DELAY,
-                    timeout: TIMEOUTS.EDS_HELIX_CONFIG,
+                    initialDelay: TIMEOUTS.POLL.INITIAL,
+                    maxDelay: TIMEOUTS.POLL.MAX,
+                    timeout: TIMEOUTS.NORMAL,
                 },
             );
 
@@ -351,7 +351,7 @@ export class HelixConfigPhase {
                     try {
                         const response = await fetch(codeUrl, {
                             method: 'GET',
-                            signal: AbortSignal.timeout(TIMEOUTS.EDS_CODE_SYNC_POLL),
+                            signal: AbortSignal.timeout(TIMEOUTS.POLL.INTERVAL),
                         });
                         return response.ok;
                     } catch {
@@ -361,9 +361,9 @@ export class HelixConfigPhase {
                 {
                     name: 'code-sync',
                     maxAttempts: MAX_CODE_SYNC_ATTEMPTS,
-                    initialDelay: TIMEOUTS.EDS_CODE_SYNC_POLL,
-                    maxDelay: TIMEOUTS.EDS_CODE_SYNC_POLL,
-                    timeout: TIMEOUTS.EDS_CODE_SYNC_TOTAL,
+                    initialDelay: TIMEOUTS.POLL.INTERVAL,
+                    maxDelay: TIMEOUTS.POLL.INTERVAL,
+                    timeout: TIMEOUTS.LONG,
                 },
             );
 

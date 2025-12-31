@@ -2,12 +2,11 @@
  * DeployMeshCommand Storage Tests
  *
  * Tests verifying mesh endpoint storage behavior:
- * - Mesh endpoint stored ONLY in componentInstances['commerce-mesh'].endpoint
- * - Mesh endpoint NOT persisted to componentConfigs (redundant write removed)
+ * - Mesh endpoint stored ONLY in meshState.endpoint (single source of truth)
+ * - Mesh endpoint NOT persisted to componentConfigs or componentInstances.endpoint
  *
- * These tests verify Step 2 of the mesh endpoint single-source-of-truth refactor.
- * Step 1 migrated readers to use componentInstances['commerce-mesh'].endpoint.
- * Step 2 removes the redundant write to componentConfigs.
+ * The mesh endpoint is now stored in project.meshState.endpoint as the
+ * authoritative location. See docs/architecture/state-ownership.md for details.
  *
  * Target Coverage: 85%+
  */
@@ -40,7 +39,15 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     },
 }));
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    updateMeshState: jest.fn().mockResolvedValue(undefined),
+    updateMeshState: jest.fn().mockImplementation(async (project, endpoint) => {
+        // Simulate the actual behavior: set meshState.endpoint
+        project.meshState = {
+            envVars: {},
+            sourceHash: null,
+            lastDeployed: new Date().toISOString(),
+            endpoint,
+        };
+    }),
 }));
 jest.mock('@/features/mesh/services/meshDeploymentVerifier', () => ({
     waitForMeshDeployment: jest.fn().mockResolvedValue({
@@ -201,7 +208,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             }
         });
 
-        it('should store mesh endpoint ONLY in componentInstances["commerce-mesh"].endpoint', async () => {
+        it('should store mesh endpoint in meshState.endpoint (single source of truth)', async () => {
             // Given: A project with mesh component
             const testProject = createTestProject();
             mockStateManager.getCurrentProject.mockResolvedValue(testProject);
@@ -215,13 +222,15 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             );
             await command.execute();
 
-            // Then: Endpoint should be stored in componentInstances['commerce-mesh'].endpoint
+            // Then: Endpoint should be stored in meshState.endpoint (authoritative location)
+            // See docs/architecture/state-ownership.md
             expect(capturedProject).not.toBeNull();
-            expect(capturedProject!.componentInstances).toBeDefined();
-            expect(capturedProject!.componentInstances!['commerce-mesh']).toBeDefined();
-            expect(capturedProject!.componentInstances!['commerce-mesh'].endpoint).toBe(
+            expect(capturedProject!.meshState).toBeDefined();
+            expect(capturedProject!.meshState!.endpoint).toBe(
                 'https://test-mesh.adobe.io/graphql'
             );
+            // And: componentInstances should NOT have endpoint (deprecated)
+            expect(capturedProject!.componentInstances!['commerce-mesh'].endpoint).toBeUndefined();
         });
 
         it('should update mesh component status to deployed', async () => {
@@ -282,9 +291,9 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             );
             await command.execute();
 
-            // Then: Deployment should succeed and endpoint stored in mesh component
+            // Then: Deployment should succeed and endpoint stored in meshState (single source of truth)
             expect(capturedProject).not.toBeNull();
-            expect(capturedProject!.componentInstances!['commerce-mesh'].endpoint).toBe(
+            expect(capturedProject!.meshState!.endpoint).toBe(
                 'https://test-mesh.adobe.io/graphql'
             );
             // And: componentConfigs should not have any MESH_ENDPOINT entries

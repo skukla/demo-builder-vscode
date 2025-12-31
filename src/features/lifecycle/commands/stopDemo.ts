@@ -59,7 +59,7 @@ export class StopDemoCommand extends BaseCommand {
         try {
             const commandExecutor = ServiceLocator.getCommandExecutor();
             const result = await commandExecutor.execute(`lsof -ti:${port}`, {
-                timeout: TIMEOUTS.PORT_CHECK,
+                timeout: TIMEOUTS.QUICK,
                 configureTelemetry: false,
                 useNodeVersion: null,
                 enhancePath: false,
@@ -197,7 +197,7 @@ export class StopDemoCommand extends BaseCommand {
 
                 // Update notification in place and pause briefly so user can see success
                 progress.report({ message: '✓ Demo stopped' });
-                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.LOADING_MIN_DISPLAY));
+                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.MIN_LOADING));
             });
 
             // Status bar update only (notification already shown above)

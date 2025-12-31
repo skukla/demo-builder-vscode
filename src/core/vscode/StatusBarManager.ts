@@ -128,9 +128,11 @@ export class StatusBarManager {
             tooltipLines.push(`Port: ${port}`);
         }
 
+        // Read endpoint from meshState (authoritative) with fallback to componentInstance (legacy)
         const meshComponent = project.componentInstances?.['commerce-mesh'];
-        if (meshComponent?.endpoint) {
-            tooltipLines.push(`Mesh: ${meshComponent.status || 'deployed'}`);
+        const meshEndpoint = project.meshState?.endpoint || meshComponent?.endpoint;
+        if (meshEndpoint) {
+            tooltipLines.push(`Mesh: ${meshComponent?.status || 'deployed'}`);
         }
 
         tooltipLines.push('', 'Click to open Project Dashboard');

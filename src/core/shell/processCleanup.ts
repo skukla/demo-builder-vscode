@@ -49,7 +49,7 @@ export interface ProcessCleanupOptions {
 
 export class ProcessCleanup {
     private gracefulTimeout: number;
-    private readonly checkInterval = TIMEOUTS.PROCESS_CHECK_INTERVAL;
+    private readonly checkInterval = TIMEOUTS.POLL.PROCESS_CHECK;
 
     constructor(options: ProcessCleanupOptions = {}) {
         this.gracefulTimeout = options.gracefulTimeout ?? 5000;

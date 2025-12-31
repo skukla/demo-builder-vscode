@@ -23,7 +23,7 @@ jest.mock('@/core/di', () => ({
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        MESH_DESCRIBE: 30000,
+        NORMAL: 30000, // Standard operations (replaces MESH_DESCRIBE)
     },
 }));
 

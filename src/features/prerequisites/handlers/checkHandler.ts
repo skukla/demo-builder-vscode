@@ -103,7 +103,7 @@ export async function handleCheckPrerequisites(
         });
 
         // Small delay to ensure UI updates before we start checking
-        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI_UPDATE_DELAY));
+        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.UPDATE_DELAY));
 
         // Check each prerequisite
         for (let i = 0; i < (prerequisites?.length ?? 0); i++) {

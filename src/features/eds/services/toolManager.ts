@@ -256,7 +256,7 @@ export class ToolManager {
         scriptName: string,
         options: ToolExecutionOptions = {},
     ): Promise<ToolExecutionResult> {
-        const { onOutput, timeout = TIMEOUTS.DATA_INGESTION, dryRun = false } = options;
+        const { onOutput, timeout = TIMEOUTS.EXTENDED, dryRun = false } = options;
 
         // Build command
         let command = `npm run ${scriptName}`;
@@ -328,7 +328,7 @@ export class ToolManager {
 
         try {
             const result = await executor.execute(command, {
-                timeout: TIMEOUTS.TOOL_CLONE,
+                timeout: TIMEOUTS.LONG,
             });
 
             if (result.code !== 0) {
@@ -373,7 +373,7 @@ export class ToolManager {
         const command = `git clone --depth 1 --branch ${DATA_REPO_CONFIG.branch} ${DATA_REPO_CONFIG.repoUrl} ${this.dataRepoPath}`;
 
         const result = await executor.execute(command, {
-            timeout: TIMEOUTS.TOOL_CLONE,
+            timeout: TIMEOUTS.LONG,
         });
 
         if (result.code !== 0) {
@@ -395,7 +395,7 @@ export class ToolManager {
         const executor = ServiceLocator.getCommandExecutor();
         const result = await executor.execute(`npm install ${NPM_INSTALL_FLAGS}`, {
             cwd: this.toolPath,
-            timeout: TIMEOUTS.TOOL_INSTALL,
+            timeout: TIMEOUTS.LONG,
             useNodeVersion: NODE_VERSION,
         });
 

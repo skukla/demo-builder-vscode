@@ -290,7 +290,7 @@ describe('loadingHTML', () => {
             expect(mockPanel.webview.html).toContain('Loading...');
 
             // Complete
-            await advanceTime(TIMEOUTS.LOADING_MIN_DISPLAY);
+            await advanceTime(TIMEOUTS.UI.MIN_LOADING);
             await promise;
         });
 

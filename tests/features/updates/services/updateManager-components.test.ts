@@ -29,10 +29,10 @@ jest.mock('@/core/logging', () => ({
     })),
 }));
 
-// Mock timeoutConfig
+// Mock timeoutConfig - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        UPDATE_CHECK: 10000,
+        QUICK: 5000, // Fast operations (replaces UPDATE_CHECK)
     },
 }));
 

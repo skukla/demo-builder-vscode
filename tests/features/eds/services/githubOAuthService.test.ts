@@ -16,10 +16,13 @@ jest.mock('vscode', () => ({
     },
 }));
 
-// Mock timeoutConfig
+// Mock timeoutConfig - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        OAUTH_FLOW: 5000, // Short timeout for tests
+        LONG: 5000, // Short timeout for tests (normally AUTH.OAUTH but using LONG for test speed)
+        AUTH: {
+            OAUTH: 5000, // OAuth flow timeout (short for tests)
+        },
     },
 }));
 

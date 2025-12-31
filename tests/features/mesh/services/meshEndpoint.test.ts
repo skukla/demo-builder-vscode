@@ -12,11 +12,11 @@ jest.mock('@/core/validation', () => ({
     validateMeshId: jest.fn(),
 }));
 
-// Mock timeout config
+// Mock timeout config - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        API_CALL: 30000,
-        CONFIG_READ: 5000,
+        NORMAL: 30000, // Standard API calls (replaces API_CALL)
+        QUICK: 5000, // Fast operations (replaces CONFIG_READ)
     },
 }));
 

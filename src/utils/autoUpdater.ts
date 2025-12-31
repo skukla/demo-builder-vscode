@@ -67,7 +67,7 @@ export class AutoUpdater {
                 headers: {
                     'Accept': 'application/vnd.github.v3+json',
                 },
-                timeout: TIMEOUTS.UPDATE_CHECK,
+                timeout: TIMEOUTS.QUICK,
             });
 
             // Get the latest release based on channel
@@ -150,7 +150,7 @@ export class AutoUpdater {
             
             const response = await axios.get(updateInfo.downloadUrl, {
                 responseType: 'arraybuffer',
-                timeout: TIMEOUTS.UPDATE_DOWNLOAD,
+                timeout: TIMEOUTS.AUTH.BROWSER,
                 onDownloadProgress: (progressEvent) => {
                     const percentCompleted = progressEvent.total 
                         ? Math.round((progressEvent.loaded * 100) / progressEvent.total)

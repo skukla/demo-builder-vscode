@@ -136,7 +136,7 @@ export abstract class BaseCommand implements vscode.Disposable {
     protected async showSuccessMessage(message: string, timeout = TIMEOUTS.STATUS_BAR_SUCCESS): Promise<void> {
         this.logger.info(message);
         // Show auto-dismissing notification popup
-        await this.showProgressNotification(message, TIMEOUTS.NOTIFICATION_AUTO_DISMISS);
+        await this.showProgressNotification(message, TIMEOUTS.UI.NOTIFICATION);
         // Also show in status bar as secondary indicator
         vscode.window.setStatusBarMessage(`✅ ${message}`, timeout);
     }
@@ -147,7 +147,7 @@ export abstract class BaseCommand implements vscode.Disposable {
      * @param message Message to display
      * @param duration Duration in milliseconds (default NOTIFICATION_AUTO_DISMISS)
      */
-    protected async showProgressNotification(message: string, duration = TIMEOUTS.NOTIFICATION_AUTO_DISMISS): Promise<void> {
+    protected async showProgressNotification(message: string, duration = TIMEOUTS.UI.NOTIFICATION): Promise<void> {
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,

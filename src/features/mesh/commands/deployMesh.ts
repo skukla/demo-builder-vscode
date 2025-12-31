@@ -158,7 +158,7 @@ export class DeployMeshCommand extends BaseCommand {
                                 cwd: meshComponent.path, // Run from mesh component directory (where .env file is)
                                 streaming: true,
                                 shell: true, // Required for command string with arguments and quoted paths
-                                timeout: TIMEOUTS.API_MESH_UPDATE,
+                                timeout: TIMEOUTS.LONG,
                                 onOutput: (data: string) => {
                                     // Write detailed streaming output to main logs
                                     // Filter out HTML error responses (Adobe CLI sometimes includes entire error pages)
@@ -247,7 +247,7 @@ export class DeployMeshCommand extends BaseCommand {
                         }
                         
                         // Update component instance with deployment info
-                        meshComponent.endpoint = deployedEndpoint;
+                        // Note: endpoint is stored in meshState (authoritative), not componentInstance
                         meshComponent.status = 'deployed';
                         meshComponent.metadata = {
                             ...meshComponent.metadata,
@@ -255,10 +255,11 @@ export class DeployMeshCommand extends BaseCommand {
                             meshStatus: 'deployed',
                         };
 
-                        // Update mesh state (env vars + source hash) to match deployed configuration
+                        // Update mesh state (env vars + source hash + endpoint) to match deployed configuration
                         // This ensures the dashboard knows the config is in sync
+                        // See docs/architecture/state-ownership.md for single-source-of-truth
                         const { updateMeshState } = await import('../services/stalenessDetector');
-                        await updateMeshState(project);
+                        await updateMeshState(project, deployedEndpoint);
                         this.logger.debug('[Mesh Deployment] Updated mesh state after successful deployment');
 
                         await this.stateManager.saveProject(project);

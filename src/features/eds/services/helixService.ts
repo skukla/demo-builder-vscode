@@ -102,7 +102,7 @@ export class HelixService {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
-            signal: AbortSignal.timeout(TIMEOUTS.EDS_HELIX_CONFIG || 30000),
+            signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
         });
 
         // 404 is acceptable (site was never published)
@@ -141,7 +141,7 @@ export class HelixService {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
-            signal: AbortSignal.timeout(TIMEOUTS.EDS_HELIX_CONFIG || 30000),
+            signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
         });
 
         // 404 is acceptable (never previewed)

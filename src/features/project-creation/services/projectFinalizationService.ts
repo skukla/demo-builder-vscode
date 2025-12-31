@@ -41,10 +41,10 @@ export async function generateEnvironmentFiles(
     progressTracker('Configuring Environment', 85, 'Generating environment files...');
     logger.debug('[Project Creation] Phase 4: Generating environment configuration...');
 
-    // Get deployed mesh endpoint from componentInstances (SINGLE SOURCE OF TRUTH)
-    // This is the authoritative location for mesh endpoint storage.
-    // DO NOT read from componentConfigs - that location is deprecated for mesh endpoint.
-    const deployedMeshEndpoint = project.componentInstances?.['commerce-mesh']?.endpoint;
+    // Get deployed mesh endpoint from meshState (SINGLE SOURCE OF TRUTH)
+    // with fallback to componentInstances for backward compatibility.
+    // See docs/architecture/state-ownership.md for details.
+    const deployedMeshEndpoint = project.meshState?.endpoint || project.componentInstances?.['commerce-mesh']?.endpoint;
     const typedConfig = config as { apiMesh?: { endpoint?: string } };
 
     // Create config with mesh endpoint for .env generation

@@ -67,13 +67,12 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-// Mock timeout config
+// Mock timeout config - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        TOOL_CLONE: 120000,
-        TOOL_INSTALL: 180000,
-        DATA_INGESTION: 600000,
-        COMMAND_DEFAULT: 30000,
+        LONG: 180000, // Complex operations (replaces TOOL_CLONE, TOOL_INSTALL)
+        EXTENDED: 600000, // Extended operations (replaces DATA_INGESTION)
+        NORMAL: 30000, // Standard operations (replaces COMMAND_DEFAULT)
     },
 }));
 
@@ -132,7 +131,7 @@ describe('ToolManager', () => {
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 expect.stringContaining('git clone'),
                 expect.objectContaining({
-                    timeout: 120000,
+                    timeout: 180000, // TIMEOUTS.LONG (was TOOL_CLONE: 120000)
                 })
             );
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(

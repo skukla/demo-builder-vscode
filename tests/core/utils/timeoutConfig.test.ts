@@ -1,12 +1,16 @@
 /**
  * Tests for timeout configuration
- * Step 1: Quick Wins - npm Flags & Timeout Optimization
  *
- * Verifies that PREREQUISITE_CHECK timeout has been reduced from 60s to 10s
- * for faster failure feedback.
+ * Step 4: Timeout Configuration Simplification
+ * - Tests new semantic categories (QUICK, NORMAL, LONG, VERY_LONG, EXTENDED)
+ * - Tests UI and POLL sub-objects
+ * - Tests backward-compatible aliases (deprecated)
+ * - Tests type safety with 'as const'
+ *
+ * Previous tests (Step 1: Quick Wins) are retained for backward compatibility.
  */
 
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { TIMEOUTS, CACHE_TTL } from '@/core/utils/timeoutConfig';
 
 describe('Timeout Configuration', () => {
     describe('PREREQUISITE_CHECK timeout', () => {
@@ -15,10 +19,10 @@ describe('Timeout Configuration', () => {
             expect(TIMEOUTS.PREREQUISITE_CHECK).toBe(10000);
         });
 
-        it('should be significantly less than PREREQUISITE_INSTALL timeout', () => {
+        it('should be significantly less than LONG timeout (used for installations)', () => {
             // Check timeouts should fail fast
-            // Install timeouts need more time for downloads
-            expect(TIMEOUTS.PREREQUISITE_CHECK).toBeLessThan(TIMEOUTS.PREREQUISITE_INSTALL);
+            // Install timeouts (LONG) need more time for downloads
+            expect(TIMEOUTS.PREREQUISITE_CHECK).toBeLessThan(TIMEOUTS.LONG);
         });
 
         it('should allow enough time for command execution', () => {
@@ -38,9 +42,9 @@ describe('Timeout Configuration', () => {
             expect(speedup).toBeLessThanOrEqual(7);
         });
 
-        it('should maintain reasonable timeout for installation', () => {
-            // Installation timeout should remain high for npm downloads
-            expect(TIMEOUTS.PREREQUISITE_INSTALL).toBeGreaterThanOrEqual(120000);
+        it('should maintain reasonable timeout for installation via LONG category', () => {
+            // LONG category (3 minutes) is used for installations
+            expect(TIMEOUTS.LONG).toBeGreaterThanOrEqual(120000);
         });
     });
 
@@ -49,8 +53,8 @@ describe('Timeout Configuration', () => {
             expect(TIMEOUTS).toHaveProperty('PREREQUISITE_CHECK');
         });
 
-        it('should define PREREQUISITE_INSTALL', () => {
-            expect(TIMEOUTS).toHaveProperty('PREREQUISITE_INSTALL');
+        it('should define LONG category for installation operations', () => {
+            expect(TIMEOUTS).toHaveProperty('LONG');
         });
 
         it('should be a const object with TypeScript type safety', () => {
@@ -175,8 +179,8 @@ describe('Timeout Configuration', () => {
             expect(TIMEOUTS.STATUS_BAR_INFO).toBe(3000);
         });
 
-        it('should have NOTIFICATION_AUTO_DISMISS timeout', () => {
-            expect(TIMEOUTS.NOTIFICATION_AUTO_DISMISS).toBe(2000);
+        it('should have UI.NOTIFICATION timeout (replaces deprecated NOTIFICATION_AUTO_DISMISS)', () => {
+            expect(TIMEOUTS.UI.NOTIFICATION).toBe(2000);
         });
 
         it('should have STATUS_BAR_UPDATE_INTERVAL timeout', () => {
@@ -237,35 +241,277 @@ describe('Timeout Configuration', () => {
         });
     });
 
-    // Mesh Deployment Timeout Recovery - Step 1
-    describe('Mesh deployment total timeout (PM decision 2025-12-06)', () => {
-        it('should have MESH_DEPLOY_TOTAL constant set to 180000ms (180 seconds)', () => {
-            // PM Decision: Increase from 120s to 180s per research recommendation
+    // Mesh Deployment Timeout - Uses semantic LONG category
+    describe('Mesh deployment timeout (uses LONG category)', () => {
+        it('should use LONG timeout (180s) for mesh deployments', () => {
+            // Mesh deployments use the LONG timeout category (3 minutes)
             // Adobe mesh deployments commonly take 2-3 minutes
-            expect(TIMEOUTS.MESH_DEPLOY_TOTAL).toBe(180000);
+            expect(TIMEOUTS.LONG).toBe(180000);
         });
 
-        it('should be longer than existing API_MESH_UPDATE timeout', () => {
-            // Total deployment timeout should exceed individual operation timeout
-            expect(TIMEOUTS.MESH_DEPLOY_TOTAL).toBeGreaterThan(TIMEOUTS.API_MESH_UPDATE);
-        });
-
-        it('should be 3 minutes for user patience threshold', () => {
+        it('should have LONG be 3 minutes for user patience threshold', () => {
             // 180s = 3 minutes - reasonable for mesh deployment with verification
             const threeMinutes = 3 * 60 * 1000;
-            expect(TIMEOUTS.MESH_DEPLOY_TOTAL).toBe(threeMinutes);
+            expect(TIMEOUTS.LONG).toBe(threeMinutes);
         });
 
         it('should allow sufficient time for verification polling', () => {
-            // Given 10s polling interval and 20s initial wait, 180s allows ~16 verification attempts
+            // Given 10s polling interval and 20s initial wait, LONG (180s) allows ~16 verification attempts
             const initialWait = TIMEOUTS.MESH_VERIFY_INITIAL_WAIT;
             const pollInterval = TIMEOUTS.MESH_VERIFY_POLL_INTERVAL;
-            const totalTimeout = TIMEOUTS.MESH_DEPLOY_TOTAL;
+            const totalTimeout = TIMEOUTS.LONG;
 
             const verificationAttempts = Math.floor((totalTimeout - initialWait) / pollInterval);
 
             // Should allow at least 10 verification attempts
             expect(verificationAttempts).toBeGreaterThanOrEqual(10);
+        });
+    });
+
+    // =========================================================================
+    // Step 4: Timeout Configuration Simplification - New Tests
+    // =========================================================================
+
+    describe('Semantic Category Structure (Step 4)', () => {
+        describe('Core operation categories', () => {
+            it('should have QUICK category for fast operations (5s)', () => {
+                expect(TIMEOUTS.QUICK).toBe(5000);
+            });
+
+            it('should have NORMAL category for standard operations (30s)', () => {
+                expect(TIMEOUTS.NORMAL).toBe(30000);
+            });
+
+            it('should have LONG category for complex operations (3min)', () => {
+                expect(TIMEOUTS.LONG).toBe(180000);
+            });
+
+            it('should have VERY_LONG category for large operations (5min)', () => {
+                expect(TIMEOUTS.VERY_LONG).toBe(300000);
+            });
+
+            it('should have EXTENDED category for workflow operations (10min)', () => {
+                expect(TIMEOUTS.EXTENDED).toBe(600000);
+            });
+
+            it('should have categories in ascending order', () => {
+                expect(TIMEOUTS.QUICK).toBeLessThan(TIMEOUTS.NORMAL);
+                expect(TIMEOUTS.NORMAL).toBeLessThan(TIMEOUTS.LONG);
+                expect(TIMEOUTS.LONG).toBeLessThan(TIMEOUTS.VERY_LONG);
+                expect(TIMEOUTS.VERY_LONG).toBeLessThan(TIMEOUTS.EXTENDED);
+            });
+        });
+
+        describe('UI timing sub-object', () => {
+            it('should have UI sub-object defined', () => {
+                expect(TIMEOUTS.UI).toBeDefined();
+                expect(typeof TIMEOUTS.UI).toBe('object');
+            });
+
+            it('should have ANIMATION timing (150ms)', () => {
+                expect(TIMEOUTS.UI.ANIMATION).toBe(150);
+            });
+
+            it('should have UPDATE_DELAY timing (100ms)', () => {
+                expect(TIMEOUTS.UI.UPDATE_DELAY).toBe(100);
+            });
+
+            it('should have TRANSITION timing (300ms)', () => {
+                expect(TIMEOUTS.UI.TRANSITION).toBe(300);
+            });
+
+            it('should have NOTIFICATION timing (2000ms)', () => {
+                expect(TIMEOUTS.UI.NOTIFICATION).toBe(2000);
+            });
+
+            it('should have MIN_LOADING timing (1500ms)', () => {
+                expect(TIMEOUTS.UI.MIN_LOADING).toBe(1500);
+            });
+
+            it('should have FOCUS_FALLBACK timing (1000ms)', () => {
+                expect(TIMEOUTS.UI.FOCUS_FALLBACK).toBe(1000);
+            });
+        });
+
+        describe('Polling sub-object', () => {
+            it('should have POLL sub-object defined', () => {
+                expect(TIMEOUTS.POLL).toBeDefined();
+                expect(typeof TIMEOUTS.POLL).toBe('object');
+            });
+
+            it('should have INITIAL delay (500ms)', () => {
+                expect(TIMEOUTS.POLL.INITIAL).toBe(500);
+            });
+
+            it('should have MAX delay (5000ms)', () => {
+                expect(TIMEOUTS.POLL.MAX).toBe(5000);
+            });
+
+            it('should have INTERVAL timing (1000ms)', () => {
+                expect(TIMEOUTS.POLL.INTERVAL).toBe(1000);
+            });
+
+            it('should have PROCESS_CHECK timing (100ms)', () => {
+                expect(TIMEOUTS.POLL.PROCESS_CHECK).toBe(100);
+            });
+        });
+
+        describe('Auth sub-object', () => {
+            it('should have AUTH sub-object defined', () => {
+                expect(TIMEOUTS.AUTH).toBeDefined();
+                expect(typeof TIMEOUTS.AUTH).toBe('object');
+            });
+
+            it('should have BROWSER timeout (60s)', () => {
+                expect(TIMEOUTS.AUTH.BROWSER).toBe(60000);
+            });
+
+            it('should have OAUTH timeout (120s)', () => {
+                expect(TIMEOUTS.AUTH.OAUTH).toBe(120000);
+            });
+        });
+    });
+
+    describe('Semantic Category Migration (Step 4)', () => {
+        describe('Operation categories replace specific timeouts', () => {
+            it('should use QUICK for fast operations like config reads', () => {
+                // CONFIG_READ, UPDATE_CHECK, SDK_INIT, TOKEN_READ etc. now use QUICK
+                expect(TIMEOUTS.QUICK).toBe(5000);
+            });
+
+            it('should use NORMAL for standard API calls', () => {
+                // COMMAND_DEFAULT, ORG_LIST, PROJECT_LIST, WORKSPACE_LIST etc. now use NORMAL
+                expect(TIMEOUTS.NORMAL).toBe(30000);
+            });
+
+            it('should use LONG for complex operations', () => {
+                // API_MESH_CREATE, API_MESH_UPDATE, MESH_DEPLOY_TOTAL etc. now use LONG
+                expect(TIMEOUTS.LONG).toBe(180000);
+            });
+
+            it('should use VERY_LONG for large operations', () => {
+                // COMPONENT_INSTALL, NPM_INSTALL etc. now use VERY_LONG
+                expect(TIMEOUTS.VERY_LONG).toBe(300000);
+            });
+
+            it('should use EXTENDED for workflow operations', () => {
+                // DATA_INGESTION etc. now use EXTENDED
+                expect(TIMEOUTS.EXTENDED).toBe(600000);
+            });
+
+            it('should use AUTH.BROWSER for browser auth flows', () => {
+                // BROWSER_AUTH now uses AUTH.BROWSER
+                expect(TIMEOUTS.AUTH.BROWSER).toBe(60000);
+            });
+
+            it('should use AUTH.OAUTH for full OAuth flows', () => {
+                // OAUTH_FLOW now uses AUTH.OAUTH
+                expect(TIMEOUTS.AUTH.OAUTH).toBe(120000);
+            });
+        });
+
+        describe('UI timing now uses UI sub-object', () => {
+            it('should use UI.ANIMATION for scroll/fade animations', () => {
+                // SCROLL_ANIMATION now uses UI.ANIMATION
+                expect(TIMEOUTS.UI.ANIMATION).toBe(150);
+            });
+
+            it('should use UI.UPDATE_DELAY for state settling', () => {
+                // UI_UPDATE_DELAY now uses UI.UPDATE_DELAY
+                expect(TIMEOUTS.UI.UPDATE_DELAY).toBe(100);
+            });
+
+            it('should use UI.TRANSITION for step transitions', () => {
+                // STEP_TRANSITION now uses UI.TRANSITION
+                expect(TIMEOUTS.UI.TRANSITION).toBe(300);
+            });
+
+            it('should use UI.MIN_LOADING for minimum loading display', () => {
+                // LOADING_MIN_DISPLAY now uses UI.MIN_LOADING
+                expect(TIMEOUTS.UI.MIN_LOADING).toBe(1500);
+            });
+
+            it('should use UI.FOCUS_FALLBACK for focus management', () => {
+                // FOCUS_FALLBACK now uses UI.FOCUS_FALLBACK
+                expect(TIMEOUTS.UI.FOCUS_FALLBACK).toBe(1000);
+            });
+        });
+
+        describe('Polling timing now uses POLL sub-object', () => {
+            it('should use POLL.INITIAL for initial poll delay', () => {
+                // POLL_INITIAL_DELAY now uses POLL.INITIAL
+                expect(TIMEOUTS.POLL.INITIAL).toBe(500);
+            });
+
+            it('should use POLL.MAX for maximum backoff', () => {
+                // POLL_MAX_DELAY now uses POLL.MAX
+                expect(TIMEOUTS.POLL.MAX).toBe(5000);
+            });
+
+            it('should use POLL.INTERVAL for standard polling', () => {
+                // PORT_CHECK_INTERVAL now uses POLL.INTERVAL
+                expect(TIMEOUTS.POLL.INTERVAL).toBe(1000);
+            });
+
+            it('should use POLL.PROCESS_CHECK for tight process polling', () => {
+                // PROCESS_CHECK_INTERVAL now uses POLL.PROCESS_CHECK
+                expect(TIMEOUTS.POLL.PROCESS_CHECK).toBe(100);
+            });
+        });
+    });
+
+    describe('CACHE_TTL Simplification (Step 4)', () => {
+        describe('Cache TTL categories', () => {
+            it('should have SHORT TTL (1 minute)', () => {
+                expect(CACHE_TTL.SHORT).toBe(60000);
+            });
+
+            it('should have MEDIUM TTL (5 minutes)', () => {
+                expect(CACHE_TTL.MEDIUM).toBe(300000);
+            });
+
+            it('should have LONG TTL (1 hour)', () => {
+                expect(CACHE_TTL.LONG).toBe(3600000);
+            });
+
+            it('should have TTLs in ascending order', () => {
+                expect(CACHE_TTL.SHORT).toBeLessThan(CACHE_TTL.MEDIUM);
+                expect(CACHE_TTL.MEDIUM).toBeLessThan(CACHE_TTL.LONG);
+            });
+        });
+    });
+
+    describe('Type Safety (Step 4)', () => {
+        it('should export TIMEOUTS as const object', () => {
+            expect(TIMEOUTS).toBeDefined();
+            expect(typeof TIMEOUTS).toBe('object');
+            expect(TIMEOUTS).not.toBeNull();
+        });
+
+        it('should export CACHE_TTL as const object', () => {
+            expect(CACHE_TTL).toBeDefined();
+            expect(typeof CACHE_TTL).toBe('object');
+            expect(CACHE_TTL).not.toBeNull();
+        });
+
+        it('should have nested UI object as readonly', () => {
+            // Verify the structure exists and values are numbers
+            expect(typeof TIMEOUTS.UI.ANIMATION).toBe('number');
+            expect(typeof TIMEOUTS.UI.UPDATE_DELAY).toBe('number');
+            expect(typeof TIMEOUTS.UI.TRANSITION).toBe('number');
+        });
+
+        it('should have nested POLL object as readonly', () => {
+            // Verify the structure exists and values are numbers
+            expect(typeof TIMEOUTS.POLL.INITIAL).toBe('number');
+            expect(typeof TIMEOUTS.POLL.MAX).toBe('number');
+            expect(typeof TIMEOUTS.POLL.INTERVAL).toBe('number');
+        });
+
+        it('should have nested AUTH object as readonly', () => {
+            // Verify the structure exists and values are numbers
+            expect(typeof TIMEOUTS.AUTH.BROWSER).toBe('number');
+            expect(typeof TIMEOUTS.AUTH.OAUTH).toBe('number');
         });
     });
 });

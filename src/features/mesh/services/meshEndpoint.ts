@@ -23,7 +23,7 @@ async function checkApiMeshPlugin(
     try {
         // Mesh plugin is installed with the Node version defined for commerce-mesh component
         const result = await commandManager.execute('aio plugins', {
-            timeout: TIMEOUTS.CONFIG_READ,
+            timeout: TIMEOUTS.QUICK,
             configureTelemetry: false,
             useNodeVersion: getMeshNodeVersion(),
             enhancePath: true,
@@ -79,7 +79,7 @@ export async function getEndpoint(
             const result = await commandManager.execute(
                 'aio api-mesh:describe',
                 {
-                    timeout: TIMEOUTS.API_CALL,
+                    timeout: TIMEOUTS.NORMAL,
                     configureTelemetry: false,
                     useNodeVersion: getMeshNodeVersion(),
                     enhancePath: true,

@@ -345,7 +345,7 @@ export class EnvironmentSetup {
                 if (!currentVersion?.includes(requiredVersion)) {
                     this.logger.debug(`[Env Setup] Switching to Node v${requiredVersion}`);
                     await executeCommand(`fnm use ${requiredVersion} --silent-if-unchanged`, {
-                        timeout: TIMEOUTS.COMMAND_DEFAULT,
+                        timeout: TIMEOUTS.NORMAL,
                     });
                 }
             }
@@ -367,7 +367,7 @@ export class EnvironmentSetup {
     private async checkFnmAvailable(executeCommand: (command: string, options?: ExecuteOptions) => Promise<CommandResult>): Promise<boolean> {
         try {
             await executeCommand('fnm --version', {
-                timeout: TIMEOUTS.QUICK_SHELL,
+                timeout: TIMEOUTS.QUICK,
                 shell: DEFAULT_SHELL,  // Fixes ENOENT in Dock-launched VS Code
             });
             return true;
@@ -382,7 +382,7 @@ export class EnvironmentSetup {
     private async getCurrentFnmVersion(executeCommand: (command: string, options?: ExecuteOptions) => Promise<CommandResult>): Promise<string | null> {
         try {
             const result = await executeCommand('fnm current', {
-                timeout: TIMEOUTS.QUICK_SHELL,
+                timeout: TIMEOUTS.QUICK,
                 shell: DEFAULT_SHELL,  // Fixes ENOENT in Dock-launched VS Code
             });
             return result.stdout?.trim() || null;
@@ -411,7 +411,7 @@ export class EnvironmentSetup {
                 {
                     configureTelemetry: false,  // Don't check telemetry for telemetry commands
                     encoding: 'utf8',
-                    timeout: TIMEOUTS.PORT_CHECK,  // Same timeout as quick operations
+                    timeout: TIMEOUTS.QUICK,  // Same timeout as quick operations
                 },
             );
 

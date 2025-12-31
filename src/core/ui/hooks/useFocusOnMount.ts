@@ -71,7 +71,7 @@ export function useFocusOnMount(
 ): void {
     const {
         selector,
-        delay = TIMEOUTS.FOCUS_FALLBACK,
+        delay = TIMEOUTS.UI.FOCUS_FALLBACK,
         disabled = false,
     } = options;
 

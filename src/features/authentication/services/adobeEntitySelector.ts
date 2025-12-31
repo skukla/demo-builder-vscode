@@ -116,7 +116,7 @@ export class AdobeEntitySelector {
                 `aio console org select ${orgId}`,
                 {
                     encoding: 'utf8',
-                    timeout: TIMEOUTS.CONFIG_WRITE,
+                    timeout: TIMEOUTS.NORMAL,
                 },
             );
 
@@ -208,7 +208,7 @@ export class AdobeEntitySelector {
                 `aio console project select ${projectId}`,
                 {
                     encoding: 'utf8',
-                    timeout: TIMEOUTS.CONFIG_WRITE,
+                    timeout: TIMEOUTS.NORMAL,
                 },
             );
 
@@ -311,7 +311,7 @@ export class AdobeEntitySelector {
                 `aio console workspace select ${workspaceId}`,
                 {
                     encoding: 'utf8',
-                    timeout: TIMEOUTS.CONFIG_WRITE,
+                    timeout: TIMEOUTS.NORMAL,
                 },
             );
 

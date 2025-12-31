@@ -1,196 +1,279 @@
 /**
- * Centralized timeout and cache configuration
+ * Centralized Timeout Configuration - Simplified
  *
- * This file contains all timeout and cache TTL values to avoid magic numbers
- * throughout the codebase and provide a single place to tune performance.
+ * PHILOSOPHY: Use semantic categories instead of operation-specific names.
+ * Most operations fit into a small set of timeout buckets.
  *
- * TIMEOUTS: Command execution timeout values
- * CACHE_TTL: Cache time-to-live values for performance optimization
+ * USAGE:
+ * - QUICK: Fast checks, config reads, shell commands (<5s)
+ * - NORMAL: Standard API calls, data fetching (<30s)
+ * - LONG: Installations, builds, complex operations (<3min)
+ * - VERY_LONG: Large downloads, full npm installs (<5min)
+ * - EXTENDED: Data ingestion, complete workflows (<10min)
+ *
+ * SUB-OBJECTS:
+ * - UI: CSS-coupled timing (animations, transitions, notifications)
+ * - POLL: Polling/retry algorithm inputs
+ * - AUTH: Browser authentication flows
+ *
+ * OVERRIDE: Pass explicit timeout when operation truly differs:
+ *   await execute('aio', args, { timeout: 60000 }); // 60s for specific flow
+ *
+ * BACKWARD COMPATIBILITY:
+ * Deprecated aliases are provided for gradual migration. They map to the
+ * appropriate semantic category or sub-object value.
+ *
+ * @example
+ * // Preferred: Use semantic categories
+ * import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+ * await execute(cmd, { timeout: TIMEOUTS.NORMAL });
+ *
+ * // For UI timing
+ * setTimeout(callback, TIMEOUTS.UI.ANIMATION);
+ *
+ * // For polling
+ * const initialDelay = TIMEOUTS.POLL.INITIAL;
  */
 
 export const TIMEOUTS = {
-    // Minimum thresholds
-    MIN_COMMAND_TIMEOUT: 1000,      // Minimum timeout for any command (1 second)
+    // =========================================================================
+    // Core Operation Categories (5 semantic buckets)
+    // =========================================================================
 
-    // Adobe CLI operations
-    CONFIG_READ: 5000,              // Reading config values (expiry, other config)
-    TOKEN_READ: 10000,              // Reading JWT tokens (longer due to size)
-    CONFIG_WRITE: 20000,            // Writing config values (INCREASED: project/workspace selection can take 8-15 seconds)
-    // Adobe CLI project/workspace selection often takes 8-10 seconds, but can exceed 10s
-    API_CALL: 10000,                // API-based commands (console where, org list)
-    BROWSER_AUTH: 60000,            // Browser-based authentication flow (1 minute)
-    OAUTH_FLOW: 120000,             // OAuth flow timeout (2 minutes - browser auth + callback)
-    TOKEN_VALIDATION_TTL: 300000,   // Token validation cache TTL (5 minutes)
-    API_MESH_CREATE: 180000,        // API Mesh creation (3 minutes - initial creation can be slow)
-    API_MESH_UPDATE: 120000,        // API Mesh update/deployment (2 minutes)
-    MESH_DESCRIBE: 30000,           // Fetching mesh info via describe command (30 seconds)
-    MESH_VERIFY_INITIAL_WAIT: 20000, // Initial wait before first verification poll (20 seconds)
-    MESH_VERIFY_POLL_INTERVAL: 10000, // Interval between verification polls (10 seconds)
-    
-    // Adobe SDK operations
-    SDK_INIT: 5000,                 // Adobe SDK initialization (fail fast, non-critical background operation)
+    /** Fast operations: config reads, shell checks, quick validations (5 seconds) */
+    QUICK: 5000,
 
-    // Data loading timeouts (wizard UI)
-    ORG_LIST: 30000,                // 30 seconds - organization list
-    PROJECT_LIST: 30000,            // 30 seconds - project list  
-    WORKSPACE_LIST: 30000,          // 30 seconds - workspace list
-    PROJECT_DETAILS: 30000,         // 30 seconds - project details
-    WORKSPACE_DETAILS: 30000,       // 30 seconds - workspace details
+    /** Standard operations: API calls, data loading, list fetching (30 seconds) */
+    NORMAL: 30000,
 
-    // Prerequisites timeouts
-    PREREQUISITE_CHECK: 10000,      // 10 seconds - checking if prerequisite exists (fail fast, Step 1 optimization)
-    PREREQUISITE_INSTALL: 180000,   // 3 minutes - installing prerequisites (downloads, npm installs)
+    /** Complex operations: mesh deployment, installations, builds (3 minutes) */
+    LONG: 180000,
 
-    // Component installation timeouts
-    COMPONENT_CLONE: 120000,        // Cloning git repository (2 minutes)
-    COMPONENT_INSTALL: 300000,      // Installing npm dependencies (5 minutes)
-    COMPONENT_BUILD: 180000,        // Running build scripts (3 minutes)
-    NPM_INSTALL: 300000,            // npm install for post-update builds (5 minutes)
+    /** Large operations: npm installs, component downloads (5 minutes) */
+    VERY_LONG: 300000,
 
-    // Update system timeouts
-    UPDATE_CHECK: 10000,            // GitHub API calls to check releases
-    UPDATE_DOWNLOAD: 60000,         // Downloading VSIX or component archives (1 minute)
-    UPDATE_EXTRACT: 30000,          // Extracting downloaded archives
-    UPDATE_MESSAGE_DELAY: 2000,     // Delay before showing update notification (2 seconds)
-    UPDATE_RESULT_DISPLAY: 3000,    // Display time for update result notification (3 seconds)
+    /** Extended operations: data ingestion, full workflows (10 minutes) */
+    EXTENDED: 600000,
 
-    // Demo lifecycle timeouts
-    DEMO_STOP_WAIT: 2000,           // Wait time after stopping demo before cleanup (2 seconds)
-    DEMO_STATUS_UPDATE_DELAY: 1000, // Delay before refreshing dashboard status after start/stop (1 second)
+    // =========================================================================
+    // UI Timing Sub-Object (CSS-coupled, must stay granular)
+    // =========================================================================
 
-    // Webview lifecycle timeouts
-    WEBVIEW_TRANSITION: 3000,       // 3 seconds - webview transition tracking (prevents race conditions)
-    WEBVIEW_AUTO_CLOSE: 120000,     // Auto-close wizard after project creation if user doesn't click Open Project (2 minutes)
+    UI: {
+        /** Scroll/fade animations (matches CSS transition duration) */
+        ANIMATION: 150,
 
-    // UI timing delays
-    STEP_TRANSITION: 300,           // Step transition animation duration (matches CSS)
-    STEP_CONTENT_FOCUS: 300,        // Delay before focusing step content (allows Spectrum components to mount)
-    SCROLL_ANIMATION: 150,          // Scroll animation delay for UI smoothness
-    FOCUS_FALLBACK: 1000,           // Fallback timeout for MutationObserver-based focus management
-    DASHBOARD_OPEN_DELAY: 500,      // Delay before opening dashboard after project creation
-    UI_UPDATE_DELAY: 100,           // Small delay for UI updates before subsequent operations
-    HOVER_SUPPRESSION_DELAY: 500,   // Layout stabilization delay before re-enabling hover styles (SOP §1)
-    WEBVIEW_INIT_DELAY: 50,         // Small delay for webview initialization to avoid race conditions (SOP §1)
-    PROGRESS_MESSAGE_DELAY: 1000,   // First progress message update timing (SOP §1)
-    PROGRESS_MESSAGE_DELAY_LONG: 2000, // Second progress message update timing (SOP §1)
-    IMPORT_TRANSITION_FEEDBACK: 600, // Loading feedback delay before auto-navigating to review in import mode
+        /** State settling before DOM operations */
+        UPDATE_DELAY: 100,
 
-    // UI notification timing (SOP §1 compliance - Round 2)
-    STATUS_BAR_SUCCESS: 5000,       // Success message duration in status bar
-    STATUS_BAR_INFO: 3000,          // Info message duration in status bar
-    STATUS_BAR_UPDATE_INTERVAL: 5000, // Status bar polling interval
-    NOTIFICATION_AUTO_DISMISS: 2000,  // Progress notification auto-dismiss
+        /** Step transitions (matches Spectrum component animations) */
+        TRANSITION: 300,
 
-    // Auto-update system (SOP §1 compliance - Round 2)
-    AUTO_UPDATE_CHECK_INTERVAL: 4 * 60 * 60 * 1000, // 4 hours - periodic update check
-    STARTUP_UPDATE_CHECK_DELAY: 10000,  // 10 seconds - delay at activation
+        /** User-visible notification duration */
+        NOTIFICATION: 2000,
 
-    // File watcher (SOP §1 compliance - Round 2)
-    PROGRAMMATIC_WRITE_CLEANUP: 5000,  // Auto-cleanup tracking timeout
+        /** Minimum loading indicator display (prevents flash-of-content) */
+        MIN_LOADING: 1500,
 
-    // Project creation (SOP §1 compliance - Round 2)
-    PROJECT_OPEN_TRANSITION: 1500,     // Transition delay before open project
+        /** Fallback timeout for MutationObserver-based focus management */
+        FOCUS_FALLBACK: 1000,
+    },
 
-    // Shell and system operations
-    QUICK_SHELL: 2000,              // Quick shell commands (fnm --version, fnm current)
-    PORT_CHECK: 5000,               // Port checking operations (lsof)
+    // =========================================================================
+    // Polling/Retry Sub-Object (algorithm inputs, need specific values)
+    // =========================================================================
 
-    // Default fallbacks
-    COMMAND_DEFAULT: 30000,         // Default command timeout
+    POLL: {
+        /** Initial delay before first poll */
+        INITIAL: 500,
 
-    // SOP §1 Compliance - Round 3: Centralized timeout constants
-    // Webview communication
-    WEBVIEW_HANDSHAKE: 10000,       // Handshake protocol timeout (10 seconds)
-    WEBVIEW_HANDSHAKE_EXTENDED: 15000, // Extended handshake for slow systems (15 seconds)
-    WEBVIEW_MESSAGE_TIMEOUT: 30000, // Message response timeout (30 seconds)
-    WEBVIEW_RETRY_DELAY: 1000,      // Retry delay for failed messages (1 second)
-    LOADING_MIN_DISPLAY: 1500,      // Minimum spinner display time (1.5 seconds)
+        /** Maximum backoff delay for exponential retry */
+        MAX: 5000,
 
-    // API Mesh specific
-    API_MESH_CHECK: 60000,          // Check mesh status - workspace download + describe (60 seconds)
-    /**
-     * Total timeout for mesh deployment step during project creation (180 seconds = 3 minutes)
-     *
-     * PM Decision (2025-12-06): Increased from 120s to 180s per research recommendation.
-     * Adobe mesh deployments commonly take 2-3 minutes.
-     * This timeout covers: deployment command + verification polling.
-     */
-    MESH_DEPLOY_TOTAL: 180000,      // Total mesh deployment timeout (3 minutes)
+        /** Standard polling interval */
+        INTERVAL: 1000,
 
-    // Polling service defaults
-    POLL_INITIAL_DELAY: 500,        // Initial poll delay (500ms)
-    POLL_MAX_DELAY: 5000,           // Maximum poll delay with backoff (5 seconds)
+        /** Tight polling for process exit detection */
+        PROCESS_CHECK: 100,
+    },
 
-    // Lifecycle management
-    DEMO_STARTUP_TIMEOUT: 30000,    // Wait for demo server to start (30 seconds)
-    PORT_CHECK_INTERVAL: 1000,      // Interval between port checks (1 second)
-    PROCESS_CHECK_INTERVAL: 100,    // Tight polling for process exit detection (100ms)
-    PROCESS_GRACEFUL_SHUTDOWN: 5000, // Graceful shutdown timeout (5 seconds)
+    // =========================================================================
+    // Auth Sub-Object (browser interaction timeouts)
+    // =========================================================================
 
-    // File operations
-    FILE_DELETE_RETRY_BASE: 100,    // Base delay for delete retry backoff (100ms)
-    FILE_HANDLE_RELEASE: 500,       // Wait for OS to release file handles (increased from 100ms for reliability)
-    FILE_WATCH_TIMEOUT: 10000,      // Default timeout for file watcher operations (10 seconds)
-    FILE_WATCH_INITIAL: 100,        // Initial delay for file watcher polling (100ms)
-    FILE_WATCH_MAX: 1000,           // Max delay for file watcher polling (1 second)
+    AUTH: {
+        /** Browser-based authentication flow (1 minute) */
+        BROWSER: 60000,
 
-    // State persistence
-    PROJECT_STATE_PERSIST_DELAY: 500, // Wait for project manifest to be written to disk after state change (500ms)
+        /** Full OAuth flow with callback (2 minutes) */
+        OAUTH: 120000,
+    },
 
-    // Retry strategy delays (SOP §1 Round 4)
-    RETRY_INITIAL_DELAY: 1000,      // Initial delay for network/adobe-cli retry strategies (1 second)
-    RETRY_MAX_DELAY: 5000,          // Max delay for retry backoff (5 seconds)
-    FILE_RETRY_INITIAL: 200,        // Initial delay for file operation retry (200ms)
-    FILE_RETRY_MAX: 1000,           // Max delay for file operation retry (1 second)
+    // =========================================================================
+    // Operation-Specific Constants (for precise timing requirements)
+    // =========================================================================
 
-    // Progress update intervals (SOP §1 Round 4)
-    PROGRESS_UPDATE_INTERVAL: 1000, // Interval for progress bar updates (1 second)
+    /** Minimum timeout for any command (validation threshold) */
+    MIN_COMMAND_TIMEOUT: 1000,
 
-    // Authentication retry
-    TOKEN_RETRY_BASE: 500,          // Base delay for token retry backoff (500ms)
+    /** Token validation cache TTL (5 minutes) - see CACHE_TTL */
+    TOKEN_VALIDATION_TTL: 300000,
 
-    // DA.live API operations
-    DA_LIVE_API: 30000,             // DA.live admin API calls (30 seconds)
-    DA_LIVE_COPY: 120000,           // DA.live content copy operations (2 minutes - recursive directory copy)
+    /** Initial wait before first mesh verification poll (20 seconds) */
+    MESH_VERIFY_INITIAL_WAIT: 20000,
 
-    // EDS (Edge Delivery Services) operations
-    EDS_HELIX_CONFIG: 30000,        // Helix 5 configuration API call (30 seconds)
-    EDS_CODE_SYNC_POLL: 5000,       // Interval between code bus sync polls (5 seconds)
-    EDS_CODE_SYNC_TOTAL: 125000,    // Total timeout for code bus sync (25 polls * 5 seconds = 125 seconds)
+    /** Interval between mesh verification polls (10 seconds) */
+    MESH_VERIFY_POLL_INTERVAL: 10000,
 
-    // Tool Manager operations (commerce-demo-ingestion, vertical-data)
-    TOOL_CLONE: 120000,             // Git clone for tool repository (2 minutes)
-    TOOL_INSTALL: 180000,           // npm install for tool dependencies (3 minutes)
-    DATA_INGESTION: 600000,         // Data ingestion operations (10 minutes - large data imports)
+    /** Prerequisites check timeout - reduced for faster failure (10 seconds) */
+    PREREQUISITE_CHECK: 10000,
 
-    // SOP §1 Compliance - Round 5
-    RATE_LIMIT_WINDOW: 1000,        // Rate limiting window (1 second - operations per second)
-    ELAPSED_TIME_THRESHOLD: 30000,  // Show elapsed time after this duration (30 seconds)
-    DEFAULT_STEP_DURATION: 10000,   // Default estimated step duration (10 seconds)
-    SLOW_COMMAND_THRESHOLD: 3000,   // Threshold for slow command warnings (3 seconds)
-    PROGRESS_ESTIMATED_DEFAULT_SHORT: 500, // Default estimated step duration for short operations (500ms)
-    PROGRESS_MIN_DURATION_CAP: 1000,       // Maximum duration cap for immediate operations (1 second)
+    /** Extract archives timeout (30 seconds) */
+    UPDATE_EXTRACT: 30000,
 
-    // Project creation workflow (SOP §1 - moved from shared.ts)
-    PROJECT_CREATION_OVERALL: 30 * 60 * 1000, // 30 minutes - complete project creation workflow timeout
+    /** Update message delay (2 seconds) */
+    UPDATE_MESSAGE_DELAY: 2000,
+
+    /** Update result display time (3 seconds) */
+    UPDATE_RESULT_DISPLAY: 3000,
+
+    /** Demo stop wait time (2 seconds) */
+    DEMO_STOP_WAIT: 2000,
+
+    /** Demo status update delay (1 second) */
+    DEMO_STATUS_UPDATE_DELAY: 1000,
+
+    /** Webview transition tracking (3 seconds) */
+    WEBVIEW_TRANSITION: 3000,
+
+    /** Webview auto-close after project creation (2 minutes) */
+    WEBVIEW_AUTO_CLOSE: 120000,
+
+    /** Dashboard open delay (500ms) */
+    DASHBOARD_OPEN_DELAY: 500,
+
+    /** Hover suppression delay for layout stabilization (500ms) */
+    HOVER_SUPPRESSION_DELAY: 500,
+
+    /** Webview initialization delay (50ms) */
+    WEBVIEW_INIT_DELAY: 50,
+
+    /** First progress message update timing (1 second) */
+    PROGRESS_MESSAGE_DELAY: 1000,
+
+    /** Second progress message update timing (2 seconds) */
+    PROGRESS_MESSAGE_DELAY_LONG: 2000,
+
+    /** Import transition feedback delay (600ms) */
+    IMPORT_TRANSITION_FEEDBACK: 600,
+
+    /** Status bar success message duration (5 seconds) */
+    STATUS_BAR_SUCCESS: 5000,
+
+    /** Status bar info message duration (3 seconds) */
+    STATUS_BAR_INFO: 3000,
+
+    /** Status bar polling interval (5 seconds) */
+    STATUS_BAR_UPDATE_INTERVAL: 5000,
+
+    /** Auto-update check interval (4 hours) */
+    AUTO_UPDATE_CHECK_INTERVAL: 4 * 60 * 60 * 1000,
+
+    /** Startup update check delay (10 seconds) */
+    STARTUP_UPDATE_CHECK_DELAY: 10000,
+
+    /** Programmatic write cleanup timeout (5 seconds) */
+    PROGRAMMATIC_WRITE_CLEANUP: 5000,
+
+    /** Project open transition delay (1.5 seconds) */
+    PROJECT_OPEN_TRANSITION: 1500,
+
+    /** Graceful shutdown timeout (5 seconds) */
+    PROCESS_GRACEFUL_SHUTDOWN: 5000,
+
+    /** File delete retry base delay (100ms) */
+    FILE_DELETE_RETRY_BASE: 100,
+
+    /** File handle release wait (500ms) */
+    FILE_HANDLE_RELEASE: 500,
+
+    /** File watch timeout (10 seconds) */
+    FILE_WATCH_TIMEOUT: 10000,
+
+    /** File watch initial delay (100ms) */
+    FILE_WATCH_INITIAL: 100,
+
+    /** File watch max delay (1 second) */
+    FILE_WATCH_MAX: 1000,
+
+    /** Project state persist delay (500ms) */
+    PROJECT_STATE_PERSIST_DELAY: 500,
+
+    /** Retry initial delay (1 second) */
+    RETRY_INITIAL_DELAY: 1000,
+
+    /** Retry max delay (5 seconds) */
+    RETRY_MAX_DELAY: 5000,
+
+    /** File retry initial delay (200ms) */
+    FILE_RETRY_INITIAL: 200,
+
+    /** File retry max delay (1 second) */
+    FILE_RETRY_MAX: 1000,
+
+    /** Progress update interval (1 second) */
+    PROGRESS_UPDATE_INTERVAL: 1000,
+
+    /** Token retry base delay (500ms) */
+    TOKEN_RETRY_BASE: 500,
+
+    /** Webview retry delay (1 second) */
+    WEBVIEW_RETRY_DELAY: 1000,
+
+    /** EDS code sync poll interval (5 seconds) */
+    EDS_CODE_SYNC_POLL: 5000,
+
+    /** Rate limit window (1 second) */
+    RATE_LIMIT_WINDOW: 1000,
+
+    /** Elapsed time threshold for progress display (30 seconds) */
+    ELAPSED_TIME_THRESHOLD: 30000,
+
+    /** Default step duration estimate (10 seconds) */
+    DEFAULT_STEP_DURATION: 10000,
+
+    /** Slow command warning threshold (3 seconds) */
+    SLOW_COMMAND_THRESHOLD: 3000,
+
+    /** Short operation estimated duration (500ms) */
+    PROGRESS_ESTIMATED_DEFAULT_SHORT: 500,
+
+    /** Minimum duration cap for immediate operations (1 second) */
+    PROGRESS_MIN_DURATION_CAP: 1000,
+
+    /** Complete project creation workflow (30 minutes) */
+    PROJECT_CREATION_OVERALL: 30 * 60 * 1000,
 } as const;
 
 /**
- * Cache TTL (Time To Live) configurations
- * Separate from operation timeouts for clarity
+ * Cache TTL (Time To Live) configurations - Simplified
+ *
+ * Use semantic categories instead of per-cache names.
+ *
+ * @example
+ * cache.set(key, value, { ttl: CACHE_TTL.MEDIUM });
  */
 export const CACHE_TTL = {
-    // Authentication and session caches
-    AUTH_STATUS: 5 * 60 * 1000,     // 5 minutes - authentication status
-    AUTH_STATUS_ERROR: 60 * 1000,   // 1 minute - authentication status on error (shorter to allow retry)
-    VALIDATION: 5 * 60 * 1000,      // 5 minutes - organization access validation
-    TOKEN_INSPECTION: 5 * 60 * 1000,  // 5 minutes - token inspection results
+    // =========================================================================
+    // Semantic Categories (3 buckets)
+    // =========================================================================
 
-    // API response caches (shorter TTLs for fresher data)
-    ORG_LIST: 60 * 1000,            // 1 minute - organization list
-    CONSOLE_WHERE: 3 * 60 * 1000,   // 3 minutes - current console context (expensive 2s+ calls)
-    PLUGIN_LIST: 5 * 60 * 1000,     // 5 minutes - installed plugins
+    /** Short-lived cache: frequently changing data (1 minute) */
+    SHORT: 60000,
 
-    // Prerequisite check caches (Step 2: Prerequisite Caching)
-    PREREQUISITE_CHECK: 5 * 60 * 1000,  // 5 minutes - prerequisite check results
+    /** Medium-lived cache: auth status, validation results (5 minutes) */
+    MEDIUM: 300000,
+
+    /** Long-lived cache: rarely changing data (1 hour) */
+    LONG: 3600000,
 } as const;

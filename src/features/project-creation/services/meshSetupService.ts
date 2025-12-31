@@ -175,7 +175,7 @@ export async function deployNewMesh(
                     logger.debug('[Project Creation] Fetching mesh info via describe...');
                     try {
                         const describeResult = await commandManager.execute('aio api-mesh:describe', {
-                            timeout: TIMEOUTS.MESH_DESCRIBE,
+                            timeout: TIMEOUTS.NORMAL,
                             configureTelemetry: false,
                             useNodeVersion: getMeshNodeVersion(),
                             enhancePath: true,
@@ -199,7 +199,7 @@ export async function deployNewMesh(
                 }
 
                 // Update component instance with deployment info
-                meshComponent.endpoint = endpoint;
+                // Note: endpoint is stored in meshState (authoritative), not componentInstance
                 meshComponent.status = 'deployed';
                 meshComponent.metadata = {
                     meshId: meshId || '',
@@ -217,8 +217,9 @@ export async function deployNewMesh(
                     message: 'Mesh deployed successfully',
                 });
 
-                // Update meshState to track deployment
-                await updateProjectMeshState(project, logger);
+                // Update meshState to track deployment (includes endpoint as single source of truth)
+                // See docs/architecture/state-ownership.md
+                await updateProjectMeshState(project, logger, endpoint);
 
                 logger.info(`[Project Creation] Phase 3 complete: Mesh deployed${endpoint ? ' at ' + endpoint : ''}`);
                 return; // Success, exit the retry loop
@@ -305,6 +306,7 @@ export async function linkExistingMesh(
     // Preserve existing component properties (like path from Phase 1 cloning)
     const existingMeshComponent = project.componentInstances?.['commerce-mesh'];
 
+    // Note: endpoint is stored in meshState (authoritative), not componentInstance
     project.componentInstances!['commerce-mesh'] = {
         ...existingMeshComponent, // Preserve path if component was cloned
         id: 'commerce-mesh',
@@ -312,7 +314,6 @@ export async function linkExistingMesh(
         type: 'dependency',
         subType: 'mesh',
         status: 'deployed',
-        endpoint: meshConfig.endpoint,
         lastUpdated: new Date(),
         metadata: {
             meshId: meshConfig.meshId,
@@ -320,7 +321,9 @@ export async function linkExistingMesh(
         },
     };
 
-    await updateProjectMeshState(project, logger);
+    // Update meshState with endpoint as single source of truth
+    // See docs/architecture/state-ownership.md
+    await updateProjectMeshState(project, logger, meshConfig.endpoint);
 
     logger.info('[Project Creation] Phase 3 complete: Existing mesh linked');
 }
@@ -328,12 +331,19 @@ export async function linkExistingMesh(
 /**
  * Update project mesh state after deployment/linking
  *
- * Sets meshState with envVars from componentConfigs, source hash, and timestamp.
+ * Sets meshState with envVars from componentConfigs, source hash, endpoint, and timestamp.
+ * The endpoint is stored in meshState as the single source of truth.
+ * See docs/architecture/state-ownership.md for details.
+ *
  * Staleness detection (comparing local vs deployed) happens later via detectMeshChanges().
+ *
+ * @param project - The project to update
+ * @param logger - Logger instance
+ * @param endpoint - The mesh endpoint URL (optional)
  */
-async function updateProjectMeshState(project: Project, logger: Logger): Promise<void> {
+async function updateProjectMeshState(project: Project, logger: Logger, endpoint?: string): Promise<void> {
     const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
 
-    await updateMeshState(project);
+    await updateMeshState(project, endpoint);
     logger.debug('[Project Creation] Updated mesh state after deployment');
 }

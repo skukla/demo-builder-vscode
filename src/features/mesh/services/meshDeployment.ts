@@ -63,7 +63,7 @@ export async function deployMeshComponent(
                 cwd: componentPath, // Run from mesh component directory (where .env file is)
                 streaming: true,
                 shell: true, // Required for command string with arguments and quoted paths
-                timeout: TIMEOUTS.API_MESH_CREATE,
+                timeout: TIMEOUTS.LONG,
                 onOutput: (data: string) => {
                     const output = data.toLowerCase();
                     if (output.includes('validating')) {
@@ -99,7 +99,7 @@ export async function deployMeshComponent(
                         cwd: componentPath,
                         streaming: true,
                         shell: true,
-                        timeout: TIMEOUTS.API_MESH_UPDATE,
+                        timeout: TIMEOUTS.LONG,
                         onOutput: (data: string) => {
                             const output = data.toLowerCase();
                             if (output.includes('validating')) {

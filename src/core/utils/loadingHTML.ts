@@ -6,7 +6,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
  * Ensures loading spinners are visible for a minimum time to prevent jarring flashes.
  */
 
-const MIN_DISPLAY_TIME = TIMEOUTS.LOADING_MIN_DISPLAY; // milliseconds
+const MIN_DISPLAY_TIME = TIMEOUTS.UI.MIN_LOADING; // milliseconds
 const INIT_DELAY = TIMEOUTS.WEBVIEW_INIT_DELAY; // milliseconds - prevents VSCode's "Initializing web view..." message
 
 /**

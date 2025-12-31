@@ -21,7 +21,9 @@ jest.mock('vscode', () => ({
 jest.mock('@/core/validation');
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        UPDATE_DOWNLOAD: 300000,
+        AUTH: {
+            BROWSER: 60000, // Browser auth flows (UPDATE_DOWNLOAD maps to AUTH.BROWSER)
+        },
     },
 }));
 

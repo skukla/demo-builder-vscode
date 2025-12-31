@@ -30,13 +30,11 @@ jest.mock('@/core/logging', () => ({
     Logger: jest.fn(() => mockLogger),
 }));
 
-// Mock timeout config
+// Mock timeout config - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        GITHUB_API: 30000,
-        DA_LIVE_API: 30000,
-        HELIX_API: 30000,
-        DATA_INGESTION: 600000,
+        NORMAL: 30000, // Standard API calls (replaces GITHUB_API, DA_LIVE_API, HELIX_API)
+        EXTENDED: 600000, // Extended operations (replaces DATA_INGESTION)
     },
 }));
 

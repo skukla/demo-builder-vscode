@@ -44,7 +44,7 @@ export async function handleGetWorkspaces(
         const workspaces = await withTimeout(
             workspacesPromise,
             {
-                timeoutMs: TIMEOUTS.WORKSPACE_LIST,
+                timeoutMs: TIMEOUTS.NORMAL,
                 timeoutMessage: 'Request timed out. Please check your connection and try again.',
             },
         );
