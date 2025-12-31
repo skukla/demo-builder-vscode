@@ -38,7 +38,7 @@
  */
 
 import type { PrerequisiteStatus, CachedPrerequisiteResult } from './types';
-import { getCacheTTLWithJitter } from '@/core/cache/AbstractCacheManager';
+import { getCacheTTLWithJitter } from '@/core/cache/cacheUtils';
 import { getLogger } from '@/core/logging/debugLogger';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -149,7 +149,7 @@ export class PrerequisitesCacheManager {
     setCachedResult(
         prereqId: string,
         result: PrerequisiteStatus,
-        ttlMs: number = CACHE_TTL.PREREQUISITE_CHECK,
+        ttlMs: number = CACHE_TTL.MEDIUM,
         nodeVersion?: string,
     ): void {
         const key = this.getCacheKey(prereqId, nodeVersion);

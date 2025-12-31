@@ -71,7 +71,7 @@ export const mockDependencies = () => {
 
     jest.mock('@/core/utils/timeoutConfig', () => ({
         CACHE_TTL: {
-            PREREQUISITE_CHECK: 300000, // 5 minutes
+            MEDIUM: 300000, // 5 minutes - semantic category (replaces PREREQUISITE_CHECK)
         },
     }));
 };
