@@ -338,7 +338,15 @@ export async function handleOpenExternal(
             context.logger.info('[OpenExternal] Wrote data URL to temp file:', tempFile);
             await vscode.env.openExternal(vscode.Uri.file(tempFile));
         } else {
-            // Regular URL
+            // Regular URL - validate to prevent open redirect/malicious URL attacks
+            // SECURITY: Validates protocol and prevents SSRF to private networks
+            try {
+                validateURL(url);
+            } catch (validationError) {
+                context.logger.error('[OpenExternal] URL validation failed', validationError as Error);
+                return { success: false, error: 'Invalid or unsafe URL' };
+            }
+
             context.logger.info('[OpenExternal] Opening URL');
             await vscode.env.openExternal(vscode.Uri.parse(url));
         }
