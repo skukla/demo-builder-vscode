@@ -12,7 +12,7 @@ export type { BundleUris, WebviewHTMLWithBundlesOptions } from './getWebviewHTML
 
 export { extractEnvVars, extractEnvVarsSync } from './envVarExtraction';
 
-export { ProgressUnifier } from './progressUnifier';
+export { ProgressUnifier, formatElapsedTime } from './progressUnifier';
 export type {
     UnifiedProgress,
     IDateProvider,
@@ -21,8 +21,6 @@ export type {
     ProgressHandler,
     ExecutionContext,
 } from './progressUnifier';
-export { ElapsedTimeTracker, formatElapsedTime, CommandResolver } from './progressUnifier';
-export type { CommandResolveOptions } from './progressUnifier';
 
 export { setLoadingState } from './loadingHTML';
 

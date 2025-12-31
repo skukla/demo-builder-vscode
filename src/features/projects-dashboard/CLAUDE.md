@@ -27,9 +27,9 @@ projects-dashboard/
 │       ├── ProjectsGrid.tsx    # Responsive card grid
 │       └── DashboardEmptyState.tsx  # Empty state with CTA
 ├── handlers/
-│   ├── index.ts                # Handler exports (dashboardHandlers + registry)
-│   ├── dashboardHandlers.ts    # Message handlers
-│   └── ProjectsListHandlerRegistry.ts  # Handler registry for Projects List
+│   ├── index.ts                # Handler exports
+│   ├── dashboardHandlers.ts    # Dashboard message handlers
+│   └── projectsListHandlers.ts # Projects list message handlers (object literal)
 └── CLAUDE.md                   # This file
 ```
 
@@ -103,7 +103,7 @@ The main command for displaying the Projects List as the home screen.
 
 **Features:**
 - Extends `BaseWebviewCommand` for standardized webview management
-- Uses `ProjectsListHandlerRegistry` for message handling
+- Uses `projectsListHandlers` object literal with `dispatchHandler` for message handling
 - Loads the `projectsList` webpack bundle (4-bundle pattern)
 - Auto-shows on extension activation when no current project
 
@@ -112,13 +112,13 @@ The main command for displaying the Projects List as the home screen.
 await vscode.commands.executeCommand('demoBuilder.showProjectsList');
 ```
 
-## Handler Registry
+## Handler Map
 
-### ProjectsListHandlerRegistry
+### projectsListHandlers
 
-Centralized message dispatcher for the Projects List view.
+Object literal handler map for the Projects List view, used with `dispatchHandler`.
 
-**File:** `handlers/ProjectsListHandlerRegistry.ts`
+**File:** `handlers/projectsListHandlers.ts`
 
 **Registered Handlers:**
 - `getProjects` - Load all projects
@@ -127,8 +127,10 @@ Centralized message dispatcher for the Projects List view.
 
 **Usage:**
 ```typescript
-const registry = new ProjectsListHandlerRegistry();
-const result = await registry.handle(context, 'getProjects', {});
+import { projectsListHandlers } from './handlers';
+import { dispatchHandler } from '@/core/handlers';
+
+const result = await dispatchHandler(projectsListHandlers, context, 'getProjects', {});
 ```
 
 ## Handlers

@@ -23,8 +23,11 @@ core/
 │   ├── BaseCommand.ts
 │   ├── BaseWebviewCommand.ts
 │   └── types.ts
-├── commands/           # Command infrastructure
-│   └── HandlerRegistry.ts
+├── cache/              # Cache utilities
+│   ├── cacheUtils.ts   # Shared cache functions (TTL, jitter, expiry)
+│   └── index.ts
+├── commands/           # Command classes
+│   └── ResetAllCommand.ts
 ├── communication/      # Webview messaging (→ communication/README.md)
 │   ├── WebviewCommunicationManager.ts
 │   └── types.ts
@@ -50,6 +53,10 @@ core/
 │   ├── FormField.tsx
 │   ├── LoadingDisplay.tsx
 │   └── components/
+├── handlers/           # Handler dispatch utilities
+│   ├── dispatchHandler.ts
+│   ├── errorHandling.ts
+│   └── index.ts
 ├── utils/              # Core utilities
 │   ├── progressUnifier.ts
 │   ├── fileSystemUtils.ts
@@ -89,18 +96,37 @@ core/
 
 ---
 
-### commands/
+### cache/
 
-**Purpose**: Command infrastructure and handler registry
+**Purpose**: Shared cache utility functions
 
 **Key Exports:**
-- `HandlerRegistry` - Centralized message handler registration
-- Handler patterns and types
+- `getCacheTTLWithJitter()` - TTL with randomized jitter (security)
+- `isExpired()` - Check if cache entry has expired
+- `createCacheEntry()` - Create cache entry with TTL
+- `CacheConfig`, `CacheEntry` - Type definitions
 
 **Responsibilities:**
-- Message handler registration
-- Command orchestration patterns
-- Handler context management
+- TTL-based cache expiration
+- Security jitter to prevent timing attacks
+- Composable cache utilities (used by feature caches)
+
+**Note:** Replaces the former `AbstractCacheManager` base class with simple, composable utility functions.
+
+**Path Alias**: `@/core/cache`
+
+---
+
+### commands/
+
+**Purpose**: VS Code command implementations
+
+**Key Exports:**
+- `ResetAllCommand` - Development command to reset extension state
+
+**Responsibilities:**
+- Extension reset functionality
+- Developer utilities
 
 **Path Alias**: `@/core/commands`
 
@@ -155,6 +181,43 @@ core/
 - Singleton management
 
 **Path Alias**: `@/core/di`
+
+---
+
+### handlers/
+
+**Purpose**: Handler dispatch utilities for message handling
+
+**Key Exports:**
+- `dispatchHandler()` - Dispatch messages to handler maps
+- `hasHandler()` - Check if handler exists for message type
+- `getRegisteredTypes()` - Get all registered message types
+- `createErrorResponse()` - Create standardized error responses
+- `wrapHandler()` - Wrap handlers with error handling
+
+**Responsibilities:**
+- Message dispatch to handler maps
+- Handler existence checking
+- Error response standardization
+- Handler wrapping for consistent error handling
+
+**Usage Pattern:**
+Features define handler maps as simple object literals, then use `dispatchHandler()` to route messages:
+
+```typescript
+// Feature handler map (object literal)
+export const meshHandlers = defineHandlers({
+    'check-api-mesh': handleCheckApiMesh,
+    'create-api-mesh': handleCreateApiMesh,
+});
+
+// Dispatch in command
+const result = await dispatchHandler(meshHandlers, context, messageType, data);
+```
+
+**Note:** Replaces the former `BaseHandlerRegistry` class-based pattern with simple functional utilities.
+
+**Path Alias**: `@/core/handlers`
 
 ---
 

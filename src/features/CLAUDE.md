@@ -232,7 +232,7 @@ features/my-feature/
 
 **Key Services:**
 - `ShowProjectsListCommand` - Main webview command (home screen)
-- `ProjectsListHandlerRegistry` - Message handler registry
+- `projectsListHandlers` - Message handler map (object literal with `dispatchHandler`)
 - `ProjectsDashboard` - Main dashboard component with search/filter
 - `ProjectCard` - Individual project card display
 - `ProjectsGrid` - Responsive grid layout
