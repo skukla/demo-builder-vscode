@@ -302,6 +302,13 @@ export type EdsProgressCallback = (
 ) => void;
 
 /**
+ * Sub-progress callback for individual phase operations
+ * Used to report granular progress during long-running operations
+ * like verification and polling.
+ */
+export type PhaseProgressCallback = (message: string) => void;
+
+/**
  * Result of Helix 5 configuration
  */
 export interface HelixConfigResult {

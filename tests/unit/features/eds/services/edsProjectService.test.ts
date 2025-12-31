@@ -46,6 +46,8 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
         EDS_CODE_SYNC_TOTAL: 125000,
         COMPONENT_CLONE: 120000,
         DA_LIVE_COPY: 120000,
+        POLL_INITIAL_DELAY: 500,
+        POLL_MAX_DELAY: 5000,
     },
 }));
 
@@ -155,7 +157,15 @@ describe('EdsProjectService', () => {
         // Mock fs/promises
         (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
         (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
-        (fs.access as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+        // Default: files don't exist (for .env check), but we override for clone verification
+        (fs.access as jest.Mock).mockImplementation(async (filePath: string) => {
+            // Clone verification files should pass after clone
+            if (filePath.includes('package.json') || filePath.includes('scripts/aem.js')) {
+                return undefined; // File exists
+            }
+            // .env file doesn't exist (so it gets created)
+            throw new Error('ENOENT');
+        });
 
         // Progress callback
         mockProgressCallback = jest.fn();
@@ -553,7 +563,10 @@ describe('EdsProjectService', () => {
         beforeEach(() => {
             mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
             mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // helix config
+            // Setup for helix config POST + helix config verification GET
+            mockFetch
+                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config POST
+                .mockResolvedValueOnce({ ok: true, status: 200 }); // helix config verification GET
         });
 
         it('should use exponential backoff for polling', async () => {
@@ -1098,8 +1111,15 @@ describe('EdsProjectService', () => {
         });
 
         it('should handle fs.writeFile error in env generation', async () => {
-            // Given: fs.writeFile fails
-            (fs.access as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+            // Given: fs.writeFile fails, but clone verification should pass
+            (fs.access as jest.Mock).mockImplementation(async (filePath: string) => {
+                // Clone verification files exist
+                if (filePath.includes('package.json') || filePath.includes('scripts/aem.js')) {
+                    return undefined;
+                }
+                // .env doesn't exist (triggers creation)
+                throw new Error('ENOENT');
+            });
             (fs.writeFile as jest.Mock).mockRejectedValue(new Error('Permission denied'));
 
             // When: Running setup
@@ -1115,7 +1135,8 @@ describe('EdsProjectService', () => {
         it('should handle network error during code sync polling', async () => {
             // Given: Helix config succeeds, but code sync has network errors
             mockFetch
-                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config
+                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config POST
+                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config verification GET
                 .mockRejectedValue(new Error('Network error')); // code sync network error
 
             // When: Running setup (will keep polling until timeout)
@@ -1131,7 +1152,8 @@ describe('EdsProjectService', () => {
         it('should handle code sync non-404 error response', async () => {
             // Given: Code sync returns 500 error
             mockFetch
-                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config
+                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config POST
+                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config verification GET
                 .mockResolvedValue({ ok: false, status: 500 }); // code sync error
 
             // When: Running setup

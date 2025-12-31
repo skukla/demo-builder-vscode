@@ -15,6 +15,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { PollingService } from '@/core/shell/pollingService';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import type { Logger } from '@/types/logger';
@@ -26,7 +27,11 @@ import {
     EdsProjectError,
     type EdsProjectConfig,
     type GitHubRepo,
+    type PhaseProgressCallback,
 } from './types';
+
+// Re-export PhaseProgressCallback for consumers
+export type { PhaseProgressCallback } from './types';
 
 /**
  * GitHub services for EDS phases
@@ -56,6 +61,9 @@ const HELIX_CONFIG_URL = 'https://admin.hlx.page/config';
 const HELIX_CODE_URL = 'https://admin.hlx.page/code';
 const MAX_CODE_SYNC_ATTEMPTS = 25;
 const DEFAULT_BRANCH = 'main';
+
+// Key files that must exist after clone to verify successful clone
+const CLONE_VERIFICATION_FILES = ['package.json', 'scripts/aem.js'];
 
 /**
  * GitHub Repository Phase
@@ -160,13 +168,25 @@ export class GitHubRepoPhase {
         config.githubOwner = owner;
     }
 
-    async clone(repo: GitHubRepo, config: EdsProjectConfig): Promise<void> {
+    async clone(
+        repo: GitHubRepo,
+        config: EdsProjectConfig,
+        onProgress?: PhaseProgressCallback,
+    ): Promise<void> {
         this.logger.debug(`[EDS] Cloning repository to: ${config.projectPath}`);
 
         try {
+            onProgress?.('Cloning repository...');
             await this.repoOperations.cloneRepository(repo.cloneUrl, config.projectPath);
             this.logger.debug(`[EDS] Repository cloned successfully`);
+
+            // Priority 3: Post-clone verification - check key files exist
+            onProgress?.('Verifying clone integrity...');
+            await this.verifyCloneComplete(config.projectPath);
         } catch (error) {
+            if (error instanceof EdsProjectError) {
+                throw error;
+            }
             throw new EdsProjectError(
                 `Failed to clone repository: ${(error as Error).message}`,
                 'github-clone',
@@ -174,18 +194,48 @@ export class GitHubRepoPhase {
             );
         }
     }
+
+    /**
+     * Verify clone completed successfully by checking key files exist
+     */
+    private async verifyCloneComplete(projectPath: string): Promise<void> {
+        this.logger.debug(`[EDS] Verifying clone integrity`);
+
+        for (const file of CLONE_VERIFICATION_FILES) {
+            const filePath = path.join(projectPath, file);
+            try {
+                await fs.access(filePath);
+                this.logger.debug(`[EDS] Verified file exists: ${file}`);
+            } catch {
+                throw new EdsProjectError(
+                    `Clone verification failed: ${file} not found`,
+                    'github-clone',
+                );
+            }
+        }
+
+        this.logger.debug(`[EDS] Clone verification complete`);
+    }
 }
 
 /**
  * Helix Configuration Phase
  */
 export class HelixConfigPhase {
+    private pollingService: PollingService;
+
     constructor(
         private authService: AuthenticationService,
         private logger: Logger,
-    ) {}
+    ) {
+        this.pollingService = new PollingService();
+    }
 
-    async configure(config: EdsProjectConfig, repo: GitHubRepo): Promise<void> {
+    async configure(
+        config: EdsProjectConfig,
+        repo: GitHubRepo,
+        onProgress?: PhaseProgressCallback,
+    ): Promise<void> {
         this.logger.debug(`[EDS] Configuring Helix 5 for: ${repo.fullName}`);
 
         try {
@@ -205,6 +255,7 @@ export class HelixConfigPhase {
                 },
             };
 
+            onProgress?.('Sending Helix configuration...');
             const response = await fetch(configUrl, {
                 method: 'POST',
                 headers: {
@@ -220,7 +271,14 @@ export class HelixConfigPhase {
             }
 
             this.logger.debug(`[EDS] Helix 5 configured successfully`);
+
+            // Priority 1: Verify config was applied
+            onProgress?.('Verifying Helix config...');
+            await this.verifyHelixConfig(config);
         } catch (error) {
+            if (error instanceof EdsProjectError) {
+                throw error;
+            }
             const message = (error as Error).message;
             if (message.includes('timeout') || message.includes('abort')) {
                 throw new EdsProjectError('Helix configuration timeout', 'helix-config', error as Error);
@@ -233,44 +291,90 @@ export class HelixConfigPhase {
         }
     }
 
-    async verifyCodeSync(config: EdsProjectConfig, _repo: GitHubRepo): Promise<void> {
+    /**
+     * Priority 1: Verify Helix configuration was applied successfully
+     * Uses PollingService for consistent retry behavior
+     */
+    private async verifyHelixConfig(config: EdsProjectConfig): Promise<void> {
+        this.logger.debug(`[EDS] Verifying Helix config for: ${config.githubOwner}/${config.repoName}`);
+
+        const configUrl = `${HELIX_CONFIG_URL}/${config.githubOwner}/${config.repoName}/${DEFAULT_BRANCH}`;
+
+        try {
+            await this.pollingService.pollUntilCondition(
+                async () => {
+                    try {
+                        const response = await fetch(configUrl, {
+                            method: 'GET',
+                            signal: AbortSignal.timeout(TIMEOUTS.EDS_CODE_SYNC_POLL),
+                        });
+                        return response.ok;
+                    } catch {
+                        return false;
+                    }
+                },
+                {
+                    name: 'helix-config-verify',
+                    maxAttempts: 10,
+                    initialDelay: TIMEOUTS.POLL_INITIAL_DELAY,
+                    maxDelay: TIMEOUTS.POLL_MAX_DELAY,
+                    timeout: TIMEOUTS.EDS_HELIX_CONFIG,
+                },
+            );
+
+            this.logger.debug(`[EDS] Helix config verified`);
+        } catch (error) {
+            throw new EdsProjectError(
+                `Helix config verification failed: ${(error as Error).message}`,
+                'helix-config',
+                error as Error,
+            );
+        }
+    }
+
+    /**
+     * Priority 2: Verify code sync using PollingService
+     */
+    async verifyCodeSync(
+        config: EdsProjectConfig,
+        _repo: GitHubRepo,
+        onProgress?: PhaseProgressCallback,
+    ): Promise<void> {
         this.logger.debug(`[EDS] Verifying code sync for: ${config.githubOwner}/${config.repoName}`);
 
         const codeUrl = `${HELIX_CODE_URL}/${config.githubOwner}/${config.repoName}/${DEFAULT_BRANCH}/scripts/aem.js`;
-        const pollInterval = TIMEOUTS.EDS_CODE_SYNC_POLL;
 
-        let attempts = 0;
+        try {
+            onProgress?.('Checking code sync status...');
+            await this.pollingService.pollUntilCondition(
+                async () => {
+                    try {
+                        const response = await fetch(codeUrl, {
+                            method: 'GET',
+                            signal: AbortSignal.timeout(TIMEOUTS.EDS_CODE_SYNC_POLL),
+                        });
+                        return response.ok;
+                    } catch {
+                        return false;
+                    }
+                },
+                {
+                    name: 'code-sync',
+                    maxAttempts: MAX_CODE_SYNC_ATTEMPTS,
+                    initialDelay: TIMEOUTS.EDS_CODE_SYNC_POLL,
+                    maxDelay: TIMEOUTS.EDS_CODE_SYNC_POLL,
+                    timeout: TIMEOUTS.EDS_CODE_SYNC_TOTAL,
+                },
+            );
 
-        while (attempts < MAX_CODE_SYNC_ATTEMPTS) {
-            attempts++;
-
-            try {
-                const response = await fetch(codeUrl, {
-                    method: 'GET',
-                    signal: AbortSignal.timeout(pollInterval),
-                });
-
-                if (response.ok) {
-                    this.logger.debug(`[EDS] Code synced after ${attempts} attempts`);
-                    return;
-                }
-
-                if (response.status === 404) {
-                    this.logger.debug(`[EDS] Code not synced yet, attempt ${attempts}/${MAX_CODE_SYNC_ATTEMPTS}`);
-                }
-            } catch {
-                this.logger.debug(`[EDS] Code sync poll failed, attempt ${attempts}/${MAX_CODE_SYNC_ATTEMPTS}`);
-            }
-
-            if (attempts < MAX_CODE_SYNC_ATTEMPTS) {
-                await new Promise((resolve) => setTimeout(resolve, pollInterval));
-            }
+            this.logger.debug(`[EDS] Code sync verified`);
+        } catch (error) {
+            throw new EdsProjectError(
+                `Code sync timeout: ${(error as Error).message}`,
+                'code-sync',
+                error as Error,
+            );
         }
-
-        throw new EdsProjectError(
-            `Code sync timeout after ${MAX_CODE_SYNC_ATTEMPTS} attempts`,
-            'code-sync',
-        );
     }
 }
 

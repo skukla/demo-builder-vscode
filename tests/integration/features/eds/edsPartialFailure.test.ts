@@ -42,6 +42,8 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
         COMPONENT_CLONE: 120000,
         DA_LIVE_COPY: 120000,
         DA_LIVE_API: 30000,
+        POLL_INITIAL_DELAY: 1000,
+        POLL_MAX_DELAY: 10000,
     },
 }));
 
@@ -158,7 +160,14 @@ describe('EDS Partial Failure - Integration Tests', () => {
         // Mock fs/promises
         (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
         (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
-        (fs.access as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+        // Clone verification needs package.json and scripts/aem.js to exist
+        // .env check should fail (ENOENT) to trigger env generation
+        (fs.access as jest.Mock).mockImplementation(async (filePath: string) => {
+            if (filePath.includes('package.json') || filePath.includes('scripts/aem.js')) {
+                return undefined; // File exists (clone verification passes)
+            }
+            throw new Error('ENOENT'); // .env doesn't exist (triggers generation)
+        });
 
         // Progress callback
         mockProgressCallback = jest.fn();

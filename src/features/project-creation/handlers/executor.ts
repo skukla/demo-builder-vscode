@@ -25,8 +25,15 @@ import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
-import { getProjectFrontendPort, getComponentConfigPort } from '@/types/typeGuards';
+import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
+
+// EDS service imports (lazy-loaded, only instantiated for EDS stacks)
+import type {
+    EdsProjectConfig,
+    EdsProgressCallback,
+    EdsProjectSetupResult,
+} from '@/features/eds/services/types';
 
 // ============================================================================
 // Helper Functions
@@ -77,6 +84,20 @@ interface ProjectCreationConfig {
     // Edit mode: re-use existing project directory
     editMode?: boolean;
     editProjectPath?: string;
+    // EDS-specific configuration (for Edge Delivery Services stacks)
+    edsConfig?: {
+        repoName: string;
+        repoMode: 'new' | 'existing';
+        existingRepo?: string;
+        resetToTemplate?: boolean;
+        daLiveOrg: string;
+        daLiveSite: string;
+        accsEndpoint?: string;
+        githubOwner?: string;
+        isPrivate?: boolean;
+        skipContent?: boolean;
+        skipTools?: boolean;
+    };
 }
 
 /**
@@ -161,6 +182,129 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     context.logger.debug('[Project Creation] Deferring project state save until after installation');
 
     // ========================================================================
+    // EDS SETUP (if EDS stack selected)
+    // ========================================================================
+
+    const isEdsStack = isEdsStackId(typedConfig.selectedStack);
+    let edsResult: EdsProjectSetupResult | undefined;
+
+    if (isEdsStack && typedConfig.edsConfig) {
+        progressTracker('EDS Setup', 16, 'Initializing Edge Delivery Services...');
+
+        // Check if AuthenticationService is available
+        if (!context.authManager) {
+            context.logger.warn('[Project Creation] AuthenticationService not available - skipping EDS setup');
+        } else {
+            // Build EdsProjectConfig from wizard config
+            const edsProjectConfig: EdsProjectConfig = {
+                projectName: typedConfig.projectName,
+                projectPath,
+                repoName: typedConfig.edsConfig.repoName,
+                daLiveOrg: typedConfig.edsConfig.daLiveOrg,
+                daLiveSite: typedConfig.edsConfig.daLiveSite,
+                accsEndpoint: typedConfig.edsConfig.accsEndpoint || '',
+                githubOwner: typedConfig.edsConfig.githubOwner || '',
+                isPrivate: typedConfig.edsConfig.isPrivate,
+                skipContent: typedConfig.edsConfig.skipContent,
+                skipTools: typedConfig.edsConfig.skipTools,
+                repoMode: typedConfig.edsConfig.repoMode,
+                existingRepo: typedConfig.edsConfig.existingRepo,
+                resetToTemplate: typedConfig.edsConfig.resetToTemplate,
+            };
+
+            // Map EdsProgressCallback to executor progressTracker
+            // EDS progress (0-100) maps to executor progress (16-30)
+            const edsProgressCallback: EdsProgressCallback = (phase, progress, message) => {
+                const mappedProgress = 16 + Math.round(progress * 0.14);
+                progressTracker('EDS Setup', mappedProgress, message);
+            };
+
+            // Lazy-load EDS services (only for EDS stacks)
+            const { EdsProjectService } = await import('@/features/eds/services/edsProjectService');
+            const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
+            const { GitHubRepoOperations } = await import('@/features/eds/services/githubRepoOperations');
+            const { DaLiveOrgOperations } = await import('@/features/eds/services/daLiveOrgOperations');
+            const { DaLiveContentOperations } = await import('@/features/eds/services/daLiveContentOperations');
+            const { ComponentManager } = await import('@/features/components/services/componentManager');
+
+            // Create TokenProvider adapter from AuthenticationService
+            // TokenManager returns undefined, TokenProvider expects null - adapt the type
+            const tokenProvider = {
+                getAccessToken: async () => {
+                    const token = await context.authManager!.getTokenManager().getAccessToken();
+                    return token ?? null;
+                },
+            };
+
+            // GitHub services
+            const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
+            const githubRepoOperations = new GitHubRepoOperations(githubTokenService, context.logger);
+            const githubServices = {
+                tokenService: githubTokenService,
+                repoOperations: githubRepoOperations,
+            };
+
+            // DA.live services
+            const daLiveOrgOperations = new DaLiveOrgOperations(tokenProvider, context.logger);
+            const daLiveContentOperations = new DaLiveContentOperations(tokenProvider, context.logger);
+            const daLiveServices = {
+                orgOperations: daLiveOrgOperations,
+                contentOperations: daLiveContentOperations,
+            };
+
+            // ComponentManager for tool cloning
+            const componentManager = new ComponentManager(context.logger);
+
+            // Create EdsProjectService and run setup
+            const edsProjectService = new EdsProjectService(
+                githubServices,
+                daLiveServices,
+                context.authManager,
+                componentManager,
+                context.logger,
+            );
+
+            context.logger.info(`[Project Creation] Running EDS setup for: ${typedConfig.projectName}`);
+            edsResult = await edsProjectService.setupProject(edsProjectConfig, edsProgressCallback);
+
+            if (!edsResult.success) {
+                const errorMsg = `EDS setup failed at phase '${edsResult.phase}': ${edsResult.error}`;
+                context.logger.error(`[Project Creation] ${errorMsg}`);
+                throw new Error(errorMsg);
+            }
+
+            context.logger.info(`[Project Creation] EDS setup complete: ${edsResult.repoUrl}`);
+        }
+
+        // Create frontend ComponentInstance from EDS project path
+        const frontendId = typedConfig.components?.frontend;
+        if (frontendId) {
+            const frontendInstance: import('@/types').ComponentInstance = {
+                id: frontendId,
+                name: 'EDS Storefront',
+                type: 'frontend',
+                path: projectPath,  // EDS clones to project root
+                status: 'ready',
+                lastUpdated: new Date(),
+                metadata: edsResult ? {
+                    previewUrl: edsResult.previewUrl,
+                    liveUrl: edsResult.liveUrl,
+                    repoUrl: edsResult.repoUrl,
+                } : undefined,
+            };
+            project.componentInstances![frontendId] = frontendInstance;
+
+            context.logger.debug(`[Project Creation] Created EDS frontend instance: ${frontendId}`);
+        }
+
+        // Save project state after EDS setup completes (ensures EDS metadata is persisted
+        // even if later steps fail)
+        await context.stateManager.saveProject(project);
+
+        progressTracker('EDS Setup', 30, 'EDS initialization complete');
+    }
+
+    // ========================================================================
     // LOAD COMPONENT DEFINITIONS
     // ========================================================================
 
@@ -171,7 +315,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const registry = await registryManager.loadRegistry();
     const sharedEnvVars = registry.envVars || {};
 
-    const componentDefinitions = await loadComponentDefinitions(typedConfig, registryManager, context);
+    const componentDefinitions = await loadComponentDefinitions(typedConfig, registryManager, context, isEdsStack);
 
     // ========================================================================
     // EDIT MODE: CLEAN SLATE FOR COMPONENTS
@@ -280,20 +424,6 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         project.componentInstances!['commerce-mesh'] = meshComponent;
     }
 
-    // Persist MESH_ENDPOINT to componentConfigs so exports include it
-    const meshEndpoint = project.componentInstances?.['commerce-mesh']?.endpoint;
-    if (meshEndpoint && typedConfig.components?.frontend) {
-        const frontendId = typedConfig.components.frontend;
-        if (!project.componentConfigs) {
-            project.componentConfigs = {};
-        }
-        if (!project.componentConfigs[frontendId]) {
-            project.componentConfigs[frontendId] = {};
-        }
-        project.componentConfigs[frontendId]['MESH_ENDPOINT'] = meshEndpoint;
-        context.logger.debug(`[Project Creation] Persisted MESH_ENDPOINT to componentConfigs.${frontendId}`);
-    }
-
     // ========================================================================
     // PHASE 4-5: FINALIZATION
     // ========================================================================
@@ -386,6 +516,7 @@ async function loadComponentDefinitions(
     typedConfig: ProjectCreationConfig,
     registryManager: import('@/features/components/services/ComponentRegistryManager').ComponentRegistryManager,
     context: HandlerContext,
+    isEdsStack: boolean = false,
 ): Promise<Map<string, ComponentDefinitionEntry>> {
     // Get frontend's submodule IDs to skip them in the dependency loop
     const frontendSubmoduleIds = new Set<string>();
@@ -401,8 +532,12 @@ async function loadComponentDefinitions(
     const filteredDependencies = (typedConfig.components?.dependencies || [])
         .filter((id: string) => !frontendSubmoduleIds.has(id));
 
+    // Build component list - skip frontend for EDS stacks (EdsProjectService handles repo cloning)
     const allComponents = [
-        ...(typedConfig.components?.frontend ? [{ id: typedConfig.components.frontend, type: 'frontend' }] : []),
+        // Only include frontend if NOT EDS stack (EDS handles repo cloning internally via setupProject)
+        ...(!isEdsStack && typedConfig.components?.frontend
+            ? [{ id: typedConfig.components.frontend, type: 'frontend' }]
+            : []),
         ...filteredDependencies.map((id: string) => ({ id, type: 'dependency' })),
         ...(typedConfig.components?.appBuilder || []).map((id: string) => ({ id, type: 'app-builder' })),
     ];

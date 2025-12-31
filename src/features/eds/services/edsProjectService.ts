@@ -152,18 +152,21 @@ export class EdsProjectService {
             }
 
             // Phase 2: Clone repository locally
-            reportProgress('github-clone', PROGRESS.GITHUB_CLONE.start, 'Cloning repository...');
-            await this.githubPhase.clone(createdRepo, config);
-            reportProgress('github-clone', PROGRESS.GITHUB_CLONE.end, 'Repository cloned');
+            await this.githubPhase.clone(createdRepo, config, (msg) => {
+                reportProgress('github-clone', PROGRESS.GITHUB_CLONE.start, msg);
+            });
+            reportProgress('github-clone', PROGRESS.GITHUB_CLONE.end, 'Repository cloned and verified');
 
             // Phase 3: Configure Helix 5
-            reportProgress('helix-config', PROGRESS.HELIX_CONFIG.start, 'Configuring Helix 5...');
-            await this.helixPhase.configure(config, createdRepo);
-            reportProgress('helix-config', PROGRESS.HELIX_CONFIG.end, 'Helix configured');
+            await this.helixPhase.configure(config, createdRepo, (msg) => {
+                reportProgress('helix-config', PROGRESS.HELIX_CONFIG.start, msg);
+            });
+            reportProgress('helix-config', PROGRESS.HELIX_CONFIG.end, 'Helix configured and verified');
 
             // Phase 4: Verify Code Bus sync
-            reportProgress('code-sync', PROGRESS.CODE_SYNC.start, 'Verifying code sync...');
-            await this.helixPhase.verifyCodeSync(config, createdRepo);
+            await this.helixPhase.verifyCodeSync(config, createdRepo, (msg) => {
+                reportProgress('code-sync', PROGRESS.CODE_SYNC.start, msg);
+            });
             reportProgress('code-sync', PROGRESS.CODE_SYNC.end, 'Code synced');
 
             // Phase 5: Populate DA.live content (unless skipped)
