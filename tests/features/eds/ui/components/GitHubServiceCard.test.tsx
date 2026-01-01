@@ -252,8 +252,9 @@ describe('GitHubServiceCard', () => {
                 </TestWrapper>
             );
 
-            // Then: Should have card class and GitHub title
-            expect(container.querySelector('.service-card')).toBeInTheDocument();
+            // Then: Should have card with data-connected attribute and GitHub title
+            // Note: CSS Modules generate unique class names, so we query by data attribute instead
+            expect(container.querySelector('[data-connected]')).toBeInTheDocument();
             expect(screen.getByText('GitHub')).toBeInTheDocument();
         });
     });
