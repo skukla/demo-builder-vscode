@@ -1,0 +1,325 @@
+/**
+ * Project Creation Feature CSS Module
+ *
+ * Scoped styles for BrandGallery, StackSelector, and architecture modal components.
+ * Migrated from global custom-spectrum.css to enable CSS Modules scoping.
+ *
+ * Part of CSS Architecture Improvement - Step 6
+ */
+
+/* ========================================
+ * Selector Grid (StackSelector)
+ * ======================================== */
+
+.selectorGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.selectorCard {
+    background: var(--spectrum-global-color-gray-50);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.selectorCard:hover {
+    background: var(--spectrum-global-color-gray-75);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.selectorCard:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+.selectorCard[data-selected="true"] {
+    background: var(--spectrum-global-color-gray-50);
+    border-color: var(--spectrum-global-color-blue-400);
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+    transform: none;
+}
+
+.selectorCard[data-selected="true"]:hover {
+    background: var(--spectrum-global-color-gray-75);
+    transform: none;
+}
+
+.selectorCardName {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+    margin-bottom: 4px;
+}
+
+.selectorCardDescription {
+    display: block;
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-500);
+    line-height: 1.4;
+}
+
+/* ========================================
+ * Expandable Brand Cards (BrandGallery)
+ * ======================================== */
+
+.expandableBrandGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+    align-items: start;
+}
+
+.expandableBrandCard {
+    background: var(--spectrum-global-color-gray-50);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    cursor: pointer;
+    transition: all 0.2s ease-out;
+}
+
+.expandableBrandCard:hover {
+    background: var(--spectrum-global-color-gray-75);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.expandableBrandCard:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+/* Selected state - brand chosen, shows blue border */
+.selected {
+    border-color: var(--spectrum-global-color-blue-400);
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+/* Expanded state - shows architecture selection */
+.expanded {
+    background: var(--spectrum-global-color-gray-50);
+    border-color: var(--spectrum-global-color-blue-400);
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+    transform: none;
+    cursor: pointer;
+}
+
+.expanded:hover {
+    transform: none;
+    box-shadow: none;
+    background: var(--spectrum-global-color-gray-75);
+}
+
+/* Dimmed state - other cards when one is expanded */
+.dimmed {
+    opacity: 0.5;
+    transform: none;
+}
+
+.dimmed:hover {
+    opacity: 0.7;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ========================================
+ * Brand Card Internal Elements
+ * ======================================== */
+
+.brandCardHeader {
+    margin-bottom: 0;
+}
+
+.expandableBrandCard.expanded .brandCardHeader {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.brandCardTitleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.brandCardName {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+.brandCardCheck {
+    color: var(--spectrum-global-color-green-600);
+    flex-shrink: 0;
+}
+
+.brandCardDescription {
+    display: block;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+    line-height: 1.4;
+}
+
+/* Selection summary in expanded brand card */
+.brandCardSelection {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--spectrum-global-color-gray-300);
+    animation: expandIn 0.25s ease-out;
+}
+
+@keyframes expandIn {
+    from {
+        opacity: 0;
+        max-height: 0;
+        margin-top: 0;
+        padding-top: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 100px;
+        margin-top: 12px;
+        padding-top: 12px;
+    }
+}
+
+.brandCardSelectionLabel {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.brandCardSelectionValue {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+/* ========================================
+ * Architecture Modal Options
+ * ======================================== */
+
+.architectureModalOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.architectureModalOption {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 8px;
+    background: var(--spectrum-global-color-gray-75);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.architectureModalOption:hover {
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-400);
+}
+
+.architectureModalOption:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+.architectureModalOption.selected {
+    background: rgba(38, 128, 235, 0.15);
+    border-color: var(--spectrum-global-color-blue-400);
+}
+
+/* Radio circle indicator */
+.architectureRadio {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--spectrum-global-color-gray-500);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    transition: all 0.15s ease;
+}
+
+.architectureModalOption.selected .architectureRadio {
+    border-color: var(--spectrum-global-color-blue-400);
+}
+
+.architectureRadioDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--spectrum-global-color-blue-400);
+}
+
+/* Architecture option text content */
+.architectureContent {
+    flex: 1;
+    min-width: 0;
+}
+
+.architectureName {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+    margin-bottom: 2px;
+}
+
+.architectureDescription {
+    display: block;
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-600);
+    line-height: 1.4;
+}
+
+/* ========================================
+ * Addon Section (in architecture modal)
+ * ======================================== */
+
+.architectureAddons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.addonLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.addonName {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+.addonDescription {
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-600);
+    line-height: 1.4;
+}

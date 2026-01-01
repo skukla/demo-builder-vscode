@@ -8,6 +8,7 @@
 import { Text } from '@adobe/react-spectrum';
 import React, { useCallback, useRef } from 'react';
 import { Stack } from '@/types/stacks';
+import styles from '../styles/project-creation.module.css';
 
 export interface StackSelectorProps {
     stacks: Stack[];
@@ -72,14 +73,14 @@ const StackCard: React.FC<StackCardProps> = ({ stack, isSelected, onSelect, onNa
             aria-selected={isSelected ? 'true' : 'false'}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
-            className="selector-card"
+            className={styles.selectorCard}
             aria-pressed={isSelected}
             aria-label={`${stack.name}: ${stack.description}`}
         >
-            <Text UNSAFE_className="selector-card-name">
+            <Text UNSAFE_className={styles.selectorCardName}>
                 {stack.name}
             </Text>
-            <Text UNSAFE_className="selector-card-description">
+            <Text UNSAFE_className={styles.selectorCardDescription}>
                 {stack.description}
             </Text>
             {stack.features && stack.features.length > 0 && (
@@ -130,7 +131,7 @@ export const StackSelector: React.FC<StackSelectorProps> = ({
     }, [stacks.length]);
 
     return (
-        <div className="selector-grid" role="listbox" aria-label="Architecture selection">
+        <div className={styles.selectorGrid} role="listbox" aria-label="Architecture selection">
             {stacks.map((stack, index) => (
                 <StackCard
                     key={stack.id}

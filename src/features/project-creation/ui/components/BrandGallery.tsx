@@ -18,6 +18,7 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
 import { filterPackagesBySearchQuery } from './brandGalleryHelpers';
+import styles from '../styles/project-creation.module.css';
 
 /** Addon metadata for display */
 const ADDON_METADATA: Record<string, { name: string; description: string }> = {
@@ -81,11 +82,11 @@ const PackageCard: React.FC<PackageCardProps> = ({
     const isComplete = isSelected && selectedStack;
 
     const cardClasses = cn(
-        'expandable-brand-card',
-        isSelected && 'selected',      // Blue border when package selected
-        isComplete && 'expanded',       // Expanded when stack also selected
+        styles.expandableBrandCard,
+        isSelected && styles.selected,      // Blue border when package selected
+        isComplete && styles.expanded,       // Expanded when stack also selected
         isComplete && 'complete',
-        isDimmed && 'dimmed',
+        isDimmed && styles.dimmed,
     );
 
     return (
@@ -102,27 +103,27 @@ const PackageCard: React.FC<PackageCardProps> = ({
             aria-label={`${pkg.name}: ${pkg.description}`}
         >
             {/* Package header - always visible */}
-            <div className="brand-card-header">
-                <div className="brand-card-title-row">
-                    <Text UNSAFE_className="brand-card-name">
+            <div className={styles.brandCardHeader}>
+                <div className={styles.brandCardTitleRow}>
+                    <Text UNSAFE_className={styles.brandCardName}>
                         {pkg.name}
                     </Text>
                     {isComplete && (
-                        <CheckmarkCircle size="S" UNSAFE_className="brand-card-check" />
+                        <CheckmarkCircle size="S" UNSAFE_className={styles.brandCardCheck} />
                     )}
                 </div>
-                <Text UNSAFE_className="brand-card-description">
+                <Text UNSAFE_className={styles.brandCardDescription}>
                     {pkg.description}
                 </Text>
             </div>
 
             {/* Selected architecture - shown when complete */}
             {isComplete && (
-                <div className="brand-card-selection">
-                    <Text UNSAFE_className="brand-card-selection-label">
+                <div className={styles.brandCardSelection}>
+                    <Text UNSAFE_className={styles.brandCardSelectionLabel}>
                         Architecture
                     </Text>
-                    <Text UNSAFE_className="brand-card-selection-value">
+                    <Text UNSAFE_className={styles.brandCardSelectionValue}>
                         {selectedStack.name}
                     </Text>
                 </div>
@@ -218,7 +219,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
             <Text UNSAFE_className="description-block">
                 How should it be built?
             </Text>
-            <div className="architecture-modal-options" role="radiogroup" aria-label="Architecture options">
+            <div className={styles.architectureModalOptions} role="radiogroup" aria-label="Architecture options">
                 {filteredStacks.map((stack, index) => {
                     const isSelected = selectedStackId === stack.id;
                     const itemProps = getItemProps(index);
@@ -231,20 +232,20 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                             aria-checked={isSelected}
                             data-selected={isSelected ? 'true' : 'false'}
                             className={cn(
-                                'architecture-modal-option',
-                                isSelected && 'selected',
+                                styles.architectureModalOption,
+                                isSelected && styles.selected,
                             )}
                             onClick={() => handleStackClick(stack.id)}
                             onKeyDown={itemProps.onKeyDown}
                         >
-                            <div className="architecture-radio">
-                                {isSelected && <div className="architecture-radio-dot" />}
+                            <div className={styles.architectureRadio}>
+                                {isSelected && <div className={styles.architectureRadioDot} />}
                             </div>
-                            <div className="architecture-content">
-                                <Text UNSAFE_className="architecture-name">
+                            <div className={styles.architectureContent}>
+                                <Text UNSAFE_className={styles.architectureName}>
                                     {stack.name}
                                 </Text>
-                                <Text UNSAFE_className="architecture-description">
+                                <Text UNSAFE_className={styles.architectureDescription}>
                                     {stack.description}
                                 </Text>
                             </div>
@@ -260,7 +261,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                     <Text UNSAFE_className="description-block-sm">
                         Optional Services
                     </Text>
-                    <div className="architecture-addons">
+                    <div className={styles.architectureAddons}>
                         {availableAddons.map((optionalAddon) => {
                             const addonMeta = ADDON_METADATA[optionalAddon.id];
                             if (!addonMeta) return null;
@@ -273,9 +274,9 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                                     isDisabled={isRequired}
                                     onChange={(isSelected) => handleAddonToggle(optionalAddon.id, isSelected)}
                                 >
-                                    <span className="addon-label">
-                                        <span className="addon-name">{addonMeta.name}</span>
-                                        <span className="addon-description">{addonMeta.description}</span>
+                                    <span className={styles.addonLabel}>
+                                        <span className={styles.addonName}>{addonMeta.name}</span>
+                                        <span className={styles.addonDescription}>{addonMeta.description}</span>
                                     </span>
                                 </Checkbox>
                             );
@@ -395,7 +396,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                 hasLoadedOnce={true}
             />
 
-            <div className="expandable-brand-grid">
+            <div className={styles.expandableBrandGrid}>
                 {filteredPackages.map(pkg => {
                     const isSelected = selectedPackage === pkg.id;
                     const isDimmed = selectedPackage !== undefined && !isSelected;
