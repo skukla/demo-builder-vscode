@@ -14,15 +14,24 @@ The `UNSAFE_className` prop is the official way to apply custom CSS classes to R
 
 ### File Structure
 
+**Global Styles** (shared across all features):
 ```
-src/webviews/styles/
-├── custom-spectrum.css    # All React Spectrum customizations
+src/core/ui/styles/
+├── custom-spectrum.css    # React Spectrum customizations & utility classes
 ├── index.css              # Entry point that imports all styles
 ├── vscode-theme.css       # VS Code theme integration
 └── wizard.css             # Wizard-specific styles
 ```
 
-### Central CSS System
+**Feature-Scoped Styles** (CSS Modules per feature):
+```
+src/features/
+├── prerequisites/ui/styles/prerequisites.module.css
+├── project-creation/ui/styles/project-creation.module.css
+└── projects-dashboard/ui/styles/projects-dashboard.module.css
+```
+
+### Central CSS System (Global)
 
 All custom styles are defined in `custom-spectrum.css` with clear sections:
 
@@ -489,10 +498,70 @@ translateSpectrumToken(undefined)   // → undefined (preserve optional)
 
 This ensures backward compatibility while enabling modern token-based design.
 
+## CSS Modules (Feature-Scoped Styles)
+
+As of v1.8.0, the project supports CSS Modules for feature-scoped styling alongside global CSS.
+
+### File Naming Convention
+
+- **Global CSS**: `*.css` (e.g., `custom-spectrum.css`, `wizard.css`)
+- **Scoped CSS**: `*.module.css` (e.g., `prerequisites.module.css`)
+
+### Usage Pattern
+
+```typescript
+// Import CSS Module (TypeScript-safe via src/types/css.d.ts)
+import styles from '../styles/prerequisites.module.css';
+
+// Use scoped class names
+<div className={styles.prerequisiteItem}>
+  <span className={styles.statusIcon}>...</span>
+</div>
+```
+
+### Feature Module Locations
+
+CSS Modules are colocated with their features:
+
+```
+src/features/
+├── prerequisites/ui/styles/prerequisites.module.css
+├── project-creation/ui/styles/project-creation.module.css
+└── projects-dashboard/ui/styles/projects-dashboard.module.css
+```
+
+### When to Use CSS Modules vs Global CSS
+
+**Use CSS Modules when:**
+- Styling feature-specific components
+- Class names might conflict with other features
+- Building new features from scratch
+
+**Use Global CSS (`custom-spectrum.css`) when:**
+- Defining utility classes (`.flex`, `.gap-4`, etc.)
+- Overriding React Spectrum defaults
+- Creating reusable patterns across features
+
+### Class Naming in Modules
+
+Use camelCase for class names in CSS Modules:
+
+```css
+/* prerequisites.module.css */
+.prerequisiteItem { }      /* Good: camelCase */
+.statusIndicator { }       /* Good: camelCase */
+```
+
+This differs from global CSS which uses kebab-case:
+
+```css
+/* custom-spectrum.css (global) */
+.prerequisite-item { }     /* Good: kebab-case for global */
+```
+
 ## Future Improvements
 
-- Consider CSS Modules for better scoping
-- Evaluate CSS-in-JS solutions that work with React Spectrum
 - Create a visual style guide component
 - Add CSS linting rules for consistency
 - Expand token support as new Spectrum sizes are needed (follow YAGNI principle)
+- Consider cascade layers (@layer) for better specificity management

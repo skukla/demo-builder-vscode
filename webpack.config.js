@@ -58,8 +58,25 @@ module.exports = {
         },
         exclude: /node_modules/
       },
+      // CSS Modules - feature-scoped styles (MUST come before global CSS rule)
+      {
+        test: /\.module\.css$/,
+        use: [
+          'style-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              modules: {
+                localIdentName: '[name]__[local]--[hash:base64:5]'
+              }
+            }
+          }
+        ]
+      },
+      // Global CSS - shared styles (excludes CSS Modules)
       {
         test: /\.css$/,
+        exclude: /\.module\.css$/,
         use: ['style-loader', 'css-loader']
       },
       {
