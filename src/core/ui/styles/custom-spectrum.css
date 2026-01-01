@@ -12,6 +12,10 @@
    While marked as "unsafe" to discourage overriding the design system,
    it's necessary and correct for customization beyond built-in props.
    There is NO "safe" className prop in React Spectrum.
+
+   MAINTENANCE:
+   Dead CSS audit completed 2025-12-31. 63 unused utility classes removed.
+   Use `node scripts/audit-dead-css.js --verbose` to identify unused classes.
    ============================================ */
 
 /* ============================================
@@ -233,102 +237,6 @@ button[class*="spectrum-Button"][disabled],
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* ===========================================
-   Prerequisite-specific Classes
-   =========================================== */
-.prerequisite-container {
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    margin-bottom: 16px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    border-radius: 4px !important;
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    padding: 12px !important;
-    max-width: 100% !important;
-    width: 100% !important;
-}
-
-.prerequisite-list {
-    padding-bottom: 60px !important;
-}
-
-.prerequisite-item {
-    padding: 12px !important;
-    background-color: var(--spectrum-global-color-gray-75) !important;
-    border-radius: 4px !important;
-    width: 100% !important;
-    overflow: hidden !important;
-    transition: all 0.3s ease !important;
-}
-
-.prerequisite-item:not(:last-child) {
-    margin-bottom: 8px !important;
-}
-
-.prerequisite-content {
-    margin-right: 12px !important;
-    min-width: 0 !important;
-    overflow: hidden !important;
-}
-
-.prerequisite-title {
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    display: block !important;
-    margin-bottom: 2px !important;
-}
-
-.prerequisite-description {
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    display: block !important;
-}
-
-.prerequisite-message {
-    font-size: 12px !important;
-    font-weight: 400 !important;
-    display: block !important;
-    margin-top: 4px !important;
-    min-height: 17px !important;
-    line-height: 17px !important;
-    transition: color 0.3s ease, opacity 0.3s ease !important;
-    white-space: pre-wrap !important;
-    word-break: break-word !important;
-    overflow: hidden !important;
-}
-
-.prerequisite-message-error {
-    color: var(--spectrum-global-color-red-600) !important;
-}
-
-.prerequisite-message-warning {
-    color: var(--spectrum-global-color-orange-600) !important;
-}
-
-.prerequisite-message-default {
-    color: var(--spectrum-global-color-gray-600) !important;
-}
-
-.node-version-line {
-    font-size: 12px !important;
-    font-weight: 400 !important;
-    line-height: 18px !important;
-    display: block !important;
-}
-
-.node-version-success {
-    color: var(--spectrum-global-color-green-600) !important;
-}
-
-.node-version-error {
-    color: var(--spectrum-global-color-red-600) !important;
-}
-
-.prerequisite-plugin-item {
-    font-size: 12px !important;
-    margin-left: 20px !important;
-}
-
 /* Progress bar customizations */
 .progress-bar-small-label [class*="spectrum-ProgressBar-label"] {
     font-size: 12px !important;
@@ -364,7 +272,6 @@ button[class*="spectrum-Button"][disabled],
    Utility Classes
    =========================================== */
 .opacity-50 { opacity: 0.5 !important; }
-.opacity-60 { opacity: 0.6 !important; }
 .opacity-70 { opacity: 0.7 !important; }
 .opacity-100 { opacity: 1 !important; }
 
@@ -375,8 +282,6 @@ button[class*="spectrum-Button"][disabled],
 .min-h-16 { min-height: 16px !important; }
 .h-28 { height: 28px !important; }
 .h-32 { height: 32px !important; }
-
-.line-height-16 { line-height: 16px !important; }
 
 .whitespace-pre-wrap { white-space: pre-wrap !important; }
 .whitespace-nowrap { white-space: nowrap !important; }
@@ -429,13 +334,9 @@ button[class*="spectrum-Button"][disabled],
 
 .top-0 { top: 0 !important; }
 .top-2 { top: 8px !important; }
-.top-7 { top: 28px !important; }
 .left-0 { left: 0 !important; }
-.left-3 { left: 11px !important; }
 .right-0 { right: 0 !important; }
-.right-2 { right: 8px !important; }
 .bottom-0 { bottom: 0 !important; }
-.bottom-14 { bottom: 56px !important; }
 .z-1 { z-index: 1 !important; }
 .z-2 { z-index: 2 !important; }
 .z-10 { z-index: 10 !important; }
@@ -443,7 +344,6 @@ button[class*="spectrum-Button"][disabled],
 /* ===========================================
    Display Variations
    =========================================== */
-.inline { display: inline !important; }
 .inline-block { display: inline-block !important; }
 .inline-flex { display: inline-flex !important; }
 .grid { display: grid !important; }
@@ -460,11 +360,8 @@ button[class*="spectrum-Button"][disabled],
 /* ===========================================
    Border Radius Variations
    =========================================== */
-.rounded-none { border-radius: 0 !important; }
-.rounded-sm { border-radius: 2px !important; }
 .rounded { border-radius: 4px !important; }
 .rounded-lg { border-radius: 8px !important; }
-.rounded-xl { border-radius: 12px !important; }
 .rounded-full { border-radius: 50% !important; }
 
 /* ===========================================
@@ -472,17 +369,8 @@ button[class*="spectrum-Button"][disabled],
    =========================================== */
 .border-none { border: none !important; }
 .border-t { border-top: 1px solid #1a1a1a !important; }
-.border-r { border-right: 1px solid #1a1a1a !important; }
 .border-b { border-bottom: 1px solid #1a1a1a !important; }
-.border-l { border-left: 1px solid #1a1a1a !important; }
 
-.border-2 { border-width: 2px !important; }
-.border-3 { border-width: 3px !important; }
-.border-dashed { border-style: dashed !important; }
-.border-dotted { border-style: dotted !important; }
-
-.border-gray-400 { border-color: var(--spectrum-global-color-gray-400) !important; }
-.border-blue-400 { border-color: var(--spectrum-global-color-blue-400) !important; }
 .border-green-600 { border-color: var(--spectrum-global-color-green-600) !important; }
 
 /* ===========================================
@@ -490,16 +378,8 @@ button[class*="spectrum-Button"][disabled],
    =========================================== */
 .bg-white { background-color: var(--spectrum-global-color-gray-100) !important; }
 .bg-transparent { background-color: transparent !important; }
-.bg-gray-200 { background-color: var(--spectrum-global-color-gray-200) !important; }
-.bg-gray-300 { background-color: var(--spectrum-global-color-gray-300) !important; }
 .bg-gray-400 { background-color: var(--spectrum-global-color-gray-400) !important; }
-.bg-gray-600 { background-color: var(--spectrum-global-color-gray-600) !important; }
-.bg-gray-700 { background-color: var(--spectrum-global-color-gray-700) !important; }
-.bg-gray-800 { background-color: var(--spectrum-global-color-gray-800) !important; }
 .bg-green-100 { background-color: var(--spectrum-global-color-green-100) !important; }
-.bg-green-600 { background-color: var(--spectrum-global-color-green-600) !important; }
-.bg-blue-600 { background-color: var(--spectrum-global-color-blue-600) !important; }
-.bg-red-100 { background-color: var(--spectrum-global-color-red-100) !important; }
 
 /* ===========================================
    Text Color Extensions
@@ -512,41 +392,15 @@ button[class*="spectrum-Button"][disabled],
    Text Utilities
    =========================================== */
 .letter-spacing-05 { letter-spacing: 0.5px !important; }
-.letter-spacing-1 { letter-spacing: 1px !important; }
 .user-select-none { user-select: none !important; }
 .user-select-text { user-select: text !important; }
 
 /* ===========================================
    Width and Height Utilities
    =========================================== */
-.w-3 { width: 12px !important; }
-.w-4 { width: 16px !important; }
-.w-6 { width: 24px !important; }
-.w-100 { width: 100px !important; }
-.w-150 { width: 150px !important; }
-.w-200 { width: 200px !important; }
-.w-300 { width: 300px !important; }
-.w-400 { width: 400px !important; }
-.w-600 { width: 600px !important; }
-
-.h-3 { height: 12px !important; }
-.h-4 { height: 16px !important; }
-.h-6 { height: 24px !important; }
-.h-100 { height: 100px !important; }
-.h-screen { height: 100vh !important; }
-
-.min-w-60 { min-width: 60px !important; }
-.min-w-80 { min-width: 80px !important; }
 .min-w-100 { min-width: 100px !important; }
-.min-w-150 { min-width: 150px !important; }
-.min-w-200 { min-width: 200px !important; }
-.min-w-240 { min-width: 240px !important; }
-.max-w-240 { max-width: 240px !important; }
-.max-w-400 { max-width: 400px !important; }
-.max-w-500 { max-width: 500px !important; }
 .max-w-600 { max-width: 600px !important; }
 .max-w-800 { max-width: 800px !important; }
-.max-w-900 { max-width: 900px !important; }
 
 /* ===========================================
    Semantic Layout Classes
@@ -756,446 +610,6 @@ button[class*="spectrum-Button"][disabled],
     padding-bottom: 16px !important;
 }
 
-/* Prerequisite item spacing */
-.prerequisite-item-spacing {
-    margin-bottom: 8px !important;
-}
-
-/* ===========================================
-   Projects Dashboard Specific
-   =========================================== */
-/* Sticky header for search/filter controls - middle layer between header and content */
-.projects-sticky-header {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 10 !important;
-    background-color: #050505 !important;
-    border-bottom: 1px solid #2a2a2a !important;
-    margin-bottom: 16px !important;
-}
-
-.projects-grid {
-    display: grid !important;
-    /* Larger cards: 240px min for more square appearance */
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
-    /* Increased gap: 24px (Spectrum size-300) */
-    gap: 24px !important;
-    /* Padding for shadow overflow */
-    padding: 8px !important;
-}
-
-/* Compact selector grid for brand/stack selection */
-.selector-grid {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
-    gap: 12px !important;
-    margin-bottom: 20px !important;
-}
-
-/* Compact card variant for selectors - matches project-card-spectrum style but smaller */
-.selector-card {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 8px !important;
-    padding: 12px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    cursor: pointer !important;
-    transition: all 0.3s ease !important;
-}
-
-.selector-card:hover {
-    background: var(--spectrum-global-color-gray-75) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
-}
-
-.selector-card:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-}
-
-.selector-card[data-selected="true"] {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-color: var(--spectrum-global-color-blue-400) !important;
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-    transform: none !important;
-}
-
-.selector-card[data-selected="true"]:hover {
-    background: var(--spectrum-global-color-gray-75) !important;
-    transform: none !important;
-}
-
-.selector-card-name {
-    display: block !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-    margin-bottom: 4px !important;
-}
-
-.selector-card-description {
-    display: block !important;
-    font-size: 11px !important;
-    color: var(--spectrum-global-color-gray-500) !important;
-    line-height: 1.4 !important;
-}
-
-/* ========================================
- * Expandable Brand Cards
- * ======================================== */
-
-/* Grid for expandable brand cards - slightly wider cards with more gap */
-.expandable-brand-grid {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
-    gap: 20px !important;
-    margin-bottom: 24px !important;
-    align-items: start !important;  /* Cards take natural height, don't stretch to match row */
-}
-
-/* Base brand card - expandable variant */
-.expandable-brand-card {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 12px !important;
-    padding: 16px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease-out !important;
-}
-
-.expandable-brand-card:hover {
-    background: var(--spectrum-global-color-gray-75) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
-}
-
-.expandable-brand-card:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-}
-
-/* Selected state - brand chosen, shows blue border */
-.expandable-brand-card.selected {
-    border-color: var(--spectrum-global-color-blue-400) !important;
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-}
-
-/* Expanded state - shows architecture selection */
-.expandable-brand-card.expanded {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-color: var(--spectrum-global-color-blue-400) !important;
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-    transform: none !important;
-    cursor: default !important;
-}
-
-.expandable-brand-card.expanded:hover {
-    transform: none !important;
-    box-shadow: none !important;
-}
-
-/* Dimmed state - other cards when one is expanded */
-.expandable-brand-card.dimmed {
-    opacity: 0.5 !important;
-    transform: none !important;
-}
-
-.expandable-brand-card.dimmed:hover {
-    opacity: 0.7 !important;
-    transform: none !important;
-    box-shadow: none !important;
-}
-
-/* Brand card header area */
-.brand-card-header {
-    margin-bottom: 0 !important;
-}
-
-.expandable-brand-card.expanded .brand-card-header {
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
-    /* No border here - selection section has its own border-top */
-}
-
-.brand-card-title-row {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    margin-bottom: 4px !important;
-}
-
-.brand-card-name {
-    display: block !important;
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-}
-
-.brand-card-check {
-    color: var(--spectrum-global-color-green-600) !important;
-    flex-shrink: 0 !important;
-}
-
-.brand-card-description {
-    display: block !important;
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    line-height: 1.4 !important;
-}
-
-/* Architecture options section (inside expanded card) */
-.brand-card-architectures {
-    animation: fadeIn 0.2s ease-out !important;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.brand-card-section-label {
-    display: block !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    margin-bottom: 12px !important;
-}
-
-.architecture-options {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-}
-
-/* Individual architecture option (radio-like) - compact */
-.architecture-option {
-    display: flex !important;
-    align-items: center !important;  /* Center align for single-line feel */
-    gap: 10px !important;
-    padding: 8px 10px !important;
-    border-radius: 6px !important;
-    background: var(--spectrum-global-color-gray-75) !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    cursor: pointer !important;
-    transition: all 0.15s ease !important;
-}
-
-.architecture-option:hover {
-    background: var(--spectrum-global-color-gray-100) !important;
-    border-color: var(--spectrum-global-color-gray-400) !important;
-}
-
-.architecture-option:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-}
-
-.architecture-option.selected {
-    background: var(--spectrum-global-color-blue-400) !important;
-    background: rgba(38, 128, 235, 0.15) !important;
-    border-color: var(--spectrum-global-color-blue-400) !important;
-}
-
-/* Radio circle indicator */
-.architecture-radio {
-    width: 18px !important;
-    height: 18px !important;
-    border-radius: 50% !important;
-    border: 2px solid var(--spectrum-global-color-gray-500) !important;
-    flex-shrink: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin-top: 2px !important;
-    transition: all 0.15s ease !important;
-}
-
-.architecture-option.selected .architecture-radio {
-    border-color: var(--spectrum-global-color-blue-400) !important;
-}
-
-.architecture-radio-dot {
-    width: 10px !important;
-    height: 10px !important;
-    border-radius: 50% !important;
-    background: var(--spectrum-global-color-blue-400) !important;
-}
-
-/* Architecture option text content */
-.architecture-content {
-    flex: 1 !important;
-    min-width: 0 !important;
-}
-
-.architecture-name {
-    display: block !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-    margin-bottom: 2px !important;
-}
-
-.architecture-description {
-    display: block !important;
-    font-size: 11px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    line-height: 1.4 !important;
-}
-
-/* Architecture options in modal - more spacious */
-.architecture-modal-options {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
-    margin-bottom: 20px !important;  /* Space before Close button */
-}
-
-.architecture-modal-option {
-    display: flex !important;
-    align-items: flex-start !important;
-    gap: 12px !important;
-    padding: 14px !important;
-    border-radius: 8px !important;
-    background: var(--spectrum-global-color-gray-75) !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    cursor: pointer !important;
-    transition: all 0.15s ease !important;
-}
-
-.architecture-modal-option:hover {
-    background: var(--spectrum-global-color-gray-100) !important;
-    border-color: var(--spectrum-global-color-gray-400) !important;
-}
-
-.architecture-modal-option:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-}
-
-.architecture-modal-option.selected {
-    background: rgba(38, 128, 235, 0.15) !important;
-    border-color: var(--spectrum-global-color-blue-400) !important;
-}
-
-/* Selection summary in expanded brand card */
-.brand-card-selection {
-    margin-top: 12px !important;
-    padding-top: 12px !important;
-    border-top: 1px solid var(--spectrum-global-color-gray-300) !important;
-    animation: expandIn 0.25s ease-out !important;
-}
-
-@keyframes expandIn {
-    from {
-        opacity: 0;
-        max-height: 0;
-        margin-top: 0;
-        padding-top: 0;
-    }
-    to {
-        opacity: 1;
-        max-height: 100px;
-        margin-top: 12px;
-        padding-top: 12px;
-    }
-}
-
-.brand-card-selection-label {
-    display: block !important;
-    font-size: 10px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    margin-bottom: 4px !important;
-}
-
-.brand-card-selection-value {
-    display: block !important;
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-}
-
-/* Edit hint for expanded card */
-.brand-card-edit-hint {
-    display: block !important;
-    font-size: 11px !important;
-    color: var(--spectrum-global-color-blue-400) !important;
-    margin-top: 8px !important;
-    opacity: 0.7 !important;
-    transition: opacity 0.15s ease !important;
-}
-
-.expandable-brand-card.expanded:hover .brand-card-edit-hint {
-    opacity: 1 !important;
-}
-
-/* Optional addons section in architecture modal */
-.architecture-addons {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-}
-
-.architecture-addons .addon-label {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 2px !important;
-}
-
-.architecture-addons .addon-name {
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-}
-
-.architecture-addons .addon-description {
-    font-size: 11px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    line-height: 1.4 !important;
-}
-
-.architecture-addons .addon-required-badge {
-    display: inline-block !important;
-    margin-left: 8px !important;
-    padding: 1px 6px !important;
-    font-size: 10px !important;
-    font-weight: 500 !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    background: var(--spectrum-global-color-gray-200) !important;
-    border-radius: 4px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.3px !important;
-}
-
-/* Architecture modal footer with Done button */
-.architecture-modal-footer {
-    display: flex !important;
-    justify-content: flex-end !important;
-    margin-top: 20px !important;
-    padding-top: 16px !important;
-    border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
-}
-
-/* Make expanded card look clickable on hover */
-.expandable-brand-card.expanded {
-    cursor: pointer !important;
-}
-
-.expandable-brand-card.expanded:hover {
-    background: var(--spectrum-global-color-gray-75) !important;
-}
-
 /* Modal button - focusable button matching Spectrum design language */
 .modal-button {
     display: inline-flex !important;
@@ -1261,27 +675,8 @@ button[class*="spectrum-Button"][disabled],
     cursor: pointer !important;
 }
 
-/* Wizard progress list */
-.wizard-progress-list {
-    list-style: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-
-/* Wizard progress step item */
-.wizard-step-item {
-    padding: 6px 12px !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-}
-
-/* Wizard step indicator */
-.wizard-step-indicator {
-    font-size: 12px !important;
-    width: 16px !important;
-    text-align: center !important;
-}
+/* NOTE: .wizard-progress-list, .wizard-step-item, .wizard-step-indicator
+   are defined later in this file (in the sidebar wizard section) */
 
 /* Border top with gray-200 */
 .border-t-gray-200 {
@@ -1290,18 +685,7 @@ button[class*="spectrum-Button"][disabled],
 
 .min-h-0 { min-height: 0 !important; }
 .min-h-48 { min-height: 48px !important; }
-.min-h-96 { min-height: 96px !important; }
 .min-h-120 { min-height: 120px !important; }
-.min-h-200 { min-height: 200px !important; }
-.max-h-300 { max-height: 300px !important; }
-.max-h-400 { max-height: 400px !important; }
-.max-h-500 { max-height: 500px !important; }
-
-/* ===========================================
-   Box Model Utilities
-   =========================================== */
-.box-border { box-sizing: border-box !important; }
-.box-content { box-sizing: content-box !important; }
 
 /* ===========================================
    Animation Classes
@@ -1320,23 +704,7 @@ button[class*="spectrum-Button"][disabled],
 /* ===========================================
    Shadow Classes
    =========================================== */
-.shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important; }
-.shadow { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important; }
 .shadow-md { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important; }
-.shadow-lg { box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important; }
-.shadow-xl { box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important; }
-.shadow-none { box-shadow: none !important; }
-
-/* ===========================================
-   Transform Classes
-   =========================================== */
-.translate-y-0 { transform: translateY(0) !important; }
-.translate-y--2 { transform: translateY(-2px) !important; }
-.translate-y-2 { transform: translateY(2px) !important; }
-.scale-110 { transform: scale(1.1) !important; }
-.scale-125 { transform: scale(1.25) !important; }
-.scale-150 { transform: scale(1.5) !important; }
-.scale-200 { transform: scale(2) !important; }
 
 /* ===========================================
    Icon Size Classes
@@ -1840,9 +1208,9 @@ button[class*="spectrum-Button"][disabled],
 .project-row-list {
     display: flex !important;
     flex-direction: column !important;
-    /* Match .projects-grid gap for consistent view switching */
+    /* Match projectsGrid gap for consistent view switching */
     gap: 16px !important;
-    /* Match .projects-grid padding for shadow overflow */
+    /* Match projectsGrid padding for shadow overflow */
     padding: 8px !important;
 }
 
@@ -2239,10 +1607,6 @@ button[class*="spectrum-Button"][disabled],
     flex-shrink: 0 !important;
 }
 
-.opacity-60 {
-    opacity: 0.6 !important;
-}
-
 /* ===========================================
    Grid Utilities
    =========================================== */
@@ -2569,24 +1933,8 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* ===========================================
-   Smooth Transitions for Prerequisites
+   Progress Bar Animations (shared)
    =========================================== */
-/* Smooth transitions for all prerequisite elements */
-.prerequisite-item * {
-    transition: opacity 0.3s ease, transform 0.3s ease !important;
-}
-
-.prerequisite-content > * {
-    transition: opacity 0.3s ease !important;
-}
-
-/* Message text transitions */
-.prerequisite-message,
-.prerequisite-description,
-.prerequisite-title {
-    transition: opacity 0.2s ease, color 0.3s ease !important;
-}
-
 /* Progress bar entrance/exit animations */
 [class*="spectrum-ProgressBar"] {
     animation: fadeInUp 0.3s ease;
@@ -2594,11 +1942,11 @@ button[class*="spectrum-Button"][disabled],
 }
 
 @keyframes fadeInUp {
-    from { 
+    from {
         opacity: 0;
         transform: translateY(4px);
     }
-    to { 
+    to {
         opacity: 1;
         transform: translateY(0);
     }
@@ -2607,58 +1955,6 @@ button[class*="spectrum-Button"][disabled],
 /* Smooth progress bar value changes */
 [class*="spectrum-ProgressBar-fill"] {
     transition: width 0.3s ease !important;
-}
-
-/* Status icon transitions */
-.prerequisite-item svg {
-    transition: opacity 0.3s ease, transform 0.2s ease, color 0.3s ease !important;
-}
-
-/* Prevent jarring height changes */
-.prerequisite-item {
-    transition: min-height 0.3s ease, padding 0.3s ease !important;
-}
-
-/* Smooth transitions for conditional content */
-.prerequisite-content > div {
-    transition: all 0.3s ease !important;
-}
-
-/* Note: .animate-fade-in and @keyframes fadeIn defined in utility section above */
-
-/* Ensure smooth transitions for dynamically added content */
-.prerequisite-item [role="progressbar"],
-.prerequisite-item .progress-bar-small-label {
-    animation: fadeInUp 0.3s ease;
-}
-
-/* Smooth text content updates */
-.prerequisite-message {
-    transition: opacity 0.2s ease !important;
-}
-
-.prerequisite-message:not(:empty) {
-    animation: fadeIn 0.2s ease;
-}
-
-/* Node version status lines transitions */
-.node-version-line {
-    transition: opacity 0.3s ease, color 0.3s ease !important;
-    animation: fadeIn 0.3s ease;
-}
-
-/* Smooth install button transitions */
-.prerequisite-item button {
-    transition: opacity 0.3s ease, transform 0.2s ease !important;
-}
-
-/* Prevent layout shift during transitions */
-.prerequisite-container {
-    will-change: scroll-position;
-}
-
-.prerequisite-item {
-    will-change: transform;
 }
 
 /* ===========================================

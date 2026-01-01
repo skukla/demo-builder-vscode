@@ -16,55 +16,6 @@
    Wrapped in @layer theme for cascade control
    ============================================ */
 @layer theme {
-    /* Prerequisites Container */
-    .prerequisites-container {
-        max-height: 360px;
-        overflow-y: auto;
-        border: 1px solid var(--spectrum-global-color-gray-400);
-        border-radius: 4px;
-        padding: 12px;
-        margin-top: 20px;
-        margin-bottom: 30px;
-    }
-
-    /* Prerequisite item - grid layout with icon spanning full height */
-    .prerequisite-item-grid {
-        display: grid;
-        grid-template-columns: 20px 1fr;
-        column-gap: 12px;
-    }
-
-    /* Prerequisite icon - spans both rows, centered vertically */
-    .prerequisite-icon {
-        grid-column: 1;
-        grid-row: span 2;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* Prerequisite header - row 1 */
-    .prerequisite-header {
-        grid-column: 2;
-    }
-
-    /* Prerequisite header inner layout */
-    .prerequisite-header-inner {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-    }
-
-    /* Prerequisite expandable content - row 2 */
-    .prerequisite-expandable {
-        grid-column: 2;
-    }
-
-    /* Smooth transition for progress bar appearance */
-    .prerequisites-container .animate-fade-in {
-        animation: fadeIn 0.3s ease-in-out;
-    }
-
     /* Circular Number Badge */
     .number-badge {
         min-width: 32px;
@@ -251,6 +202,9 @@
         display: flex;
         flex-direction: column;
     }
+
+    /* NOTE: .wizard-progress-list, .wizard-step-item, and .wizard-step-indicator
+       are defined in custom-spectrum.css (canonical location) */
 
     /* Ensure Picker takes full width of container */
     .spectrum-Picker {
