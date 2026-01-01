@@ -1,0 +1,176 @@
+/**
+ * Prerequisites Feature CSS Module
+ *
+ * Feature-scoped styles for the prerequisites checking UI.
+ * Migrated from global wizard.css and custom-spectrum.css.
+ *
+ * Part of CSS Architecture Improvement - Step 5
+ */
+
+/* ===========================================
+   Container Styles
+   =========================================== */
+
+.prerequisitesContainer {
+    max-height: 360px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid var(--spectrum-global-color-gray-400);
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 20px;
+    margin-bottom: 30px;
+    background-color: var(--spectrum-global-color-gray-50);
+    max-width: 100%;
+    width: 100%;
+    will-change: scroll-position;
+}
+
+.prerequisiteList {
+    padding-bottom: 60px;
+}
+
+/* ===========================================
+   Item Styles
+   =========================================== */
+
+.prerequisiteItem {
+    padding: 12px;
+    background-color: var(--spectrum-global-color-gray-75);
+    border-radius: 4px;
+    width: 100%;
+    overflow: hidden;
+    transition: all 0.3s ease, min-height 0.3s ease;
+    will-change: transform;
+}
+
+.prerequisiteItem:not(:last-child) {
+    margin-bottom: 8px;
+}
+
+.prerequisiteItemGrid {
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    column-gap: 12px;
+}
+
+.prerequisiteItemSpacing {
+    margin-bottom: 8px;
+}
+
+/* ===========================================
+   Layout Styles
+   =========================================== */
+
+.prerequisiteIcon {
+    grid-column: 1;
+    grid-row: span 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.prerequisiteHeader {
+    grid-column: 2;
+}
+
+.prerequisiteHeaderInner {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.prerequisiteExpandable {
+    grid-column: 2;
+}
+
+.prerequisiteContent {
+    margin-right: 12px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* ===========================================
+   Typography Styles
+   =========================================== */
+
+.prerequisiteTitle {
+    font-size: 14px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 2px;
+    transition: opacity 0.2s ease, color 0.3s ease;
+}
+
+.prerequisiteDescription {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+    display: block;
+    transition: opacity 0.2s ease, color 0.3s ease;
+}
+
+/* ===========================================
+   Message Styles
+   =========================================== */
+
+.prerequisiteMessage {
+    font-size: 12px;
+    font-weight: 400;
+    display: block;
+    margin-top: 4px;
+    min-height: 17px;
+    line-height: 17px;
+    transition: color 0.3s ease, opacity 0.2s ease;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: hidden;
+}
+
+.prerequisiteMessageError {
+    color: var(--spectrum-global-color-red-600);
+}
+
+.prerequisiteMessageWarning {
+    color: var(--spectrum-global-color-orange-600);
+}
+
+.prerequisiteMessageDefault {
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* ===========================================
+   Plugin Styles
+   =========================================== */
+
+.prerequisitePluginItem {
+    font-size: 12px;
+    margin-left: 20px;
+}
+
+/* ===========================================
+   Transition and Animation Styles
+   =========================================== */
+
+/* Smooth transitions for all prerequisite elements */
+.prerequisiteItem * {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.prerequisiteContent > * {
+    transition: opacity 0.3s ease;
+}
+
+/* Status icon transitions */
+.prerequisiteItem svg {
+    transition: opacity 0.3s ease, transform 0.2s ease, color 0.3s ease;
+}
+
+/* Smooth transitions for conditional content */
+.prerequisiteContent > div {
+    transition: all 0.3s ease;
+}
+
+/* Smooth install button transitions */
+.prerequisiteItem button {
+    transition: opacity 0.3s ease, transform 0.2s ease;
+}

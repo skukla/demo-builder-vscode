@@ -7,6 +7,7 @@ import React from 'react';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { cn } from '@/core/ui/utils/classNames';
 import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
+import styles from '../../styles/prerequisites.module.css';
 
 /**
  * Check if plugin details should be shown for a prerequisite
@@ -115,7 +116,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
     // Case 1: nodeVersionStatus exists - render structured version items
     if (check.nodeVersionStatus) {
         return (
-            <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
+            <View UNSAFE_className={cn(styles.prerequisiteMessage, 'animate-fade-in')}>
                 {check.nodeVersionStatus.map((item, idx) => (
                     <Flex key={idx} alignItems="center" marginBottom="size-50">
                         <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>
@@ -136,7 +137,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
     // Case 2: Node.js success with comma-separated versions
     if (check.name === 'Node.js' && check.status === 'success' && check.message?.includes(',')) {
         return (
-            <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
+            <View UNSAFE_className={cn(styles.prerequisiteMessage, 'animate-fade-in')}>
                 {renderNodeVersionSuccess(check.message)}
             </View>
         );
@@ -147,7 +148,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
         const versionItems = renderAioCliErrorVersions(check.message);
         if (versionItems) {
             return (
-                <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
+                <View UNSAFE_className={cn(styles.prerequisiteMessage, 'animate-fade-in')}>
                     {versionItems}
                 </View>
             );
@@ -158,9 +159,10 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
     if (!check.plugins || check.plugins.length === 0 || check.status !== 'success') {
         return (
             <Text UNSAFE_className={cn(
+                styles.prerequisiteMessage,
                 check.status === 'error'
-                    ? 'prerequisite-message prerequisite-message-error'
-                    : 'prerequisite-message prerequisite-message-default',
+                    ? styles.prerequisiteMessageError
+                    : styles.prerequisiteMessageDefault,
                 'animate-fade-in',
             )}>
                 {check.message || 'Waiting...'}

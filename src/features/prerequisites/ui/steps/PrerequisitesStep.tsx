@@ -19,6 +19,7 @@ import {
 import { cn } from '@/core/ui/utils/classNames';
 import { NavigableStepProps } from '@/types/wizard';
 import { WizardState } from '@/types/webview';
+import styles from '../styles/prerequisites.module.css';
 
 // Extracted hooks and helpers
 
@@ -75,29 +76,29 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
 
             <div
                 ref={scrollContainerRef}
-                className="prerequisites-container">
+                className={styles.prerequisitesContainer}>
                 <Flex direction="column" gap="size-150">
                     {checks.map((check, index) => (
                         <div
                             key={check.name}
                             ref={el => { itemRefs.current[index] = el; }}
-                            className={cn('prerequisite-item', 'prerequisite-item-grid', index !== checks.length - 1 && 'prerequisite-item-spacing')}
+                            className={cn(styles.prerequisiteItem, styles.prerequisiteItemGrid, index !== checks.length - 1 && styles.prerequisiteItemSpacing)}
                         >
                             {/* Icon - spans both rows, centered vertically in the entire item */}
-                            <div className="prerequisite-icon">
+                            <div className={styles.prerequisiteIcon}>
                                 {getStatusIcon(check.status)}
                             </div>
 
                             {/* Header content - row 1 */}
-                            <div className="prerequisite-header">
-                                <div className="prerequisite-header-inner">
+                            <div className={styles.prerequisiteHeader}>
+                                <div className={styles.prerequisiteHeaderInner}>
                                     <div>
-                                        <div className="prerequisite-title">
+                                        <div className={styles.prerequisiteTitle}>
                                             {check.name}
                                             {check.isOptional && <span className="text-muted-label"> (Optional)</span>}
                                             {check.status === 'pending' && <span className="text-muted-label"> (Waiting)</span>}
                                         </div>
-                                        <div className="prerequisite-description">
+                                        <div className={styles.prerequisiteDescription}>
                                             {check.description}
                                         </div>
                                     </div>
@@ -115,7 +116,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                             </div>
 
                             {/* Expandable content - row 2 */}
-                            <div className="prerequisite-expandable">
+                            <div className={styles.prerequisiteExpandable}>
                                 {renderPrerequisiteMessage(check)}
                                 {check.status === 'checking' && check.unifiedProgress && (
                                     <View marginTop="size-100" UNSAFE_className="animate-fade-in">
@@ -144,7 +145,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                                                     .join(', ');
                                                 return (
                                                     <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
-                                                        <Text UNSAFE_className={cn(check.status === 'success' ? 'text-sm' : 'prerequisite-plugin-item')}>
+                                                        <Text UNSAFE_className={cn(check.status === 'success' ? 'text-sm' : styles.prerequisitePluginItem)}>
                                                             {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
                                                             {versions ? ` (${versions})` : ''}
                                                         </Text>
@@ -156,7 +157,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                                                 <>
                                                     {check.plugins.map(plugin => (
                                                         <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
-                                                            <Text UNSAFE_className={cn(check.status === 'success' ? 'text-sm' : 'prerequisite-plugin-item')}>
+                                                            <Text UNSAFE_className={cn(check.status === 'success' ? 'text-sm' : styles.prerequisitePluginItem)}>
                                                                 {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
                                                             </Text>
                                                             {renderPluginStatusIcon(check.status, plugin.installed)}
