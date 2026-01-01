@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { ProjectCard } from './ProjectCard';
+import styles from '../styles/projects-dashboard.module.css';
 import type { Project } from '@/types/base';
 
 export interface ProjectsGridProps {
@@ -46,7 +47,7 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
     return (
         <div
             data-testid="projects-grid"
-            className="projects-grid"
+            className={styles.projectsGrid}
         >
             {projects.map((project) => (
                 <ProjectCard

@@ -26,6 +26,7 @@ import { DashboardEmptyState } from './components/DashboardEmptyState';
 import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { buildMenuItems } from './projectsDashboardHelpers';
+import styles from './styles/projects-dashboard.module.css';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
@@ -193,7 +194,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             backgroundColor="var(--spectrum-global-color-gray-50)"
         >
             {/* Sticky controls - search, view toggle, and new project button */}
-            <div className="projects-sticky-header">
+            <div className={styles.projectsStickyHeader}>
                 <div className="page-container-padded page-header-section">
                     <Flex alignItems="start" gap="size-300">
                         {/* Search Header with view mode toggle */}

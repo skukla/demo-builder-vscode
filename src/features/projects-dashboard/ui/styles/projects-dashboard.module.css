@@ -1,0 +1,27 @@
+/**
+ * Projects Dashboard CSS Module
+ *
+ * Feature-scoped styles for the projects dashboard.
+ * Migrated from custom-spectrum.css as part of CSS Architecture Improvement.
+ */
+
+/* Sticky header for search/filter controls - middle layer between header and content */
+.projectsStickyHeader {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #050505;
+    border-bottom: 1px solid #2a2a2a;
+    margin-bottom: 16px;
+}
+
+/* Responsive grid layout for project cards */
+.projectsGrid {
+    display: grid;
+    /* Larger cards: 240px min for more square appearance */
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    /* Increased gap: 24px (Spectrum size-300) */
+    gap: 24px;
+    /* Padding for shadow overflow */
+    padding: 8px;
+}

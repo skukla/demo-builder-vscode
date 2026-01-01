@@ -52,14 +52,15 @@ describe('ProjectsGrid', () => {
             expect(screen.getByText('Project 3')).toBeInTheDocument();
         });
 
-        it('should apply grid layout class', () => {
+        it('should apply grid layout class from CSS Module', () => {
             const projects = createMockProjects(2);
             const { container } = renderWithProvider(
                 <ProjectsGrid projects={projects} onSelectProject={jest.fn()} />
             );
 
             const grid = container.querySelector('[data-testid="projects-grid"]');
-            expect(grid).toHaveClass('projects-grid');
+            // CSS Module class name - Jest identity mock returns class name as-is
+            expect(grid).toHaveClass('projectsGrid');
         });
     });
 
@@ -110,8 +111,9 @@ describe('ProjectsGrid', () => {
             );
 
             const grid = container.querySelector('[data-testid="projects-grid"]');
-            // Grid class provides responsive layout via CSS (auto-fill, minmax(280px, 1fr))
-            expect(grid).toHaveClass('projects-grid');
+            // Grid class provides responsive layout via CSS (auto-fill, minmax(240px, 1fr))
+            // CSS Module class name - Jest identity mock returns class name as-is
+            expect(grid).toHaveClass('projectsGrid');
         });
     });
 
