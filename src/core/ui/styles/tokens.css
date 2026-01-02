@@ -4,7 +4,7 @@
    Namespace: --db-* (Demo Builder)
    ============================================ */
 
-@layer theme {
+@layer vscode-theme {
   :root {
     /* =========================================
        LAYER 1: PRIMITIVE TOKENS

@@ -45,16 +45,20 @@ styles/
 
 ## @layer Cascade System
 
-The CSS uses `@layer` for explicit cascade control:
+The CSS uses `@layer` for explicit cascade control with 5 layers:
 
 ```css
-@layer reset, theme, overrides;
+@layer reset, vscode-theme, spectrum, components, utilities;
 ```
 
-**Layer Order** (lowest to highest specificity):
-1. `reset` - Browser resets
-2. `theme` - Base theming
-3. `overrides` - Component overrides
+**Layer Order** (lowest to highest priority):
+1. `reset` - Browser resets (index.css)
+2. `vscode-theme` - VS Code theme integration (tokens.css, vscode-theme.css)
+3. `spectrum` - Adobe Spectrum overrides (spectrum/*.css)
+4. `components` - Semantic component styles (components/*.css)
+5. `utilities` - Utility classes with highest priority (utilities/*.css)
+
+This cascade order ensures utilities always override component and Spectrum styles without needing `!important`.
 
 ## Pattern Guidelines
 
@@ -73,14 +77,19 @@ Use for layout and spacing:
 - One-off layout adjustments: `.flex`, `.items-center`
 - Context-specific overrides
 
-### Utilities Use `!important`
+### Utilities Use @layer (No !important)
 
-Utility classes use `!important` to reliably override Spectrum defaults:
+Utility classes rely on `@layer utilities` cascade priority to override Spectrum defaults. This is cleaner and more maintainable than `!important`:
+
 ```css
-.flex {
-    display: flex !important;
+@layer utilities {
+  .flex {
+    display: flex;
+  }
 }
 ```
+
+Since `utilities` is declared last in the layer order, it has highest priority and overrides all other layers naturally.
 
 ## CSS Modules
 
@@ -95,14 +104,27 @@ features/project-creation/ui/styles/project-creation.module.css
 
 ## Animation Keyframes
 
-Common keyframes are centralized in `utilities/animations.css`:
+**Canonical Location:** `utilities/animations.css`
 
+Common keyframes are centralized there:
 - `spin` - Loading spinners
 - `pulse` - Status indicators
 - `fadeIn` - Element appearance
 - `fadeInUp` - Subtle entrance effects
 
-**Component-specific keyframes** (e.g., `timeline-enter`) remain in their component files.
+**Exceptions (acceptable):**
+
+1. **Component-specific animations** in their component files:
+   - `components/timeline.css`: `timeline-enter`, `timeline-exit`
+   - CSS Modules may have local keyframes (e.g., `expandIn` in project-creation.module.css)
+
+2. **VS Code providers** (unavoidable):
+   - `sidebarProvider.ts` has inline `@keyframes spin` because VS Code WebviewViewProviders inject styles differently
+
+**Convention:**
+- New common keyframes → `utilities/animations.css`
+- Component-specific keyframes → Component's CSS file
+- Reference existing keyframes via class (`.animate-fade-in`) instead of duplicating
 
 ## Adobe Spectrum Integration
 

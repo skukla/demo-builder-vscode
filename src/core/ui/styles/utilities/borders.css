@@ -5,25 +5,27 @@
  * Extracted from custom-spectrum.css.
  */
 
-/* ===========================================
-   Border Classes
-   =========================================== */
-.border { border: 1px solid var(--spectrum-global-color-gray-300) !important; }
-.border-none { border: none !important; }
-.border-t { border-top: 1px solid #1a1a1a !important; }
-.border-b { border-bottom: 1px solid #1a1a1a !important; }
-.border-radius { border-radius: 4px !important; }
+@layer utilities {
+  /* ===========================================
+     Border Classes
+     =========================================== */
+  .border { border: 1px solid var(--spectrum-global-color-gray-300); }
+  .border-none { border: none; }
+  .border-t { border-top: 1px solid #1a1a1a; }
+  .border-b { border-bottom: 1px solid #1a1a1a; }
+  .border-radius { border-radius: 4px; }
 
-/* Border Colors */
-.border-green-600 { border-color: var(--spectrum-global-color-green-600) !important; }
-.border-t-gray-200 {
-    border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+  /* Border Colors */
+  .border-green-600 { border-color: var(--spectrum-global-color-green-600); }
+  .border-t-gray-200 {
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
+  }
+
+  /* ===========================================
+     Border Radius Classes
+     =========================================== */
+  .rounded { border-radius: 4px; }
+  .rounded-md { border-radius: 6px; }
+  .rounded-lg { border-radius: 8px; }
+  .rounded-full { border-radius: 50%; }
 }
-
-/* ===========================================
-   Border Radius Classes
-   =========================================== */
-.rounded { border-radius: 4px !important; }
-.rounded-md { border-radius: 6px !important; }
-.rounded-lg { border-radius: 8px !important; }
-.rounded-full { border-radius: 50% !important; }

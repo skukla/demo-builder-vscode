@@ -20,7 +20,8 @@ describe('CSS Layer Declarations', () => {
     });
 
     it('declares layer order at top of file', () => {
-      expect(indexCSS).toContain('@layer reset, theme, overrides;');
+      // Updated for 5-layer architecture (CSS Architecture Improvement)
+      expect(indexCSS).toContain('@layer reset, vscode-theme, spectrum, components, utilities;');
     });
 
     it('imports reset.css', () => {
@@ -49,14 +50,14 @@ describe('CSS Layer Declarations', () => {
       buttonsCss = readFileSync(join(stylesDir, 'spectrum/buttons.css'), 'utf-8');
     });
 
-    it('wraps CTA button overrides in @layer overrides', () => {
-      expect(buttonsCss).toContain('@layer overrides {');
+    it('wraps CTA button overrides in @layer spectrum', () => {
+      expect(buttonsCss).toContain('@layer spectrum {');
     });
 
-    it('has CTA button styles inside overrides layer', () => {
-      // Find the overrides layer content
+    it('has CTA button styles inside spectrum layer', () => {
+      // Find the spectrum layer content
       const layerMatch = buttonsCss.match(
-        /@layer overrides\s*\{([\s\S]*?)\n\}/
+        /@layer spectrum\s*\{([\s\S]*?)\n\}/
       );
       expect(layerMatch).toBeTruthy();
       if (layerMatch) {
@@ -96,12 +97,12 @@ describe('CSS Layer Declarations', () => {
       wizardCSS = readFileSync(join(stylesDir, 'wizard.css'), 'utf-8');
     });
 
-    it('wraps structural styles in @layer theme', () => {
-      expect(wizardCSS).toContain('@layer theme {');
+    it('wraps structural styles in @layer components', () => {
+      expect(wizardCSS).toContain('@layer components {');
     });
 
-    it('has .number-badge styles inside theme layer', () => {
-      const layerMatch = wizardCSS.match(/@layer theme\s*\{([\s\S]*?)\n\}/);
+    it('has .number-badge styles inside components layer', () => {
+      const layerMatch = wizardCSS.match(/@layer components\s*\{([\s\S]*?)\n\}/);
       expect(layerMatch).toBeTruthy();
       if (layerMatch) {
         const layerContent = layerMatch[1];

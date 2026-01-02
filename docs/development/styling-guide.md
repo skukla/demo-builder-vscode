@@ -166,13 +166,34 @@ Leverage Spectrum and VS Code CSS variables for consistency:
 }
 ```
 
-### 4. Important Flag Usage
+### 4. CSS Cascade Layers (@layer)
 
-Most custom styles need `!important` to override React Spectrum's inline styles:
+The project uses a 5-layer CSS cascade hierarchy. Layers are declared in `index.css`:
 
 ```css
+@layer reset, vscode-theme, spectrum, components, utilities;
+```
+
+**Layer Priority (lowest to highest):**
+1. `reset` - Browser resets
+2. `vscode-theme` - VS Code theme integration
+3. `spectrum` - Adobe Spectrum component overrides
+4. `components` - Semantic component styles
+5. `utilities` - Utility classes (highest priority)
+
+**When is `!important` needed?**
+- **Utility classes**: No `!important` needed - they're in the highest-priority layer
+- **Spectrum internal overrides** (`.spectrum-*` selectors): Still need `!important`
+
+```css
+/* Utility class - no !important needed */
 .custom-padding {
-  padding: 20px !important; /* Required to override Spectrum */
+  padding: 20px;  /* @layer utilities wins via cascade */
+}
+
+/* Spectrum internal override - needs !important */
+.spectrum-Picker {
+  cursor: pointer !important;  /* Override Spectrum inline styles */
 }
 ```
 
@@ -564,4 +585,3 @@ This differs from global CSS which uses kebab-case:
 - Create a visual style guide component
 - Add CSS linting rules for consistency
 - Expand token support as new Spectrum sizes are needed (follow YAGNI principle)
-- Consider cascade layers (@layer) for better specificity management

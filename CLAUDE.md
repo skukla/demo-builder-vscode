@@ -157,6 +157,23 @@ demo-builder-vscode/
 - **Visual Consistency**: Standardized status indicators with icons
 - **Details**: See `docs/systems/prerequisites-system.md`
 
+### CSS Architecture (Hybrid Pattern)
+- **Philosophy**: Semantic component classes + utility classes for layout/spacing
+- **Directory Structure**: Modular organization in `src/core/ui/styles/`
+  - `utilities/` - Utility classes with highest cascade priority (layout, spacing, colors, typography, animations)
+  - `components/` - Semantic component styles (cards, common, dashboard, timeline)
+  - `spectrum/` - Adobe Spectrum component overrides (buttons, components)
+- **@layer Cascade**: 5-layer hierarchy for explicit specificity control:
+  - `reset` - Browser resets (lowest priority)
+  - `vscode-theme` - VS Code theme integration
+  - `spectrum` - Adobe Spectrum overrides
+  - `components` - Semantic component styles
+  - `utilities` - Utility classes (highest priority)
+- **Utilities Override via @layer**: No `!important` needed - utilities have highest cascade priority
+- **Animation Keyframes**: Centralized in `utilities/animations.css` (exceptions: component-specific and VS Code provider inline styles)
+- **CSS Modules**: Feature-scoped for complex UIs (e.g., `features/*/ui/styles/*.module.css`)
+- **Details**: See `src/core/ui/styles/CLAUDE.md`
+
 ### State Management
 - Extension state persisted via StateManager
 - Webview state managed with React hooks

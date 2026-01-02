@@ -15,48 +15,50 @@
  * in their respective component files.
  */
 
-/* ===========================================
-   Keyframe Definitions
-   =========================================== */
+@layer utilities {
+  /* ===========================================
+     Keyframe Definitions
+     =========================================== */
 
-/* Spin animation - used for loading spinners */
-@keyframes spin {
+  /* Spin animation - used for loading spinners */
+  @keyframes spin {
     to { transform: rotate(360deg); }
-}
+  }
 
-/* Pulse animation - used for checking/loading status indicators */
-@keyframes pulse {
+  /* Pulse animation - used for checking/loading status indicators */
+  @keyframes pulse {
     0% { opacity: 1; }
     50% { opacity: 0.6; }
     100% { opacity: 1; }
-}
+  }
 
-/* Fade in animation - simple opacity transition */
-@keyframes fadeIn {
+  /* Fade in animation - simple opacity transition */
+  @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
-}
+  }
 
-/* Fade in with upward motion - subtle entrance effect */
-@keyframes fadeInUp {
+  /* Fade in with upward motion - subtle entrance effect */
+  @keyframes fadeInUp {
     from {
-        opacity: 0;
-        transform: translateY(4px);
+      opacity: 0;
+      transform: translateY(4px);
     }
     to {
-        opacity: 1;
-        transform: translateY(0);
+      opacity: 1;
+      transform: translateY(0);
     }
+  }
+
+  /* ===========================================
+     Animation Utility Classes
+     =========================================== */
+
+  /* Spin animation class - for loading spinners */
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+
+  /* Note: .animate-fade-in and .animate-pulse are defined in layout.css
+     as they were already there. They reference these keyframes. */
 }
-
-/* ===========================================
-   Animation Utility Classes
-   =========================================== */
-
-/* Spin animation class - for loading spinners */
-.animate-spin {
-    animation: spin 1s linear infinite !important;
-}
-
-/* Note: .animate-fade-in and .animate-pulse are defined in layout.css
-   as they were already there. They reference these keyframes. */

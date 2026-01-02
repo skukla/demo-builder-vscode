@@ -91,7 +91,8 @@ describe('Entry Point Update', () => {
 
   describe('Layer Declaration', () => {
     it('should maintain @layer order declaration', () => {
-      expect(indexContent).toMatch(/@layer\s+reset,\s*theme,\s*overrides/);
+      // Updated for 5-layer architecture (CSS Architecture Improvement)
+      expect(indexContent).toMatch(/@layer\s+reset,\s*vscode-theme,\s*spectrum,\s*components,\s*utilities/);
     });
 
     it('should have layer declaration at the top', () => {

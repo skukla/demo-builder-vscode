@@ -20,7 +20,21 @@ import React from 'react';
 import { Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Alert from '@spectrum-icons/workflow/Alert';
-import styles from '../styles/connect-services.module.css';
+import {
+    serviceCard,
+    serviceCardHeader,
+    serviceIcon,
+    githubIcon,
+    serviceCardTitle,
+    serviceCardDescription,
+    serviceCardStatus,
+    statusText,
+    statusIconSuccess,
+    serviceActionLink,
+    statusTextError,
+    statusIconError,
+    serviceActionButton,
+} from '../styles/connect-services.module.css';
 
 /** GitHub user information */
 export interface GitHubUser {
@@ -76,42 +90,42 @@ export function GitHubServiceCard({
 
     return (
         <div
-            className={styles.serviceCard}
+            className={serviceCard}
             data-connected={isAuthenticated ? 'true' : 'false'}
         >
-            <div className={styles.serviceCardHeader}>
-                <div className={`${styles.serviceIcon} ${styles.githubIcon}`}>
+            <div className={serviceCardHeader}>
+                <div className={`${serviceIcon} ${githubIcon}`}>
                     <GitHubIcon />
                 </div>
-                <div className={styles.serviceCardTitle}>GitHub</div>
+                <div className={serviceCardTitle}>GitHub</div>
             </div>
-            <div className={styles.serviceCardDescription}>
+            <div className={serviceCardDescription}>
                 Repository for your project code
             </div>
-            <div className={styles.serviceCardStatus}>
+            <div className={serviceCardStatus}>
                 {isLoading ? (
                     <Flex alignItems="center" gap="size-100">
                         <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
-                        <Text UNSAFE_className={styles.statusText}>
+                        <Text UNSAFE_className={statusText}>
                             {isAuthenticating ? 'Connecting...' : 'Checking...'}
                         </Text>
                     </Flex>
                 ) : isAuthenticated && user ? (
                     compact ? (
                         <Flex alignItems="center" gap="size-100">
-                            <CheckmarkCircle size="S" UNSAFE_className={styles.statusIconSuccess} />
-                            <Text UNSAFE_className={styles.statusText}>Connected</Text>
+                            <CheckmarkCircle size="S" UNSAFE_className={statusIconSuccess} />
+                            <Text UNSAFE_className={statusText}>Connected</Text>
                         </Flex>
                     ) : (
                         <Flex alignItems="center" justifyContent="space-between">
                             <Flex alignItems="center" gap="size-100">
-                                <CheckmarkCircle size="S" UNSAFE_className={styles.statusIconSuccess} />
-                                <Text UNSAFE_className={styles.statusText}>
+                                <CheckmarkCircle size="S" UNSAFE_className={statusIconSuccess} />
+                                <Text UNSAFE_className={statusText}>
                                     {user.login}
                                 </Text>
                             </Flex>
                             {onChangeAccount && (
-                                <button className={styles.serviceActionLink} onClick={onChangeAccount}>
+                                <button className={serviceActionLink} onClick={onChangeAccount}>
                                     Change
                                 </button>
                             )}
@@ -120,15 +134,15 @@ export function GitHubServiceCard({
                 ) : error ? (
                     <Flex direction="column" gap="size-100">
                         <Flex alignItems="center" gap="size-100">
-                            <Alert size="S" UNSAFE_className={styles.statusIconError} />
-                            <Text UNSAFE_className={styles.statusTextError}>{error}</Text>
+                            <Alert size="S" UNSAFE_className={statusIconError} />
+                            <Text UNSAFE_className={statusTextError}>{error}</Text>
                         </Flex>
-                        <button className={styles.serviceActionButton} onClick={onConnect}>
+                        <button className={serviceActionButton} onClick={onConnect}>
                             Try Again
                         </button>
                     </Flex>
                 ) : (
-                    <button className={styles.serviceActionButton} onClick={onConnect}>
+                    <button className={serviceActionButton} onClick={onConnect}>
                         Connect GitHub
                     </button>
                 )}

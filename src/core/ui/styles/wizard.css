@@ -6,9 +6,9 @@
 
 /* ============================================
    WIZARD STRUCTURAL STYLES
-   Wrapped in @layer theme for cascade control
+   Wrapped in @layer components for cascade control
    ============================================ */
-@layer theme {
+@layer components {
     /* Circular Number Badge */
     .number-badge {
         min-width: 32px;
@@ -29,9 +29,9 @@
 
 /* ============================================
    WIZARD COMPONENT OVERRIDES
-   Wrapped in @layer theme for cascade control
+   Wrapped in @layer components for cascade control
    ============================================ */
-@layer theme {
+@layer components {
     /* Step Content Animations */
     .step-content {
         opacity: 1;

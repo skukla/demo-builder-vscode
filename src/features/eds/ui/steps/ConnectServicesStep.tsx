@@ -13,7 +13,7 @@ import { useGitHubAuth } from '../hooks/useGitHubAuth';
 import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
 import { GitHubServiceCard, DaLiveServiceCard } from '../components';
 import type { BaseStepProps } from '@/types/wizard';
-import styles from '../styles/connect-services.module.css';
+import { servicesCardsGrid } from '../styles/connect-services.module.css';
 
 /**
  * ConnectServicesStep Component
@@ -58,7 +58,7 @@ export function ConnectServicesStep({
 
     return (
         <SingleColumnLayout maxWidth="900px">
-            <div className={styles.servicesCardsGrid}>
+            <div className={servicesCardsGrid}>
                 <GitHubServiceCard
                     isChecking={gitHubAuth.isChecking}
                     isAuthenticating={gitHubAuth.isAuthenticating}

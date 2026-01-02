@@ -9,7 +9,7 @@
    has light, dark, or high-contrast VS Code theme.
    ============================================ */
 
-@layer theme {
+@layer vscode-theme {
     /* Force consistent body styling regardless of VS Code theme */
     body.vscode-dark,
     body.vscode-light,

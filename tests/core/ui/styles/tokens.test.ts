@@ -18,8 +18,8 @@ describe('Design Token System', () => {
   });
 
   describe('Layer Declaration', () => {
-    it('wraps tokens in @layer theme', () => {
-      expect(tokensCSS).toContain('@layer theme');
+    it('wraps tokens in @layer vscode-theme', () => {
+      expect(tokensCSS).toContain('@layer vscode-theme');
     });
   });
 

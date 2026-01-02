@@ -5,39 +5,110 @@
  * Extracted from custom-spectrum.css.
  */
 
-/* ===========================================
-   Font Size Classes
-   =========================================== */
-.text-xs { font-size: 11px !important; }
-.text-sm { font-size: 12px !important; }
-.text-base { font-size: 13px !important; }
-.text-md { font-size: 14px !important; }
-.text-lg { font-size: 16px !important; }
-.text-xl { font-size: 18px !important; }
-.text-2xl { font-size: 22px !important; }
-.text-3xl { font-size: 28px !important; }
-.text-4xl { font-size: 32px !important; }
-.text-5xl { font-size: 36px !important; }
-.text-15 { font-size: 15px !important; }
+@layer utilities {
+  /* ===========================================
+     Font Size Classes
+     =========================================== */
+  .text-xs { font-size: 11px; }
+  .text-sm { font-size: 12px; }
+  .text-base { font-size: 13px; }
+  .text-md { font-size: 14px; }
+  .text-lg { font-size: 16px; }
+  .text-xl { font-size: 18px; }
+  .text-2xl { font-size: 22px; }
+  .text-3xl { font-size: 28px; }
+  .text-4xl { font-size: 32px; }
+  .text-5xl { font-size: 36px; }
+  .text-15 { font-size: 15px; }
 
-/* ===========================================
-   Font Weight Classes
-   =========================================== */
-.font-normal { font-weight: 400 !important; }
-.font-medium { font-weight: 500 !important; }
-.font-semibold { font-weight: 600 !important; }
-.font-bold { font-weight: 700 !important; }
-.font-mono { font-family: var(--spectrum-font-family-code, monospace) !important; }
+  /* ===========================================
+     Font Weight Classes
+     =========================================== */
+  .font-normal { font-weight: 400; }
+  .font-medium { font-weight: 500; }
+  .font-semibold { font-weight: 600; }
+  .font-bold { font-weight: 700; }
+  .font-mono { font-family: var(--spectrum-font-family-code, monospace); }
 
-/* ===========================================
-   Text Alignment Classes
-   =========================================== */
-.text-center { text-align: center !important; }
-.text-left { text-align: left !important; }
-.text-right { text-align: right !important; }
+  /* ===========================================
+     Text Alignment Classes
+     =========================================== */
+  .text-center { text-align: center; }
+  .text-left { text-align: left; }
+  .text-right { text-align: right; }
 
-/* ===========================================
-   Text Transform Classes
-   =========================================== */
-.text-uppercase { text-transform: uppercase !important; }
-.text-italic { font-style: italic !important; }
+  /* ===========================================
+     Text Transform Classes
+     =========================================== */
+  .text-uppercase { text-transform: uppercase; }
+  .text-italic { font-style: italic; }
+
+  /* ===========================================
+     Description Text Classes
+     =========================================== */
+  .description-text {
+    color: var(--spectrum-global-color-gray-500);
+    font-size: 12px;
+  }
+
+  .description-text-spaced {
+    color: var(--spectrum-global-color-gray-500);
+    font-size: 12px;
+    margin-top: 16px;
+  }
+
+  /* Section label - uppercase heading for sections */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ===========================================
+     Line Height Classes
+     =========================================== */
+  .leading-tight { line-height: 1.25; }
+  .leading-normal { line-height: 1.5; }
+  .leading-relaxed { line-height: 1.625; }
+
+  /* ===========================================
+     Text Overflow Classes
+     =========================================== */
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .whitespace-nowrap { white-space: nowrap; }
+  .break-all { word-break: break-all; }
+
+  /* ===========================================
+     Letter Spacing Classes
+     =========================================== */
+  .letter-spacing-05 { letter-spacing: 0.5px; }
+  .letter-spacing-1 { letter-spacing: 1px; }
+
+  /* ===========================================
+     Text Centering with Max Width
+     =========================================== */
+  .text-center-max-450 {
+    text-align: center;
+    max-width: 450px;
+  }
+
+  .text-center-max-500 {
+    text-align: center;
+    max-width: 500px;
+  }
+
+  /* ===========================================
+     Muted Label Styles
+     =========================================== */
+  .text-muted-label {
+    font-weight: 400;
+    opacity: 0.7;
+  }
+}

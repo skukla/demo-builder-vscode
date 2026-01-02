@@ -23,7 +23,23 @@ import React, { useState } from 'react';
 import { Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Alert from '@spectrum-icons/workflow/Alert';
-import styles from '../styles/connect-services.module.css';
+import {
+    serviceCard,
+    serviceCardHeader,
+    serviceIcon,
+    daliveIcon,
+    serviceCardTitle,
+    serviceCardDescription,
+    serviceCardStatus,
+    statusText,
+    statusIconSuccess,
+    serviceActionLink,
+    daliveInputForm,
+    serviceInput,
+    statusTextError,
+    serviceActionButton,
+    statusIconError,
+} from '../styles/connect-services.module.css';
 
 /** Props for DaLiveServiceCard component */
 export interface DaLiveServiceCardProps {
@@ -95,72 +111,72 @@ export function DaLiveServiceCard({
 
     return (
         <div
-            className={styles.serviceCard}
+            className={serviceCard}
             data-connected={isAuthenticated ? 'true' : 'false'}
         >
-            <div className={styles.serviceCardHeader}>
-                <div className={`${styles.serviceIcon} ${styles.daliveIcon}`}>DA</div>
-                <div className={styles.serviceCardTitle}>DA.live</div>
+            <div className={serviceCardHeader}>
+                <div className={`${serviceIcon} ${daliveIcon}`}>DA</div>
+                <div className={serviceCardTitle}>DA.live</div>
             </div>
-            <div className={styles.serviceCardDescription}>
+            <div className={serviceCardDescription}>
                 Content authoring and management
             </div>
-            <div className={styles.serviceCardStatus}>
+            <div className={serviceCardStatus}>
                 {isLoading ? (
                     <Flex alignItems="center" gap="size-100">
                         <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
-                        <Text UNSAFE_className={styles.statusText}>
+                        <Text UNSAFE_className={statusText}>
                             {isAuthenticating ? 'Verifying...' : 'Checking...'}
                         </Text>
                     </Flex>
                 ) : isAuthenticated ? (
                     compact ? (
                         <Flex alignItems="center" gap="size-100">
-                            <CheckmarkCircle size="S" UNSAFE_className={styles.statusIconSuccess} />
-                            <Text UNSAFE_className={styles.statusText}>Connected</Text>
+                            <CheckmarkCircle size="S" UNSAFE_className={statusIconSuccess} />
+                            <Text UNSAFE_className={statusText}>Connected</Text>
                         </Flex>
                     ) : (
                         <Flex alignItems="center" justifyContent="space-between">
                             <Flex alignItems="center" gap="size-100">
-                                <CheckmarkCircle size="S" UNSAFE_className={styles.statusIconSuccess} />
-                                <Text UNSAFE_className={styles.statusText}>
+                                <CheckmarkCircle size="S" UNSAFE_className={statusIconSuccess} />
+                                <Text UNSAFE_className={statusText}>
                                     {verifiedOrg || 'Connected'}
                                 </Text>
                             </Flex>
-                            <button className={styles.serviceActionLink} onClick={onReset}>
+                            <button className={serviceActionLink} onClick={onReset}>
                                 Change
                             </button>
                         </Flex>
                     )
                 ) : showInput ? (
-                    <div className={styles.daliveInputForm}>
+                    <div className={daliveInputForm}>
                         <input
                             type="text"
                             placeholder="Organization"
                             value={orgValue}
                             onChange={(e) => setOrgValue(e.target.value)}
-                            className={styles.serviceInput}
+                            className={serviceInput}
                         />
                         <input
                             type="password"
                             placeholder="Token"
                             value={tokenValue}
                             onChange={(e) => setTokenValue(e.target.value)}
-                            className={styles.serviceInput}
+                            className={serviceInput}
                         />
                         {error && (
-                            <Text UNSAFE_className={styles.statusTextError}>{error}</Text>
+                            <Text UNSAFE_className={statusTextError}>{error}</Text>
                         )}
                         <Flex gap="size-100">
                             <button
-                                className={styles.serviceActionButton}
+                                className={serviceActionButton}
                                 onClick={handleSubmit}
                                 disabled={!canSubmit}
                             >
                                 Verify
                             </button>
                             <button
-                                className={styles.serviceActionLink}
+                                className={serviceActionLink}
                                 onClick={handleCancel}
                             >
                                 Cancel
@@ -170,15 +186,15 @@ export function DaLiveServiceCard({
                 ) : error ? (
                     <Flex direction="column" gap="size-100">
                         <Flex alignItems="center" gap="size-100">
-                            <Alert size="S" UNSAFE_className={styles.statusIconError} />
-                            <Text UNSAFE_className={styles.statusTextError}>{error}</Text>
+                            <Alert size="S" UNSAFE_className={statusIconError} />
+                            <Text UNSAFE_className={statusTextError}>{error}</Text>
                         </Flex>
-                        <button className={styles.serviceActionButton} onClick={onSetup}>
+                        <button className={serviceActionButton} onClick={onSetup}>
                             Try Again
                         </button>
                     </Flex>
                 ) : (
-                    <button className={styles.serviceActionButton} onClick={onSetup}>
+                    <button className={serviceActionButton} onClick={onSetup}>
                         {setupComplete ? 'Connect DA.live' : 'Set up DA.live'}
                     </button>
                 )}

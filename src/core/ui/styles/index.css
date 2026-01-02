@@ -3,8 +3,8 @@
    Layer order controls cascade priority
    ============================================ */
 
-/* Layer order declaration - MUST be first */
-@layer reset, theme, overrides;
+/* 5-Layer cascade order (lowest to highest priority) - MUST be first */
+@layer reset, vscode-theme, spectrum, components, utilities;
 
 /* Import design system files */
 @import './reset.css';

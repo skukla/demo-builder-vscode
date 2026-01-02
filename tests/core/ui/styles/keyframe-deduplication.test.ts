@@ -44,17 +44,6 @@ describe('Keyframe Centralization', () => {
     return matches ? matches.length : 0;
   }
 
-  // Get all keyframe definitions from a file
-  function getKeyframeNames(content: string): string[] {
-    const regex = /@keyframes\s+(\w+)\s*\{/g;
-    const names: string[] = [];
-    let match;
-    while ((match = regex.exec(content)) !== null) {
-      names.push(match[1]);
-    }
-    return names;
-  }
-
   describe('Centralized Animations File', () => {
     it('should have utilities/animations.css file', () => {
       expect(existsSync(animationsPath)).toBe(true);

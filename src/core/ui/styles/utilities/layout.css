@@ -5,126 +5,203 @@
  * Extracted from custom-spectrum.css.
  */
 
-/* ===========================================
-   Dimension Classes
-   =========================================== */
-.w-full { width: 100% !important; }
-.w-5 { width: 20px !important; }
-.h-full { height: 100% !important; }
-.h-5 { height: 20px !important; }
-.h-28 { height: 28px !important; }
-.h-32 { height: 32px !important; }
+@layer utilities {
+  /* ===========================================
+     Dimension Classes
+     =========================================== */
+  .w-full { width: 100%; }
+  .w-5 { width: 20px; }
+  .h-full { height: 100%; }
+  .h-5 { height: 20px; }
+  .h-28 { height: 28px; }
+  .h-32 { height: 32px; }
 
-/* Min/Max Width */
-.min-w-0 { min-width: 0 !important; }
-.min-w-100 { min-width: 100px !important; }
-.max-w-full { max-width: 100% !important; }
-.max-w-600 { max-width: 600px !important; }
-.max-w-800 { max-width: 800px !important; }
+  /* Min/Max Width */
+  .min-w-0 { min-width: 0; }
+  .min-w-100 { min-width: 100px; }
+  .max-w-full { max-width: 100%; }
+  .max-w-600 { max-width: 600px; }
+  .max-w-800 { max-width: 800px; }
 
-/* Min/Max Height */
-.min-h-0 { min-height: 0 !important; }
-.min-h-16 { min-height: 16px !important; }
-.min-h-48 { min-height: 48px !important; }
-.min-h-120 { min-height: 120px !important; }
+  /* Min/Max Height */
+  .min-h-0 { min-height: 0; }
+  .min-h-16 { min-height: 16px; }
+  .min-h-48 { min-height: 48px; }
+  .min-h-120 { min-height: 120px; }
 
-/* Label width for label/value pairs (ReviewStep, etc.) */
-.review-label-width { min-width: 100px !important; }
+  /* Label width for label/value pairs (ReviewStep, etc.) */
+  .review-label-width { min-width: 100px; }
 
-/* ===========================================
-   Flexbox Classes
-   =========================================== */
-.flex { display: flex !important; }
-.flex-center {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-.flex-column {
-    display: flex !important;
-    flex-direction: column !important;
-}
-.flex-1 { flex: 1 !important; }
-.inline-flex { display: inline-flex !important; }
+  /* ===========================================
+     Flexbox Classes
+     =========================================== */
+  .flex { display: flex; }
+  .flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .flex-column {
+    display: flex;
+    flex-direction: column;
+  }
+  .flex-1 { flex: 1; }
+  .flex-shrink-0 { flex-shrink: 0; }
+  .inline-flex { display: inline-flex; }
 
-/* Flex Alignment */
-.items-center { align-items: center !important; }
-.items-stretch { align-items: stretch !important; }
-.justify-between { justify-content: space-between !important; }
+  /* Flex Alignment */
+  .items-center { align-items: center; }
+  .items-stretch { align-items: stretch; }
+  .justify-between { justify-content: space-between; }
 
-/* ===========================================
-   Grid Classes
-   =========================================== */
-.grid { display: grid !important; }
-.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
-.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-.grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-.grid-gap-4 { gap: 16px !important; }
-.grid-align-start { justify-self: start !important; }
-.grid-align-center { justify-self: center !important; }
-.grid-align-end { justify-self: end !important; }
+  /* ===========================================
+     Grid Classes
+     =========================================== */
+  .grid { display: grid; }
+  .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid-gap-4 { gap: 16px; }
+  .grid-align-start { justify-self: start; }
+  .grid-align-center { justify-self: center; }
+  .grid-align-end { justify-self: end; }
 
-/* ===========================================
-   Display Classes
-   =========================================== */
-.block { display: block !important; }
-.hidden { display: none !important; }
+  /* ===========================================
+     Display Classes
+     =========================================== */
+  .block { display: block; }
+  .hidden { display: none; }
 
-/* ===========================================
-   Overflow Classes
-   =========================================== */
-.overflow-hidden { overflow: hidden !important; }
-.overflow-auto { overflow: auto !important; }
-.overflow-y-auto { overflow-y: auto !important; }
-.overflow-x-hidden { overflow-x: hidden !important; }
+  /* ===========================================
+     Overflow Classes
+     =========================================== */
+  .overflow-hidden { overflow: hidden; }
+  .overflow-auto { overflow: auto; }
+  .overflow-y-auto { overflow-y: auto; }
+  .overflow-x-hidden { overflow-x: hidden; }
 
-/* ===========================================
-   Position Classes
-   =========================================== */
-.relative { position: relative !important; }
-.absolute { position: absolute !important; }
-.top-0 { top: 0 !important; }
-.top-2 { top: 8px !important; }
-.left-0 { left: 0 !important; }
-.right-0 { right: 0 !important; }
+  /* ===========================================
+     Position Classes
+     =========================================== */
+  .relative { position: relative; }
+  .absolute { position: absolute; }
+  .top-0 { top: 0; }
+  .top-2 { top: 8px; }
+  .left-0 { left: 0; }
+  .right-0 { right: 0; }
 
-/* ===========================================
-   Z-Index Classes
-   =========================================== */
-.z-1 { z-index: 1 !important; }
-.z-2 { z-index: 2 !important; }
-.z-10 { z-index: 10 !important; }
+  /* ===========================================
+     Z-Index Classes
+     =========================================== */
+  .z-1 { z-index: 1; }
+  .z-2 { z-index: 2; }
+  .z-10 { z-index: 10; }
 
-/* ===========================================
-   Cursor Classes
-   =========================================== */
-.cursor-pointer { cursor: pointer !important; }
-.cursor-not-allowed { cursor: not-allowed !important; }
-.cursor-default { cursor: default !important; }
+  /* ===========================================
+     Cursor Classes
+     =========================================== */
+  .cursor-pointer { cursor: pointer; }
+  .cursor-not-allowed { cursor: not-allowed; }
+  .cursor-default { cursor: default; }
 
-/* ===========================================
-   Transition Classes
-   =========================================== */
-.transition-all {
-    transition: all 0.3s ease !important;
-}
+  /* ===========================================
+     Transition Classes
+     =========================================== */
+  .transition-all {
+    transition: all 0.3s ease;
+  }
 
-.transition-colors {
-    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease !important;
-}
+  .transition-colors {
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  }
 
-.transition-opacity {
-    transition: opacity 0.2s ease !important;
-}
+  .transition-opacity {
+    transition: opacity 0.2s ease;
+  }
 
-/* ===========================================
-   Animation Classes
-   Reference keyframes defined in index.css
-   =========================================== */
-.animate-fade-in {
-    animation: fadeIn 0.3s ease-out !important;
-}
+  /* ===========================================
+     Animation Classes
+     Reference keyframes defined in index.css
+     =========================================== */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
 
-.animate-pulse {
-    animation: pulse 1.5s ease-in-out infinite !important;
+  .animate-pulse {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* ===========================================
+     Page Container Classes
+     =========================================== */
+  .page-container-padded {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .page-header-section {
+    padding-top: 24px;
+    padding-bottom: 16px;
+  }
+
+  .page-body-section {
+    padding-bottom: 16px;
+  }
+
+  /* ===========================================
+     Centered Content Classes
+     =========================================== */
+  .centered-content-narrow {
+    max-width: 400px;
+    text-align: center;
+  }
+
+  .centered-padding-lg {
+    padding-top: 32px;
+    padding-bottom: 32px;
+  }
+
+  .centered-padding-md {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+
+  /* ===========================================
+     Content Area Classes
+     =========================================== */
+  .content-area {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
+    width: 100%;
+  }
+
+  /* ===========================================
+     App Container Classes
+     =========================================== */
+  .app-container {
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    background: var(--spectrum-global-color-gray-75);
+  }
+
+  .step-main-content {
+    flex: 1;
+    display: flex;
+    width: 100%;
+  }
+
+  /* ===========================================
+     Placeholder Icon
+     =========================================== */
+  .placeholder-icon {
+    width: 20px;
+    height: 20px;
+  }
 }
