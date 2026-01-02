@@ -1,23 +1,37 @@
 /**
  * Utility Classes Tests
  *
- * Validates that active utility classes in custom-spectrum.css
- * have correct CSS property definitions.
+ * Validates that active utility classes have correct CSS property definitions.
+ * Classes are now in modular files under utilities/, spectrum/, and components/.
  *
  * Part of CSS Architecture Improvement - Step 1: Dead CSS Cleanup
+ * Updated for CSS Utility Modularization
  */
 import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, join } from 'path';
 
 describe('Utility Classes', () => {
-  const cssPath = resolve(
-    __dirname,
-    '../../../../src/core/ui/styles/custom-spectrum.css'
-  );
+  const stylesDir = resolve(__dirname, '../../../../src/core/ui/styles');
+
+  // Helper to read and combine modular CSS files
+  const readModularCSS = () => {
+    const files = [
+      'utilities/typography.css',
+      'utilities/colors.css',
+      'utilities/layout.css',
+      'utilities/spacing.css',
+      'utilities/borders.css',
+      'spectrum/buttons.css',
+      'spectrum/components.css',
+      'components/common.css',
+    ];
+    return files.map(f => readFileSync(join(stylesDir, f), 'utf-8')).join('\n');
+  };
+
   let cssContent: string;
 
   beforeAll(() => {
-    cssContent = readFileSync(cssPath, 'utf-8');
+    cssContent = readModularCSS();
   });
 
   describe('Typography Utilities', () => {
@@ -222,10 +236,12 @@ describe('Utility Classes', () => {
 
   describe('Animation Utilities', () => {
     it('defines animate-pulse class', () => {
+      // animate-pulse is in layout.css under utilities
       expect(cssContent).toMatch(/\.animate-pulse\s*\{[^}]*animation:/);
     });
 
     it('defines animate-fade-in class', () => {
+      // animate-fade-in is in layout.css under utilities
       expect(cssContent).toMatch(/\.animate-fade-in\s*\{[^}]*animation:/);
     });
   });

@@ -2,10 +2,10 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ProjectDashboardScreen } from './ProjectDashboardScreen';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
+// Note: index.css imports utilities/, spectrum/, components/ - do not also import custom-spectrum.css
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
-import '@/core/ui/styles/custom-spectrum.css';
 
 // Get root element
 const container = document.getElementById('root');

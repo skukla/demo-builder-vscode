@@ -1,0 +1,113 @@
+/**
+ * Timeline Component Styles
+ *
+ * Timeline navigation, steps, connectors, and step states.
+ * Extracted from custom-spectrum.css.
+ */
+
+/* ===========================================
+   Timeline Container
+   =========================================== */
+.timeline-container {
+    border-right: 1px solid var(--spectrum-global-color-gray-300) !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+}
+
+/* Timeline in sidebar - no border, use Spectrum gray-75 for consistency */
+.timeline-container.timeline-sidebar {
+    border-right: none !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+}
+
+/* ===========================================
+   Timeline Step Dots
+   =========================================== */
+.timeline-step-dot {
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+.timeline-step-dot-completed {
+    background: var(--spectrum-global-color-green-600) !important; /* Green - Completed steps */
+}
+
+.timeline-step-dot-review {
+    background: var(--spectrum-global-color-blue-600) !important; /* Blue - Edit mode (reviewing completed steps) */
+}
+
+.timeline-step-dot-current {
+    background: var(--spectrum-global-color-blue-600) !important; /* Blue - Active step */
+    border: 2px solid var(--spectrum-global-color-blue-400) !important; /* Blue - Active step border */
+}
+
+.timeline-step-dot-upcoming {
+    background: var(--spectrum-global-color-gray-75) !important;
+    border: 2px solid var(--spectrum-global-color-gray-400) !important;
+}
+
+/* ===========================================
+   Timeline Connectors
+   =========================================== */
+.timeline-connector {
+    position: absolute !important;
+    left: 11px !important;
+    top: 28px !important;
+    width: 3px !important;
+    height: 28px !important;
+    z-index: 0 !important;
+}
+
+.timeline-connector-completed {
+    background: repeating-linear-gradient(to bottom, var(--spectrum-global-color-blue-600) 0px, var(--spectrum-global-color-blue-600) 4px, transparent 4px, transparent 8px) !important;
+}
+
+.timeline-connector-pending {
+    background: repeating-linear-gradient(to bottom, var(--spectrum-global-color-gray-400) 0px, var(--spectrum-global-color-gray-400) 4px, transparent 4px, transparent 8px) !important;
+}
+
+/* ===========================================
+   Timeline Step Animations
+   =========================================== */
+/* Timeline step entrance animation - fade in with expand */
+.timeline-step-enter {
+    animation: timeline-enter 0.3s ease-out forwards !important;
+    overflow: hidden !important;
+}
+
+@keyframes timeline-enter {
+    0% {
+        opacity: 0;
+        max-height: 0;
+        margin-bottom: 0;
+    }
+    100% {
+        opacity: 1;
+        max-height: 50px;
+        margin-bottom: var(--spectrum-global-dimension-size-300);
+    }
+}
+
+/* Timeline step exit animation - fade out with collapse */
+.timeline-step-exit {
+    animation: timeline-exit 0.3s ease-out forwards !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+}
+
+@keyframes timeline-exit {
+    0% {
+        opacity: 1;
+        max-height: 50px;
+        margin-bottom: var(--spectrum-global-dimension-size-300);
+    }
+    100% {
+        opacity: 0;
+        max-height: 0;
+        margin-bottom: 0;
+    }
+}

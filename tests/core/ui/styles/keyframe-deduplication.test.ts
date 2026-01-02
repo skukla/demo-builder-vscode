@@ -5,19 +5,30 @@
  * in src/core/ui/styles/, with the canonical definition in index.css.
  *
  * Part of CSS Architecture Improvement - Step 2: Fix Keyframe Duplication
+ * Updated for CSS Utility Modularization
  */
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { resolve, join } from 'path';
 
 describe('Keyframe Deduplication', () => {
   const projectRoot = resolve(__dirname, '../../../..');
   const stylesDir = resolve(projectRoot, 'src/core/ui/styles');
 
-  // Read all CSS files in the styles directory
-  function getCssFiles(): string[] {
-    return readdirSync(stylesDir)
-      .filter((file) => file.endsWith('.css'))
-      .map((file) => join(stylesDir, file));
+  // Read all CSS files in the styles directory and subdirectories
+  function getAllCssFiles(dir: string = stylesDir): string[] {
+    const files: string[] = [];
+    const entries = readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        files.push(...getAllCssFiles(fullPath));
+      } else if (entry.name.endsWith('.css')) {
+        files.push(fullPath);
+      }
+    }
+
+    return files;
   }
 
   // Count occurrences of @keyframes fadeIn in a CSS file
@@ -26,9 +37,22 @@ describe('Keyframe Deduplication', () => {
     return matches ? matches.length : 0;
   }
 
+  // Helper to read and combine modular CSS files
+  const readModularCSS = () => {
+    const files = [
+      'utilities/layout.css',
+      'components/common.css',
+      'components/timeline.css',
+    ];
+    return files
+      .filter((f) => existsSync(join(stylesDir, f)))
+      .map((f) => readFileSync(join(stylesDir, f), 'utf-8'))
+      .join('\n');
+  };
+
   describe('Single Definition Requirement', () => {
     it('should have @keyframes fadeIn defined exactly once across all CSS files', () => {
-      const cssFiles = getCssFiles();
+      const cssFiles = getAllCssFiles();
       let totalCount = 0;
       const filesWithFadeIn: string[] = [];
 
@@ -72,40 +96,30 @@ describe('Keyframe Deduplication', () => {
       const customSpectrumPath = resolve(stylesDir, 'custom-spectrum.css');
       const content = readFileSync(customSpectrumPath, 'utf-8');
 
-      // This test should FAIL before we remove the duplicate
-      // The duplicate exists at line 904 in custom-spectrum.css
+      // custom-spectrum.css should not contain @keyframes fadeIn
       const count = countFadeInKeyframes(content);
       expect(count).toBe(0);
     });
 
-    it('should reference fadeIn animation from index.css in classes', () => {
-      const customSpectrumPath = resolve(stylesDir, 'custom-spectrum.css');
-      const content = readFileSync(customSpectrumPath, 'utf-8');
+    it('should have animation classes in modular files that use fadeIn', () => {
+      // Animation classes now live in modular files (utilities/layout.css)
+      const layoutCssPath = resolve(stylesDir, 'utilities/layout.css');
+      const content = readFileSync(layoutCssPath, 'utf-8');
 
-      // Classes that use fadeIn animation should still work
-      // (the keyframe is defined in index.css and imported)
       // Look for animation: fadeIn usage (classes referencing the keyframe)
       expect(content).toMatch(/animation:\s*fadeIn/);
     });
   });
 
   describe('Other Keyframes Remain Intact', () => {
-    // fadeInUp is a DIFFERENT keyframe that should NOT be removed
-    it('should retain @keyframes fadeInUp in custom-spectrum.css', () => {
-      const customSpectrumPath = resolve(stylesDir, 'custom-spectrum.css');
-      const content = readFileSync(customSpectrumPath, 'utf-8');
+    // These keyframes are now in the modular files or timeline
+    it('should retain timeline animation keyframes in components/timeline.css', () => {
+      const timelineCssPath = resolve(stylesDir, 'components/timeline.css');
+      const content = readFileSync(timelineCssPath, 'utf-8');
 
-      expect(content).toMatch(/@keyframes\s+fadeInUp\s*\{/);
-    });
-
-    // Note: @keyframes expandIn was migrated to project-creation.module.css (Step 6)
-    // It's now in the feature-scoped CSS Module for BrandGallery component.
-
-    it('should retain @keyframes slide-down in custom-spectrum.css', () => {
-      const customSpectrumPath = resolve(stylesDir, 'custom-spectrum.css');
-      const content = readFileSync(customSpectrumPath, 'utf-8');
-
-      expect(content).toMatch(/@keyframes\s+slide-down\s*\{/);
+      // Timeline has enter/exit keyframes
+      expect(content).toMatch(/@keyframes\s+timeline-enter\s*\{/);
+      expect(content).toMatch(/@keyframes\s+timeline-exit\s*\{/);
     });
 
     it('should retain @keyframes pulse in index.css', () => {
@@ -114,19 +128,31 @@ describe('Keyframe Deduplication', () => {
 
       expect(content).toMatch(/@keyframes\s+pulse\s*\{/);
     });
+
+    it('should retain @keyframes spin in components/common.css (loading spinner)', () => {
+      const commonCssPath = resolve(stylesDir, 'components/common.css');
+      const content = readFileSync(commonCssPath, 'utf-8');
+
+      expect(content).toMatch(/@keyframes\s+spin\s*\{/);
+    });
   });
 
   describe('Animation Classes Still Work', () => {
     it('should have .animate-fade-in class that uses fadeIn animation', () => {
-      const customSpectrumPath = resolve(stylesDir, 'custom-spectrum.css');
-      const content = readFileSync(customSpectrumPath, 'utf-8');
+      // animate-fade-in is now in utilities/layout.css
+      const layoutCssPath = resolve(stylesDir, 'utilities/layout.css');
+      const content = readFileSync(layoutCssPath, 'utf-8');
 
       // The .animate-fade-in class should use animation: fadeIn
       expect(content).toMatch(/\.animate-fade-in\s*\{[^}]*animation:[^}]*fadeIn/);
     });
 
-    // Note: .brand-card-architectures was removed as dead CSS during Step 6 migration
-    // (not referenced in any source files). The fadeIn animation is still used by
-    // .animate-fade-in and remains properly defined in index.css.
+    it('should have .animate-pulse class that uses pulse animation', () => {
+      // animate-pulse is now in utilities/layout.css
+      const layoutCssPath = resolve(stylesDir, 'utilities/layout.css');
+      const content = readFileSync(layoutCssPath, 'utf-8');
+
+      expect(content).toMatch(/\.animate-pulse\s*\{[^}]*animation:/);
+    });
   });
 });

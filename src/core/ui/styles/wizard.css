@@ -1,15 +1,8 @@
 /* Timeline Animation Styles
-   Note: @keyframes pulse and fadeIn are defined in index.css
-   This file only contains wizard-specific spin animation */
-
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
+   Note: @keyframes pulse, fadeIn, and spin are defined canonically elsewhere:
+   - pulse, fadeIn: index.css
+   - spin: components/common.css
+   This file only contains wizard-specific styles */
 
 /* ============================================
    WIZARD STRUCTURAL STYLES

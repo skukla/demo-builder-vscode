@@ -3,10 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { ConfigureScreen, ComponentsData } from './ConfigureScreen';
 import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
 import { Project } from '@/types/base';
+// Note: index.css imports utilities/, spectrum/, components/ - do not also import custom-spectrum.css
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
-import '@/core/ui/styles/custom-spectrum.css';
 
 interface ConfigureInitData extends WebviewInitData {
     project?: Project;

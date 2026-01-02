@@ -3,19 +3,20 @@
  *
  * Validates that CSS files have proper cascade layer declarations
  * for predictable style ordering.
+ *
+ * Updated for CSS Utility Modularization
  */
 import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, join } from 'path';
 
 describe('CSS Layer Declarations', () => {
+  const stylesDir = resolve(__dirname, '../../../../src/core/ui/styles');
+
   describe('index.css', () => {
     let indexCSS: string;
 
     beforeAll(() => {
-      indexCSS = readFileSync(
-        resolve(__dirname, '../../../../src/core/ui/styles/index.css'),
-        'utf-8'
-      );
+      indexCSS = readFileSync(join(stylesDir, 'index.css'), 'utf-8');
     });
 
     it('declares layer order at top of file', () => {
@@ -33,28 +34,28 @@ describe('CSS Layer Declarations', () => {
     it('wraps base styles in @layer theme', () => {
       expect(indexCSS).toContain('@layer theme {');
     });
+
+    it('imports modular CSS directories', () => {
+      expect(indexCSS).toContain("@import './utilities/index.css'");
+      expect(indexCSS).toContain("@import './spectrum/index.css'");
+      expect(indexCSS).toContain("@import './components/index.css'");
+    });
   });
 
-  describe('custom-spectrum.css', () => {
-    let customSpectrumCSS: string;
+  describe('spectrum/buttons.css', () => {
+    let buttonsCss: string;
 
     beforeAll(() => {
-      customSpectrumCSS = readFileSync(
-        resolve(
-          __dirname,
-          '../../../../src/core/ui/styles/custom-spectrum.css'
-        ),
-        'utf-8'
-      );
+      buttonsCss = readFileSync(join(stylesDir, 'spectrum/buttons.css'), 'utf-8');
     });
 
     it('wraps CTA button overrides in @layer overrides', () => {
-      expect(customSpectrumCSS).toContain('@layer overrides {');
+      expect(buttonsCss).toContain('@layer overrides {');
     });
 
     it('has CTA button styles inside overrides layer', () => {
       // Find the overrides layer content
-      const layerMatch = customSpectrumCSS.match(
+      const layerMatch = buttonsCss.match(
         /@layer overrides\s*\{([\s\S]*?)\n\}/
       );
       expect(layerMatch).toBeTruthy();
@@ -66,14 +67,33 @@ describe('CSS Layer Declarations', () => {
     });
   });
 
+  describe('custom-spectrum.css (deprecated)', () => {
+    let customSpectrumCSS: string;
+
+    beforeAll(() => {
+      customSpectrumCSS = readFileSync(
+        join(stylesDir, 'custom-spectrum.css'),
+        'utf-8'
+      );
+    });
+
+    it('is now a minimal re-export stub', () => {
+      const lineCount = customSpectrumCSS.split('\n').length;
+      expect(lineCount).toBeLessThanOrEqual(100);
+    });
+
+    it('imports modular files for backwards compatibility', () => {
+      expect(customSpectrumCSS).toContain("@import './utilities/index.css'");
+      expect(customSpectrumCSS).toContain("@import './spectrum/index.css'");
+      expect(customSpectrumCSS).toContain("@import './components/index.css'");
+    });
+  });
+
   describe('wizard.css', () => {
     let wizardCSS: string;
 
     beforeAll(() => {
-      wizardCSS = readFileSync(
-        resolve(__dirname, '../../../../src/core/ui/styles/wizard.css'),
-        'utf-8'
-      );
+      wizardCSS = readFileSync(join(stylesDir, 'wizard.css'), 'utf-8');
     });
 
     it('wraps structural styles in @layer theme', () => {

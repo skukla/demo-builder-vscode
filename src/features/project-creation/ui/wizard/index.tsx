@@ -4,10 +4,10 @@ import { createRoot } from 'react-dom/client';
 import { WizardContainer, ImportedSettings, EditProjectConfig } from './WizardContainer';
 import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
 import { ComponentSelection } from '@/types/webview';
+// Note: index.css imports utilities/, spectrum/, components/ - do not also import custom-spectrum.css
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
-import '@/core/ui/styles/custom-spectrum.css';
 
 interface WizardInitData extends WebviewInitData {
     componentDefaults?: ComponentSelection;

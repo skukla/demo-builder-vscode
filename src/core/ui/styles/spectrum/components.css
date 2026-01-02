@@ -1,0 +1,52 @@
+/**
+ * Spectrum Component Overrides
+ *
+ * TextField, Picker, Badge, Checkbox, Radio, Switch, ProgressBar,
+ * Dialog, Menu, Tabs, Well, Divider styling.
+ * Extracted from custom-spectrum.css.
+ */
+
+/* ===========================================
+   Progress Bar Customizations
+   =========================================== */
+/* Progress bar small label styling */
+.progress-bar-small-label [class*="spectrum-ProgressBar-label"] {
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+}
+
+/* Full width progress bar */
+.progress-bar-full-width {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+.progress-bar-full-width [class*="spectrum-ProgressBar"] {
+    width: 100% !important;
+}
+
+/* ===========================================
+   Progress Bar Animations
+   =========================================== */
+/* Progress bar entrance/exit animations */
+[class*="spectrum-ProgressBar"] {
+    animation: fadeInUp 0.3s ease;
+    transition: opacity 0.3s ease !important;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Smooth progress bar value changes */
+[class*="spectrum-ProgressBar-fill"] {
+    transition: width 0.3s ease !important;
+}

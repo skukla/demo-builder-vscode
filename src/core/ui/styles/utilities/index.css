@@ -1,0 +1,12 @@
+/**
+ * Utilities CSS - Barrel Import
+ *
+ * Imports all utility class categories in order.
+ * Part of CSS Utility Modularization.
+ */
+
+@import './typography.css';
+@import './colors.css';
+@import './layout.css';
+@import './spacing.css';
+@import './borders.css';

@@ -1,0 +1,124 @@
+/**
+ * Dashboard Component Styles
+ *
+ * Dashboard grid, header, actions, status indicators.
+ * Extracted from custom-spectrum.css.
+ */
+
+/* ===========================================
+   Dashboard Status Header
+   =========================================== */
+/* Dashboard status header - middle layer between header and content for depth */
+.dashboard-status-header {
+    background-color: #050505 !important;
+    border-bottom: 1px solid #2a2a2a !important;
+    margin-bottom: 16px !important;
+}
+
+/* Match the height of the Projects List search header so content aligns */
+.dashboard-status-header > div {
+    min-height: 122px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Match grid width so status aligns with buttons: 4 × 160px + 3 × 24px = 712px */
+.dashboard-status-content {
+    width: 712px;
+    margin: 0 auto;
+}
+
+/* ===========================================
+   Dashboard Grid
+   =========================================== */
+/* Dashboard grid - center fixed-width buttons */
+.dashboard-grid-container {
+    display: flex;
+    justify-content: center;
+    padding: 8px; /* Shadow overflow padding */
+}
+
+.dashboard-grid {
+    width: auto !important; /* Override w-full from GridLayout */
+    grid-template-columns: repeat(4, auto) !important; /* 4 columns for 8 buttons */
+    gap: 24px !important; /* Spectrum size-300 - matches project cards */
+}
+
+/* ===========================================
+   Dashboard Action Buttons
+   Matches project-card-spectrum patterns
+   =========================================== */
+.dashboard-action-button {
+    /* Base - lighter background matching cards */
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+
+    /* Smoother transition matching cards */
+    transition: all 0.3s ease !important;
+
+    /* Layout */
+    text-align: center !important;
+    width: 160px !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important; /* Square buttons */
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+}
+
+/* Scale icons */
+.dashboard-action-button svg {
+    width: 28px !important;
+    height: 28px !important;
+}
+
+.dashboard-action-button:hover,
+.dashboard-action-button:focus {
+    /* Layered depth matching cards */
+    background: var(--spectrum-global-color-gray-75) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+
+    /* Lift animation matching cards */
+    transform: translateY(-2px) !important;
+
+    /* Shadow matching cards */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+
+    outline: none !important;
+}
+
+.dashboard-action-button:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+/* Prevent internal Spectrum elements from showing their own hover states */
+.dashboard-action-button:hover *,
+.dashboard-action-button:focus * {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* Temporarily suppress hover/focus after click to prevent stuck state during layout shift */
+.dashboard-action-button.hover-suppressed,
+.dashboard-action-button.hover-suppressed:hover,
+.dashboard-action-button.hover-suppressed:focus {
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-color: var(--spectrum-global-color-gray-300) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Dashboard button icon label */
+.dashboard-action-button .icon-label {
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: var(--spectrum-global-color-gray-800) !important;
+    line-height: 1.2 !important;
+}

@@ -1,0 +1,33 @@
+/**
+ * Card Component Styles
+ *
+ * Card base styles, project cards, template cards, brand cards,
+ * stack cards, and card grid layouts.
+ * Extracted from custom-spectrum.css.
+ */
+
+/* ===========================================
+   Base Card Styles
+   =========================================== */
+.card-container {
+    background-color: var(--spectrum-global-color-gray-75) !important;
+    border-radius: 4px !important;
+    padding: 12px !important;
+    transition: all 0.3s ease !important;
+}
+
+.card-hover:hover {
+    background-color: var(--spectrum-global-color-gray-100) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ===========================================
+   Bordered Container
+   =========================================== */
+.bordered-container {
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: 4px !important;
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    padding: 12px !important;
+}

@@ -13,8 +13,8 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { Project } from '@/types/base';
 
 // Import global styles
+// Note: index.css imports utilities/, spectrum/, components/ - do not also import custom-spectrum.css
 import '@/core/ui/styles/index.css';
-import '@/core/ui/styles/custom-spectrum.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts

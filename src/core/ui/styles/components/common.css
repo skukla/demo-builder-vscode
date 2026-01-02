@@ -1,0 +1,161 @@
+/**
+ * Common Component Styles
+ *
+ * Container classes, empty states, loading indicators,
+ * error/success messages, icons, dividers.
+ * Extracted from custom-spectrum.css.
+ */
+
+/* ===========================================
+   Container Classes
+   =========================================== */
+.container-wizard {
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.container-dashboard {
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    width: 100% !important;
+    min-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.container-form {
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    padding: 16px !important;
+}
+
+.container-configure {
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    width: 100% !important;
+    height: 100vh !important;
+    display: flex !important;
+    overflow: hidden !important;
+}
+
+/* ===========================================
+   Wizard Layout
+   =========================================== */
+.wizard-wrapper {
+    display: flex !important;
+    height: 100% !important;
+    width: 100% !important;
+}
+
+.wizard-main-content {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+}
+
+/* ===========================================
+   Loading Overlays
+   =========================================== */
+.loading-overlay-container {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    z-index: 100 !important;
+}
+
+.loading-overlay-container-opaque {
+    background-color: var(--spectrum-global-color-gray-50) !important;
+}
+
+.loading-overlay-spinner-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+.loading-overlay-spinner {
+    width: 32px !important;
+    height: 32px !important;
+    border: 3px solid var(--spectrum-global-color-gray-400) !important;
+    border-top-color: var(--spectrum-global-color-blue-500) !important;
+    border-radius: 50% !important;
+    animation: spin 1s linear infinite !important;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-overlay-text {
+    font-size: 14px !important;
+    color: var(--spectrum-global-color-gray-800) !important;
+}
+
+.loading-spinner-small {
+    width: 16px !important;
+    height: 16px !important;
+    border-width: 2px !important;
+}
+
+/* ===========================================
+   Empty State
+   =========================================== */
+.empty-state-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 32px !important;
+    text-align: center !important;
+}
+
+.empty-state-text {
+    color: var(--spectrum-global-color-gray-600) !important;
+    font-size: 14px !important;
+}
+
+/* ===========================================
+   Status Indicators
+   =========================================== */
+.status-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.status-text {
+    font-size: 13px !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+}
+
+.status-icon-sm {
+    width: 12px !important;
+    height: 12px !important;
+}
+
+.status-icon-md {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+/* ===========================================
+   Sidebar
+   =========================================== */
+.sidebar-provider {
+    background: var(--spectrum-global-color-gray-75) !important;
+    min-height: 100vh !important;
+}
+
+.sidebar-welcome {
+    padding: 16px !important;
+    min-height: calc(100vh - 40px) !important;
+    justify-content: center !important;
+}

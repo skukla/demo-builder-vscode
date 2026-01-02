@@ -9,6 +9,19 @@
 /* Import design system files */
 @import './reset.css';
 @import './tokens.css';
+@import './vscode-theme.css';
+
+/* Utility classes (low specificity, general purpose) */
+@import './utilities/index.css';
+
+/* Spectrum overrides (medium specificity, component overrides) */
+@import './spectrum/index.css';
+
+/* Component styles (high specificity, semantic components) */
+@import './components/index.css';
+
+/* Wizard-specific styles (highest specificity, page-specific) */
+@import './wizard.css';
 
 /* Base styles wrapped in theme layer */
 @layer theme {

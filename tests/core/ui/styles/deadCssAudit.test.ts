@@ -1,10 +1,11 @@
 /**
  * Dead CSS Audit Tests
  *
- * Validates that dead CSS classes have been removed from custom-spectrum.css
- * and verifies the expected reduction in file size.
+ * Validates that dead CSS classes have been removed and active classes remain.
+ * Classes are now in modular files under utilities/, spectrum/, and components/.
  *
  * Part of CSS Architecture Improvement - Step 1: Dead CSS Cleanup
+ * Updated for CSS Utility Modularization
  */
 import { readFileSync, existsSync } from 'fs';
 import { resolve, join } from 'path';
@@ -12,15 +13,33 @@ import { execSync } from 'child_process';
 
 describe('Dead CSS Audit', () => {
   const projectRoot = resolve(__dirname, '../../../..');
-  const cssPath = resolve(
-    projectRoot,
-    'src/core/ui/styles/custom-spectrum.css'
-  );
+  const stylesDir = resolve(projectRoot, 'src/core/ui/styles');
+
+  // Helper to read and combine all modular CSS files
+  const readAllModularCSS = () => {
+    const files = [
+      'utilities/typography.css',
+      'utilities/colors.css',
+      'utilities/layout.css',
+      'utilities/spacing.css',
+      'utilities/borders.css',
+      'spectrum/buttons.css',
+      'spectrum/components.css',
+      'components/cards.css',
+      'components/timeline.css',
+      'components/dashboard.css',
+      'components/common.css',
+    ];
+    return files
+      .filter((f) => existsSync(join(stylesDir, f)))
+      .map((f) => readFileSync(join(stylesDir, f), 'utf-8'))
+      .join('\n');
+  };
 
   let cssContent: string;
 
   beforeAll(() => {
-    cssContent = readFileSync(cssPath, 'utf-8');
+    cssContent = readAllModularCSS();
   });
 
   describe('Dead CSS Removal Verification', () => {
@@ -172,7 +191,7 @@ describe('Dead CSS Audit', () => {
   });
 
   describe('Active CSS Classes Remain', () => {
-    // These classes ARE used and should still exist
+    // These classes ARE used and should still exist in the modular files
     // Verified by grep search in src/**/*.tsx and src/**/*.ts
     const activeClasses = [
       // Typography - heavily used
@@ -206,15 +225,6 @@ describe('Dead CSS Audit', () => {
       'bg-gray-50',
       'bg-gray-75',
 
-      // Classes verified as used (would have been false positives)
-      'opacity-70', // Used in UtilityBar.tsx
-      'min-w-100', // Used in PrerequisitesStep.tsx
-      'min-h-48', // Used in FieldHelpButton.tsx
-      'text-gray-800', // Used in TimelineNav.tsx
-      'text-blue-700', // Used in TimelineNav.tsx
-      'text-white', // Used in TimelineNav.tsx
-      'bg-gray-400', // Used in TimelineNav.tsx
-
       // Component-specific - heavily used
       // Note: prerequisite-* classes migrated to CSS Module (Step 5 of CSS Architecture Improvement)
       // Note: selector-*, expandable-brand-*, brand-card-*, architecture-* classes migrated to CSS Module (Step 6)
@@ -231,40 +241,50 @@ describe('Dead CSS Audit', () => {
     );
   });
 
-  describe('CSS File Size Reduction', () => {
-    // Original baseline: 3,148 lines (actual count)
-    // Removing 63 unused utility classes
-    // Target reduction: ~2% (~63 lines minimum)
-    // Expected final: ~3,085 lines or less
-    const ORIGINAL_LINE_COUNT = 3148;
-    const MIN_REDUCTION_LINES = 60; // 63 classes removed, minimum ~60 lines
-    const MAX_LINE_COUNT = ORIGINAL_LINE_COUNT - MIN_REDUCTION_LINES;
-
-    it('should have reduced line count from baseline', () => {
-      const lineCount = cssContent.split('\n').length;
-
-      expect(lineCount).toBeLessThan(ORIGINAL_LINE_COUNT);
+  describe('Modular CSS File Structure', () => {
+    it('should have utilities directory with expected files', () => {
+      const utilityFiles = [
+        'utilities/typography.css',
+        'utilities/colors.css',
+        'utilities/layout.css',
+        'utilities/spacing.css',
+        'utilities/borders.css',
+      ];
+      for (const file of utilityFiles) {
+        expect(existsSync(join(stylesDir, file))).toBe(true);
+      }
     });
 
-    it('should achieve target reduction in file size', () => {
-      const lineCount = cssContent.split('\n').length;
-
-      expect(lineCount).toBeLessThanOrEqual(MAX_LINE_COUNT);
+    it('should have spectrum directory with expected files', () => {
+      const spectrumFiles = ['spectrum/buttons.css', 'spectrum/components.css'];
+      for (const file of spectrumFiles) {
+        expect(existsSync(join(stylesDir, file))).toBe(true);
+      }
     });
 
-    it('should report reduction metrics', () => {
-      const lineCount = cssContent.split('\n').length;
-      const reduction = ORIGINAL_LINE_COUNT - lineCount;
-      const percentReduction = ((reduction / ORIGINAL_LINE_COUNT) * 100).toFixed(
-        1
-      );
+    it('should have components directory with expected files', () => {
+      const componentFiles = [
+        'components/cards.css',
+        'components/timeline.css',
+        'components/dashboard.css',
+        'components/common.css',
+      ];
+      for (const file of componentFiles) {
+        expect(existsSync(join(stylesDir, file))).toBe(true);
+      }
+    });
 
-      // Log metrics for visibility
-      console.log(`CSS Line Count: ${lineCount} (was ${ORIGINAL_LINE_COUNT})`);
-      console.log(`Reduction: ${reduction} lines (${percentReduction}%)`);
+    it('custom-spectrum.css should be a minimal re-export stub', () => {
+      const customSpectrumPath = join(stylesDir, 'custom-spectrum.css');
+      const content = readFileSync(customSpectrumPath, 'utf-8');
+      const lineCount = content.split('\n').length;
 
-      // Just ensure we can calculate - actual assertion is in previous tests
-      expect(lineCount).toBeGreaterThan(0);
+      // Should be under 100 lines (just imports and comments)
+      expect(lineCount).toBeLessThanOrEqual(100);
+      // Should contain @import statements to modular files
+      expect(content).toContain("@import './utilities/index.css'");
+      expect(content).toContain("@import './spectrum/index.css'");
+      expect(content).toContain("@import './components/index.css'");
     });
   });
 

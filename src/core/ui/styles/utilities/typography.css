@@ -1,0 +1,43 @@
+/**
+ * Typography Utilities
+ *
+ * Font size, weight, alignment, and text transform utilities.
+ * Extracted from custom-spectrum.css.
+ */
+
+/* ===========================================
+   Font Size Classes
+   =========================================== */
+.text-xs { font-size: 11px !important; }
+.text-sm { font-size: 12px !important; }
+.text-base { font-size: 13px !important; }
+.text-md { font-size: 14px !important; }
+.text-lg { font-size: 16px !important; }
+.text-xl { font-size: 18px !important; }
+.text-2xl { font-size: 22px !important; }
+.text-3xl { font-size: 28px !important; }
+.text-4xl { font-size: 32px !important; }
+.text-5xl { font-size: 36px !important; }
+.text-15 { font-size: 15px !important; }
+
+/* ===========================================
+   Font Weight Classes
+   =========================================== */
+.font-normal { font-weight: 400 !important; }
+.font-medium { font-weight: 500 !important; }
+.font-semibold { font-weight: 600 !important; }
+.font-bold { font-weight: 700 !important; }
+.font-mono { font-family: var(--spectrum-font-family-code, monospace) !important; }
+
+/* ===========================================
+   Text Alignment Classes
+   =========================================== */
+.text-center { text-align: center !important; }
+.text-left { text-align: left !important; }
+.text-right { text-align: right !important; }
+
+/* ===========================================
+   Text Transform Classes
+   =========================================== */
+.text-uppercase { text-transform: uppercase !important; }
+.text-italic { font-style: italic !important; }

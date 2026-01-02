@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
@@ -70,10 +70,12 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
             </Provider>
         );
 
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
-            ]
+        await act(async () => {
+            loadedCallback({
+                prerequisites: [
+                    { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
+                ]
+            });
         });
 
         await waitFor(() => {
@@ -81,24 +83,26 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
         });
 
         // Simulate prerequisite checking with unified progress (no separate milestone counters)
-        statusCallback({
-            index: 0,
-            status: 'checking',
-            message: 'Installing...',
-            unifiedProgress: {
-                overall: {
-                    percent: 50,
-                    currentStep: 1,
-                    totalSteps: 2,
-                    stepName: 'Installing Node.js'
-                },
-                command: {
-                    type: 'determinate' as const,
-                    percent: 25,
-                    detail: 'Installing Node.js 20',
-                    confidence: 'exact' as const
+        await act(async () => {
+            statusCallback({
+                index: 0,
+                status: 'checking',
+                message: 'Installing...',
+                unifiedProgress: {
+                    overall: {
+                        percent: 50,
+                        currentStep: 1,
+                        totalSteps: 2,
+                        stepName: 'Installing Node.js'
+                    },
+                    command: {
+                        type: 'determinate' as const,
+                        percent: 25,
+                        detail: 'Installing Node.js 20',
+                        confidence: 'exact' as const
+                    }
                 }
-            }
+            });
         });
 
         // Check for unified format: "Step X/Y: Task Name - Detail"
@@ -133,10 +137,12 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
             </Provider>
         );
 
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
-            ]
+        await act(async () => {
+            loadedCallback({
+                prerequisites: [
+                    { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
+                ]
+            });
         });
 
         await waitFor(() => {
@@ -144,24 +150,26 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
         });
 
         // Simulate progress without detail text (detail is empty)
-        statusCallback({
-            index: 0,
-            status: 'checking',
-            message: 'Installing...',
-            unifiedProgress: {
-                overall: {
-                    percent: 50,
-                    currentStep: 1,
-                    totalSteps: 1,
-                    stepName: 'Installing Node.js'
-                },
-                command: {
-                    type: 'determinate' as const,
-                    percent: 25,
-                    detail: '',
-                    confidence: 'exact' as const
+        await act(async () => {
+            statusCallback({
+                index: 0,
+                status: 'checking',
+                message: 'Installing...',
+                unifiedProgress: {
+                    overall: {
+                        percent: 50,
+                        currentStep: 1,
+                        totalSteps: 1,
+                        stepName: 'Installing Node.js'
+                    },
+                    command: {
+                        type: 'determinate' as const,
+                        percent: 25,
+                        detail: '',
+                        confidence: 'exact' as const
+                    }
                 }
-            }
+            });
         });
 
         // Check for format without detail: "Step X/Y: Task Name"
@@ -196,29 +204,33 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
             </Provider>
         );
 
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
-            ]
+        await act(async () => {
+            loadedCallback({
+                prerequisites: [
+                    { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
+                ]
+            });
         });
 
         await waitFor(() => {
             expect(screen.getByText('Node.js')).toBeInTheDocument();
         });
 
-        statusCallback({
-            index: 0,
-            status: 'checking',
-            message: 'Installing...',
-            unifiedProgress: {
-                overall: { percent: 50, currentStep: 1, totalSteps: 1, stepName: 'Installing Node.js' },
-                command: {
-                    type: 'determinate' as const,
-                    percent: 50,
-                    detail: 'Installing Node.js 20',
-                    confidence: 'exact' as const
+        await act(async () => {
+            statusCallback({
+                index: 0,
+                status: 'checking',
+                message: 'Installing...',
+                unifiedProgress: {
+                    overall: { percent: 50, currentStep: 1, totalSteps: 1, stepName: 'Installing Node.js' },
+                    command: {
+                        type: 'determinate' as const,
+                        percent: 50,
+                        detail: 'Installing Node.js 20',
+                        confidence: 'exact' as const
+                    }
                 }
-            }
+            });
         });
 
         // Check unified format for single step
@@ -253,10 +265,12 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
             </Provider>
         );
 
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
-            ]
+        await act(async () => {
+            loadedCallback({
+                prerequisites: [
+                    { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
+                ]
+            });
         });
 
         await waitFor(() => {
@@ -264,19 +278,21 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
         });
 
         // Progress with detail text
-        statusCallback({
-            index: 0,
-            status: 'checking',
-            message: 'Installing...',
-            unifiedProgress: {
-                overall: { percent: 50, currentStep: 1, totalSteps: 1, stepName: 'Installing Node.js' },
-                command: {
-                    type: 'determinate' as const,
-                    percent: 50,
-                    detail: 'Downloading packages',
-                    confidence: 'exact' as const
+        await act(async () => {
+            statusCallback({
+                index: 0,
+                status: 'checking',
+                message: 'Installing...',
+                unifiedProgress: {
+                    overall: { percent: 50, currentStep: 1, totalSteps: 1, stepName: 'Installing Node.js' },
+                    command: {
+                        type: 'determinate' as const,
+                        percent: 50,
+                        detail: 'Downloading packages',
+                        confidence: 'exact' as const
+                    }
                 }
-            }
+            });
         });
 
         // Should display with detail
@@ -285,19 +301,21 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
         });
 
         // Progress without detail text (empty string)
-        statusCallback({
-            index: 0,
-            status: 'checking',
-            message: 'Installing...',
-            unifiedProgress: {
-                overall: { percent: 50, currentStep: 1, totalSteps: 1, stepName: 'Installing Node.js' },
-                command: {
-                    type: 'determinate' as const,
-                    percent: 50,
-                    detail: '',
-                    confidence: 'exact' as const
+        await act(async () => {
+            statusCallback({
+                index: 0,
+                status: 'checking',
+                message: 'Installing...',
+                unifiedProgress: {
+                    overall: { percent: 50, currentStep: 1, totalSteps: 1, stepName: 'Installing Node.js' },
+                    command: {
+                        type: 'determinate' as const,
+                        percent: 50,
+                        detail: '',
+                        confidence: 'exact' as const
+                    }
                 }
-            }
+            });
         });
 
         // Should display without detail (no hyphen)
