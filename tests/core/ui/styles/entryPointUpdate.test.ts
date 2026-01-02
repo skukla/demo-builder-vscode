@@ -129,9 +129,11 @@ describe('Entry Point Update', () => {
       expect(indexContent).toContain('.status-indicator');
     });
 
-    it('should maintain canonical keyframes (pulse, fadeIn)', () => {
-      expect(indexContent).toContain('@keyframes pulse');
-      expect(indexContent).toContain('@keyframes fadeIn');
+    it('should reference centralized keyframes (pulse, fadeIn)', () => {
+      // Keyframes are now centralized in utilities/animations.css
+      // index.css still has the .pulse utility class that uses the keyframe
+      expect(indexContent).toContain('.pulse');
+      expect(indexContent).toContain('animation: pulse');
     });
 
     it('should maintain code-block styles', () => {

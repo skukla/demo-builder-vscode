@@ -150,23 +150,11 @@
 }
 
 /* ===========================================
-   Canonical Animation Keyframes
-   Other CSS files reference these definitions
+   Animation Keyframes Reference
+   Keyframes are now centralized in utilities/animations.css
    =========================================== */
 
-/* Pulse animation for checking status */
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.6; }
-    100% { opacity: 1; }
-}
-
-/* Fade in animation */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
+/* .pulse class uses keyframe from utilities/animations.css */
 .pulse {
     animation: pulse 1.5s ease-in-out infinite;
 }

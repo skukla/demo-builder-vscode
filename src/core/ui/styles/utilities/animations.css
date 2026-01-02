@@ -1,0 +1,62 @@
+/**
+ * Animation Keyframes & Utility Classes
+ *
+ * Centralized keyframe definitions for the entire application.
+ * This is the canonical location for all common animations.
+ *
+ * Part of CSS Architecture - Keyframe Centralization
+ *
+ * Usage:
+ *   - Import via utilities/index.css (automatically included)
+ *   - Reference keyframes by name: animation: fadeIn 0.3s ease;
+ *   - Use utility classes: class="animate-fade-in"
+ *
+ * Note: Component-specific keyframes (e.g., timeline-enter) stay
+ * in their respective component files.
+ */
+
+/* ===========================================
+   Keyframe Definitions
+   =========================================== */
+
+/* Spin animation - used for loading spinners */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Pulse animation - used for checking/loading status indicators */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+/* Fade in animation - simple opacity transition */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Fade in with upward motion - subtle entrance effect */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===========================================
+   Animation Utility Classes
+   =========================================== */
+
+/* Spin animation class - for loading spinners */
+.animate-spin {
+    animation: spin 1s linear infinite !important;
+}
+
+/* Note: .animate-fade-in and .animate-pulse are defined in layout.css
+   as they were already there. They reference these keyframes. */

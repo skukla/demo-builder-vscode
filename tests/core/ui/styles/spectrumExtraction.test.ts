@@ -72,7 +72,8 @@ describe('Spectrum Extraction', () => {
 
     it('should contain progress bar animations', () => {
       expect(componentsContent).toMatch(/\[class\*="spectrum-ProgressBar"\]/);
-      expect(componentsContent).toMatch(/@keyframes fadeInUp/);
+      // fadeInUp keyframe is now centralized in utilities/animations.css
+      expect(componentsContent).toMatch(/animation:\s*fadeInUp/);
     });
 
     it('should contain progress bar fill transitions', () => {

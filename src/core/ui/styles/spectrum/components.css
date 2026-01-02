@@ -30,20 +30,10 @@
    Progress Bar Animations
    =========================================== */
 /* Progress bar entrance/exit animations */
+/* fadeInUp keyframe is defined in utilities/animations.css */
 [class*="spectrum-ProgressBar"] {
     animation: fadeInUp 0.3s ease;
     transition: opacity 0.3s ease !important;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(4px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 /* Smooth progress bar value changes */

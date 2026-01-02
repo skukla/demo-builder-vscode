@@ -90,9 +90,7 @@
     animation: spin 1s linear infinite !important;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
+/* spin keyframe is defined in utilities/animations.css */
 
 .loading-overlay-text {
     font-size: 14px !important;

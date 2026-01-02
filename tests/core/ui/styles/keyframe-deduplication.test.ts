@@ -1,18 +1,24 @@
 /**
- * Keyframe Deduplication Tests
+ * Keyframe Centralization Tests
  *
- * Validates that @keyframes fadeIn is defined exactly once across all CSS files
- * in src/core/ui/styles/, with the canonical definition in index.css.
+ * Validates that all common @keyframes are defined in a single canonical location:
+ * utilities/animations.css
  *
- * Part of CSS Architecture Improvement - Step 2: Fix Keyframe Duplication
+ * This follows CSS architecture best practices identified in research:
+ * - Centralized keyframe definitions prevent duplication
+ * - Single source of truth for animations
+ * - Animation utility classes reference centralized keyframes
+ *
+ * Part of CSS Architecture Improvement - Keyframe Centralization
  * Updated for CSS Utility Modularization
  */
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { resolve, join } from 'path';
 
-describe('Keyframe Deduplication', () => {
+describe('Keyframe Centralization', () => {
   const projectRoot = resolve(__dirname, '../../../..');
   const stylesDir = resolve(projectRoot, 'src/core/ui/styles');
+  const animationsPath = resolve(stylesDir, 'utilities/animations.css');
 
   // Read all CSS files in the styles directory and subdirectories
   function getAllCssFiles(dir: string = stylesDir): string[] {
@@ -31,128 +37,139 @@ describe('Keyframe Deduplication', () => {
     return files;
   }
 
-  // Count occurrences of @keyframes fadeIn in a CSS file
-  function countFadeInKeyframes(content: string): number {
-    const matches = content.match(/@keyframes\s+fadeIn\s*\{/g);
+  // Count occurrences of a specific @keyframes in a CSS file
+  function countKeyframes(content: string, name: string): number {
+    const regex = new RegExp(`@keyframes\\s+${name}\\s*\\{`, 'g');
+    const matches = content.match(regex);
     return matches ? matches.length : 0;
   }
 
-  // Helper to read and combine modular CSS files
-  const readModularCSS = () => {
-    const files = [
-      'utilities/layout.css',
-      'components/common.css',
-      'components/timeline.css',
-    ];
-    return files
-      .filter((f) => existsSync(join(stylesDir, f)))
-      .map((f) => readFileSync(join(stylesDir, f), 'utf-8'))
-      .join('\n');
-  };
+  // Get all keyframe definitions from a file
+  function getKeyframeNames(content: string): string[] {
+    const regex = /@keyframes\s+(\w+)\s*\{/g;
+    const names: string[] = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      names.push(match[1]);
+    }
+    return names;
+  }
 
-  describe('Single Definition Requirement', () => {
-    it('should have @keyframes fadeIn defined exactly once across all CSS files', () => {
+  describe('Centralized Animations File', () => {
+    it('should have utilities/animations.css file', () => {
+      expect(existsSync(animationsPath)).toBe(true);
+    });
+
+    it('should be imported in utilities/index.css', () => {
+      const utilsIndexPath = resolve(stylesDir, 'utilities/index.css');
+      const content = readFileSync(utilsIndexPath, 'utf-8');
+      expect(content).toMatch(/@import\s+['"]\.\/animations\.css['"]/);
+    });
+  });
+
+  describe('Common Keyframes in Canonical Location', () => {
+    // These keyframes should ONLY exist in utilities/animations.css
+    const commonKeyframes = ['spin', 'pulse', 'fadeIn', 'fadeInUp'];
+
+    it.each(commonKeyframes)('should have @keyframes %s in animations.css', (name) => {
+      const content = readFileSync(animationsPath, 'utf-8');
+      expect(content).toMatch(new RegExp(`@keyframes\\s+${name}\\s*\\{`));
+    });
+
+    it.each(commonKeyframes)('should have @keyframes %s defined exactly once across all CSS files', (name) => {
       const cssFiles = getAllCssFiles();
       let totalCount = 0;
-      const filesWithFadeIn: string[] = [];
+      const filesWithKeyframe: string[] = [];
 
       for (const filePath of cssFiles) {
         const content = readFileSync(filePath, 'utf-8');
-        const count = countFadeInKeyframes(content);
+        const count = countKeyframes(content, name);
         if (count > 0) {
           totalCount += count;
-          filesWithFadeIn.push(filePath);
+          filesWithKeyframe.push(filePath.replace(stylesDir, ''));
         }
       }
 
       expect(totalCount).toBe(1);
-      expect(filesWithFadeIn.length).toBe(1);
+      expect(filesWithKeyframe.length).toBe(1);
+      expect(filesWithKeyframe[0]).toBe('/utilities/animations.css');
     });
   });
 
-  describe('Canonical Location', () => {
-    it('should have @keyframes fadeIn defined in index.css', () => {
+  describe('No Common Keyframes in Other Files', () => {
+    it('should NOT have common keyframes in index.css', () => {
       const indexCssPath = resolve(stylesDir, 'index.css');
       const content = readFileSync(indexCssPath, 'utf-8');
 
-      // Check that fadeIn keyframe exists in index.css
-      expect(content).toMatch(/@keyframes\s+fadeIn\s*\{/);
+      // These should have been moved to animations.css
+      expect(countKeyframes(content, 'pulse')).toBe(0);
+      expect(countKeyframes(content, 'fadeIn')).toBe(0);
     });
 
-    it('should have the correct canonical fadeIn animation in index.css', () => {
-      const indexCssPath = resolve(stylesDir, 'index.css');
-      const content = readFileSync(indexCssPath, 'utf-8');
-
-      // The canonical fadeIn should be a simple opacity animation
-      // Match the pattern: @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-      const fadeInPattern =
-        /@keyframes\s+fadeIn\s*\{[^}]*from\s*\{\s*opacity:\s*0;?\s*\}[^}]*to\s*\{\s*opacity:\s*1;?\s*\}/;
-      expect(content).toMatch(fadeInPattern);
-    });
-  });
-
-  describe('No Duplicate in custom-spectrum.css', () => {
-    it('should NOT have @keyframes fadeIn in custom-spectrum.css', () => {
-      const customSpectrumPath = resolve(stylesDir, 'custom-spectrum.css');
-      const content = readFileSync(customSpectrumPath, 'utf-8');
-
-      // custom-spectrum.css should not contain @keyframes fadeIn
-      const count = countFadeInKeyframes(content);
-      expect(count).toBe(0);
+    it('should NOT have @keyframes spin in components/common.css', () => {
+      const commonCssPath = resolve(stylesDir, 'components/common.css');
+      const content = readFileSync(commonCssPath, 'utf-8');
+      expect(countKeyframes(content, 'spin')).toBe(0);
     });
 
-    it('should have animation classes in modular files that use fadeIn', () => {
-      // Animation classes now live in modular files (utilities/layout.css)
-      const layoutCssPath = resolve(stylesDir, 'utilities/layout.css');
-      const content = readFileSync(layoutCssPath, 'utf-8');
-
-      // Look for animation: fadeIn usage (classes referencing the keyframe)
-      expect(content).toMatch(/animation:\s*fadeIn/);
+    it('should NOT have @keyframes fadeInUp in spectrum/components.css', () => {
+      const spectrumComponentsPath = resolve(stylesDir, 'spectrum/components.css');
+      const content = readFileSync(spectrumComponentsPath, 'utf-8');
+      expect(countKeyframes(content, 'fadeInUp')).toBe(0);
     });
   });
 
-  describe('Other Keyframes Remain Intact', () => {
-    // These keyframes are now in the modular files or timeline
+  describe('Component-Specific Keyframes Allowed', () => {
+    // Timeline animations are component-specific and can stay in timeline.css
     it('should retain timeline animation keyframes in components/timeline.css', () => {
       const timelineCssPath = resolve(stylesDir, 'components/timeline.css');
       const content = readFileSync(timelineCssPath, 'utf-8');
 
-      // Timeline has enter/exit keyframes
+      // Timeline has enter/exit keyframes (component-specific, OK to keep here)
       expect(content).toMatch(/@keyframes\s+timeline-enter\s*\{/);
       expect(content).toMatch(/@keyframes\s+timeline-exit\s*\{/);
     });
-
-    it('should retain @keyframes pulse in index.css', () => {
-      const indexCssPath = resolve(stylesDir, 'index.css');
-      const content = readFileSync(indexCssPath, 'utf-8');
-
-      expect(content).toMatch(/@keyframes\s+pulse\s*\{/);
-    });
-
-    it('should retain @keyframes spin in components/common.css (loading spinner)', () => {
-      const commonCssPath = resolve(stylesDir, 'components/common.css');
-      const content = readFileSync(commonCssPath, 'utf-8');
-
-      expect(content).toMatch(/@keyframes\s+spin\s*\{/);
-    });
   });
 
-  describe('Animation Classes Still Work', () => {
-    it('should have .animate-fade-in class that uses fadeIn animation', () => {
-      // animate-fade-in is now in utilities/layout.css
+  describe('Animation Utility Classes', () => {
+    it('should have .animate-fade-in class in utilities/layout.css', () => {
       const layoutCssPath = resolve(stylesDir, 'utilities/layout.css');
       const content = readFileSync(layoutCssPath, 'utf-8');
-
-      // The .animate-fade-in class should use animation: fadeIn
       expect(content).toMatch(/\.animate-fade-in\s*\{[^}]*animation:[^}]*fadeIn/);
     });
 
-    it('should have .animate-pulse class that uses pulse animation', () => {
-      // animate-pulse is now in utilities/layout.css
+    it('should have .animate-pulse class in utilities/layout.css', () => {
       const layoutCssPath = resolve(stylesDir, 'utilities/layout.css');
       const content = readFileSync(layoutCssPath, 'utf-8');
-
       expect(content).toMatch(/\.animate-pulse\s*\{[^}]*animation:/);
+    });
+
+    it('should have .animate-spin class in animations.css', () => {
+      const content = readFileSync(animationsPath, 'utf-8');
+      expect(content).toMatch(/\.animate-spin\s*\{[^}]*animation:[^}]*spin/);
+    });
+  });
+
+  describe('Keyframe Definitions Are Correct', () => {
+    it('should have correct spin keyframe (rotation)', () => {
+      const content = readFileSync(animationsPath, 'utf-8');
+      expect(content).toMatch(/@keyframes\s+spin\s*\{[^}]*rotate\(360deg\)/);
+    });
+
+    it('should have correct pulse keyframe (opacity variation)', () => {
+      const content = readFileSync(animationsPath, 'utf-8');
+      expect(content).toMatch(/@keyframes\s+pulse\s*\{[^}]*opacity/);
+    });
+
+    it('should have correct fadeIn keyframe (opacity 0 to 1)', () => {
+      const content = readFileSync(animationsPath, 'utf-8');
+      const pattern = /@keyframes\s+fadeIn\s*\{[^}]*from\s*\{\s*opacity:\s*0;?\s*\}[^}]*to\s*\{\s*opacity:\s*1;?\s*\}/;
+      expect(content).toMatch(pattern);
+    });
+
+    it('should have correct fadeInUp keyframe (opacity + translate)', () => {
+      const content = readFileSync(animationsPath, 'utf-8');
+      expect(content).toMatch(/@keyframes\s+fadeInUp\s*\{[^}]*opacity[^}]*translateY/);
     });
   });
 });
