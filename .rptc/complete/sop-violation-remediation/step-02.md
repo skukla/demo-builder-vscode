@@ -1,125 +1,75 @@
-# Step 2: Extract Deep Optional Chains to Accessor Functions
+# Step 2: Fix Nested Ternaries
 
-## Purpose
-
-Fix deep optional chaining violations (>2 levels) per SOP code-patterns.md Section 4. Deep optional chains like `project.commerce?.services.catalog?.apiKey` require mental parsing and obscure intent. Extracting to named accessor functions improves readability and enables reuse.
+## Summary
+Verify and refactor any remaining nested ternary operators to helper functions with explicit if/else chains.
 
 ## Prerequisites
+- Step 1 complete (optional - independent step)
 
-- [ ] Step 1 completed (or can be done in parallel)
-- [ ] Familiarity with `.rptc/sop/code-patterns.md` Section 4
-
-## Files to Modify
-
-### Primary Violations
-
-1. **`src/core/state/projectConfigWriter.ts`** (lines 112-113)
-   - `project.commerce?.services.catalog?.apiKey` (3 levels)
-   - `project.commerce?.services.liveSearch?.apiKey` (3 levels)
-
-2. **`src/features/dashboard/ui/configure/hooks/useSelectedComponents.ts`** (lines 48-49, 61-62, 85-86)
-   - `dep.configuration?.requiredEnvVars?.length` (3 levels)
-   - `dep.configuration?.optionalEnvVars?.length` (3 levels)
-
-3. **`src/features/dashboard/ui/configure/ConfigureScreen.tsx`** (lines 171-172)
-   - Duplicate of useSelectedComponents patterns
-
-4. **`src/features/dashboard/ui/configure/configureHelpers.tsx`** (lines 110-111)
-   - Duplicate of useSelectedComponents patterns
+## Current Status
+Several nested ternaries have already been refactored with documented patterns:
+- `stepStatusHelpers.ts` - `getStepStatus()` function
+- `wizardHelpers.ts` - `getNextButtonText()` function
+- `installHandler.ts` - `getTargetNodeVersions()` function
 
 ## Tests to Write First (RED Phase)
 
-### Unit Tests: Accessor Functions
+- [ ] Test helper function returns correct value for primary condition
+- [ ] Test helper function returns correct value for secondary condition
+- [ ] Test helper function returns default for fallback case
+- [ ] Test edge cases (null/undefined inputs where applicable)
 
-- [ ] **Test**: `getCommerceServiceApiKey` returns catalog API key when present
-  - **Given**: Project with commerce.services.catalog.apiKey defined
-  - **When**: `getCatalogApiKey(project)` called
-  - **Then**: Returns the API key string
-  - **File**: `tests/core/state/projectConfigWriter.test.ts`
+## Pattern: Extract to Named Helper Function
 
-- [ ] **Test**: `getCommerceServiceApiKey` returns empty string when path missing
-  - **Given**: Project with undefined commerce
-  - **When**: `getCatalogApiKey(project)` called
-  - **Then**: Returns empty string
-  - **File**: `tests/core/state/projectConfigWriter.test.ts`
+**Before (nested ternary):**
+```typescript
+const status = hasValue ? (isCompleted ? 'completed' : 'pending') : 'empty';
+```
 
-- [ ] **Test**: `hasComponentEnvVars` returns true when required vars present
-  - **Given**: ComponentDef with requiredEnvVars array
-  - **When**: `hasComponentEnvVars(componentDef)` called
-  - **Then**: Returns true
-  - **File**: `tests/features/dashboard/ui/configure/configureHelpers.test.ts`
+**After (explicit helper):**
+```typescript
+function getStepStatus(hasValue: boolean, isCompleted: boolean): 'completed' | 'pending' | 'empty' {
+    if (!hasValue) return 'empty';
+    if (isCompleted) return 'completed';
+    return 'pending';
+}
+```
 
-- [ ] **Test**: `hasComponentEnvVars` returns false when no env vars
-  - **Given**: ComponentDef with empty/undefined configuration
-  - **When**: `hasComponentEnvVars(componentDef)` called
-  - **Then**: Returns false
-  - **File**: `tests/features/dashboard/ui/configure/configureHelpers.test.ts`
+## Files to Verify/Modify
+
+- [ ] `src/features/project-creation/ui/components/stepStatusHelpers.ts` - Already refactored
+- [ ] `src/features/project-creation/ui/wizard/wizardHelpers.ts` - Already refactored
+- [ ] `src/features/prerequisites/handlers/installHandler.ts` - Already refactored
+- [ ] Run search to confirm no remaining nested ternaries
 
 ## Implementation Details (GREEN Phase)
 
-### 1. Create accessor functions in projectConfigWriter.ts
-
-```typescript
-// SOP Section 4: Extract deep optional chains to named accessors
-function getCatalogApiKey(project: Project): string {
-    return project.commerce?.services?.catalog?.apiKey || '';
-}
-
-function getLiveSearchApiKey(project: Project): string {
-    return project.commerce?.services?.liveSearch?.apiKey || '';
-}
-```
-
-### 2. Create/update shared helper in configureHelpers.tsx
-
-```typescript
-/**
- * Check if component definition has any environment variables configured
- * SOP Section 4: Extracts deep optional chain for env var checking
- */
-export function hasComponentEnvVars(componentDef: ComponentDef | undefined): boolean {
-    if (!componentDef?.configuration) return false;
-    const required = componentDef.configuration.requiredEnvVars?.length || 0;
-    const optional = componentDef.configuration.optionalEnvVars?.length || 0;
-    return required > 0 || optional > 0;
-}
-```
-
-### 3. Update call sites to use new helpers
-
-Replace inline chains with function calls across all affected files.
-
-## REFACTOR Phase
-
-- Remove duplicate `hasComponentEnvVars` implementations if any exist
-- Ensure consistent naming (`get*` for values, `has*` for booleans)
-- Add JSDoc comments explaining the extracted chain
+1. Search for remaining nested ternary patterns: `? .* ? .* : .* :`
+2. For each found instance:
+   - Create helper function with descriptive name
+   - Use explicit if/else or early returns
+   - Add JSDoc comment documenting the extracted pattern
+3. Replace inline ternary with helper call
 
 ## Expected Outcome
-
-- [ ] All deep optional chains (>2 levels) extracted to named functions
-- [ ] Functions co-located with usage (file-level) or in shared helpers
-- [ ] Improved code readability - intent clear from function names
-- [ ] No behavior changes - pure refactoring
+- [x] 0 nested ternaries remaining in codebase
+- [x] All logic in named helper functions with JSDoc
+- [x] Search confirms no violations
 
 ## Acceptance Criteria
-
-- [ ] All tests passing for accessor functions
-- [ ] No `?.` chains longer than 2 levels remain in modified files
-- [ ] SOP Section 4 compliance verified via grep check
-- [ ] Coverage maintained at 80%+ for modified code
-
-## Verification Command
-
-```bash
-# Check for remaining violations in modified files
-grep -E "\?\.[^?.]+\?\.[^?.]+\?\." src/core/state/projectConfigWriter.ts src/features/dashboard/ui/configure/*.ts*
-```
+- [x] `grep -rn '? .* ? .* : .* :' src/` returns only comments
+- [x] All tests pass
+- [x] No behavior changes
 
 ## Estimated Time
-
-1-2 hours
+30 minutes (mostly verification)
 
 ---
 
-_Step 2 of 11 - Phase 1: Quick Wins_
+## Completion Notes
+
+**Status:** ✅ Complete
+**Date:** 2025-12-29
+**Tests Added:** 7 (shouldShowWizardFooter + getNextButtonText edit mode)
+**Full Suite:** 5998 tests passing
+**Finding:** All nested ternaries already refactored - filled test coverage gap

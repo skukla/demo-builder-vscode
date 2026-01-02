@@ -1,94 +1,93 @@
-# Step 01: Refactor Nested Ternaries to Helper Functions
+# Step 1: Fix Magic Timeouts
 
-## Purpose
+## Summary
 
-Fix 3 nested ternary violations (SOP Section 3) by extracting inline nested ternaries to explicit helper functions with clear if/else logic.
+Replace 3 hardcoded timeout values with centralized FRONTEND_TIMEOUTS constants from `@/core/ui/utils/frontendTimeouts`.
 
 ## Prerequisites
 
-- [ ] Understanding of code-patterns.md Section 3: Nested Ternary Refactoring
-- [ ] Files exist and are accessible
-
-## Violations to Fix
-
-| File | Line | Nested Ternary |
-|------|------|----------------|
-| `EdsRepositoryConfigStep.tsx` | 332, 402 | `error ? 'invalid' : (verified ? 'valid' : undefined)` |
-| `ProjectCreationStep.tsx` | 263 | `isCheckingMesh ? 'Back' : isCancelling ? 'Cancelling...' : 'Cancel'` |
+- None (first step)
 
 ## Tests to Write First (RED Phase)
 
-- [ ] Test: `getValidationState` returns correct state
-  - **Given:** Various combinations of error and verified flags
-  - **When:** `getValidationState(error, verified)` called
-  - **Then:** Returns `'invalid'`, `'valid'`, or `undefined` appropriately
-  - **File:** `tests/features/eds/ui/helpers/validationHelpers.test.ts`
+### Test 1: Verify constant usage in SearchableList
 
-- [ ] Test: `getCancelButtonText` returns correct text
-  - **Given:** Various phase states (checking, cancelling, active)
-  - **When:** `getCancelButtonText(isCheckingMesh, isCancelling)` called
-  - **Then:** Returns `'Back'`, `'Cancelling...'`, or `'Cancel'`
-  - **File:** `tests/features/project-creation/ui/helpers/buttonTextHelpers.test.ts`
+- [ ] Test that SearchableList scroll delay uses FRONTEND_TIMEOUTS.SCROLL_SETTLE
+- [ ] Verify scroll behavior remains unchanged (200ms delay)
 
-## Files to Create/Modify
+### Test 2: Verify constant usage in useFieldFocusTracking
 
-- [ ] `src/features/eds/ui/helpers/validationHelpers.ts` - Create helper function
-- [ ] `src/features/eds/ui/steps/EdsRepositoryConfigStep.tsx` - Use helper (lines 332, 402)
-- [ ] `src/features/project-creation/ui/helpers/buttonTextHelpers.ts` - Create helper function
-- [ ] `src/features/project-creation/ui/steps/ProjectCreationStep.tsx` - Use helper (line 263)
+- [ ] Test that focus tracking scroll delay uses FRONTEND_TIMEOUTS.SCROLL_ANIMATION
+- [ ] Verify scroll behavior remains unchanged (150ms delay)
 
-## Implementation Details
+### Test 3: Verify constant usage in useComponentSelection
 
-### GREEN Phase
+- [ ] Test that debounce delay uses FRONTEND_TIMEOUTS constant
+- [ ] Verify debounce behavior remains unchanged (500ms delay)
 
-**1. Create `getValidationState` helper:**
+## Files to Modify
 
-```typescript
-// src/features/eds/ui/helpers/validationHelpers.ts
-export function getValidationState(
-    hasError: boolean,
-    isVerified: boolean
-): 'invalid' | 'valid' | undefined {
-    if (hasError) return 'invalid';
-    if (isVerified) return 'valid';
-    return undefined;
-}
-```
+### File 1: `src/core/ui/utils/frontendTimeouts.ts`
 
-**2. Create `getCancelButtonText` helper:**
+**Changes**: Add COMPONENT_DEBOUNCE constant (500ms) if not present
+**Pattern**: Follow existing naming convention
 
-```typescript
-// src/features/project-creation/ui/helpers/buttonTextHelpers.ts
-export function getCancelButtonText(
-    isCheckingMesh: boolean,
-    isCancelling: boolean
-): string {
-    if (isCheckingMesh) return 'Back';
-    if (isCancelling) return 'Cancelling...';
-    return 'Cancel';
-}
-```
+### File 2: `src/core/ui/components/navigation/SearchableList.tsx`
 
-**3. Update components to use helpers**
+**Changes**: Replace `}, 200);` with `}, FRONTEND_TIMEOUTS.SCROLL_SETTLE);`
+**Line**: ~212
+**Import**: Add `import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';`
 
-### REFACTOR Phase
+### File 3: `src/features/dashboard/ui/configure/hooks/useFieldFocusTracking.ts`
 
-- Ensure helpers are exported from feature index files if needed elsewhere
-- Verify no duplication with existing helpers (check `wizardHelpers.ts` patterns)
+**Changes**: Replace `}, 150);` with `}, FRONTEND_TIMEOUTS.SCROLL_ANIMATION);`
+**Line**: ~97
+**Import**: Add `import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';`
+
+### File 4: `src/features/components/ui/hooks/useComponentSelection.ts`
+
+**Changes**: Replace `500` in useDebouncedValue calls with `FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE`
+**Lines**: 64-69 (6 occurrences)
+**Import**: Add `import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';`
+
+## Implementation Details (GREEN Phase)
+
+1. Add constant to frontendTimeouts.ts if needed:
+   ```typescript
+   COMPONENT_DEBOUNCE: 500,  // Debounce delay for component selection changes
+   ```
+
+2. Update each file with import and constant usage
+
+3. Verify existing constants match values:
+   - SCROLL_SETTLE: 200 (matches SearchableList)
+   - SCROLL_ANIMATION: 150 (matches useFieldFocusTracking)
+
+## Refactor Notes
+
+- All frontend timeout values should use FRONTEND_TIMEOUTS
+- Backend code uses TIMEOUTS from timeoutConfig.ts
+- Keep values in sync between frontend and backend where applicable
 
 ## Expected Outcome
 
-- 3 nested ternary violations eliminated
-- Explicit if/else logic improves readability
-- Pattern aligns with SOP Section 3 examples
+- [x] 0 magic timeout values in identified files
+- [x] All timeouts use FRONTEND_TIMEOUTS.* constants
+- [x] No behavior changes (same delay values)
 
 ## Acceptance Criteria
 
-- [ ] All tests passing
-- [ ] No nested ternaries in modified lines
-- [ ] Helpers follow naming convention (`get*` for returning values)
-- [ ] Code follows existing helper patterns in codebase
+- [x] SearchableList uses FRONTEND_TIMEOUTS.SCROLL_SETTLE
+- [x] useFieldFocusTracking uses FRONTEND_TIMEOUTS.SCROLL_ANIMATION
+- [x] useComponentSelection uses FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE
+- [x] No TypeScript errors
+- [x] Existing tests pass
 
-## Estimated Time
+---
 
-30 minutes
+## Completion Notes
+
+**Status:** ✅ Complete
+**Date:** 2025-12-29
+**Tests Added:** 2 (COMPONENT_DEBOUNCE constant tests)
+**Full Suite:** 5991 tests passing

@@ -1,101 +1,86 @@
-# Step 3: Add Barrel Exports to Features Missing Them
+# Step 3: Remove Dead Code
 
-## Purpose
+## Summary
 
-Convert wildcard exports (`export *`) to curated explicit exports in 5 feature index.ts files, establishing clear public APIs per SOP Section 14 (Module Boundary/Facade Consistency).
+Delete identified dead code block(s) to reduce codebase size and improve maintainability.
 
 ## Prerequisites
 
-- [ ] Understanding of feature public API vs internal implementation
-- [ ] Reference: `authentication/index.ts` and `eds/index.ts` for curated export patterns
+- [ ] Steps 1-2 completed (optional - can run independently)
+- [ ] TypeScript strict mode enabled (catches unused variables)
 
-## Violations to Fix
+## Tests to Write First (RED Phase)
 
-| Feature | Current State | Issue |
-|---------|---------------|-------|
-| `project-creation` | `export {}` | Empty - no public API |
-| `dashboard` | `export * from './handlers'` | Wildcard exposes internals |
-| `prerequisites` | `export * from ...` | Wildcard exposes internals |
-| `components` | All wildcards | No curated API |
-| `updates` | Mostly wildcards | No curated API |
+- [ ] Verify no existing tests reference dead code
+  - **Given:** Identified dead code function/class
+  - **When:** Search for imports across test files
+  - **Then:** Zero test imports found (confirms safe to delete)
+  - **File:** N/A - verification via grep, not new test file
 
-## Tests to Write First
+- [ ] Run full test suite to confirm code is truly unused
+  - **Given:** Codebase with identified dead code
+  - **When:** Run `npm test`
+  - **Then:** All tests pass (no dependencies on dead code)
 
-- [ ] Test: Verify public API exports are importable
-  - **Given:** Updated index.ts with curated exports
-  - **When:** Import specific named exports from feature
-  - **Then:** All documented public APIs are accessible
-  - **File:** `tests/features/barrel-exports.test.ts`
+## Identification Process
 
-- [ ] Test: Verify wildcard removal doesn't break existing imports
-  - **Given:** Codebase with imports from feature modules
-  - **When:** Update to curated exports
-  - **Then:** All existing cross-feature imports still resolve
-  - **File:** `tests/features/barrel-exports.test.ts`
+1. **Search for unused exports**:
+   ```bash
+   # Find exports with zero imports
+   grep -r "export.*function\|export.*const\|export.*class" src/ | while read export; do
+     name=$(echo "$export" | grep -oE "export (function|const|class) \w+" | awk '{print $3}')
+     if [ -n "$name" ] && [ $(grep -r "import.*$name" src/ | wc -l) -eq 0 ]; then
+       echo "Possibly unused: $name in $export"
+     fi
+   done
+   ```
+
+2. **Search for commented-out code blocks** (>10 lines)
+
+3. **Verify via TypeScript**: `npx tsc --noEmit` with `noUnusedLocals: true`
 
 ## Files to Modify
 
-- [ ] `src/features/project-creation/index.ts` - Add curated exports for handlers, helpers
-- [ ] `src/features/dashboard/index.ts` - Replace wildcard with explicit handler exports
-- [ ] `src/features/prerequisites/index.ts` - Replace wildcards with explicit exports
-- [ ] `src/features/components/index.ts` - Replace wildcards with explicit exports
-- [ ] `src/features/updates/index.ts` - Replace wildcards with explicit exports
+Identified during verification process above. Pattern:
+- [ ] Remove unused function/class/constant
+- [ ] Remove any now-orphaned imports
+- [ ] Delete associated test file if exists
 
-## Implementation Details
+## Implementation Details (GREEN Phase)
 
-### RED Phase
-
-Write tests that import specific named exports from each feature:
-
-```typescript
-// tests/features/barrel-exports.test.ts
-describe('Feature barrel exports', () => {
-  it('project-creation exports public API', () => {
-    const exports = require('@/features/project-creation');
-    expect(exports.CreateProjectCommand).toBeDefined();
-    expect(exports.envFileGenerator).toBeUndefined(); // Internal
-  });
-});
-```
-
-### GREEN Phase
-
-Replace wildcards with curated exports following this pattern:
-
-```typescript
-// Good: Curated public API (from eds/index.ts pattern)
-export { CreateProjectCommand } from './commands/createProject';
-export { handleValidate, handleCreate } from './handlers';
-export type { ProjectConfig } from './handlers/services/types';
-
-// Bad: Wildcard exposing internals
-export * from './handlers';
-```
-
-### REFACTOR Phase
-
-- Ensure only public API is exported (handlers, commands, key types)
-- Keep internal helpers unexported (orchestrators, formatters, predicates)
-- Add JSDoc header explaining feature purpose
+1. Run identification commands above
+2. For each identified dead code block:
+   - Verify zero imports via grep
+   - Delete the code
+   - Remove orphaned imports
+3. Run `npm test` to confirm no breakage
 
 ## Expected Outcome
 
-- All 5 features have curated `index.ts` with explicit named exports
-- Internal implementation details not exported
-- Existing imports continue working (backward compatible)
-- Clear distinction between public API and internals
+- [x] Dead code removed
+- [x] No orphaned imports remain
+- [x] All tests still pass
+- [x] TypeScript compiles without unused variable warnings
 
 ## Acceptance Criteria
 
-- [ ] No wildcard exports (`export *`) in feature index.ts files
-- [ ] All cross-feature imports still resolve
-- [ ] Each index.ts has JSDoc header describing feature
-- [ ] Tests verify public API accessibility
+- [x] Identified dead code deleted
+- [x] No test failures introduced
+- [x] `npm run build` succeeds
+- [x] No new TypeScript errors
 
 ## Estimated Time
 
-1-2 hours
+30 minutes
 
 ---
 
-_Generated by Step Generator Sub-Agent_
+## Completion Notes
+
+**Status:** ✅ Complete
+**Date:** 2025-12-29
+**Dead Code Removed:** 5 items
+- OperationResult, createSuccess, createFailure from results.ts
+- DataStepProps, FullStepProps from wizard.ts
+**Files Reduced:** results.ts -42%, wizard.ts -31%
+**Full Suite:** 5998 tests passing

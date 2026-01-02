@@ -1,72 +1,80 @@
-# Step 11: Final Consistency Pass and Documentation Update
+# Step 11: Fix Validation Chain Violations
 
-## Purpose
+**STATUS: COMPLETE**
 
-Verify all 52 SOP violations are resolved, run full test suite, confirm no ESLint errors, and update CLAUDE.md documentation with any new patterns established during remediation.
+## Summary
+
+Standardize validation hook files to use the composable validators from `@/core/validation/Validator` instead of inline/duplicated validation logic.
 
 ## Prerequisites
 
-- [ ] Steps 1-10 completed (all violation fixes, extractions, god file split, DI standardization)
+- Steps 9-10 complete (module structure finalized)
+- Familiarity with `src/core/validation/Validator.ts` composable pattern
 
-## Verification Tests
+## Tests to Write First (RED Phase)
 
-### 11.1 Full Test Suite Validation
+- [x] Test `useFieldValidation` uses core validators for URL/pattern (17 tests written)
+- [x] Test `useConfigValidation` uses core validators consistently (15 tests existing)
+- [x] Test `useStepValidation` returns standard `ValidationResult` type - **NOT APPLICABLE** (see Notes)
+- [x] Test validation error messages match core validator format
+- [x] Test edge cases: empty strings, null, undefined inputs
 
-- [ ] Run `npm test` - All 158+ tests passing
-- [ ] Run `npm run lint` - No ESLint errors introduced
-- [ ] Run `/rptc:helper-sop-scan` - Zero violations reported
+## Validation Pattern Standard
 
-### 11.2 Violation Resolution Checklist
+The project has established composable validators in `@/core/validation/Validator.ts`:
 
-- [ ] Nested ternaries: 3 fixed (Step 1)
-- [ ] Deep optional chains: 5 fixed (Step 2)
-- [ ] Barrel export cleanup: 5 fixed (Step 3)
-- [ ] Component extractions: 3 fixed (Step 4)
-- [ ] Hook extractions: 6 fixed (Step 5)
-- [ ] Callback complexity: 4 fixed (Step 6)
-- [ ] God file split: 1 fixed (Step 7)
-- [ ] Service layers: 3 fixed (Step 8)
-- [ ] DI patterns: 6 fixed (Step 9)
-- [ ] Handler patterns: 20 fixed (Step 10)
-- [ ] **Total: 56 violations resolved** (verified against individual step counts)
+```typescript
+// Standard pattern from core/validation
+import { required, url, pattern, compose, ValidationResult } from '@/core/validation/Validator';
 
-## Files to Update
+// Use composable validators instead of inline logic
+const validator = compose(
+  required('Field is required'),
+  url('Please enter a valid URL')
+);
+const result: ValidationResult = validator(value);
+```
 
-- [ ] `CLAUDE.md` - Add service layer pattern documentation if missing
-- [ ] `src/features/eds/README.md` - Update architecture after edsHandlers split
-- [ ] `docs/patterns/` - Add any new pattern documentation if needed
+## Analysis Results
 
-## Implementation Details
+| File | Original Issue | Resolution |
+|------|----------------|------------|
+| `useFieldValidation.ts` | Inline `new URL()` and manual `RegExp.test()` | **FIXED** - Now uses core validators |
+| `useConfigValidation.tsx` | Duplicates same URL/pattern logic | **FIXED** - Now uses core validators |
+| `useStepValidation.ts` | Custom `StepValidation` type | **ACCEPTABLE** - Different purpose (see Notes) |
+| `useComponentConfig.ts` | Same inline validation | **FIXED** - Additional file discovered and refactored |
+| `ConfigureScreen.tsx` | Same inline validation | **FIXED** - Additional file discovered and refactored |
 
-### Verification Phase
+## Files Fixed
 
-1. Run full test suite and capture results
-2. Run ESLint across entire codebase
-3. Execute SOP scan to confirm zero violations
-4. Manually verify each step's acceptance criteria met
+- [x] `src/features/dashboard/ui/configure/hooks/useFieldValidation.ts`
+- [x] `src/features/components/ui/steps/hooks/useConfigValidation.tsx`
+- [x] `src/features/components/ui/hooks/useComponentConfig.ts` (additional)
+- [x] `src/features/dashboard/ui/configure/ConfigureScreen.tsx` (additional)
+- [x] `src/features/project-creation/ui/hooks/useStepValidation.ts` (documentation added)
 
-### Documentation Phase
+## Notes: useStepValidation.ts Decision
 
-1. Review CLAUDE.md for outdated architecture references
-2. Add new patterns section if services/ structure undocumented
-3. Update feature README files affected by god file split
+**NOT REFACTORED** - This hook validates wizard step **state** (boolean existence checks), NOT string field values:
+- Checks like `state.adobeAuth?.isAuthenticated === true`
+- Checks like `Boolean(state.projectName?.trim())`
+
+The core `@/core/validation/Validator.ts` validators (`url`, `pattern`, `required`, etc.) are designed for **string field validation**. The `StepValidation` type `{ isValid: boolean, canProceed: boolean }` serves a different purpose than `ValidationResult { valid: boolean, error?: string }`.
+
+A clarifying comment was added to the file to document this design decision.
 
 ## Expected Outcome
 
-- All tests passing (158+)
-- Zero ESLint errors
-- Zero SOP violations
-- Documentation reflects current architecture
+- [x] All applicable files use `@/core/validation/Validator` functions
+- [x] No duplicated URL validation logic in field validators
+- [x] Consistent error message format (`'Please enter a valid URL'`)
+- [x] All 49 validation hook tests pass
+- [x] All 326 affected feature tests pass
 
 ## Acceptance Criteria
 
-- [ ] `npm test` passes with 158+ tests
-- [ ] `npm run lint` reports no errors
-- [ ] `/rptc:helper-sop-scan` reports 0 violations
-- [ ] All 56 violations confirmed resolved
-- [ ] CLAUDE.md updated if needed
-- [ ] Affected README files updated
-
-## Estimated Time
-
-1 hour
+- [x] 4 violations fixed (2 original + 2 discovered during refactoring)
+- [x] 1 violation documented as acceptable (useStepValidation - different purpose)
+- [x] Tests pass (49 validation tests + 326 feature tests)
+- [x] No inline `new URL()` try/catch for validation in hooks
+- [x] No manual `RegExp.test()` when `pattern()` validator exists in hooks
