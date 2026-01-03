@@ -1,0 +1,56 @@
+/**
+ * Sidebar Styles - CSS Module
+ *
+ * Sidebar layout, navigation, wizard progress indicators.
+ * Migrated from src/core/ui/styles/components/common.css
+ */
+
+/* ===========================================
+   Sidebar Container & Layout
+   =========================================== */
+.provider {
+  background: var(--spectrum-global-color-gray-75);
+  min-height: 100vh;
+}
+
+.welcome {
+  padding: 16px;
+  min-height: calc(100vh - 40px);
+  justify-content: center;
+}
+
+.wizardView {
+  min-height: calc(100vh - 40px);
+  background: var(--spectrum-global-color-gray-75);
+}
+
+.navItem {
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.utilityBar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+/* ===========================================
+   Wizard Progress List
+   =========================================== */
+.progressList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.stepItem {
+  padding: 8px 0;
+}
+
+.stepIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

@@ -10,6 +10,7 @@ import Book from '@spectrum-icons/workflow/Book';
 import Help from '@spectrum-icons/workflow/Help';
 import Settings from '@spectrum-icons/workflow/Settings';
 import React from 'react';
+import styles from '../styles/sidebar.module.css';
 
 export interface UtilityBarProps {
     /** Callback when user clicks Documentation link */
@@ -37,7 +38,7 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             alignItems="center"
             justifyContent="center"
             height="100%"
-            className="sidebar-utility-bar"
+            className={styles.utilityBar}
         >
             {onOpenDocs && (
                 <Flex direction="column" alignItems="center" gap="size-75">

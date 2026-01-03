@@ -7,6 +7,7 @@
 import { Text } from '@/core/ui/components/aria';
 import React from 'react';
 import type { WizardStep } from '../../types';
+import styles from '../styles/sidebar.module.css';
 
 export interface WizardProgressProps {
     /** Wizard steps */
@@ -32,7 +33,7 @@ export const WizardProgress: React.FC<WizardProgressProps> = ({
         <ul
             role="list"
             aria-label="Wizard progress"
-            className="wizard-progress-list"
+            className={styles.progressList}
         >
             {steps.map((step, index) => (
                 <WizardStepItem
@@ -88,12 +89,12 @@ const WizardStepItem: React.FC<WizardStepItemProps> = ({
             tabIndex={onClick ? 0 : undefined}
             onClick={onClick}
             onKeyDown={onClick ? handleKeyDown : undefined}
-            className="wizard-step-item"
+            className={styles.stepItem}
             // SOP: Dynamic style - cursor depends on onClick prop
             style={{ cursor: onClick ? 'pointer' : 'default' }}
         >
             <span
-                className="wizard-step-indicator"
+                className={styles.stepIndicator}
                 // SOP: Dynamic style - color computed from isCompleted/isCurrent state
                 style={{ color: indicatorColor }}
             >

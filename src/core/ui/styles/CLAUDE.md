@@ -51,6 +51,7 @@ styles/
 ```
 src/features/projects-dashboard/ui/styles/projects-dashboard.module.css  # Project cards, rows
 src/features/dashboard/ui/styles/dashboard.module.css                     # Dashboard grid, buttons
+src/features/sidebar/ui/styles/sidebar.module.css                         # Sidebar, wizard progress
 src/core/ui/components/TimelineNav.module.css                             # Timeline navigation
 ```
 
@@ -112,6 +113,7 @@ features/prerequisites/ui/styles/prerequisites.module.css
 features/project-creation/ui/styles/project-creation.module.css
 features/projects-dashboard/ui/styles/projects-dashboard.module.css
 features/dashboard/ui/styles/dashboard.module.css
+features/sidebar/ui/styles/sidebar.module.css
 core/ui/components/TimelineNav.module.css
 ```
 
@@ -121,6 +123,7 @@ core/ui/components/TimelineNav.module.css
 - `cards.css` → `projects-dashboard.module.css`
 - `dashboard.css` → `dashboard.module.css`
 - `timeline.css` → `TimelineNav.module.css`
+- Sidebar/wizard-progress classes → `sidebar.module.css`
 
 ## Animation Keyframes
 

@@ -7,6 +7,7 @@
 import { Flex, Text } from '@/core/ui/components/aria';
 import React from 'react';
 import type { NavItem } from '../../types';
+import styles from '../styles/sidebar.module.css';
 
 export interface SidebarNavProps {
     /** Navigation items to display */
@@ -52,7 +53,7 @@ const NavItemButton: React.FC<NavItemButtonProps> = ({ item, onClick }) => {
             data-active={item.active || undefined}
             onClick={onClick}
             onKeyDown={handleKeyDown}
-            className="sidebar-nav-item"
+            className={styles.navItem}
             // SOP: Dynamic style - background depends on item.active prop
             style={{
                 background: item.active

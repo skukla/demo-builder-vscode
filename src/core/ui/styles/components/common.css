@@ -145,36 +145,7 @@
     height: 16px;
   }
 
-  /* ===========================================
-     Sidebar
-     =========================================== */
-  .sidebar-provider {
-    background: var(--spectrum-global-color-gray-75);
-    min-height: 100vh;
-  }
-
-  .sidebar-welcome {
-    padding: 16px;
-    min-height: calc(100vh - 40px);
-    justify-content: center;
-  }
-
-  .sidebar-wizard-view {
-    min-height: calc(100vh - 40px);
-    background: var(--spectrum-global-color-gray-75);
-  }
-
-  .sidebar-nav-item {
-    padding: 8px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-
-  .sidebar-utility-bar {
-    display: flex;
-    gap: 8px;
-    padding: 8px 12px;
-  }
+  /* Note: Sidebar classes moved to features/sidebar/ui/styles/sidebar.module.css */
 
   /* ===========================================
      Form/Config Field Classes
@@ -222,24 +193,7 @@
     color: var(--spectrum-global-color-gray-600);
   }
 
-  /* ===========================================
-     Wizard Progress List
-     =========================================== */
-  .wizard-progress-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .wizard-step-item {
-    padding: 8px 0;
-  }
-
-  .wizard-step-indicator {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+  /* Note: Wizard progress classes moved to features/sidebar/ui/styles/sidebar.module.css */
 
   /* ===========================================
      Auth Status Area
@@ -253,6 +207,7 @@
 
   /* ===========================================
      EDS/GitHub Classes
+     Note: repo-*, da-icon, site-list moved to inline styles in EDS components
      =========================================== */
   .brand-section {
     margin-bottom: 32px;
@@ -284,56 +239,14 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
   }
 
-  .repo-no-description {
-    font-style: italic;
-    color: var(--spectrum-global-color-gray-500);
-  }
-
-  .repo-private-badge {
-    display: inline-block;
-    font-size: 10px;
-    padding: 2px 6px;
-    background: var(--spectrum-global-color-gray-200);
-    color: var(--spectrum-global-color-gray-700);
-    border-radius: 8px;
-  }
-
-  .da-icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .site-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
   /* ===========================================
      Label/Icon Classes
+     Note: .icon-label for dashboard moved to dashboard.module.css
+     Note: .panel-header moved to inline styles in EDS components
      =========================================== */
-  .icon-label {
-    font-size: 14px;
-    margin-top: 8px;
-  }
-
-  .dashboard-action-button .icon-label {
-    font-size: 12px;
-    margin-top: 8px;
-  }
-
   .review-label {
     font-size: 14px;
     color: var(--spectrum-global-color-gray-500);
     min-width: 100px;
-  }
-
-  /* ===========================================
-     Panel Header
-     =========================================== */
-  .panel-header {
-    padding: 16px;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
-    background: var(--spectrum-global-color-gray-50);
   }
 }

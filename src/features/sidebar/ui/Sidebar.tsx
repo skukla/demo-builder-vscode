@@ -12,6 +12,7 @@ import type { SidebarContext, NavItem } from '../types';
 import { SidebarNav } from './components/SidebarNav';
 import { UtilityBar } from './views';
 import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
+import styles from './styles/sidebar.module.css';
 
 export interface SidebarProps {
     /** Current sidebar context */
@@ -84,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Flex
                 direction="column"
                 height="100%"
-                className="sidebar-wizard-view"
+                className={styles.wizardView}
             >
                 {/* Wizard progress using shared TimelineNav */}
                 <TimelineNav
