@@ -1,9 +1,0 @@
-/**
- * Spectrum CSS Overrides - Barrel Import
- *
- * Imports all Adobe Spectrum component override categories.
- * Part of CSS Utility Modularization.
- */
-
-@import './buttons.css';
-@import './components.css';
