@@ -57,104 +57,20 @@
     }
 
     /* =========================================
-       COMPONENT OVERRIDES
-       Ensure consistent component styling
+       STATUS COLOR ATTRIBUTES
+       Semantic color attributes for components
        ========================================= */
 
-    /* Well component - transparent, no border (used for form grouping) */
-    body [class*="spectrum-Well"] {
-        background-color: transparent !important;
-        border: none !important;
+    [color="positive"] {
+        color: var(--db-status-success);
     }
 
-    /* ListView - Let Spectrum handle styling natively (uses alias tokens above) */
-
-    /* TextField and SearchField styling - transparent background to blend with page */
-    body [class*="spectrum-Textfield"] input,
-    body [class*="spectrum-SearchField"] input {
-        background-color: transparent !important;
-        color: var(--spectrum-global-color-gray-900) !important;
-        border-color: var(--spectrum-global-color-gray-400) !important;
+    [color="negative"] {
+        color: var(--db-status-error);
     }
 
-    body [class*="spectrum-Textfield"] input:focus,
-    body [class*="spectrum-SearchField"] input:focus {
-        border-color: var(--spectrum-global-color-blue-500) !important;
-    }
-
-    /* Button styling - use light text on dark backgrounds */
-    /* Use precise class matching to avoid targeting internal elements like spectrum-Button-label */
-    /* Exclude accent buttons (data-variant="accent") - let Spectrum handle their native blue */
-    body button[class*="spectrum-Button"]:not([class*="quiet"]):not([class*="cta"]):not([data-variant="accent"]):not(.dashboard-action-button) {
-        background-color: var(--spectrum-global-color-gray-200) !important;
-        color: var(--spectrum-global-color-gray-800) !important;
-        border-color: var(--spectrum-global-color-gray-400) !important;
-    }
-
-    body button[class*="spectrum-Button"]:not([class*="quiet"]):not([class*="cta"]):not([data-variant="accent"]):not(.dashboard-action-button):hover {
-        background-color: var(--spectrum-global-color-gray-300) !important;
-    }
-
-    /* Accent buttons - let Spectrum handle natively (uses --spectrum-accent-background-color-*) */
-    /* No override needed - Spectrum's native accent blue is correct */
-
-    body button[class*="spectrum-Button"][class*="secondary"]:not(.dashboard-action-button),
-    body button[class*="spectrum-Button"][data-variant="secondary"]:not(.dashboard-action-button) {
-        background-color: var(--spectrum-global-color-gray-200) !important;
-        color: var(--spectrum-global-color-gray-800) !important;
-    }
-
-    /* Ensure internal button elements don't get background overrides */
-    body [class*="spectrum-Button-label"],
-    body [class*="spectrum-Button-icon"] {
-        background-color: transparent !important;
-    }
-
-    /* Picker/Dropdown styling */
-    body [class*="spectrum-Picker"] {
-        background-color: var(--spectrum-global-color-gray-100) !important;
-        color: var(--spectrum-global-color-gray-900) !important;
-        border-color: var(--spectrum-global-color-gray-400) !important;
-    }
-
-    /* ProgressBar and ProgressCircle */
-    body [class*="spectrum-ProgressBar-fill"],
-    body [class*="spectrum-ProgressCircle-fill"] {
-        background-color: var(--spectrum-global-color-blue-500) !important;
-    }
-
-    /* Badge styling - use our design tokens */
-    body [class*="spectrum-Badge"] {
-        background-color: var(--spectrum-global-color-gray-200) !important;
-        color: var(--spectrum-global-color-gray-900) !important;
-    }
-
-    /* Divider */
-    body [class*="spectrum-Divider"] {
-        background-color: var(--spectrum-global-color-gray-400) !important;
-    }
-
-    /* Heading and text colors */
-    body [class*="spectrum-Heading"] {
-        color: var(--spectrum-global-color-gray-900) !important;
-    }
-
-    body [class*="spectrum-Body"],
-    body [class*="spectrum-Detail"] {
-        color: var(--spectrum-global-color-gray-700) !important;
-    }
-
-    /* Status colors - preserve semantic meaning with our tokens */
-    body [color="positive"] {
-        color: var(--db-status-success) !important;
-    }
-
-    body [color="negative"] {
-        color: var(--db-status-error) !important;
-    }
-
-    body [color="notice"] {
-        color: var(--db-status-warning) !important;
+    [color="notice"] {
+        color: var(--db-status-warning);
     }
 
     /* =========================================

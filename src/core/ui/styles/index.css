@@ -3,8 +3,8 @@
    Layer order controls cascade priority
    ============================================ */
 
-/* 5-Layer cascade order (lowest to highest priority) - MUST be first */
-@layer reset, vscode-theme, spectrum, components, utilities;
+/* 4-Layer cascade order (lowest to highest priority) - MUST be first */
+@layer reset, vscode-theme, components, utilities;
 
 /* Import design system files */
 @import './reset.css';
@@ -13,9 +13,6 @@
 
 /* Utility classes (low specificity, general purpose) */
 @import './utilities/index.css';
-
-/* Spectrum overrides (medium specificity, component overrides) */
-@import './spectrum/index.css';
 
 /* Component styles (high specificity, semantic components) */
 @import './components/index.css';

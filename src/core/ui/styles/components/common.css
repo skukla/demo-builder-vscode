@@ -11,329 +11,329 @@
      Container Classes
      =========================================== */
   .container-wizard {
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    width: 100% !important;
-    height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
+    background-color: var(--spectrum-global-color-gray-50);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   .container-dashboard {
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    width: 100% !important;
-    min-height: 100vh !important;
-    display: flex !important;
-    flex-direction: column !important;
+    background-color: var(--spectrum-global-color-gray-50);
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 
   .container-form {
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    padding: 16px !important;
+    background-color: var(--spectrum-global-color-gray-50);
+    padding: 16px;
   }
 
   .container-configure {
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    width: 100% !important;
-    height: 100vh !important;
-    display: flex !important;
-    overflow: hidden !important;
+    background-color: var(--spectrum-global-color-gray-50);
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
   }
 
   /* ===========================================
      Wizard Layout
      =========================================== */
   .wizard-wrapper {
-    display: flex !important;
-    height: 100% !important;
-    width: 100% !important;
+    display: flex;
+    height: 100%;
+    width: 100%;
   }
 
   .wizard-main-content {
-    flex: 1 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    min-width: 0 !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
   }
 
   /* ===========================================
      Loading Overlays
      =========================================== */
   .loading-overlay-container {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background-color: rgba(0, 0, 0, 0.5) !important;
-    z-index: 100 !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 100;
   }
 
   .loading-overlay-container-opaque {
-    background-color: var(--spectrum-global-color-gray-50) !important;
+    background-color: var(--spectrum-global-color-gray-50);
   }
 
   .loading-overlay-spinner-container {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    gap: 12px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
   }
 
   .loading-overlay-spinner {
-    width: 32px !important;
-    height: 32px !important;
-    border: 3px solid var(--spectrum-global-color-gray-400) !important;
-    border-top-color: var(--spectrum-global-color-blue-500) !important;
-    border-radius: 50% !important;
-    animation: spin 1s linear infinite !important;
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--spectrum-global-color-gray-400);
+    border-top-color: var(--spectrum-global-color-blue-500);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
   }
 
   /* spin keyframe is defined in utilities/animations.css */
 
   .loading-overlay-text {
-    font-size: 14px !important;
-    color: var(--spectrum-global-color-gray-800) !important;
+    font-size: 14px;
+    color: var(--spectrum-global-color-gray-800);
   }
 
   .loading-spinner-small {
-    width: 16px !important;
-    height: 16px !important;
-    border-width: 2px !important;
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
   }
 
   /* ===========================================
      Empty State
      =========================================== */
   .empty-state-container {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 32px !important;
-    text-align: center !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    text-align: center;
   }
 
   .empty-state-text {
-    color: var(--spectrum-global-color-gray-600) !important;
-    font-size: 14px !important;
+    color: var(--spectrum-global-color-gray-600);
+    font-size: 14px;
   }
 
   /* ===========================================
      Status Indicators
      =========================================== */
   .status-row {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .status-text {
-    font-size: 13px !important;
-    color: var(--spectrum-global-color-gray-700) !important;
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-700);
   }
 
   .status-icon-sm {
-    width: 12px !important;
-    height: 12px !important;
+    width: 12px;
+    height: 12px;
   }
 
   .status-icon-md {
-    width: 16px !important;
-    height: 16px !important;
+    width: 16px;
+    height: 16px;
   }
 
   /* ===========================================
      Sidebar
      =========================================== */
   .sidebar-provider {
-    background: var(--spectrum-global-color-gray-75) !important;
-    min-height: 100vh !important;
+    background: var(--spectrum-global-color-gray-75);
+    min-height: 100vh;
   }
 
   .sidebar-welcome {
-    padding: 16px !important;
-    min-height: calc(100vh - 40px) !important;
-    justify-content: center !important;
+    padding: 16px;
+    min-height: calc(100vh - 40px);
+    justify-content: center;
   }
 
   .sidebar-wizard-view {
-    min-height: calc(100vh - 40px) !important;
-    background: var(--spectrum-global-color-gray-75) !important;
+    min-height: calc(100vh - 40px);
+    background: var(--spectrum-global-color-gray-75);
   }
 
   .sidebar-nav-item {
-    padding: 8px 12px !important;
-    border-radius: 4px !important;
-    cursor: pointer !important;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
   }
 
   .sidebar-utility-bar {
-    display: flex !important;
-    gap: 8px !important;
-    padding: 8px 12px !important;
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
   }
 
   /* ===========================================
      Form/Config Field Classes
      =========================================== */
   .checkbox-spacing {
-    margin-bottom: 4px !important;
+    margin-bottom: 4px;
   }
 
   .progress-bar-spacing {
-    margin-bottom: 8px !important;
+    margin-bottom: 8px;
   }
 
   .description-block {
-    color: var(--spectrum-global-color-gray-600) !important;
-    margin-bottom: 16px !important;
-    display: block !important;
+    color: var(--spectrum-global-color-gray-600);
+    margin-bottom: 16px;
+    display: block;
   }
 
   .description-block-sm {
-    color: var(--spectrum-global-color-gray-600) !important;
-    font-size: 12px !important;
-    margin-bottom: 8px !important;
-    display: block !important;
+    color: var(--spectrum-global-color-gray-600);
+    font-size: 12px;
+    margin-bottom: 8px;
+    display: block;
   }
 
   .config-section-header {
-    padding-bottom: 4px !important;
-    margin-bottom: 12px !important;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
+    padding-bottom: 4px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
   }
 
   .config-field {
-    scroll-margin-top: 24px !important;
+    scroll-margin-top: 24px;
   }
 
   .reset-warning-container {
-    padding: 16px !important;
-    background-color: var(--spectrum-global-color-red-100) !important;
-    border-radius: 8px !important;
-    margin-bottom: 16px !important;
+    padding: 16px;
+    background-color: var(--spectrum-global-color-red-100);
+    border-radius: 8px;
+    margin-bottom: 16px;
   }
 
   .selector-card-features {
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
   }
 
   /* ===========================================
      Wizard Progress List
      =========================================== */
   .wizard-progress-list {
-    list-style: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    list-style: none;
+    padding: 0;
+    margin: 0;
   }
 
   .wizard-step-item {
-    padding: 8px 0 !important;
+    padding: 8px 0;
   }
 
   .wizard-step-indicator {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   /* ===========================================
      Auth Status Area
      =========================================== */
   .auth-status-area {
-    padding: 16px !important;
-    background: var(--spectrum-global-color-gray-100) !important;
-    border-radius: 8px !important;
-    margin-bottom: 16px !important;
+    padding: 16px;
+    background: var(--spectrum-global-color-gray-100);
+    border-radius: 8px;
+    margin-bottom: 16px;
   }
 
   /* ===========================================
      EDS/GitHub Classes
      =========================================== */
   .brand-section {
-    margin-bottom: 32px !important;
-    min-height: 384px !important;
+    margin-bottom: 32px;
+    min-height: 384px;
   }
 
   .github-avatar-container {
-    position: relative !important;
-    display: inline-block !important;
+    position: relative;
+    display: inline-block;
   }
 
   .github-avatar-container img {
-    width: 64px !important;
-    height: 64px !important;
-    border-radius: 50% !important;
-    object-fit: cover !important;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
   }
 
   .github-avatar-badge {
-    position: absolute !important;
-    bottom: 0 !important;
-    right: 0 !important;
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 50% !important;
-    padding: 3px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: var(--spectrum-global-color-gray-50);
+    border-radius: 50%;
+    padding: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
   }
 
   .repo-no-description {
-    font-style: italic !important;
-    color: var(--spectrum-global-color-gray-500) !important;
+    font-style: italic;
+    color: var(--spectrum-global-color-gray-500);
   }
 
   .repo-private-badge {
-    display: inline-block !important;
-    font-size: 10px !important;
-    padding: 2px 6px !important;
-    background: var(--spectrum-global-color-gray-200) !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    border-radius: 8px !important;
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 6px;
+    background: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-gray-700);
+    border-radius: 8px;
   }
 
   .da-icon {
-    width: 24px !important;
-    height: 24px !important;
+    width: 24px;
+    height: 24px;
   }
 
   .site-list {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
   /* ===========================================
      Label/Icon Classes
      =========================================== */
   .icon-label {
-    font-size: 14px !important;
-    margin-top: 8px !important;
+    font-size: 14px;
+    margin-top: 8px;
   }
 
   .dashboard-action-button .icon-label {
-    font-size: 12px !important;
-    margin-top: 8px !important;
+    font-size: 12px;
+    margin-top: 8px;
   }
 
   .review-label {
-    font-size: 14px !important;
-    color: var(--spectrum-global-color-gray-500) !important;
-    min-width: 100px !important;
+    font-size: 14px;
+    color: var(--spectrum-global-color-gray-500);
+    min-width: 100px;
   }
 
   /* ===========================================
      Panel Header
      =========================================== */
   .panel-header {
-    padding: 16px !important;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
-    background: var(--spectrum-global-color-gray-50) !important;
+    padding: 16px;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+    background: var(--spectrum-global-color-gray-50);
   }
 }

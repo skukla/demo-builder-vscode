@@ -1,0 +1,60 @@
+/**
+ * Button Utilities
+ *
+ * Button size variations and action pill styles.
+ * Migrated from spectrum/buttons.css after React Aria migration.
+ */
+
+@layer utilities {
+  /* ===========================================
+     Button Size Variations
+     =========================================== */
+  .btn-compact {
+    height: 28px;
+    font-size: 12px;
+    padding: 0 12px;
+    min-width: 60px;
+  }
+
+  .btn-standard {
+    height: 32px;
+    font-size: 13px;
+    padding: 0 16px;
+  }
+
+  .btn-large {
+    height: 40px;
+    font-size: 14px;
+    padding: 0 20px;
+  }
+
+  /* ===========================================
+     Action Pill Buttons
+     =========================================== */
+  .action-pill {
+    background: var(--spectrum-accent-background-color-default, var(--spectrum-global-color-blue-400));
+    border: none;
+    border-radius: 11px;
+    padding: 3px 9px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--spectrum-global-color-gray-900);
+    cursor: pointer;
+  }
+
+  .action-pill:hover {
+    background: var(--spectrum-accent-background-color-hover, var(--spectrum-global-color-blue-500));
+  }
+
+  .action-pill:active {
+    background: var(--spectrum-accent-background-color-down, var(--spectrum-global-color-blue-600));
+  }
+
+  /* ===========================================
+     Progress Bar Utilities
+     =========================================== */
+  .progress-bar-full-width {
+    width: 100%;
+    max-width: none;
+  }
+}

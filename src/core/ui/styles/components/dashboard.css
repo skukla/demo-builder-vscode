@@ -11,16 +11,16 @@
      =========================================== */
   /* Dashboard status header - middle layer between header and content for depth */
   .dashboard-status-header {
-    background-color: #050505 !important;
-    border-bottom: 1px solid #2a2a2a !important;
-    margin-bottom: 16px !important;
+    background-color: #050505;
+    border-bottom: 1px solid #2a2a2a;
+    margin-bottom: 16px;
   }
 
   /* Match the height of the Projects List search header so content aligns */
   .dashboard-status-header > div {
-    min-height: 122px !important;
-    display: flex !important;
-    align-items: center !important;
+    min-height: 122px;
+    display: flex;
+    align-items: center;
   }
 
   /* Match grid width so status aligns with buttons: 4 x 160px + 3 x 24px = 712px */
@@ -40,9 +40,9 @@
   }
 
   .dashboard-grid {
-    width: auto !important; /* Override w-full from GridLayout */
-    grid-template-columns: repeat(4, auto) !important; /* 4 columns for 8 buttons */
-    gap: 24px !important; /* Spectrum size-300 - matches project cards */
+    width: auto; /* Override w-full from GridLayout */
+    grid-template-columns: repeat(4, auto); /* 4 columns for 8 buttons */
+    gap: 24px; /* Spectrum size-300 - matches project cards */
   }
 
   /* ===========================================
@@ -51,76 +51,76 @@
      =========================================== */
   .dashboard-action-button {
     /* Base - lighter background matching cards */
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 8px !important;
-    padding: 20px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    background: var(--spectrum-global-color-gray-50);
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
 
     /* Smoother transition matching cards */
-    transition: all 0.3s ease !important;
+    transition: all 0.3s ease;
 
     /* Layout */
-    text-align: center !important;
-    width: 160px !important;
-    height: auto !important;
-    aspect-ratio: 1 / 1 !important; /* Square buttons */
-    box-sizing: border-box !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-    gap: 8px !important;
-    cursor: pointer !important;
+    text-align: center;
+    width: 160px;
+    height: auto;
+    aspect-ratio: 1 / 1; /* Square buttons */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
   }
 
   /* Scale icons */
   .dashboard-action-button svg {
-    width: 28px !important;
-    height: 28px !important;
+    width: 28px;
+    height: 28px;
   }
 
   .dashboard-action-button:hover,
   .dashboard-action-button:focus {
     /* Layered depth matching cards */
-    background: var(--spectrum-global-color-gray-75) !important;
-    border-color: var(--spectrum-global-color-gray-400) !important;
+    background: var(--spectrum-global-color-gray-75);
+    border-color: var(--spectrum-global-color-gray-400);
 
     /* Lift animation matching cards */
-    transform: translateY(-2px) !important;
+    transform: translateY(-2px);
 
     /* Shadow matching cards */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 
-    outline: none !important;
+    outline: none;
   }
 
   .dashboard-action-button:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
   }
 
   /* Prevent internal Spectrum elements from showing their own hover states */
   .dashboard-action-button:hover *,
   .dashboard-action-button:focus * {
-    background: transparent !important;
-    background-color: transparent !important;
+    background: transparent;
+    background-color: transparent;
   }
 
   /* Temporarily suppress hover/focus after click to prevent stuck state during layout shift */
   .dashboard-action-button.hover-suppressed,
   .dashboard-action-button.hover-suppressed:hover,
   .dashboard-action-button.hover-suppressed:focus {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-color: var(--spectrum-global-color-gray-300) !important;
-    transform: none !important;
-    box-shadow: none !important;
+    background: var(--spectrum-global-color-gray-50);
+    border-color: var(--spectrum-global-color-gray-300);
+    transform: none;
+    box-shadow: none;
   }
 
   /* Dashboard button icon label */
   .dashboard-action-button .icon-label {
-    font-size: 12px !important;
-    font-weight: 500 !important;
-    color: var(--spectrum-global-color-gray-800) !important;
-    line-height: 1.2 !important;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--spectrum-global-color-gray-800);
+    line-height: 1.2;
   }
 }

@@ -1,5 +1,5 @@
 /* ============================================
-   CUSTOM SPECTRUM OVERRIDES
+   CUSTOM STYLES (LEGACY RE-EXPORT)
 
    DEPRECATED: This file now re-exports from modular CSS files.
 
@@ -8,14 +8,11 @@
 
    This file exists for backwards compatibility with existing
    imports. Content has been extracted to:
-   - utilities/   - Typography, colors, layout, spacing, borders
-   - spectrum/    - Button overrides, component customizations
+   - utilities/   - Typography, colors, layout, spacing, borders, buttons
    - components/  - Cards, timeline, dashboard, common styles
 
-   See: .rptc/plans/css-utility-modularization/
    ============================================ */
 
 /* Re-export from modular files for backwards compatibility */
 @import './utilities/index.css';
-@import './spectrum/index.css';
 @import './components/index.css';
