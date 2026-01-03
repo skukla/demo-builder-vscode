@@ -8,7 +8,18 @@ The `styles/` directory contains the CSS architecture for the Demo Builder webvi
 
 **Hybrid Pattern**: Semantic classes for components + utility classes for layout/spacing.
 
-This approach is recommended by CUBE CSS, MaintainableCSS, and aligns with Adobe Spectrum's philosophy of minimal overrides.
+This approach is recommended by CUBE CSS, MaintainableCSS, and works cleanly with React Aria Components (unstyled by default).
+
+## React Aria Integration
+
+The project uses React Aria Components instead of Adobe React Spectrum. This enables:
+
+- **Zero `!important` declarations** in component CSS Modules
+- **Clean `@layer` cascade** without inline style conflicts
+- **CSS Modules** for component-scoped styling
+- **Spectrum design tokens** for consistency
+
+React Aria component styles: `src/core/ui/components/aria/*.module.css`
 
 ## Directory Structure
 
@@ -45,20 +56,21 @@ styles/
 
 ## @layer Cascade System
 
-The CSS uses `@layer` for explicit cascade control with 5 layers:
+The CSS uses `@layer` for explicit cascade control with 4 layers:
 
 ```css
-@layer reset, vscode-theme, spectrum, components, utilities;
+@layer reset, vscode-theme, components, utilities;
 ```
 
 **Layer Order** (lowest to highest priority):
 1. `reset` - Browser resets (index.css)
 2. `vscode-theme` - VS Code theme integration (tokens.css, vscode-theme.css)
-3. `spectrum` - Adobe Spectrum overrides (spectrum/*.css)
-4. `components` - Semantic component styles (components/*.css)
-5. `utilities` - Utility classes with highest priority (utilities/*.css)
+3. `components` - Semantic component styles (components/*.css)
+4. `utilities` - Utility classes with highest priority (utilities/*.css)
 
-This cascade order ensures utilities always override component and Spectrum styles without needing `!important`.
+This cascade order ensures utilities always override component styles without needing `!important`.
+
+**Note:** The `spectrum` layer was removed after migrating to React Aria Components. Legacy Spectrum overrides remain in `spectrum/` for any remaining Spectrum components but will be removed in future cleanup.
 
 ## Pattern Guidelines
 
@@ -126,14 +138,38 @@ Common keyframes are centralized there:
 - Component-specific keyframes → Component's CSS file
 - Reference existing keyframes via class (`.animate-fade-in`) instead of duplicating
 
-## Adobe Spectrum Integration
+## React Aria Component Styling
 
-**Philosophy**: Create wrapper components with layout styling, not internal overrides.
+**Philosophy**: CSS Modules for component styling, no inline styles.
 
-- Use Spectrum components as intended
-- Add layout wrappers for positioning
-- Minimize `UNSAFE_className` usage
+- Components in `src/core/ui/components/aria/` have co-located `.module.css` files
+- Zero `!important` declarations - relies on `@layer` cascade
+- Uses data-* attributes for state styling (pressed, focused, disabled)
+- Spectrum design tokens for colors and spacing
 - Test with all theme modes (light, dark, high-contrast)
+
+**CSS Module Pattern:**
+```css
+/* Button.module.css */
+.button {
+    padding: var(--spectrum-global-dimension-size-150);
+    background: var(--spectrum-accent-background-color-default);
+}
+
+.button[data-pressed] {
+    background: var(--spectrum-accent-background-color-down);
+}
+```
+
+## React Aria Migration Complete
+
+All Spectrum components have been migrated to React Aria:
+- All components now use `className` (not `UNSAFE_className`)
+- `Tooltip`, `TooltipTrigger` - Migrated to React Aria
+- `RadioGroup`, `Radio` - Migrated to React Aria
+- `List`, `ListItem` - Migrated to React Aria
+
+Spectrum overrides in `spectrum/` are used only for remaining Spectrum types (Icon provider).
 
 ## VS Code Webview Requirements
 

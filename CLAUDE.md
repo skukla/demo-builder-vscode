@@ -87,9 +87,9 @@ demo-builder-vscode/
 
 ### 1. **Wizard System**
 - Multi-step project creation wizard
-- React-based UI using Adobe Spectrum
+- React-based UI using React Aria Components (migrated from Adobe Spectrum)
 - Maintains state across steps
-- Width constraint solution: Replace Spectrum Flex with div for layouts
+- CSS Modules for component styling (zero !important declarations)
 
 ### 2. **Prerequisites System**
 - JSON-driven prerequisite definitions
@@ -131,17 +131,18 @@ demo-builder-vscode/
 
 ## Critical Design Decisions
 
-### Adobe Spectrum Integration
-- **Issue**: Flex component constrains width to 450px
-- **Solution**: Use standard HTML div with flex styles for critical layouts
-- **Details**: See `src/webviews/CLAUDE.md`
+### React Aria Component Library
+- **Migration**: Replaced Adobe React Spectrum with React Aria Components
+- **Benefit**: Zero inline styles enables clean CSS `@layer` cascade
+- **Components**: Primitives (Text, Heading, Flex, View, Divider), Interactive (Button, ActionButton, ProgressCircle), Forms (TextField, SearchField, Checkbox, Select, ProgressBar), Overlays (Dialog, Menu)
+- **Styling**: CSS Modules with zero `!important` declarations
+- **Details**: See `src/core/ui/components/aria/README.md`
 
-### Spectrum Design Token Support (v1.7.0)
-- **Feature**: Layout components support type-safe Spectrum design tokens
-- **Components**: `GridLayout`, `TwoColumnLayout` accept `DimensionValue` props
-- **Example**: `gap="size-300"` compiles to `"24px"` with TypeScript validation
+### Spectrum Design Token Support
+- **Feature**: React Aria components support Spectrum design tokens for spacing
+- **Example**: `gap="size-300"` compiles to `24px`
 - **Backward Compatible**: Pixel strings and numbers still work
-- **Details**: See `docs/development/ui-patterns.md` and `docs/development/styling-guide.md`
+- **Details**: See `docs/development/ui-patterns.md`
 
 ### Adobe Setup Redesign (Two-Column Layout)
 - **Unified Experience**: Single step replaces separate auth/org/project steps
@@ -162,13 +163,13 @@ demo-builder-vscode/
 - **Directory Structure**: Modular organization in `src/core/ui/styles/`
   - `utilities/` - Utility classes with highest cascade priority (layout, spacing, colors, typography, animations)
   - `components/` - Semantic component styles (cards, common, dashboard, timeline)
-  - `spectrum/` - Adobe Spectrum component overrides (buttons, components)
-- **@layer Cascade**: 5-layer hierarchy for explicit specificity control:
+  - `spectrum/` - Legacy Spectrum overrides (being phased out)
+- **@layer Cascade**: 4-layer hierarchy for explicit specificity control:
   - `reset` - Browser resets (lowest priority)
   - `vscode-theme` - VS Code theme integration
-  - `spectrum` - Adobe Spectrum overrides
   - `components` - Semantic component styles
   - `utilities` - Utility classes (highest priority)
+- **React Aria CSS Modules**: Component-scoped styles with zero `!important` (e.g., `components/aria/*.module.css`)
 - **Utilities Override via @layer**: No `!important` needed - utilities have highest cascade priority
 - **Animation Keyframes**: Centralized in `utilities/animations.css` (exceptions: component-specific and VS Code provider inline styles)
 - **CSS Modules**: Feature-scoped for complex UIs (e.g., `features/*/ui/styles/*.module.css`)
@@ -222,7 +223,7 @@ demo-builder-vscode/
 ## Technology Stack
 
 - **Extension**: TypeScript, VS Code Extension API
-- **UI**: React, Adobe Spectrum, Webpack
+- **UI**: React, React Aria Components, CSS Modules, Webpack
 - **Build**: TypeScript compiler, Webpack
 - **Testing**: Jest with ts-jest, @testing-library/react, structure-aligned test organization (see tests/README.md)
 
