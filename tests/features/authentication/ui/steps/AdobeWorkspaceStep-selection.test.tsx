@@ -1,6 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -61,30 +60,30 @@ describe('AdobeWorkspaceStep - Selection', () => {
             mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
-            // Heading was removed - check for workspace list instead
-            expect(screen.getByRole('grid', { name: /workspaces/i })).toBeInTheDocument();
+            // Check for workspace list (now uses listbox role after React Aria migration)
+            expect(screen.getByRole('listbox', { name: /workspaces/i })).toBeInTheDocument();
         });
 
         it('should display all workspaces in list', async () => {
             mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(await screen.findByText('Stage')).toBeInTheDocument();
@@ -96,13 +95,13 @@ describe('AdobeWorkspaceStep - Selection', () => {
             mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Verify autoSelectCustom was provided to find "Stage"
@@ -119,13 +118,13 @@ describe('AdobeWorkspaceStep - Selection', () => {
             mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={stateWithWorkspace as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);
@@ -135,13 +134,13 @@ describe('AdobeWorkspaceStep - Selection', () => {
             mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);

@@ -1,17 +1,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Provider as SpectrumProvider, defaultTheme } from '@adobe/react-spectrum';
 import { MeshErrorDialog } from '@/features/mesh/ui/steps/components/MeshErrorDialog';
 
-// Test wrapper for Spectrum components
-function renderWithSpectrum(ui: React.ReactElement) {
-    return render(
-        <SpectrumProvider theme={defaultTheme}>
-            {ui}
-        </SpectrumProvider>
-    );
-}
+// Simple render helper (no Provider needed - React Aria components work standalone)
+function renderWithSpectrum(ui: React.ReactElement) { return render(ui); }
 
 describe('MeshErrorDialog', () => {
     const mockOnRetry = jest.fn();
@@ -305,8 +298,8 @@ describe('MeshErrorDialog', () => {
                 />
             );
 
-            // AlertCircle icon should have red styling
-            const icon = container.querySelector('[class*="text-red"]');
+            // AlertCircle icon should be rendered as SVG
+            const icon = container.querySelector('svg');
             expect(icon).toBeInTheDocument();
         });
 

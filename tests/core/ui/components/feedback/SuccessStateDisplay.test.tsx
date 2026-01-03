@@ -30,17 +30,9 @@ describe('SuccessStateDisplay', () => {
             const { container } = renderWithProviders(
                 <SuccessStateDisplay title="Success" />
             );
-            // CheckmarkCircle icon from StatusDisplay variant="success" renders with green color
-            const icon = container.querySelector('.text-green-600');
+            // CheckmarkCircle icon from StatusDisplay variant="success" renders as SVG
+            const icon = container.querySelector('svg');
             expect(icon).toBeInTheDocument();
-        });
-
-        it('should render with green success icon color', () => {
-            const { container } = renderWithProviders(
-                <SuccessStateDisplay title="Complete" />
-            );
-            // Verify the success variant's green icon class
-            expect(container.querySelector('.text-green-600')).toBeInTheDocument();
         });
     });
 

@@ -11,7 +11,7 @@ import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import { WizardState } from '@/types/webview';
 import { DemoPackage } from '@/types/demoPackages';
 import { Stack } from '@/types/stacks';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
+// No Provider needed - React Aria components work standalone
 import '@testing-library/jest-dom';
 
 // Mock useSelectableDefault hook
@@ -96,13 +96,7 @@ describe('WelcomeStep - Package + Stack Selection', () => {
         },
     };
 
-    const renderWithProvider = (ui: React.ReactElement) => {
-        return render(
-            <Provider theme={defaultTheme} colorScheme="light">
-                {ui}
-            </Provider>
-        );
-    };
+    const renderWithProvider = (ui: React.ReactElement) => render(ui);
 
     beforeEach(() => {
         jest.clearAllMocks();

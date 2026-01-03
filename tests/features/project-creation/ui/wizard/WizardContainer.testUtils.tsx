@@ -1,6 +1,5 @@
 import React from 'react';
 import { render as rtlRender } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ComponentSelection } from '@/types/webview';
 
 /**
@@ -180,9 +179,9 @@ export const cleanupTest = async () => {
 // Custom render with theme provider wrapper
 export const renderWithTheme = (ui: React.ReactElement, options = {}) => {
     return rtlRender(
-        <Provider theme={defaultTheme}>
+        <>
             {ui}
-        </Provider>,
+        </>,
         options
     );
 };

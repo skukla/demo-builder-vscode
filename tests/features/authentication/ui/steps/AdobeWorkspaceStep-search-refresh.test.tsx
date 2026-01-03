@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -68,13 +67,13 @@ describe('AdobeWorkspaceStep - Search and Refresh', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Only the filtered workspace should be shown
@@ -92,13 +91,13 @@ describe('AdobeWorkspaceStep - Search and Refresh', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByPlaceholderText('Type to filter workspaces...')).toBeInTheDocument();
@@ -110,13 +109,13 @@ describe('AdobeWorkspaceStep - Search and Refresh', () => {
             mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             const refreshButton = screen.getByLabelText('Refresh workspaces');
@@ -132,13 +131,13 @@ describe('AdobeWorkspaceStep - Search and Refresh', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             const user = userEvent.setup();

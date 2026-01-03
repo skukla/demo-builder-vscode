@@ -6,7 +6,6 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ErrorCode } from '@/types/errorCodes';
 import { MeshErrorDialog } from '@/features/mesh/ui/steps/components/MeshErrorDialog';
 
@@ -27,9 +26,9 @@ jest.mock('@/core/ui/components/ui/NumberedInstructions', () => ({
 
 function renderWithProvider(component: React.ReactElement) {
     return render(
-        <Provider theme={defaultTheme}>
+        <>
             {component}
-        </Provider>
+        </>
     );
 }
 

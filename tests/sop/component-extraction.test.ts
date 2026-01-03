@@ -41,6 +41,7 @@ describe('SOP: Component Extraction', () => {
     const LEGITIMATE_GENERICS = [
         'SearchableList', // 264 lines, reusable list pattern
         'SelectionStepContent', // 227 lines, 3+ usages (AdobeProjectStep, AdobeWorkspaceStep, GitHubRepoSelectionStep)
+        'ListComponent', // React Aria List wrapper, replaces Spectrum ListView, used by SearchableList
     ];
 
     /**

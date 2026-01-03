@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -71,13 +70,13 @@ describe('AdobeProjectStep - Search and Refresh', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByPlaceholderText('Type to filter projects...')).toBeInTheDocument();
@@ -96,13 +95,13 @@ describe('AdobeProjectStep - Search and Refresh', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Only the filtered project should be visible
@@ -122,13 +121,13 @@ describe('AdobeProjectStep - Search and Refresh', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText(/No projects match "nonexistent"/)).toBeInTheDocument();
@@ -146,13 +145,13 @@ describe('AdobeProjectStep - Search and Refresh', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             const refreshButton = screen.getByLabelText('Refresh projects');
@@ -171,13 +170,13 @@ describe('AdobeProjectStep - Search and Refresh', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             const user = userEvent.setup();

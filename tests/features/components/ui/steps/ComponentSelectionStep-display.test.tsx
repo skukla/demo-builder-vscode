@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -28,14 +27,14 @@ describe('ComponentSelectionStep - Display', () => {
     describe('Focus Management', () => {
         it('should use useFocusOnMount hook with correct options', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Verify useFocusOnMount was called
@@ -49,52 +48,52 @@ describe('ComponentSelectionStep - Display', () => {
 
         it('should render frontend picker for focus management', () => {
             // Verify the component renders correctly with the picker that receives focus
-            const { container } = render(
-                <Provider theme={defaultTheme}>
+            render(
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
-            // Verify the frontend picker container exists (ref target for focus)
-            const frontendSection = container.querySelector('[aria-label="Select frontend system"]');
-            expect(frontendSection).toBeInTheDocument();
+            // Verify the frontend picker label exists (visible label for the Select)
+            expect(screen.getByText('Frontend System')).toBeInTheDocument();
         });
     });
 
     describe('Basic Rendering', () => {
         it('should render frontend and backend pickers', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
-            expect(screen.getByLabelText('Select frontend system')).toBeInTheDocument();
-            expect(screen.getByLabelText('Select backend system')).toBeInTheDocument();
+            // React Aria Select uses visible labels, verify they are rendered
+            expect(screen.getByText('Frontend System')).toBeInTheDocument();
+            expect(screen.getByText('Backend System')).toBeInTheDocument();
         });
 
         it('should NOT render external systems section (simplified UI)', () => {
             // External Systems and App Builder Apps sections were removed
             // to reduce visual clutter as part of Demo Templates Phase 3
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.queryByText('External Systems')).not.toBeInTheDocument();

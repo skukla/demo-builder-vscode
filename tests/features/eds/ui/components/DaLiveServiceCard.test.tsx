@@ -15,14 +15,13 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 
 // Test wrapper with Spectrum provider
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <Provider theme={defaultTheme} colorScheme="light">
+    <>
         {children}
-    </Provider>
+    </>
 );
 
 describe('DaLiveServiceCard', () => {

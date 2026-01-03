@@ -1,6 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import '@testing-library/jest-dom';
 import {
@@ -51,7 +50,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
 
     it('should render loading state initially', () => {
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -60,7 +59,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         expect(screen.getByText('Checking required tools. Missing tools can be installed automatically.')).toBeInTheDocument();
@@ -68,7 +67,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
 
     it('should trigger check on mount without componentSelection when no components selected', () => {
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -77,7 +76,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         expect(mockPostMessage).toHaveBeenCalledWith('check-prerequisites', {
@@ -88,7 +87,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
 
     it('should pass componentSelection when components are in state (edit project flow)', () => {
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseStateWithComponents as WizardState}
                     updateState={mockUpdateState}
@@ -97,7 +96,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         expect(mockPostMessage).toHaveBeenCalledWith('check-prerequisites', {
@@ -119,7 +118,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
         });
 
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -128,7 +127,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         loadedCallback({
@@ -154,7 +153,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
         });
 
         const { container } = render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -163,7 +162,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         // Simulate prerequisite success
@@ -193,7 +192,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
         });
 
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -202,7 +201,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         loadedCallback({

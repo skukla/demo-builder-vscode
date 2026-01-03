@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -67,13 +66,13 @@ describe('AdobeProjectStep - Loading States and Errors', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByTestId('loading-display')).toBeInTheDocument();
@@ -89,13 +88,13 @@ describe('AdobeProjectStep - Loading States and Errors', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText(/Fetching from organization: Test Organization/)).toBeInTheDocument();
@@ -113,13 +112,13 @@ describe('AdobeProjectStep - Loading States and Errors', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // List should still be visible during refresh
@@ -136,13 +135,13 @@ describe('AdobeProjectStep - Loading States and Errors', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('Error Loading Projects')).toBeInTheDocument();
@@ -159,13 +158,13 @@ describe('AdobeProjectStep - Loading States and Errors', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             const user = userEvent.setup();
@@ -183,13 +182,13 @@ describe('AdobeProjectStep - Loading States and Errors', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('No Projects Found')).toBeInTheDocument();
@@ -205,13 +204,13 @@ describe('AdobeProjectStep - Loading States and Errors', () => {
             mockUseSelectionStep.mockReturnValue(createMockSelectionStep());
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={stateWithoutOrg as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Verify validateBeforeLoad was provided

@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
 import '@testing-library/jest-dom';
 import { mockProject, mockComponentsData } from './ConfigureScreen.testUtils';
@@ -73,9 +72,9 @@ jest.mock('@/core/ui/components/navigation', () => ({
 // Helper to wrap component in Provider
 const renderWithProvider = (component: React.ReactElement) => {
     return render(
-        <Provider theme={defaultTheme}>
+        <>
             {component}
-        </Provider>
+        </>
     );
 };
 
@@ -125,11 +124,11 @@ describe('ConfigureScreen - Validation', () => {
 
         it('should enable save button when all required fields valid', async () => {
             const validConfig = {
-                venia: {
+                headless: {
                     ADOBE_COMMERCE_URL: 'https://example.com',
                     ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
                 },
-                'commerce-backend': {
+                'adobe-commerce-paas': {
                     ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
                 },
                 'catalog-service': {

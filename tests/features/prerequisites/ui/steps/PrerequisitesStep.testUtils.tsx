@@ -1,6 +1,5 @@
 import { render } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { WizardState } from '@/types/webview';
 
@@ -39,7 +38,7 @@ export const createMockFunctions = () => ({
 });
 
 /**
- * Render PrerequisitesStep with Provider wrapper
+ * Render PrerequisitesStep (no Provider needed - React Aria components work standalone)
  */
 export const renderPrerequisitesStep = (
     state: Partial<WizardState> = baseState,
@@ -47,16 +46,14 @@ export const renderPrerequisitesStep = (
 ) => {
     return {
         ...render(
-            <Provider theme={defaultTheme}>
-                <PrerequisitesStep
-                    state={state as WizardState}
-                    updateState={mocks.mockUpdateState}
-                    onNext={mocks.mockOnNext}
-                    onBack={mocks.mockOnBack}
-                    setCanProceed={mocks.mockSetCanProceed}
-                    currentStep="prerequisites"
-                />
-            </Provider>
+            <PrerequisitesStep
+                state={state as WizardState}
+                updateState={mocks.mockUpdateState}
+                onNext={mocks.mockOnNext}
+                onBack={mocks.mockOnBack}
+                setCanProceed={mocks.mockSetCanProceed}
+                currentStep="prerequisites"
+            />
         ),
         ...mocks,
     };

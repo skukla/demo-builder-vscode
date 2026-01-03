@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -31,14 +30,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
         it('should render Frontend section', () => {
             // Given: Component rendered with base state
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: Frontend section header should be present
@@ -48,14 +47,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
         it('should render Backend section', () => {
             // Given: Component rendered with base state
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: Backend section header should be present
@@ -65,14 +64,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
         it('should render frontend picker', () => {
             // Given: Component rendered with base state
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: Frontend picker should be present
@@ -82,14 +81,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
         it('should render backend picker', () => {
             // Given: Component rendered with base state
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: Backend picker should be present
@@ -101,14 +100,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
         it('should NOT render External Systems section', () => {
             // Given: Component rendered with base state
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: External Systems section should NOT be present
@@ -118,14 +117,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
         it('should NOT render App Builder Apps section', () => {
             // Given: Component rendered with base state
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: App Builder Apps section should NOT be present
@@ -135,14 +134,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
         it('should NOT render Experience Platform checkbox', () => {
             // Given: Component rendered with base state
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: Experience Platform checkbox should NOT be present
@@ -152,14 +151,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
         it('should NOT render Integration Service checkbox', () => {
             // Given: Component rendered with base state
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: Integration Service checkbox should NOT be present
@@ -172,14 +171,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
             // Given: Component rendered with frontend selected
             const stateWithFrontend = createStateWithFrontend();
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithFrontend as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: API Mesh checkbox should be present
@@ -190,14 +189,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
             // Given: Component rendered with frontend selected
             const stateWithFrontend = createStateWithFrontend();
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithFrontend as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: Demo Inspector checkbox should be present
@@ -210,14 +209,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
             // Given: Component rendered with backend selected
             const stateWithBackend = createStateWithBackend();
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithBackend as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: Catalog Service checkbox should be present
@@ -228,14 +227,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
             // Given: Component rendered with backend selected
             const stateWithBackend = createStateWithBackend();
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithBackend as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: Live Search checkbox should be present
@@ -247,14 +246,14 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
         it('should NOT render Divider between sections', () => {
             // Given: Component rendered with base state
             const { container } = render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Then: Divider component should NOT be present

@@ -1,7 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import '@testing-library/jest-dom';
 import {
@@ -48,7 +47,7 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
 
     it('should show recheck button', () => {
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -57,7 +56,7 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         expect(screen.getByText('Recheck')).toBeInTheDocument();
@@ -66,7 +65,7 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
     it('should trigger recheck when button clicked', async () => {
         const user = userEvent.setup();
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -75,7 +74,7 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         const recheckButton = screen.getByText('Recheck');
@@ -88,16 +87,20 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
 
     it('should disable recheck during checking', async () => {
         let loadedCallback: (data: any) => void = () => {};
+        let checkStoppedCallback: () => void = () => {};
 
         mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
             if (type === 'prerequisites-loaded') {
                 loadedCallback = callback;
             }
+            if (type === 'prerequisite-check-stopped') {
+                checkStoppedCallback = callback;
+            }
             return jest.fn();
         });
 
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -106,20 +109,31 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'Runtime', optional: false }
-            ]
+        // Wrap state update in act() to properly handle React state changes
+        await act(async () => {
+            loadedCallback({
+                prerequisites: [
+                    { id: 'node', name: 'Node.js', description: 'Runtime', optional: false }
+                ]
+            });
         });
 
         await waitFor(() => {
             expect(screen.getByText('Node.js')).toBeInTheDocument();
         });
 
-        const recheckButton = screen.getByText('Recheck');
-        expect(recheckButton).not.toBeDisabled();
+        // Simulate check completion by triggering 'prerequisite-check-stopped' message
+        await act(async () => {
+            checkStoppedCallback();
+        });
+
+        // Wait for the button to become enabled after check is stopped
+        await waitFor(() => {
+            const recheckButton = screen.getByText('Recheck');
+            expect(recheckButton).not.toBeDisabled();
+        });
     });
 });

@@ -1,6 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import '@testing-library/jest-dom';
 import {
@@ -58,7 +57,7 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
         });
 
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -67,7 +66,7 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         loadedCallback({
@@ -137,7 +136,7 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
         });
 
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -146,7 +145,7 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         loadedCallback({
@@ -196,7 +195,7 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
         });
 
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -205,7 +204,7 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         loadedCallback({

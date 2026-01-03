@@ -1,6 +1,5 @@
 import { render, screen, waitFor, act } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import '@testing-library/jest-dom';
 import {
@@ -58,7 +57,7 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
         });
 
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -67,7 +66,7 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         await act(async () => {
@@ -125,7 +124,7 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
         });
 
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -134,7 +133,7 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         await act(async () => {
@@ -192,7 +191,7 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
         });
 
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -201,7 +200,7 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         await act(async () => {
@@ -253,7 +252,7 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
         });
 
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -262,7 +261,7 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         await act(async () => {

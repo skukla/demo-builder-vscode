@@ -1,6 +1,5 @@
 import { render, cleanup } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ApiMeshStep } from '@/features/mesh/ui/steps/ApiMeshStep';
 import { WizardState } from '@/types/webview';
 
@@ -88,14 +87,14 @@ export const renderApiMeshStep = (
     onBack = jest.fn()
 ) => {
     return render(
-        <Provider theme={defaultTheme}>
+        <>
             <ApiMeshStep
                 state={state}
                 updateState={updateState}
                 setCanProceed={setCanProceed}
                 onBack={onBack}
             />
-        </Provider>
+        </>
     );
 };
 

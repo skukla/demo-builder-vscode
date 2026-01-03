@@ -34,10 +34,8 @@ describe('SOP: Inline Styles', () => {
         'SidebarNav.tsx': 'Dynamic styles for navigation items',
 
         // Spectrum UNSAFE_style (required for Spectrum overrides)
-        'SearchHeader.tsx': 'Spectrum UNSAFE_style for theme integration',
+        // Note: SearchHeader, VerifiedField, EdsRepositoryConfigStep migrated to React Aria (use style= not UNSAFE_style)
         'TimelineNav.tsx': 'Spectrum UNSAFE_style for background colors',
-        'VerifiedField.tsx': 'Spectrum UNSAFE_style for semantic colors',
-        'EdsRepositoryConfigStep.tsx': 'Spectrum UNSAFE_style for semantic colors',
     };
 
     /**

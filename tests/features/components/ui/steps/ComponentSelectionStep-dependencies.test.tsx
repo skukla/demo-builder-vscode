@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -25,14 +24,14 @@ describe('ComponentSelectionStep - Dependencies', () => {
             const stateWithFrontend = createStateWithFrontend();
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithFrontend as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             const meshCheckbox = screen.getByLabelText('API Mesh');
@@ -44,28 +43,28 @@ describe('ComponentSelectionStep - Dependencies', () => {
             const stateInitial = createStateInitial();
 
             const { rerender } = render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateInitial as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Simulate frontend selection
             const stateWithFrontend = createStateWithFrontend();
 
             rerender(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithFrontend as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             expect(mockUpdateState).toHaveBeenCalled();
@@ -75,14 +74,14 @@ describe('ComponentSelectionStep - Dependencies', () => {
             const stateWithBackend = createStateWithBackend();
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithBackend as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             const catalogCheckbox = screen.getByLabelText('Catalog Service');
@@ -100,14 +99,14 @@ describe('ComponentSelectionStep - Dependencies', () => {
             const stateWithFrontend = createStateWithFrontend();
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithFrontend as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             const demoInspectorCheckbox = screen.getByLabelText('Demo Inspector');
@@ -118,14 +117,14 @@ describe('ComponentSelectionStep - Dependencies', () => {
             // External Systems section was removed to reduce visual clutter
             // as part of Demo Templates Phase 3
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             const platformCheckbox = screen.queryByLabelText('Experience Platform');
@@ -136,14 +135,14 @@ describe('ComponentSelectionStep - Dependencies', () => {
             // App Builder Apps section was removed to reduce visual clutter
             // as part of Demo Templates Phase 3
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             const appCheckbox = screen.queryByLabelText('Integration Service');

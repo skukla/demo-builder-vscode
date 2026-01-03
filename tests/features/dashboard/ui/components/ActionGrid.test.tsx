@@ -288,16 +288,16 @@ describe('ActionGrid', () => {
             render(<ActionGrid {...defaultProps} isLogsHoverSuppressed={true} />);
 
             const logsButton = screen.getByText('Logs').closest('button');
-            // Mock renders UNSAFE_className as lowercase attribute
-            expect(logsButton?.getAttribute('unsafe_classname')).toContain('hover-suppressed');
+            // React Aria merges className into class attribute
+            expect(logsButton?.className).toContain('hover-suppressed');
         });
 
         it('should not apply hover-suppressed class when isLogsHoverSuppressed is false', () => {
             render(<ActionGrid {...defaultProps} isLogsHoverSuppressed={false} />);
 
             const logsButton = screen.getByText('Logs').closest('button');
-            // Mock renders UNSAFE_className as lowercase attribute
-            expect(logsButton?.getAttribute('unsafe_classname')).not.toContain('hover-suppressed');
+            // React Aria merges className into class attribute
+            expect(logsButton?.className).not.toContain('hover-suppressed');
         });
     });
 

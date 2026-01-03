@@ -10,18 +10,11 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { BackButton } from '@/core/ui/components/navigation/BackButton';
 
-// Helper to render with Spectrum Provider
-const renderWithProvider = (ui: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme} colorScheme="light">
-            {ui}
-        </Provider>
-    );
-};
+// Helper to render components (no Provider needed for React Aria)
+const renderWithProvider = (ui: React.ReactElement) => render(ui);
 
 describe('BackButton', () => {
     describe('default label rendering', () => {

@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -67,13 +66,13 @@ describe('AdobeProjectStep - Layout', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByTestId('config-summary')).toBeInTheDocument();

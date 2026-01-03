@@ -6,7 +6,6 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ErrorCode } from '@/types/errorCodes';
 import { AuthErrorState } from '@/features/authentication/ui/steps/components/AuthErrorState';
 
@@ -17,9 +16,9 @@ jest.mock('@/core/ui/components/ui/FadeTransition', () => ({
 
 function renderWithProvider(component: React.ReactElement) {
     return render(
-        <Provider theme={defaultTheme}>
+        <>
             {component}
-        </Provider>
+        </>
     );
 }
 

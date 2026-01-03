@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -69,13 +68,13 @@ describe('AdobeWorkspaceStep - Loading and Errors', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByTestId('loading-display')).toBeInTheDocument();
@@ -92,13 +91,13 @@ describe('AdobeWorkspaceStep - Loading and Errors', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // List should still be visible during refresh
@@ -118,13 +117,13 @@ describe('AdobeWorkspaceStep - Loading and Errors', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('Error Loading Workspaces')).toBeInTheDocument();
@@ -144,13 +143,13 @@ describe('AdobeWorkspaceStep - Loading and Errors', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             const user = userEvent.setup();
@@ -169,13 +168,13 @@ describe('AdobeWorkspaceStep - Loading and Errors', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('No Workspaces Found')).toBeInTheDocument();
@@ -194,13 +193,13 @@ describe('AdobeWorkspaceStep - Loading and Errors', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeWorkspaceStep
                         state={stateWithoutProject as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Verify validateBeforeLoad was provided

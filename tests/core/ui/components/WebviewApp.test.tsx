@@ -2,7 +2,8 @@
  * WebviewApp Component Tests
  *
  * Tests the shared root component for all VS Code webview applications.
- * This is CRITICAL infrastructure - handles theme sync, handshake, and Provider setup.
+ * This is CRITICAL infrastructure - handles theme sync, handshake, and wrapper div setup.
+ * Note: Spectrum Provider was removed in Step 9 of React Aria migration.
  */
 
 import React from 'react';
@@ -313,23 +314,23 @@ describe('WebviewApp', () => {
         });
     });
 
-    describe('Spectrum Provider', () => {
-        it('renders with Spectrum Provider', async () => {
+    describe('wrapper div', () => {
+        it('renders content in wrapper div', async () => {
             render(
                 <WebviewApp>
-                    <div data-testid="spectrum-content">Content</div>
+                    <div data-testid="app-content">Content</div>
                 </WebviewApp>
             );
 
             triggerMessage('init', {});
 
             await waitFor(() => {
-                // Content is rendered inside Spectrum Provider
-                expect(screen.getByTestId('spectrum-content')).toBeInTheDocument();
+                // Content is rendered inside wrapper div
+                expect(screen.getByTestId('app-content')).toBeInTheDocument();
             });
         });
 
-        it('always uses dark colorScheme (unified theme system)', async () => {
+        it('applies webview-app class to wrapper (unified theme system)', async () => {
             const { container } = render(
                 <WebviewApp>
                     <div>Content</div>
@@ -342,10 +343,9 @@ describe('WebviewApp', () => {
                 expect(screen.getByText('Content')).toBeInTheDocument();
             });
 
-            // Spectrum Provider applies colorScheme="dark" (always dark in unified theme)
-            // We verify the Provider rendered by checking for Spectrum classes
-            const spectrumContainer = container.querySelector('[class*="spectrum"]');
-            expect(spectrumContainer).toBeInTheDocument();
+            // Wrapper div has webview-app class (Spectrum Provider removed)
+            const wrapperDiv = container.querySelector('.webview-app');
+            expect(wrapperDiv).toBeInTheDocument();
         });
     });
 });

@@ -1,6 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import '@testing-library/jest-dom';
 import {
@@ -58,7 +57,7 @@ describe('PrerequisitesStep - Edge Cases', () => {
         });
 
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -67,7 +66,7 @@ describe('PrerequisitesStep - Edge Cases', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         loadedCallback({
@@ -101,7 +100,7 @@ describe('PrerequisitesStep - Edge Cases', () => {
         });
 
         render(
-            <Provider theme={defaultTheme}>
+            <>
                 <PrerequisitesStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
@@ -110,7 +109,7 @@ describe('PrerequisitesStep - Edge Cases', () => {
                     setCanProceed={mockSetCanProceed}
                     currentStep="prerequisites"
                 />
-            </Provider>
+            </>
         );
 
         loadedCallback({

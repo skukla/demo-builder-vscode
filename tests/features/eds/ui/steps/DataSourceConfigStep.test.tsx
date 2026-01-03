@@ -19,7 +19,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import type { WizardState, EDSConfig, DaLiveSiteItem } from '@/types/webview';
 
 // Mock webviewClient
@@ -49,9 +48,9 @@ jest.mock('@/core/ui/utils/webviewLogger', () => ({
 
 // Test wrapper with Spectrum provider
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <Provider theme={defaultTheme} colorScheme="light">
+    <>
         {children}
-    </Provider>
+    </>
 );
 
 // Sample site data

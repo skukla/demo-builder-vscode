@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import { WizardState } from '@/types/webview';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 
 // Mock useSelectableDefault hook
@@ -35,7 +34,7 @@ describe('WelcomeStep', () => {
     describe('Happy Path - Initial Render', () => {
         it('should render project name input field', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
@@ -43,7 +42,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
@@ -51,7 +50,7 @@ describe('WelcomeStep', () => {
 
         it('should set default project name on mount', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
@@ -59,7 +58,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // updateState should be called with default project name
@@ -72,7 +71,7 @@ describe('WelcomeStep', () => {
             const validState = { ...baseState, projectName: 'my-demo-project' };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={validState as WizardState}
                         updateState={mockUpdateState}
@@ -80,7 +79,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             const input = screen.getByLabelText(/name/i) as HTMLInputElement;
@@ -93,7 +92,7 @@ describe('WelcomeStep', () => {
         it('should update state when project name changes', async () => {
             const user = userEvent.setup();
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
@@ -101,7 +100,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             const input = screen.getByLabelText(/name/i);
@@ -119,7 +118,7 @@ describe('WelcomeStep', () => {
             const validState = { ...baseState, projectName: 'valid-project-123' };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={validState as WizardState}
                         updateState={mockUpdateState}
@@ -127,7 +126,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // setCanProceed should be true for valid name (3+ chars, valid format)
@@ -140,7 +139,7 @@ describe('WelcomeStep', () => {
             const invalidState = { ...baseState, projectName: 'MyProject' };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
@@ -148,7 +147,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Should show validation error
@@ -162,7 +161,7 @@ describe('WelcomeStep', () => {
             const invalidState = { ...baseState, projectName: 'my_project' };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
@@ -170,7 +169,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText(/Use lowercase letters, numbers, and hyphens only/)).toBeInTheDocument();
@@ -181,7 +180,7 @@ describe('WelcomeStep', () => {
             const invalidState = { ...baseState, projectName: 'my project' };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
@@ -189,7 +188,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText(/Use lowercase letters, numbers, and hyphens only/)).toBeInTheDocument();
@@ -200,7 +199,7 @@ describe('WelcomeStep', () => {
             const invalidState = { ...baseState, projectName: 'ab' };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
@@ -208,7 +207,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText(/Name must be at least 3 characters/)).toBeInTheDocument();
@@ -219,7 +218,7 @@ describe('WelcomeStep', () => {
             const invalidState = { ...baseState, projectName: 'this-is-a-very-long-project-name-that-exceeds-thirty' };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
@@ -227,7 +226,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText(/Name must be less than 30 characters/)).toBeInTheDocument();
@@ -236,7 +235,7 @@ describe('WelcomeStep', () => {
 
         it('should reject empty project name', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
@@ -244,7 +243,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Empty name should show required error
@@ -257,7 +256,7 @@ describe('WelcomeStep', () => {
             const validState = { ...baseState, projectName: 'abc' };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={validState as WizardState}
                         updateState={mockUpdateState}
@@ -265,7 +264,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);
@@ -275,7 +274,7 @@ describe('WelcomeStep', () => {
             const validState = { ...baseState, projectName: 'a'.repeat(30) };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={validState as WizardState}
                         updateState={mockUpdateState}
@@ -283,7 +282,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);
@@ -293,7 +292,7 @@ describe('WelcomeStep', () => {
             const validState = { ...baseState, projectName: '123-456' };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={validState as WizardState}
                         updateState={mockUpdateState}
@@ -301,7 +300,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);
@@ -316,7 +315,7 @@ describe('WelcomeStep', () => {
             } as WizardState;
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={minimalState}
                         updateState={mockUpdateState}
@@ -324,7 +323,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Should render without crashing
@@ -334,7 +333,7 @@ describe('WelcomeStep', () => {
         it('should handle rapid input changes', async () => {
             const user = userEvent.setup();
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
@@ -342,7 +341,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             const input = screen.getByLabelText(/name/i);
@@ -359,7 +358,7 @@ describe('WelcomeStep', () => {
     describe('Accessibility', () => {
         it('should mark name field as required', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
@@ -367,7 +366,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             const input = screen.getByLabelText(/name/i);
@@ -378,7 +377,7 @@ describe('WelcomeStep', () => {
             const invalidState = { ...baseState, projectName: 'AB' };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
@@ -386,7 +385,7 @@ describe('WelcomeStep', () => {
                         onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Validation error should be visible (format error takes precedence for 'AB')

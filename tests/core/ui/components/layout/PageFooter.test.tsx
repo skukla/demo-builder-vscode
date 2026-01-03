@@ -9,18 +9,12 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { Provider, defaultTheme, Button, Flex } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { PageFooter } from '@/core/ui/components/layout/PageFooter';
+import { Button, Flex } from '@/core/ui/components/aria';
 
-// Helper to render with Spectrum Provider
-const renderWithProvider = (ui: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme} colorScheme="light">
-            {ui}
-        </Provider>
-    );
-};
+// Simple render helper (no Provider needed - React Aria components work standalone)
+const renderWithProvider = (ui: React.ReactElement) => render(ui);
 
 describe('PageFooter', () => {
     describe('content rendering', () => {

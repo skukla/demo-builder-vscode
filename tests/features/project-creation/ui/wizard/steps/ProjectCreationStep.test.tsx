@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { WizardState } from '@/types/webview';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 
 // Mock vscode API
@@ -61,12 +60,12 @@ describe('ProjectCreationStep', () => {
     describe('Happy Path - Creation in Progress', () => {
         it('should render project creation heading', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={baseState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText(/Creating Project/i)).toBeInTheDocument();
@@ -74,12 +73,12 @@ describe('ProjectCreationStep', () => {
 
         it('should display current operation', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={baseState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('Creating project directory')).toBeInTheDocument();
@@ -87,12 +86,12 @@ describe('ProjectCreationStep', () => {
 
         it('should display progress message', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={baseState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('Setting up project structure...')).toBeInTheDocument();
@@ -100,12 +99,12 @@ describe('ProjectCreationStep', () => {
 
         it('should display progress percentage', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={baseState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Component uses LoadingDisplay, not progress percentages - delete this test
@@ -115,12 +114,12 @@ describe('ProjectCreationStep', () => {
 
         it('should display logs', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={baseState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Component doesn't display logs in UI - shows current operation only
@@ -129,12 +128,12 @@ describe('ProjectCreationStep', () => {
 
         it('should show loading indicator during creation', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={baseState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Loading spinner or progress indicator should be visible
@@ -146,12 +145,12 @@ describe('ProjectCreationStep', () => {
     describe('Happy Path - Creation Success', () => {
         it('should display success message when complete', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={successState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
@@ -159,12 +158,12 @@ describe('ProjectCreationStep', () => {
 
         it('should show 100% progress when complete', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={successState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Component doesn't show percentages - shows success message instead
@@ -173,12 +172,12 @@ describe('ProjectCreationStep', () => {
 
         it('should display View Projects button when complete', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={successState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Component shows "View Projects" button for navigating to projects list
@@ -187,12 +186,12 @@ describe('ProjectCreationStep', () => {
 
         it('should only show View Projects button when complete', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={successState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Success state only shows "View Projects" button, no "Close" button
@@ -203,12 +202,12 @@ describe('ProjectCreationStep', () => {
         it('should show loading transition when View Projects is clicked', async () => {
             const user = userEvent.setup();
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={successState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             const openButton = screen.getByRole('button', { name: /View Projects/i });
@@ -222,12 +221,12 @@ describe('ProjectCreationStep', () => {
     describe('Error Conditions - Creation Failure', () => {
         it('should display error message when creation fails', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={errorState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Component shows failure heading and error field (not message or logs)
@@ -237,12 +236,12 @@ describe('ProjectCreationStep', () => {
 
         it('should display Back button on error', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={errorState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Error state shows Back button
@@ -251,12 +250,12 @@ describe('ProjectCreationStep', () => {
 
         it('should show error icon or status', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={errorState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Error state should be visually distinct
@@ -265,12 +264,12 @@ describe('ProjectCreationStep', () => {
 
         it('should display Back button on error', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={errorState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Note: Back button may not be present in ProjectCreationStep
@@ -290,12 +289,12 @@ describe('ProjectCreationStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={initialState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Component doesn't display percentages - shows loading indicator
@@ -313,12 +312,12 @@ describe('ProjectCreationStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={midState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Shows current operation message
@@ -335,12 +334,12 @@ describe('ProjectCreationStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={stateWithoutLogs as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Should render without crashing
@@ -357,12 +356,12 @@ describe('ProjectCreationStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={stateWithManyLogs as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Component doesn't display logs - renders without crashing
@@ -379,12 +378,12 @@ describe('ProjectCreationStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={stateWithoutProgress as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Component shows "Initializing" when creationProgress is undefined
@@ -403,12 +402,12 @@ describe('ProjectCreationStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={stateWithPartialProgress as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Should render without crashing
@@ -419,12 +418,12 @@ describe('ProjectCreationStep', () => {
     describe('Accessibility', () => {
         it('should have progress indicator with proper role', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={baseState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // LoadingDisplay provides progressbar role
@@ -434,12 +433,12 @@ describe('ProjectCreationStep', () => {
 
         it('should have clear success state for screen readers', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={successState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Success message should be clear
@@ -448,12 +447,12 @@ describe('ProjectCreationStep', () => {
 
         it('should have clear error state for screen readers', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={errorState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Error message should be clear
@@ -462,12 +461,12 @@ describe('ProjectCreationStep', () => {
 
         it('should have accessible action button', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ProjectCreationStep
                         state={successState as WizardState}
                         onBack={mockOnBack}
                     />
-                </Provider>
+                </>
             );
 
             // Success state shows View Projects button

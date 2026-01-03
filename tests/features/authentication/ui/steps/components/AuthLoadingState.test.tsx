@@ -1,16 +1,9 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { Provider as SpectrumProvider, defaultTheme } from '@adobe/react-spectrum';
 import { AuthLoadingState } from '@/features/authentication/ui/steps/components/AuthLoadingState';
 
-// Test wrapper for Spectrum components
-function renderWithSpectrum(ui: React.ReactElement) {
-    return render(
-        <SpectrumProvider theme={defaultTheme}>
-            {ui}
-        </SpectrumProvider>
-    );
-}
+// Simple render helper (no Provider needed - React Aria components work standalone)
+function renderWithSpectrum(ui: React.ReactElement) { return render(ui); }
 
 describe('AuthLoadingState', () => {
     describe('Basic rendering', () => {
@@ -123,11 +116,7 @@ describe('AuthLoadingState', () => {
 
             expect(screen.getByText('Initial message')).toBeInTheDocument();
 
-            rerender(
-                <SpectrumProvider theme={defaultTheme}>
-                    <AuthLoadingState message="Updated message" />
-                </SpectrumProvider>
-            );
+            rerender(<AuthLoadingState message="Updated message" />);
 
             expect(screen.queryByText('Initial message')).not.toBeInTheDocument();
             expect(screen.getByText('Updated message')).toBeInTheDocument();
@@ -144,12 +133,10 @@ describe('AuthLoadingState', () => {
             expect(screen.getByText('Step 1')).toBeInTheDocument();
 
             rerender(
-                <SpectrumProvider theme={defaultTheme}>
-                    <AuthLoadingState
-                        message="Authenticating..."
-                        subMessage="Step 2"
-                    />
-                </SpectrumProvider>
+                <AuthLoadingState
+                    message="Authenticating..."
+                    subMessage="Step 2"
+                />
             );
 
             expect(screen.queryByText('Step 1')).not.toBeInTheDocument();

@@ -4,17 +4,10 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 
 // Wrap component with Spectrum Provider
-const renderWithProvider = (ui: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme} colorScheme="light">
-            {ui}
-        </Provider>
-    );
-};
+const renderWithProvider = (ui: React.ReactElement) => render(ui); // Simplified - no Provider needed
 
 describe('SearchHeader', () => {
     const defaultProps = {

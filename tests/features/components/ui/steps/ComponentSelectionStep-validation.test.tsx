@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -27,14 +26,14 @@ describe('ComponentSelectionStep - Validation', () => {
             const stateWithSelections = createStateWithSelections();
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithSelections as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Verify mockPostMessage is available (debounced, so may not be called immediately)
@@ -47,14 +46,14 @@ describe('ComponentSelectionStep - Validation', () => {
             const stateNoFrontend = createStateNoFrontend();
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateNoFrontend as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
@@ -64,14 +63,14 @@ describe('ComponentSelectionStep - Validation', () => {
             const stateNoBackend = createStateNoBackend();
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateNoBackend as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
@@ -86,51 +85,51 @@ describe('ComponentSelectionStep - Validation', () => {
             const stateWithDefaults = createStateWithDefaults();
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithDefaults as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Experience Platform and Integration Service checkboxes are no longer rendered
             expect(screen.queryByLabelText('Experience Platform')).not.toBeInTheDocument();
             expect(screen.queryByLabelText('Integration Service')).not.toBeInTheDocument();
 
-            // Verify core selections still work (frontend/backend pickers present)
-            expect(screen.getByLabelText('Select frontend system')).toBeInTheDocument();
-            expect(screen.getByLabelText('Select backend system')).toBeInTheDocument();
+            // Verify core selections still work (frontend/backend pickers present via visible labels)
+            expect(screen.getByText('Frontend System')).toBeInTheDocument();
+            expect(screen.getByText('Backend System')).toBeInTheDocument();
         });
 
         it('should prevent duplicate backend messages', () => {
             const stateWithSelections = createStateWithSelections();
 
             const { rerender } = render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithSelections as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             const initialCallCount = mockPostMessage.mock.calls.length;
 
             // Re-render with same state
             rerender(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithSelections as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Should not send duplicate messages

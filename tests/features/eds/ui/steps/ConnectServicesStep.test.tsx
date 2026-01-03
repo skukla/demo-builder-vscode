@@ -12,7 +12,6 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import type { WizardState } from '@/types/webview';
 
 // Mock the auth hooks
@@ -55,13 +54,7 @@ import { useGitHubAuth } from '@/features/eds/ui/hooks/useGitHubAuth';
 import { useDaLiveAuth } from '@/features/eds/ui/hooks/useDaLiveAuth';
 
 // Wrapper component with Spectrum provider
-const renderWithProvider = (ui: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme}>
-            {ui}
-        </Provider>
-    );
-};
+const renderWithProvider = (ui: React.ReactElement) => render(ui); // Simplified - no Provider needed
 
 // Default wizard state
 const createDefaultState = (): WizardState => ({
@@ -294,13 +287,13 @@ describe('ConnectServicesStep', () => {
 
             // Re-render to reflect mock state change
             rerender(
-                <Provider theme={defaultTheme}>
+                <>
                     <ConnectServicesStep
                         state={state}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // And input form should be shown (not the Set up button)

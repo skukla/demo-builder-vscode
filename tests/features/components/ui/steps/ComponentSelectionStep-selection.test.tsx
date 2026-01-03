@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -23,14 +22,14 @@ describe('ComponentSelectionStep - Selection', () => {
             // External Systems and App Builder Apps sections were removed
             // to reduce visual clutter as part of Demo Templates Phase 3
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('Frontend')).toBeInTheDocument();
@@ -42,14 +41,14 @@ describe('ComponentSelectionStep - Selection', () => {
 
         it('should allow frontend selection', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             const frontendPicker = screen.getByLabelText('Select frontend system');
@@ -58,14 +57,14 @@ describe('ComponentSelectionStep - Selection', () => {
 
         it('should allow backend selection', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             const backendPicker = screen.getByLabelText('Select backend system');
@@ -76,14 +75,14 @@ describe('ComponentSelectionStep - Selection', () => {
             const stateWithSelections = createStateWithSelections();
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithSelections as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);
@@ -93,14 +92,14 @@ describe('ComponentSelectionStep - Selection', () => {
             const stateWithSelections = createStateWithSelections();
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ComponentSelectionStep
                         state={stateWithSelections as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             expect(mockUpdateState).toHaveBeenCalledWith(

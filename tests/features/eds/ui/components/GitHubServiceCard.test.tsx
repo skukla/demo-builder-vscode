@@ -14,14 +14,11 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 
-// Test wrapper with Spectrum provider
+// Simple test wrapper (no Provider needed - React Aria components work standalone)
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <Provider theme={defaultTheme} colorScheme="light">
-        {children}
-    </Provider>
+    <>{children}</>
 );
 
 describe('GitHubServiceCard', () => {

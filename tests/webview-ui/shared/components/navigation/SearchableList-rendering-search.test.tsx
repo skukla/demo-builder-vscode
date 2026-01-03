@@ -34,7 +34,7 @@ describe('SearchableList - Rendering and Search', () => {
             expect(screen.getByText('Second project')).toBeInTheDocument();
         });
 
-        it('renders with ListView role', () => {
+        it('renders with listbox role', () => {
             renderWithProviders(
                 <SearchableList
                     {...defaultProps}
@@ -42,8 +42,8 @@ describe('SearchableList - Rendering and Search', () => {
                 />
             );
 
-            // Spectrum ListView renders as a grid role
-            expect(screen.getByRole('grid', { name: 'Adobe Projects' })).toBeInTheDocument();
+            // React Aria List renders as a listbox role
+            expect(screen.getByRole('listbox', { name: 'Adobe Projects' })).toBeInTheDocument();
         });
     });
 

@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
 import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -68,13 +67,13 @@ describe('AdobeProjectStep - Project Selection', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText(/Projects in Test Organization/)).toBeInTheDocument();
@@ -91,13 +90,13 @@ describe('AdobeProjectStep - Project Selection', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('Test Project 1')).toBeInTheDocument();
@@ -116,13 +115,13 @@ describe('AdobeProjectStep - Project Selection', () => {
 
             // Get the onSelect callback passed to useSelectionStep
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Verify useSelectionStep was called with onSelect that clears workspace
@@ -155,13 +154,13 @@ describe('AdobeProjectStep - Project Selection', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={stateWithProject as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);
@@ -177,13 +176,13 @@ describe('AdobeProjectStep - Project Selection', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
@@ -201,13 +200,13 @@ describe('AdobeProjectStep - Project Selection', () => {
             );
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <AdobeProjectStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Get the onSelect callback from useSelectionStep

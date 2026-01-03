@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WizardState } from '@/types/webview';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 
 describe('ReviewStep', () => {
@@ -78,13 +77,13 @@ describe('ReviewStep', () => {
     describe('Happy Path - Review Display', () => {
         it('should render project name as heading', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Project name should be displayed as the main heading
@@ -93,13 +92,13 @@ describe('ReviewStep', () => {
 
         it('should display project name', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('my-demo-project')).toBeInTheDocument();
@@ -107,14 +106,14 @@ describe('ReviewStep', () => {
 
         it('should display frontend component', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('CitiSignal Next.js')).toBeInTheDocument();
@@ -122,14 +121,14 @@ describe('ReviewStep', () => {
 
         it('should display backend component', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('Commerce PaaS')).toBeInTheDocument();
@@ -137,14 +136,14 @@ describe('ReviewStep', () => {
 
         it('should display API Mesh dependency', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             expect(screen.getByText('API Mesh for Adobe Developer App Builder')).toBeInTheDocument();
@@ -152,14 +151,14 @@ describe('ReviewStep', () => {
 
         it('should display selected components', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Should show frontend and backend components by their display names
@@ -169,14 +168,14 @@ describe('ReviewStep', () => {
 
         it('should display API Mesh dependency', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Should show API Mesh by its full name
@@ -185,13 +184,13 @@ describe('ReviewStep', () => {
 
         it('should enable Continue button automatically', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Review step should always allow proceeding
@@ -207,13 +206,13 @@ describe('ReviewStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={stateWithoutMesh as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Should render without crashing
@@ -227,13 +226,13 @@ describe('ReviewStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={stateWithoutWorkspace as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Should render without crashing
@@ -247,13 +246,13 @@ describe('ReviewStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={stateWithoutComponents as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Should render without crashing
@@ -272,14 +271,14 @@ describe('ReviewStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={stateWithMultipleDeps as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Mesh is shown as "Middleware" row, demo-inspector is filtered out (it's a frontend submodule)
@@ -296,14 +295,14 @@ describe('ReviewStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={stateWithIntegrations as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Integrations should be displayed as comma-separated list
@@ -320,14 +319,14 @@ describe('ReviewStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={stateWithApps as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // App Builder apps should be displayed as comma-separated list
@@ -346,13 +345,13 @@ describe('ReviewStep', () => {
             } as WizardState;
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={minimalState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Should render without crashing
@@ -368,13 +367,13 @@ describe('ReviewStep', () => {
             };
 
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={stateWithNulls as unknown as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
-                </Provider>
+                </>
             );
 
             // Should render without crashing
@@ -385,14 +384,14 @@ describe('ReviewStep', () => {
     describe('Accessibility', () => {
         it('should display Adobe context breadcrumb', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Should show org, project, workspace as breadcrumb
@@ -401,14 +400,14 @@ describe('ReviewStep', () => {
 
         it('should have clear section labels', () => {
             render(
-                <Provider theme={defaultTheme}>
+                <>
                     <ReviewStep
                         state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
                     />
-                </Provider>
+                </>
             );
 
             // Review sections should be clearly labeled with uppercase titles

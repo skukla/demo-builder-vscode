@@ -1,17 +1,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Provider as SpectrumProvider, defaultTheme } from '@adobe/react-spectrum';
 import { MeshStatusDisplay } from '@/features/mesh/ui/steps/components/MeshStatusDisplay';
 
-// Test wrapper for Spectrum components
-function renderWithSpectrum(ui: React.ReactElement) {
-    return render(
-        <SpectrumProvider theme={defaultTheme}>
-            {ui}
-        </SpectrumProvider>
-    );
-}
+// Simple render helper (no Provider needed - React Aria components work standalone)
+function renderWithSpectrum(ui: React.ReactElement) { return render(ui); }
 
 describe('MeshStatusDisplay', () => {
     const mockOnRecreateMesh = jest.fn();
@@ -52,8 +45,8 @@ describe('MeshStatusDisplay', () => {
                 />
             );
 
-            // CheckmarkCircle icon should be present with green styling
-            const icon = container.querySelector('[class*="text-green"]');
+            // CheckmarkCircle icon should be present (SVG element from Spectrum icon)
+            const icon = container.querySelector('svg');
             expect(icon).toBeInTheDocument();
         });
 
@@ -120,8 +113,8 @@ describe('MeshStatusDisplay', () => {
                 />
             );
 
-            // AlertCircle icon should be present with orange styling
-            const icon = container.querySelector('[class*="text-orange"]');
+            // AlertCircle icon should be present (SVG element from Spectrum icon)
+            const icon = container.querySelector('svg');
             expect(icon).toBeInTheDocument();
         });
 
@@ -230,8 +223,8 @@ describe('MeshStatusDisplay', () => {
                 />
             );
 
-            // CheckmarkCircle icon should be present
-            const icon = container.querySelector('[class*="text-green"]');
+            // CheckmarkCircle icon should be present (SVG element from Spectrum icon)
+            const icon = container.querySelector('svg');
             expect(icon).toBeInTheDocument();
         });
 

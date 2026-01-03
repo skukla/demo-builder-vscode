@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderWithProviders, screen } from "../../../../helpers/react-test-utils";
-import { Item, Text } from '@adobe/react-spectrum';
+import { ListItem, Text } from '@/core/ui/components/aria';
 import { SearchableList } from '@/core/ui/components/navigation/SearchableList';
 import { mockItems, defaultProps, TestItem, cleanupTests } from './SearchableList.testUtils';
 
@@ -95,9 +95,9 @@ describe('SearchableList - Display Customization', () => {
         it('uses custom renderer when provided', () => {
             // Custom renderer is properly implemented with filteredItems.map(itemRenderer)
             const customRenderer = (item: TestItem) => (
-                <Item key={item.id} textValue={item.title}>
+                <ListItem key={item.id} id={item.id} textValue={item.title}>
                     <Text>Custom: {item.title}</Text>
-                </Item>
+                </ListItem>
             );
 
             renderWithProviders(

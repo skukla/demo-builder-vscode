@@ -9,18 +9,12 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { Provider, defaultTheme, Button, ProgressCircle } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { Button, ProgressCircle } from '@/core/ui/components/aria';
 
-// Helper to render with Spectrum Provider
-const renderWithProvider = (ui: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme} colorScheme="light">
-            {ui}
-        </Provider>
-    );
-};
+// Simple render helper (no Provider needed - React Aria components work standalone)
+const renderWithProvider = (ui: React.ReactElement) => render(ui);
 
 // Helper to find the CenteredFeedbackContainer (by its flex centering styles)
 const findContainerElement = (container: HTMLElement): HTMLElement | null => {

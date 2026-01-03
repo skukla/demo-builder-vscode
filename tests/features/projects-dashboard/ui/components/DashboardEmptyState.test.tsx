@@ -4,17 +4,10 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { DashboardEmptyState } from '@/features/projects-dashboard/ui/components/DashboardEmptyState';
 
 // Wrap component with Spectrum Provider
-const renderWithProvider = (ui: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme} colorScheme="light">
-            {ui}
-        </Provider>
-    );
-};
+const renderWithProvider = (ui: React.ReactElement) => render(ui); // Simplified - no Provider needed
 
 describe('DashboardEmptyState', () => {
     describe('rendering', () => {

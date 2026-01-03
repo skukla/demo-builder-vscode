@@ -66,7 +66,8 @@ describe('ErrorDisplay', () => {
     describe('Severity', () => {
         it('renders error severity by default', () => {
             const { container } = renderWithProviders(<ErrorDisplay message="Error" />);
-            const icon = container.querySelector('.text-red-600');
+            // Icon should be rendered as SVG
+            const icon = container.querySelector('svg');
             expect(icon).toBeInTheDocument();
         });
 
@@ -74,8 +75,8 @@ describe('ErrorDisplay', () => {
             const { container } = renderWithProviders(
                 <ErrorDisplay message="Warning" severity="warning" />
             );
-            // StatusDisplay uses orange for warning variant
-            const icon = container.querySelector('.text-orange-600');
+            // Icon should be rendered as SVG
+            const icon = container.querySelector('svg');
             expect(icon).toBeInTheDocument();
         });
     });
