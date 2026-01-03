@@ -5,14 +5,14 @@
  * Shows different views depending on whether user has a project, is in wizard, etc.
  */
 
-import { Flex, Text, ActionButton, Divider } from '@/core/ui/components/aria';
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
 import React from 'react';
 import type { SidebarContext, NavItem } from '../types';
 import { SidebarNav } from './components/SidebarNav';
-import { UtilityBar } from './views';
-import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
 import styles from './styles/sidebar.module.css';
+import { UtilityBar } from './views';
+import { Flex, Text, ActionButton, Divider } from '@/core/ui/components/aria';
+import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
 
 export interface SidebarProps {
     /** Current sidebar context */
@@ -84,8 +84,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         return (
             <Flex
                 direction="column"
-                height="100%"
                 className={styles.wizardView}
+                style={{ height: '100%' }}
             >
                 {/* Wizard progress using shared TimelineNav */}
                 <TimelineNav
@@ -109,11 +109,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             direction="column"
             gap="size-200"
             className="p-2"
-            height="100%"
+            style={{ height: '100%' }}
         >
             {/* Back button */}
             {onBack && (
-                <ActionButton isQuiet onPress={onBack}>
+                <ActionButton onPress={onBack}>
                     <ChevronLeft />
                     <Text>Projects</Text>
                 </ActionButton>

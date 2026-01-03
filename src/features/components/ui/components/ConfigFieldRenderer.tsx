@@ -1,3 +1,5 @@
+import React from 'react';
+import { UniqueField } from '../hooks/useComponentConfig';
 import {
     TextField,
     Checkbox,
@@ -6,8 +8,6 @@ import {
     Flex,
     Text,
 } from '@/core/ui/components/aria';
-import React from 'react';
-import { UniqueField } from '../hooks/useComponentConfig';
 import { FieldHelpButton } from '@/core/ui/components/forms';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 
@@ -68,8 +68,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
                         isRequired={isFieldRequired}
                         validationState={showError ? 'invalid' : undefined}
                         errorMessage={showError ? error : undefined}
-                        width="100%"
-                        marginBottom="size-200"
+                        className="w-full mb-200"
                         {...(hasDefault ? selectableDefaultProps : {})}
                     />
                 </div>
@@ -88,8 +87,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
                         isRequired={isFieldRequired}
                         validationState={showError ? 'invalid' : undefined}
                         errorMessage={showError ? error : undefined}
-                        width="100%"
-                        marginBottom="size-200"
+                        className="w-full mb-200"
                         {...(hasDefault ? selectableDefaultProps : {})}
                     />
                 </div>
@@ -118,7 +116,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
                         isSelected={value as boolean}
                         onChange={(val) => onUpdate(field, val)}
                         aria-label={field.label}
-                        marginBottom="size-200"
+                        className="mb-200"
                     >
                         {field.label}
                     </Checkbox>

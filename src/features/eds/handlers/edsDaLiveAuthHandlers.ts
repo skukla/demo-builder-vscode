@@ -15,12 +15,12 @@
  */
 
 import * as vscode from 'vscode';
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import { getBookmarkletUrl } from '../utils/daLiveTokenBookmarklet';
 import {
     getDaLiveAuthService,
     validateDaLiveToken,
 } from './edsHelpers';
+import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
+import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 // ==========================================================
 // Payload Types

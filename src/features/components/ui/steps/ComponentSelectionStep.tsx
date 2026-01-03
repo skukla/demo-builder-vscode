@@ -1,3 +1,6 @@
+import LockClosed from '@spectrum-icons/workflow/LockClosed';
+import React, { useRef } from 'react';
+import { useComponentSelection } from '../hooks/useComponentSelection';
 import {
     View,
     Flex,
@@ -6,9 +9,6 @@ import {
     SelectItem,
     Checkbox,
 } from '@/core/ui/components/aria';
-import LockClosed from '@spectrum-icons/workflow/LockClosed';
-import React, { useRef } from 'react';
-import { useComponentSelection } from '../hooks/useComponentSelection';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { useFocusOnMount } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
@@ -107,7 +107,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
             {/* Frontend and Backend Selection */}
             <Flex gap="size-300" wrap>
                 {/* Frontend */}
-                <View flex="1" minWidth="300px">
+                <View className="flex-1" style={{ minWidth: '300px' }}>
                     <div ref={frontendPickerRef}>
                         <Text className="section-label">
                             Frontend
@@ -128,7 +128,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                             </Select>
                         </ErrorBoundary>
                         {selectedFrontend && (
-                            <View marginTop="size-150">
+                            <View className="mt-150">
                                 {/* Required dependencies (locked) */}
                                 {FRONTEND_DEPENDENCIES.map(dep => (
                                     <Checkbox
@@ -139,7 +139,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                         className="checkbox-spacing"
                                     >
                                         <Flex alignItems="center" gap="size-50">
-                                            <LockClosed size="XS" className="text-gray-600" />
+                                            <span className="text-gray-600"><LockClosed size="XS" /></span>
                                             <Text className="text-md">{dep.name}</Text>
                                         </Flex>
                                     </Checkbox>
@@ -164,7 +164,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                 </View>
 
                 {/* Backend */}
-                <View flex="1" minWidth="300px">
+                <View className="flex-1" style={{ minWidth: '300px' }}>
                     <Text className="section-label">
                         Backend
                     </Text>
@@ -184,7 +184,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         </Select>
                     </ErrorBoundary>
                     {selectedBackend && (
-                        <View marginTop="size-150">
+                        <View className="mt-150">
                             {/* All backend services are required (locked) */}
                             {BACKEND_SERVICES.map(svc => (
                                 <Checkbox
@@ -195,7 +195,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                     className="checkbox-spacing"
                                 >
                                     <Flex alignItems="center" gap="size-50">
-                                        <LockClosed size="XS" className="text-gray-600" />
+                                        <span className="text-gray-600"><LockClosed size="XS" /></span>
                                         <Text className="text-md">{svc.name}</Text>
                                     </Flex>
                                 </Checkbox>

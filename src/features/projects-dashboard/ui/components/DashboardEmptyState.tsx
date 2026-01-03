@@ -4,10 +4,10 @@
  * Displays an empty state for the Projects Dashboard with CTAs to create or import a project.
  */
 
-import { Flex, Text, Button } from '@/core/ui/components/aria';
 import Add from '@spectrum-icons/workflow/Add';
 import Import from '@spectrum-icons/workflow/Import';
 import React, { useEffect, useRef } from 'react';
+import { Flex, Text, Button } from '@/core/ui/components/aria';
 
 export interface DashboardEmptyStateProps {
     /** Callback when the create button is clicked */
@@ -46,8 +46,7 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
         <Flex
             justifyContent="center"
             alignItems="center"
-            height="100%"
-            minHeight="350px"
+            style={{ height: '100%', minHeight: '350px' }}
         >
             <Flex
                 direction="column"
@@ -63,7 +62,7 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
                 </Text>
                 <Flex gap="size-200" alignItems="center">
                     <Button
-                        ref={buttonRef as any}
+                        ref={buttonRef}
                         variant="cta"
                         onPress={onCreate}
                     >

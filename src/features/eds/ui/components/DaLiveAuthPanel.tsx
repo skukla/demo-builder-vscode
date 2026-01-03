@@ -6,10 +6,10 @@
  * Used within ConnectServicesStep for side-by-side auth display.
  */
 
+import Alert from '@spectrum-icons/workflow/Alert';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState } from 'react';
 import { Flex, Heading, Text, Button, TextField, ProgressCircle } from '@/core/ui/components/aria';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import Alert from '@spectrum-icons/workflow/Alert';
 
 interface DaLiveAuthPanelProps {
     isAuthenticated: boolean;
@@ -60,7 +60,7 @@ export function DaLiveAuthPanel({
             {/* Panel header */}
             <div className="panel-header">
                 <div className="da-icon">DA</div>
-                <Heading level={3} margin={0}>
+                <Heading level={3} className="m-0">
                     DA.live
                 </Heading>
             </div>
@@ -90,7 +90,7 @@ export function DaLiveAuthPanel({
                             )}
                         </Flex>
                         {verifiedOrg && (
-                            <Text className="text-sm text-gray-600" marginStart="size-350">
+                            <Text className="text-sm text-gray-600 ml-350">
                                 Organization: <strong>{verifiedOrg}</strong>
                             </Text>
                         )}
@@ -106,7 +106,7 @@ export function DaLiveAuthPanel({
                             label="Organization"
                             value={orgValue}
                             onChange={setOrgValue}
-                            width="100%"
+                            className="w-full"
                             placeholder="your-org"
                             description="Your DA.live organization name"
                             isRequired
@@ -116,7 +116,7 @@ export function DaLiveAuthPanel({
                             value={tokenValue}
                             onChange={setTokenValue}
                             type="password"
-                            width="100%"
+                            className="w-full"
                             placeholder="Paste token here..."
                             isRequired
                         />

@@ -5,12 +5,12 @@
  * Displayed in all contexts except wizard mode.
  */
 
-import { Flex, Text, ActionButton } from '@/core/ui/components/aria';
 import Book from '@spectrum-icons/workflow/Book';
 import Help from '@spectrum-icons/workflow/Help';
 import Settings from '@spectrum-icons/workflow/Settings';
 import React from 'react';
 import styles from '../styles/sidebar.module.css';
+import { Flex, Text, ActionButton } from '@/core/ui/components/aria';
 
 export interface UtilityBarProps {
     /** Callback when user clicks Documentation link */
@@ -37,12 +37,12 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             gap="size-300"
             alignItems="center"
             justifyContent="center"
-            height="100%"
             className={styles.utilityBar}
+            style={{ height: '100%' }}
         >
             {onOpenDocs && (
-                <Flex direction="column" alignItems="center" gap="size-75">
-                    <ActionButton isQuiet onPress={onOpenDocs} aria-label="Documentation">
+                <Flex direction="column" alignItems="center" gap="size-50">
+                    <ActionButton onPress={onOpenDocs} aria-label="Documentation">
                         <Book size="L" />
                     </ActionButton>
                     <Text className="text-sm opacity-70">Docs</Text>
@@ -50,8 +50,8 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             )}
 
             {onOpenHelp && (
-                <Flex direction="column" alignItems="center" gap="size-75">
-                    <ActionButton isQuiet onPress={onOpenHelp} aria-label="Get Help">
+                <Flex direction="column" alignItems="center" gap="size-50">
+                    <ActionButton onPress={onOpenHelp} aria-label="Get Help">
                         <Help size="L" />
                     </ActionButton>
                     <Text className="text-sm opacity-70">Help</Text>
@@ -59,8 +59,8 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             )}
 
             {onOpenSettings && (
-                <Flex direction="column" alignItems="center" gap="size-75">
-                    <ActionButton isQuiet onPress={onOpenSettings} aria-label="Settings">
+                <Flex direction="column" alignItems="center" gap="size-50">
+                    <ActionButton onPress={onOpenSettings} aria-label="Settings">
                         <Settings size="L" />
                     </ActionButton>
                     <Text className="text-sm opacity-70">Settings</Text>

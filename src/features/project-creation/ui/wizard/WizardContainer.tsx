@@ -1,11 +1,7 @@
-import {
-    View,
-    Flex,
-    Heading,
-    Button,
-    Text,
-} from '@/core/ui/components/aria';
 import React, { useEffect, useRef, useState } from 'react';
+import { loadStacks } from '../helpers/brandStackLoader';
+import { loadDemoPackages } from '../helpers/demoPackageLoader';
+import { filterComponentConfigsForStackChange } from '../helpers/stackHelpers';
 import {
     useWizardState,
     useWizardNavigation,
@@ -20,11 +16,13 @@ import {
     EditProjectConfig,
     WizardStepConfigWithRequirements,
 } from './wizardHelpers';
-import { loadStacks } from '../helpers/brandStackLoader';
-import { loadDemoPackages } from '../helpers/demoPackageLoader';
-import { filterComponentConfigsForStackChange } from '../helpers/stackHelpers';
-import type { DemoPackage } from '@/types/demoPackages';
-import type { Stack } from '@/types/stacks';
+import {
+    View,
+    Flex,
+    Heading,
+    Button,
+    Text,
+} from '@/core/ui/components/aria';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay, LoadingDisplay } from '@/core/ui/components/feedback';
 import { PageHeader, PageFooter, CenteredFeedbackContainer, SingleColumnLayout } from '@/core/ui/components/layout';
@@ -37,15 +35,17 @@ import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjec
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
-import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
-import { GitHubSetupStep } from '@/features/eds/ui/steps/GitHubSetupStep';
-import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
+import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';
 import { DaLiveSetupStep } from '@/features/eds/ui/steps/DaLiveSetupStep';
 import { DataSourceConfigStep } from '@/features/eds/ui/steps/DataSourceConfigStep';
-import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';
+import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
+import { GitHubSetupStep } from '@/features/eds/ui/steps/GitHubSetupStep';
+import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
+import type { DemoPackage } from '@/types/demoPackages';
+import type { Stack } from '@/types/stacks';
 import { ComponentSelection } from '@/types/webview';
 
 // Extracted hooks
@@ -164,7 +164,7 @@ export function WizardContainer({
             setTimeout(() => {
                 setState(prev => ({ ...prev, currentStep: step }));
                 setIsTransitioning(false);
-            }, TIMEOUTS.STEP_TRANSITION);
+            }, TIMEOUTS.UI.TRANSITION);
         },
         WIZARD_STEPS,
     });
@@ -297,7 +297,7 @@ export function WizardContainer({
     // Configuration error check - AFTER all hooks to comply with Rules of Hooks
     if (WIZARD_STEPS.length === 0) {
         return (
-            <View padding="size-400" height="100vh">
+            <View padding="size-400" style={{ height: '100vh' }}>
                 <Heading level={2}>Configuration Error</Heading>
                 <Text>Wizard configuration not loaded. Please restart the extension.</Text>
             </View>
@@ -310,11 +310,9 @@ export function WizardContainer({
     const currentStepDescription = WIZARD_STEPS[currentStepIndex]?.description;
 
     return (
-        <View
-            backgroundColor="gray-50"
-            width="100%"
-            height="100vh"
+        <div
             className={cn('flex', 'overflow-hidden')}
+            style={{ backgroundColor: 'var(--spectrum-global-color-gray-50)', width: '100%', height: '100vh' }}
         >
             <div ref={wizardContainerRef} className="flex h-full w-full">
                 {/* Content Area - Timeline moved to sidebar */}
@@ -447,6 +445,6 @@ export function WizardContainer({
                     }
                 }
             `}</style>
-        </View>
+        </div>
     );
 }

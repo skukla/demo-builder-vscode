@@ -7,13 +7,13 @@
  */
 
 import React, { useState } from 'react';
+import { GitHubServiceCard, DaLiveServiceCard } from '../components';
+import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
+import { useGitHubAuth } from '../hooks/useGitHubAuth';
+import styles from '../styles/connect-services.module.css';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useCanProceedAll } from '@/core/ui/hooks';
-import { useGitHubAuth } from '../hooks/useGitHubAuth';
-import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
-import { GitHubServiceCard, DaLiveServiceCard } from '../components';
 import type { BaseStepProps } from '@/types/wizard';
-import { servicesCardsGrid } from '../styles/connect-services.module.css';
 
 /**
  * ConnectServicesStep Component
@@ -58,7 +58,7 @@ export function ConnectServicesStep({
 
     return (
         <SingleColumnLayout maxWidth="900px">
-            <div className={servicesCardsGrid}>
+            <div className={styles.servicesCardsGrid}>
                 <GitHubServiceCard
                     isChecking={gitHubAuth.isChecking}
                     isAuthenticating={gitHubAuth.isAuthenticating}

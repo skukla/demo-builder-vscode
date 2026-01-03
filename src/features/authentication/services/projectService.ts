@@ -10,13 +10,13 @@
  * Design Principle: Direct CLI calls with caching, minimal indirection.
  */
 
+import type { AuthCache } from './authCache';
+import type { AdobeProject, RawAdobeProject, AdobeConsoleWhereResponse } from './types';
 import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectId } from '@/core/validation';
 import { parseJSON } from '@/types/typeGuards';
-import type { AuthCache } from './authCache';
-import type { AdobeProject, RawAdobeProject, AdobeConsoleWhereResponse } from './types';
 
 export interface ProjectValidationResult {
     valid: boolean;

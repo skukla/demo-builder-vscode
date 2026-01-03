@@ -10,10 +10,10 @@
  */
 
 import * as vscode from 'vscode';
+import { REQUIRED_SCOPES, type OAuthCallbackParams } from './types';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-import { REQUIRED_SCOPES, type OAuthCallbackParams } from './types';
 
 /** GitHub OAuth authorization URL */
 const GITHUB_OAUTH_URL = 'https://github.com/login/oauth/authorize';

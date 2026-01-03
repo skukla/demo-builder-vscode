@@ -5,11 +5,11 @@
  * testability and reduce inline complexity in useMemo hooks.
  */
 
-import React from 'react';
-import { Flex, Text } from '@/core/ui/components/aria';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import { cn } from '@/core/ui/utils/classNames';
+import React from 'react';
 import type { ComponentData, ComponentsData } from './ReviewStep';
+import { Flex, Text } from '@/core/ui/components/aria';
+import { cn } from '@/core/ui/utils/classNames';
 
 /**
  * Component info item structure for the review list.
@@ -45,7 +45,7 @@ interface ComponentsState {
 export function resolveServiceNames(
     backendId: string | undefined,
     backends: ComponentData[] | undefined,
-    services: Record<string, { name: string; description?: string }> | undefined
+    services: Record<string, { name: string; description?: string }> | undefined,
 ): string[] {
     if (!backendId || !backends || !services) {
         return [];
@@ -80,7 +80,7 @@ export function buildComponentInfoList(
     meshStatus: string | undefined,
     componentsData: ComponentsData | undefined,
     hasDemoInspector: boolean,
-    backendServiceNames: string[]
+    backendServiceNames: string[],
 ): ComponentInfoItem[] {
     if (!components || !componentsData) {
         return [];

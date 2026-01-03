@@ -7,16 +7,6 @@
  * - Rows: Full-width horizontal list
  */
 
-import {
-    View,
-    Flex,
-    Text,
-    Button,
-    ProgressCircle,
-    MenuTrigger,
-    Menu,
-    MenuItem,
-} from '@/core/ui/components/aria';
 import Add from '@spectrum-icons/workflow/Add';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import Copy from '@spectrum-icons/workflow/Copy';
@@ -27,6 +17,16 @@ import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { buildMenuItems } from './projectsDashboardHelpers';
 import styles from './styles/projects-dashboard.module.css';
+import {
+    View,
+    Flex,
+    Text,
+    Button,
+    ProgressCircle,
+    MenuTrigger,
+    Menu,
+    MenuItem,
+} from '@/core/ui/components/aria';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
@@ -142,11 +142,11 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     if (isLoading) {
         return (
             <div ref={containerRef}>
-                <View height="100vh" backgroundColor="gray-50">
+                <div style={{ backgroundColor: 'var(--spectrum-global-color-gray-50)', height: '100vh' }}>
                     <Flex
                         justifyContent="center"
                         alignItems="center"
-                        height="100%"
+                        style={{ height: '100%' }}
                     >
                         <ProgressCircle
                             aria-label="Loading projects"
@@ -154,7 +154,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                             size="L"
                         />
                     </Flex>
-                </View>
+                </div>
             </div>
         );
     }
@@ -163,19 +163,19 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     if (!hasProjects) {
         return (
             <div ref={containerRef}>
-                <View height="100vh" backgroundColor="gray-50">
+                <div style={{ backgroundColor: 'var(--spectrum-global-color-gray-50)', height: '100vh' }}>
                     <Flex
                         direction="column"
                         alignItems="center"
                         justifyContent="center"
-                        height="100%"
+                        style={{ height: '100%' }}
                     >
                         <DashboardEmptyState
                             onCreate={onCreateProject}
                             onImportFromFile={onImportFromFile}
                         />
                     </Flex>
-                </View>
+                </div>
             </div>
         );
     }
@@ -198,7 +198,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                 <div className="page-container-padded page-header-section">
                     <Flex alignItems="start" gap="size-300">
                         {/* Search Header with view mode toggle */}
-                        <View flex>
+                        <View className="flex-1">
                             <SearchHeader
                                 searchQuery={searchQuery}
                                 onSearchQueryChange={setSearchQuery}

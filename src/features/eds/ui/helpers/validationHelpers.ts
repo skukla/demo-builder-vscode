@@ -19,7 +19,7 @@
  */
 export function getValidationState(
     error: string | undefined,
-    verified: boolean | undefined
+    verified: boolean | undefined,
 ): 'invalid' | 'valid' | undefined {
     if (error) {
         return 'invalid';

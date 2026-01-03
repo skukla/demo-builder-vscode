@@ -1,7 +1,7 @@
-import { View } from '@/core/ui/components/aria';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { WizardContainer, ImportedSettings, EditProjectConfig } from './WizardContainer';
+import { View } from '@/core/ui/components/aria';
 import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
 import { ComponentSelection } from '@/types/webview';
 // Note: index.css imports utilities/, spectrum/, components/ - do not also import custom-spectrum.css

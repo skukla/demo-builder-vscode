@@ -16,11 +16,8 @@
  * - Logger for logging
  */
 
-import { getLogger } from '@/core/logging';
-import type { CommandExecutor } from '@/core/shell';
-import { TIMEOUTS } from '@/core/utils';
-import type { AuthCacheManager } from './authCacheManager';
 import type { AdobeEntityFetcher } from './adobeEntityFetcher';
+import type { AuthCacheManager } from './authCacheManager';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -28,6 +25,9 @@ import type {
     AdobeContext,
     AdobeConsoleWhereResponse,
 } from './types';
+import { getLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
+import { TIMEOUTS } from '@/core/utils';
 import { parseJSON } from '@/types/typeGuards';
 
 /**

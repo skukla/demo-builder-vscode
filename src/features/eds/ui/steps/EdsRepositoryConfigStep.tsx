@@ -11,7 +11,10 @@
  * - DA.live site name
  */
 
+import Alert from '@spectrum-icons/workflow/Alert';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useEffect, useState, useCallback } from 'react';
+import { getValidationState } from '../helpers/validationHelpers';
 import {
     Heading,
     Text,
@@ -22,17 +25,14 @@ import {
     RadioGroup,
     Radio,
 } from '@/core/ui/components/aria';
-import Alert from '@spectrum-icons/workflow/Alert';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
-import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import {
     isValidRepositoryName,
     getRepositoryNameError,
     normalizeRepositoryName,
 } from '@/core/validation/normalizers';
-import { getValidationState } from '../helpers/validationHelpers';
 import type { BaseStepProps } from '@/types/wizard';
 
 const log = webviewLogger('EdsRepositoryConfigStep');
@@ -286,7 +286,7 @@ export function EdsRepositoryConfigStep({
                 label="GitHub Repository"
                 value={repoMode}
                 onChange={(value) => handleRepoModeChange(value as RepoMode)}
-                marginBottom="size-300"
+                className="mb-300"
             >
                 <Radio value="new">Create new repository</Radio>
                 <Radio value="existing">Use existing repository</Radio>
@@ -307,8 +307,7 @@ export function EdsRepositoryConfigStep({
                     errorMessage={repoNameError}
                     placeholder="my-eds-project"
                     description="Name for your new GitHub repository"
-                    width="100%"
-                    marginBottom="size-400"
+                    className="w-full mb-400"
                     isRequired
                 />
             )}
@@ -316,7 +315,7 @@ export function EdsRepositoryConfigStep({
             {/* Existing Repository */}
             {repoMode === 'existing' && (
                 <>
-                    <Flex alignItems="end" gap="size-200" marginBottom="size-200">
+                    <Flex alignItems="end" gap="size-200" className="mb-200">
                         <TextField
                             label="Repository"
                             value={existingRepo}
@@ -326,7 +325,7 @@ export function EdsRepositoryConfigStep({
                             errorMessage={existingRepoError}
                             placeholder="owner/repository"
                             description="Your existing GitHub repository (e.g., my-org/my-eds-site)"
-                            width="100%"
+                            className="w-full"
                             isRequired
                         />
 
@@ -352,15 +351,15 @@ export function EdsRepositoryConfigStep({
                     <Checkbox
                         isSelected={resetToTemplate}
                         onChange={handleResetToTemplateChange}
-                        marginBottom={resetToTemplate ? 'size-100' : 'size-400'}
+                        className={resetToTemplate ? 'mb-100' : 'mb-400'}
                     >
                         Reset to template (replaces all content)
                     </Checkbox>
 
                     {/* Warning when reset is selected */}
                     {resetToTemplate && (
-                        <Flex alignItems="center" gap="size-100" marginBottom="size-400">
-                            <Alert size="S" />
+                        <Flex alignItems="center" gap="size-100" className="mb-400">
+                            <span className="text-orange-500"><Alert size="S" /></span>
                             <Text className="text-orange-500 text-xs">
                                 This will delete and recreate the repository with the selected template content.
                             </Text>
@@ -370,16 +369,16 @@ export function EdsRepositoryConfigStep({
             )}
 
             {/* DA.live Section */}
-            <Heading level={3} marginBottom="size-200">
+            <Heading level={3} className="mb-200">
                 DA.live Content Source
             </Heading>
 
-            <Text marginBottom="size-300" className="text-sm text-gray-600">
+            <Text className="text-sm text-gray-600 mb-300">
                 DA.live provides content authoring for your Edge Delivery site.
             </Text>
 
             {/* DA.live Organization */}
-            <Flex alignItems="end" gap="size-200" marginBottom="size-300">
+            <Flex alignItems="end" gap="size-200" className="mb-300">
                 <TextField
                     label="Organization"
                     value={daLiveOrg}
@@ -387,7 +386,7 @@ export function EdsRepositoryConfigStep({
                     onBlur={handleDaLiveOrgBlur}
                     placeholder="your-org"
                     description="Your DA.live organization name"
-                    width="100%"
+                    className="w-full"
                     isRequired
                     validationState={getValidationState(daLiveOrgError, daLiveOrgVerified)}
                 />
@@ -411,8 +410,8 @@ export function EdsRepositoryConfigStep({
             </Flex>
 
             {daLiveOrgError && (
-                <Flex alignItems="center" gap="size-100" marginBottom="size-300">
-                    <Alert size="S" />
+                <Flex alignItems="center" gap="size-100" className="mb-300">
+                    <span className="text-red-600"><Alert size="S" /></span>
                     <Text className="text-red-600">
                         {daLiveOrgError}
                     </Text>
@@ -426,7 +425,7 @@ export function EdsRepositoryConfigStep({
                 onChange={handleDaLiveSiteChange}
                 placeholder="my-site"
                 description="Name for your DA.live site"
-                width="100%"
+                className="w-full"
                 isRequired
             />
         </SingleColumnLayout>

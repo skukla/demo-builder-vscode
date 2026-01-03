@@ -1,15 +1,15 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { formatAdobeCliError, extractMeshErrorSummary } from '@/features/mesh/utils/errorFormatter';
-import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
-import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
+import { formatAdobeCliError, extractMeshErrorSummary } from '@/features/mesh/utils/errorFormatter';
 import { Project } from '@/types/base';
+import type { Logger } from '@/types/logger';
 import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
 
 /**

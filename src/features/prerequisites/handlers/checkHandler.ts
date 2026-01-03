@@ -9,7 +9,7 @@
 
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getNodeVersionMapping, getNodeVersionIdMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys, getPluginNodeVersions, NodeVersionIdMapping } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, getNodeVersionIdMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys, getPluginNodeVersions } from '@/features/prerequisites/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
 import type { PrerequisiteCheckState } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
@@ -185,8 +185,9 @@ export async function handleCheckPrerequisites(
                 if ((!requiredForComponents || requiredForComponents.length === 0) && prereq.plugins) {
                     // Collect all requiredFor from plugins
                     const allPluginRequired = prereq.plugins
-                        .filter(p => p.requiredFor && p.requiredFor.length > 0)
-                        .flatMap(p => p.requiredFor!);
+                        .filter((p): p is typeof p & { requiredFor: string[] } =>
+                            p.requiredFor !== undefined && p.requiredFor.length > 0)
+                        .flatMap(p => p.requiredFor);
                     if (allPluginRequired.length > 0) {
                         requiredForComponents = [...new Set(allPluginRequired)];
                     }

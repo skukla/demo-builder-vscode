@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { ServiceGroup, UniqueField } from './useComponentConfig';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 interface UseConfigNavigationProps {
     serviceGroups: ServiceGroup[];

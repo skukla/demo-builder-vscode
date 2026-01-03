@@ -19,7 +19,7 @@
  */
 export function getCancelButtonText(
     isCheckingMesh: boolean,
-    isCancelling: boolean
+    isCancelling: boolean,
 ): string {
     if (isCheckingMesh) {
         return 'Back';

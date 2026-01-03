@@ -1,6 +1,6 @@
-import { View } from '@/core/ui/components/aria';
 import React, { useEffect, useState } from 'react';
 import { WizardContainer } from './wizard/WizardContainer';
+import { View } from '@/core/ui/components/aria';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { ThemeMode, ComponentSelection } from '@/types/webview';
@@ -24,7 +24,7 @@ interface ThemeChangedMessageData {
 }
 
 export function App() {
-    const [theme, setTheme] = useState<ThemeMode>('dark');
+    const [, setTheme] = useState<ThemeMode>('dark');
     const [isReady, setIsReady] = useState(false);
     const [componentDefaults, setComponentDefaults] = useState<ComponentSelection | null>(null);
     const [wizardSteps, setWizardSteps] = useState<WizardStepConfig[] | null>(null);

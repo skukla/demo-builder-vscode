@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+import { url, pattern } from '@/core/validation/Validator';
 import { toServiceGroupWithSortedFields, ServiceGroupDef } from '@/features/components/services/serviceGroupTransforms';
 import { ComponentEnvVar, ComponentConfigs, WizardState } from '@/types/webview';
-import { url, pattern } from '@/core/validation/Validator';
 
 const log = webviewLogger('useComponentConfig');
 
@@ -225,8 +225,8 @@ export function useComponentConfig({
                     if (!fieldMap.has(envVarKey)) {
                         fieldMap.set(envVarKey, { ...envVarDef, key: envVarKey, componentIds: [id] });
                     } else {
-                        const existing = fieldMap.get(envVarKey)!;
-                        if (!existing.componentIds.includes(id)) {
+                        const existing = fieldMap.get(envVarKey);
+                        if (existing && !existing.componentIds.includes(id)) {
                             existing.componentIds.push(id);
                         }
                     }
@@ -332,7 +332,7 @@ export function useComponentConfig({
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
                         const patternValidator = pattern(
                             new RegExp(field.validation.pattern),
-                            field.validation.message || 'Invalid format'
+                            field.validation.message || 'Invalid format',
                         );
                         const result = patternValidator(value);
                         if (!result.valid && result.error) {

@@ -150,12 +150,15 @@ export class CheckUpdatesCommand extends BaseCommand {
                         components: [],
                     });
                 }
-                projectComponentMap.get(project.path)!.components.push({
-                    componentId: update.componentId,
-                    currentVersion,
-                    latestVersion: update.latestVersion,
-                    releaseInfo: update.releaseInfo,
-                });
+                const projectData = projectComponentMap.get(project.path);
+                if (projectData) {
+                    projectData.components.push({
+                        componentId: update.componentId,
+                        currentVersion,
+                        latestVersion: update.latestVersion,
+                        releaseInfo: update.releaseInfo,
+                    });
+                }
             }
         }
 

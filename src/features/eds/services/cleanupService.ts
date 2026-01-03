@@ -12,10 +12,8 @@
  * All operations continue even if one fails, with detailed results returned.
  */
 
-import { getLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
-import type { GitHubRepoOperations } from './githubRepoOperations';
 import type { DaLiveOrgOperations } from './daLiveOrgOperations';
+import type { GitHubRepoOperations } from './githubRepoOperations';
 import type { HelixService } from './helixService';
 import type { ToolManager } from './toolManager';
 import type {
@@ -24,6 +22,8 @@ import type {
     EdsCleanupResult,
     CleanupOperationResult,
 } from './types';
+import { getLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 /**
  * Cleanup Service for EDS project resources

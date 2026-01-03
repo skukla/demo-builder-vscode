@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useDebouncedValue, useSetToggle } from '@/core/ui/hooks';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WizardState } from '@/types/webview';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 /** Component option for required dependencies or services */
 interface ComponentOption {

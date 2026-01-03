@@ -3,9 +3,9 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
 import { ServiceLocator } from '@/core/di';
-import type { Logger } from '@/types/logger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project, SubmoduleConfig } from '@/types';
+import type { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { getComponentIds, getComponentVersion } from '@/types/typeGuards';
 
@@ -148,7 +148,10 @@ export class UpdateManager {
                 if (!componentProjectMap.has(componentId)) {
                     componentProjectMap.set(componentId, []);
                 }
-                componentProjectMap.get(componentId)!.push({ project, currentVersion });
+                const projectVersions = componentProjectMap.get(componentId);
+                if (projectVersions) {
+                    projectVersions.push({ project, currentVersion });
+                }
             }
         }
 

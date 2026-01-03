@@ -83,8 +83,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     protected async getWebviewContent(): Promise<string> {
+        const panel = this.requirePanel();
         const bundleUris = createBundleUris({
-            webview: this.panel!.webview,
+            webview: panel.webview,
             extensionPath: this.context.extensionPath,
             featureBundleName: 'configure',
         });
@@ -93,12 +94,12 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         // Get base URI for media assets
         const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
-        const baseUri = this.panel!.webview.asWebviewUri(mediaPath);
+        const baseUri = panel.webview.asWebviewUri(mediaPath);
 
         return getWebviewHTMLWithBundles({
             bundleUris,
             nonce,
-            cspSource: this.panel!.webview.cspSource,
+            cspSource: panel.webview.cspSource,
             title: 'Configure Project',
             baseUri,
         });

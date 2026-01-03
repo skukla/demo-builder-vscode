@@ -5,15 +5,15 @@
  * Part of the layout prototype comparison (Option D: List).
  */
 
-import { List, ListItem, Text, Flex } from '@/core/ui/components/aria';
 import React from 'react';
 import styles from '../styles/projects-dashboard.module.css';
+import { List, ListItem, Text, Flex } from '@/core/ui/components/aria';
+import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import type { Project } from '@/types/base';
 
 export interface ProjectListViewProps {
@@ -55,7 +55,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         <Flex
                             alignItems="center"
                             justifyContent="space-between"
-                            width="100%"
+                            style={{ width: '100%' }}
                         >
                             <Flex alignItems="center" gap="size-150">
                                 <StatusDot variant={statusVariant} size={8} />

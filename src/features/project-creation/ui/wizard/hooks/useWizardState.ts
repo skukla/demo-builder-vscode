@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import {
     getEnabledWizardSteps,
     initializeComponentsFromImport,
@@ -9,11 +10,10 @@ import {
     EditProjectConfig,
     WizardStepConfigWithRequirements,
 } from '../wizardHelpers';
-import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
-import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
 import type { Stack } from '@/types/stacks';
+import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
 
 const log = webviewLogger('useWizardState');
 

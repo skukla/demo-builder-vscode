@@ -11,7 +11,6 @@
  * - Edit is always available (no need to stop first)
  */
 
-import { Text, ActionButton, MenuTrigger, Menu, MenuItem } from '@/core/ui/components/aria';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
@@ -20,6 +19,7 @@ import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
 import Play from '@spectrum-icons/workflow/Play';
 import Stop from '@spectrum-icons/workflow/Stop';
 import React, { useCallback, useMemo } from 'react';
+import { Text, ActionButton, MenuTrigger, Menu, MenuItem } from '@/core/ui/components/aria';
 import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
 
@@ -152,10 +152,13 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     }
 
     return (
-        <div onClick={handleMenuClick}>
+        <div
+            role="presentation"
+            onClick={handleMenuClick}
+            onKeyDown={(e) => e.stopPropagation()}
+        >
             <MenuTrigger>
                 <ActionButton
-                    isQuiet
                     aria-label="More actions"
                     className={className}
                 >

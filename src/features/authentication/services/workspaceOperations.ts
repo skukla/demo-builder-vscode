@@ -9,7 +9,6 @@ import { getConsoleWhereContext, ensureContext, type ContextOperationsDeps } fro
 import { mapWorkspaces } from './entityMappers';
 import { doSelectProject } from './projectOperations';
 import { getLogger, StepLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { validateWorkspaceId } from '@/core/validation';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
@@ -18,6 +17,7 @@ import type {
     RawAdobeWorkspace,
     SDKResponse,
 } from '@/features/authentication/services/types';
+import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
 /**

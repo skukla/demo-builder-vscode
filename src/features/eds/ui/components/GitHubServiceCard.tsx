@@ -16,25 +16,11 @@
  * />
  */
 
-import React from 'react';
-import { Flex, Text, ProgressCircle } from '@/core/ui/components/aria';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Alert from '@spectrum-icons/workflow/Alert';
-import {
-    serviceCard,
-    serviceCardHeader,
-    serviceIcon,
-    githubIcon,
-    serviceCardTitle,
-    serviceCardDescription,
-    serviceCardStatus,
-    statusText,
-    statusIconSuccess,
-    serviceActionLink,
-    statusTextError,
-    statusIconError,
-    serviceActionButton,
-} from '../styles/connect-services.module.css';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import React from 'react';
+import styles from '../styles/connect-services.module.css';
+import { Flex, Text, ProgressCircle } from '@/core/ui/components/aria';
 
 /** GitHub user information */
 export interface GitHubUser {
@@ -90,23 +76,23 @@ export function GitHubServiceCard({
 
     return (
         <div
-            className={serviceCard}
+            className={styles.serviceCard}
             data-connected={isAuthenticated ? 'true' : 'false'}
         >
-            <div className={serviceCardHeader}>
-                <div className={`${serviceIcon} ${githubIcon}`}>
+            <div className={styles.serviceCardHeader}>
+                <div className={`${styles.serviceIcon} ${styles.githubIcon}`}>
                     <GitHubIcon />
                 </div>
-                <div className={serviceCardTitle}>GitHub</div>
+                <div className={styles.serviceCardTitle}>GitHub</div>
             </div>
-            <div className={serviceCardDescription}>
+            <div className={styles.serviceCardDescription}>
                 Repository for your project code
             </div>
-            <div className={serviceCardStatus}>
+            <div className={styles.serviceCardStatus}>
                 {isLoading ? (
                     <Flex alignItems="center" gap="size-100">
                         <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
-                        <Text className={statusText}>
+                        <Text className={styles.statusText}>
                             {isAuthenticating ? 'Connecting...' : 'Checking...'}
                         </Text>
                     </Flex>
@@ -114,18 +100,18 @@ export function GitHubServiceCard({
                     compact ? (
                         <Flex alignItems="center" gap="size-100">
                             <CheckmarkCircle size="S" />
-                            <Text className={statusText}>Connected</Text>
+                            <Text className={styles.statusText}>Connected</Text>
                         </Flex>
                     ) : (
                         <Flex alignItems="center" justifyContent="space-between">
                             <Flex alignItems="center" gap="size-100">
                                 <CheckmarkCircle size="S" />
-                                <Text className={statusText}>
+                                <Text className={styles.statusText}>
                                     {user.login}
                                 </Text>
                             </Flex>
                             {onChangeAccount && (
-                                <button className={serviceActionLink} onClick={onChangeAccount}>
+                                <button className={styles.serviceActionLink} onClick={onChangeAccount}>
                                     Change
                                 </button>
                             )}
@@ -135,14 +121,14 @@ export function GitHubServiceCard({
                     <Flex direction="column" gap="size-100">
                         <Flex alignItems="center" gap="size-100">
                             <Alert size="S" />
-                            <Text className={statusTextError}>{error}</Text>
+                            <Text className={styles.statusTextError}>{error}</Text>
                         </Flex>
-                        <button className={serviceActionButton} onClick={onConnect}>
+                        <button className={styles.serviceActionButton} onClick={onConnect}>
                             Try Again
                         </button>
                     </Flex>
                 ) : (
-                    <button className={serviceActionButton} onClick={onConnect}>
+                    <button className={styles.serviceActionButton} onClick={onConnect}>
                         Connect GitHub
                     </button>
                 )}

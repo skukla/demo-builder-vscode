@@ -11,6 +11,11 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import {
+    buildStatusPayload,
+    hasMeshDeploymentRecord,
+    getMeshEndpoint,
+} from '../services/dashboardStatusService';
 import { ServiceLocator } from '@/core/di';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
@@ -19,11 +24,6 @@ import { Project, ComponentInstance } from '@/types';
 import { HandlerContext } from '@/types/handlers';
 
 // Import from services for use in this file
-import {
-    buildStatusPayload,
-    hasMeshDeploymentRecord,
-    getMeshEndpoint,
-} from '../services/dashboardStatusService';
 
 // Re-export for backward compatibility
 export {

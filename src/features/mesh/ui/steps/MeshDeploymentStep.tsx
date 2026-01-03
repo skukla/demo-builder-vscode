@@ -7,7 +7,6 @@
  * @module features/mesh/ui/steps/MeshDeploymentStep
  */
 
-import { Heading, Text, Flex, Button } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
@@ -17,6 +16,7 @@ import {
     isDeploymentSuccess,
 } from './meshDeploymentPredicates';
 import { MeshDeploymentState, MeshDeploymentCallbacks } from './meshDeploymentTypes';
+import { Heading, Text, Flex, Button } from '@/core/ui/components/aria';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -93,7 +93,7 @@ export function MeshDeploymentStep({
                     {state.status === 'timeout' && (
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                                <Clock size="L" className="text-yellow-600" />
+                                <span className="text-yellow-600"><Clock size="L" /></span>
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text className="text-xl font-medium">
                                         Deployment Timed Out
@@ -121,7 +121,7 @@ export function MeshDeploymentStep({
                     {state.status === 'error' && (
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                                <AlertCircle size="L" className="text-red-600" />
+                                <span className="text-red-600"><AlertCircle size="L" /></span>
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text className="text-xl font-medium">
                                         Mesh Deployment Failed
@@ -146,7 +146,7 @@ export function MeshDeploymentStep({
                     {isSuccess && (
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                                <CheckmarkCircle size="L" className="text-green-600" />
+                                <span className="text-green-600"><CheckmarkCircle size="L" /></span>
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text className="text-xl font-medium">
                                         Mesh Deployed Successfully

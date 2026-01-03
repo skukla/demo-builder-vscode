@@ -7,18 +7,18 @@
  * @module features/dashboard/ui/ProjectDashboardScreen
  */
 
+import React, { useState, useEffect } from 'react';
+import { ActionGrid } from './components/ActionGrid';
+import { isStartActionDisabled } from './dashboardPredicates';
+import { useDashboardActions } from './hooks/useDashboardActions';
+import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
+import styles from './styles/dashboard.module.css';
 import {
     View,
     Flex,
     Button,
     ProgressCircle,
 } from '@/core/ui/components/aria';
-import React, { useState, useEffect } from 'react';
-import styles from './styles/dashboard.module.css';
-import { isStartActionDisabled } from './dashboardPredicates';
-import { ActionGrid } from './components/ActionGrid';
-import { useDashboardActions } from './hooks/useDashboardActions';
-import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
 import { StatusCard } from '@/core/ui/components/feedback';
 import { PageLayout, PageHeader } from '@/core/ui/components/layout';
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
@@ -112,7 +112,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                 if (firstButton) {
                     firstButton.focus();
                 }
-            }, TIMEOUTS.UI_UPDATE_DELAY);
+            }, TIMEOUTS.UI.UPDATE_DELAY);
         }
     }, []); // Only on mount
 
@@ -146,7 +146,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                         <div className={styles.statusContent}>
                             <Flex alignItems="center" gap="size-300">
                                 {/* Status indicators */}
-                                <View flex>
+                                <View className="flex-1">
                                 {/* Demo Status */}
                                 <StatusCard
                                     label="Demo"

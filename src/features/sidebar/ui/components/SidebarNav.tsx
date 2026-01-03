@@ -4,10 +4,10 @@
  * Navigation list for the sidebar.
  */
 
-import { Flex, Text } from '@/core/ui/components/aria';
 import React from 'react';
 import type { NavItem } from '../../types';
 import styles from '../styles/sidebar.module.css';
+import { Flex, Text } from '@/core/ui/components/aria';
 
 export interface SidebarNavProps {
     /** Navigation items to display */

@@ -29,6 +29,17 @@ import { toError } from '@/types/typeGuards';
 
 // Extracted modules
 
+/** Minimal context for prerequisite installation (subset of HandlerContext) */
+interface MinimalInstallContext {
+    logger: Logger;
+    debugLogger: {
+        debug: (message: string) => void;
+        info: (message: string) => void;
+        warn: (message: string) => void;
+        error: (message: string, error?: Error) => void;
+    };
+}
+
 export type {
     PrerequisiteCheck,
     ProgressMilestone,
@@ -72,7 +83,7 @@ export class PrerequisitesManager {
     }
 
     async loadConfig(): Promise<PrerequisitesConfig> {
-        return await this.configLoader.load({
+        return this.configLoader.load({
             validationErrorMessage: 'Failed to parse prerequisites configuration',
         });
     }
@@ -95,8 +106,9 @@ export class PrerequisitesManager {
 
         // Add component-specific requirements
         if (selectedComponents && config.componentRequirements) {
+            const componentRequirements = config.componentRequirements;
             const checkComponent = (componentId: string) => {
-                const req = config.componentRequirements![componentId];
+                const req = componentRequirements[componentId];
                 if (req) {
                     req.prerequisites?.forEach(id => required.add(id));
                 }
@@ -361,7 +373,7 @@ export class PrerequisitesManager {
         return result.satisfied;
     }
 
-    private createMinimalContext(): any {
+    private createMinimalContext(): MinimalInstallContext {
         return {
             logger: this.logger,
             debugLogger: {

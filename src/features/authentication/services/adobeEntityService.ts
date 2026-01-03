@@ -26,21 +26,21 @@
  * - Maintain backward-compatible API
  */
 
-import { StepLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
-import type { CommandExecutor } from '@/core/shell';
+import { AdobeContextResolver } from './adobeContextResolver';
+import { AdobeEntityFetcher } from './adobeEntityFetcher';
+import { AdobeEntitySelector } from './adobeEntitySelector';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import type { OrganizationValidator } from './organizationValidator';
-import { AdobeEntityFetcher } from './adobeEntityFetcher';
-import { AdobeContextResolver } from './adobeContextResolver';
-import { AdobeEntitySelector } from './adobeEntitySelector';
 import type {
     AdobeOrg,
     AdobeProject,
     AdobeWorkspace,
     AdobeContext,
 } from './types';
+import { StepLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
+import type { Logger } from '@/types/logger';
 
 /**
  * Facade service for managing Adobe entities
@@ -61,6 +61,7 @@ export class AdobeEntityService {
     ) {
         // Create selector first (needed for clearConsoleContext callback)
         // But selector needs fetcher and resolver, so we create a temporary reference
+        // eslint-disable-next-line prefer-const -- reassigned on line 101 after callback setup
         let selectorRef: AdobeEntitySelector | undefined;
 
         // Create fetcher with callback to selector's clearConsoleContext

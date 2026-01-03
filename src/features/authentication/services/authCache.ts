@@ -14,8 +14,6 @@
  * SECURITY: Cache TTLs include optional jitter to prevent timing attacks
  */
 
-import { getCacheTTLWithJitter } from '@/core/cache/cacheUtils';
-import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -23,6 +21,8 @@ import type {
     AdobeConsoleWhereResponse,
     AuthTokenValidation,
 } from './types';
+import { getCacheTTLWithJitter } from '@/core/cache/cacheUtils';
+import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 
 interface CacheEntry<T> {
     value: T;
@@ -94,11 +94,12 @@ export class AuthCache {
     }
 
     getOrganizations(): AdobeOrg[] | undefined {
-        if (this.isExpired(this.organizations)) {
+        const entry = this.organizations;
+        if (!entry || Date.now() > entry.expiresAt) {
             this.organizations = null;
             return undefined;
         }
-        return this.organizations!.value;
+        return entry.value;
     }
 
     // =========================================================================
@@ -126,11 +127,11 @@ export class AuthCache {
 
     getProjects(orgId: string): AdobeProject[] | undefined {
         const entry = this.projectsByOrg.get(orgId);
-        if (this.isExpired(entry || null)) {
+        if (!entry || Date.now() > entry.expiresAt) {
             this.projectsByOrg.delete(orgId);
             return undefined;
         }
-        return entry!.value;
+        return entry.value;
     }
 
     // =========================================================================
@@ -164,11 +165,11 @@ export class AuthCache {
     getWorkspaces(orgId: string, projectId: string): AdobeWorkspace[] | undefined {
         const key = this.getWorkspaceKey(orgId, projectId);
         const entry = this.workspacesByOrgProject.get(key);
-        if (this.isExpired(entry || null)) {
+        if (!entry || Date.now() > entry.expiresAt) {
             this.workspacesByOrgProject.delete(key);
             return undefined;
         }
-        return entry!.value;
+        return entry.value;
     }
 
     // =========================================================================
@@ -222,11 +223,12 @@ export class AuthCache {
     }
 
     getConsoleWhere(): AdobeConsoleWhereResponse | undefined {
-        if (this.isExpired(this.consoleWhere)) {
+        const entry = this.consoleWhere;
+        if (!entry || Date.now() > entry.expiresAt) {
             this.consoleWhere = null;
             return undefined;
         }
-        return this.consoleWhere!.value;
+        return entry.value;
     }
 
     clearConsoleWhere(): void {
@@ -245,11 +247,12 @@ export class AuthCache {
     }
 
     getTokenInspection(): { valid: boolean; expiresIn: number; token?: string } | undefined {
-        if (this.isExpired(this.tokenInspection)) {
+        const entry = this.tokenInspection;
+        if (!entry || Date.now() > entry.expiresAt) {
             this.tokenInspection = null;
             return undefined;
         }
-        return this.tokenInspection!.value;
+        return entry.value;
     }
 
     clearTokenInspection(): void {
@@ -272,11 +275,12 @@ export class AuthCache {
     }
 
     getValidation(): AuthTokenValidation | undefined {
-        if (this.isExpired(this.validation)) {
+        const entry = this.validation;
+        if (!entry || Date.now() > entry.expiresAt) {
             this.validation = null;
             return undefined;
         }
-        return this.validation!.value;
+        return entry.value;
     }
 
     clearValidation(): void {

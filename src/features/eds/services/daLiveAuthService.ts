@@ -13,9 +13,9 @@
  * 6. Shut down localhost server
  */
 
-import * as vscode from 'vscode';
 import * as crypto from 'crypto';
 import * as http from 'http';
+import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging';
 
 // ==========================================================

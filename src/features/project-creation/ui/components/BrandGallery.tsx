@@ -7,43 +7,18 @@
  * 3. Card expands to show the confirmed selection (at-a-glance confirmation)
  */
 
-import { Text, Checkbox, Divider } from '@/core/ui/components/aria';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useMemo, useCallback } from 'react';
-import { DemoPackage } from '@/types/demoPackages';
-import { Stack } from '@/types/stacks';
-import { cn } from '@/core/ui/utils/classNames';
-import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import styles from '../styles/project-creation.module.css';
+import { filterPackagesBySearchQuery } from './brandGalleryHelpers';
+import { Text, Checkbox, Divider } from '@/core/ui/components/aria';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
-import { filterPackagesBySearchQuery } from './brandGalleryHelpers';
-import {
-    expandableBrandCard,
-    expandableBrandGrid,
-    selected,
-    expanded,
-    dimmed,
-    brandCardHeader,
-    brandCardTitleRow,
-    brandCardName,
-    brandCardCheck,
-    brandCardDescription,
-    brandCardSelection,
-    brandCardSelectionLabel,
-    brandCardSelectionValue,
-    architectureModalOptions,
-    architectureModalOption,
-    architectureRadio,
-    architectureRadioDot,
-    architectureContent,
-    architectureName,
-    architectureDescription,
-    architectureAddons,
-    addonLabel,
-    addonName,
-    addonDescription,
-} from '../styles/project-creation.module.css';
+import { cn } from '@/core/ui/utils/classNames';
+import { DemoPackage } from '@/types/demoPackages';
+import { Stack } from '@/types/stacks';
 
 /** Addon metadata for display */
 const ADDON_METADATA: Record<string, { name: string; description: string }> = {
@@ -107,11 +82,11 @@ const PackageCard: React.FC<PackageCardProps> = ({
     const isComplete = isSelected && selectedStack;
 
     const cardClasses = cn(
-        expandableBrandCard,
-        isSelected && selected,      // Blue border when package selected
-        isComplete && expanded,       // Expanded when stack also selected
+        styles.expandableBrandCard,
+        isSelected && styles.selected,      // Blue border when package selected
+        isComplete && styles.expanded,       // Expanded when stack also selected
         isComplete && 'complete',
-        isDimmed && dimmed,
+        isDimmed && styles.dimmed,
     );
 
     return (
@@ -128,27 +103,27 @@ const PackageCard: React.FC<PackageCardProps> = ({
             aria-label={`${pkg.name}: ${pkg.description}`}
         >
             {/* Package header - always visible */}
-            <div className={brandCardHeader}>
-                <div className={brandCardTitleRow}>
-                    <Text className={brandCardName}>
+            <div className={styles.brandCardHeader}>
+                <div className={styles.brandCardTitleRow}>
+                    <Text className={styles.brandCardName}>
                         {pkg.name}
                     </Text>
                     {isComplete && (
                         <CheckmarkCircle size="S" />
                     )}
                 </div>
-                <Text className={brandCardDescription}>
+                <Text className={styles.brandCardDescription}>
                     {pkg.description}
                 </Text>
             </div>
 
             {/* Selected architecture - shown when complete */}
             {isComplete && (
-                <div className={brandCardSelection}>
-                    <Text className={brandCardSelectionLabel}>
+                <div className={styles.brandCardSelection}>
+                    <Text className={styles.brandCardSelectionLabel}>
                         Architecture
                     </Text>
-                    <Text className={brandCardSelectionValue}>
+                    <Text className={styles.brandCardSelectionValue}>
                         {selectedStack.name}
                     </Text>
                 </div>
@@ -244,7 +219,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
             <Text className="description-block">
                 How should it be built?
             </Text>
-            <div className={architectureModalOptions} role="radiogroup" aria-label="Architecture options">
+            <div className={styles.architectureModalOptions} role="radiogroup" aria-label="Architecture options">
                 {filteredStacks.map((stack, index) => {
                     const isStackSelected = selectedStackId === stack.id;
                     const itemProps = getItemProps(index);
@@ -257,20 +232,20 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                             aria-checked={isStackSelected}
                             data-selected={isStackSelected ? 'true' : 'false'}
                             className={cn(
-                                architectureModalOption,
-                                isStackSelected && selected,
+                                styles.architectureModalOption,
+                                isStackSelected && styles.selected,
                             )}
                             onClick={() => handleStackClick(stack.id)}
                             onKeyDown={itemProps.onKeyDown}
                         >
-                            <div className={architectureRadio}>
-                                {isStackSelected && <div className={architectureRadioDot} />}
+                            <div className={styles.architectureRadio}>
+                                {isStackSelected && <div className={styles.architectureRadioDot} />}
                             </div>
-                            <div className={architectureContent}>
-                                <Text className={architectureName}>
+                            <div className={styles.architectureContent}>
+                                <Text className={styles.architectureName}>
                                     {stack.name}
                                 </Text>
-                                <Text className={architectureDescription}>
+                                <Text className={styles.architectureDescription}>
                                     {stack.description}
                                 </Text>
                             </div>
@@ -286,7 +261,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                     <Text className="description-block-sm">
                         Optional Services
                     </Text>
-                    <div className={architectureAddons}>
+                    <div className={styles.architectureAddons}>
                         {availableAddons.map((optionalAddon) => {
                             const addonMeta = ADDON_METADATA[optionalAddon.id];
                             if (!addonMeta) return null;
@@ -299,9 +274,9 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                                     isDisabled={isRequired}
                                     onChange={(isAddonSelected) => handleAddonToggle(optionalAddon.id, isAddonSelected)}
                                 >
-                                    <span className={addonLabel}>
-                                        <span className={addonName}>{addonMeta.name}</span>
-                                        <span className={addonDescription}>{addonMeta.description}</span>
+                                    <span className={styles.addonLabel}>
+                                        <span className={styles.addonName}>{addonMeta.name}</span>
+                                        <span className={styles.addonDescription}>{addonMeta.description}</span>
                                     </span>
                                 </Checkbox>
                             );
@@ -331,7 +306,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
 
     const filteredPackages = useMemo(
         () => filterPackagesBySearchQuery(packages, searchQuery),
-        [packages, searchQuery]
+        [packages, searchQuery],
     );
 
     // Get the package object for the modal
@@ -421,7 +396,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                 hasLoadedOnce={true}
             />
 
-            <div className={expandableBrandGrid}>
+            <div className={styles.expandableBrandGrid}>
                 {filteredPackages.map(pkg => {
                     const isSelected = selectedPackage === pkg.id;
                     const isDimmed = selectedPackage !== undefined && !isSelected;

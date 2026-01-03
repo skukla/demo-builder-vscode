@@ -60,7 +60,7 @@ const STEP_VALIDATORS: Record<string, (state: WizardState) => boolean> = {
  */
 export function useStepValidation(
     stepName: string,
-    state: WizardState
+    state: WizardState,
 ): StepValidation {
     return useMemo(() => {
         const validator = STEP_VALIDATORS[stepName];

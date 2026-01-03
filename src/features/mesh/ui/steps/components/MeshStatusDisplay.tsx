@@ -1,7 +1,7 @@
-import { Flex, Text, Button } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
+import { Flex, Text, Button } from '@/core/ui/components/aria';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
 
@@ -26,7 +26,7 @@ export function MeshStatusDisplay({ meshData, onRecreateMesh, onBack }: MeshStat
                 <Flex direction="column" gap="size-200" alignItems="center">
                     {isError ? (
                         <>
-                            <AlertCircle size="L" className="text-orange-600" />
+                            <span className="text-orange-600"><AlertCircle size="L" /></span>
                             <Flex direction="column" gap="size-100" alignItems="center">
                                 <Text className="text-xl font-medium">Mesh in Error State</Text>
                                 <Text className="text-sm text-gray-600 text-center-max-500">
@@ -37,7 +37,7 @@ export function MeshStatusDisplay({ meshData, onRecreateMesh, onBack }: MeshStat
                         </>
                     ) : (
                         <>
-                            <CheckmarkCircle size="L" className="text-green-600" />
+                            <span className="text-green-600"><CheckmarkCircle size="L" /></span>
                             <Flex direction="column" gap="size-100" alignItems="center">
                                 <Text className="text-xl font-medium">
                                     API Mesh {meshData.status === 'deployed' ? 'Deployed' : 'Found'}

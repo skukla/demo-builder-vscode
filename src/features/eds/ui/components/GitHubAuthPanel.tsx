@@ -5,11 +5,11 @@
  * Used within ConnectServicesStep for side-by-side auth display.
  */
 
+import Alert from '@spectrum-icons/workflow/Alert';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import Code from '@spectrum-icons/workflow/Code';
 import React from 'react';
 import { Flex, Heading, Text, Button, ProgressCircle } from '@/core/ui/components/aria';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import Alert from '@spectrum-icons/workflow/Alert';
-import Code from '@spectrum-icons/workflow/Code';
 
 interface GitHubAuthPanelProps {
     isAuthenticated: boolean;
@@ -35,7 +35,7 @@ export function GitHubAuthPanel({
             {/* Panel header */}
             <div className="panel-header">
                 <Code size="S" />
-                <Heading level={3} margin={0}>
+                <Heading level={3} className="m-0">
                     GitHub
                 </Heading>
             </div>

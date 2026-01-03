@@ -14,21 +14,21 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { PollingService } from '@/core/shell/pollingService';
-import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { ComponentManager } from '@/features/components/services/componentManager';
-import type { Logger } from '@/types/logger';
-import type { DaLiveOrgOperations } from './daLiveOrgOperations';
 import type { DaLiveContentOperations } from './daLiveContentOperations';
-import type { GitHubTokenService } from './githubTokenService';
+import type { DaLiveOrgOperations } from './daLiveOrgOperations';
 import type { GitHubRepoOperations } from './githubRepoOperations';
+import type { GitHubTokenService } from './githubTokenService';
 import {
     EdsProjectError,
     type EdsProjectConfig,
     type GitHubRepo,
     type PhaseProgressCallback,
 } from './types';
+import { PollingService } from '@/core/shell/pollingService';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import type { ComponentManager } from '@/features/components/services/componentManager';
+import type { Logger } from '@/types/logger';
 
 // Re-export PhaseProgressCallback for consumers
 export type { PhaseProgressCallback } from './types';

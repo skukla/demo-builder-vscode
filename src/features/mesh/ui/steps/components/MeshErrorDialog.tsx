@@ -1,6 +1,6 @@
-import { Flex, Text, ActionButton, DialogTrigger, Dialog } from '@/core/ui/components/aria';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import React from 'react';
+import { Flex, Text, ActionButton, DialogTrigger, Dialog } from '@/core/ui/components/aria';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
 import { ErrorCode } from '@/types/errorCodes';
@@ -39,7 +39,7 @@ export function MeshErrorDialog({ error, code: _code, setupInstructions = [], on
                         Follow the setup guide to enable API Mesh for this workspace.
                     </Text>
                     <DialogTrigger>
-                        <ActionButton isQuiet>
+                        <ActionButton>
                             <InfoOutline />
                             <Text>View Setup Instructions</Text>
                         </ActionButton>

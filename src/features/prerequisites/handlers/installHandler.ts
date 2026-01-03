@@ -216,7 +216,7 @@ export async function handleInstallPrerequisite(
         // BUG FIX: For dynamic installs (Node.js), PrerequisitesManager already creates
         // version-specific steps, so we shouldn't multiply by targetVersions.length again.
         // Only multiply for per-node-version installs (Adobe CLI) where steps are templates.
-        const isDynamicInstall = prereq.id === 'node' && (prereq as any).install?.dynamic;
+        const isDynamicInstall = prereq.id === 'node' && prereq.install?.dynamic;
         const total = isDynamicInstall
             ? installSteps.length + defaultSteps.length
             : (installSteps.length * (targetVersions?.length || 1)) + defaultSteps.length;

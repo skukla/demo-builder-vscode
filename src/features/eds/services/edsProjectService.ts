@@ -17,22 +17,8 @@
  * - EnvConfigPhase: Environment file generation
  */
 
-import { getLogger } from '@/core/logging';
-import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { ComponentManager } from '@/features/components/services/componentManager';
-import type { Logger } from '@/types/logger';
-import type { DaLiveOrgOperations } from './daLiveOrgOperations';
 import type { DaLiveContentOperations } from './daLiveContentOperations';
-import type { GitHubTokenService } from './githubTokenService';
-import type { GitHubRepoOperations } from './githubRepoOperations';
-import {
-    EdsProjectError,
-    type EdsProjectConfig,
-    type EdsProjectSetupResult,
-    type EdsProgressCallback,
-    type EdsSetupPhase,
-    type GitHubRepo,
-} from './types';
+import type { DaLiveOrgOperations } from './daLiveOrgOperations';
 import {
     GitHubRepoPhase,
     HelixConfigPhase,
@@ -41,6 +27,20 @@ import {
     generatePreviewUrl,
     generateLiveUrl,
 } from './edsSetupPhases';
+import type { GitHubRepoOperations } from './githubRepoOperations';
+import type { GitHubTokenService } from './githubTokenService';
+import {
+    EdsProjectError,
+    type EdsProjectConfig,
+    type EdsProjectSetupResult,
+    type EdsProgressCallback,
+    type EdsSetupPhase,
+    type GitHubRepo,
+} from './types';
+import { getLogger } from '@/core/logging';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import type { ComponentManager } from '@/features/components/services/componentManager';
+import type { Logger } from '@/types/logger';
 
 // Re-export phase classes for direct use
 export { GitHubRepoPhase, HelixConfigPhase, ContentPhase, EnvConfigPhase } from './edsSetupPhases';

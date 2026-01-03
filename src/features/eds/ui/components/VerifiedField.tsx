@@ -18,10 +18,10 @@
  * />
  */
 
+import Alert from '@spectrum-icons/workflow/Alert';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
 import { TextField, Flex, Text, ProgressCircle } from '@/core/ui/components/aria';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import Alert from '@spectrum-icons/workflow/Alert';
 
 /** Props for VerifiedField component */
 export interface VerifiedFieldProps {
@@ -45,8 +45,8 @@ export interface VerifiedFieldProps {
     description?: string;
     /** Whether field is required */
     isRequired?: boolean;
-    /** Full width */
-    width?: string;
+    /** Full width - use style prop or className for width control */
+    width?: string; // Note: Pass via style={{ width }} or use className="w-full"
 }
 
 /**
@@ -86,7 +86,7 @@ export function VerifiedField({
     };
 
     return (
-        <Flex direction="column" gap="size-100" width={width}>
+        <Flex direction="column" gap="size-100" style={width ? { width } : undefined}>
             <Flex alignItems="end" gap="size-200">
                 <TextField
                     label={label}
@@ -96,7 +96,7 @@ export function VerifiedField({
                     placeholder={placeholder}
                     description={description}
                     isRequired={isRequired}
-                    width="100%"
+                    className="w-full"
                     validationState={getValidationState()}
                 />
 

@@ -11,15 +11,15 @@
  * @module features/eds/handlers/edsHelpers
  */
 
-import type { HandlerContext } from '@/types/handlers';
-import { GitHubTokenService } from '../services/githubTokenService';
-import { GitHubRepoOperations } from '../services/githubRepoOperations';
+import { DaLiveAuthService } from '../services/daLiveAuthService';
+import { DaLiveContentOperations } from '../services/daLiveContentOperations';
+import { DaLiveOrgOperations, type TokenProvider } from '../services/daLiveOrgOperations';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubOAuthService } from '../services/githubOAuthService';
-import { DaLiveOrgOperations, type TokenProvider } from '../services/daLiveOrgOperations';
-import { DaLiveContentOperations } from '../services/daLiveContentOperations';
-import { DaLiveAuthService } from '../services/daLiveAuthService';
+import { GitHubRepoOperations } from '../services/githubRepoOperations';
+import { GitHubTokenService } from '../services/githubTokenService';
 import { getLogger } from '@/core/logging';
+import type { HandlerContext } from '@/types/handlers';
 
 // ==========================================================
 // Service Instance Cache
@@ -89,7 +89,10 @@ export function getDaLiveServices(context: HandlerContext): DaLiveServices {
         // Create token provider adapter from AuthenticationService
         const tokenProvider: TokenProvider = {
             getAccessToken: async () => {
-                const tokenManager = context.authManager!.getTokenManager();
+                if (!context.authManager) {
+                    throw new Error('AuthManager not available');
+                }
+                const tokenManager = context.authManager.getTokenManager();
                 const token = await tokenManager.getAccessToken();
                 return token ?? null;  // Convert undefined to null for TokenProvider interface
             },

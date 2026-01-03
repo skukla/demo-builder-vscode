@@ -5,15 +5,10 @@
  * Supports keyboard navigation with arrow keys.
  */
 
-import { Text } from '@/core/ui/components/aria';
 import React, { useCallback, useRef } from 'react';
+import styles from '../styles/project-creation.module.css';
+import { Text } from '@/core/ui/components/aria';
 import { Stack } from '@/types/stacks';
-import {
-    selectorGrid,
-    selectorCard,
-    selectorCardName,
-    selectorCardDescription,
-} from '../styles/project-creation.module.css';
 
 export interface StackSelectorProps {
     stacks: Stack[];
@@ -75,17 +70,16 @@ const StackCard: React.FC<StackCardProps> = ({ stack, isSelected, onSelect, onNa
             data-testid="stack-card"
             data-selected={isSelected ? 'true' : 'false'}
             data-requires-setup={requiresSetup ? 'true' : 'false'}
-            aria-selected={isSelected ? 'true' : 'false'}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
-            className={selectorCard}
+            className={styles.selectorCard}
             aria-pressed={isSelected}
             aria-label={`${stack.name}: ${stack.description}`}
         >
-            <Text className={selectorCardName}>
+            <Text className={styles.selectorCardName}>
                 {stack.name}
             </Text>
-            <Text className={selectorCardDescription}>
+            <Text className={styles.selectorCardDescription}>
                 {stack.description}
             </Text>
             {stack.features && stack.features.length > 0 && (
@@ -136,7 +130,7 @@ export const StackSelector: React.FC<StackSelectorProps> = ({
     }, [stacks.length]);
 
     return (
-        <div className={selectorGrid} role="listbox" aria-label="Architecture selection">
+        <div className={styles.selectorGrid} role="listbox" aria-label="Architecture selection">
             {stacks.map((stack, index) => (
                 <StackCard
                     key={stack.id}

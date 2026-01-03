@@ -10,19 +10,19 @@
  * - Single-purpose: authentication only (no form fields)
  */
 
-import React from 'react';
-import { Text } from '@/core/ui/components/aria';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Code from '@spectrum-icons/workflow/Code';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
-import { useCanProceed } from '@/core/ui/hooks';
+import React from 'react';
 import { useGitHubAuth } from '../hooks/useGitHubAuth';
+import { Text } from '@/core/ui/components/aria';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { useCanProceed } from '@/core/ui/hooks';
 import type { BaseStepProps } from '@/types/wizard';
 
 /**

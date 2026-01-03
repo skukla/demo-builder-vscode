@@ -1,17 +1,13 @@
-import { View, Flex, Text } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import React from 'react';
+import styles from '../../styles/prerequisites.module.css';
+import { View, Flex, Text } from '@/core/ui/components/aria';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { cn } from '@/core/ui/utils/classNames';
 import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
-import {
-    prerequisiteMessage,
-    prerequisiteMessageError,
-    prerequisiteMessageDefault,
-} from '../../styles/prerequisites.module.css';
 
 /**
  * Check if plugin details should be shown for a prerequisite
@@ -33,11 +29,11 @@ export function shouldShowPluginDetails(
 export function getStatusIcon(status: PrerequisiteCheck['status']): React.ReactNode {
     switch (status) {
         case 'success':
-            return <CheckmarkCircle size="S" className="text-green-600" />;
+            return <span className="text-green-600"><CheckmarkCircle size="S" /></span>;
         case 'error':
-            return <CloseCircle size="S" className="text-red-600" />;
+            return <span className="text-red-600"><CloseCircle size="S" /></span>;
         case 'warning':
-            return <AlertCircle size="S" className="text-yellow-600" />;
+            return <span className="text-yellow-600"><AlertCircle size="S" /></span>;
         case 'checking':
             return <Spinner size="S" />;
         case 'pending':
@@ -55,12 +51,12 @@ export function renderPluginStatusIcon(
     pluginInstalled: boolean | undefined,
 ): React.ReactNode {
     if (checkStatus === 'checking' && pluginInstalled === undefined) {
-        return <Pending size="XS" marginStart="size-50" />;
+        return <span className="ml-50"><Pending size="XS" /></span>;
     }
     if (pluginInstalled) {
-        return <CheckmarkCircle size="XS" className="text-green-600" marginStart="size-50" />;
+        return <span className="text-green-600 ml-50"><CheckmarkCircle size="XS" /></span>;
     }
-    return <CloseCircle size="XS" className="text-red-600" marginStart="size-50" />;
+    return <span className="text-red-600 ml-50"><CloseCircle size="XS" /></span>;
 }
 
 /**
@@ -91,7 +87,7 @@ export function renderNodeVersionSuccess(message: string): React.ReactNode {
                     {version}
                     {component && ` (${component})`}
                 </Text>
-                <CheckmarkCircle size="XS" className="text-green-600" marginStart="size-50" />
+                <span className="text-green-600 ml-50"><CheckmarkCircle size="XS" /></span>
             </Flex>
         );
     });
@@ -106,7 +102,7 @@ export function renderAioCliErrorVersions(message: string): React.ReactNode {
         return nodes.map((n, idx) => (
             <Flex key={idx} alignItems="center" marginBottom="size-50">
                 <Text className={cn('animate-fade-in', 'text-sm')}>{n}</Text>
-                <CloseCircle size="XS" className="text-red-600" marginStart="size-50" />
+                <span className="text-red-600 ml-50"><CloseCircle size="XS" /></span>
             </Flex>
         ));
     }
@@ -120,7 +116,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
     // Case 1: nodeVersionStatus exists - render structured version items
     if (check.nodeVersionStatus) {
         return (
-            <View className={cn(prerequisiteMessage, 'animate-fade-in')}>
+            <View className={cn(styles.prerequisiteMessage, 'animate-fade-in')}>
                 {check.nodeVersionStatus.map((item, idx) => (
                     <Flex key={idx} alignItems="center" marginBottom="size-50">
                         <Text className={cn('animate-fade-in', 'text-sm')}>
@@ -128,9 +124,9 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
                             {item.component ? ` – ${item.component}` : ''}
                         </Text>
                         {item.installed ? (
-                            <CheckmarkCircle size="XS" className="text-green-600" marginStart="size-50" />
+                            <span className="text-green-600 ml-50"><CheckmarkCircle size="XS" /></span>
                         ) : (
-                            <CloseCircle size="XS" className="text-red-600" marginStart="size-50" />
+                            <span className="text-red-600 ml-50"><CloseCircle size="XS" /></span>
                         )}
                     </Flex>
                 ))}
@@ -141,7 +137,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
     // Case 2: Node.js success with comma-separated versions
     if (check.name === 'Node.js' && check.status === 'success' && check.message?.includes(',')) {
         return (
-            <View className={cn(prerequisiteMessage, 'animate-fade-in')}>
+            <View className={cn(styles.prerequisiteMessage, 'animate-fade-in')}>
                 {renderNodeVersionSuccess(check.message)}
             </View>
         );
@@ -152,7 +148,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
         const versionItems = renderAioCliErrorVersions(check.message);
         if (versionItems) {
             return (
-                <View className={cn(prerequisiteMessage, 'animate-fade-in')}>
+                <View className={cn(styles.prerequisiteMessage, 'animate-fade-in')}>
                     {versionItems}
                 </View>
             );
@@ -163,10 +159,10 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
     if (!check.plugins || check.plugins.length === 0 || check.status !== 'success') {
         return (
             <Text className={cn(
-                prerequisiteMessage,
+                styles.prerequisiteMessage,
                 check.status === 'error'
-                    ? prerequisiteMessageError
-                    : prerequisiteMessageDefault,
+                    ? styles.prerequisiteMessageError
+                    : styles.prerequisiteMessageDefault,
                 'animate-fade-in',
             )}>
                 {check.message || 'Waiting...'}

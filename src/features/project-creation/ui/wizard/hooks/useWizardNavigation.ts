@@ -165,7 +165,7 @@ export function useWizardNavigation({
                 });
                 setIsTransitioning(false);
                 transitionTimerRef.current = null;
-            }, TIMEOUTS.STEP_TRANSITION);
+            }, TIMEOUTS.UI.TRANSITION);
         } else {
             if (transitionTimerRef.current) {
                 clearTimeout(transitionTimerRef.current);
@@ -175,7 +175,7 @@ export function useWizardNavigation({
                 setState(prev => ({ ...prev, currentStep: step }));
                 setIsTransitioning(false);
                 transitionTimerRef.current = null;
-            }, TIMEOUTS.STEP_TRANSITION);
+            }, TIMEOUTS.UI.TRANSITION);
         }
     }, [WIZARD_STEPS, setAnimationDirection, setIsTransitioning, setCompletedSteps, setState]);
 
@@ -232,7 +232,7 @@ export function useWizardNavigation({
 
                 importNavClearTimerRef.current = setTimeout(() => {
                     setIsPreparingReview(false);
-                }, TIMEOUTS.STEP_TRANSITION);
+                }, TIMEOUTS.UI.TRANSITION);
             }, TIMEOUTS.IMPORT_TRANSITION_FEEDBACK);
 
             return;

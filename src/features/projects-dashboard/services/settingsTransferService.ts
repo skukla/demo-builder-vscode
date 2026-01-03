@@ -13,9 +13,9 @@ import {
     createExportSettings,
     getSuggestedFilename,
 } from './settingsSerializer';
+import { showWebviewQuickPick } from '@/core/utils';
 import { SETTINGS_FILE_VERSION } from '@/features/projects-dashboard/types/settingsFile';
 import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
-import { showWebviewQuickPick } from '@/core/utils';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 

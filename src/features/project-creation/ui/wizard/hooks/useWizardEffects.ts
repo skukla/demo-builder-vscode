@@ -62,7 +62,7 @@ export function useWizardEffects({
             if (focusableElements.length > 0) {
                 (focusableElements[0] as HTMLElement).focus();
             }
-        }, TIMEOUTS.STEP_CONTENT_FOCUS);
+        }, TIMEOUTS.UI.FOCUS_FALLBACK);
 
         return () => clearTimeout(timer);
     }, [state.currentStep, stepContentRef]);

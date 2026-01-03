@@ -1,27 +1,27 @@
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import {
+    getAllComponentDefinitions,
+    hasComponentEnvVars,
+    discoverComponentsFromInstances,
+} from './configureHelpers';
 import {
     Heading,
     Text,
     Button,
     View,
 } from '@/core/ui/components/aria';
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { FormField, ConfigSection } from '@/core/ui/components/forms';
 import { TwoColumnLayout, PageHeader, PageFooter } from '@/core/ui/components/layout';
 import { NavigationPanel, NavigationSection } from '@/core/ui/components/navigation';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { url, pattern } from '@/core/validation/Validator';
 import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
 import type { Project } from '@/types/base';
 import { hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
-import {
-    getAllComponentDefinitions,
-    hasComponentEnvVars,
-    discoverComponentsFromInstances,
-} from './configureHelpers';
 
 // Create validators with consistent error messages
 const urlValidator = url('Please enter a valid URL');
@@ -63,10 +63,6 @@ interface ServiceGroup {
     id: string;
     label: string;
     fields: UniqueField[];
-}
-
-interface ComponentInstance {
-    type?: string;
 }
 
 interface SaveConfigurationResponse {
@@ -272,8 +268,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                             componentIds: [id],
                         });
                     } else {
-                        const existing = fieldMap.get(envVarKey)!;
-                        if (!existing.componentIds.includes(id)) {
+                        const existing = fieldMap.get(envVarKey);
+                        if (existing && !existing.componentIds.includes(id)) {
                             existing.componentIds.push(id);
                         }
                     }
@@ -290,8 +286,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                             componentIds: [id],
                         });
                     } else {
-                        const existing = fieldMap.get(envVarKey)!;
-                        if (!existing.componentIds.includes(id)) {
+                        const existing = fieldMap.get(envVarKey);
+                        if (existing && !existing.componentIds.includes(id)) {
                             existing.componentIds.push(id);
                         }
                     }
@@ -483,7 +479,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
                         const patternValidator = pattern(
                             new RegExp(field.validation.pattern),
-                            field.validation.message || 'Invalid format'
+                            field.validation.message || 'Invalid format',
                         );
                         const result = patternValidator(value);
                         if (!result.valid && result.error) {
@@ -621,7 +617,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             ref={containerRef}
             className="container-configure"
         >
-            <View width="100%" height="100%">
+            <View style={{ width: '100%', height: '100%' }}>
             <div className="content-area">
                 {/* Header */}
                 <PageHeader

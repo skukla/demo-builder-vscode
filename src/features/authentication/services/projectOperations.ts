@@ -8,7 +8,6 @@
 import { getConsoleWhereContext, ensureContext, type ContextOperationsDeps } from './contextOperations';
 import { mapProjects } from './entityMappers';
 import { getLogger, StepLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { validateProjectId } from '@/core/validation';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
@@ -18,6 +17,7 @@ import type {
     AdobeCLIError,
     SDKResponse,
 } from '@/features/authentication/services/types';
+import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
 /**

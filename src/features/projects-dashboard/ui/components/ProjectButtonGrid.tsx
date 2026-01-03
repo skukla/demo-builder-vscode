@@ -7,8 +7,8 @@
  */
 
 import React from 'react';
-import { ProjectButton } from './ProjectButton';
 import styles from '../styles/projects-dashboard.module.css';
+import { ProjectButton } from './ProjectButton';
 import type { Project } from '@/types/base';
 
 export interface ProjectButtonGridProps {

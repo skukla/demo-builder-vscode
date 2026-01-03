@@ -125,7 +125,7 @@ async function fetchMeshInfoFromAdobeIOImpl(logger: Logger): Promise<{ meshId?: 
         // Log parsing failure (output already logged above)
         logger.debug('[Mesh Verifier] Could not parse mesh info from describe output');
         return null;
-    } catch (error) {
+    } catch {
         return null;
     }
 }

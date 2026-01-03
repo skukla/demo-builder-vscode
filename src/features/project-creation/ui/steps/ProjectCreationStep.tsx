@@ -1,8 +1,9 @@
-import { Text, Flex, Button } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useEffect, useCallback } from 'react';
+import { getCancelButtonText } from '../helpers/buttonTextHelpers';
 import { isProgressActive } from './projectCreationPredicates';
+import { Text, Flex, Button } from '@/core/ui/components/aria';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { PageFooter } from '@/core/ui/components/layout/PageFooter';
@@ -10,7 +11,6 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { MeshErrorDialog } from '@/features/mesh/ui/steps/components/MeshErrorDialog';
-import { getCancelButtonText } from '../helpers/buttonTextHelpers';
 import { WizardState } from '@/types/webview';
 
 interface ProjectCreationStepProps {

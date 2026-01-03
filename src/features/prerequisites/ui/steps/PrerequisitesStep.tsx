@@ -1,11 +1,5 @@
-import {
-    View,
-    Flex,
-    Text,
-    Button,
-    ProgressBar,
-} from '@/core/ui/components/aria';
 import React, { useRef, useCallback } from 'react';
+import styles from '../styles/prerequisites.module.css';
 import {
     usePrerequisiteState,
     usePrerequisiteAutoScroll,
@@ -16,22 +10,16 @@ import {
     getProgressValue,
     renderPrerequisiteMessage,
 } from './hooks';
-import { cn } from '@/core/ui/utils/classNames';
-import { NavigableStepProps } from '@/types/wizard';
-import { WizardState } from '@/types/webview';
 import {
-    prerequisitesContainer,
-    prerequisiteItem,
-    prerequisiteItemGrid,
-    prerequisiteItemSpacing,
-    prerequisiteIcon,
-    prerequisiteHeader,
-    prerequisiteHeaderInner,
-    prerequisiteTitle,
-    prerequisiteDescription,
-    prerequisiteExpandable,
-    prerequisitePluginItem,
-} from '../styles/prerequisites.module.css';
+    View,
+    Flex,
+    Text,
+    Button,
+    ProgressBar,
+} from '@/core/ui/components/aria';
+import { cn } from '@/core/ui/utils/classNames';
+import { WizardState } from '@/types/webview';
+import { NavigableStepProps } from '@/types/wizard';
 
 // Extracted hooks and helpers
 
@@ -78,8 +66,6 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
         resetAutoScroll,
     );
 
-    const hasErrors = checks.some(check => check.status === 'error');
-
     return (
         <div className="container-wizard">
             <Text marginBottom="size-200" className={cn('text-gray-700', 'text-md')}>
@@ -88,29 +74,29 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
 
             <div
                 ref={scrollContainerRef}
-                className={prerequisitesContainer}>
+                className={styles.prerequisitesContainer}>
                 <Flex direction="column" gap="size-150">
                     {checks.map((check, index) => (
                         <div
                             key={check.name}
                             ref={el => { itemRefs.current[index] = el; }}
-                            className={cn(prerequisiteItem, prerequisiteItemGrid, index !== checks.length - 1 && prerequisiteItemSpacing)}
+                            className={cn(styles.prerequisiteItem, styles.prerequisiteItemGrid, index !== checks.length - 1 && styles.prerequisiteItemSpacing)}
                         >
                             {/* Icon - spans both rows, centered vertically in the entire item */}
-                            <div className={prerequisiteIcon}>
+                            <div className={styles.prerequisiteIcon}>
                                 {getStatusIcon(check.status)}
                             </div>
 
                             {/* Header content - row 1 */}
-                            <div className={prerequisiteHeader}>
-                                <div className={prerequisiteHeaderInner}>
+                            <div className={styles.prerequisiteHeader}>
+                                <div className={styles.prerequisiteHeaderInner}>
                                     <div>
-                                        <div className={prerequisiteTitle}>
+                                        <div className={styles.prerequisiteTitle}>
                                             {check.name}
                                             {check.isOptional && <span className="text-muted-label"> (Optional)</span>}
                                             {check.status === 'pending' && <span className="text-muted-label"> (Waiting)</span>}
                                         </div>
-                                        <div className={prerequisiteDescription}>
+                                        <div className={styles.prerequisiteDescription}>
                                             {check.description}
                                         </div>
                                     </div>
@@ -128,7 +114,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                             </div>
 
                             {/* Expandable content - row 2 */}
-                            <div className={prerequisiteExpandable}>
+                            <div className={styles.prerequisiteExpandable}>
                                 {renderPrerequisiteMessage(check)}
                                 {check.status === 'checking' && check.unifiedProgress && (
                                     <View marginTop="size-100" className="animate-fade-in">
@@ -157,7 +143,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                                                     .join(', ');
                                                 return (
                                                     <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
-                                                        <Text className={cn(check.status === 'success' ? 'text-sm' : prerequisitePluginItem)}>
+                                                        <Text className={cn(check.status === 'success' ? 'text-sm' : styles.prerequisitePluginItem)}>
                                                             {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
                                                             {versions ? ` (${versions})` : ''}
                                                         </Text>
@@ -169,7 +155,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                                                 <>
                                                     {check.plugins.map(plugin => (
                                                         <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
-                                                            <Text className={cn(check.status === 'success' ? 'text-sm' : prerequisitePluginItem)}>
+                                                            <Text className={cn(check.status === 'success' ? 'text-sm' : styles.prerequisitePluginItem)}>
                                                                 {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
                                                             </Text>
                                                             {renderPluginStatusIcon(check.status, plugin.installed)}

@@ -1,14 +1,14 @@
+import React from 'react';
+import { ConfigFieldRenderer } from '../components/ConfigFieldRenderer';
+import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
+import { useComponentConfig } from '../hooks/useComponentConfig';
+import { useConfigNavigation } from '../hooks/useConfigNavigation';
 import {
     Text,
     Flex,
     Heading,
     Divider,
 } from '@/core/ui/components/aria';
-import React from 'react';
-import { ConfigFieldRenderer } from '../components/ConfigFieldRenderer';
-import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
-import { useComponentConfig } from '../hooks/useComponentConfig';
-import { useConfigNavigation } from '../hooks/useConfigNavigation';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';

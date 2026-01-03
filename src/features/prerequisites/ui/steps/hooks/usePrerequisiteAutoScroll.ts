@@ -22,7 +22,7 @@ interface UsePrerequisiteAutoScrollReturn {
 export function usePrerequisiteAutoScroll(
     checks: PrerequisiteCheck[],
     setCanProceed: (value: boolean) => void,
-    scrollContainerRef: React.MutableRefObject<HTMLDivElement | null>
+    scrollContainerRef: React.MutableRefObject<HTMLDivElement | null>,
 ): UsePrerequisiteAutoScrollReturn {
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
     const hasAutoScrolled = useRef<boolean>(false);

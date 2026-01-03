@@ -8,19 +8,19 @@
  * Includes a kebab menu for additional actions like Export.
  */
 
-import { Flex, Text } from '@/core/ui/components/aria';
 import React, { useCallback, useMemo } from 'react';
-import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import styles from '../styles/projects-dashboard.module.css';
+import { ProjectActionsMenu } from './ProjectActionsMenu';
+import { Flex, Text } from '@/core/ui/components/aria';
+import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
-import { isEdsProject } from '@/types/typeGuards';
-import { ProjectActionsMenu } from './ProjectActionsMenu';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import type { Project } from '@/types/base';
+import { isEdsProject } from '@/types/typeGuards';
 
 export interface ProjectCardProps {
     /** The project to display */
@@ -120,7 +120,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             )}
 
             {/* Status Row */}
-            <Flex alignItems="center" gap="size-100" marginTop="auto">
+            <Flex alignItems="center" gap="size-100" style={{ marginTop: 'auto' }}>
                 <StatusDot variant={statusVariant} size={6} />
                 <Text className={styles.projectCardStatus}>
                     {statusText}

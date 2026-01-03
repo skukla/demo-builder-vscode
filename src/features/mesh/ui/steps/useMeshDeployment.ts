@@ -213,7 +213,7 @@ export function useMeshDeployment({
                     cleanup();
                     dispatch({ type: 'TIMEOUT' });
                 }
-            }, TIMEOUTS.MESH_DEPLOY_TOTAL);
+            }, TIMEOUTS.LONG);
 
             // Set up elapsed time tracking (every second)
             elapsedIntervalRef.current = setInterval(() => {

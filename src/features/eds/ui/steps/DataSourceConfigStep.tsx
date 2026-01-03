@@ -13,6 +13,10 @@
  * which dynamically renders fields based on the selected stack's backend component.
  */
 
+// Note: Heading is still used for the "Create New Site" subsection (level={3})
+import Add from '@spectrum-icons/workflow/Add';
+import Close from '@spectrum-icons/workflow/Close';
+import Info from '@spectrum-icons/workflow/Info';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
     ActionButton,
@@ -25,10 +29,6 @@ import {
     List,
     ListItem,
 } from '@/core/ui/components/aria';
-// Note: Heading is still used for the "Create New Site" subsection (level={3})
-import Add from '@spectrum-icons/workflow/Add';
-import Close from '@spectrum-icons/workflow/Close';
-import Info from '@spectrum-icons/workflow/Info';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
@@ -155,18 +155,6 @@ export function DataSourceConfigStep({
         }
     }, [daLiveSite]);
 
-    /**
-     * Handle list selection change
-     */
-    const handleSelectionChange = useCallback((keys: 'all' | Set<React.Key>) => {
-        if (keys === 'all') return;
-        const itemId = Array.from(keys)[0] as string;
-        const item = sites.find(s => s.id === itemId);
-        if (item) {
-            selectItem(item);
-        }
-    }, [sites, selectItem]);
-
     // Update canProceed based on site selection
     useEffect(() => {
         const isNewValid = isCreatingNew && daLiveSite.trim() !== '' && isValidSiteName(daLiveSite);
@@ -226,8 +214,8 @@ export function DataSourceConfigStep({
             {!isCreatingNew && (
                 <>
                     {/* Search + New button row */}
-                    <Flex alignItems="start" gap="size-200" marginBottom="size-100">
-                        <View flex>
+                    <Flex alignItems="start" gap="size-200" className="mb-100">
+                        <View className="flex-1">
                             <SearchHeader
                                 searchQuery={searchQuery}
                                 onSearchQueryChange={setSearchQuery}
@@ -293,14 +281,13 @@ export function DataSourceConfigStep({
 
             {/* Create New Site form */}
             {isCreatingNew && (
-                <View
-                    backgroundColor="gray-50"
-                    borderRadius="medium"
-                    padding="size-300"
+                <div
+                    className="p-300"
+                    style={{ backgroundColor: 'var(--spectrum-global-color-gray-50)', borderRadius: 'var(--spectrum-alias-border-radius-regular)' }}
                 >
-                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-                        <Heading level={3} margin={0}>Create New Site</Heading>
-                        <ActionButton onPress={handleCancelNew} isQuiet>
+                    <Flex justifyContent="space-between" alignItems="center" className="mb-200">
+                        <Heading level={3} className="m-0">Create New Site</Heading>
+                        <ActionButton onPress={handleCancelNew}>
                             <Close size="S" />
                             <Text>Cancel</Text>
                         </ActionButton>
@@ -315,18 +302,18 @@ export function DataSourceConfigStep({
                         errorMessage={siteNameError}
                         placeholder="my-site"
                         description={`Will be created at da.live/${daLiveOrg}/${daLiveSite || 'my-site'}`}
-                        width="100%"
+                        className="w-full"
                         isRequired
                         autoFocus
                     />
 
-                    <Flex alignItems="center" gap="size-150" marginTop="size-200">
-                        <Info size="S" className="text-blue-500" />
+                    <Flex alignItems="center" gap="size-150" className="mt-200">
+                        <span className="text-blue-500"><Info size="S" /></span>
                         <Text className="text-sm text-gray-600">
                             A new site will be created with the selected template content.
                         </Text>
                     </Flex>
-                </View>
+                </div>
             )}
 
             <style>{`

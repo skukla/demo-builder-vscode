@@ -10,8 +10,14 @@
  * Extracted from DaLiveService for better modularity and testability.
  */
 
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { Logger } from '@/types/logger';
+import {
+    DA_LIVE_BASE_URL,
+    CITISIGNAL_SOURCE,
+    MAX_RETRY_ATTEMPTS,
+    RETRYABLE_STATUS_CODES,
+    getRetryDelay,
+    normalizePath,
+} from './daLiveConstants';
 import {
     DaLiveError,
     DaLiveAuthError,
@@ -21,14 +27,8 @@ import {
     type DaLiveCopyResult,
     type DaLiveProgressCallback,
 } from './types';
-import {
-    DA_LIVE_BASE_URL,
-    CITISIGNAL_SOURCE,
-    MAX_RETRY_ATTEMPTS,
-    RETRYABLE_STATUS_CODES,
-    getRetryDelay,
-    normalizePath,
-} from './daLiveConstants';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { Logger } from '@/types/logger';
 
 /**
  * Token provider interface for dependency injection
@@ -96,7 +96,7 @@ export class DaLiveContentOperations {
             throw this.createErrorFromResponse(response, 'list directory');
         }
 
-        return await response.json();
+        return response.json();
     }
 
     /**

@@ -7,10 +7,10 @@
  * Part of Step 3: Handler Registry Simplification
  */
 
-import { defineHandlers } from '@/types/handlers';
 import { handleCheckPrerequisites } from './checkHandler';
 import { handleContinuePrerequisites } from './continueHandler';
 import { handleInstallPrerequisite } from './installHandler';
+import { defineHandlers } from '@/types/handlers';
 
 /**
  * Prerequisites feature handler map

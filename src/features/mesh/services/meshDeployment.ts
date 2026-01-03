@@ -150,14 +150,19 @@ export async function deployMeshComponent(
             throw new Error(verificationResult.error || 'Mesh deployment verification failed');
         }
 
+        const { meshId, endpoint } = verificationResult;
+        if (!meshId || !endpoint) {
+            throw new Error('Mesh deployment verification succeeded but meshId or endpoint is missing');
+        }
+
         logger.info('[Mesh Deployment] ✅ Mesh verified and deployed successfully');
         onProgress?.('✓ Deployment Complete', 'Mesh deployed successfully');
 
         return {
             success: true,
             data: {
-                meshId: verificationResult.meshId!,
-                endpoint: verificationResult.endpoint!,
+                meshId,
+                endpoint,
             },
         };
 

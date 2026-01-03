@@ -10,10 +10,11 @@
  */
 
 import * as vscode from 'vscode';
+import { toggleLogsPanel } from '../services/lifecycleService';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { validateProjectPath, validateURL } from '@/core/validation';
-import { toggleLogsPanel } from '../services/lifecycleService';
 import { ErrorCode } from '@/types/errorCodes';
+import { defineHandlers } from '@/types/handlers';
 import { SimpleResult, DataResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 
@@ -108,8 +109,6 @@ export async function handleCancelAuthPolling(context: HandlerContext): Promise<
  * Opens the project directory in VS Code, triggering an Extension Host restart.
  */
 export async function handleOpenProject(context: HandlerContext): Promise<SimpleResult> {
-    const vscode = await import('vscode');
-
     context.logger.info('[Project Creation] ✅ openProject message received');
     context.logger.debug(`[Project Creation] Current panel: ${context.panel ? 'exists' : 'undefined'}`);
 
@@ -385,7 +384,6 @@ async function loadComponents(context: HandlerContext): Promise<void> {
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
 
-import { defineHandlers } from '@/types/handlers';
 
 /**
  * Lifecycle feature handler map

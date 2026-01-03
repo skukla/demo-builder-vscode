@@ -12,14 +12,32 @@
 
 import { Octokit } from '@octokit/core';
 import { retry } from '@octokit/plugin-retry';
-import { getLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
+import { injectTokenIntoUrl } from './githubHelpers';
+import type { GitHubTokenService } from './githubTokenService';
 import type {
     GitHubRepo,
     GitHubApiError,
 } from './types';
-import type { GitHubTokenService } from './githubTokenService';
-import { injectTokenIntoUrl } from './githubHelpers';
+import { getLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
+
+/** GitHub API Repository response type for /user/repos endpoint */
+interface GitHubApiRepo {
+    id: number;
+    name: string;
+    full_name: string;
+    html_url: string;
+    clone_url: string;
+    default_branch: string;
+    description: string | null;
+    updated_at: string | null;
+    private: boolean;
+    permissions?: {
+        admin?: boolean;
+        push?: boolean;
+        pull?: boolean;
+    };
+}
 
 /** Error messages for repository operations */
 const ERROR_MESSAGES = {
@@ -155,9 +173,9 @@ export class GitHubRepoOperations {
                 const repos = response.data;
 
                 // Filter to only repos with push access and map to our type
-                const mappedRepos = repos
-                    .filter((repo: any) => repo.permissions?.push)
-                    .map((repo: any) => ({
+                const mappedRepos = (repos as GitHubApiRepo[])
+                    .filter((repo) => repo.permissions?.push)
+                    .map((repo) => ({
                         id: repo.id,
                         name: repo.name,
                         fullName: repo.full_name,

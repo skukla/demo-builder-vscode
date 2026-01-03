@@ -1,8 +1,8 @@
 // @ts-expect-error - Adobe SDK lacks TypeScript declarations
 import * as sdk from '@adobe/aio-lib-console';
 import { getLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
 import { validateAccessToken } from '@/core/validation';
+import type { Logger } from '@/types/logger';
 
 /**
  * Manages Adobe Console SDK client for high-performance operations
@@ -115,8 +115,11 @@ export class AdobeSDKClient {
             // CRITICAL FIX: Use token from disk (inspectToken) instead of Adobe IMS Context cache
             // getToken('cli') reads from Adobe IMS Context memory cache which can be stale after login
             // inspectToken() reads directly from Adobe CLI config file, always current
-            // Token is guaranteed to exist if valid=true, no need for additional check
-            const accessToken = tokenInspection.token!;
+            const accessToken = tokenInspection.token;
+            if (!accessToken) {
+                this.debugLogger.warn('[Auth SDK] Token inspection returned valid=true but no token');
+                return;
+            }
 
             // SECURITY: Validate access token format before using it
             // This checks for shell metacharacters that inspectToken() doesn't validate

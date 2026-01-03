@@ -6,18 +6,18 @@
  * Includes a kebab menu for additional actions like Export.
  */
 
-import { Flex, Text } from '@/core/ui/components/aria';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import React, { useCallback, useMemo } from 'react';
-import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import styles from '../styles/projects-dashboard.module.css';
+import { ProjectActionsMenu } from './ProjectActionsMenu';
+import { Flex, Text } from '@/core/ui/components/aria';
+import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
-import { ProjectActionsMenu } from './ProjectActionsMenu';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import type { Project } from '@/types/base';
 
 export interface ProjectRowProps {
@@ -85,7 +85,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
             onKeyDown={handleKeyDown}
             className={styles.projectRow}
         >
-            <Flex alignItems="center" justifyContent="space-between" width="100%">
+            <Flex alignItems="center" justifyContent="space-between" style={{ width: '100%' }}>
                 {/* Left: Status dot + Name + Components */}
                 <Flex alignItems="center" gap="size-150">
                     <StatusDot variant={statusVariant} size={8} />

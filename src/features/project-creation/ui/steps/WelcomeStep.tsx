@@ -1,10 +1,9 @@
-import { TextField, Text } from '@/core/ui/components/aria';
 import React, { useEffect, useCallback } from 'react';
 import { BrandGallery } from '../components/BrandGallery';
 import { deriveComponentsFromStack } from '../helpers/stackHelpers';
+import { TextField, Text } from '@/core/ui/components/aria';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
-import { cn } from '@/core/ui/utils/classNames';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
 import { normalizeProjectName } from '@/features/project-creation/helpers/formatters';
@@ -28,7 +27,7 @@ interface WelcomeStepProps extends BaseStepProps {
     onArchitectureChange?: (oldStackId: string, newStackId: string) => void;
 }
 
-export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], initialViewMode, packages, stacks, onArchitectureChange }: WelcomeStepProps) {
+export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], packages, stacks, onArchitectureChange }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
 
@@ -97,7 +96,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 input.focus();
                 input.select();
             }
-        }, TIMEOUTS.STEP_CONTENT_FOCUS + 100); // Delay to allow Spectrum components to mount and win focus race
+        }, TIMEOUTS.UI.FOCUS_FALLBACK + 100); // Delay to allow Spectrum components to mount and win focus race
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount
 

@@ -10,18 +10,18 @@
  * 4. Paste token in VS Code → Token validated and stored
  */
 
-import React, { useState } from 'react';
-import { Text, TextField, Flex } from '@/core/ui/components/aria';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import React, { useState } from 'react';
+import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
+import { Text, TextField, Flex } from '@/core/ui/components/aria';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useCanProceed } from '@/core/ui/hooks';
 import { vscode } from '@/core/ui/utils/vscode-api';
-import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
 import type { BaseStepProps } from '@/types/wizard';
 
 // Bookmarklet code for easy token extraction from DA.live
@@ -180,7 +180,6 @@ export function DaLiveSetupStep({
         isAuthenticating,
         error: authError,
         setupComplete,
-        openDaLive,
         storeToken,
     } = useDaLiveAuth({ state, updateState });
 
@@ -324,7 +323,7 @@ export function DaLiveSetupStep({
                             value={tokenInput}
                             onChange={setTokenInput}
                             type="password"
-                            width="100%"
+                            className="w-full"
                             placeholder="Paste your token here..."
                             autoFocus
                         />

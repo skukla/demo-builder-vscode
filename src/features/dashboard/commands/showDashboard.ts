@@ -2,17 +2,17 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
-import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { createBundleUris } from '@/core/utils/bundleUri';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
+import { loadDemoPackages } from '@/features/project-creation/ui/helpers/demoPackageLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { Project, ComponentInstance } from '@/types';
 import type { DemoPackage } from '@/types/demoPackages';
-import type { Stack, StacksConfig } from '@/types/stacks';
-import { loadDemoPackages } from '@/features/project-creation/ui/helpers/demoPackageLoader';
 import { HandlerContext, SharedState } from '@/types/handlers';
+import type { Stack, StacksConfig } from '@/types/stacks';
 import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl } from '@/types/typeGuards';
 
 /**
@@ -48,8 +48,9 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     protected async getWebviewContent(): Promise<string> {
+        const panel = this.requirePanel();
         const bundleUris = createBundleUris({
-            webview: this.panel!.webview,
+            webview: panel.webview,
             extensionPath: this.context.extensionPath,
             featureBundleName: 'dashboard',
         });
@@ -60,7 +61,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         return getWebviewHTMLWithBundles({
             bundleUris,
             nonce,
-            cspSource: this.panel!.webview.cspSource,
+            cspSource: panel.webview.cspSource,
             title: 'Project Dashboard',
         });
     }
@@ -158,7 +159,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         for (const messageType of messageTypes) {
             comm.onStreaming(messageType, async (data: unknown) => {
                 const context = this.createHandlerContext();
-                return await dispatchHandler(dashboardHandlers, context, messageType, data);
+                return dispatchHandler(dashboardHandlers, context, messageType, data);
             });
         }
     }
@@ -266,7 +267,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             // Using type assertion since dashboard handlers don't actually use these managers
             prereqManager: undefined as unknown as HandlerContext['prereqManager'],
             authManager: undefined as unknown as HandlerContext['authManager'],
-            componentHandler: undefined as unknown as HandlerContext['componentHandler'],
             errorLogger: undefined as unknown as HandlerContext['errorLogger'],
             progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
             stepLogger: undefined as unknown as HandlerContext['stepLogger'],

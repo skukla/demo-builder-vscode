@@ -7,10 +7,6 @@
  * @module features/dashboard/ui/components/ActionGrid
  */
 
-import {
-    ActionButton,
-    Text,
-} from '@/core/ui/components/aria';
 import Code from '@spectrum-icons/workflow/Code';
 import Delete from '@spectrum-icons/workflow/Delete';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
@@ -21,8 +17,12 @@ import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
-import { GridLayout } from '@/core/ui/components/layout';
 import styles from '../styles/dashboard.module.css';
+import {
+    ActionButton,
+    Text,
+} from '@/core/ui/components/aria';
+import { GridLayout } from '@/core/ui/components/layout';
 
 /**
  * Props for the ActionGrid component
@@ -97,7 +97,6 @@ export function ActionGrid({
             {!isEds && !isRunning && (
                 <ActionButton
                     onPress={handleStartDemo}
-                    isQuiet
                     isDisabled={isStartDisabled}
                     className={styles.actionButton}
                     data-action-button
@@ -109,7 +108,6 @@ export function ActionGrid({
             {!isEds && isRunning && (
                 <ActionButton
                     onPress={handleStopDemo}
-                    isQuiet
                     isDisabled={isStopDisabled}
                     className={styles.actionButton}
                     data-action-button
@@ -123,7 +121,6 @@ export function ActionGrid({
             {isEds && (
                 <ActionButton
                     onPress={handleOpenLiveSite}
-                    isQuiet
                     isDisabled={isOpeningBrowser}
                     className={styles.actionButton}
                     data-action-button
@@ -137,7 +134,6 @@ export function ActionGrid({
             {!isEds && (
                 <ActionButton
                     onPress={handleOpenBrowser}
-                    isQuiet
                     isDisabled={!isRunning || isOpeningBrowser}
                     className={styles.actionButton}
                 >
@@ -149,7 +145,6 @@ export function ActionGrid({
             {/* Logs */}
             <ActionButton
                 onPress={handleViewLogs}
-                isQuiet
                 className={`${styles.actionButton} ${isLogsHoverSuppressed ? styles.hoverSuppressed : ''}`}
             >
                 <ViewList size="L" />
@@ -159,7 +154,6 @@ export function ActionGrid({
             {/* Deploy Mesh */}
             <ActionButton
                 onPress={handleDeployMesh}
-                isQuiet
                 isDisabled={isMeshActionDisabled}
                 className={styles.actionButton}
                 data-action="deploy-mesh"
@@ -171,7 +165,6 @@ export function ActionGrid({
             {/* Configure */}
             <ActionButton
                 onPress={handleConfigure}
-                isQuiet
                 isDisabled={isMeshActionDisabled}
                 className={styles.actionButton}
             >
@@ -182,7 +175,6 @@ export function ActionGrid({
             {/* View Components */}
             <ActionButton
                 onPress={handleViewComponents}
-                isQuiet
                 className={styles.actionButton}
             >
                 <FolderOpen size="L" />
@@ -192,7 +184,6 @@ export function ActionGrid({
             {/* Developer Console */}
             <ActionButton
                 onPress={handleOpenDevConsole}
-                isQuiet
                 className={styles.actionButton}
             >
                 <Code size="L" />
@@ -202,7 +193,6 @@ export function ActionGrid({
             {/* Delete Project */}
             <ActionButton
                 onPress={handleDeleteProject}
-                isQuiet
                 className={styles.actionButton}
             >
                 <Delete size="L" />

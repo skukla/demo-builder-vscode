@@ -4,18 +4,14 @@
  * Maps message types to handler functions from multiple features.
  * Used by createProject command for message dispatch.
  */
-
-import { defineHandlers } from '@/types/handlers';
-
 import * as creation from './';
 import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
-
-// Import all handler modules
 import * as eds from '@/features/eds/handlers';
 import * as lifecycle from '@/features/lifecycle/handlers';
 import * as mesh from '@/features/mesh/handlers';
 import * as prerequisites from '@/features/prerequisites/handlers';
+import { defineHandlers } from '@/types/handlers';
 
 /**
  * Composite handler map for project creation wizard

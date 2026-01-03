@@ -7,7 +7,6 @@
  * Part of Step 3: Handler Registry Simplification
  */
 
-import { defineHandlers } from '@/types/handlers';
 import {
     handleGetProjects,
     handleSelectProject,
@@ -25,6 +24,7 @@ import {
     handleOpenSettings,
     handleSetViewModeOverride,
 } from './dashboardHandlers';
+import { defineHandlers } from '@/types/handlers';
 
 /**
  * Projects list feature handler map

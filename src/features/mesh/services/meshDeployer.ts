@@ -1,11 +1,11 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ServiceLocator } from '@/core/di';
-import type { Logger } from '@/types/logger';
 import { validateMeshId } from '@/core/validation';
 import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError } from '@/types/errors';
+import type { Logger } from '@/types/logger';
 import { DataResult } from '@/types/results';
 
 export class MeshDeployer {

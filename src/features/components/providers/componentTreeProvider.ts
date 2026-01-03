@@ -5,7 +5,7 @@ import { StateManager } from '@/core/state';
 import { CustomIconPaths, Project } from '@/types';
 import { getComponentInstanceEntries } from '@/types/typeGuards';
 
-type FileSystemItem = ComponentFolder | FileItem | ProjectItem;
+export type FileSystemItem = ComponentFolder | FileItem | ProjectItem;
 
 interface RecentProject {
     name: string;

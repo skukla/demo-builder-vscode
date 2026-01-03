@@ -5,12 +5,12 @@
  * Renders the Sidebar component with communication to the extension.
  */
 
-import { Flex, ProgressCircle } from '@/core/ui/components/aria';
 import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import '@/core/ui/styles/custom-spectrum.css';
 import type { SidebarContext } from '../types';
 import { Sidebar } from './Sidebar';
+import { Flex, ProgressCircle } from '@/core/ui/components/aria';
+import '@/core/ui/styles/custom-spectrum.css';
 
 // Acquire VS Code API
 declare const acquireVsCodeApi: () => {

@@ -5,8 +5,8 @@
  */
 
 import React from 'react';
-import { ProjectCard } from './ProjectCard';
 import styles from '../styles/projects-dashboard.module.css';
+import { ProjectCard } from './ProjectCard';
 import type { Project } from '@/types/base';
 
 export interface ProjectsGridProps {

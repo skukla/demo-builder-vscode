@@ -5,6 +5,7 @@ import { HandlerContext, SharedState } from '@/commands/handlers/HandlerContext'
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ServiceLocator } from '@/core/di';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
 import { createBundleUris } from '@/core/utils/bundleUri';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
@@ -14,7 +15,6 @@ import { AuthenticationService } from '@/features/authentication';
 import { ComponentHandler } from '@/features/components/handlers/componentHandler';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 // Handler utilities and handlers
-import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { projectCreationHandlers, needsProgressCallback } from '@/features/project-creation/handlers';
 import {
     formatGroupName as formatGroupNameHelper,
@@ -207,8 +207,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     protected async getWebviewContent(): Promise<string> {
+        const panel = this.requirePanel();
         const bundleUris = createBundleUris({
-            webview: this.panel!.webview,
+            webview: panel.webview,
             extensionPath: this.context.extensionPath,
             featureBundleName: 'wizard',
         });
@@ -217,12 +218,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
         // Get base URI for media assets
         const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
-        const baseUri = this.panel!.webview.asWebviewUri(mediaPath);
+        const baseUri = panel.webview.asWebviewUri(mediaPath);
 
         return getWebviewHTMLWithBundles({
             bundleUris,
             nonce,
-            cspSource: this.panel!.webview.cspSource,
+            cspSource: panel.webview.cspSource,
             title: 'Adobe Demo Builder',
             baseUri,
         });
@@ -304,7 +305,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Managers
             prereqManager: this.prereqManager,
             authManager: this.authManager,
-            componentHandler: this.componentHandler,
             errorLogger: this.errorLogger,
             progressUnifier: this.progressUnifier,
             stepLogger,
@@ -363,13 +363,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         });
                     };
                     const context = await this.createHandlerContext();
-                    return await dispatchHandler(projectCreationHandlers, context, messageType, { ...(data as object), onProgress });
+                    return dispatchHandler(projectCreationHandlers, context, messageType, { ...(data as object), onProgress });
                 });
             } else {
                 // Standard handler registration (all other handlers)
                 comm.onStreaming(messageType, async (data: unknown) => {
                     const context = await this.createHandlerContext();
-                    return await dispatchHandler(projectCreationHandlers, context, messageType, data);
+                    return dispatchHandler(projectCreationHandlers, context, messageType, data);
                 });
             }
         }

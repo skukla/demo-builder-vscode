@@ -1,10 +1,9 @@
-import { Text } from '@/core/ui/components/aria';
 import React from 'react';
+import { Text } from '@/core/ui/components/aria';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
-import { useCanProceed } from '@/core/ui/hooks';
 import { SelectionStepContent } from '@/core/ui/components/selection';
-import { useSelectionStep } from '@/core/ui/hooks';
 import { ConfigurationSummary } from '@/core/ui/components/wizard';
+import { useCanProceed , useSelectionStep } from '@/core/ui/hooks';
 import { Workspace } from '@/types/webview';
 import { TrackableStepProps } from '@/types/wizard';
 
@@ -110,7 +109,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                         // Show name as description if different from title
                         if (item.title && item.name && item.title !== item.name) {
                             return (
-                                <Text slot="description" className="text-sm text-gray-600">
+                                <Text className="text-sm text-gray-600">
                                     {item.name}
                                 </Text>
                             );

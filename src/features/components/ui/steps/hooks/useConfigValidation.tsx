@@ -6,8 +6,8 @@
  */
 import { useMemo } from 'react';
 import { ServiceGroup } from '../ComponentConfigStep';
-import { ComponentConfigs } from '@/types/webview';
 import { url, pattern } from '@/core/validation/Validator';
+import { ComponentConfigs } from '@/types/webview';
 
 interface ConfigValidationResult {
     isValid: boolean;
@@ -69,7 +69,7 @@ export function useConfigValidation(
                 if (field.validation?.pattern) {
                     const patternValidator = pattern(
                         new RegExp(field.validation.pattern),
-                        field.validation.message || 'Invalid format'
+                        field.validation.message || 'Invalid format',
                     );
                     const result = patternValidator(value);
                     if (!result.valid && result.error) {

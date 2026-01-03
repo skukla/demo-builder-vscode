@@ -17,13 +17,9 @@
  * - Logger/StepLogger for logging
  */
 
-import { getLogger, StepLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
-import type { CommandExecutor } from '@/core/shell';
-import { formatDuration } from '@/core/utils';
+import { mapOrganizations, mapProjects, mapWorkspaces } from './adobeEntityMapper';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
-import { mapOrganizations, mapProjects, mapWorkspaces } from './adobeEntityMapper';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -33,6 +29,10 @@ import type {
     RawAdobeWorkspace,
     SDKResponse,
 } from './types';
+import { getLogger, StepLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
+import { formatDuration } from '@/core/utils';
+import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
 /**

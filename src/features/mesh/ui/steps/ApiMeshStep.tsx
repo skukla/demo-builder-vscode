@@ -1,15 +1,15 @@
-import { Text, Flex, Button } from '@/core/ui/components/aria';
 import Info from '@spectrum-icons/workflow/Info';
 import React, { useCallback } from 'react';
 import { useMeshOperations } from '../hooks/useMeshOperations';
 import { MeshErrorDialog } from './components/MeshErrorDialog';
 import { MeshStatusDisplay } from './components/MeshStatusDisplay';
 import { isMeshDataReady, isReadyForMeshCreation } from './meshPredicates';
+import { Text, Flex, Button } from '@/core/ui/components/aria';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { ConfigurationSummary } from '@/core/ui/components/wizard';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WizardStep } from '@/types/webview';
 import { BaseStepProps } from '@/types/wizard';
 
@@ -87,7 +87,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                     {showCreateMesh && (
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center">
-                                <Info size="L" className="text-blue-600" />
+                                <span className="text-blue-600"><Info size="L" /></span>
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text className="text-xl font-medium">Ready for Mesh Creation</Text>
                                     <Text className="text-sm text-gray-600 text-center-max-450">

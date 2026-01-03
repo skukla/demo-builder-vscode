@@ -25,9 +25,8 @@ import { validateURL } from '@/core/validation';
 import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
-import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
-import { MessageHandler, HandlerContext } from '@/types/handlers';
+import { MessageHandler, defineHandlers } from '@/types/handlers';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 
 /**
@@ -515,7 +514,6 @@ export const handleNavigateBack: MessageHandler = async (context) => {
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
 
-import { defineHandlers } from '@/types/handlers';
 
 /**
  * Dashboard feature handler map

@@ -10,14 +10,14 @@
 
 import { Octokit } from '@octokit/core';
 import { retry } from '@octokit/plugin-retry';
-import { getLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
+import type { GitHubTokenService } from './githubTokenService';
 import type {
     GitHubFileContent,
     GitHubFileResult,
     GitHubApiError,
 } from './types';
-import type { GitHubTokenService } from './githubTokenService';
+import { getLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 /** Error messages for file operations */
 const ERROR_MESSAGES = {

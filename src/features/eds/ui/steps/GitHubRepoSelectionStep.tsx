@@ -14,6 +14,10 @@
  * Uses the shared useSelectionStep hook and SelectionStepContent component.
  */
 
+import Add from '@spectrum-icons/workflow/Add';
+import Alert from '@spectrum-icons/workflow/Alert';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import Info from '@spectrum-icons/workflow/Info';
 import React, { useEffect, useCallback, useState } from 'react';
 import {
     Button,
@@ -25,18 +29,14 @@ import {
     TextField,
     View,
 } from '@/core/ui/components/aria';
-import Add from '@spectrum-icons/workflow/Add';
-import Alert from '@spectrum-icons/workflow/Alert';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import Info from '@spectrum-icons/workflow/Info';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
+import { SelectionStepContent } from '@/core/ui/components/selection';
+import { useSelectionStep } from '@/core/ui/hooks';
 import {
     isValidRepositoryName,
     getRepositoryNameError,
     normalizeRepositoryName,
 } from '@/core/validation/normalizers';
-import { SelectionStepContent } from '@/core/ui/components/selection';
-import { useSelectionStep } from '@/core/ui/hooks';
 import type { GitHubRepoItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 
@@ -54,7 +54,7 @@ function StatusSection({ label, value, status, emptyText = 'Not selected' }: Sta
     const renderIcon = () => {
         switch (status) {
             case 'completed':
-                return <CheckmarkCircle size="S" className="text-green-600" />;
+                return <span className="text-green-600"><CheckmarkCircle size="S" /></span>;
             default:
                 return null;
         }
@@ -74,11 +74,11 @@ function StatusSection({ label, value, status, emptyText = 'Not selected' }: Sta
     };
 
     return (
-        <View marginTop="size-200" marginBottom="size-200">
+        <View className="mt-200 mb-200">
             <Text className="text-xs font-semibold text-gray-700 text-uppercase letter-spacing-05">
                 {label}
             </Text>
-            <View marginTop="size-100">
+            <View className="mt-100">
                 {renderContent()}
             </View>
         </View>
@@ -116,8 +116,8 @@ function GitHubConfigurationSummary({
     const isRepoComplete = repoMode === 'new' ? !!repoName : !!selectedRepo;
 
     return (
-        <View height="100%">
-            <Heading level={3} marginBottom="size-300">
+        <View style={{ height: '100%' }}>
+            <Heading level={3} className="mb-300">
                 Configuration Summary
             </Heading>
 
@@ -308,7 +308,7 @@ export function GitHubRepoSelectionStep({
             {/* Create New Repository mode */}
             {repoMode === 'new' && (
                 <>
-                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-300">
+                    <Flex justifyContent="space-between" alignItems="center" className="mb-300">
                         <Heading level={2}>New Repository</Heading>
                         <Button variant="secondary" onPress={handleUseExisting}>
                             Use Existing
@@ -324,24 +324,22 @@ export function GitHubRepoSelectionStep({
                         errorMessage={repoNameError}
                         placeholder="my-eds-project"
                         description={githubUser ? `Will be created as ${githubUser.login}/${repoName || 'my-eds-project'}` : 'Name for your new GitHub repository'}
-                        width="100%"
+                        className="w-full"
                         isRequired
                         autoFocus
                     />
 
-                    <View
-                        backgroundColor="gray-50"
-                        borderRadius="medium"
-                        padding="size-200"
-                        marginTop="size-300"
+                    <div
+                        className="mt-300 p-200"
+                        style={{ backgroundColor: 'var(--spectrum-global-color-gray-50)', borderRadius: 'var(--spectrum-alias-border-radius-regular)' }}
                     >
                         <Flex alignItems="center" gap="size-150">
-                            <Info size="S" className="text-blue-500" />
+                            <span className="text-blue-500"><Info size="S" /></span>
                             <Text className="text-sm text-gray-600">
                                 Repository will be created from the EDS template with starter content.
                             </Text>
                         </Flex>
-                    </View>
+                    </div>
                 </>
             )}
 
@@ -383,7 +381,7 @@ export function GitHubRepoSelectionStep({
                             ariaLabel: 'GitHub Repositories',
                         }}
                         renderDescription={(item) => (
-                            <Text slot="description">
+                            <Text>
                                 {item.isPrivate && (
                                     <span className="repo-private-badge">Private</span>
                                 )}
@@ -394,7 +392,7 @@ export function GitHubRepoSelectionStep({
 
                     {/* Reset to template option - only show when repo is selected */}
                     {selectedRepo && (
-                        <Flex direction="column" gap="size-100" marginTop="size-300">
+                        <Flex direction="column" gap="size-100" className="mt-300">
                             <Checkbox
                                 isSelected={resetToTemplate}
                                 onChange={handleResetToTemplateChange}
@@ -404,16 +402,15 @@ export function GitHubRepoSelectionStep({
 
                             {/* Warning notice - fixed height container prevents layout jump */}
                             <View
-                                marginStart="size-300"
-                                minHeight="size-250"
-                                className="reset-warning-container"
+                                className="reset-warning-container ml-300"
+                                style={{ minHeight: 'var(--spectrum-global-dimension-size-250)' }}
                             >
                                 <Flex
                                     alignItems="center"
                                     gap="size-100"
                                     className={resetToTemplate ? 'reset-warning-visible' : 'reset-warning-hidden'}
                                 >
-                                    <Alert size="S" className="text-orange-500 flex-shrink-0" />
+                                    <span className="text-orange-500 flex-shrink-0"><Alert size="S" /></span>
                                     <Text className="text-xs text-orange-600">
                                         This will delete and recreate the repository with the selected template content.
                                     </Text>

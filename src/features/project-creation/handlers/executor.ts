@@ -23,17 +23,17 @@ import {
 import { ProgressTracker } from './shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type {
+    EdsProjectConfig,
+    EdsProgressCallback,
+    EdsProjectSetupResult,
+} from '@/features/eds/services/types';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
 import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 
 // EDS service imports (lazy-loaded, only instantiated for EDS stacks)
-import type {
-    EdsProjectConfig,
-    EdsProgressCallback,
-    EdsProjectSetupResult,
-} from '@/features/eds/services/types';
 
 // ============================================================================
 // Helper Functions
@@ -134,8 +134,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     // Determine project path based on edit mode
     const isEditMode = typedConfig.editMode && typedConfig.editProjectPath;
-    const projectPath = isEditMode
-        ? typedConfig.editProjectPath!
+    const projectPath = isEditMode && typedConfig.editProjectPath
+        ? typedConfig.editProjectPath
         : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
 
     if (isEditMode) {
@@ -231,7 +231,10 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             // TokenManager returns undefined, TokenProvider expects null - adapt the type
             const tokenProvider = {
                 getAccessToken: async () => {
-                    const token = await context.authManager!.getTokenManager().getAccessToken();
+                    if (!context.authManager) {
+                        throw new Error('AuthManager not available');
+                    }
+                    const token = await context.authManager.getTokenManager().getAccessToken();
                     return token ?? null;
                 },
             };

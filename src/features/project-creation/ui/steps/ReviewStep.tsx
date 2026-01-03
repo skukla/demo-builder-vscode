@@ -1,7 +1,7 @@
-import { View, Text, Flex, Heading, Divider } from '@/core/ui/components/aria';
 import React, { useMemo } from 'react';
 import { hasRequiredReviewData } from './reviewPredicates';
 import { resolveServiceNames, buildComponentInfoList } from './reviewStepHelpers';
+import { View, Text, Flex, Heading, Divider } from '@/core/ui/components/aria';
 import { useCanProceed } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -94,9 +94,9 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
         () => resolveServiceNames(
             state.components?.backend,
             componentsData?.backends,
-            componentsData?.services
+            componentsData?.services,
         ),
-        [state.components?.backend, componentsData?.backends, componentsData?.services]
+        [state.components?.backend, componentsData?.backends, componentsData?.services],
     );
 
     // Derive component info using extracted helper
@@ -106,9 +106,9 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
             state.apiMesh?.meshStatus,
             componentsData,
             hasDemoInspector,
-            backendServiceNames
+            backendServiceNames,
         ),
-        [state.components, state.apiMesh?.meshStatus, componentsData, hasDemoInspector, backendServiceNames]
+        [state.components, state.apiMesh?.meshStatus, componentsData, hasDemoInspector, backendServiceNames],
     );
 
     // Adobe context info - prefer title (human-readable) over name (often ID-like)
