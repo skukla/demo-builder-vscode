@@ -20,10 +20,10 @@ import {
     Text,
     FieldError,
 } from 'react-aria-components';
-import { cn } from '@/core/ui/utils/classNames';
-import { translateSpectrumToken } from '@/core/ui/utils/spectrumTokens';
 import styles from './RadioGroup.module.css';
 import type { ValidationState } from './TextField';
+import { cn } from '@/core/ui/utils/classNames';
+import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
 
 export type RadioGroupOrientation = 'horizontal' | 'vertical';
 
@@ -51,7 +51,7 @@ export interface RadioGroupProps {
     /** Additional CSS class */
     className?: string;
     /** Margin bottom (Spectrum dimension token or CSS value) */
-    marginBottom?: string;
+    marginBottom?: DimensionValue;
 }
 
 /**
@@ -85,7 +85,7 @@ export function RadioGroup({
                 styles.radioGroup,
                 orientation === 'horizontal' && styles.horizontal,
                 isDisabled && styles.disabled,
-                className
+                className,
             )}
             value={value}
             defaultValue={defaultValue}
@@ -104,7 +104,7 @@ export function RadioGroup({
             <div
                 className={cn(
                     styles.options,
-                    orientation === 'horizontal' && styles.horizontal
+                    orientation === 'horizontal' && styles.horizontal,
                 )}
             >
                 {children}
@@ -147,7 +147,7 @@ export const Radio = forwardRef<HTMLLabelElement, RadioProps>(
                             className={cn(
                                 styles.circle,
                                 isSelected && styles.selected,
-                                disabled && styles.disabled
+                                disabled && styles.disabled,
                             )}
                             data-selected={isSelected || undefined}
                             data-disabled={disabled || undefined}
@@ -161,7 +161,7 @@ export const Radio = forwardRef<HTMLLabelElement, RadioProps>(
                 )}
             </AriaRadio>
         );
-    }
+    },
 );
 
 Radio.displayName = 'Radio';

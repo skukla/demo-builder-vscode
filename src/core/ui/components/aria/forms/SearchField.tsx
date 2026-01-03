@@ -20,9 +20,9 @@ import {
     Input,
     Button,
 } from 'react-aria-components';
+import styles from './SearchField.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
-import styles from './SearchField.module.css';
 
 export interface SearchFieldProps {
     /** Current search value */
@@ -68,7 +68,7 @@ export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(
             'aria-label': ariaLabel,
             className,
         },
-        ref
+        ref,
     ) {
         const style: CSSProperties = {};
         if (width !== undefined) {
@@ -84,7 +84,7 @@ export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(
                 className={cn(
                     styles.searchField,
                     isQuiet && styles.quiet,
-                    className
+                    className,
                 )}
                 isDisabled={isDisabled}
                 value={value}
@@ -126,7 +126,7 @@ export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(
                 )}
             </AriaSearchField>
         );
-    }
+    },
 );
 
 SearchField.displayName = 'SearchField';

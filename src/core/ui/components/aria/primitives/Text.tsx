@@ -11,15 +11,15 @@
  */
 
 import React, { forwardRef, CSSProperties } from 'react';
+import styles from './Text.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
-import styles from './Text.module.css';
 
 export interface TextProps {
     /** Text content */
     children?: React.ReactNode;
     /** HTML element to render (default: span) */
-    elementType?: keyof JSX.IntrinsicElements;
+    elementType?: 'span' | 'p' | 'div' | 'label' | 'strong' | 'em' | 'small';
     /** Top margin using Spectrum tokens or pixels */
     marginTop?: DimensionValue;
     /** Bottom margin using Spectrum tokens or pixels */
@@ -55,7 +55,7 @@ export const Text = forwardRef<HTMLSpanElement, TextProps>(
                 {children}
             </Element>
         );
-    }
+    },
 );
 
 Text.displayName = 'Text';

@@ -87,7 +87,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                     {title}
                 </Heading>
                 {subtitle && (
-                    <Heading level={3} marginBottom="size-0" className={cn('font-normal', 'text-gray-600')}>
+                    <Heading level={3} className={cn('font-normal', 'text-gray-600', 'mb-0')}>
                         {subtitle}
                     </Heading>
                 )}

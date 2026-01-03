@@ -17,8 +17,8 @@
 
 import React, { forwardRef } from 'react';
 import { Button as AriaButton, ButtonProps as AriaButtonProps } from 'react-aria-components';
-import { cn } from '@/core/ui/utils/classNames';
 import styles from './ActionButton.module.css';
+import { cn } from '@/core/ui/utils/classNames';
 
 export interface ActionButtonProps extends Omit<AriaButtonProps, 'className' | 'style'> {
     /** Button content (typically icon or icon + text) */
@@ -42,7 +42,7 @@ export const ActionButton = forwardRef<HTMLButtonElement, ActionButtonProps>(
             className,
             ...ariaProps
         },
-        ref
+        ref,
     ) {
         return (
             <AriaButton
@@ -54,7 +54,7 @@ export const ActionButton = forwardRef<HTMLButtonElement, ActionButtonProps>(
                 {children}
             </AriaButton>
         );
-    }
+    },
 );
 
 ActionButton.displayName = 'ActionButton';

@@ -12,7 +12,6 @@
  */
 
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type {
     IDateProvider,
     ITimerProvider,
@@ -20,8 +19,9 @@ import type {
     ProgressHandler,
     ExecutionContext,
 } from './types';
-import type { Logger } from '@/types/logger';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
+import type { Logger } from '@/types/logger';
 
 /**
  * Progress type configuration

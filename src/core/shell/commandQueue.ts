@@ -4,10 +4,11 @@
  * Sequential command execution queue with resource locking support.
  */
 
+import type { ExecOptions } from 'child_process';
 import type { CommandResult, CommandRequest } from './types';
 
 export interface CommandQueueOptions {
-    executeCommand: (command: string, options?: any) => Promise<CommandResult>;
+    executeCommand: (command: string, options?: ExecOptions) => Promise<CommandResult>;
     executeExclusive: <T>(resource: string, operation: () => Promise<T>) => Promise<T>;
 }
 
@@ -32,7 +33,7 @@ export class CommandQueue {
      */
     queueCommand(
         command: string,
-        commandOptions?: any,
+        commandOptions?: ExecOptions,
         resourceLock?: string,
     ): Promise<CommandResult> {
         return new Promise((resolve, reject) => {

@@ -43,11 +43,11 @@ import {
     ModalOverlay,
     Heading,
 } from 'react-aria-components';
-import { cn } from '@/core/ui/utils/classNames';
 import { Button } from '../interactive/Button';
 import { Divider } from '../primitives/Divider';
-import { hasSlotChildren } from './DialogSlots';
 import styles from './Dialog.module.css';
+import { hasSlotChildren } from './DialogSlots';
+import { cn } from '@/core/ui/utils/classNames';
 
 /**
  * Context to pass close function to children
@@ -260,7 +260,7 @@ export function Dialog({
             className={cn(
                 styles.modal,
                 sizeClass,
-                className
+                className,
             )}
             data-size={size}
         >

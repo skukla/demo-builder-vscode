@@ -160,8 +160,10 @@ class WebviewClient {
         if (!this.vscodeApi) {
             this.initialize();
         }
-        // Safe non-null assertion: initialize() sets vscodeApi
-        return this.vscodeApi!;
+        if (!this.vscodeApi) {
+            throw new Error('WebviewClient: Failed to initialize VS Code API');
+        }
+        return this.vscodeApi;
     }
 
     // Wait for handshake to complete
@@ -253,11 +255,11 @@ class WebviewClient {
             this.initialize();
         }
 
+        const handlers = this.listeners.get(type) ?? new Set<(data: unknown) => void>();
         if (!this.listeners.has(type)) {
-            this.listeners.set(type, new Set());
+            this.listeners.set(type, handlers);
         }
-        // Safe non-null assertion: we just set it if it didn't exist
-        this.listeners.get(type)!.add(handler);
+        handlers.add(handler);
 
         // Return unsubscribe function
         return () => {

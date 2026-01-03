@@ -1,7 +1,7 @@
-import React, { useCallback } from 'react';
-import { Heading, Flex, Text } from '@/core/ui/components/aria';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
+import React, { useCallback } from 'react';
+import { Heading, Flex, Text } from '@/core/ui/components/aria';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface NavigationField {
@@ -92,7 +92,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                     isActive && 'nav-section-button-active',
                                 )}
                             >
-                                <Flex width="100%" justifyContent="space-between" alignItems="center">
+                                <Flex justifyContent="space-between" alignItems="center" style={{ width: '100%' }}>
                                     <Flex gap="size-100" alignItems="center">
                                         {isExpanded ? <ChevronDown size="S" /> : <ChevronRight size="S" />}
                                         <Text

@@ -10,9 +10,9 @@
  */
 
 import React, { forwardRef, CSSProperties } from 'react';
+import styles from './Divider.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
-import styles from './Divider.module.css';
 
 export interface DividerProps {
     /** Divider thickness: S (1px), M (2px), L (4px) */
@@ -58,7 +58,7 @@ export const Divider = forwardRef<HTMLHRElement, DividerProps>(
                 style={Object.keys(style).length > 0 ? style : undefined}
             />
         );
-    }
+    },
 );
 
 Divider.displayName = 'Divider';

@@ -11,9 +11,9 @@
  */
 
 import React, { forwardRef, CSSProperties } from 'react';
+import styles from './View.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { buildDimensionStyle, DimensionValue } from '@/core/ui/utils/spectrumTokens';
-import styles from './View.module.css';
 
 export interface ViewProps {
     /** View content */
@@ -73,7 +73,7 @@ export const View = forwardRef<HTMLDivElement, ViewProps>(
             className,
             style: styleProp,
         },
-        ref
+        ref,
     ) {
         // Build dimension styles using utility, merge with base style and position
         const baseStyle: CSSProperties = { ...styleProp };
@@ -83,7 +83,7 @@ export const View = forwardRef<HTMLDivElement, ViewProps>(
 
         const style = buildDimensionStyle(
             { width, height, left, top, right, bottom, marginTop, marginBottom, marginStart, marginEnd, padding },
-            baseStyle
+            baseStyle,
         );
 
         return (
@@ -95,7 +95,7 @@ export const View = forwardRef<HTMLDivElement, ViewProps>(
                 {children}
             </div>
         );
-    }
+    },
 );
 
 View.displayName = 'View';

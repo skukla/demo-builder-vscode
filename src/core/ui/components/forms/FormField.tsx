@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
-import { TextField, Flex, Text, Select, SelectItem } from '@/core/ui/components/aria';
 import { FieldHelpButton, FieldHelpContent } from './FieldHelpButton';
+import { TextField, Flex, Text, Select, SelectItem } from '@/core/ui/components/aria';
 
 export interface FormFieldOption {
     value: string;
@@ -118,8 +118,7 @@ export const FormField = React.memo<FormFieldProps>(({
                         isRequired={required}
                         validationState={showError ? 'invalid' : undefined}
                         errorMessage={showError ? error : undefined}
-                        width="100%"
-                        marginBottom="size-200"
+                        className="w-full mb-200"
                         {...(selectableDefaultProps || {})}
                     />
                 </div>
@@ -137,8 +136,7 @@ export const FormField = React.memo<FormFieldProps>(({
                         isRequired={required}
                         validationState={showError ? 'invalid' : undefined}
                         errorMessage={showError ? error : undefined}
-                        width="100%"
-                        marginBottom="size-200"
+                        className="w-full mb-200"
                         {...(selectableDefaultProps || {})}
                     />
                 </div>

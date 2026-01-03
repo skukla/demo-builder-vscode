@@ -23,9 +23,9 @@ import {
     Text,
     FieldError,
 } from 'react-aria-components';
+import styles from './TextField.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
-import styles from './TextField.module.css';
 
 export type ValidationState = 'valid' | 'invalid';
 
@@ -95,7 +95,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
             marginBottom,
             className,
         },
-        ref
+        ref,
     ) {
         const style: CSSProperties = {};
         if (width !== undefined) {
@@ -113,7 +113,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
                 className={cn(
                     styles.textField,
                     validationState && styles[validationState],
-                    className
+                    className,
                 )}
                 isDisabled={isDisabled}
                 isRequired={isRequired}
@@ -149,7 +149,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
                 )}
             </AriaTextField>
         );
-    }
+    },
 );
 
 TextField.displayName = 'TextField';

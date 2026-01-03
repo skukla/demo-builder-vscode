@@ -38,7 +38,7 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
     const containerProps = shouldCenter ? {
         alignItems: 'center' as const,
         justifyContent: 'center' as const,
-        height: '100%',
+        style: { height: '100%' },
     } : {
         alignItems: 'center' as const,
     };
@@ -81,7 +81,7 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
                     </Text>
                 )}
                 {helperText && (
-                    <Text className={helperTextClass} marginTop="size-100">
+                    <Text className={`${helperTextClass} mt-100`}>
                         {helperText}
                     </Text>
                 )}

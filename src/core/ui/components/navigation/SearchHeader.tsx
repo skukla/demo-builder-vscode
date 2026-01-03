@@ -12,12 +12,12 @@
  * - Configurable visibility and behavior
  */
 
-import React from 'react';
-import { Flex, Text, SearchField, ActionButton, Tooltip, TooltipTrigger } from '@/core/ui/components/aria';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
 import ViewList from '@spectrum-icons/workflow/ViewList';
+import React from 'react';
 import { Spinner } from '../ui/Spinner';
+import { Flex, Text, SearchField, ActionButton, Tooltip, TooltipTrigger } from '@/core/ui/components/aria';
 
 /** Available view modes */
 export type ViewMode = 'cards' | 'rows';

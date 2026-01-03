@@ -15,8 +15,8 @@
 
 import React, { forwardRef } from 'react';
 import { Checkbox as AriaCheckbox } from 'react-aria-components';
-import { cn } from '@/core/ui/utils/classNames';
 import styles from './Checkbox.module.css';
+import { cn } from '@/core/ui/utils/classNames';
 
 export interface CheckboxProps {
     /** Label content */
@@ -52,7 +52,7 @@ export const Checkbox = forwardRef<HTMLLabelElement, CheckboxProps>(
             isDisabled = false,
             className,
         },
-        ref
+        ref,
     ) {
         return (
             <AriaCheckbox
@@ -68,7 +68,7 @@ export const Checkbox = forwardRef<HTMLLabelElement, CheckboxProps>(
                         <div
                             className={cn(
                                 styles.box,
-                                selected && styles.selected
+                                selected && styles.selected,
                             )}
                             data-selected={selected || undefined}
                         >
@@ -93,7 +93,7 @@ export const Checkbox = forwardRef<HTMLLabelElement, CheckboxProps>(
                 )}
             </AriaCheckbox>
         );
-    }
+    },
 );
 
 Checkbox.displayName = 'Checkbox';

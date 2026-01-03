@@ -1,11 +1,11 @@
 /**
  * Helper functions for ConfigurationSummary component (SOP 3, 5 compliance)
  */
-import React from 'react';
-import { Flex, Text } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
+import React from 'react';
+import { Flex, Text } from '@/core/ui/components/aria';
 import { WizardState, WizardStep } from '@/types/webview';
 
 // Re-export pure helpers from separate file for testability
@@ -59,7 +59,7 @@ export function renderApiMeshStatus({
     if (currentStepIndex < meshStepIndex && hasVisitedMesh) {
         return (
             <Flex gap="size-100" alignItems="center">
-                <Clock size="S" className="text-blue-600" />
+                <span className="text-blue-600"><Clock size="S" /></span>
                 <Text className="text-sm text-gray-600">Waiting</Text>
             </Flex>
         );
@@ -69,7 +69,7 @@ export function renderApiMeshStatus({
     if (state.apiMesh?.isChecking) {
         return (
             <Flex gap="size-100" alignItems="center">
-                <Clock size="S" className="text-blue-600" />
+                <span className="text-blue-600"><Clock size="S" /></span>
                 <Text className="text-sm text-gray-600">Checking...</Text>
             </Flex>
         );
@@ -92,9 +92,9 @@ export function renderApiMeshStatus({
         return (
             <Flex gap="size-100" alignItems="center">
                 {isStepCompleted('api-mesh') ? (
-                    <CheckmarkCircle size="S" className="text-green-600" />
+                    <span className="text-green-600"><CheckmarkCircle size="S" /></span>
                 ) : (
-                    <Clock size="S" className="text-blue-600" />
+                    <span className="text-blue-600"><Clock size="S" /></span>
                 )}
                 <Text className="text-sm text-gray-600">Ready for creation</Text>
             </Flex>
@@ -105,7 +105,7 @@ export function renderApiMeshStatus({
     if (state.apiMesh?.apiEnabled === false) {
         return (
             <Flex gap="size-100" alignItems="center">
-                <AlertCircle size="S" className="text-red-600" />
+                <span className="text-red-600"><AlertCircle size="S" /></span>
                 <Text className="text-sm text-red-600">Not enabled</Text>
             </Flex>
         );
@@ -114,7 +114,7 @@ export function renderApiMeshStatus({
     // Default state
     return (
         <Flex gap="size-100" alignItems="center">
-            <Clock size="S" className="text-blue-600" />
+            <span className="text-blue-600"><Clock size="S" /></span>
             <Text className="text-sm text-gray-600">Pending</Text>
         </Flex>
     );
@@ -125,12 +125,12 @@ export function renderApiMeshStatus({
  */
 function renderMeshStatusIcon(meshStatus: string | undefined): React.ReactNode {
     if (meshStatus === 'deployed') {
-        return <CheckmarkCircle size="S" className="text-green-600" />;
+        return <span className="text-green-600"><CheckmarkCircle size="S" /></span>;
     }
     if (meshStatus === 'error') {
-        return <AlertCircle size="S" className="text-red-600" />;
+        return <span className="text-red-600"><AlertCircle size="S" /></span>;
     }
-    return <Clock size="S" className="text-blue-600" />;
+    return <span className="text-blue-600"><Clock size="S" /></span>;
 }
 
 /**

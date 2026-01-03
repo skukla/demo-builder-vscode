@@ -1,3 +1,8 @@
+import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
+import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
+import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
     ActionButton,
     DialogTrigger,
@@ -11,11 +16,6 @@ import {
     Flex,
     Button,
 } from '@/core/ui/components/aria';
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
-import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { getBaseUri } from '@/core/ui/utils/baseUri';
 import { FieldHelp, FieldHelpStep } from '@/types/webview';
@@ -184,9 +184,18 @@ function StepContent({
                     <img
                         src={screenshotSrc}
                         alt={step.screenshotAlt || `Step ${index + 1}`}
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => {
                             e.stopPropagation();
                             onImageClick(screenshotSrc, step.screenshotAlt || `Step ${index + 1}`);
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onImageClick(screenshotSrc, step.screenshotAlt || `Step ${index + 1}`);
+                            }
                         }}
                         className="screenshot-thumbnail"
                     />
@@ -258,15 +267,14 @@ export function FieldHelpButton({
         return (
             <DialogTrigger type="modal">
                 <ActionButton
-                    isQuiet
                     aria-label={`Help for ${fieldLabel}`}
-                    className="field-help-button"
+                    className="field-help-button quiet"
                 >
                     <InfoOutline size="S" />
                 </ActionButton>
                 <Dialog size="S">
                     <DialogContent>
-                        <Flex direction="column" gap="size-150" maxWidth="size-3600">
+                        <Flex direction="column" gap="size-150" style={{ maxWidth: 'var(--spectrum-global-dimension-size-3600)' }}>
                             {help.text && (
                                 <Text>{help.text}</Text>
                             )}
@@ -275,7 +283,7 @@ export function FieldHelpButton({
                                     key={i}
                                     step={step}
                                     index={i}
-                                    total={help.steps!.length}
+                                    total={totalSteps}
                                     onImageClick={handleImageClick}
                                     resolveScreenshot={resolveScreenshot}
                                 />
@@ -301,17 +309,16 @@ export function FieldHelpButton({
             )}
             <DialogTrigger type="modal" onOpenChange={(isOpen) => isOpen && handleDialogOpen()}>
                 <ActionButton
-                    isQuiet
                     aria-label={`Help for ${fieldLabel}`}
-                    className="field-help-button"
+                    className="field-help-button quiet"
                 >
                     <InfoOutline size="S" />
                 </ActionButton>
                 {(close) => (
                     <Dialog size="L" className="field-help-dialog">
                         <DialogHeader>
-                            <Flex justifyContent="space-between" alignItems="center" width="100%">
-                                <Heading level={3} margin={0}>{help.title || `Help: ${fieldLabel}`}</Heading>
+                            <Flex justifyContent="space-between" alignItems="center" style={{ width: '100%' }}>
+                                <Heading level={3} className="m-0">{help.title || `Help: ${fieldLabel}`}</Heading>
                                 {hasMultipleSteps && (
                                     <Text className="step-counter">
                                         Step {currentStep + 1} of {totalSteps}
@@ -337,7 +344,7 @@ export function FieldHelpButton({
                             </Flex>
                         </DialogContent>
                         <DialogFooter>
-                            <Flex width="100%" justifyContent="space-between" alignItems="center">
+                            <Flex justifyContent="space-between" alignItems="center" style={{ width: '100%' }}>
                                 {/* Left spacer for centering */}
                                 <div className="flex-1" />
                                 {/* Navigation buttons - centered */}

@@ -28,12 +28,12 @@
  * />
  * ```
  */
-import React from 'react';
-import { Flex, Text, Button } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
+import React from 'react';
+import { Flex, Text, Button } from '@/core/ui/components/aria';
 import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
 
 export type StatusVariant = 'error' | 'success' | 'warning' | 'info' | 'pending';
@@ -43,7 +43,7 @@ export interface StatusAction {
     label: string;
     /** Optional icon to display before the label */
     icon?: React.ReactNode;
-    /** Button variant */
+    /** Button variant - 'primary' is mapped to 'accent' for React Aria compatibility */
     variant?: 'accent' | 'primary' | 'secondary' | 'negative';
     /** Click handler */
     onPress: () => void;
@@ -74,23 +74,23 @@ export interface StatusDisplayProps {
 
 const variantConfig: Record<StatusVariant, { icon: React.ReactNode; colorClass: string }> = {
     error: {
-        icon: <AlertCircle size="L" className="text-red-600" />,
+        icon: <span className="text-red-600"><AlertCircle size="L" /></span>,
         colorClass: 'text-red-600',
     },
     success: {
-        icon: <CheckmarkCircle size="L" className="text-green-600" />,
+        icon: <span className="text-green-600"><CheckmarkCircle size="L" /></span>,
         colorClass: 'text-green-600',
     },
     warning: {
-        icon: <AlertCircle size="L" className="text-orange-600" />,
+        icon: <span className="text-orange-600"><AlertCircle size="L" /></span>,
         colorClass: 'text-orange-600',
     },
     info: {
-        icon: <InfoOutline size="L" className="text-blue-600" />,
+        icon: <span className="text-blue-600"><InfoOutline size="L" /></span>,
         colorClass: 'text-blue-600',
     },
     pending: {
-        icon: <Clock size="L" className="text-blue-600" />,
+        icon: <span className="text-blue-600"><Clock size="L" /></span>,
         colorClass: 'text-blue-600',
     },
 };
@@ -120,13 +120,13 @@ export function StatusDisplay({
                 direction="column"
                 justifyContent="center"
                 alignItems="center"
-                height={height}
+                style={{ height }}
             >
                 <Flex
                     direction="column"
                     gap="size-200"
                     alignItems="center"
-                    maxWidth={maxWidth}
+                    style={{ maxWidth }}
                 >
                     {displayIcon}
 
@@ -149,10 +149,13 @@ export function StatusDisplay({
 
                     {actions && actions.length > 0 && (
                         <Flex gap="size-150" marginTop="size-300">
-                            {actions.map((action, index) => (
+                            {actions.map((action, index) => {
+                                // Map 'primary' to 'accent' for React Aria compatibility
+                                const variant = action.variant === 'primary' ? 'accent' : (action.variant || 'secondary');
+                                return (
                                 <Button
                                     key={index}
-                                    variant={action.variant || 'secondary'}
+                                    variant={variant}
                                     onPress={action.onPress}
                                 >
                                     {action.icon && (
@@ -162,7 +165,8 @@ export function StatusDisplay({
                                     )}
                                     {action.label}
                                 </Button>
-                            ))}
+                                );
+                            })}
                         </Flex>
                     )}
                 </Flex>

@@ -12,9 +12,9 @@
  */
 
 import React, { forwardRef, CSSProperties } from 'react';
+import styles from './Flex.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { buildDimensionStyle, DimensionValue } from '@/core/ui/utils/spectrumTokens';
-import styles from './Flex.module.css';
 
 export interface FlexProps {
     /** Flex content */
@@ -49,6 +49,8 @@ export interface FlexProps {
     marginBottom?: DimensionValue;
     /** Custom CSS class */
     className?: string;
+    /** Additional inline styles */
+    style?: CSSProperties;
 }
 
 /**
@@ -76,8 +78,9 @@ export const Flex = forwardRef<HTMLDivElement, FlexProps>(
             marginTop,
             marginBottom,
             className,
+            style: styleProp,
         },
-        ref
+        ref,
     ) {
         // Build base flexbox style
         const baseStyle: CSSProperties = {
@@ -101,7 +104,7 @@ export const Flex = forwardRef<HTMLDivElement, FlexProps>(
         // Build dimension styles using utility
         const style = buildDimensionStyle(
             { gap, width, height, minWidth, maxWidth, minHeight, maxHeight, marginTop, marginBottom },
-            baseStyle
+            { ...baseStyle, ...styleProp },
         );
 
         return (
@@ -113,7 +116,7 @@ export const Flex = forwardRef<HTMLDivElement, FlexProps>(
                 {children}
             </div>
         );
-    }
+    },
 );
 
 Flex.displayName = 'Flex';

@@ -116,11 +116,12 @@ export class WorkspaceWatcherManager implements vscode.Disposable {
         const key = this.getWatcherKey(workspaceFolder, pattern);
 
         // Return existing watcher if already created
-        if (this.watchers.has(key)) {
+        const existingWatcher = this.watchers.get(key);
+        if (existingWatcher) {
             getLoggerLazy().warn(
                 `[WorkspaceWatcherManager] Watcher already exists for ${workspaceFolder.name} with pattern ${pattern}`,
             );
-            return this.watchers.get(key)!;
+            return existingWatcher;
         }
 
         // Create new watcher

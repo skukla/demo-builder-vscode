@@ -22,8 +22,8 @@
  */
 
 import React, { forwardRef } from 'react';
-import { cn } from '@/core/ui/utils/classNames';
 import styles from './Dialog.module.css';
+import { cn } from '@/core/ui/utils/classNames';
 
 // Slot type markers for React.Children detection
 const DIALOG_HEADER_SLOT = Symbol('DialogHeader');
@@ -54,7 +54,7 @@ export const DialogHeader = forwardRef<HTMLDivElement, DialogSlotProps>(
                 {children}
             </div>
         );
-    }
+    },
 );
 
 DialogHeader.displayName = 'DialogHeader';
@@ -78,7 +78,7 @@ export const DialogContent = forwardRef<HTMLDivElement, DialogSlotProps>(
                 {children}
             </div>
         );
-    }
+    },
 );
 
 DialogContent.displayName = 'DialogContent';
@@ -102,7 +102,7 @@ export const DialogFooter = forwardRef<HTMLDivElement, DialogSlotProps>(
                 {children}
             </div>
         );
-    }
+    },
 );
 
 DialogFooter.displayName = 'DialogFooter';
@@ -114,7 +114,7 @@ DialogFooter.__slot__ = DIALOG_FOOTER_SLOT;
  */
 export function isSlotElement(
     element: React.ReactNode,
-    slotSymbol: symbol
+    slotSymbol: symbol,
 ): boolean {
     if (!React.isValidElement(element)) return false;
     const type = element.type as { __slot__?: symbol };

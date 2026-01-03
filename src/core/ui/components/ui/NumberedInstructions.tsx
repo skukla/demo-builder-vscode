@@ -1,6 +1,6 @@
 import React from 'react';
-import { Flex, Text } from '@/core/ui/components/aria';
 import { CopyableText } from './CopyableText';
+import { Flex, Text } from '@/core/ui/components/aria';
 
 export interface Instruction {
     step: string;
@@ -56,7 +56,7 @@ export function NumberedInstructions({ description, instructions }: NumberedInst
                     </div>
 
                     {/* Content */}
-                    <Flex direction="column" gap="size-75" flex={1}>
+                    <Flex direction="column" gap="size-50" flex={1}>
                         <Text className="font-semibold instruction-title">
                             {instruction.step}
                         </Text>

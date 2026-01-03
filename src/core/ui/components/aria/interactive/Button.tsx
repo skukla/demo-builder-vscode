@@ -17,9 +17,9 @@
 
 import React, { forwardRef, CSSProperties } from 'react';
 import { Button as AriaButton, ButtonProps as AriaButtonProps } from 'react-aria-components';
+import styles from './Button.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
-import styles from './Button.module.css';
 
 export type ButtonVariant = 'accent' | 'secondary' | 'cta' | 'negative';
 
@@ -57,7 +57,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             className,
             ...ariaProps
         },
-        ref
+        ref,
     ) {
         const style: CSSProperties = {};
 
@@ -80,7 +80,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
                 {children}
             </AriaButton>
         );
-    }
+    },
 );
 
 Button.displayName = 'Button';

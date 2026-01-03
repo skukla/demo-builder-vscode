@@ -25,10 +25,10 @@ import {
     ListBox,
     ListBoxItem,
     Label,
+    type Key,
 } from 'react-aria-components';
-import type { Key } from 'react-aria-components';
-import { cn } from '@/core/ui/utils/classNames';
 import styles from './Select.module.css';
+import { cn } from '@/core/ui/utils/classNames';
 
 // Re-export ListBoxItem as SelectItem for semantic clarity
 export { ListBoxItem as SelectItem };
@@ -42,12 +42,14 @@ export interface SelectProps {
     defaultSelectedKey?: Key;
     /** Selection change handler */
     onSelectionChange?: (key: Key) => void;
-    /** Visible label above the select */
-    label?: string;
+    /** Visible label above the select (can be string or ReactNode for complex labels) */
+    label?: React.ReactNode;
     /** Placeholder when no selection */
     placeholder?: string;
     /** Whether select is disabled */
     isDisabled?: boolean;
+    /** Whether field is required */
+    isRequired?: boolean;
     /** Accessible label (used when no visible label) */
     'aria-label'?: string;
     /** Additional CSS class */
@@ -73,10 +75,11 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
             label,
             placeholder = 'Select an option',
             isDisabled = false,
+            isRequired = false,
             'aria-label': ariaLabel,
             className,
         },
-        ref
+        ref,
     ) {
         // Use aria-label if provided, otherwise fall back to placeholder for accessibility
         const accessibleLabel = ariaLabel || (label ? undefined : placeholder);
@@ -86,8 +89,9 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
                 className={cn(styles.select, className)}
                 selectedKey={selectedKey}
                 defaultSelectedKey={defaultSelectedKey}
-                onSelectionChange={onSelectionChange}
+                onSelectionChange={(key) => key !== null && onSelectionChange?.(key)}
                 isDisabled={isDisabled}
+                isRequired={isRequired}
                 aria-label={accessibleLabel}
             >
                 {label && <Label className={styles.label}>{label}</Label>}
@@ -113,7 +117,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
                 </Popover>
             </AriaSelect>
         );
-    }
+    },
 );
 
 Select.displayName = 'Select';

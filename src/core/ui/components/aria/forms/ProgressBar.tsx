@@ -15,8 +15,8 @@
 
 import React, { forwardRef } from 'react';
 import { ProgressBar as AriaProgressBar, Label } from 'react-aria-components';
-import { cn } from '@/core/ui/utils/classNames';
 import styles from './ProgressBar.module.css';
+import { cn } from '@/core/ui/utils/classNames';
 
 export type ProgressBarSize = 'S' | 'M' | 'L';
 
@@ -61,7 +61,7 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(
             'aria-label': ariaLabel,
             className,
         },
-        ref
+        ref,
     ) {
         return (
             <AriaProgressBar
@@ -84,7 +84,7 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(
                             <div
                                 className={cn(
                                     styles.fill,
-                                    isIndeterminate && styles.indeterminate
+                                    isIndeterminate && styles.indeterminate,
                                 )}
                                 style={isIndeterminate ? undefined : { width: `${percentage}%` }}
                             />
@@ -93,7 +93,7 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(
                 )}
             </AriaProgressBar>
         );
-    }
+    },
 );
 
 ProgressBar.displayName = 'ProgressBar';

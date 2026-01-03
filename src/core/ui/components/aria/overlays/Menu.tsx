@@ -22,10 +22,10 @@ import {
     MenuTrigger as AriaMenuTrigger,
     Popover,
     Separator,
+    type Key,
 } from 'react-aria-components';
-import type { Key } from 'react-aria-components';
-import { cn } from '@/core/ui/utils/classNames';
 import styles from './Menu.module.css';
+import { cn } from '@/core/ui/utils/classNames';
 
 export interface MenuItemData {
     /** Unique key for the item */
@@ -119,7 +119,7 @@ export const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(
             children,
             className,
         },
-        ref
+        ref,
     ) {
         // Derive textValue from children if not provided and children is a string
         const derivedTextValue = textValue || (typeof children === 'string' ? children : undefined);
@@ -135,7 +135,7 @@ export const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(
                 {children}
             </AriaMenuItem>
         );
-    }
+    },
 );
 
 MenuItem.displayName = 'MenuItem';

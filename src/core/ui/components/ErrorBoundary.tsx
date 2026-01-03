@@ -12,9 +12,9 @@
  * ```
  */
 
+import Alert from '@spectrum-icons/workflow/Alert';
 import React, { Component, ReactNode, ErrorInfo } from 'react';
 import { View, Text, Heading } from '@/core/ui/components/aria';
-import Alert from '@spectrum-icons/workflow/Alert';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 
 const log = webviewLogger('ErrorBoundary');

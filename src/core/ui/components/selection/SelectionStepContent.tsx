@@ -9,8 +9,8 @@
  *
  * Used by AdobeProjectStep and AdobeWorkspaceStep to reduce duplication.
  */
-import { Flex, Heading, Text, ListItem } from '@/core/ui/components/aria';
 import React from 'react';
+import { Flex, Heading, Text, ListItem } from '@/core/ui/components/aria';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
@@ -123,8 +123,8 @@ export function SelectionStepContent<T extends SelectableItem>({
 }: SelectionStepContentProps<T>) {
     // Header with optional action (only render if heading provided or headerAction exists)
     const header = (labels.heading || headerAction) ? (
-        <Flex justifyContent="space-between" alignItems="center" marginBottom="size-300">
-            {labels.heading && <Heading level={2} margin={0}>{labels.heading}</Heading>}
+        <Flex justifyContent="space-between" alignItems="center" className="mb-300">
+            {labels.heading && <Heading level={2} className="m-0">{labels.heading}</Heading>}
             {headerAction}
         </Flex>
     ) : null;
@@ -177,7 +177,7 @@ export function SelectionStepContent<T extends SelectableItem>({
     // State 4: Data loaded - show list (delegates to SearchableList)
 
     // Adapter: Convert Set-based onSelectionChange to item-based onSelect
-    const handleSelectionChange = (keys: Set<any>) => {
+    const handleSelectionChange = (keys: Set<React.Key>) => {
         const itemId = Array.from(keys)[0] as string;
         const item = items.find(i => i.id === itemId);
         if (item) {

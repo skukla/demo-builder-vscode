@@ -18,9 +18,8 @@ import {
     TooltipTrigger as AriaTooltipTrigger,
     OverlayArrow,
 } from 'react-aria-components';
-import type { TooltipProps as AriaTooltipProps } from 'react-aria-components';
-import { cn } from '@/core/ui/utils/classNames';
 import styles from './Tooltip.module.css';
+import { cn } from '@/core/ui/utils/classNames';
 
 export type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right' | 'start' | 'end';
 

@@ -1,6 +1,6 @@
-import { Text, List, ListItem } from '@/core/ui/components/aria';
 import React, { useEffect, useRef } from 'react';
 import { SearchHeader } from './SearchHeader';
+import { Text, List, ListItem } from '@/core/ui/components/aria';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 export interface SearchableListItem {
@@ -16,7 +16,7 @@ export interface SearchableListProps<T extends SearchableListItem> {
     /** Currently selected item IDs */
     selectedKeys?: string[];
     /** Selection change handler */
-    onSelectionChange?: (keys: Set<any>) => void;
+    onSelectionChange?: (keys: Set<React.Key>) => void;
     /** Search query */
     searchQuery: string;
     /** Search query change handler */

@@ -11,9 +11,9 @@
  */
 
 import React, { forwardRef, CSSProperties } from 'react';
+import styles from './Heading.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
-import styles from './Heading.module.css';
 
 export interface HeadingProps {
     /** Heading content */
@@ -34,23 +34,23 @@ export interface HeadingProps {
  */
 export const Heading = forwardRef<HTMLHeadingElement, HeadingProps>(
     function Heading({ children, level = 2, marginBottom, className }, ref) {
-        const Element = `h${level}` as keyof JSX.IntrinsicElements;
+        const Tag = `h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
         const style: CSSProperties = {};
         if (marginBottom !== undefined) {
             style.marginBottom = translateSpectrumToken(marginBottom);
         }
 
-        return React.createElement(
-            Element,
-            {
-                ref,
-                className: cn(styles.heading, className),
-                style: Object.keys(style).length > 0 ? style : undefined,
-            },
-            children
+        return (
+            <Tag
+                ref={ref}
+                className={cn(styles.heading, className)}
+                style={Object.keys(style).length > 0 ? style : undefined}
+            >
+                {children}
+            </Tag>
         );
-    }
+    },
 );
 
 Heading.displayName = 'Heading';

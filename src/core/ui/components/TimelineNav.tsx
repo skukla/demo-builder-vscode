@@ -5,12 +5,12 @@
  * Supports both string-based step IDs (wizard) and index-based navigation (sidebar).
  */
 
-import React, { useRef, useEffect, useState } from 'react';
-import { View, Text } from '@/core/ui/components/aria';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import React, { useRef, useEffect, useState } from 'react';
+import styles from './TimelineNav.module.css';
+import { View, Text } from '@/core/ui/components/aria';
 import { cn } from '@/core/ui/utils/classNames';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
-import styles from './TimelineNav.module.css';
 
 /**
  * Timeline step status type
@@ -62,16 +62,14 @@ function getTimelineLabelClasses(status: TimelineStatus): string {
  */
 function renderStepIndicator(status: TimelineStatus): React.ReactNode {
     if (status === 'completed' || status === 'completed-current') {
-        return <CheckmarkCircle size="XS" className={cn('text-white', 'icon-xs')} />;
+        return <span className={cn('text-white', 'icon-xs')}><CheckmarkCircle size="XS" /></span>;
     }
     if (status === 'review') {
         // Solid white inner dot for edit mode (no checkmark - indicates "can review/edit")
         return (
-            <View
-                width="size-100"
-                height="size-100"
+            <div
                 className="rounded-full"
-                UNSAFE_style={{ backgroundColor: '#ffffff' }}
+                style={{ width: 'var(--spectrum-global-dimension-size-100)', height: 'var(--spectrum-global-dimension-size-100)', backgroundColor: '#ffffff' }}
             />
         );
     }
@@ -79,19 +77,16 @@ function renderStepIndicator(status: TimelineStatus): React.ReactNode {
         // White inner dot creates contrast against the blue outer ring
         // Use inline style for true white since bg-white maps to gray-100 in dark theme
         return (
-            <View
-                width="size-100"
-                height="size-100"
+            <div
                 className={cn('rounded-full', 'animate-pulse')}
-                UNSAFE_style={{ backgroundColor: '#ffffff' }}
+                style={{ width: 'var(--spectrum-global-dimension-size-100)', height: 'var(--spectrum-global-dimension-size-100)', backgroundColor: '#ffffff' }}
             />
         );
     }
     return (
-        <View
-            width="size-100"
-            height="size-100"
+        <div
             className={cn('rounded-full', 'bg-gray-400')}
+            style={{ width: 'var(--spectrum-global-dimension-size-100)', height: 'var(--spectrum-global-dimension-size-100)' }}
         />
     );
 }
@@ -276,11 +271,11 @@ export function TimelineNav({
     return (
         <View
             padding={padding}
-            height="100%"
             className={containerClass}
+            style={{ height: '100%' }}
         >
             {showHeader && (
-                <View marginBottom={compact ? 'size-200' : 'size-400'}>
+                <View className={compact ? 'mb-200' : 'mb-400'}>
                     <Text className={cn('text-xs', 'text-uppercase', 'letter-spacing-05', 'text-gray-600', 'font-semibold')}>
                         {headerText}
                     </Text>
@@ -300,9 +295,12 @@ export function TimelineNav({
 
                     return (
                         <View key={step.id} position="relative">
-                            {/* Step item */}
+                            {/* Step item - role/tabIndex are conditional on isClickable for proper a11y */}
+                            {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
                             <div
                                 data-testid={`timeline-step-${step.id}`}
+                                role={isClickable ? 'button' : undefined}
+                                tabIndex={isClickable ? 0 : undefined}
                                 aria-current={!step.isExiting && actualIndex === currentStepIndex ? 'step' : undefined}
                                 style={{
                                     marginBottom: displayIndex < displaySteps.length - 1 ? stepSpacing : undefined,
@@ -316,7 +314,19 @@ export function TimelineNav({
                                     isEntering && styles.stepEnter,
                                     isExiting && styles.stepExit,
                                 )}
-                                onClick={() => !step.isExiting && handleStepClick(actualIndex)}
+                                onClick={isClickable ? () => {
+                                    if (!step.isExiting) {
+                                        handleStepClick(actualIndex);
+                                    }
+                                } : undefined}
+                                onKeyDown={isClickable ? (e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        if (!step.isExiting) {
+                                            handleStepClick(actualIndex);
+                                        }
+                                    }
+                                } : undefined}
                             >
                                 <View
                                     className="nav-item-row"

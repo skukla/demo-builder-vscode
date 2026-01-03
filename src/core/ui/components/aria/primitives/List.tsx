@@ -17,10 +17,11 @@ import React, { forwardRef } from 'react';
 import {
     ListBox,
     ListBoxItem,
+    type Key,
+    type Selection,
 } from 'react-aria-components';
-import type { Key, Selection } from 'react-aria-components';
-import { cn } from '@/core/ui/utils/classNames';
 import styles from './List.module.css';
+import { cn } from '@/core/ui/utils/classNames';
 
 export type SelectionMode = 'none' | 'single' | 'multiple';
 
@@ -67,7 +68,7 @@ function ListComponent<T extends object>(
         'aria-label': ariaLabel,
         className,
     }: ListProps<T>,
-    ref: React.ForwardedRef<HTMLDivElement>
+    ref: React.ForwardedRef<HTMLDivElement>,
 ) {
     // Handle selection change to convert Selection to Set<Key>
     const handleSelectionChange = (selection: Selection) => {
@@ -130,7 +131,7 @@ export const ListItem = forwardRef<HTMLDivElement, ListItemProps>(
             isDisabled = false,
             className,
         },
-        ref
+        ref,
     ) {
         // Derive textValue from children if not provided and children is a string
         const derivedTextValue =
@@ -150,7 +151,7 @@ export const ListItem = forwardRef<HTMLDivElement, ListItemProps>(
                             styles.itemContent,
                             isSelected && styles.selected,
                             isFocused && styles.focused,
-                            disabled && styles.disabled
+                            disabled && styles.disabled,
                         )}
                         data-selected={isSelected || undefined}
                         data-focused={isFocused || undefined}
@@ -161,7 +162,7 @@ export const ListItem = forwardRef<HTMLDivElement, ListItemProps>(
                 )}
             </ListBoxItem>
         );
-    }
+    },
 );
 
 ListItem.displayName = 'ListItem';

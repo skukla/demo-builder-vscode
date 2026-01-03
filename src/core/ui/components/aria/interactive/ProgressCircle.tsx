@@ -17,8 +17,8 @@
  */
 
 import React, { forwardRef } from 'react';
-import { cn } from '@/core/ui/utils/classNames';
 import styles from './ProgressCircle.module.css';
+import { cn } from '@/core/ui/utils/classNames';
 
 export type ProgressCircleSize = 'S' | 'M' | 'L';
 
@@ -64,7 +64,7 @@ export const ProgressCircle = forwardRef<HTMLDivElement, ProgressCircleProps>(
             'aria-label': ariaLabel,
             className,
         },
-        ref
+        ref,
     ) {
         const dimension = SIZE_MAP[size];
         const strokeWidth = STROKE_WIDTH_MAP[size];
@@ -127,7 +127,7 @@ export const ProgressCircle = forwardRef<HTMLDivElement, ProgressCircleProps>(
                 </svg>
             </div>
         );
-    }
+    },
 );
 
 ProgressCircle.displayName = 'ProgressCircle';

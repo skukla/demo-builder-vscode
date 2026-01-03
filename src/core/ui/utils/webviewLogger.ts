@@ -1,3 +1,5 @@
+/* eslint-disable no-console -- This is a logger utility; console usage is intentional */
+
 /**
  * WebviewLogger - Lightweight logging for webview (browser) context
  *

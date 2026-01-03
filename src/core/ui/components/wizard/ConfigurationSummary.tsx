@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Heading, Text, Flex, Divider } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
+import React from 'react';
 import { getStepStatus } from './configurationSummaryHelpers';
+import { View, Heading, Text, Flex, Divider } from '@/core/ui/components/aria';
 import { cn } from '@/core/ui/utils/classNames';
 import { WizardState, WizardStep } from '@/types/webview';
 
@@ -31,12 +31,12 @@ function StatusSection({ label, value, description, status, emptyText = 'Not sel
     const renderIcon = () => {
         switch (status) {
             case 'completed':
-                return <CheckmarkCircle size="S" className="text-green-600" />;
+                return <span className="text-green-600"><CheckmarkCircle size="S" /></span>;
             case 'checking':
             case 'pending':
-                return <Clock size="S" className="text-blue-600" />;
+                return <span className="text-blue-600"><Clock size="S" /></span>;
             case 'error':
-                return <AlertCircle size="S" className="text-red-600" />;
+                return <span className="text-red-600"><AlertCircle size="S" /></span>;
             default:
                 return null;
         }
@@ -133,8 +133,8 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
     };
 
     return (
-        <View height="100%">
-            <Heading level={3} marginBottom="size-300">
+        <View style={{ height: '100%' }}>
+            <Heading level={3} className="mb-300">
                 Configuration Summary
             </Heading>
 

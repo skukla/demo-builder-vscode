@@ -56,6 +56,18 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     protected panel: vscode.WebviewPanel | undefined;
     protected communicationManager: WebviewCommunicationManager | undefined;
 
+    /**
+     * Get the webview panel, throwing if not available.
+     * Use this in methods called after execute() to avoid non-null assertions.
+     * @throws Error if panel is not initialized (called before execute())
+     */
+    protected requirePanel(): vscode.WebviewPanel {
+        if (!this.panel) {
+            throw new Error(`${this.constructor.name}: Panel not initialized. This method must be called after execute().`);
+        }
+        return this.panel;
+    }
+
     // ========================================================================
     // Static Delegations to WebviewPanelManager
     // These maintain backward compatibility while centralizing panel management
