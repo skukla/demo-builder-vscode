@@ -8,6 +8,7 @@
 
 import { Flex, Text } from '@/core/ui/components/aria';
 import React, { useCallback } from 'react';
+import styles from '../styles/projects-dashboard.module.css';
 import {
     getStatusText,
     getStatusVariant,
@@ -83,20 +84,20 @@ export const ProjectButton: React.FC<ProjectButtonProps> = ({
             aria-label={ariaLabel}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
-            className="project-button"
+            className={styles.projectButton}
         >
             {/* Icon */}
             <AdobeIcon className={isRunning ? 'text-green-500' : 'text-gray-400'} />
 
             {/* Name */}
-            <Text className="project-button-name">
+            <Text className={styles.projectButtonName}>
                 {displayName}
             </Text>
 
             {/* Status */}
             <Flex alignItems="center" gap="size-50">
                 <StatusDot variant={statusVariant} size={6} />
-                <Text className="project-button-status">
+                <Text className={styles.projectButtonStatus}>
                     {statusText}
                 </Text>
             </Flex>

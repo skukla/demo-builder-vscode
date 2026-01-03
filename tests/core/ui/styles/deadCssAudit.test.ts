@@ -2,10 +2,15 @@
  * Dead CSS Audit Tests
  *
  * Validates that dead CSS classes have been removed and active classes remain.
- * Classes are now in modular files under utilities/, spectrum/, and components/.
+ * Classes are now in modular files under utilities/, components/, and CSS Modules.
  *
  * Part of CSS Architecture Improvement - Step 1: Dead CSS Cleanup
  * Updated for CSS Utility Modularization
+ *
+ * Migration Notes:
+ * - cards.css migrated to projects-dashboard.module.css
+ * - dashboard.css migrated to dashboard.module.css
+ * - timeline.css migrated to TimelineNav.module.css
  */
 import { readFileSync, existsSync } from 'fs';
 import { resolve, join } from 'path';
@@ -15,19 +20,16 @@ describe('Dead CSS Audit', () => {
   const projectRoot = resolve(__dirname, '../../../..');
   const stylesDir = resolve(projectRoot, 'src/core/ui/styles');
 
-  // Helper to read and combine all modular CSS files
-  const readAllModularCSS = () => {
+  // Helper to read and combine all modular CSS files (global only)
+  const readAllGlobalCSS = () => {
     const files = [
       'utilities/typography.css',
       'utilities/colors.css',
       'utilities/layout.css',
       'utilities/spacing.css',
       'utilities/borders.css',
-      'spectrum/buttons.css',
-      'spectrum/components.css',
-      'components/cards.css',
-      'components/timeline.css',
-      'components/dashboard.css',
+      'utilities/buttons.css',
+      'utilities/animations.css',
       'components/common.css',
     ];
     return files
@@ -39,7 +41,7 @@ describe('Dead CSS Audit', () => {
   let cssContent: string;
 
   beforeAll(() => {
-    cssContent = readAllModularCSS();
+    cssContent = readAllGlobalCSS();
   });
 
   describe('Dead CSS Removal Verification', () => {
@@ -190,9 +192,10 @@ describe('Dead CSS Audit', () => {
     });
   });
 
-  describe('Active CSS Classes Remain', () => {
-    // These classes ARE used and should still exist in the modular files
+  describe('Active CSS Classes Remain (Global)', () => {
+    // These classes ARE used and should still exist in the global CSS files
     // Verified by grep search in src/**/*.tsx and src/**/*.ts
+    // Note: Component-specific classes like timeline-* are now in CSS Modules
     const activeClasses = [
       // Typography - heavily used
       'text-xs',
@@ -224,12 +227,6 @@ describe('Dead CSS Audit', () => {
       'text-gray-600',
       'bg-gray-50',
       'bg-gray-75',
-
-      // Component-specific - heavily used
-      // Note: prerequisite-* classes migrated to CSS Module (Step 5 of CSS Architecture Improvement)
-      // Note: selector-*, expandable-brand-*, brand-card-*, architecture-* classes migrated to CSS Module (Step 6)
-      // Note: projects-grid, projects-sticky-header migrated to CSS Module (Step 7)
-      'timeline-container',
     ];
 
     it.each(activeClasses)(
@@ -239,6 +236,36 @@ describe('Dead CSS Audit', () => {
         expect(cssContent).toMatch(classPattern);
       }
     );
+  });
+
+  describe('CSS Modules Contain Migrated Styles', () => {
+    it('projects-dashboard.module.css should have project card styles', () => {
+      const modulePath = resolve(projectRoot, 'src/features/projects-dashboard/ui/styles/projects-dashboard.module.css');
+      const content = readFileSync(modulePath, 'utf-8');
+
+      // Migrated from cards.css
+      expect(content).toMatch(/\.projectCard\s*\{/);
+      expect(content).toMatch(/\.projectRow\s*\{/);
+    });
+
+    it('dashboard.module.css should have dashboard grid styles', () => {
+      const modulePath = resolve(projectRoot, 'src/features/dashboard/ui/styles/dashboard.module.css');
+      const content = readFileSync(modulePath, 'utf-8');
+
+      // Migrated from dashboard.css
+      expect(content).toMatch(/\.gridContainer\s*\{/);
+      expect(content).toMatch(/\.actionButton\s*\{/);
+    });
+
+    it('TimelineNav.module.css should have timeline styles', () => {
+      const modulePath = resolve(projectRoot, 'src/core/ui/components/TimelineNav.module.css');
+      const content = readFileSync(modulePath, 'utf-8');
+
+      // Migrated from timeline.css
+      expect(content).toMatch(/\.container\s*\{/);
+      expect(content).toMatch(/\.stepDot\s*\{/);
+      expect(content).toMatch(/\.connector\s*\{/);
+    });
   });
 
   describe('Modular CSS File Structure', () => {
@@ -259,16 +286,12 @@ describe('Dead CSS Audit', () => {
 
     // Note: spectrum/ directory removed after React Aria migration
 
-    it('should have components directory with expected files', () => {
-      const componentFiles = [
-        'components/cards.css',
-        'components/timeline.css',
-        'components/dashboard.css',
-        'components/common.css',
-      ];
-      for (const file of componentFiles) {
-        expect(existsSync(join(stylesDir, file))).toBe(true);
-      }
+    it('should have components directory with common.css only', () => {
+      // Only common.css remains (others migrated to CSS Modules)
+      expect(existsSync(join(stylesDir, 'components/common.css'))).toBe(true);
+      expect(existsSync(join(stylesDir, 'components/cards.css'))).toBe(false);
+      expect(existsSync(join(stylesDir, 'components/dashboard.css'))).toBe(false);
+      expect(existsSync(join(stylesDir, 'components/timeline.css'))).toBe(false);
     });
 
     it('custom-spectrum.css should be a minimal re-export stub', () => {

@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { ProjectRow } from './ProjectRow';
+import styles from '../styles/projects-dashboard.module.css';
 import type { Project } from '@/types/base';
 
 export interface ProjectRowListProps {
@@ -45,7 +46,7 @@ export const ProjectRowList: React.FC<ProjectRowListProps> = ({
     onDeleteProject,
 }) => {
     return (
-        <div className="project-row-list">
+        <div className={styles.projectRowList}>
             {projects.map((project) => (
                 <ProjectRow
                     key={project.path}

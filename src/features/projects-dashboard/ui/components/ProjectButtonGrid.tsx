@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { ProjectButton } from './ProjectButton';
+import styles from '../styles/projects-dashboard.module.css';
 import type { Project } from '@/types/base';
 
 export interface ProjectButtonGridProps {
@@ -25,8 +26,8 @@ export const ProjectButtonGrid: React.FC<ProjectButtonGridProps> = ({
     onSelectProject,
 }) => {
     return (
-        <div className="project-button-grid-container">
-            <div className="project-button-grid">
+        <div className={styles.projectButtonGridContainer}>
+            <div className={styles.projectButtonGrid}>
                 {projects.map((project) => (
                     <ProjectButton
                         key={project.path}

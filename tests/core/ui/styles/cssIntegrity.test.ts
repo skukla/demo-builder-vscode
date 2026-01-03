@@ -9,6 +9,10 @@
  * - Expected file counts are correct
  *
  * Part of CSS Architecture Improvement - Step 7: Verification
+ *
+ * Migration Notes:
+ * - cards.css, dashboard.css, timeline.css migrated to CSS Modules
+ * - Only common.css remains in components/ as global styles
  */
 import { existsSync, readFileSync, readdirSync } from 'fs';
 import { resolve, join } from 'path';
@@ -157,23 +161,26 @@ describe('CSS Integrity', () => {
 
     // Note: spectrum/index.css test removed after React Aria migration
 
-    it('components/index.css imports all component files', () => {
+    it('components/index.css imports common.css', () => {
       const barrelPath = join(stylesPath, 'components', 'index.css');
       const content = readFileSync(barrelPath, 'utf-8');
 
-      const expectedImports = [
-        'cards.css',
-        'timeline.css',
-        'dashboard.css',
-        'common.css',
-      ];
+      // Only common.css remains in global CSS (others migrated to CSS Modules)
+      expect(content).toContain('common.css');
 
-      for (const file of expectedImports) {
-        expect(content).toContain(file);
-        // Verify the imported file exists
-        const filePath = join(stylesPath, 'components', file);
-        expect(existsSync(filePath)).toBe(true);
-      }
+      // Verify common.css exists
+      const commonPath = join(stylesPath, 'components', 'common.css');
+      expect(existsSync(commonPath)).toBe(true);
+    });
+
+    it('components/index.css has migration notes', () => {
+      const barrelPath = join(stylesPath, 'components', 'index.css');
+      const content = readFileSync(barrelPath, 'utf-8');
+
+      // Should document the migration
+      expect(content).toContain('cards.css moved to projects-dashboard.module.css');
+      expect(content).toContain('dashboard.css moved to dashboard.module.css');
+      expect(content).toContain('timeline.css moved to TimelineNav.module.css');
     });
   });
 
@@ -258,19 +265,15 @@ describe('CSS Integrity', () => {
 
     // Note: spectrum directory removed after React Aria migration
 
-    it('should have exactly 4 component files', () => {
+    it('should have exactly 1 component file (common.css)', () => {
       const componentsPath = join(stylesPath, 'components');
       const files = readdirSync(componentsPath).filter(
         (f) => f.endsWith('.css') && f !== 'index.css'
       );
 
-      expect(files).toHaveLength(4);
-      expect(files.sort()).toEqual([
-        'cards.css',
-        'common.css',
-        'dashboard.css',
-        'timeline.css',
-      ]);
+      // Only common.css remains (cards, dashboard, timeline migrated to CSS Modules)
+      expect(files).toHaveLength(1);
+      expect(files).toEqual(['common.css']);
     });
 
     it('should have expected root-level CSS files', () => {

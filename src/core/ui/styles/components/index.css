@@ -3,9 +3,10 @@
  *
  * Imports all semantic component style categories.
  * Part of CSS Utility Modularization.
+ *
+ * Note: cards.css moved to projects-dashboard.module.css
+ * Note: dashboard.css moved to dashboard.module.css
+ * Note: timeline.css moved to TimelineNav.module.css
  */
 
-@import './cards.css';
-@import './timeline.css';
-@import './dashboard.css';
 @import './common.css';

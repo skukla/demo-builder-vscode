@@ -42,12 +42,16 @@ styles/
 │   ├── buttons.css             # Button size variations, action pills
 │   └── animations.css          # Centralized @keyframes definitions
 │
-└── components/                  # Semantic component styles
-    ├── index.css               # Barrel import
-    ├── cards.css               # Card layouts
-    ├── common.css              # Containers, loading, empty states
-    ├── dashboard.css           # Dashboard-specific styles
-    └── timeline.css            # Timeline navigation
+└── components/                  # Semantic component styles (shared/global only)
+    ├── index.css               # Barrel import with migration notes
+    └── common.css              # Containers, loading, empty states
+```
+
+**Feature CSS Modules** (migrated from global components/):
+```
+src/features/projects-dashboard/ui/styles/projects-dashboard.module.css  # Project cards, rows
+src/features/dashboard/ui/styles/dashboard.module.css                     # Dashboard grid, buttons
+src/core/ui/components/TimelineNav.module.css                             # Timeline navigation
 ```
 
 ## @layer Cascade System
@@ -65,6 +69,8 @@ The CSS uses `@layer` for explicit cascade control with 4 layers:
 4. `utilities` - Utility classes with highest priority (utilities/*.css)
 
 This cascade order ensures utilities always override component styles without needing `!important`.
+
+**Note**: CSS Modules don't use `@layer` - they're scoped by hashed class names instead.
 
 ## Pattern Guidelines
 
@@ -104,9 +110,17 @@ Feature-scoped CSS Modules are used for complex UIs:
 ```
 features/prerequisites/ui/styles/prerequisites.module.css
 features/project-creation/ui/styles/project-creation.module.css
+features/projects-dashboard/ui/styles/projects-dashboard.module.css
+features/dashboard/ui/styles/dashboard.module.css
+core/ui/components/TimelineNav.module.css
 ```
 
-**Naming Convention**: Use camelCase for module class names.
+**Naming Convention**: Use camelCase for module class names (e.g., `.projectCard`, `.actionButton`).
+
+**Migration Complete**: Feature-specific component styles have been migrated from global CSS to CSS Modules:
+- `cards.css` → `projects-dashboard.module.css`
+- `dashboard.css` → `dashboard.module.css`
+- `timeline.css` → `TimelineNav.module.css`
 
 ## Animation Keyframes
 
@@ -120,8 +134,8 @@ Common keyframes are centralized there:
 
 **Exceptions (acceptable):**
 
-1. **Component-specific animations** in their component files:
-   - `components/timeline.css`: `timeline-enter`, `timeline-exit`
+1. **Component-specific animations** in their CSS Modules:
+   - `TimelineNav.module.css`: `timelineEnter`, `timelineExit`
    - CSS Modules may have local keyframes (e.g., `expandIn` in project-creation.module.css)
 
 2. **VS Code providers** (unavoidable):
@@ -129,7 +143,7 @@ Common keyframes are centralized there:
 
 **Convention:**
 - New common keyframes → `utilities/animations.css`
-- Component-specific keyframes → Component's CSS file
+- Component-specific keyframes → Component's CSS Module
 - Reference existing keyframes via class (`.animate-fade-in`) instead of duplicating
 
 ## React Aria Component Styling
@@ -175,18 +189,18 @@ The `spectrum/` directory has been removed as all components now use React Aria 
 
 ```
 Utility Classes:     ~46%  (global, reusable, single-concern)
-Semantic Components: ~31%  (page-level, contextual)
-CSS Modules:         ~23%  (feature-scoped, complex UIs, React Aria)
+Semantic Components: ~20%  (global common.css only)
+CSS Modules:         ~34%  (feature-scoped, complex UIs, React Aria)
 Inline Styles:       <1%   (dynamic values only)
 ```
 
 ## Adding New Styles
 
 1. **Utility class needed?** → Add to appropriate `utilities/*.css`
-2. **Component styling?** → Add to `components/*.css`
-3. **React Aria component?** → Create CSS Module in `components/aria/`
-4. **Feature-specific complex UI?** → Create CSS Module in feature directory
-5. **New keyframe animation?** → Add to `utilities/animations.css`
+2. **Feature-specific component?** → Create CSS Module in feature's `ui/styles/` directory
+3. **Shared layout/container?** → Add to `components/common.css`
+4. **React Aria component?** → Create CSS Module in `components/aria/`
+5. **New keyframe animation?** → Add to `utilities/animations.css` (or CSS Module if component-specific)
 
 ## Related Documentation
 

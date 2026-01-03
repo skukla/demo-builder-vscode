@@ -22,6 +22,7 @@ import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
 import { GridLayout } from '@/core/ui/components/layout';
+import styles from '../styles/dashboard.module.css';
 
 /**
  * Props for the ActionGrid component
@@ -91,17 +92,18 @@ export function ActionGrid({
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
     return (
-        <GridLayout columns={4} gap="size-400" className="dashboard-grid">
+        <GridLayout columns={4} gap="size-400" className={styles.grid}>
             {/* Start/Stop - Hidden for EDS projects (always published) */}
             {!isEds && !isRunning && (
                 <ActionButton
                     onPress={handleStartDemo}
                     isQuiet
                     isDisabled={isStartDisabled}
-                    className="dashboard-action-button"
+                    className={styles.actionButton}
+                    data-action-button
                 >
                     <PlayCircle size="L" />
-                    <Text className="icon-label">Start</Text>
+                    <Text className={styles.iconLabel}>Start</Text>
                 </ActionButton>
             )}
             {!isEds && isRunning && (
@@ -109,10 +111,11 @@ export function ActionGrid({
                     onPress={handleStopDemo}
                     isQuiet
                     isDisabled={isStopDisabled}
-                    className="dashboard-action-button"
+                    className={styles.actionButton}
+                    data-action-button
                 >
                     <StopCircle size="L" />
-                    <Text className="icon-label">Stop</Text>
+                    <Text className={styles.iconLabel}>Stop</Text>
                 </ActionButton>
             )}
 
@@ -122,10 +125,11 @@ export function ActionGrid({
                     onPress={handleOpenLiveSite}
                     isQuiet
                     isDisabled={isOpeningBrowser}
-                    className="dashboard-action-button"
+                    className={styles.actionButton}
+                    data-action-button
                 >
                     <Globe size="L" />
-                    <Text className="icon-label">Open Live Site</Text>
+                    <Text className={styles.iconLabel}>Open Live Site</Text>
                 </ActionButton>
             )}
 
@@ -135,10 +139,10 @@ export function ActionGrid({
                     onPress={handleOpenBrowser}
                     isQuiet
                     isDisabled={!isRunning || isOpeningBrowser}
-                    className="dashboard-action-button"
+                    className={styles.actionButton}
                 >
                     <Globe size="L" />
-                    <Text className="icon-label">Open in Browser</Text>
+                    <Text className={styles.iconLabel}>Open in Browser</Text>
                 </ActionButton>
             )}
 
@@ -146,10 +150,10 @@ export function ActionGrid({
             <ActionButton
                 onPress={handleViewLogs}
                 isQuiet
-                className={`dashboard-action-button ${isLogsHoverSuppressed ? 'hover-suppressed' : ''}`}
+                className={`${styles.actionButton} ${isLogsHoverSuppressed ? styles.hoverSuppressed : ''}`}
             >
                 <ViewList size="L" />
-                <Text className="icon-label">Logs</Text>
+                <Text className={styles.iconLabel}>Logs</Text>
             </ActionButton>
 
             {/* Deploy Mesh */}
@@ -157,11 +161,11 @@ export function ActionGrid({
                 onPress={handleDeployMesh}
                 isQuiet
                 isDisabled={isMeshActionDisabled}
-                className="dashboard-action-button"
+                className={styles.actionButton}
                 data-action="deploy-mesh"
             >
                 <Refresh size="L" />
-                <Text className="icon-label">Deploy Mesh</Text>
+                <Text className={styles.iconLabel}>Deploy Mesh</Text>
             </ActionButton>
 
             {/* Configure */}
@@ -169,40 +173,40 @@ export function ActionGrid({
                 onPress={handleConfigure}
                 isQuiet
                 isDisabled={isMeshActionDisabled}
-                className="dashboard-action-button"
+                className={styles.actionButton}
             >
                 <Settings size="L" />
-                <Text className="icon-label">Configure</Text>
+                <Text className={styles.iconLabel}>Configure</Text>
             </ActionButton>
 
             {/* View Components */}
             <ActionButton
                 onPress={handleViewComponents}
                 isQuiet
-                className="dashboard-action-button"
+                className={styles.actionButton}
             >
                 <FolderOpen size="L" />
-                <Text className="icon-label">Components</Text>
+                <Text className={styles.iconLabel}>Components</Text>
             </ActionButton>
 
             {/* Developer Console */}
             <ActionButton
                 onPress={handleOpenDevConsole}
                 isQuiet
-                className="dashboard-action-button"
+                className={styles.actionButton}
             >
                 <Code size="L" />
-                <Text className="icon-label">Dev Console</Text>
+                <Text className={styles.iconLabel}>Dev Console</Text>
             </ActionButton>
 
             {/* Delete Project */}
             <ActionButton
                 onPress={handleDeleteProject}
                 isQuiet
-                className="dashboard-action-button"
+                className={styles.actionButton}
             >
                 <Delete size="L" />
-                <Text className="icon-label">Delete</Text>
+                <Text className={styles.iconLabel}>Delete</Text>
             </ActionButton>
         </GridLayout>
     );

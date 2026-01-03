@@ -5,6 +5,10 @@
  * with proper barrel files for each category.
  *
  * Part of CSS Utility Modularization - Step 1: Directory Structure
+ *
+ * Migration Notes:
+ * - cards.css, dashboard.css, timeline.css migrated to CSS Modules
+ * - Only common.css remains in components/ as global styles
  */
 import { existsSync, readFileSync } from 'fs';
 import { resolve, join } from 'path';
@@ -68,29 +72,53 @@ describe('CSS Directory Structure', () => {
       expect(existsSync(indexPath)).toBe(true);
     });
 
-    it('should have components/index.css with proper @import structure', () => {
+    it('should have components/index.css importing common.css', () => {
       const indexPath = join(componentsDir, 'index.css');
       const content = readFileSync(indexPath, 'utf-8');
 
-      // Should import component category files
-      expect(content).toMatch(/@import ['"]\.\/cards\.css['"]/);
-      expect(content).toMatch(/@import ['"]\.\/timeline\.css['"]/);
-      expect(content).toMatch(/@import ['"]\.\/dashboard\.css['"]/);
+      // Should import common.css (only remaining global component file)
       expect(content).toMatch(/@import ['"]\.\/common\.css['"]/);
     });
 
-    it('should have all component category files', () => {
-      const expectedFiles = [
-        'cards.css',
-        'timeline.css',
-        'dashboard.css',
-        'common.css',
-      ];
+    it('should have components/index.css with migration notes', () => {
+      const indexPath = join(componentsDir, 'index.css');
+      const content = readFileSync(indexPath, 'utf-8');
 
-      for (const file of expectedFiles) {
+      // Should have notes about migrated files
+      expect(content).toContain('cards.css moved to projects-dashboard.module.css');
+      expect(content).toContain('dashboard.css moved to dashboard.module.css');
+      expect(content).toContain('timeline.css moved to TimelineNav.module.css');
+    });
+
+    it('should have common.css (only remaining global component file)', () => {
+      const commonPath = join(componentsDir, 'common.css');
+      expect(existsSync(commonPath)).toBe(true);
+    });
+
+    it('should NOT have migrated files (now CSS Modules)', () => {
+      const migratedFiles = ['cards.css', 'timeline.css', 'dashboard.css'];
+
+      for (const file of migratedFiles) {
         const filePath = join(componentsDir, file);
-        expect(existsSync(filePath)).toBe(true);
+        expect(existsSync(filePath)).toBe(false);
       }
+    });
+  });
+
+  describe('CSS Modules Directory Structure', () => {
+    it('should have projects-dashboard CSS Module', () => {
+      const modulePath = resolve(__dirname, '../../../../src/features/projects-dashboard/ui/styles/projects-dashboard.module.css');
+      expect(existsSync(modulePath)).toBe(true);
+    });
+
+    it('should have dashboard CSS Module', () => {
+      const modulePath = resolve(__dirname, '../../../../src/features/dashboard/ui/styles/dashboard.module.css');
+      expect(existsSync(modulePath)).toBe(true);
+    });
+
+    it('should have TimelineNav CSS Module', () => {
+      const modulePath = resolve(__dirname, '../../../../src/core/ui/components/TimelineNav.module.css');
+      expect(existsSync(modulePath)).toBe(true);
     });
   });
 
@@ -119,17 +147,12 @@ describe('CSS Directory Structure', () => {
 
     // Note: Spectrum size constraints removed after React Aria migration
 
-    it('each component file should be under 500 lines', () => {
-      const componentsDir = join(stylesDir, 'components');
-      const files = ['cards.css', 'timeline.css', 'dashboard.css', 'common.css'];
-
-      for (const file of files) {
-        const filePath = join(componentsDir, file);
-        if (existsSync(filePath)) {
-          const content = readFileSync(filePath, 'utf-8');
-          const lineCount = content.split('\n').length;
-          expect(lineCount).toBeLessThanOrEqual(500);
-        }
+    it('common.css should be under 500 lines', () => {
+      const commonPath = join(stylesDir, 'components', 'common.css');
+      if (existsSync(commonPath)) {
+        const content = readFileSync(commonPath, 'utf-8');
+        const lineCount = content.split('\n').length;
+        expect(lineCount).toBeLessThanOrEqual(500);
       }
     });
   });

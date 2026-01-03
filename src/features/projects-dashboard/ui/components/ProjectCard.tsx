@@ -11,6 +11,7 @@
 import { Flex, Text } from '@/core/ui/components/aria';
 import React, { useCallback, useMemo } from 'react';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
+import styles from '../styles/projects-dashboard.module.css';
 import {
     getStatusText,
     getStatusVariant,
@@ -90,11 +91,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             aria-label={ariaLabel}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
-            className="project-card-spectrum"
+            className={styles.projectCard}
         >
             {/* Header Row: Name + More Menu */}
             <Flex alignItems="center" justifyContent="space-between">
-                <Text className="project-card-spectrum-name">
+                <Text className={styles.projectCardName}>
                     {project.name}
                 </Text>
                 <ProjectActionsMenu
@@ -107,13 +108,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                     onEdit={onEdit}
                     onExport={onExport}
                     onDelete={onDelete}
-                    className="project-card-menu-button"
+                    className={styles.projectCardMenuButton}
                 />
             </Flex>
 
             {/* Component Summary */}
             {componentSummary && (
-                <Text className="project-card-spectrum-components">
+                <Text className={styles.projectCardComponents}>
                     {componentSummary}
                 </Text>
             )}
@@ -121,7 +122,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             {/* Status Row */}
             <Flex alignItems="center" gap="size-100" marginTop="auto">
                 <StatusDot variant={statusVariant} size={6} />
-                <Text className="project-card-spectrum-status">
+                <Text className={styles.projectCardStatus}>
                     {statusText}
                 </Text>
             </Flex>

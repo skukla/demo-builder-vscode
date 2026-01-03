@@ -7,6 +7,7 @@
 
 import { List, ListItem, Text, Flex } from '@/core/ui/components/aria';
 import React from 'react';
+import styles from '../styles/projects-dashboard.module.css';
 import {
     getStatusText,
     getStatusVariant,
@@ -42,7 +43,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                 }
             }}
             aria-label="Projects list"
-            className="project-list-view"
+            className={styles.projectListView}
         >
             {projects.map((project: Project) => {
                 const port = getFrontendPort(project);

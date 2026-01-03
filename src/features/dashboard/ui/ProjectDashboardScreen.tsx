@@ -14,6 +14,7 @@ import {
     ProgressCircle,
 } from '@/core/ui/components/aria';
 import React, { useState, useEffect } from 'react';
+import styles from './styles/dashboard.module.css';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { ActionGrid } from './components/ActionGrid';
 import { useDashboardActions } from './hooks/useDashboardActions';
@@ -107,7 +108,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
     useEffect(() => {
         if (projectStatus) {
             focusTimer.set(() => {
-                const firstButton = document.querySelector('.dashboard-action-button') as HTMLElement;
+                const firstButton = document.querySelector('[data-action-button]') as HTMLElement;
                 if (firstButton) {
                     firstButton.focus();
                 }
@@ -139,10 +140,10 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                 backgroundColor="var(--spectrum-global-color-gray-50)"
             >
                 {/* Status Header - matches Projects List header design */}
-                <div className="dashboard-status-header">
+                <div className={styles.statusHeader}>
                     <div className="page-container-padded page-header-section">
                         {/* Content wrapper matches grid width for alignment */}
-                        <div className="dashboard-status-content">
+                        <div className={styles.statusContent}>
                             <Flex alignItems="center" gap="size-300">
                                 {/* Status indicators */}
                                 <View flex>
@@ -191,7 +192,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                 <div className="page-container-padded pb-4">
 
                     {/* Center the grid of fixed-width buttons */}
-                    <div className="dashboard-grid-container">
+                    <div className={styles.gridContainer}>
                         <ActionGrid
                             isEds={isEds}
                             isRunning={isRunning}

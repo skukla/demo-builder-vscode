@@ -11,6 +11,9 @@
  *
  * Part of CSS Architecture Improvement - Keyframe Centralization
  * Updated for CSS Utility Modularization
+ *
+ * Migration Notes:
+ * - timeline.css keyframes now in TimelineNav.module.css
  */
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { resolve, join } from 'path';
@@ -19,6 +22,7 @@ describe('Keyframe Centralization', () => {
   const projectRoot = resolve(__dirname, '../../../..');
   const stylesDir = resolve(projectRoot, 'src/core/ui/styles');
   const animationsPath = resolve(stylesDir, 'utilities/animations.css');
+  const timelineModulePath = resolve(projectRoot, 'src/core/ui/components/TimelineNav.module.css');
 
   // Read all CSS files in the styles directory and subdirectories
   function getAllCssFiles(dir: string = stylesDir): string[] {
@@ -104,15 +108,14 @@ describe('Keyframe Centralization', () => {
     // Note: spectrum/components.css test removed after React Aria migration
   });
 
-  describe('Component-Specific Keyframes Allowed', () => {
-    // Timeline animations are component-specific and can stay in timeline.css
-    it('should retain timeline animation keyframes in components/timeline.css', () => {
-      const timelineCssPath = resolve(stylesDir, 'components/timeline.css');
-      const content = readFileSync(timelineCssPath, 'utf-8');
+  describe('Component-Specific Keyframes (CSS Modules)', () => {
+    // Timeline animations are component-specific and now in TimelineNav.module.css
+    it('should have timeline animation keyframes in TimelineNav.module.css', () => {
+      const content = readFileSync(timelineModulePath, 'utf-8');
 
-      // Timeline has enter/exit keyframes (component-specific, OK to keep here)
-      expect(content).toMatch(/@keyframes\s+timeline-enter\s*\{/);
-      expect(content).toMatch(/@keyframes\s+timeline-exit\s*\{/);
+      // Timeline has enter/exit keyframes (component-specific, now in CSS Module)
+      expect(content).toMatch(/@keyframes\s+timelineEnter\s*\{/);
+      expect(content).toMatch(/@keyframes\s+timelineExit\s*\{/);
     });
   });
 

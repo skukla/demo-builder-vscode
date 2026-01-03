@@ -10,6 +10,7 @@ import { View, Text } from '@/core/ui/components/aria';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import { cn } from '@/core/ui/utils/classNames';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
+import styles from './TimelineNav.module.css';
 
 /**
  * Timeline step status type
@@ -17,23 +18,22 @@ import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 type TimelineStatus = 'completed' | 'completed-current' | 'current' | 'upcoming' | 'review';
 
 /**
- * Lookup map for timeline step dot status classes
+ * Lookup map for timeline step dot status classes (CSS Module)
  */
 const TIMELINE_DOT_STATUS_CLASS: Record<TimelineStatus, string> = {
-    'completed': 'timeline-step-dot-completed',
-    'completed-current': 'timeline-step-dot-completed',
-    'current': 'timeline-step-dot-current',
-    'upcoming': 'timeline-step-dot-upcoming',
-    'review': 'timeline-step-dot-review',
+    'completed': styles.stepDotCompleted,
+    'completed-current': styles.stepDotCompleted,
+    'current': styles.stepDotCurrent,
+    'upcoming': styles.stepDotUpcoming,
+    'review': styles.stepDotReview,
 };
 
 /**
  * Build timeline step dot classes based on status
  */
 function getTimelineStepDotClasses(status: TimelineStatus): string {
-    const baseClasses = 'timeline-step-dot';
-    const statusClass = TIMELINE_DOT_STATUS_CLASS[status] ?? 'timeline-step-dot-upcoming';
-    return cn(baseClasses, statusClass);
+    const statusClass = TIMELINE_DOT_STATUS_CLASS[status] ?? styles.stepDotUpcoming;
+    return cn(styles.stepDot, statusClass);
 }
 
 /**
@@ -270,8 +270,8 @@ export function TimelineNav({
     const padding = compact ? 'size-200' : 'size-400';
     const stepSpacing = compact ? 'var(--spectrum-global-dimension-size-300)' : 'var(--spectrum-global-dimension-size-400)';
 
-    // Add timeline-sidebar class when in compact/sidebar mode
-    const containerClass = compact ? 'timeline-container timeline-sidebar' : 'timeline-container';
+    // Add sidebar class when in compact/sidebar mode
+    const containerClass = compact ? cn(styles.container, styles.containerSidebar) : styles.container;
 
     return (
         <View
@@ -313,8 +313,8 @@ export function TimelineNav({
                                     isClickable ? 'cursor-pointer' : 'cursor-default',
                                     status === 'upcoming' ? 'opacity-50' : 'opacity-100',
                                     'transition-opacity',
-                                    isEntering && 'timeline-step-enter',
-                                    isExiting && 'timeline-step-exit',
+                                    isEntering && styles.stepEnter,
+                                    isExiting && styles.stepExit,
                                 )}
                                 onClick={() => !step.isExiting && handleStepClick(actualIndex)}
                             >
@@ -345,8 +345,8 @@ export function TimelineNav({
                                     position="absolute"
                                     left="11px"
                                     className={cn(
-                                        'timeline-connector',
-                                        status === 'completed' ? 'timeline-connector-completed' : 'timeline-connector-pending',
+                                        styles.connector,
+                                        status === 'completed' ? styles.connectorCompleted : styles.connectorPending,
                                     )}
                                 />
                             )}

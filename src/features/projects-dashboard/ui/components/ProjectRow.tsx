@@ -10,6 +10,7 @@ import { Flex, Text } from '@/core/ui/components/aria';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import React, { useCallback, useMemo } from 'react';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
+import styles from '../styles/projects-dashboard.module.css';
 import {
     getStatusText,
     getStatusVariant,
@@ -82,17 +83,17 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
             aria-label={ariaLabel}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
-            className="project-row"
+            className={styles.projectRow}
         >
             <Flex alignItems="center" justifyContent="space-between" width="100%">
                 {/* Left: Status dot + Name + Components */}
                 <Flex alignItems="center" gap="size-150">
                     <StatusDot variant={statusVariant} size={8} />
-                    <Text className="project-row-name">
+                    <Text className={styles.projectRowName}>
                         {project.name}
                     </Text>
                     {componentSummary && (
-                        <Text className="project-row-components">
+                        <Text className={styles.projectRowComponents}>
                             {componentSummary}
                         </Text>
                     )}
@@ -109,9 +110,9 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         onEdit={onEdit}
                         onExport={onExport}
                         onDelete={onDelete}
-                        className="project-row-menu-button"
+                        className={styles.projectRowMenuButton}
                     />
-                    <Text className="project-row-status">
+                    <Text className={styles.projectRowStatus}>
                         {statusText}
                     </Text>
                     <ChevronRight size="S" />
