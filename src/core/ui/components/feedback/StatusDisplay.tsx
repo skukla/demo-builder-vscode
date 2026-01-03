@@ -19,7 +19,7 @@
  * // Using custom icon and button icons
  * <StatusDisplay
  *   variant="info"
- *   icon={<Key size="L" UNSAFE_className="text-gray-500" />}
+ *   icon={<Key size="L" className="text-gray-500" />}
  *   title="Sign in to Adobe"
  *   message="Connect your Adobe account"
  *   actions={[
@@ -28,12 +28,12 @@
  * />
  * ```
  */
-import { Flex, Text, Button } from '@adobe/react-spectrum';
+import React from 'react';
+import { Flex, Text, Button } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
-import React from 'react';
 import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
 
 export type StatusVariant = 'error' | 'success' | 'warning' | 'info' | 'pending';
@@ -74,23 +74,23 @@ export interface StatusDisplayProps {
 
 const variantConfig: Record<StatusVariant, { icon: React.ReactNode; colorClass: string }> = {
     error: {
-        icon: <AlertCircle size="L" UNSAFE_className="text-red-600" />,
+        icon: <AlertCircle size="L" className="text-red-600" />,
         colorClass: 'text-red-600',
     },
     success: {
-        icon: <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />,
+        icon: <CheckmarkCircle size="L" className="text-green-600" />,
         colorClass: 'text-green-600',
     },
     warning: {
-        icon: <AlertCircle size="L" UNSAFE_className="text-orange-600" />,
+        icon: <AlertCircle size="L" className="text-orange-600" />,
         colorClass: 'text-orange-600',
     },
     info: {
-        icon: <InfoOutline size="L" UNSAFE_className="text-blue-600" />,
+        icon: <InfoOutline size="L" className="text-blue-600" />,
         colorClass: 'text-blue-600',
     },
     pending: {
-        icon: <Clock size="L" UNSAFE_className="text-blue-600" />,
+        icon: <Clock size="L" className="text-blue-600" />,
         colorClass: 'text-blue-600',
     },
 };
@@ -133,12 +133,12 @@ export function StatusDisplay({
                     {/* Title/message section - only render if title provided */}
                     {title && (
                         <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-xl font-medium">{title}</Text>
+                            <Text className="text-xl font-medium">{title}</Text>
                             {message && (
-                                <Text UNSAFE_className={messageClassName}>{message}</Text>
+                                <Text className={messageClassName}>{message}</Text>
                             )}
                             {details?.map((detail, index) => (
-                                <Text key={index} UNSAFE_className={messageClassName}>
+                                <Text key={index} className={messageClassName}>
                                     {detail}
                                 </Text>
                             ))}

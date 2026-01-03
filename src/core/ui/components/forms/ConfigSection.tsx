@@ -1,5 +1,5 @@
-import { Heading, Flex, Divider } from '@adobe/react-spectrum';
 import React from 'react';
+import { Heading, Flex, Divider } from '@/core/ui/components/aria';
 
 export interface ConfigSectionProps {
     /** Section ID */

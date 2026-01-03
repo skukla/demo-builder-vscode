@@ -9,12 +9,7 @@
  *
  * Used by AdobeProjectStep and AdobeWorkspaceStep to reduce duplication.
  */
-import {
-    Flex,
-    Heading,
-    Item,
-    Text,
-} from '@adobe/react-spectrum';
+import { Flex, Heading, Text, ListItem } from '@/core/ui/components/aria';
 import React from 'react';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
@@ -190,14 +185,14 @@ export function SelectionStepContent<T extends SelectableItem>({
         }
     };
 
-    // Adapter: Create combined renderItem that wraps content in Item with description support
+    // Adapter: Create combined renderItem that wraps content in ListItem with description support
     const combinedRenderItem = (item: T) => (
-        <Item key={item.id} textValue={item.title || item.name}>
+        <ListItem key={item.id} id={item.id} textValue={item.title || item.name}>
             {renderItem ? renderItem(item) : (
                 <Text>{item.title || item.name}</Text>
             )}
             {renderDescription && renderDescription(item)}
-        </Item>
+        </ListItem>
     );
 
     return (

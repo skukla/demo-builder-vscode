@@ -1,8 +1,8 @@
-import { View, Heading, Text, Flex, Divider } from '@adobe/react-spectrum';
+import React from 'react';
+import { View, Heading, Text, Flex, Divider } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
-import React from 'react';
 import { getStepStatus } from './configurationSummaryHelpers';
 import { cn } from '@/core/ui/utils/classNames';
 import { WizardState, WizardStep } from '@/types/webview';
@@ -31,12 +31,12 @@ function StatusSection({ label, value, description, status, emptyText = 'Not sel
     const renderIcon = () => {
         switch (status) {
             case 'completed':
-                return <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />;
+                return <CheckmarkCircle size="S" className="text-green-600" />;
             case 'checking':
             case 'pending':
-                return <Clock size="S" UNSAFE_className="text-blue-600" />;
+                return <Clock size="S" className="text-blue-600" />;
             case 'error':
-                return <AlertCircle size="S" UNSAFE_className="text-red-600" />;
+                return <AlertCircle size="S" className="text-red-600" />;
             default:
                 return null;
         }
@@ -48,14 +48,14 @@ function StatusSection({ label, value, description, status, emptyText = 'Not sel
      */
     const renderStatusContent = (): React.ReactNode => {
         if (status === 'empty') {
-            return <Text UNSAFE_className="text-sm text-gray-600">{emptyText}</Text>;
+            return <Text className="text-sm text-gray-600">{emptyText}</Text>;
         }
 
         if (status === 'checking') {
             return (
                 <Flex gap="size-100" alignItems="center">
                     {renderIcon()}
-                    <Text UNSAFE_className="text-sm text-gray-600">{statusText || 'Checking...'}</Text>
+                    <Text className="text-sm text-gray-600">{statusText || 'Checking...'}</Text>
                 </Flex>
             );
         }
@@ -64,11 +64,11 @@ function StatusSection({ label, value, description, status, emptyText = 'Not sel
             <Flex gap="size-100" alignItems="center">
                 {renderIcon()}
                 <View>
-                    <Text UNSAFE_className={status === 'error' ? 'text-sm text-red-600' : 'text-sm'}>
+                    <Text className={status === 'error' ? 'text-sm text-red-600' : 'text-sm'}>
                         {statusText || value}
                     </Text>
                     {description && (
-                        <Text UNSAFE_className="text-xs text-gray-600">{description}</Text>
+                        <Text className="text-xs text-gray-600">{description}</Text>
                     )}
                 </View>
             </Flex>
@@ -77,7 +77,7 @@ function StatusSection({ label, value, description, status, emptyText = 'Not sel
 
     return (
         <View marginTop="size-200" marginBottom="size-200">
-            <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
+            <Text className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
                 {label}
             </Text>
             <View marginTop="size-100">

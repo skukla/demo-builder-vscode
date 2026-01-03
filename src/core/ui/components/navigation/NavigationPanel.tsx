@@ -1,7 +1,7 @@
-import { Heading, Flex, Text } from '@adobe/react-spectrum';
+import React, { useCallback } from 'react';
+import { Heading, Flex, Text } from '@/core/ui/components/aria';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
-import React, { useCallback } from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface NavigationField {
@@ -76,7 +76,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                 Sections
             </Heading>
 
-            <Flex direction="column" gap="size-150" UNSAFE_className="nav-panel-scroll">
+            <Flex direction="column" gap="size-150" className="nav-panel-scroll">
                 {sections.map((section) => {
                     const isExpanded = expandedSections.has(section.id);
                     const isActive = activeSection === section.id;
@@ -96,7 +96,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                     <Flex gap="size-100" alignItems="center">
                                         {isExpanded ? <ChevronDown size="S" /> : <ChevronRight size="S" />}
                                         <Text
-                                            UNSAFE_className={`text-sm ${
+                                            className={`text-sm ${
                                                 isActive ? 'font-bold' : 'font-medium'
                                             }`}
                                         >
@@ -104,11 +104,11 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                         </Text>
                                     </Flex>
                                     {section.isComplete ? (
-                                        <Text UNSAFE_className="text-green-600 status-icon-md">
+                                        <Text className="text-green-600 status-icon-md">
                                             ✓
                                         </Text>
                                     ) : (
-                                        <Text UNSAFE_className="text-gray-600 status-icon-sm">
+                                        <Text className="text-gray-600 status-icon-sm">
                                             {section.totalCount === 0
                                                 ? 'Optional'
                                                 : `${section.completedCount}/${section.totalCount}`}
@@ -134,7 +134,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                                 )}
                                             >
                                                 <Text
-                                                    UNSAFE_className={`text-xs ${
+                                                    className={`text-xs ${
                                                         isActiveField
                                                             ? 'text-blue-600 font-medium'
                                                             : 'text-gray-700'
@@ -143,7 +143,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                                     {field.label}
                                                 </Text>
                                                 {field.isComplete && (
-                                                    <Text UNSAFE_className="text-green-600 status-icon-sm">
+                                                    <Text className="text-green-600 status-icon-sm">
                                                         ✓
                                                     </Text>
                                                 )}

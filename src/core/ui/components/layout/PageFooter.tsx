@@ -32,8 +32,8 @@
  * ```
  */
 
-import { View } from '@adobe/react-spectrum';
 import React from 'react';
+import { View } from '@/core/ui/components/aria';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface PageFooterProps {
@@ -79,7 +79,7 @@ export const PageFooter: React.FC<PageFooterProps> = ({
     return (
         <View
             padding="size-400"
-            UNSAFE_className={cn('border-t', 'bg-gray-75', className)}
+            className={cn('border-t', 'bg-gray-75', className)}
         >
             {constrainWidth ? (
                 <div className="footer-content-container">

@@ -1,5 +1,5 @@
-import { Flex, Text } from '@adobe/react-spectrum';
 import React from 'react';
+import { Flex, Text } from '@/core/ui/components/aria';
 import { CopyableText } from './CopyableText';
 
 export interface Instruction {
@@ -48,7 +48,7 @@ export function NumberedInstructions({ description, instructions }: NumberedInst
                     key={index}
                     direction="row"
                     gap="size-150"
-                    UNSAFE_className="instruction-card"
+                    className="instruction-card"
                 >
                     {/* Circular number badge */}
                     <div className="number-badge">
@@ -57,10 +57,10 @@ export function NumberedInstructions({ description, instructions }: NumberedInst
 
                     {/* Content */}
                     <Flex direction="column" gap="size-75" flex={1}>
-                        <Text UNSAFE_className="font-semibold instruction-title">
+                        <Text className="font-semibold instruction-title">
                             {instruction.step}
                         </Text>
-                        <Text UNSAFE_className="text-sm text-gray-600 instruction-details">
+                        <Text className="text-sm text-gray-600 instruction-details">
                             {renderInstructionText(instruction.details)}
                         </Text>
                     </Flex>

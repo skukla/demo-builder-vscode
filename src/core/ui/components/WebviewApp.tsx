@@ -5,11 +5,11 @@
  * Handles common initialization logic:
  * - Theme synchronization
  * - Handshake protocol with extension
- * - Spectrum Provider setup
+ * - CSS class-based theming (replaces Spectrum Provider)
  */
 
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import React, { useEffect, useState, useRef, ReactNode } from 'react';
+import { cn } from '@/core/ui/utils/classNames';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 
@@ -26,7 +26,7 @@ export interface WebviewAppProps {
     onInit?: (data: WebviewInitData) => void;
     /** Optional loading content while waiting for init */
     loadingContent?: ReactNode;
-    /** Optional className for Provider */
+    /** Optional className for wrapper div */
     className?: string;
 }
 
@@ -127,7 +127,7 @@ export function WebviewApp({
         return loadingContent;
     }
 
-    log.debug('Ready! Rendering Provider with dark theme (unified theme system)');
+    log.debug('Ready! Rendering with dark theme (unified theme system)');
 
     // Support render props pattern
     const content: ReactNode = typeof children === 'function' ? children(initData) : children;
@@ -135,13 +135,8 @@ export function WebviewApp({
     log.debug('About to render content');
 
     return (
-        <Provider
-            theme={defaultTheme}
-            colorScheme="dark"
-            isQuiet
-            UNSAFE_className={className}
-        >
+        <div className={cn('webview-app', className)}>
             {content}
-        </Provider>
+        </div>
     );
 }

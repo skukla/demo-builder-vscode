@@ -5,9 +5,9 @@
  * Supports both string-based step IDs (wizard) and index-based navigation (sidebar).
  */
 
-import { View, Text } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useRef, useEffect, useState } from 'react';
+import { View, Text } from '@/core/ui/components/aria';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import { cn } from '@/core/ui/utils/classNames';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
@@ -62,7 +62,7 @@ function getTimelineLabelClasses(status: TimelineStatus): string {
  */
 function renderStepIndicator(status: TimelineStatus): React.ReactNode {
     if (status === 'completed' || status === 'completed-current') {
-        return <CheckmarkCircle size="XS" UNSAFE_className={cn('text-white', 'icon-xs')} />;
+        return <CheckmarkCircle size="XS" className={cn('text-white', 'icon-xs')} />;
     }
     if (status === 'review') {
         // Solid white inner dot for edit mode (no checkmark - indicates "can review/edit")
@@ -70,7 +70,7 @@ function renderStepIndicator(status: TimelineStatus): React.ReactNode {
             <View
                 width="size-100"
                 height="size-100"
-                UNSAFE_className="rounded-full"
+                className="rounded-full"
                 UNSAFE_style={{ backgroundColor: '#ffffff' }}
             />
         );
@@ -82,7 +82,7 @@ function renderStepIndicator(status: TimelineStatus): React.ReactNode {
             <View
                 width="size-100"
                 height="size-100"
-                UNSAFE_className={cn('rounded-full', 'animate-pulse')}
+                className={cn('rounded-full', 'animate-pulse')}
                 UNSAFE_style={{ backgroundColor: '#ffffff' }}
             />
         );
@@ -91,7 +91,7 @@ function renderStepIndicator(status: TimelineStatus): React.ReactNode {
         <View
             width="size-100"
             height="size-100"
-            UNSAFE_className={cn('rounded-full', 'bg-gray-400')}
+            className={cn('rounded-full', 'bg-gray-400')}
         />
     );
 }
@@ -277,11 +277,11 @@ export function TimelineNav({
         <View
             padding={padding}
             height="100%"
-            UNSAFE_className={containerClass}
+            className={containerClass}
         >
             {showHeader && (
                 <View marginBottom={compact ? 'size-200' : 'size-400'}>
-                    <Text UNSAFE_className={cn('text-xs', 'text-uppercase', 'letter-spacing-05', 'text-gray-600', 'font-semibold')}>
+                    <Text className={cn('text-xs', 'text-uppercase', 'letter-spacing-05', 'text-gray-600', 'font-semibold')}>
                         {headerText}
                     </Text>
                 </View>
@@ -319,20 +319,20 @@ export function TimelineNav({
                                 onClick={() => !step.isExiting && handleStepClick(actualIndex)}
                             >
                                 <View
-                                    UNSAFE_className="nav-item-row"
+                                    className="nav-item-row"
                                 >
                                     {/* Step indicator dot */}
                                     <View
                                         width="size-300"
                                         height="size-300"
-                                        UNSAFE_className={cn(getTimelineStepDotClasses(status), 'shrink-0')}
+                                        className={cn(getTimelineStepDotClasses(status), 'shrink-0')}
                                     >
                                         {renderStepIndicator(status)}
                                     </View>
 
                                     {/* Step label */}
                                     <Text
-                                        UNSAFE_className={getTimelineLabelClasses(status)}
+                                        className={getTimelineLabelClasses(status)}
                                     >
                                         {step.name}
                                     </Text>
@@ -344,7 +344,7 @@ export function TimelineNav({
                                 <View
                                     position="absolute"
                                     left="11px"
-                                    UNSAFE_className={cn(
+                                    className={cn(
                                         'timeline-connector',
                                         status === 'completed' ? 'timeline-connector-completed' : 'timeline-connector-pending',
                                     )}

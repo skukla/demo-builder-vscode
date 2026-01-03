@@ -25,8 +25,8 @@
  * ```
  */
 
-import { View, Flex, Heading, Text, Button } from '@adobe/react-spectrum';
 import React from 'react';
+import { View, Flex, Heading, Text, Button } from '@/core/ui/components/aria';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface BackButtonConfig {
@@ -87,12 +87,12 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                     {title}
                 </Heading>
                 {subtitle && (
-                    <Heading level={3} marginBottom="size-0" UNSAFE_className={cn('font-normal', 'text-gray-600')}>
+                    <Heading level={3} marginBottom="size-0" className={cn('font-normal', 'text-gray-600')}>
                         {subtitle}
                     </Heading>
                 )}
                 {description && (
-                    <Text UNSAFE_className={cn('text-gray-500', 'text-sm')}>
+                    <Text className={cn('text-gray-500', 'text-sm')}>
                         {description}
                     </Text>
                 )}
@@ -104,7 +104,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     return (
         <View
             padding="size-400"
-            UNSAFE_className={cn('border-b', 'bg-gray-75', className)}
+            className={cn('border-b', 'bg-gray-75', className)}
         >
             {constrainWidth ? (
                 <div className="page-container">

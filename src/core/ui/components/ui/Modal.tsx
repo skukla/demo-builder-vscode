@@ -1,5 +1,5 @@
-import { Dialog, Heading, Content, Divider, Button } from '@adobe/react-spectrum';
-import React, { ReactNode, useCallback } from 'react';
+import React, { ReactNode } from 'react';
+import { Dialog, DialogAction } from '@/core/ui/components/aria';
 
 export interface ActionButton {
     label: string;
@@ -8,6 +8,8 @@ export interface ActionButton {
 }
 
 export interface ModalProps {
+    /** Whether the modal is open */
+    isOpen?: boolean;
     title: string;
     size?: 'S' | 'M' | 'L' | 'fullscreen' | 'fullscreenTakeover';
     actionButtons?: ActionButton[];
@@ -16,44 +18,14 @@ export interface ModalProps {
 }
 
 /**
- * Focusable button wrapper to ensure buttons are in the same tab order
- * as custom focusable elements (tabIndex={0}) in the modal content.
- * Spectrum's ButtonGroup is excluded from focus trap with custom elements.
+ * Modal Component
+ *
+ * A modal dialog wrapper that uses the React Aria Dialog component.
+ * Provides backwards compatibility with the old Modal API while using
+ * the new accessible Dialog implementation.
  */
-interface FocusableButtonProps {
-    variant: 'primary' | 'secondary' | 'accent' | 'negative';
-    onPress: () => void;
-    children: React.ReactNode;
-}
-
-function FocusableButton({ variant, onPress, children }: FocusableButtonProps) {
-    const handleKeyDown = useCallback(
-        (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onPress();
-            }
-        },
-        [onPress],
-    );
-
-    // Map variant to CSS class
-    const variantClass = variant === 'primary' ? 'modal-button-primary' : 'modal-button-secondary';
-
-    return (
-        <div
-            role="button"
-            tabIndex={0}
-            onClick={onPress}
-            onKeyDown={handleKeyDown}
-            className={`modal-button ${variantClass}`}
-        >
-            {children}
-        </div>
-    );
-}
-
 export function Modal({
+    isOpen = true,
     title,
     size = 'M',
     actionButtons = [],
@@ -64,28 +36,23 @@ export function Modal({
     const dialogSize: 'S' | 'M' | 'L' =
         size === 'fullscreen' || size === 'fullscreenTakeover' ? 'L' : size;
 
+    // Map ActionButton to DialogAction (handle 'primary' variant mapping)
+    const dialogActions: DialogAction[] = actionButtons.map(button => ({
+        label: button.label,
+        variant: button.variant === 'primary' ? 'accent' : button.variant,
+        onPress: button.onPress,
+    }));
+
     return (
-        <Dialog size={dialogSize}>
-            <Heading>{title}</Heading>
-            <Divider />
-            <Content>
-                {children}
-                <div className="modal-footer-actions">
-                    {/* Close/Cancel on left, primary actions on right (per Spectrum design guidelines) */}
-                    <FocusableButton variant="secondary" onPress={onClose}>
-                        Close
-                    </FocusableButton>
-                    {actionButtons.map((button, index) => (
-                        <FocusableButton
-                            key={index}
-                            variant={button.variant}
-                            onPress={button.onPress}
-                        >
-                            {button.label}
-                        </FocusableButton>
-                    ))}
-                </div>
-            </Content>
+        <Dialog
+            isOpen={isOpen}
+            title={title}
+            size={dialogSize}
+            actionButtons={dialogActions}
+            onClose={onClose}
+            isDismissable
+        >
+            {children}
         </Dialog>
     );
 }

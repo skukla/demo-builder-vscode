@@ -12,9 +12,9 @@
  * ```
  */
 
-import { View, Text, Heading } from '@adobe/react-spectrum';
-import Alert from '@spectrum-icons/workflow/Alert';
 import React, { Component, ReactNode, ErrorInfo } from 'react';
+import { View, Text, Heading } from '@/core/ui/components/aria';
+import Alert from '@spectrum-icons/workflow/Alert';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 
 const log = webviewLogger('ErrorBoundary');
@@ -70,13 +70,11 @@ export class ErrorBoundary extends Component<Props, State> {
             }
 
             // Default error UI
+            // Note: backgroundColor/borderRadius/borderWidth/borderColor props replaced with CSS classes
             return (
                 <View
                     padding="size-400"
-                    backgroundColor="gray-100"
-                    borderRadius="medium"
-                    borderWidth="thin"
-                    borderColor="negative"
+                    className="bg-gray-100 rounded border border-red-600"
                 >
                     <View marginBottom="size-200">
                         <Alert size="L" color="negative" />
@@ -89,7 +87,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     </Text>
                     {this.state.errorInfo && (
                         <View marginTop="size-200">
-                            <Text UNSAFE_className="text-sm font-mono whitespace-pre-wrap">
+                            <Text className="text-sm font-mono whitespace-pre-wrap">
                                 {this.state.errorInfo.componentStack}
                             </Text>
                         </View>

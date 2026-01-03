@@ -12,11 +12,11 @@
  * - Configurable visibility and behavior
  */
 
-import { Flex, Text, SearchField, ActionButton, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
+import React from 'react';
+import { Flex, Text, SearchField, ActionButton, Tooltip, TooltipTrigger } from '@/core/ui/components/aria';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
 import ViewList from '@spectrum-icons/workflow/ViewList';
-import React from 'react';
 import { Spinner } from '../ui/Spinner';
 
 /** Available view modes */
@@ -110,11 +110,10 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
     // Refresh button component (reused in both layouts)
     const RefreshButton = onRefresh ? (
         <ActionButton
-            isQuiet
             onPress={onRefresh}
             aria-label={refreshAriaLabel}
             isDisabled={isRefreshing}
-            UNSAFE_className="cursor-pointer"
+            className="cursor-pointer"
         >
             {isRefreshing ? <Spinner size="S" /> : <Refresh />}
         </ActionButton>
@@ -125,35 +124,25 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
         <Flex gap="size-50">
             <TooltipTrigger delay={300}>
                 <ActionButton
-                    isQuiet
                     onPress={() => onViewModeChange('cards')}
                     aria-label="Card view"
                     aria-pressed={viewMode === 'cards'}
-                    UNSAFE_className={`cursor-pointer ${viewMode === 'cards' ? 'is-selected' : ''}`}
-                    UNSAFE_style={{
-                        backgroundColor: viewMode === 'cards' ? 'var(--spectrum-global-color-gray-200)' : undefined,
-                        borderRadius: '4px',
-                    }}
+                    className={`cursor-pointer ${viewMode === 'cards' ? 'is-selected' : ''}`}
                 >
                     <ViewGrid />
                 </ActionButton>
-                <Tooltip>Card view</Tooltip>
+                <Tooltip placement="bottom">Card view</Tooltip>
             </TooltipTrigger>
             <TooltipTrigger delay={300}>
                 <ActionButton
-                    isQuiet
                     onPress={() => onViewModeChange('rows')}
                     aria-label="List view"
                     aria-pressed={viewMode === 'rows'}
-                    UNSAFE_className={`cursor-pointer ${viewMode === 'rows' ? 'is-selected' : ''}`}
-                    UNSAFE_style={{
-                        backgroundColor: viewMode === 'rows' ? 'var(--spectrum-global-color-gray-200)' : undefined,
-                        borderRadius: '4px',
-                    }}
+                    className={`cursor-pointer ${viewMode === 'rows' ? 'is-selected' : ''}`}
                 >
                     <ViewList />
                 </ActionButton>
-                <Tooltip>List view</Tooltip>
+                <Tooltip placement="bottom">List view</Tooltip>
             </TooltipTrigger>
         </Flex>
     ) : null;
@@ -179,7 +168,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                         isQuiet
                         autoFocus={autoFocus}
                         aria-label={`Filter ${nounPlural}`}
-                        UNSAFE_className="flex-1"
+                        className="flex-1"
                     />
                     {ActionButtons}
                 </Flex>
@@ -188,7 +177,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
             {/* Item Count + Actions (always shown when data loaded) */}
             {showCount && (
                 <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-                    <Text UNSAFE_className="text-sm text-gray-600">
+                    <Text className="text-sm text-gray-600">
                         {isFiltering
                             ? `Showing ${filteredCount} of ${totalCount} ${displayNoun}`
                             : `${totalCount} ${displayNoun}`}

@@ -1,8 +1,4 @@
-import {
-    Text,
-    ListView,
-    Item,
-} from '@adobe/react-spectrum';
+import { Text, List, ListItem } from '@/core/ui/components/aria';
 import React, { useEffect, useRef } from 'react';
 import { SearchHeader } from './SearchHeader';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
@@ -106,14 +102,14 @@ export function SearchableList<T extends SearchableListItem>({
     const nounPlural = itemNounPlural || `${itemNoun}s`;
     // Default item renderer
     const defaultRenderItem = (item: T) => (
-        <Item key={item.id} textValue={item.title || item.name}>
+        <ListItem key={item.id} id={item.id} textValue={item.title || item.name}>
             <Text>{item.title || item.name}</Text>
             {item.description && (
-                <Text slot="description" UNSAFE_className="text-sm text-gray-600">
+                <Text className="text-sm text-gray-600">
                     {item.description}
                 </Text>
             )}
-        </Item>
+        </ListItem>
     );
 
     const itemRenderer = renderItem
@@ -240,21 +236,19 @@ export function SearchableList<T extends SearchableListItem>({
                 ref={listContainerRef}
                 className={`list-refresh-container ${isRefreshing ? 'refreshing' : ''}`}
             >
-                <ListView
-                    items={filteredItems}
+                <List
                     selectionMode="single"
-                    selectedKeys={selectedKeys}
-                    onSelectionChange={onSelectionChange as (keys: 'all' | Set<React.Key>) => void}
+                    selectedKeys={new Set(selectedKeys)}
+                    onSelectionChange={onSelectionChange}
                     aria-label={ariaLabel}
-                    height="100%"
-                    UNSAFE_className="flex-1"
+                    className="flex-1 h-full"
                 >
                     {filteredItems.map(itemRenderer)}
-                </ListView>
+                </List>
 
                 {/* No results message */}
                 {filteredItems.length === 0 && searchQuery && (
-                    <Text UNSAFE_className="text-sm text-gray-600" marginTop="size-200">
+                    <Text className="text-sm text-gray-600 mt-size-200">
                         No {nounPlural} match "{searchQuery}"
                     </Text>
                 )}

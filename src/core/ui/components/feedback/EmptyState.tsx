@@ -1,6 +1,6 @@
-import { Flex, Text, Well } from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React from 'react';
+import { Flex, Text, View } from '@/core/ui/components/aria';
+import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 
 export interface EmptyStateProps {
     /** Icon to display (defaults to AlertCircle) */
@@ -41,17 +41,18 @@ export const EmptyState = React.memo<EmptyStateProps>(({
 }) => {
     const content = (
         <Flex direction="column" gap="size-300" alignItems="center">
-            <Well>
+            {/* Well replacement: View with bg-gray-75 and padding for the well effect */}
+            <View padding="size-200" className="bg-gray-75 rounded">
                 <Flex gap="size-200" alignItems="center">
-                    {icon || <AlertCircle UNSAFE_className={iconColor} />}
+                    {icon || <AlertCircle className={iconColor} />}
                     <Flex direction="column" gap="size-50">
                         <Text>
                             <strong>{title}</strong>
                         </Text>
-                        <Text UNSAFE_className="text-sm">{description}</Text>
+                        <Text className="text-sm">{description}</Text>
                     </Flex>
                 </Flex>
-            </Well>
+            </View>
             {children}
         </Flex>
     );

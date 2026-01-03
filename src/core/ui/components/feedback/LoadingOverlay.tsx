@@ -1,5 +1,5 @@
-import { Text } from '@adobe/react-spectrum';
 import React from 'react';
+import { Text } from '@/core/ui/components/aria';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface LoadingOverlayProps {
@@ -53,7 +53,7 @@ export function LoadingOverlay({ isVisible, message, opaque = false }: LoadingOv
             </div>
             {message && (
                 <Text
-                    UNSAFE_className="loading-overlay-text"
+                    className="loading-overlay-text"
                     data-testid="loading-message"
                 >
                     {message}

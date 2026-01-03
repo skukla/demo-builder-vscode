@@ -1,5 +1,5 @@
-import { Flex, ProgressCircle, Text } from '@adobe/react-spectrum';
 import React from 'react';
+import { Flex, ProgressCircle, Text } from '@/core/ui/components/aria';
 
 export interface LoadingDisplayProps {
     /** Size of the progress circle */
@@ -46,17 +46,17 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
     // For small size with no sub-message, use horizontal layout
     if (size === 'S' && !subMessage) {
         return (
-            <Flex gap="size-200" alignItems="center" UNSAFE_className={className}>
+            <Flex gap="size-200" alignItems="center" className={className}>
                 <ProgressCircle
                     size={size}
-                    isIndeterminate={true}
+                    isIndeterminate
                     aria-label={message}
                 />
-                <Text UNSAFE_className={mainTextClass}>{message}</Text>
+                <Text className={mainTextClass}>{message}</Text>
             </Flex>
         );
     }
-    
+
     // For larger sizes or when sub-message exists, use vertical layout
     return (
         <div role="status" aria-live="polite" aria-atomic="true">
@@ -64,24 +64,24 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
             direction="column"
             gap="size-200"
             {...containerProps}
-            UNSAFE_className={className}
+            className={className}
         >
             <ProgressCircle
                 size={size}
-                isIndeterminate={true}
+                isIndeterminate
                 aria-label={message}
             />
             <Flex direction="column" gap="size-50" alignItems={shouldCenter ? 'center' : 'start'}>
-                <Text UNSAFE_className={mainTextClass}>
+                <Text className={mainTextClass}>
                     {message}
                 </Text>
                 {subMessage && (
-                    <Text UNSAFE_className={subTextClass}>
+                    <Text className={subTextClass}>
                         {subMessage}
                     </Text>
                 )}
                 {helperText && (
-                    <Text UNSAFE_className={helperTextClass} marginTop="size-100">
+                    <Text className={helperTextClass} marginTop="size-100">
                         {helperText}
                     </Text>
                 )}

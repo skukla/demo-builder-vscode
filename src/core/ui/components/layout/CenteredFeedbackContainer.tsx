@@ -1,6 +1,6 @@
-import { Flex } from '@adobe/react-spectrum';
 import React, { memo } from 'react';
-import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
+import { Flex } from '@/core/ui/components/aria';
+import { DimensionValue } from '@/core/ui/utils/spectrumTokens';
 
 /**
  * Props for CenteredFeedbackContainer component
@@ -53,8 +53,8 @@ const CenteredFeedbackContainerComponent: React.FC<CenteredFeedbackContainerProp
             direction="column"
             justifyContent="center"
             alignItems="center"
-            height={translateSpectrumToken(height)}
-            maxWidth={maxWidth ? translateSpectrumToken(maxWidth) : undefined}
+            height={height}
+            maxWidth={maxWidth}
         >
             {children}
         </Flex>

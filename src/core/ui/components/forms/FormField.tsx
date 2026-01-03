@@ -1,11 +1,5 @@
-import {
-    TextField,
-    Picker,
-    Item,
-    Flex,
-    Text,
-} from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
+import { TextField, Flex, Text, Select, SelectItem } from '@/core/ui/components/aria';
 import { FieldHelpButton, FieldHelpContent } from './FieldHelpButton';
 
 export interface FormFieldOption {
@@ -152,19 +146,17 @@ export const FormField = React.memo<FormFieldProps>(({
 
         case 'select':
             return (
-                <div key={fieldKey} id={`field-${fieldKey}`} style={wrapperStyle}>
-                    <Picker
-                        label={renderLabel()}
+                <div key={fieldKey} id={`field-${fieldKey}`} style={wrapperStyle} className="mb-3">
+                    <Select
+                        label={label}
                         selectedKey={value as string}
                         onSelectionChange={(key) => handleChange(String(key || ''))}
-                        width="100%"
-                        isRequired={required}
-                        marginBottom="size-200"
+                        aria-label={label}
                     >
                         {options?.map(option => (
-                            <Item key={option.value}>{option.label}</Item>
+                            <SelectItem key={option.value} id={option.value}>{option.label}</SelectItem>
                         )) || []}
-                    </Picker>
+                    </Select>
                 </div>
             );
 

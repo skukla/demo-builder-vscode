@@ -2,14 +2,15 @@ import {
     ActionButton,
     DialogTrigger,
     Dialog,
+    DialogHeader,
+    DialogContent,
+    DialogFooter,
     Heading,
-    Content,
     Divider,
     Text,
     Flex,
     Button,
-    Footer,
-} from '@adobe/react-spectrum';
+} from '@/core/ui/components/aria';
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
@@ -162,7 +163,7 @@ function StepContent({
         <Flex
             direction="row"
             gap="size-150"
-            UNSAFE_className="instruction-card"
+            className="instruction-card"
         >
             {/* Circular number badge */}
             {showStepNumber && (
@@ -175,7 +176,7 @@ function StepContent({
             <Flex direction="column" gap="size-150" flex={1}>
                 {/* Fixed height for text prevents layout shift between steps */}
                 <div className="min-h-48">
-                    <Text UNSAFE_className="instruction-title">
+                    <Text className="instruction-title">
                         {renderTextWithCopyable(step.text)}
                     </Text>
                 </div>
@@ -252,18 +253,19 @@ export function FieldHelpButton({
     };
 
     // Popover variant - lightweight floating card (text only, no steps)
+    // Note: Using modal dialog since we don't have a popover implementation yet
     if (variant === 'popover') {
         return (
-            <DialogTrigger type="popover">
+            <DialogTrigger type="modal">
                 <ActionButton
                     isQuiet
                     aria-label={`Help for ${fieldLabel}`}
-                    UNSAFE_className="field-help-button"
+                    className="field-help-button"
                 >
                     <InfoOutline size="S" />
                 </ActionButton>
-                <Dialog>
-                    <Content>
+                <Dialog size="S">
+                    <DialogContent>
                         <Flex direction="column" gap="size-150" maxWidth="size-3600">
                             {help.text && (
                                 <Text>{help.text}</Text>
@@ -279,7 +281,7 @@ export function FieldHelpButton({
                                 />
                             ))}
                         </Flex>
-                    </Content>
+                    </DialogContent>
                 </Dialog>
             </DialogTrigger>
         );
@@ -301,24 +303,24 @@ export function FieldHelpButton({
                 <ActionButton
                     isQuiet
                     aria-label={`Help for ${fieldLabel}`}
-                    UNSAFE_className="field-help-button"
+                    className="field-help-button"
                 >
                     <InfoOutline size="S" />
                 </ActionButton>
                 {(close) => (
-                    <Dialog size="L" UNSAFE_className="field-help-dialog">
-                        <Heading>
+                    <Dialog size="L" className="field-help-dialog">
+                        <DialogHeader>
                             <Flex justifyContent="space-between" alignItems="center" width="100%">
-                                <Text>{help.title || `Help: ${fieldLabel}`}</Text>
+                                <Heading level={3} margin={0}>{help.title || `Help: ${fieldLabel}`}</Heading>
                                 {hasMultipleSteps && (
-                                    <Text UNSAFE_className="step-counter">
+                                    <Text className="step-counter">
                                         Step {currentStep + 1} of {totalSteps}
                                     </Text>
                                 )}
                             </Flex>
-                        </Heading>
+                        </DialogHeader>
                         <Divider />
-                        <Content>
+                        <DialogContent>
                             <Flex direction="column" gap="size-200">
                                 {help.text && (
                                     <Text>{help.text}</Text>
@@ -333,8 +335,8 @@ export function FieldHelpButton({
                                     />
                                 )}
                             </Flex>
-                        </Content>
-                        <Footer>
+                        </DialogContent>
+                        <DialogFooter>
                             <Flex width="100%" justifyContent="space-between" alignItems="center">
                                 {/* Left spacer for centering */}
                                 <div className="flex-1" />
@@ -368,7 +370,7 @@ export function FieldHelpButton({
                                     </Button>
                                 </div>
                             </Flex>
-                        </Footer>
+                        </DialogFooter>
                     </Dialog>
                 )}
             </DialogTrigger>

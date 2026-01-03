@@ -1,5 +1,5 @@
-import { ProgressCircle } from '@adobe/react-spectrum';
 import React from 'react';
+import { ProgressCircle } from '@/core/ui/components/aria';
 
 export interface SpinnerProps {
     /** Size of the spinner */
@@ -15,7 +15,7 @@ export interface SpinnerProps {
 /**
  * Atomic Component: Spinner
  *
- * A loading spinner based on Adobe Spectrum's ProgressCircle.
+ * A loading spinner based on React Aria's ProgressCircle.
  * Use for indicating loading states.
  *
  * @example
@@ -34,7 +34,7 @@ export const Spinner: React.FC<SpinnerProps> = ({
             size={size}
             isIndeterminate={isIndeterminate}
             aria-label={ariaLabel}
-            UNSAFE_className={className}
+            className={className}
         />
     );
 };
