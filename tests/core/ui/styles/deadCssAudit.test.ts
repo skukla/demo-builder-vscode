@@ -249,18 +249,15 @@ describe('Dead CSS Audit', () => {
         'utilities/layout.css',
         'utilities/spacing.css',
         'utilities/borders.css',
+        'utilities/buttons.css',
+        'utilities/animations.css',
       ];
       for (const file of utilityFiles) {
         expect(existsSync(join(stylesDir, file))).toBe(true);
       }
     });
 
-    it('should have spectrum directory with expected files', () => {
-      const spectrumFiles = ['spectrum/buttons.css', 'spectrum/components.css'];
-      for (const file of spectrumFiles) {
-        expect(existsSync(join(stylesDir, file))).toBe(true);
-      }
-    });
+    // Note: spectrum/ directory removed after React Aria migration
 
     it('should have components directory with expected files', () => {
       const componentFiles = [
@@ -283,8 +280,8 @@ describe('Dead CSS Audit', () => {
       expect(lineCount).toBeLessThanOrEqual(100);
       // Should contain @import statements to modular files
       expect(content).toContain("@import './utilities/index.css'");
-      expect(content).toContain("@import './spectrum/index.css'");
       expect(content).toContain("@import './components/index.css'");
+      // Note: spectrum import removed after React Aria migration
     });
   });
 

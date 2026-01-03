@@ -20,8 +20,8 @@ describe('CSS Layer Declarations', () => {
     });
 
     it('declares layer order at top of file', () => {
-      // Updated for 5-layer architecture (CSS Architecture Improvement)
-      expect(indexCSS).toContain('@layer reset, vscode-theme, spectrum, components, utilities;');
+      // Updated for 4-layer architecture after React Aria migration
+      expect(indexCSS).toContain('@layer reset, vscode-theme, components, utilities;');
     });
 
     it('imports reset.css', () => {
@@ -38,35 +38,12 @@ describe('CSS Layer Declarations', () => {
 
     it('imports modular CSS directories', () => {
       expect(indexCSS).toContain("@import './utilities/index.css'");
-      expect(indexCSS).toContain("@import './spectrum/index.css'");
       expect(indexCSS).toContain("@import './components/index.css'");
+      // Note: spectrum/ directory removed after React Aria migration
     });
   });
 
-  describe('spectrum/buttons.css', () => {
-    let buttonsCss: string;
-
-    beforeAll(() => {
-      buttonsCss = readFileSync(join(stylesDir, 'spectrum/buttons.css'), 'utf-8');
-    });
-
-    it('wraps CTA button overrides in @layer spectrum', () => {
-      expect(buttonsCss).toContain('@layer spectrum {');
-    });
-
-    it('has CTA button styles inside spectrum layer', () => {
-      // Find the spectrum layer content
-      const layerMatch = buttonsCss.match(
-        /@layer spectrum\s*\{([\s\S]*?)\n\}/
-      );
-      expect(layerMatch).toBeTruthy();
-      if (layerMatch) {
-        const layerContent = layerMatch[1];
-        expect(layerContent).toContain('.spectrum-Button--cta');
-        expect(layerContent).toContain('var(--db-cta-background)'); // Tangerine token
-      }
-    });
-  });
+  // Note: spectrum/buttons.css tests removed after React Aria migration
 
   describe('custom-spectrum.css (deprecated)', () => {
     let customSpectrumCSS: string;
@@ -85,8 +62,8 @@ describe('CSS Layer Declarations', () => {
 
     it('imports modular files for backwards compatibility', () => {
       expect(customSpectrumCSS).toContain("@import './utilities/index.css'");
-      expect(customSpectrumCSS).toContain("@import './spectrum/index.css'");
       expect(customSpectrumCSS).toContain("@import './components/index.css'");
+      // Note: spectrum import removed after React Aria migration
     });
   });
 

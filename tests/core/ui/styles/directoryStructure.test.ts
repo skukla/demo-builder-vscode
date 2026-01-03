@@ -43,6 +43,8 @@ describe('CSS Directory Structure', () => {
         'layout.css',
         'spacing.css',
         'borders.css',
+        'buttons.css',
+        'animations.css',
       ];
 
       for (const file of expectedFiles) {
@@ -52,36 +54,7 @@ describe('CSS Directory Structure', () => {
     });
   });
 
-  describe('Spectrum Directory', () => {
-    const spectrumDir = join(stylesDir, 'spectrum');
-
-    it('should have spectrum directory', () => {
-      expect(existsSync(spectrumDir)).toBe(true);
-    });
-
-    it('should have spectrum/index.css barrel file', () => {
-      const indexPath = join(spectrumDir, 'index.css');
-      expect(existsSync(indexPath)).toBe(true);
-    });
-
-    it('should have spectrum/index.css with proper @import structure', () => {
-      const indexPath = join(spectrumDir, 'index.css');
-      const content = readFileSync(indexPath, 'utf-8');
-
-      // Should import Spectrum override files
-      expect(content).toMatch(/@import ['"]\.\/buttons\.css['"]/);
-      expect(content).toMatch(/@import ['"]\.\/components\.css['"]/);
-    });
-
-    it('should have all Spectrum category files', () => {
-      const expectedFiles = ['buttons.css', 'components.css'];
-
-      for (const file of expectedFiles) {
-        const filePath = join(spectrumDir, file);
-        expect(existsSync(filePath)).toBe(true);
-      }
-    });
-  });
+  // Note: Spectrum Directory tests removed after React Aria migration
 
   describe('Components Directory', () => {
     const componentsDir = join(stylesDir, 'components');
@@ -130,6 +103,8 @@ describe('CSS Directory Structure', () => {
         'layout.css',
         'spacing.css',
         'borders.css',
+        'buttons.css',
+        'animations.css',
       ];
 
       for (const file of files) {
@@ -142,19 +117,7 @@ describe('CSS Directory Structure', () => {
       }
     });
 
-    it('each Spectrum file should be under 300 lines', () => {
-      const spectrumDir = join(stylesDir, 'spectrum');
-      const files = ['buttons.css', 'components.css'];
-
-      for (const file of files) {
-        const filePath = join(spectrumDir, file);
-        if (existsSync(filePath)) {
-          const content = readFileSync(filePath, 'utf-8');
-          const lineCount = content.split('\n').length;
-          expect(lineCount).toBeLessThanOrEqual(300);
-        }
-      }
-    });
+    // Note: Spectrum size constraints removed after React Aria migration
 
     it('each component file should be under 500 lines', () => {
       const componentsDir = join(stylesDir, 'components');

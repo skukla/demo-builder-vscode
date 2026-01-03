@@ -54,25 +54,6 @@ jest.mock('@/features/dashboard/ui/dashboardPredicates', () => ({
     isStartActionDisabled: () => false,
 }));
 
-// Mock Adobe React Spectrum components
-jest.mock('@adobe/react-spectrum', () => ({
-    View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
-    Heading: ({ children, level, ...props }: any) => {
-        const Tag = `h${level || 1}` as keyof JSX.IntrinsicElements;
-        return <Tag {...props}>{children}</Tag>;
-    },
-    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-    Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} data-variant={variant} data-testid="back-button" {...props}>{children}</button>
-    ),
-    ActionButton: ({ children, onPress, isQuiet, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...props}>{children}</button>
-    ),
-    Divider: () => <hr />,
-    ProgressCircle: () => <div data-testid="progress-circle" />,
-}));
-
 // Mock Spectrum icons
 jest.mock('@spectrum-icons/workflow/PlayCircle', () => ({
     __esModule: true,

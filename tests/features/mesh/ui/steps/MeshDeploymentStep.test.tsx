@@ -10,16 +10,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MeshDeploymentStep } from '@/features/mesh/ui/steps/MeshDeploymentStep';
 import { MeshDeploymentState } from '@/features/mesh/ui/steps/meshDeploymentTypes';
 
-// Mock Adobe Spectrum components
-jest.mock('@adobe/react-spectrum', () => ({
-    Button: ({ children, onPress, isDisabled }: { children: React.ReactNode; onPress?: () => void; isDisabled?: boolean }) => (
-        <button onClick={onPress} disabled={isDisabled}>{children}</button>
-    ),
-    Flex: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-    Heading: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-    Text: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-}));
-
 // Mock Spectrum icons
 jest.mock('@spectrum-icons/workflow/AlertCircle', () => ({
     __esModule: true,

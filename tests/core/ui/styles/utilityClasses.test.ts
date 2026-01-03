@@ -2,10 +2,10 @@
  * Utility Classes Tests
  *
  * Validates that active utility classes have correct CSS property definitions.
- * Classes are now in modular files under utilities/, spectrum/, and components/.
+ * Classes are now in modular files under utilities/ and components/.
  *
  * Part of CSS Architecture Improvement - Step 1: Dead CSS Cleanup
- * Updated for CSS Utility Modularization
+ * Updated after React Aria migration (spectrum/ directory removed)
  */
 import { readFileSync } from 'fs';
 import { resolve, join } from 'path';
@@ -21,8 +21,7 @@ describe('Utility Classes', () => {
       'utilities/layout.css',
       'utilities/spacing.css',
       'utilities/borders.css',
-      'spectrum/buttons.css',
-      'spectrum/components.css',
+      'utilities/buttons.css',
       'components/common.css',
     ];
     return files.map(f => readFileSync(join(stylesDir, f), 'utf-8')).join('\n');

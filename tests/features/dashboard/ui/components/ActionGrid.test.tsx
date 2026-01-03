@@ -11,16 +11,6 @@ import userEvent from '@testing-library/user-event';
 import { ActionGrid } from '@/features/dashboard/ui/components/ActionGrid';
 import '@testing-library/jest-dom';
 
-// Mock Adobe React Spectrum components
-jest.mock('@adobe/react-spectrum', () => ({
-    ActionButton: ({ children, onPress, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...props}>
-            {children}
-        </button>
-    ),
-    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-}));
-
 // Mock Spectrum icons
 jest.mock('@spectrum-icons/workflow/PlayCircle', () => ({
     __esModule: true,

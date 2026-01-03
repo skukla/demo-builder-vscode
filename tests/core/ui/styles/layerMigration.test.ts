@@ -37,27 +37,20 @@ describe('CSS Layer Migration', () => {
     });
   });
 
-  describe('spectrum layer assignment', () => {
-    it('spectrum/buttons.css uses @layer spectrum', () => {
-      const content = readFileSync(resolve(stylesPath, 'spectrum/buttons.css'), 'utf-8');
-      expect(content).toMatch(/@layer\s+spectrum\s*\{/);
-      expect(content).not.toMatch(/@layer\s+overrides\s*\{/);
-    });
-  });
+  // Note: spectrum/ directory was removed after React Aria migration
 
   describe('deprecated layer names removed', () => {
     const filesToCheck = [
       'tokens.css',
       'vscode-theme.css',
       'wizard.css',
-      'spectrum/buttons.css',
     ];
 
     it.each(filesToCheck)('%s does not contain deprecated layer names', (file) => {
       const content = readFileSync(resolve(stylesPath, file), 'utf-8');
       // @layer theme { is deprecated (but @layer vscode-theme { is valid)
       expect(content).not.toMatch(/@layer\s+theme\s*\{/);
-      // @layer overrides { is deprecated (but @layer spectrum { is valid)
+      // @layer overrides { is deprecated
       expect(content).not.toMatch(/@layer\s+overrides\s*\{/);
     });
   });

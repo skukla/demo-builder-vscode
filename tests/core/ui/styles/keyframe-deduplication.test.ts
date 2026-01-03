@@ -101,11 +101,7 @@ describe('Keyframe Centralization', () => {
       expect(countKeyframes(content, 'spin')).toBe(0);
     });
 
-    it('should NOT have @keyframes fadeInUp in spectrum/components.css', () => {
-      const spectrumComponentsPath = resolve(stylesDir, 'spectrum/components.css');
-      const content = readFileSync(spectrumComponentsPath, 'utf-8');
-      expect(countKeyframes(content, 'fadeInUp')).toBe(0);
-    });
+    // Note: spectrum/components.css test removed after React Aria migration
   });
 
   describe('Component-Specific Keyframes Allowed', () => {

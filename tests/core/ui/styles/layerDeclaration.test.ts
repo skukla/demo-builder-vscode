@@ -1,8 +1,8 @@
 /**
  * Layer Declaration Tests
  *
- * Validates the 5-layer CSS architecture declaration in index.css.
- * Part of CSS Architecture Improvement - Step 1: Layer Declaration Update
+ * Validates the 4-layer CSS architecture declaration in index.css.
+ * Updated after React Aria migration (spectrum layer removed).
  */
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
@@ -18,15 +18,19 @@ describe('CSS Layer Declaration', () => {
     cssContent = readFileSync(indexCSSPath, 'utf-8');
   });
 
-  describe('5-Layer Architecture', () => {
-    it('declares exactly 5 layers in correct order', () => {
+  describe('4-Layer Architecture', () => {
+    it('declares exactly 4 layers in correct order', () => {
       expect(cssContent).toMatch(
-        /@layer\s+reset\s*,\s*vscode-theme\s*,\s*spectrum\s*,\s*components\s*,\s*utilities\s*;/
+        /@layer\s+reset\s*,\s*vscode-theme\s*,\s*components\s*,\s*utilities\s*;/
       );
     });
 
     it('does not contain old 3-layer declaration', () => {
       expect(cssContent).not.toMatch(/@layer\s+reset\s*,\s*theme\s*,\s*overrides/);
+    });
+
+    it('does not contain deprecated spectrum layer', () => {
+      expect(cssContent).not.toMatch(/@layer.*spectrum/);
     });
 
     it('has layer declaration before any @import statements', () => {

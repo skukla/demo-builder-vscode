@@ -121,9 +121,7 @@ describe('CSS Integrity', () => {
       expect(indexContent).toContain("@import './utilities/index.css'");
     });
 
-    it('should import spectrum barrel', () => {
-      expect(indexContent).toContain("@import './spectrum/index.css'");
-    });
+    // Note: spectrum barrel import removed after React Aria migration
 
     it('should import components barrel', () => {
       expect(indexContent).toContain("@import './components/index.css'");
@@ -146,6 +144,7 @@ describe('CSS Integrity', () => {
         'spacing.css',
         'borders.css',
         'animations.css',
+        'buttons.css',
       ];
 
       for (const file of expectedImports) {
@@ -156,19 +155,7 @@ describe('CSS Integrity', () => {
       }
     });
 
-    it('spectrum/index.css imports all spectrum files', () => {
-      const barrelPath = join(stylesPath, 'spectrum', 'index.css');
-      const content = readFileSync(barrelPath, 'utf-8');
-
-      const expectedImports = ['buttons.css', 'components.css'];
-
-      for (const file of expectedImports) {
-        expect(content).toContain(file);
-        // Verify the imported file exists
-        const filePath = join(stylesPath, 'spectrum', file);
-        expect(existsSync(filePath)).toBe(true);
-      }
-    });
+    // Note: spectrum/index.css test removed after React Aria migration
 
     it('components/index.css imports all component files', () => {
       const barrelPath = join(stylesPath, 'components', 'index.css');
@@ -251,16 +238,17 @@ describe('CSS Integrity', () => {
   });
 
   describe('CSS File Count Validation', () => {
-    it('should have exactly 6 utility files', () => {
+    it('should have exactly 7 utility files', () => {
       const utilitiesPath = join(stylesPath, 'utilities');
       const files = readdirSync(utilitiesPath).filter(
         (f) => f.endsWith('.css') && f !== 'index.css'
       );
 
-      expect(files).toHaveLength(6);
+      expect(files).toHaveLength(7);
       expect(files.sort()).toEqual([
         'animations.css',
         'borders.css',
+        'buttons.css',
         'colors.css',
         'layout.css',
         'spacing.css',
@@ -268,15 +256,7 @@ describe('CSS Integrity', () => {
       ]);
     });
 
-    it('should have exactly 2 spectrum files', () => {
-      const spectrumPath = join(stylesPath, 'spectrum');
-      const files = readdirSync(spectrumPath).filter(
-        (f) => f.endsWith('.css') && f !== 'index.css'
-      );
-
-      expect(files).toHaveLength(2);
-      expect(files.sort()).toEqual(['buttons.css', 'components.css']);
-    });
+    // Note: spectrum directory removed after React Aria migration
 
     it('should have exactly 4 component files', () => {
       const componentsPath = join(stylesPath, 'components');
@@ -313,11 +293,11 @@ describe('CSS Integrity', () => {
     });
   });
 
-  describe('5-Layer Architecture Verification', () => {
-    it('should have 5-layer cascade declaration in index.css', () => {
+  describe('4-Layer Architecture Verification', () => {
+    it('should have 4-layer cascade declaration in index.css', () => {
       const indexContent = readFileSync(join(stylesPath, 'index.css'), 'utf-8');
       expect(indexContent).toMatch(
-        /@layer\s+reset\s*,\s*vscode-theme\s*,\s*spectrum\s*,\s*components\s*,\s*utilities\s*;/
+        /@layer\s+reset\s*,\s*vscode-theme\s*,\s*components\s*,\s*utilities\s*;/
       );
     });
 

@@ -14,6 +14,7 @@ describe('CSS Layer Structure', () => {
     const utilityFiles = [
       'animations.css',
       'borders.css',
+      'buttons.css',
       'colors.css',
       'layout.css',
       'spacing.css',
@@ -32,33 +33,8 @@ describe('CSS Layer Structure', () => {
     });
   });
 
-  describe('spectrum/ files', () => {
-    const spectrumFiles = [
-      'buttons.css',
-      'components.css',
-    ];
-
-    it.each(spectrumFiles)('%s is wrapped in @layer spectrum', (file) => {
-      const content = readFileSync(
-        resolve(stylesPath, 'spectrum', file),
-        'utf-8'
-      );
-      // File should start with @layer spectrum { and end with }
-      // Allow for file header comments before @layer
-      const withoutComments = content.replace(/\/\*[\s\S]*?\*\/\s*/g, '').trim();
-      expect(withoutComments).toMatch(/^@layer\s+spectrum\s*\{[\s\S]*\}$/);
-    });
-
-    it('buttons.css has no nested @layer blocks', () => {
-      const content = readFileSync(
-        resolve(stylesPath, 'spectrum', 'buttons.css'),
-        'utf-8'
-      );
-      // Count @layer declarations - should be exactly 1 (the outer wrapper)
-      const layerBlocks = content.match(/@layer\s+\w+\s*\{/g) || [];
-      expect(layerBlocks.length).toBe(1);
-    });
-  });
+  // Note: spectrum/ directory was removed after React Aria migration
+  // All Spectrum overrides are no longer needed
 
   describe('components/ files', () => {
     const componentFiles = [
