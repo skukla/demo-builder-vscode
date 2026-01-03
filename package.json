@@ -252,9 +252,9 @@
   "dependencies": {
     "@adobe/aio-lib-console": "^5.4.2",
     "@adobe/aio-lib-ims": "^7.0.2",
-    "@adobe/react-spectrum": "^3.46.0",
     "@octokit/core": "^6.1.6",
     "@octokit/plugin-retry": "^7.2.1",
+    "@spectrum-icons/workflow": "^4.2.26",
     "@types/uuid": "^10.0.0",
     "async-mutex": "^0.5.0",
     "axios": "^1.6.0",
