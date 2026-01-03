@@ -1,4 +1,4 @@
-import { TextField, Text } from '@adobe/react-spectrum';
+import { TextField, Text } from '@/core/ui/components/aria';
 import React, { useEffect, useCallback } from 'react';
 import { BrandGallery } from '../components/BrandGallery';
 import { deriveComponentsFromStack } from '../helpers/stackHelpers';
@@ -222,7 +222,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     return (
         <SingleColumnLayout>
             {projectNameField}
-            <Text UNSAFE_className="description-text-spaced">
+            <Text className="description-text-spaced">
                 No demo packages available. Configure demo-packages.json to add packages.
             </Text>
         </SingleColumnLayout>

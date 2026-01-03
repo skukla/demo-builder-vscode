@@ -24,7 +24,7 @@ import {
     Text,
     TextField,
     View,
-} from '@adobe/react-spectrum';
+} from '@/core/ui/components/aria';
 import Add from '@spectrum-icons/workflow/Add';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
@@ -54,7 +54,7 @@ function StatusSection({ label, value, status, emptyText = 'Not selected' }: Sta
     const renderIcon = () => {
         switch (status) {
             case 'completed':
-                return <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />;
+                return <CheckmarkCircle size="S" className="text-green-600" />;
             default:
                 return null;
         }
@@ -62,20 +62,20 @@ function StatusSection({ label, value, status, emptyText = 'Not selected' }: Sta
 
     const renderContent = () => {
         if (status === 'empty') {
-            return <Text UNSAFE_className="text-sm text-gray-600">{emptyText}</Text>;
+            return <Text className="text-sm text-gray-600">{emptyText}</Text>;
         }
 
         return (
             <Flex gap="size-100" alignItems="center">
                 {renderIcon()}
-                <Text UNSAFE_className="text-sm">{value}</Text>
+                <Text className="text-sm">{value}</Text>
             </Flex>
         );
     };
 
     return (
         <View marginTop="size-200" marginBottom="size-200">
-            <Text UNSAFE_className="text-xs font-semibold text-gray-700 text-uppercase letter-spacing-05">
+            <Text className="text-xs font-semibold text-gray-700 text-uppercase letter-spacing-05">
                 {label}
             </Text>
             <View marginTop="size-100">
@@ -336,8 +336,8 @@ export function GitHubRepoSelectionStep({
                         marginTop="size-300"
                     >
                         <Flex alignItems="center" gap="size-150">
-                            <Info size="S" UNSAFE_className="text-blue-500" />
-                            <Text UNSAFE_className="text-sm text-gray-600">
+                            <Info size="S" className="text-blue-500" />
+                            <Text className="text-sm text-gray-600">
                                 Repository will be created from the EDS template with starter content.
                             </Text>
                         </Flex>
@@ -406,15 +406,15 @@ export function GitHubRepoSelectionStep({
                             <View
                                 marginStart="size-300"
                                 minHeight="size-250"
-                                UNSAFE_className="reset-warning-container"
+                                className="reset-warning-container"
                             >
                                 <Flex
                                     alignItems="center"
                                     gap="size-100"
-                                    UNSAFE_className={resetToTemplate ? 'reset-warning-visible' : 'reset-warning-hidden'}
+                                    className={resetToTemplate ? 'reset-warning-visible' : 'reset-warning-hidden'}
                                 >
-                                    <Alert size="S" UNSAFE_className="text-orange-500 flex-shrink-0" />
-                                    <Text UNSAFE_className="text-xs text-orange-600">
+                                    <Alert size="S" className="text-orange-500 flex-shrink-0" />
+                                    <Text className="text-xs text-orange-600">
                                         This will delete and recreate the repository with the selected template content.
                                     </Text>
                                 </Flex>

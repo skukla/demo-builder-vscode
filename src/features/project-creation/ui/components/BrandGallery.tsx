@@ -7,7 +7,7 @@
  * 3. Card expands to show the confirmed selection (at-a-glance confirmation)
  */
 
-import { Text, DialogContainer, Checkbox, Divider } from '@adobe/react-spectrum';
+import { Text, Checkbox, Divider } from '@/core/ui/components/aria';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useMemo, useCallback } from 'react';
 import { DemoPackage } from '@/types/demoPackages';
@@ -130,14 +130,14 @@ const PackageCard: React.FC<PackageCardProps> = ({
             {/* Package header - always visible */}
             <div className={brandCardHeader}>
                 <div className={brandCardTitleRow}>
-                    <Text UNSAFE_className={brandCardName}>
+                    <Text className={brandCardName}>
                         {pkg.name}
                     </Text>
                     {isComplete && (
-                        <CheckmarkCircle size="S" UNSAFE_className={brandCardCheck} />
+                        <CheckmarkCircle size="S" />
                     )}
                 </div>
-                <Text UNSAFE_className={brandCardDescription}>
+                <Text className={brandCardDescription}>
                     {pkg.description}
                 </Text>
             </div>
@@ -145,10 +145,10 @@ const PackageCard: React.FC<PackageCardProps> = ({
             {/* Selected architecture - shown when complete */}
             {isComplete && (
                 <div className={brandCardSelection}>
-                    <Text UNSAFE_className={brandCardSelectionLabel}>
+                    <Text className={brandCardSelectionLabel}>
                         Architecture
                     </Text>
-                    <Text UNSAFE_className={brandCardSelectionValue}>
+                    <Text className={brandCardSelectionValue}>
                         {selectedStack.name}
                     </Text>
                 </div>
@@ -241,7 +241,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
             size="M"
             actionButtons={actionButtons}
         >
-            <Text UNSAFE_className="description-block">
+            <Text className="description-block">
                 How should it be built?
             </Text>
             <div className={architectureModalOptions} role="radiogroup" aria-label="Architecture options">
@@ -267,10 +267,10 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                                 {isStackSelected && <div className={architectureRadioDot} />}
                             </div>
                             <div className={architectureContent}>
-                                <Text UNSAFE_className={architectureName}>
+                                <Text className={architectureName}>
                                     {stack.name}
                                 </Text>
-                                <Text UNSAFE_className={architectureDescription}>
+                                <Text className={architectureDescription}>
                                     {stack.description}
                                 </Text>
                             </div>
@@ -283,7 +283,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
             {availableAddons.length > 0 && (
                 <div className="animate-fade-in">
                     <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-                    <Text UNSAFE_className="description-block-sm">
+                    <Text className="description-block-sm">
                         Optional Services
                     </Text>
                     <div className={architectureAddons}>
@@ -398,7 +398,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     if (packages.length === 0) {
         return (
             <SingleColumnLayout>
-                <Text UNSAFE_className="text-gray-600">
+                <Text className="text-gray-600">
                     No packages available
                 </Text>
             </SingleColumnLayout>
@@ -439,26 +439,24 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             </div>
 
             {searchQuery && filteredPackages.length === 0 && (
-                <Text UNSAFE_className="empty-state-text">
+                <Text className="empty-state-text">
                     No packages match "{searchQuery}"
                 </Text>
             )}
 
             {/* Architecture selection modal */}
-            <DialogContainer onDismiss={handleModalClose}>
-                {modalPackage && (
-                    <ArchitectureModal
-                        pkg={modalPackage}
-                        stacks={stacks}
-                        selectedStackId={selectedPackage === modalPackage.id ? selectedStack : undefined}
-                        selectedAddons={modalAddons}
-                        onStackSelect={handleStackSelect}
-                        onAddonsChange={handleModalAddonsChange}
-                        onDone={handleModalDone}
-                        onClose={handleModalClose}
-                    />
-                )}
-            </DialogContainer>
+            {modalPackage && (
+                <ArchitectureModal
+                    pkg={modalPackage}
+                    stacks={stacks}
+                    selectedStackId={selectedPackage === modalPackage.id ? selectedStack : undefined}
+                    selectedAddons={modalAddons}
+                    onStackSelect={handleStackSelect}
+                    onAddonsChange={handleModalAddonsChange}
+                    onDone={handleModalDone}
+                    onClose={handleModalClose}
+                />
+            )}
         </SingleColumnLayout>
     );
 };

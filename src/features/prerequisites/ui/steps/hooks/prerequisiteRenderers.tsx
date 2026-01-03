@@ -1,4 +1,4 @@
-import { View, Flex, Text } from '@adobe/react-spectrum';
+import { View, Flex, Text } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
@@ -33,11 +33,11 @@ export function shouldShowPluginDetails(
 export function getStatusIcon(status: PrerequisiteCheck['status']): React.ReactNode {
     switch (status) {
         case 'success':
-            return <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />;
+            return <CheckmarkCircle size="S" className="text-green-600" />;
         case 'error':
-            return <CloseCircle size="S" UNSAFE_className="text-red-600" />;
+            return <CloseCircle size="S" className="text-red-600" />;
         case 'warning':
-            return <AlertCircle size="S" UNSAFE_className="text-yellow-600" />;
+            return <AlertCircle size="S" className="text-yellow-600" />;
         case 'checking':
             return <Spinner size="S" />;
         case 'pending':
@@ -58,9 +58,9 @@ export function renderPluginStatusIcon(
         return <Pending size="XS" marginStart="size-50" />;
     }
     if (pluginInstalled) {
-        return <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />;
+        return <CheckmarkCircle size="XS" className="text-green-600" marginStart="size-50" />;
     }
-    return <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />;
+    return <CloseCircle size="XS" className="text-red-600" marginStart="size-50" />;
 }
 
 /**
@@ -87,11 +87,11 @@ export function renderNodeVersionSuccess(message: string): React.ReactNode {
 
         return (
             <Flex key={idx} alignItems="center" marginBottom="size-50">
-                <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>
+                <Text className={cn('animate-fade-in', 'text-sm')}>
                     {version}
                     {component && ` (${component})`}
                 </Text>
-                <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
+                <CheckmarkCircle size="XS" className="text-green-600" marginStart="size-50" />
             </Flex>
         );
     });
@@ -105,8 +105,8 @@ export function renderAioCliErrorVersions(message: string): React.ReactNode {
     if (nodes.length) {
         return nodes.map((n, idx) => (
             <Flex key={idx} alignItems="center" marginBottom="size-50">
-                <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>{n}</Text>
-                <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
+                <Text className={cn('animate-fade-in', 'text-sm')}>{n}</Text>
+                <CloseCircle size="XS" className="text-red-600" marginStart="size-50" />
             </Flex>
         ));
     }
@@ -120,17 +120,17 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
     // Case 1: nodeVersionStatus exists - render structured version items
     if (check.nodeVersionStatus) {
         return (
-            <View UNSAFE_className={cn(prerequisiteMessage, 'animate-fade-in')}>
+            <View className={cn(prerequisiteMessage, 'animate-fade-in')}>
                 {check.nodeVersionStatus.map((item, idx) => (
                     <Flex key={idx} alignItems="center" marginBottom="size-50">
-                        <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>
+                        <Text className={cn('animate-fade-in', 'text-sm')}>
                             {item.version}
                             {item.component ? ` – ${item.component}` : ''}
                         </Text>
                         {item.installed ? (
-                            <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
+                            <CheckmarkCircle size="XS" className="text-green-600" marginStart="size-50" />
                         ) : (
-                            <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
+                            <CloseCircle size="XS" className="text-red-600" marginStart="size-50" />
                         )}
                     </Flex>
                 ))}
@@ -141,7 +141,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
     // Case 2: Node.js success with comma-separated versions
     if (check.name === 'Node.js' && check.status === 'success' && check.message?.includes(',')) {
         return (
-            <View UNSAFE_className={cn(prerequisiteMessage, 'animate-fade-in')}>
+            <View className={cn(prerequisiteMessage, 'animate-fade-in')}>
                 {renderNodeVersionSuccess(check.message)}
             </View>
         );
@@ -152,7 +152,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
         const versionItems = renderAioCliErrorVersions(check.message);
         if (versionItems) {
             return (
-                <View UNSAFE_className={cn(prerequisiteMessage, 'animate-fade-in')}>
+                <View className={cn(prerequisiteMessage, 'animate-fade-in')}>
                     {versionItems}
                 </View>
             );
@@ -162,7 +162,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
     // Case 4: Default - show message text if no plugins or not success
     if (!check.plugins || check.plugins.length === 0 || check.status !== 'success') {
         return (
-            <Text UNSAFE_className={cn(
+            <Text className={cn(
                 prerequisiteMessage,
                 check.status === 'error'
                     ? prerequisiteMessageError

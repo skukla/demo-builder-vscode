@@ -1,10 +1,9 @@
 import {
     Text,
     Flex,
-    Form,
     Heading,
     Divider,
-} from '@adobe/react-spectrum';
+} from '@/core/ui/components/aria';
 import React from 'react';
 import { ConfigFieldRenderer } from '../components/ConfigFieldRenderer';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
@@ -48,7 +47,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         if (loadError) {
             return (
                 <CenteredFeedbackContainer>
-                    <Text UNSAFE_className="text-red-700">
+                    <Text className="text-red-700">
                         {loadError}
                     </Text>
                 </CenteredFeedbackContainer>
@@ -68,14 +67,14 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
 
         if (serviceGroups.length === 0) {
             return (
-                <Text UNSAFE_className="text-gray-600">
+                <Text className="text-gray-600">
                     No components requiring configuration were selected.
                 </Text>
             );
         }
 
         return (
-            <Form UNSAFE_className="container-form">
+            <form className="container-form" onSubmit={(e) => e.preventDefault()}>
                 {serviceGroups.map((group, index) => (
                     <React.Fragment key={group.id}>
                         {index > 0 && (
@@ -108,7 +107,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                         </div>
                     </React.Fragment>
                 ))}
-            </Form>
+            </form>
         );
     };
 
@@ -116,7 +115,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         <TwoColumnLayout
             leftContent={
                 <div className="flex-column h-full">
-                    <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
+                    <Text marginBottom="size-300" className="text-gray-700">
                         Required fields are marked with an asterisk.
                     </Text>
 

@@ -1,4 +1,4 @@
-import { Flex, Text, Button } from '@adobe/react-spectrum';
+import { Flex, Text, Button } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
@@ -26,10 +26,10 @@ export function MeshStatusDisplay({ meshData, onRecreateMesh, onBack }: MeshStat
                 <Flex direction="column" gap="size-200" alignItems="center">
                     {isError ? (
                         <>
-                            <AlertCircle size="L" UNSAFE_className="text-orange-600" />
+                            <AlertCircle size="L" className="text-orange-600" />
                             <Flex direction="column" gap="size-100" alignItems="center">
-                                <Text UNSAFE_className="text-xl font-medium">Mesh in Error State</Text>
-                                <Text UNSAFE_className="text-sm text-gray-600 text-center-max-500">
+                                <Text className="text-xl font-medium">Mesh in Error State</Text>
+                                <Text className="text-sm text-gray-600 text-center-max-500">
                                     An API Mesh exists but is not functioning properly.
                                     Click "Recreate Mesh" below to delete and redeploy it.
                                 </Text>
@@ -37,12 +37,12 @@ export function MeshStatusDisplay({ meshData, onRecreateMesh, onBack }: MeshStat
                         </>
                     ) : (
                         <>
-                            <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                            <CheckmarkCircle size="L" className="text-green-600" />
                             <Flex direction="column" gap="size-100" alignItems="center">
-                                <Text UNSAFE_className="text-xl font-medium">
+                                <Text className="text-xl font-medium">
                                     API Mesh {meshData.status === 'deployed' ? 'Deployed' : 'Found'}
                                 </Text>
-                                <Text UNSAFE_className="text-sm text-gray-600">
+                                <Text className="text-sm text-gray-600">
                                     An existing mesh was detected. It will be updated during deployment.
                                 </Text>
                             </Flex>

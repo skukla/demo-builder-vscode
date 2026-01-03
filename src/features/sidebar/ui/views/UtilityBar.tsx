@@ -5,7 +5,7 @@
  * Displayed in all contexts except wizard mode.
  */
 
-import { Flex, Text, ActionButton } from '@adobe/react-spectrum';
+import { Flex, Text, ActionButton } from '@/core/ui/components/aria';
 import Book from '@spectrum-icons/workflow/Book';
 import Help from '@spectrum-icons/workflow/Help';
 import Settings from '@spectrum-icons/workflow/Settings';
@@ -37,14 +37,14 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             alignItems="center"
             justifyContent="center"
             height="100%"
-            UNSAFE_className="sidebar-utility-bar"
+            className="sidebar-utility-bar"
         >
             {onOpenDocs && (
                 <Flex direction="column" alignItems="center" gap="size-75">
                     <ActionButton isQuiet onPress={onOpenDocs} aria-label="Documentation">
                         <Book size="L" />
                     </ActionButton>
-                    <Text UNSAFE_className="text-sm opacity-70">Docs</Text>
+                    <Text className="text-sm opacity-70">Docs</Text>
                 </Flex>
             )}
 
@@ -53,7 +53,7 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
                     <ActionButton isQuiet onPress={onOpenHelp} aria-label="Get Help">
                         <Help size="L" />
                     </ActionButton>
-                    <Text UNSAFE_className="text-sm opacity-70">Help</Text>
+                    <Text className="text-sm opacity-70">Help</Text>
                 </Flex>
             )}
 
@@ -62,7 +62,7 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
                     <ActionButton isQuiet onPress={onOpenSettings} aria-label="Settings">
                         <Settings size="L" />
                     </ActionButton>
-                    <Text UNSAFE_className="text-sm opacity-70">Settings</Text>
+                    <Text className="text-sm opacity-70">Settings</Text>
                 </Flex>
             )}
         </Flex>

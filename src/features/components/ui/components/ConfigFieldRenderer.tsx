@@ -1,11 +1,11 @@
 import {
     TextField,
     Checkbox,
-    Picker,
-    Item,
+    Select,
+    SelectItem,
     Flex,
     Text,
-} from '@adobe/react-spectrum';
+} from '@/core/ui/components/aria';
 import React from 'react';
 import { UniqueField } from '../hooks/useComponentConfig';
 import { FieldHelpButton } from '@/core/ui/components/forms';
@@ -98,18 +98,16 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
         case 'select':
             return (
                 <div key={field.key} id={`field-${field.key}`} className="config-field">
-                    <Picker
+                    <Select
                         label={renderLabel()}
                         selectedKey={value as string}
                         onSelectionChange={(key) => onUpdate(field, String(key || ''))}
-                        width="100%"
                         isRequired={field.required}
-                        marginBottom="size-200"
                     >
                         {field.options?.map(option => (
-                            <Item key={option.value}>{option.label}</Item>
+                            <SelectItem key={option.value} id={option.value}>{option.label}</SelectItem>
                         )) || []}
-                    </Picker>
+                    </Select>
                 </div>
             );
 

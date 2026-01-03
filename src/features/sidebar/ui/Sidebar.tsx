@@ -5,7 +5,7 @@
  * Shows different views depending on whether user has a project, is in wizard, etc.
  */
 
-import { Flex, Text, ActionButton, Divider } from '@adobe/react-spectrum';
+import { Flex, Text, ActionButton, Divider } from '@/core/ui/components/aria';
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
 import React from 'react';
 import type { SidebarContext, NavItem } from '../types';
@@ -84,7 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Flex
                 direction="column"
                 height="100%"
-                UNSAFE_className="sidebar-wizard-view"
+                className="sidebar-wizard-view"
             >
                 {/* Wizard progress using shared TimelineNav */}
                 <TimelineNav
@@ -107,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <Flex
             direction="column"
             gap="size-200"
-            UNSAFE_className="p-2"
+            className="p-2"
             height="100%"
         >
             {/* Back button */}
@@ -134,7 +134,7 @@ function renderHeader(context: SidebarContext): React.ReactNode {
         case 'project':
         case 'configure':
             return (
-                <Text UNSAFE_className="font-semibold text-sm truncate">
+                <Text className="font-semibold text-sm truncate">
                     {context.project.name}
                 </Text>
             );

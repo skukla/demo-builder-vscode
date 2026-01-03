@@ -12,7 +12,7 @@ import {
     Flex,
     Button,
     ProgressCircle,
-} from '@adobe/react-spectrum';
+} from '@/core/ui/components/aria';
 import React, { useState, useEffect } from 'react';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { ActionGrid } from './components/ActionGrid';
@@ -174,13 +174,13 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                                         )}
 
                                         {meshStatus === 'authenticating' && (
-                                            <ProgressCircle size="S" isIndeterminate UNSAFE_className="loading-spinner-small" />
+                                            <ProgressCircle size="S" isIndeterminate className="loading-spinner-small" />
                                         )}
                                     </Flex>
                                 )}
                             </View>
                                 {/* All Projects button */}
-                                <Button variant="secondary" onPress={handleNavigateBack}>
+                                <Button variant="secondary" onPress={handleNavigateBack} data-testid="back-button">
                                     All Projects
                                 </Button>
                             </Flex>

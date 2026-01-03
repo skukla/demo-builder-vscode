@@ -11,7 +11,7 @@
  */
 
 import React, { useState } from 'react';
-import { Text, TextField, Flex, DialogContainer } from '@adobe/react-spectrum';
+import { Text, TextField, Flex } from '@/core/ui/components/aria';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -296,49 +296,47 @@ export function DaLiveSetupStep({
             </CenteredFeedbackContainer>
 
             {/* Token paste modal */}
-            <DialogContainer onDismiss={handleCloseModal}>
-                {showTokenInput && (
-                    <Modal
-                        title="Paste DA.live Token"
-                        size="S"
-                        onClose={handleCloseModal}
-                        actionButtons={[
-                            {
-                                label: 'Verify Token',
-                                variant: 'accent',
-                                onPress: () => {
-                                    handleSubmitToken();
-                                    if (tokenInput.trim()) {
-                                        handleCloseModal();
-                                    }
-                                },
+            {showTokenInput && (
+                <Modal
+                    title="Paste DA.live Token"
+                    size="S"
+                    onClose={handleCloseModal}
+                    actionButtons={[
+                        {
+                            label: 'Verify Token',
+                            variant: 'accent',
+                            onPress: () => {
+                                handleSubmitToken();
+                                if (tokenInput.trim()) {
+                                    handleCloseModal();
+                                }
                             },
-                        ]}
-                    >
-                        <Flex direction="column" gap="size-200">
-                            <Text>
-                                Follow the steps in your browser, then paste your token here.
+                        },
+                    ]}
+                >
+                    <Flex direction="column" gap="size-200">
+                        <Text>
+                            Follow the steps in your browser, then paste your token here.
+                        </Text>
+
+                        <TextField
+                            label="DA.live Token"
+                            value={tokenInput}
+                            onChange={setTokenInput}
+                            type="password"
+                            width="100%"
+                            placeholder="Paste your token here..."
+                            autoFocus
+                        />
+
+                        {authError && (
+                            <Text className="text-red-600 text-sm">
+                                {authError}
                             </Text>
-
-                            <TextField
-                                label="DA.live Token"
-                                value={tokenInput}
-                                onChange={setTokenInput}
-                                type="password"
-                                width="100%"
-                                placeholder="Paste your token here..."
-                                autoFocus
-                            />
-
-                            {authError && (
-                                <Text UNSAFE_className="text-red-600 text-sm">
-                                    {authError}
-                                </Text>
-                            )}
-                        </Flex>
-                    </Modal>
-                )}
-            </DialogContainer>
+                        )}
+                    </Flex>
+                </Modal>
+            )}
         </SingleColumnLayout>
     );
 }

@@ -1,8 +1,7 @@
-import { Flex, Text, DialogTrigger, ActionButton } from '@adobe/react-spectrum';
+import { Flex, Text, ActionButton, DialogTrigger, Dialog } from '@/core/ui/components/aria';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import React from 'react';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
-import { Modal } from '@/core/ui/components/ui/Modal';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -36,32 +35,30 @@ export function MeshErrorDialog({ error, code: _code, setupInstructions = [], on
             {/* Setup Instructions Modal */}
             {setupInstructions && setupInstructions.length > 0 && (
                 <Flex direction="column" gap="size-100" marginTop="size-200" alignItems="center">
-                    <Text UNSAFE_className="text-sm text-gray-600">
+                    <Text className="text-sm text-gray-600">
                         Follow the setup guide to enable API Mesh for this workspace.
                     </Text>
-                    <DialogTrigger type="modal">
+                    <DialogTrigger>
                         <ActionButton isQuiet>
                             <InfoOutline />
                             <Text>View Setup Instructions</Text>
                         </ActionButton>
-                        {(close) => (
-                            <Modal
-                                title="API Mesh Setup Guide"
-                                actionButtons={[
-                                    {
-                                        label: 'Open Workspace in Console',
-                                        variant: 'secondary',
-                                        onPress: onOpenConsole,
-                                    },
-                                ]}
-                                onClose={close}
-                            >
-                                <NumberedInstructions
-                                    description="Complete these steps to enable API Mesh for your workspace:"
-                                    instructions={setupInstructions}
-                                />
-                            </Modal>
-                        )}
+                        <Dialog
+                            title="API Mesh Setup Guide"
+                            actionButtons={[
+                                {
+                                    label: 'Open Workspace in Console',
+                                    variant: 'secondary',
+                                    onPress: onOpenConsole,
+                                },
+                            ]}
+                            isDismissable
+                        >
+                            <NumberedInstructions
+                                description="Complete these steps to enable API Mesh for your workspace:"
+                                instructions={setupInstructions}
+                            />
+                        </Dialog>
                     </DialogTrigger>
                 </Flex>
             )}

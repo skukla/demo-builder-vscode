@@ -4,7 +4,7 @@ import {
     Heading,
     Button,
     Text,
-} from '@adobe/react-spectrum';
+} from '@/core/ui/components/aria';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     useWizardState,
@@ -314,7 +314,7 @@ export function WizardContainer({
             backgroundColor="gray-50"
             width="100%"
             height="100vh"
-            UNSAFE_className={cn('flex', 'overflow-hidden')}
+            className={cn('flex', 'overflow-hidden')}
         >
             <div ref={wizardContainerRef} className="flex h-full w-full">
                 {/* Content Area - Timeline moved to sidebar */}

@@ -19,7 +19,7 @@
  */
 
 import React from 'react';
-import { TextField, Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
+import { TextField, Flex, Text, ProgressCircle } from '@/core/ui/components/aria';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Alert from '@spectrum-icons/workflow/Alert';
 
@@ -110,11 +110,8 @@ export function VerifiedField({
 
                 {shouldShowVerified(isVerified, isVerifying, error) && (
                     <Flex alignItems="center" gap="size-100">
-                        <CheckmarkCircle
-                            size="S"
-                            UNSAFE_className="text-green-500"
-                        />
-                        <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-positive-color-text-small)' }}>
+                        <CheckmarkCircle size="S" />
+                        <Text className="text-green-600">
                             Verified
                         </Text>
                     </Flex>
@@ -123,11 +120,8 @@ export function VerifiedField({
 
             {error && (
                 <Flex alignItems="center" gap="size-100">
-                    <Alert
-                        size="S"
-                        UNSAFE_className="text-red-500"
-                    />
-                    <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-negative-color-text-small)' }}>
+                    <Alert size="S" />
+                    <Text className="text-red-600">
                         {error}
                     </Text>
                 </Flex>

@@ -1,10 +1,9 @@
 import {
     Heading,
     Text,
-    Form,
     Button,
     View,
-} from '@adobe/react-spectrum';
+} from '@/core/ui/components/aria';
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { FormField, ConfigSection } from '@/core/ui/components/forms';
 import { TwoColumnLayout, PageHeader, PageFooter } from '@/core/ui/components/layout';
@@ -639,16 +638,16 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     leftContent={
                         <div className="flex-column h-full">
                             <Heading level={2} marginBottom="size-300">Configuration Settings</Heading>
-                            <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
+                            <Text marginBottom="size-300" className="text-gray-700">
                                 Update the settings for your project components. Required fields are marked with an asterisk.
                             </Text>
 
                             {serviceGroups.length === 0 ? (
-                                <Text UNSAFE_className="text-gray-600">
+                                <Text className="text-gray-600">
                                     No components requiring configuration were found.
                                 </Text>
                             ) : (
-                                <Form UNSAFE_className="container-form">
+                                <form className="container-form" onSubmit={(e) => e.preventDefault()}>
                                     {serviceGroups.map((group, index) => (
                                         <ConfigSection
                                             key={group.id}
@@ -667,7 +666,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                             )}
                                         </ConfigSection>
                                     ))}
-                                </Form>
+                                </form>
                             )}
                         </div>
                     }

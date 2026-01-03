@@ -6,7 +6,7 @@
  * Part of the layout prototype comparison.
  */
 
-import { Flex, Text } from '@adobe/react-spectrum';
+import { Flex, Text } from '@/core/ui/components/aria';
 import React, { useCallback } from 'react';
 import {
     getStatusText,
@@ -89,14 +89,14 @@ export const ProjectButton: React.FC<ProjectButtonProps> = ({
             <AdobeIcon className={isRunning ? 'text-green-500' : 'text-gray-400'} />
 
             {/* Name */}
-            <Text UNSAFE_className="project-button-name">
+            <Text className="project-button-name">
                 {displayName}
             </Text>
 
             {/* Status */}
             <Flex alignItems="center" gap="size-50">
                 <StatusDot variant={statusVariant} size={6} />
-                <Text UNSAFE_className="project-button-status">
+                <Text className="project-button-status">
                     {statusText}
                 </Text>
             </Flex>

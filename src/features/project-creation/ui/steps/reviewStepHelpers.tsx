@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { Flex, Text } from '@adobe/react-spectrum';
+import { Flex, Text } from '@/core/ui/components/aria';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import { cn } from '@/core/ui/utils/classNames';
 import type { ComponentData, ComponentsData } from './ReviewStep';
@@ -109,10 +109,10 @@ export function buildComponentInfoList(
                 label: 'Middleware',
                 value: isDeployed ? (
                     <Flex gap="size-100" alignItems="center">
-                        <Text UNSAFE_className="text-md">{mesh.name}</Text>
-                        <Text UNSAFE_className={cn('text-md', 'text-gray-500')}>·</Text>
-                        <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" />
-                        <Text UNSAFE_className="text-md">Deployed</Text>
+                        <Text className="text-md">{mesh.name}</Text>
+                        <Text className={cn('text-md', 'text-gray-500')}>·</Text>
+                        <CheckmarkCircle size="XS" />
+                        <Text className="text-md">Deployed</Text>
                     </Flex>
                 ) : (
                     mesh.name

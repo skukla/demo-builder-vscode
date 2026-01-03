@@ -1,4 +1,4 @@
-import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
+import { View, Text, Flex, Heading, Divider } from '@/core/ui/components/aria';
 import React, { useMemo } from 'react';
 import { hasRequiredReviewData } from './reviewPredicates';
 import { resolveServiceNames, buildComponentInfoList } from './reviewStepHelpers';
@@ -46,18 +46,18 @@ function LabelValue({ label, value, icon, subItems }: {
 }) {
     return (
         <Flex gap="size-200" alignItems="start">
-            <Text UNSAFE_className="review-label">{label}</Text>
+            <Text className="review-label">{label}</Text>
             <Flex direction="column" gap="size-50" flex={1}>
                 <Flex gap="size-100" alignItems="center">
                     {icon}
                     {typeof value === 'string' ? (
-                        <Text UNSAFE_className="text-md">{value}</Text>
+                        <Text className="text-md">{value}</Text>
                     ) : (
                         value
                     )}
                 </Flex>
                 {subItems && subItems.length > 0 && (
-                    <Text UNSAFE_className="description-text">
+                    <Text className="description-text">
                         {subItems.join(' · ')}
                     </Text>
                 )}
@@ -72,7 +72,7 @@ function LabelValue({ label, value, icon, subItems }: {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <View marginBottom="size-200">
-            <Text UNSAFE_className={cn('text-sm', 'font-semibold', 'text-gray-600', 'text-uppercase', 'letter-spacing-05')}>
+            <Text className={cn('text-sm', 'font-semibold', 'text-gray-600', 'text-uppercase', 'letter-spacing-05')}>
                 {title}
             </Text>
             <Flex direction="column" gap="size-100" marginTop="size-100">

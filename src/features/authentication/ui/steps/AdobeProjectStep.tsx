@@ -1,4 +1,4 @@
-import { Text } from '@adobe/react-spectrum';
+import { Text } from '@/core/ui/components/aria';
 import React from 'react';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { useCanProceed } from '@/core/ui/hooks';
@@ -112,7 +112,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                         ariaLabel: 'Adobe I/O Projects',
                     }}
                     renderDescription={(item) => item.description ? (
-                        <Text slot="description" UNSAFE_className="text-sm text-gray-600">
+                        <Text slot="description" className="text-sm text-gray-600">
                             {item.description}
                         </Text>
                     ) : null}

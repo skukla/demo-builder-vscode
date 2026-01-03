@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { Avatar, Text } from '@adobe/react-spectrum';
+import { Text } from '@/core/ui/components/aria';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Code from '@spectrum-icons/workflow/Code';
@@ -77,7 +77,7 @@ export function GitHubSetupStep({
                 {stepDescription}
                 <StatusDisplay
                     variant="error"
-                    icon={<Alert UNSAFE_className="text-red-500" size="L" />}
+                    icon={<Alert size="L" />}
                     title="Connection Failed"
                     message={authError}
                     centerMessage
@@ -97,13 +97,13 @@ export function GitHubSetupStep({
         // Sized to match the checkmark icon on Adobe Authentication step
         const avatarWithBadge = user?.avatarUrl ? (
             <div className="github-avatar-container">
-                <Avatar
+                <img
                     src={user.avatarUrl}
                     alt={user.login}
-                    size="avatar-size-700"
+                    className="github-avatar-img"
                 />
                 <div className="github-avatar-badge">
-                    <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                    <CheckmarkCircle size="S" />
                 </div>
             </div>
         ) : undefined;
@@ -130,7 +130,7 @@ export function GitHubSetupStep({
             {stepDescription}
             <StatusDisplay
                 variant="info"
-                icon={<Code UNSAFE_className="text-gray-500" size="L" />}
+                icon={<Code size="L" />}
                 title="Sign in to GitHub"
                 message="Connect your GitHub account to create Edge Delivery Services repositories."
                 centerMessage

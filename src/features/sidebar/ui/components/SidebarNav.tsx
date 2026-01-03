@@ -4,7 +4,7 @@
  * Navigation list for the sidebar.
  */
 
-import { Flex, Text } from '@adobe/react-spectrum';
+import { Flex, Text } from '@/core/ui/components/aria';
 import React from 'react';
 import type { NavItem } from '../../types';
 
@@ -61,7 +61,7 @@ const NavItemButton: React.FC<NavItemButtonProps> = ({ item, onClick }) => {
             }}
         >
             <Text
-                UNSAFE_className={item.active ? 'font-medium' : ''}
+                className={item.active ? 'font-medium' : ''}
             >
                 {item.label}
             </Text>

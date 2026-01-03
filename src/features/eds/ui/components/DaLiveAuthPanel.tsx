@@ -7,7 +7,7 @@
  */
 
 import React, { useState } from 'react';
-import { Flex, Heading, Text, Button, TextField, ProgressCircle } from '@adobe/react-spectrum';
+import { Flex, Heading, Text, Button, TextField, ProgressCircle } from '@/core/ui/components/aria';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Alert from '@spectrum-icons/workflow/Alert';
 
@@ -65,7 +65,7 @@ export function DaLiveAuthPanel({
                 </Heading>
             </div>
 
-            <Text UNSAFE_className="text-sm text-gray-600">
+            <Text className="text-sm text-gray-600">
                 Required for managing content in Document Authoring.
             </Text>
 
@@ -80,24 +80,24 @@ export function DaLiveAuthPanel({
                     <Flex direction="column" gap="size-100" marginTop="size-200">
                         <Flex alignItems="center" justifyContent="space-between">
                             <Flex alignItems="center" gap="size-150">
-                                <CheckmarkCircle size="S" UNSAFE_className="text-green-500" />
+                                <CheckmarkCircle size="S" />
                                 <Text>Connected to DA.live</Text>
                             </Flex>
                             {onReset && (
-                                <Button variant="secondary" isQuiet onPress={onReset} UNSAFE_className="text-sm">
+                                <Button variant="secondary" isQuiet onPress={onReset} className="text-sm">
                                     Change
                                 </Button>
                             )}
                         </Flex>
                         {verifiedOrg && (
-                            <Text UNSAFE_className="text-sm text-gray-600" marginStart="size-350">
+                            <Text className="text-sm text-gray-600" marginStart="size-350">
                                 Organization: <strong>{verifiedOrg}</strong>
                             </Text>
                         )}
                     </Flex>
                 ) : showTokenInput ? (
                     <Flex direction="column" gap="size-200" marginTop="size-200">
-                        <Text UNSAFE_className="text-sm">
+                        <Text className="text-sm">
                             {setupComplete
                                 ? 'Run your bookmarklet on da.live, then enter your organization and token:'
                                 : 'Follow the setup instructions, then enter your organization and token:'}
@@ -121,7 +121,7 @@ export function DaLiveAuthPanel({
                             isRequired
                         />
                         {error && (
-                            <Text UNSAFE_className="text-red-600 text-sm">{error}</Text>
+                            <Text className="text-red-600 text-sm">{error}</Text>
                         )}
                         <Flex gap="size-100">
                             <Button variant="accent" onPress={handleSubmitToken} isDisabled={!canSubmit}>
@@ -135,8 +135,8 @@ export function DaLiveAuthPanel({
                 ) : error ? (
                     <Flex direction="column" gap="size-150" marginTop="size-200">
                         <Flex alignItems="center" gap="size-100">
-                            <Alert size="S" UNSAFE_className="text-red-500" />
-                            <Text UNSAFE_className="text-red-600">{error}</Text>
+                            <Alert size="S" />
+                            <Text className="text-red-600">{error}</Text>
                         </Flex>
                         <Button variant="accent" onPress={handleSignInClick}>
                             Try Again

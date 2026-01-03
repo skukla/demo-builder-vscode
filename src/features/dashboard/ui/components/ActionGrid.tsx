@@ -10,7 +10,7 @@
 import {
     ActionButton,
     Text,
-} from '@adobe/react-spectrum';
+} from '@/core/ui/components/aria';
 import Code from '@spectrum-icons/workflow/Code';
 import Delete from '@spectrum-icons/workflow/Delete';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
@@ -98,10 +98,10 @@ export function ActionGrid({
                     onPress={handleStartDemo}
                     isQuiet
                     isDisabled={isStartDisabled}
-                    UNSAFE_className="dashboard-action-button"
+                    className="dashboard-action-button"
                 >
                     <PlayCircle size="L" />
-                    <Text UNSAFE_className="icon-label">Start</Text>
+                    <Text className="icon-label">Start</Text>
                 </ActionButton>
             )}
             {!isEds && isRunning && (
@@ -109,10 +109,10 @@ export function ActionGrid({
                     onPress={handleStopDemo}
                     isQuiet
                     isDisabled={isStopDisabled}
-                    UNSAFE_className="dashboard-action-button"
+                    className="dashboard-action-button"
                 >
                     <StopCircle size="L" />
-                    <Text UNSAFE_className="icon-label">Stop</Text>
+                    <Text className="icon-label">Stop</Text>
                 </ActionButton>
             )}
 
@@ -122,10 +122,10 @@ export function ActionGrid({
                     onPress={handleOpenLiveSite}
                     isQuiet
                     isDisabled={isOpeningBrowser}
-                    UNSAFE_className="dashboard-action-button"
+                    className="dashboard-action-button"
                 >
                     <Globe size="L" />
-                    <Text UNSAFE_className="icon-label">Open Live Site</Text>
+                    <Text className="icon-label">Open Live Site</Text>
                 </ActionButton>
             )}
 
@@ -135,10 +135,10 @@ export function ActionGrid({
                     onPress={handleOpenBrowser}
                     isQuiet
                     isDisabled={!isRunning || isOpeningBrowser}
-                    UNSAFE_className="dashboard-action-button"
+                    className="dashboard-action-button"
                 >
                     <Globe size="L" />
-                    <Text UNSAFE_className="icon-label">Open in Browser</Text>
+                    <Text className="icon-label">Open in Browser</Text>
                 </ActionButton>
             )}
 
@@ -146,10 +146,10 @@ export function ActionGrid({
             <ActionButton
                 onPress={handleViewLogs}
                 isQuiet
-                UNSAFE_className={`dashboard-action-button ${isLogsHoverSuppressed ? 'hover-suppressed' : ''}`}
+                className={`dashboard-action-button ${isLogsHoverSuppressed ? 'hover-suppressed' : ''}`}
             >
                 <ViewList size="L" />
-                <Text UNSAFE_className="icon-label">Logs</Text>
+                <Text className="icon-label">Logs</Text>
             </ActionButton>
 
             {/* Deploy Mesh */}
@@ -157,11 +157,11 @@ export function ActionGrid({
                 onPress={handleDeployMesh}
                 isQuiet
                 isDisabled={isMeshActionDisabled}
-                UNSAFE_className="dashboard-action-button"
+                className="dashboard-action-button"
                 data-action="deploy-mesh"
             >
                 <Refresh size="L" />
-                <Text UNSAFE_className="icon-label">Deploy Mesh</Text>
+                <Text className="icon-label">Deploy Mesh</Text>
             </ActionButton>
 
             {/* Configure */}
@@ -169,40 +169,40 @@ export function ActionGrid({
                 onPress={handleConfigure}
                 isQuiet
                 isDisabled={isMeshActionDisabled}
-                UNSAFE_className="dashboard-action-button"
+                className="dashboard-action-button"
             >
                 <Settings size="L" />
-                <Text UNSAFE_className="icon-label">Configure</Text>
+                <Text className="icon-label">Configure</Text>
             </ActionButton>
 
             {/* View Components */}
             <ActionButton
                 onPress={handleViewComponents}
                 isQuiet
-                UNSAFE_className="dashboard-action-button"
+                className="dashboard-action-button"
             >
                 <FolderOpen size="L" />
-                <Text UNSAFE_className="icon-label">Components</Text>
+                <Text className="icon-label">Components</Text>
             </ActionButton>
 
             {/* Developer Console */}
             <ActionButton
                 onPress={handleOpenDevConsole}
                 isQuiet
-                UNSAFE_className="dashboard-action-button"
+                className="dashboard-action-button"
             >
                 <Code size="L" />
-                <Text UNSAFE_className="icon-label">Dev Console</Text>
+                <Text className="icon-label">Dev Console</Text>
             </ActionButton>
 
             {/* Delete Project */}
             <ActionButton
                 onPress={handleDeleteProject}
                 isQuiet
-                UNSAFE_className="dashboard-action-button"
+                className="dashboard-action-button"
             >
                 <Delete size="L" />
-                <Text UNSAFE_className="icon-label">Delete</Text>
+                <Text className="icon-label">Delete</Text>
             </ActionButton>
         </GridLayout>
     );

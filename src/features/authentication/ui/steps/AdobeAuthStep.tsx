@@ -47,7 +47,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
             {isTokenExpiringSoon(adobeAuth) && (
                 <StatusDisplay
                     variant="warning"
-                    icon={<Alert UNSAFE_className="text-orange-500" size="L" />}
+                    icon={<Alert className="text-orange-500" size="L" />}
                     title="Session Expiring Soon"
                     message={`Your Adobe session expires in ${adobeAuth.tokenExpiresIn || 0} ${adobeAuth.tokenExpiresIn === 1 ? 'minute' : 'minutes'}. Please re-authenticate to avoid interruption during project setup.`}
                     centerMessage
@@ -74,7 +74,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
             {needsOrgSelection(adobeAuth, adobeOrg) && (
                 <StatusDisplay
                     variant="warning"
-                    icon={<AlertCircle UNSAFE_className="text-orange-500" size="L" />}
+                    icon={<AlertCircle className="text-orange-500" size="L" />}
                     title="Select Your Organization"
                     message={getOrgSelectionMessage(adobeAuth)}
                     centerMessage
@@ -89,7 +89,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
             {isNotAuthenticated(adobeAuth, authTimeout) && (
                 <StatusDisplay
                     variant="info"
-                    icon={<Key UNSAFE_className="text-gray-500" size="L" />}
+                    icon={<Key className="text-gray-500" size="L" />}
                     title={authStatus || 'Sign in to Adobe'}
                     message={authSubMessage || 'Connect your Adobe account to create and deploy App Builder applications.'}
                     centerMessage
@@ -105,8 +105,8 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
                 <StatusDisplay
                     variant={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER ? 'warning' : 'error'}
                     icon={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER
-                        ? <AlertCircle UNSAFE_className="text-orange-500" size="L" />
-                        : <Alert UNSAFE_className="text-red-500" size="L" />
+                        ? <AlertCircle className="text-orange-500" size="L" />
+                        : <Alert className="text-red-500" size="L" />
                     }
                     title={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER ? 'Insufficient Privileges' : 'Connection Issue'}
                     message={authSubMessage || (adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER
@@ -128,7 +128,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
             {hasAuthTimeout(adobeAuth, authTimeout) && (
                 <StatusDisplay
                     variant="error"
-                    icon={<Alert UNSAFE_className="text-red-500" size="L" />}
+                    icon={<Alert className="text-red-500" size="L" />}
                     title="Authentication Timed Out"
                     message="The browser authentication window may have been closed or the session expired."
                     centerMessage

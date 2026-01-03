@@ -1,11 +1,11 @@
 /**
  * ProjectListView Component
  *
- * Displays projects using Spectrum ListView (same as wizard selection steps).
- * Part of the layout prototype comparison (Option D: Spectrum List).
+ * Displays projects using React Aria List (same as wizard selection steps).
+ * Part of the layout prototype comparison (Option D: List).
  */
 
-import { ListView, Item, Text, Flex } from '@adobe/react-spectrum';
+import { List, ListItem, Text, Flex } from '@/core/ui/components/aria';
 import React from 'react';
 import {
     getStatusText,
@@ -29,31 +29,28 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     projects,
     onSelectProject,
 }) => {
-    const handleSelectionChange = (keys: 'all' | Set<React.Key>) => {
-        if (keys !== 'all' && keys.size > 0) {
-            const selectedPath = Array.from(keys)[0] as string;
-            const project = projects.find((p) => p.path === selectedPath);
-            if (project) {
-                onSelectProject(project);
-            }
-        }
-    };
-
     return (
-        <ListView
-            items={projects}
+        <List
             selectionMode="single"
-            onSelectionChange={handleSelectionChange}
+            onSelectionChange={(keys) => {
+                if (keys instanceof Set && keys.size > 0) {
+                    const selectedPath = Array.from(keys)[0] as string;
+                    const project = projects.find((p) => p.path === selectedPath);
+                    if (project) {
+                        onSelectProject(project);
+                    }
+                }
+            }}
             aria-label="Projects list"
-            UNSAFE_className="project-list-view"
+            className="project-list-view"
         >
-            {(project: Project) => {
+            {projects.map((project: Project) => {
                 const port = getFrontendPort(project);
                 const statusText = getStatusText(project.status, port);
                 const statusVariant = getStatusVariant(project.status);
 
                 return (
-                    <Item key={project.path} textValue={project.name}>
+                    <ListItem key={project.path} id={project.path} textValue={project.name}>
                         <Flex
                             alignItems="center"
                             justifyContent="space-between"
@@ -63,13 +60,13 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                                 <StatusDot variant={statusVariant} size={8} />
                                 <Text>{project.name}</Text>
                             </Flex>
-                            <Text UNSAFE_className="text-gray-500 text-sm">
+                            <Text className="text-gray-500 text-sm">
                                 {statusText}
                             </Text>
                         </Flex>
-                    </Item>
+                    </ListItem>
                 );
-            }}
-        </ListView>
+            })}
+        </List>
     );
 };

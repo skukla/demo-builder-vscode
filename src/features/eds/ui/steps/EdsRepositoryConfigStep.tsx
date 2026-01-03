@@ -18,10 +18,10 @@ import {
     TextField,
     Flex,
     ProgressCircle,
+    Checkbox,
     RadioGroup,
     Radio,
-    Checkbox,
-} from '@adobe/react-spectrum';
+} from '@/core/ui/components/aria';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -340,11 +340,8 @@ export function EdsRepositoryConfigStep({
 
                         {existingRepoVerified && !isVerifyingRepo && (
                             <Flex alignItems="center" gap="size-100">
-                                <CheckmarkCircle
-                                    size="S"
-                                    UNSAFE_className="text-green-500"
-                                />
-                                <Text UNSAFE_className="text-green-600">
+                                <CheckmarkCircle size="S" />
+                                <Text className="text-green-600">
                                     Verified
                                 </Text>
                             </Flex>
@@ -363,8 +360,8 @@ export function EdsRepositoryConfigStep({
                     {/* Warning when reset is selected */}
                     {resetToTemplate && (
                         <Flex alignItems="center" gap="size-100" marginBottom="size-400">
-                            <Alert size="S" UNSAFE_className="text-orange-500" />
-                            <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-notice-color-text-small)', fontSize: '12px' }}>
+                            <Alert size="S" />
+                            <Text className="text-orange-500 text-xs">
                                 This will delete and recreate the repository with the selected template content.
                             </Text>
                         </Flex>
@@ -377,7 +374,7 @@ export function EdsRepositoryConfigStep({
                 DA.live Content Source
             </Heading>
 
-            <Text marginBottom="size-300" UNSAFE_className="text-sm text-gray-600">
+            <Text marginBottom="size-300" className="text-sm text-gray-600">
                 DA.live provides content authoring for your Edge Delivery site.
             </Text>
 
@@ -405,11 +402,8 @@ export function EdsRepositoryConfigStep({
 
                 {daLiveOrgVerified && !isVerifyingOrg && (
                     <Flex alignItems="center" gap="size-100">
-                        <CheckmarkCircle
-                            size="S"
-                            UNSAFE_className="text-green-500"
-                        />
-                        <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-positive-color-text-small)' }}>
+                        <CheckmarkCircle size="S" />
+                        <Text className="text-green-600">
                             Verified
                         </Text>
                     </Flex>
@@ -418,11 +412,8 @@ export function EdsRepositoryConfigStep({
 
             {daLiveOrgError && (
                 <Flex alignItems="center" gap="size-100" marginBottom="size-300">
-                    <Alert
-                        size="S"
-                        UNSAFE_className="text-red-500"
-                    />
-                    <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-negative-color-text-small)' }}>
+                    <Alert size="S" />
+                    <Text className="text-red-600">
                         {daLiveOrgError}
                     </Text>
                 </Flex>

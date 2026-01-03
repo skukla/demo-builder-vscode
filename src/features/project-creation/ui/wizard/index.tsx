@@ -1,4 +1,4 @@
-import { View } from '@adobe/react-spectrum';
+import { View } from '@/core/ui/components/aria';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { WizardContainer, ImportedSettings, EditProjectConfig } from './WizardContainer';

@@ -2,10 +2,10 @@ import {
     View,
     Flex,
     Text,
-    Picker,
-    Item,
+    Select,
+    SelectItem,
     Checkbox,
-} from '@adobe/react-spectrum';
+} from '@/core/ui/components/aria';
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
 import React, { useRef } from 'react';
 import { useComponentSelection } from '../hooks/useComponentSelection';
@@ -109,30 +109,23 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                 {/* Frontend */}
                 <View flex="1" minWidth="300px">
                     <div ref={frontendPickerRef}>
-                        <Text UNSAFE_className="section-label">
+                        <Text className="section-label">
                             Frontend
                         </Text>
-                        <ErrorBoundary onError={(error) => log.error('Picker error:', error)}>
-                            <Picker
-                                width="100%"
+                        <ErrorBoundary onError={(error) => log.error('Select error:', error)}>
+                            <Select
+                                label="Frontend System"
                                 selectedKey={selectedFrontend}
                                 onSelectionChange={(key) => setSelectedFrontend(key as string)}
                                 placeholder="Select frontend system"
-                                aria-label="Select frontend system"
-                                isQuiet={false}
-                                align="start"
-                                direction="bottom"
-                                shouldFlip={false}
-                                menuWidth="size-4600"
-                                UNSAFE_className={cn('cursor-pointer')}
+                                className={cn('cursor-pointer')}
                             >
                                 {frontendOptions.map((opt) => (
-                                    <Item key={opt.id} textValue={opt.name}>
-                                        <Text>{opt.name}</Text>
-                                        <Text slot="description">{opt.description}</Text>
-                                    </Item>
+                                    <SelectItem key={opt.id} id={opt.id} textValue={opt.name}>
+                                        {opt.name}
+                                    </SelectItem>
                                 ))}
-                            </Picker>
+                            </Select>
                         </ErrorBoundary>
                         {selectedFrontend && (
                             <View marginTop="size-150">
@@ -143,11 +136,11 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                         isSelected={selectedDependencies.has(dep.id)}
                                         isDisabled={true}
                                         onChange={(sel) => handleDependencyToggle(dep.id, sel)}
-                                        UNSAFE_className="checkbox-spacing"
+                                        className="checkbox-spacing"
                                     >
                                         <Flex alignItems="center" gap="size-50">
-                                            <LockClosed size="XS" UNSAFE_className="text-gray-600" />
-                                            <Text UNSAFE_className="text-md">{dep.name}</Text>
+                                            <LockClosed size="XS" className="text-gray-600" />
+                                            <Text className="text-md">{dep.name}</Text>
                                         </Flex>
                                     </Checkbox>
                                 ))}
@@ -158,10 +151,10 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                         isSelected={selectedDependencies.has(addon.id)}
                                         isDisabled={false}
                                         onChange={(sel) => handleDependencyToggle(addon.id, sel)}
-                                        UNSAFE_className="checkbox-spacing"
+                                        className="checkbox-spacing"
                                     >
                                         <Flex alignItems="center" gap="size-50">
-                                            <Text UNSAFE_className="text-md">{addon.name}</Text>
+                                            <Text className="text-md">{addon.name}</Text>
                                         </Flex>
                                     </Checkbox>
                                 ))}
@@ -172,30 +165,23 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
 
                 {/* Backend */}
                 <View flex="1" minWidth="300px">
-                    <Text UNSAFE_className="section-label">
+                    <Text className="section-label">
                         Backend
                     </Text>
-                    <ErrorBoundary onError={(error) => log.error('Picker error:', error)}>
-                        <Picker
-                            width="100%"
+                    <ErrorBoundary onError={(error) => log.error('Select error:', error)}>
+                        <Select
+                            label="Backend System"
                             selectedKey={selectedBackend}
                             onSelectionChange={(key) => setSelectedBackend(key as string)}
                             placeholder="Select backend system"
-                            aria-label="Select backend system"
-                            isQuiet={false}
-                            align="start"
-                            direction="bottom"
-                            shouldFlip={false}
-                            menuWidth="size-4600"
-                            UNSAFE_className={cn('cursor-pointer')}
+                            className={cn('cursor-pointer')}
                         >
                             {backendOptions.map((opt) => (
-                                <Item key={opt.id} textValue={opt.name}>
-                                    <Text>{opt.name}</Text>
-                                    <Text slot="description">{opt.description}</Text>
-                                </Item>
+                                <SelectItem key={opt.id} id={opt.id} textValue={opt.name}>
+                                    {opt.name}
+                                </SelectItem>
                             ))}
-                        </Picker>
+                        </Select>
                     </ErrorBoundary>
                     {selectedBackend && (
                         <View marginTop="size-150">
@@ -206,11 +192,11 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                     isSelected={selectedServices.has(svc.id)}
                                     isDisabled={true}
                                     onChange={(sel) => handleServiceToggle(svc.id, sel)}
-                                    UNSAFE_className="checkbox-spacing"
+                                    className="checkbox-spacing"
                                 >
                                     <Flex alignItems="center" gap="size-50">
-                                        <LockClosed size="XS" UNSAFE_className="text-gray-600" />
-                                        <Text UNSAFE_className="text-md">{svc.name}</Text>
+                                        <LockClosed size="XS" className="text-gray-600" />
+                                        <Text className="text-md">{svc.name}</Text>
                                     </Flex>
                                 </Checkbox>
                             ))}

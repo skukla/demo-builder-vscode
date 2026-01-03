@@ -19,12 +19,12 @@ import {
     Button,
     Flex,
     Heading,
-    Item,
-    ListView,
     Text,
     TextField,
     View,
-} from '@adobe/react-spectrum';
+    List,
+    ListItem,
+} from '@/core/ui/components/aria';
 // Note: Heading is still used for the "Create New Site" subsection (level={3})
 import Add from '@spectrum-icons/workflow/Add';
 import Close from '@spectrum-icons/workflow/Close';
@@ -250,31 +250,40 @@ export function DataSourceConfigStep({
                     </Flex>
 
                     {/* Site list */}
-                    <ListView
+                    <List
                         items={filteredSites}
                         selectionMode="single"
-                        selectedKeys={selectedSite ? [selectedSite.id] : []}
-                        onSelectionChange={handleSelectionChange}
+                        selectedKeys={selectedSite ? new Set([selectedSite.id]) : undefined}
+                        onSelectionChange={(keys) => {
+                            if (keys instanceof Set && keys.size > 0) {
+                                const itemId = Array.from(keys)[0] as string;
+                                const item = filteredSites.find(s => s.id === itemId);
+                                if (item) {
+                                    selectItem(item);
+                                }
+                            }
+                        }}
                         aria-label="DA.live Sites"
-                        density="spacious"
-                        UNSAFE_className="site-list"
+                        className="site-list"
                     >
-                        {(item) => (
-                            <Item key={item.id} textValue={item.name}>
-                                <Text>{item.name}</Text>
-                                {item.lastModified && (
-                                    <Text slot="description" UNSAFE_className="text-xs text-gray-500">
-                                        Last modified: {new Date(item.lastModified).toLocaleDateString()}
-                                    </Text>
-                                )}
-                            </Item>
+                        {(item: typeof filteredSites[0]) => (
+                            <ListItem key={item.id} id={item.id} textValue={item.name}>
+                                <Flex direction="column" gap="size-50">
+                                    <Text>{item.name}</Text>
+                                    {item.lastModified && (
+                                        <Text className="text-xs text-gray-500">
+                                            Last modified: {new Date(item.lastModified).toLocaleDateString()}
+                                        </Text>
+                                    )}
+                                </Flex>
+                            </ListItem>
                         )}
-                    </ListView>
+                    </List>
 
                     {/* No results */}
                     {searchQuery && filteredSites.length === 0 && (
-                        <Flex justifyContent="center" UNSAFE_className="centered-padding-md">
-                            <Text UNSAFE_className="description-text">
+                        <Flex justifyContent="center" className="centered-padding-md">
+                            <Text className="description-text">
                                 No sites match "{searchQuery}"
                             </Text>
                         </Flex>
@@ -312,8 +321,8 @@ export function DataSourceConfigStep({
                     />
 
                     <Flex alignItems="center" gap="size-150" marginTop="size-200">
-                        <Info size="S" UNSAFE_className="text-blue-500" />
-                        <Text UNSAFE_className="text-sm text-gray-600">
+                        <Info size="S" className="text-blue-500" />
+                        <Text className="text-sm text-gray-600">
                             A new site will be created with the selected template content.
                         </Text>
                     </Flex>

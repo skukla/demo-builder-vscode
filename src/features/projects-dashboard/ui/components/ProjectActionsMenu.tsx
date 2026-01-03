@@ -11,7 +11,7 @@
  * - Edit is always available (no need to stop first)
  */
 
-import { Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum';
+import { Text, ActionButton, MenuTrigger, Menu, MenuItem } from '@/core/ui/components/aria';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
@@ -157,13 +157,13 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 <ActionButton
                     isQuiet
                     aria-label="More actions"
-                    UNSAFE_className={className}
+                    className={className}
                 >
                     <MoreSmallListVert size="S" />
                 </ActionButton>
-                <Menu onAction={handleMenuAction} items={menuItems}>
-                    {(item) => (
-                        <Item key={item.key} textValue={item.label}>
+                <Menu onAction={handleMenuAction}>
+                    {menuItems.map((item) => (
+                        <MenuItem key={item.key} id={item.key} textValue={item.label}>
                             {item.icon === 'play' && <Play size="S" />}
                             {item.icon === 'stop' && <Stop size="S" />}
                             {item.icon === 'globe' && <Globe size="S" />}
@@ -171,8 +171,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                             {item.icon === 'export' && <Export size="S" />}
                             {item.icon === 'delete' && <Delete size="S" />}
                             <Text>{item.label}</Text>
-                        </Item>
-                    )}
+                        </MenuItem>
+                    ))}
                 </Menu>
             </MenuTrigger>
         </div>

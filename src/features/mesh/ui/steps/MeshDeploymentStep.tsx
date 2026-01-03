@@ -7,7 +7,7 @@
  * @module features/mesh/ui/steps/MeshDeploymentStep
  */
 
-import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
+import { Heading, Text, Flex, Button } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
@@ -82,7 +82,7 @@ export function MeshDeploymentStep({
                             />
                             {/* Show elapsed time badge during verification */}
                             {state.status === 'verifying' && (
-                                <Text UNSAFE_className="text-sm text-gray-500 mt-2">
+                                <Text className="text-sm text-gray-500 mt-2">
                                     {formatElapsedTime(state.elapsedSeconds)} elapsed
                                 </Text>
                             )}
@@ -93,15 +93,15 @@ export function MeshDeploymentStep({
                     {state.status === 'timeout' && (
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                                <Clock size="L" UNSAFE_className="text-yellow-600" />
+                                <Clock size="L" className="text-yellow-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
-                                    <Text UNSAFE_className="text-xl font-medium">
+                                    <Text className="text-xl font-medium">
                                         Deployment Timed Out
                                     </Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600 text-center">
+                                    <Text className="text-sm text-gray-600 text-center">
                                         {state.message || 'The mesh deployment is taking longer than expected. The mesh may still be deploying in the background.'}
                                     </Text>
-                                    <Text UNSAFE_className="text-xs text-gray-500">
+                                    <Text className="text-xs text-gray-500">
                                         Elapsed: {formatElapsedTime(state.elapsedSeconds)} ({state.attempt}/{state.maxAttempts} attempts)
                                     </Text>
                                 </Flex>
@@ -121,12 +121,12 @@ export function MeshDeploymentStep({
                     {state.status === 'error' && (
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                                <AlertCircle size="L" UNSAFE_className="text-red-600" />
+                                <AlertCircle size="L" className="text-red-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
-                                    <Text UNSAFE_className="text-xl font-medium">
+                                    <Text className="text-xl font-medium">
                                         Mesh Deployment Failed
                                     </Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600 text-center">
+                                    <Text className="text-sm text-gray-600 text-center">
                                         {state.errorMessage || state.message || 'An error occurred during mesh deployment.'}
                                     </Text>
                                 </Flex>
@@ -146,13 +146,13 @@ export function MeshDeploymentStep({
                     {isSuccess && (
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                                <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                                <CheckmarkCircle size="L" className="text-green-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
-                                    <Text UNSAFE_className="text-xl font-medium">
+                                    <Text className="text-xl font-medium">
                                         Mesh Deployed Successfully
                                     </Text>
                                     {state.endpoint && (
-                                        <Text UNSAFE_className="text-sm text-gray-600 text-center break-all">
+                                        <Text className="text-sm text-gray-600 text-center break-all">
                                             Endpoint: {state.endpoint}
                                         </Text>
                                     )}

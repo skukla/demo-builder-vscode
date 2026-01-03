@@ -6,7 +6,7 @@
  * Includes a kebab menu for additional actions like Export.
  */
 
-import { Flex, Text } from '@adobe/react-spectrum';
+import { Flex, Text } from '@/core/ui/components/aria';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import React, { useCallback, useMemo } from 'react';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
@@ -88,11 +88,11 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                 {/* Left: Status dot + Name + Components */}
                 <Flex alignItems="center" gap="size-150">
                     <StatusDot variant={statusVariant} size={8} />
-                    <Text UNSAFE_className="project-row-name">
+                    <Text className="project-row-name">
                         {project.name}
                     </Text>
                     {componentSummary && (
-                        <Text UNSAFE_className="project-row-components">
+                        <Text className="project-row-components">
                             {componentSummary}
                         </Text>
                     )}
@@ -111,10 +111,10 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         onDelete={onDelete}
                         className="project-row-menu-button"
                     />
-                    <Text UNSAFE_className="project-row-status">
+                    <Text className="project-row-status">
                         {statusText}
                     </Text>
-                    <ChevronRight size="S" UNSAFE_className="project-row-chevron" />
+                    <ChevronRight size="S" />
                 </Flex>
             </Flex>
         </div>

@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { Flex, Heading, Text, Button, ProgressCircle } from '@adobe/react-spectrum';
+import { Flex, Heading, Text, Button, ProgressCircle } from '@/core/ui/components/aria';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Alert from '@spectrum-icons/workflow/Alert';
 import Code from '@spectrum-icons/workflow/Code';
@@ -40,7 +40,7 @@ export function GitHubAuthPanel({
                 </Heading>
             </div>
 
-            <Text UNSAFE_className="text-sm text-gray-600">
+            <Text className="text-sm text-gray-600">
                 Required for creating and managing your project repository.
             </Text>
 
@@ -54,13 +54,13 @@ export function GitHubAuthPanel({
                 ) : isAuthenticated && user ? (
                     <Flex alignItems="center" justifyContent="space-between" marginTop="size-200">
                         <Flex alignItems="center" gap="size-150">
-                            <CheckmarkCircle size="S" UNSAFE_className="text-green-500" />
+                            <CheckmarkCircle size="S" />
                             <Text>
                                 Connected as <strong>{user.login}</strong>
                             </Text>
                         </Flex>
                         {onChangeAccount && (
-                            <Button variant="secondary" isQuiet onPress={onChangeAccount} UNSAFE_className="text-sm">
+                            <Button variant="secondary" isQuiet onPress={onChangeAccount} className="text-sm">
                                 Change
                             </Button>
                         )}
@@ -68,8 +68,8 @@ export function GitHubAuthPanel({
                 ) : error ? (
                     <Flex direction="column" gap="size-150" marginTop="size-200">
                         <Flex alignItems="center" gap="size-100">
-                            <Alert size="S" UNSAFE_className="text-red-500" />
-                            <Text UNSAFE_className="text-red-600">{error}</Text>
+                            <Alert size="S" />
+                            <Text className="text-red-600">{error}</Text>
                         </Flex>
                         <Button variant="accent" onPress={onSignIn}>
                             Try Again

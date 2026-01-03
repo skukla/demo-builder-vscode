@@ -8,7 +8,7 @@
  * Includes a kebab menu for additional actions like Export.
  */
 
-import { Flex, Text } from '@adobe/react-spectrum';
+import { Flex, Text } from '@/core/ui/components/aria';
 import React, { useCallback, useMemo } from 'react';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
@@ -94,7 +94,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         >
             {/* Header Row: Name + More Menu */}
             <Flex alignItems="center" justifyContent="space-between">
-                <Text UNSAFE_className="project-card-spectrum-name">
+                <Text className="project-card-spectrum-name">
                     {project.name}
                 </Text>
                 <ProjectActionsMenu
@@ -113,7 +113,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 
             {/* Component Summary */}
             {componentSummary && (
-                <Text UNSAFE_className="project-card-spectrum-components">
+                <Text className="project-card-spectrum-components">
                     {componentSummary}
                 </Text>
             )}
@@ -121,7 +121,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             {/* Status Row */}
             <Flex alignItems="center" gap="size-100" marginTop="auto">
                 <StatusDot variant={statusVariant} size={6} />
-                <Text UNSAFE_className="project-card-spectrum-status">
+                <Text className="project-card-spectrum-status">
                     {statusText}
                 </Text>
             </Flex>

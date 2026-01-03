@@ -1,4 +1,4 @@
-import { Provider, defaultTheme, View } from '@adobe/react-spectrum';
+import { View } from '@/core/ui/components/aria';
 import React, { useEffect, useState } from 'react';
 import { WizardContainer } from './wizard/WizardContainer';
 import { vscode } from '@/core/ui/utils/vscode-api';
@@ -84,16 +84,11 @@ export function App() {
     }
 
     return (
-        <Provider 
-            theme={defaultTheme} 
-            colorScheme={theme}
-            isQuiet // Enable quiet mode globally for minimal appearance
-            UNSAFE_className="app-container"
-        >
+        <div className="app-container">
             <WizardContainer
                 componentDefaults={componentDefaults ?? undefined}
                 wizardSteps={wizardSteps ?? undefined}
             />
-        </Provider>
+        </div>
     );
 }

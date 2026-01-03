@@ -4,7 +4,7 @@
  * Displays wizard step progress with completed/current/future indicators.
  */
 
-import { Text } from '@adobe/react-spectrum';
+import { Text } from '@/core/ui/components/aria';
 import React from 'react';
 import type { WizardStep } from '../../types';
 
@@ -101,8 +101,8 @@ const WizardStepItem: React.FC<WizardStepItemProps> = ({
             </span>
             {/* SOP: Dynamic style - color depends on isCurrent prop */}
             <Text
-                UNSAFE_className={`text-sm ${isCurrent ? 'font-medium' : ''}`}
-                UNSAFE_style={{
+                className={`text-sm ${isCurrent ? 'font-medium' : ''}`}
+                style={{
                     color: isCurrent
                         ? 'var(--spectrum-global-color-gray-800)'
                         : 'var(--spectrum-global-color-gray-600)',

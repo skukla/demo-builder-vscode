@@ -4,7 +4,7 @@
  * Displays an empty state for the Projects Dashboard with CTAs to create or import a project.
  */
 
-import { Flex, Text, Button } from '@adobe/react-spectrum';
+import { Flex, Text, Button } from '@/core/ui/components/aria';
 import Add from '@spectrum-icons/workflow/Add';
 import Import from '@spectrum-icons/workflow/Import';
 import React, { useEffect, useRef } from 'react';
@@ -53,12 +53,12 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
                 direction="column"
                 alignItems="center"
                 gap="size-300"
-                UNSAFE_className="centered-content-narrow"
+                className="centered-content-narrow"
             >
-                <Text UNSAFE_className="text-lg">
+                <Text className="text-lg">
                     <strong>{title}</strong>
                 </Text>
-                <Text UNSAFE_className="description-text">
+                <Text className="description-text">
                     Get started by creating your first demo project.
                 </Text>
                 <Flex gap="size-200" alignItems="center">

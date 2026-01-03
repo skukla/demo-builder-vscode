@@ -1,4 +1,4 @@
-import { Text, Flex, Button } from '@adobe/react-spectrum';
+import { Text, Flex, Button } from '@/core/ui/components/aria';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -192,12 +192,12 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                             ) : (
                                 <CenteredFeedbackContainer>
                                     <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                                        <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                                        <CheckmarkCircle size="L" />
                                         <Flex direction="column" gap="size-100" alignItems="center">
-                                            <Text UNSAFE_className="text-xl font-medium">
+                                            <Text className="text-xl font-medium">
                                                 Project Created Successfully
                                             </Text>
-                                            <Text UNSAFE_className="text-sm text-gray-600 text-center">
+                                            <Text className="text-sm text-gray-600 text-center">
                                                 Click below to view your projects
                                             </Text>
                                         </Flex>
@@ -211,13 +211,13 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                     {(progress?.error || isCancelled || isFailed) && phase !== 'mesh-error' && (
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                                <AlertCircle size="L" UNSAFE_className="text-red-600" />
+                                <AlertCircle size="L" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
-                                    <Text UNSAFE_className="text-xl font-medium">
+                                    <Text className="text-xl font-medium">
                                         {isCancelled ? 'Project Creation Cancelled' : 'Project Creation Failed'}
                                     </Text>
                                     {progress?.error && (
-                                        <Text UNSAFE_className="text-sm text-gray-600">{progress.error}</Text>
+                                        <Text className="text-sm text-gray-600">{progress.error}</Text>
                                     )}
                                 </Flex>
 

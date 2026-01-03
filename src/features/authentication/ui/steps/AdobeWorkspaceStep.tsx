@@ -1,4 +1,4 @@
-import { Text } from '@adobe/react-spectrum';
+import { Text } from '@/core/ui/components/aria';
 import React from 'react';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { useCanProceed } from '@/core/ui/hooks';
@@ -110,7 +110,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                         // Show name as description if different from title
                         if (item.title && item.name && item.title !== item.name) {
                             return (
-                                <Text slot="description" UNSAFE_className="text-sm text-gray-600">
+                                <Text slot="description" className="text-sm text-gray-600">
                                     {item.name}
                                 </Text>
                             );

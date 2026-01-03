@@ -17,7 +17,7 @@
  */
 
 import React from 'react';
-import { Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
+import { Flex, Text, ProgressCircle } from '@/core/ui/components/aria';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Alert from '@spectrum-icons/workflow/Alert';
 import {
@@ -106,21 +106,21 @@ export function GitHubServiceCard({
                 {isLoading ? (
                     <Flex alignItems="center" gap="size-100">
                         <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
-                        <Text UNSAFE_className={statusText}>
+                        <Text className={statusText}>
                             {isAuthenticating ? 'Connecting...' : 'Checking...'}
                         </Text>
                     </Flex>
                 ) : isAuthenticated && user ? (
                     compact ? (
                         <Flex alignItems="center" gap="size-100">
-                            <CheckmarkCircle size="S" UNSAFE_className={statusIconSuccess} />
-                            <Text UNSAFE_className={statusText}>Connected</Text>
+                            <CheckmarkCircle size="S" />
+                            <Text className={statusText}>Connected</Text>
                         </Flex>
                     ) : (
                         <Flex alignItems="center" justifyContent="space-between">
                             <Flex alignItems="center" gap="size-100">
-                                <CheckmarkCircle size="S" UNSAFE_className={statusIconSuccess} />
-                                <Text UNSAFE_className={statusText}>
+                                <CheckmarkCircle size="S" />
+                                <Text className={statusText}>
                                     {user.login}
                                 </Text>
                             </Flex>
@@ -134,8 +134,8 @@ export function GitHubServiceCard({
                 ) : error ? (
                     <Flex direction="column" gap="size-100">
                         <Flex alignItems="center" gap="size-100">
-                            <Alert size="S" UNSAFE_className={statusIconError} />
-                            <Text UNSAFE_className={statusTextError}>{error}</Text>
+                            <Alert size="S" />
+                            <Text className={statusTextError}>{error}</Text>
                         </Flex>
                         <button className={serviceActionButton} onClick={onConnect}>
                             Try Again

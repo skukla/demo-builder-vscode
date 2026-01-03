@@ -15,8 +15,8 @@ import {
     ProgressCircle,
     MenuTrigger,
     Menu,
-    Item,
-} from '@adobe/react-spectrum';
+    MenuItem,
+} from '@/core/ui/components/aria';
 import Add from '@spectrum-icons/workflow/Add';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import Copy from '@spectrum-icons/workflow/Copy';
@@ -232,16 +232,15 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                                         onImportFromFile();
                                     }
                                 }}
-                                items={buildMenuItems({ onCopyFromExisting, onImportFromFile })}
                             >
-                                {(item) => (
-                                    <Item key={item.key} textValue={item.label}>
+                                {buildMenuItems({ onCopyFromExisting, onImportFromFile }).map((item) => (
+                                    <MenuItem key={item.key} id={item.key} textValue={item.label}>
                                         {item.icon === 'add' && <Add size="S" />}
                                         {item.icon === 'copy' && <Copy size="S" />}
                                         {item.icon === 'import' && <Import size="S" />}
                                         <Text>{item.label}</Text>
-                                    </Item>
-                                )}
+                                    </MenuItem>
+                                ))}
                             </Menu>
                         </MenuTrigger>
                     </Flex>
@@ -283,9 +282,9 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                     <Flex
                         justifyContent="center"
                         alignItems="center"
-                        UNSAFE_className="centered-padding-lg"
+                        className="centered-padding-lg"
                     >
-                        <Text UNSAFE_className="text-gray-500">
+                        <Text className="text-gray-500">
                             No projects match "{searchQuery}"
                         </Text>
                     </Flex>

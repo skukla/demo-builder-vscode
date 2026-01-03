@@ -5,7 +5,7 @@
  * Supports keyboard navigation with arrow keys.
  */
 
-import { Text } from '@adobe/react-spectrum';
+import { Text } from '@/core/ui/components/aria';
 import React, { useCallback, useRef } from 'react';
 import { Stack } from '@/types/stacks';
 import {
@@ -82,10 +82,10 @@ const StackCard: React.FC<StackCardProps> = ({ stack, isSelected, onSelect, onNa
             aria-pressed={isSelected}
             aria-label={`${stack.name}: ${stack.description}`}
         >
-            <Text UNSAFE_className={selectorCardName}>
+            <Text className={selectorCardName}>
                 {stack.name}
             </Text>
-            <Text UNSAFE_className={selectorCardDescription}>
+            <Text className={selectorCardDescription}>
                 {stack.description}
             </Text>
             {stack.features && stack.features.length > 0 && (

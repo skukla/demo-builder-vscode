@@ -5,7 +5,7 @@
  * Renders the Sidebar component with communication to the extension.
  */
 
-import { Provider, defaultTheme, Flex, ProgressCircle } from '@adobe/react-spectrum';
+import { Flex, ProgressCircle } from '@/core/ui/components/aria';
 import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@/core/ui/styles/custom-spectrum.css';
@@ -128,20 +128,20 @@ function SidebarApp(): React.ReactElement {
 
     if (isLoading) {
         return (
-            <Provider theme={defaultTheme} colorScheme="dark" UNSAFE_className="sidebar-provider">
+            <div className="sidebar-provider">
                 <Flex
                     alignItems="center"
                     justifyContent="center"
-                    UNSAFE_className="sidebar-welcome"
+                    className="sidebar-welcome"
                 >
                     <ProgressCircle size="M" isIndeterminate aria-label="Loading" />
                 </Flex>
-            </Provider>
+            </div>
         );
     }
 
     return (
-        <Provider theme={defaultTheme} colorScheme="dark" UNSAFE_className="sidebar-provider">
+        <div className="sidebar-provider">
             <Sidebar
                 context={context}
                 onNavigate={handleNavigate}
@@ -157,7 +157,7 @@ function SidebarApp(): React.ReactElement {
                 onCheckUpdates={handleCheckUpdates}
                 onWizardStepClick={handleWizardStepClick}
             />
-        </Provider>
+        </div>
     );
 }
 
