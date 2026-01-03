@@ -29,7 +29,7 @@ styles/
 ├── reset.css                    # Browser resets
 ├── tokens.css                   # Design tokens (CSS variables)
 ├── vscode-theme.css             # VS Code theme integration (--vscode-* vars)
-├── wizard.css                   # Wizard-specific Spectrum overrides
+├── wizard.css                   # Wizard-specific styles
 ├── custom-spectrum.css          # Stub re-exporting modular imports
 │
 ├── utilities/                   # Low-specificity, reusable utilities
@@ -39,12 +39,8 @@ styles/
 │   ├── spacing.css             # Padding, margin, gap
 │   ├── colors.css              # Text/background colors
 │   ├── borders.css             # Border styles, radius
+│   ├── buttons.css             # Button size variations, action pills
 │   └── animations.css          # Centralized @keyframes definitions
-│
-├── spectrum/                    # Spectrum component overrides
-│   ├── index.css               # Barrel import
-│   ├── buttons.css             # Button styling
-│   └── components.css          # ProgressBar, TextField, etc.
 │
 └── components/                  # Semantic component styles
     ├── index.css               # Barrel import
@@ -69,8 +65,6 @@ The CSS uses `@layer` for explicit cascade control with 4 layers:
 4. `utilities` - Utility classes with highest priority (utilities/*.css)
 
 This cascade order ensures utilities always override component styles without needing `!important`.
-
-**Note:** The `spectrum` layer was removed after migrating to React Aria Components. Legacy Spectrum overrides remain in `spectrum/` for any remaining Spectrum components but will be removed in future cleanup.
 
 ## Pattern Guidelines
 
@@ -169,7 +163,7 @@ All Spectrum components have been migrated to React Aria:
 - `RadioGroup`, `Radio` - Migrated to React Aria
 - `List`, `ListItem` - Migrated to React Aria
 
-Spectrum overrides in `spectrum/` are used only for remaining Spectrum types (Icon provider).
+The `spectrum/` directory has been removed as all components now use React Aria with CSS Modules.
 
 ## VS Code Webview Requirements
 
@@ -180,10 +174,9 @@ Spectrum overrides in `spectrum/` are used only for remaining Spectrum types (Ic
 ## Usage Distribution
 
 ```
-Utility Classes:     ~40%  (global, reusable, single-concern)
-Semantic Components: ~27%  (page-level, contextual)
-CSS Modules:         ~20%  (feature-scoped, complex UIs)
-Spectrum Overrides:  ~13%  (component library integration)
+Utility Classes:     ~46%  (global, reusable, single-concern)
+Semantic Components: ~31%  (page-level, contextual)
+CSS Modules:         ~23%  (feature-scoped, complex UIs, React Aria)
 Inline Styles:       <1%   (dynamic values only)
 ```
 
@@ -191,7 +184,7 @@ Inline Styles:       <1%   (dynamic values only)
 
 1. **Utility class needed?** → Add to appropriate `utilities/*.css`
 2. **Component styling?** → Add to `components/*.css`
-3. **Spectrum override?** → Add to `spectrum/*.css`
+3. **React Aria component?** → Create CSS Module in `components/aria/`
 4. **Feature-specific complex UI?** → Create CSS Module in feature directory
 5. **New keyframe animation?** → Add to `utilities/animations.css`
 
