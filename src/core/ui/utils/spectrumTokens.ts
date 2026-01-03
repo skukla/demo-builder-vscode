@@ -119,3 +119,65 @@ export function translateSpectrumToken(
 
   return undefined;
 }
+
+/**
+ * Props to CSS property name mapping for dimension values
+ */
+type DimensionPropMapping = {
+  [key: string]: keyof React.CSSProperties;
+};
+
+/**
+ * Standard dimension prop to CSS property mappings
+ */
+const DIMENSION_PROP_MAP: DimensionPropMapping = {
+  width: 'width',
+  height: 'height',
+  minWidth: 'minWidth',
+  maxWidth: 'maxWidth',
+  minHeight: 'minHeight',
+  maxHeight: 'maxHeight',
+  marginTop: 'marginTop',
+  marginBottom: 'marginBottom',
+  marginStart: 'marginLeft',  // LTR assumption
+  marginEnd: 'marginRight',   // LTR assumption
+  padding: 'padding',
+  gap: 'gap',
+  left: 'left',
+  top: 'top',
+  right: 'right',
+  bottom: 'bottom',
+};
+
+/**
+ * Builds a CSS style object from dimension props
+ *
+ * Reduces repetitive if-checks by iterating over a mapping of prop names to CSS properties.
+ * Only includes properties that have defined values.
+ *
+ * @param props - Object containing dimension values keyed by prop name
+ * @param baseStyle - Optional base style object to merge with
+ * @returns CSSProperties object with translated dimension values
+ *
+ * @example
+ * buildDimensionStyle({ width: 'size-300', marginTop: 16 })
+ * // Returns: { width: '24px', marginTop: '16px' }
+ */
+export function buildDimensionStyle(
+  props: Record<string, DimensionValue | undefined>,
+  baseStyle?: React.CSSProperties,
+): React.CSSProperties {
+  const style: React.CSSProperties = baseStyle ? { ...baseStyle } : {};
+
+  for (const [propName, cssProperty] of Object.entries(DIMENSION_PROP_MAP)) {
+    const value = props[propName];
+    if (value !== undefined) {
+      const translated = translateSpectrumToken(value);
+      if (translated !== undefined) {
+        (style as Record<string, string>)[cssProperty] = translated;
+      }
+    }
+  }
+
+  return style;
+}
