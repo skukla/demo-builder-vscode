@@ -1,0 +1,73 @@
+/**
+ * ProgressBar Component Styles
+ *
+ * CSS Module for ProgressBar form component.
+ * Zero !important - uses data attributes for state styling.
+ *
+ * VS Code theme variables with Spectrum fallbacks.
+ */
+
+.progressBar {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+
+/* Label */
+.label {
+    font-size: 13px;
+    color: var(--vscode-foreground, #cccccc);
+}
+
+/* Track (background) */
+.track {
+    width: 100%;
+    border-radius: 2px;
+    background-color: var(--spectrum-global-color-gray-300, #d3d3d3);
+    overflow: hidden;
+}
+
+/* Size variants - track height */
+.progressBar[data-size="S"] .track {
+    height: 2px;
+}
+
+.progressBar[data-size="M"] .track {
+    height: 4px;
+}
+
+.progressBar[data-size="L"] .track {
+    height: 8px;
+}
+
+/* Fill (progress indicator) */
+.fill {
+    height: 100%;
+    background-color: var(--spectrum-global-color-blue-500, #0078d4);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Indeterminate animation */
+.fill.indeterminate {
+    width: 30%;
+    animation: indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+    0% {
+        transform: translateX(-100%);
+    }
+    50% {
+        transform: translateX(200%);
+    }
+    100% {
+        transform: translateX(-100%);
+    }
+}
+
+/* Ensure indeterminate fill has proper width for animation */
+.progressBar[data-indeterminate] .track {
+    overflow: hidden;
+}

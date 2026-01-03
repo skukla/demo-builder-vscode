@@ -1,0 +1,65 @@
+/**
+ * Checkbox Component Styles
+ *
+ * CSS Module for Checkbox form component.
+ * Zero !important - uses data attributes for state styling.
+ *
+ * VS Code theme variables with Spectrum fallbacks.
+ */
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--vscode-foreground, #cccccc);
+}
+
+.checkbox[data-disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Checkbox box */
+.box {
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--vscode-input-border, var(--spectrum-global-color-gray-400, #b3b3b3));
+    border-radius: 3px;
+    background-color: var(--vscode-input-background, var(--spectrum-global-color-gray-50, #ffffff));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    flex-shrink: 0;
+}
+
+/* Selected state */
+.box.selected,
+.box[data-selected] {
+    background-color: var(--spectrum-global-color-blue-500, #0078d4);
+    border-color: var(--spectrum-global-color-blue-500, #0078d4);
+}
+
+/* Checkmark icon */
+.checkmark {
+    width: 10px;
+    height: 10px;
+    color: var(--spectrum-global-color-static-white, #ffffff);
+}
+
+/* Label text */
+.label {
+    user-select: none;
+}
+
+/* Focus state */
+.checkbox[data-focus-visible] .box {
+    box-shadow: 0 0 0 2px var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+}
+
+/* Hover state */
+.checkbox:not([data-disabled]):hover .box:not(.selected) {
+    border-color: var(--spectrum-global-color-gray-500, #6e6e6e);
+}

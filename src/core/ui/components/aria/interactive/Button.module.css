@@ -1,0 +1,139 @@
+/**
+ * Button Component Styles
+ *
+ * CSS Module for Button interactive component.
+ * Zero !important - uses data-* attributes for state/variant styling.
+ *
+ * React Aria provides these data attributes:
+ * - [data-disabled]: Button is disabled
+ * - [data-pressed]: Button is being pressed
+ * - [data-focus-visible]: Focus ring should be shown
+ * - [data-hovered]: Button is hovered
+ *
+ * Custom data attributes:
+ * - [data-variant]: accent, secondary, cta, negative
+ * - [data-quiet]: Subtle/quiet styling
+ */
+
+.button {
+    /* Base button styles */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spectrum-global-dimension-size-75, 6px);
+    padding: var(--spectrum-global-dimension-size-85, 7px) var(--spectrum-global-dimension-size-200, 16px);
+    border: 2px solid transparent;
+    border-radius: var(--spectrum-alias-border-radius-regular, 4px);
+    font-family: var(--spectrum-alias-body-text-font-family, inherit);
+    font-size: var(--spectrum-alias-font-size-default, 14px);
+    font-weight: var(--spectrum-alias-body-text-font-weight, 400);
+    line-height: var(--spectrum-alias-body-text-line-height, 1.5);
+    cursor: pointer;
+    outline: none;
+    transition: background-color 130ms ease-out, border-color 130ms ease-out;
+
+    /* Default secondary variant styles */
+    background-color: var(--spectrum-global-color-gray-200, #e1e1e1);
+    color: var(--spectrum-global-color-gray-800, #323232);
+}
+
+/* Hover state */
+.button[data-hovered] {
+    background-color: var(--spectrum-global-color-gray-300, #d5d5d5);
+}
+
+/* Pressed state */
+.button[data-pressed] {
+    background-color: var(--spectrum-global-color-gray-400, #c8c8c8);
+}
+
+/* Focus visible state - show focus ring */
+.button[data-focus-visible] {
+    box-shadow: 0 0 0 2px var(--spectrum-alias-focus-ring-color, #0078d4);
+}
+
+/* Disabled state */
+.button[data-disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Accent variant - primary action */
+.button[data-variant="accent"] {
+    background-color: var(--spectrum-global-color-blue-500, #0078d4);
+    color: var(--spectrum-global-color-static-white, #ffffff);
+}
+
+.button[data-variant="accent"][data-hovered] {
+    background-color: var(--spectrum-global-color-blue-600, #0066b8);
+}
+
+.button[data-variant="accent"][data-pressed] {
+    background-color: var(--spectrum-global-color-blue-700, #005299);
+}
+
+/* Secondary variant */
+.button[data-variant="secondary"] {
+    background-color: var(--spectrum-global-color-gray-200, #e1e1e1);
+    color: var(--spectrum-global-color-gray-800, #323232);
+}
+
+.button[data-variant="secondary"][data-hovered] {
+    background-color: var(--spectrum-global-color-gray-300, #d5d5d5);
+}
+
+.button[data-variant="secondary"][data-pressed] {
+    background-color: var(--spectrum-global-color-gray-400, #c8c8c8);
+}
+
+/* CTA variant - call-to-action */
+.button[data-variant="cta"] {
+    background-color: var(--spectrum-global-color-blue-600, #0066b8);
+    color: var(--spectrum-global-color-static-white, #ffffff);
+}
+
+.button[data-variant="cta"][data-hovered] {
+    background-color: var(--spectrum-global-color-blue-700, #005299);
+}
+
+.button[data-variant="cta"][data-pressed] {
+    background-color: var(--spectrum-global-color-blue-800, #004480);
+}
+
+/* Negative variant - destructive action */
+.button[data-variant="negative"] {
+    background-color: var(--spectrum-global-color-red-500, #d83b01);
+    color: var(--spectrum-global-color-static-white, #ffffff);
+}
+
+.button[data-variant="negative"][data-hovered] {
+    background-color: var(--spectrum-global-color-red-600, #c43502);
+}
+
+.button[data-variant="negative"][data-pressed] {
+    background-color: var(--spectrum-global-color-red-700, #a62d01);
+}
+
+/* Quiet variant - subtle styling */
+.button[data-quiet] {
+    background-color: transparent;
+    color: var(--spectrum-global-color-gray-800, #323232);
+}
+
+.button[data-quiet][data-hovered] {
+    background-color: var(--spectrum-global-color-gray-200, #e1e1e1);
+}
+
+.button[data-quiet][data-pressed] {
+    background-color: var(--spectrum-global-color-gray-300, #d5d5d5);
+}
+
+/* Quiet + Accent */
+.button[data-quiet][data-variant="accent"] {
+    background-color: transparent;
+    color: var(--spectrum-global-color-blue-500, #0078d4);
+}
+
+.button[data-quiet][data-variant="accent"][data-hovered] {
+    background-color: var(--spectrum-global-color-blue-100, #e1f0ff);
+}

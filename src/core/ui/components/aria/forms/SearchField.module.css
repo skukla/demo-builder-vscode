@@ -1,0 +1,109 @@
+/**
+ * SearchField Component Styles
+ *
+ * CSS Module for SearchField form component.
+ * Zero !important - uses CSS class composition for state styling.
+ *
+ * VS Code theme variables with Spectrum fallbacks.
+ */
+
+.searchField {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+/* Search icon - decorative */
+.searchIcon {
+    position: absolute;
+    left: 10px;
+    display: flex;
+    align-items: center;
+    color: var(--vscode-input-placeholderForeground, var(--spectrum-global-color-gray-500, #6e6e6e));
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Input styles */
+.input {
+    width: 100%;
+    padding: 8px 12px 8px 34px; /* Left padding for search icon */
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.4;
+    border: 1px solid var(--vscode-input-border, var(--spectrum-global-color-gray-400, #b3b3b3));
+    background-color: var(--vscode-input-background, var(--spectrum-global-color-gray-50, #ffffff));
+    color: var(--vscode-input-foreground, var(--spectrum-global-color-gray-900, #2c2c2c));
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input::placeholder {
+    color: var(--vscode-input-placeholderForeground, var(--spectrum-global-color-gray-500, #6e6e6e));
+}
+
+/* Focus state */
+.input:focus {
+    border-color: var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+    box-shadow: 0 0 0 1px var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+}
+
+/* Disabled state */
+.input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Quiet variant - no border */
+.quiet .input {
+    border: none;
+    background-color: transparent;
+    padding-left: 30px;
+}
+
+.quiet .input:focus {
+    box-shadow: none;
+    border-bottom: 2px solid var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+    border-radius: 0;
+}
+
+.quiet .searchIcon {
+    left: 6px;
+}
+
+/* Clear button */
+.clearButton {
+    position: absolute;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background-color: var(--spectrum-global-color-gray-300, #d3d3d3);
+    color: var(--spectrum-global-color-gray-700, #464646);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    outline: none;
+}
+
+.clearButton:hover {
+    background-color: var(--spectrum-global-color-gray-400, #b3b3b3);
+}
+
+.clearButton:focus-visible {
+    outline: 2px solid var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+    outline-offset: 2px;
+}
+
+/* Adjust input padding when clear button is visible */
+.searchField:has(.clearButton) .input {
+    padding-right: 36px;
+}
+
+.quiet .clearButton {
+    right: 4px;
+}

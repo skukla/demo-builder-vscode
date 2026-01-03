@@ -1,0 +1,11 @@
+/**
+ * View Component Styles
+ *
+ * CSS Module for View primitive component.
+ * Zero !important - relies on @layer cascade for specificity.
+ */
+
+.view {
+    /* Base view container - minimal styling */
+    box-sizing: border-box;
+}

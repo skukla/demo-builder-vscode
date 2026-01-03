@@ -1,0 +1,130 @@
+/**
+ * Menu Component Styles
+ *
+ * CSS Module for Menu overlay component.
+ * Zero !important - uses data-* attributes for state styling.
+ *
+ * React Aria provides these data attributes:
+ * - [data-entering]: Element is entering (show animation)
+ * - [data-exiting]: Element is exiting (hide animation)
+ * - [data-focused]: Item has keyboard focus
+ * - [data-hovered]: Item is being hovered
+ * - [data-pressed]: Item is being pressed
+ * - [data-disabled]: Item is disabled
+ */
+
+/* Popover container */
+.popover {
+    background-color: var(--vscode-menu-background, var(--spectrum-global-color-gray-50, #ffffff));
+    border: 1px solid var(--vscode-menu-border, var(--spectrum-global-color-gray-300, #d3d3d3));
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+    min-width: 160px;
+    max-width: 280px;
+    z-index: 1100;
+    overflow: hidden;
+}
+
+/* Popover entering animation */
+.popover[data-entering] {
+    animation: popoverFadeIn 150ms ease-out;
+}
+
+.popover[data-exiting] {
+    animation: popoverFadeOut 100ms ease-in;
+}
+
+@keyframes popoverFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes popoverFadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+}
+
+/* Menu container */
+.menu {
+    padding: 4px 0;
+    outline: none;
+}
+
+/* Menu item */
+.menuItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--vscode-menu-foreground, var(--spectrum-global-color-gray-800, #2c2c2c));
+    font-size: 13px;
+    line-height: 1.4;
+    outline: none;
+    transition: background-color 0.1s ease;
+}
+
+/* Hover state */
+.menuItem[data-hovered] {
+    background-color: var(--vscode-menu-selectionBackground, var(--spectrum-global-color-gray-200, #e1e1e1));
+}
+
+/* Focus state */
+.menuItem[data-focused] {
+    background-color: var(--vscode-menu-selectionBackground, var(--spectrum-global-color-blue-100, #deebff));
+    color: var(--vscode-menu-selectionForeground, var(--spectrum-global-color-gray-900, #1a1a1a));
+}
+
+/* Pressed state */
+.menuItem[data-pressed] {
+    background-color: var(--vscode-list-activeSelectionBackground, var(--spectrum-global-color-blue-500, #1473e6));
+    color: var(--vscode-list-activeSelectionForeground, #ffffff);
+}
+
+/* Disabled state */
+.menuItem[data-disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Menu item icon */
+.menuItemIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    color: var(--vscode-icon-foreground, var(--spectrum-global-color-gray-600, #6e6e6e));
+    flex-shrink: 0;
+}
+
+.menuItem[data-focused] .menuItemIcon {
+    color: currentColor;
+}
+
+/* Menu item label */
+.menuItemLabel {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Separator */
+.separator {
+    height: 1px;
+    margin: 4px 0;
+    background-color: var(--vscode-menu-separatorBackground, var(--spectrum-global-color-gray-300, #d3d3d3));
+}

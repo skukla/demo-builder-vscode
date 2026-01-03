@@ -1,0 +1,147 @@
+/**
+ * Select Component Styles
+ *
+ * CSS Module for Select form component.
+ * Zero !important - uses data attributes for state styling.
+ *
+ * VS Code theme variables with Spectrum fallbacks.
+ */
+
+.select {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+}
+
+/* Visible label */
+.label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-700, #464646));
+}
+
+/* Trigger button */
+.trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    min-width: 150px;
+    border: 1px solid var(--vscode-input-border, var(--spectrum-global-color-gray-400, #b3b3b3));
+    border-radius: 4px;
+    background-color: var(--vscode-input-background, var(--spectrum-global-color-gray-50, #ffffff));
+    color: var(--vscode-input-foreground, var(--spectrum-global-color-gray-900, #2c2c2c));
+    font-size: 14px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.trigger:hover:not(:disabled) {
+    border-color: var(--spectrum-global-color-gray-500, #6e6e6e);
+}
+
+.trigger:focus-visible {
+    border-color: var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+    box-shadow: 0 0 0 1px var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+}
+
+.trigger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Selected value display */
+.value {
+    flex: 1;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Chevron icon */
+.chevron {
+    display: flex;
+    align-items: center;
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-700, #464646));
+    transition: transform 0.15s ease;
+}
+
+.select[data-open] .chevron {
+    transform: rotate(180deg);
+}
+
+/* Popover dropdown */
+.popover {
+    background-color: var(--vscode-dropdown-background, var(--spectrum-global-color-gray-50, #ffffff));
+    border: 1px solid var(--vscode-dropdown-border, var(--spectrum-global-color-gray-400, #b3b3b3));
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Entering animation */
+.popover[data-entering] {
+    animation: popover-enter 0.15s ease-out;
+}
+
+/* Exiting animation */
+.popover[data-exiting] {
+    animation: popover-exit 0.1s ease-in;
+}
+
+@keyframes popover-enter {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes popover-exit {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+}
+
+/* Listbox */
+.listbox {
+    padding: 4px 0;
+    outline: none;
+}
+
+/* Listbox item styling - applied via descendant selector */
+.listbox [role="option"] {
+    padding: 8px 12px;
+    cursor: pointer;
+    outline: none;
+    color: var(--vscode-dropdown-foreground, var(--spectrum-global-color-gray-900, #2c2c2c));
+}
+
+.listbox [role="option"][data-focused] {
+    background-color: var(--vscode-list-hoverBackground, var(--spectrum-global-color-gray-200, #e1e1e1));
+}
+
+.listbox [role="option"][data-selected] {
+    background-color: var(--vscode-list-activeSelectionBackground, var(--spectrum-global-color-blue-500, #0078d4));
+    color: var(--vscode-list-activeSelectionForeground, var(--spectrum-global-color-static-white, #ffffff));
+}
+
+.listbox [role="option"][data-disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

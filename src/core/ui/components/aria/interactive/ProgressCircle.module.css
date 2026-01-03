@@ -1,0 +1,52 @@
+/**
+ * ProgressCircle Component Styles
+ *
+ * CSS Module for ProgressCircle interactive component.
+ * Zero !important - uses data-* attributes for state styling.
+ *
+ * Implements circular progress indicator with:
+ * - Indeterminate mode: continuous spin animation
+ * - Determinate mode: progress arc based on value
+ */
+
+.progressCircle {
+    /* Container for SVG progress indicator */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.svg {
+    /* SVG inherits size from width/height attributes */
+    display: block;
+}
+
+.track {
+    /* Background track circle */
+    stroke: var(--spectrum-global-color-gray-300, #d5d5d5);
+}
+
+.fill {
+    /* Determinate progress fill */
+    stroke: var(--spectrum-global-color-blue-500, #0078d4);
+    transition: stroke-dashoffset 250ms ease-out;
+}
+
+.spinnerFill {
+    /* Indeterminate spinner fill with rotation animation */
+    stroke: var(--spectrum-global-color-blue-500, #0078d4);
+}
+
+/* Indeterminate mode - add spin animation to the wrapper */
+.progressCircle[data-indeterminate] .svg {
+    animation: progressCircleSpin 1s linear infinite;
+}
+
+@keyframes progressCircleSpin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}

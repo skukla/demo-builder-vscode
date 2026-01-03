@@ -1,0 +1,11 @@
+/**
+ * Flex Component Styles
+ *
+ * CSS Module for Flex primitive component.
+ * Zero !important - relies on @layer cascade for specificity.
+ */
+
+.flex {
+    /* Base flex container */
+    display: flex;
+}

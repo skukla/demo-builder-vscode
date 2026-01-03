@@ -1,0 +1,14 @@
+/**
+ * Heading Component Styles
+ *
+ * CSS Module for Heading primitive component.
+ * Zero !important - relies on @layer cascade for specificity.
+ */
+
+.heading {
+    /* Base heading styles */
+    font-family: inherit;
+    color: inherit;
+    margin: 0;
+    padding: 0;
+}

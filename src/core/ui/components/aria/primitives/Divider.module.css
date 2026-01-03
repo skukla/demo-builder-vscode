@@ -1,0 +1,27 @@
+/**
+ * Divider Component Styles
+ *
+ * CSS Module for Divider primitive component.
+ * Zero !important - relies on @layer cascade for specificity.
+ */
+
+.divider {
+    /* Base divider styles */
+    border: none;
+    width: 100%;
+    background-color: var(--spectrum-global-color-gray-300, #e1e1e1);
+    margin: 0;
+}
+
+/* Size variants */
+.sizeS {
+    height: 1px;
+}
+
+.sizeM {
+    height: 2px;
+}
+
+.sizeL {
+    height: 4px;
+}

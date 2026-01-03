@@ -1,0 +1,112 @@
+/**
+ * RadioGroup Component Styles
+ *
+ * CSS Module for RadioGroup form component.
+ * Zero !important - uses data attributes for state styling.
+ *
+ * VS Code theme variables with Spectrum fallbacks.
+ */
+
+.radioGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.radioGroup.disabled {
+    opacity: 0.5;
+}
+
+/* Label */
+.label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-800, #2c2c2c));
+    margin-bottom: 4px;
+}
+
+/* Description */
+.description {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground, var(--spectrum-global-color-gray-600, #6e6e6e));
+    margin-bottom: 8px;
+}
+
+/* Options container */
+.options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.options.horizontal {
+    flex-direction: row;
+    gap: 16px;
+}
+
+/* Individual radio option */
+.radio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-800, #cccccc));
+    user-select: none;
+}
+
+.radio[data-disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Radio circle */
+.circle {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--vscode-input-border, var(--spectrum-global-color-gray-400, #b3b3b3));
+    border-radius: 50%;
+    background-color: var(--vscode-input-background, var(--spectrum-global-color-gray-50, #ffffff));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+    flex-shrink: 0;
+}
+
+/* Selected state */
+.circle.selected,
+.circle[data-selected] {
+    border-color: var(--spectrum-global-color-blue-500, #0078d4);
+}
+
+/* Inner dot for selected state */
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--spectrum-global-color-blue-500, #0078d4);
+}
+
+/* Radio label text */
+.radioLabel {
+    line-height: 1.4;
+}
+
+/* Focus state */
+.radio[data-focus-visible] .circle {
+    box-shadow: 0 0 0 2px var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+}
+
+/* Hover state */
+.radio:not([data-disabled]):hover .circle:not(.selected) {
+    border-color: var(--spectrum-global-color-gray-500, #6e6e6e);
+}
+
+/* Error message */
+.error {
+    color: var(--vscode-errorForeground, var(--spectrum-global-color-red-600, #e34850));
+    font-size: 12px;
+    margin-top: 4px;
+}

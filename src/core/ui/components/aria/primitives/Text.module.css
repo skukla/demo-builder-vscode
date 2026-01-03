@@ -1,0 +1,14 @@
+/**
+ * Text Component Styles
+ *
+ * CSS Module for Text primitive component.
+ * Zero !important - relies on @layer cascade for specificity.
+ */
+
+.text {
+    /* Inherit font properties from parent */
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+}

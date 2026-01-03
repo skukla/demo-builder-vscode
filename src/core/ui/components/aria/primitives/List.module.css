@@ -1,0 +1,75 @@
+/**
+ * List Component Styles
+ *
+ * CSS Module for List (ListBox) component.
+ * Zero !important - uses data-* attributes for state styling.
+ *
+ * React Aria provides these data attributes on items:
+ * - [data-selected]: Item is selected
+ * - [data-focused]: Item has keyboard focus
+ * - [data-disabled]: Item is disabled
+ * - [data-hovered]: Item is hovered
+ */
+
+.list {
+    outline: none;
+    border: 1px solid var(--vscode-list-hoverBackground, var(--spectrum-global-color-gray-300, #d3d3d3));
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: var(--vscode-list-background, var(--spectrum-global-color-gray-50, #ffffff));
+}
+
+/* Individual list item */
+.item {
+    outline: none;
+    cursor: pointer;
+}
+
+.item[data-disabled] {
+    cursor: not-allowed;
+}
+
+/* Item content wrapper */
+.itemContent {
+    padding: 8px 12px;
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-800, #2c2c2c));
+    font-size: 14px;
+    line-height: 1.4;
+    transition: background-color 0.1s ease;
+}
+
+/* Hover state */
+.item:not([data-disabled]):hover .itemContent {
+    background-color: var(--vscode-list-hoverBackground, var(--spectrum-global-color-gray-200, #e5e5e5));
+}
+
+/* Focused state */
+.item[data-focused] .itemContent,
+.itemContent.focused {
+    background-color: var(--vscode-list-hoverBackground, var(--spectrum-global-color-gray-200, #e5e5e5));
+    outline: none;
+}
+
+/* Selected state */
+.item[data-selected] .itemContent,
+.itemContent.selected {
+    background-color: var(--vscode-list-activeSelectionBackground, var(--spectrum-global-color-blue-500, #0078d4));
+    color: var(--vscode-list-activeSelectionForeground, var(--spectrum-global-color-static-white, #ffffff));
+}
+
+/* Selected + focused state */
+.item[data-selected][data-focused] .itemContent {
+    background-color: var(--vscode-list-activeSelectionBackground, var(--spectrum-global-color-blue-600, #0066b8));
+}
+
+/* Disabled state */
+.item[data-disabled] .itemContent,
+.itemContent.disabled {
+    opacity: 0.5;
+    color: var(--vscode-disabledForeground, var(--spectrum-global-color-gray-500, #6e6e6e));
+}
+
+/* Focus visible indicator on list itself */
+.list[data-focus-visible] {
+    box-shadow: 0 0 0 2px var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+}

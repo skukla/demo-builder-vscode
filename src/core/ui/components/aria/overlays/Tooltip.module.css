@@ -1,0 +1,86 @@
+/**
+ * Tooltip Component Styles
+ *
+ * CSS Module for Tooltip overlay component.
+ * Zero !important - uses data-* attributes for state styling.
+ *
+ * React Aria provides these data attributes:
+ * - [data-entering]: Element is entering (show animation)
+ * - [data-exiting]: Element is exiting (hide animation)
+ * - [data-placement]: Placement direction (top, bottom, left, right)
+ */
+
+.tooltip {
+    background-color: var(--vscode-editorWidget-background, var(--spectrum-global-color-gray-800, #323232));
+    color: var(--vscode-editorWidget-foreground, var(--spectrum-global-color-static-white, #ffffff));
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 12px;
+    line-height: 1.4;
+    max-width: 200px;
+    word-wrap: break-word;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    z-index: 1100;
+}
+
+/* Entering animation */
+.tooltip[data-entering] {
+    animation: tooltipFadeIn 150ms ease-out;
+}
+
+/* Exiting animation */
+.tooltip[data-exiting] {
+    animation: tooltipFadeOut 100ms ease-in;
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes tooltipFadeOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}
+
+/* Arrow container */
+.arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Arrow SVG */
+.arrowSvg {
+    fill: var(--vscode-editorWidget-background, var(--spectrum-global-color-gray-800, #323232));
+    display: block;
+}
+
+/* Arrow positioning based on placement */
+.tooltip[data-placement="top"] .arrow {
+    transform: translateY(100%) rotate(180deg);
+}
+
+.tooltip[data-placement="bottom"] .arrow {
+    transform: translateY(-100%);
+}
+
+.tooltip[data-placement="left"] .arrow {
+    transform: translateX(100%) rotate(90deg);
+}
+
+.tooltip[data-placement="right"] .arrow {
+    transform: translateX(-100%) rotate(-90deg);
+}

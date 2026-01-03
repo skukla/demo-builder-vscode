@@ -1,0 +1,181 @@
+/**
+ * Dialog Component Styles
+ *
+ * CSS Module for Dialog overlay component.
+ * Zero !important - uses data-* attributes for state styling.
+ *
+ * React Aria provides these data attributes:
+ * - [data-entering]: Element is entering (show animation)
+ * - [data-exiting]: Element is exiting (hide animation)
+ */
+
+/* Overlay backdrop */
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+}
+
+/* Overlay entering animation */
+.overlay[data-entering] {
+    animation: overlayFadeIn 200ms ease-out;
+}
+
+.overlay[data-exiting] {
+    animation: overlayFadeOut 150ms ease-in;
+}
+
+@keyframes overlayFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes overlayFadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* Modal container */
+.modal {
+    background-color: var(--vscode-editor-background, var(--spectrum-global-color-gray-100, #f5f5f5));
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Modal entering animation */
+.modal[data-entering] {
+    animation: modalSlideIn 200ms ease-out;
+}
+
+.modal[data-exiting] {
+    animation: modalSlideOut 150ms ease-in;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes modalSlideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+}
+
+/* Size variants */
+.sizeS {
+    width: 320px;
+    max-width: 90vw;
+}
+
+.sizeM {
+    width: 480px;
+    max-width: 90vw;
+}
+
+.sizeL {
+    width: 640px;
+    max-width: 90vw;
+}
+
+/* Dialog inner wrapper */
+.dialog {
+    display: flex;
+    flex-direction: column;
+    outline: none;
+    max-height: 90vh;
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 12px;
+}
+
+/* Title */
+.title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-900, #1a1a1a));
+}
+
+/* Close button */
+.closeButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background-color: transparent;
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-700, #464646));
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.closeButton:hover {
+    background-color: var(--vscode-toolbar-hoverBackground, var(--spectrum-global-color-gray-200, #e1e1e1));
+}
+
+.closeButton:focus-visible {
+    outline: 2px solid var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+    outline-offset: 2px;
+}
+
+/* Description */
+.description {
+    margin: 0;
+    padding: 0 20px 8px;
+    font-size: 14px;
+    color: var(--vscode-descriptionForeground, var(--spectrum-global-color-gray-700, #464646));
+}
+
+/* Content area */
+.content {
+    flex: 1;
+    padding: 16px 20px;
+    overflow-y: auto;
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-800, #2c2c2c));
+}
+
+/* Footer */
+.footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 20px 16px;
+    border-top: 1px solid var(--vscode-widget-border, var(--spectrum-global-color-gray-300, #d3d3d3));
+}
