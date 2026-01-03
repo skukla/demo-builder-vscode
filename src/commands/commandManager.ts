@@ -3,7 +3,6 @@ import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
@@ -17,6 +16,7 @@ import { CreateProjectWebviewCommand } from '@/features/project-creation/command
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { Project } from '@/types';
+import type { Logger } from '@/types/logger';
 
 export class CommandManager {
     private context: vscode.ExtensionContext;

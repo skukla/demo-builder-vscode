@@ -5,13 +5,12 @@
  * imports (*.module.css files) without compilation errors.
  *
  * CSS Modules export an object mapping class names (strings) to their
- * generated/scoped class name strings. The readonly modifier ensures
- * TypeScript enforces immutability of these class name mappings.
+ * generated/scoped class name strings.
  *
- * Usage:
+ * Import pattern:
  * ```typescript
  * import styles from './Component.module.css';
- * // styles.className is typed as string
+ * <div className={styles.container} />
  * ```
  */
 declare module '*.module.css' {
