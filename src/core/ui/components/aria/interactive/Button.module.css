@@ -19,17 +19,23 @@
  */
 
 .button {
-    /* Base button styles */
+    /* Base button styles - matching Spectrum Button exactly */
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--spectrum-global-dimension-size-75);
-    padding: var(--spectrum-global-dimension-size-85) var(--spectrum-global-dimension-size-200);
-    border: 2px solid transparent;
+    gap: var(--spectrum-global-dimension-size-100);
+    min-block-size: var(--spectrum-global-dimension-size-400);
+    block-size: 0%;
+    padding: var(--spectrum-global-dimension-size-50) calc(var(--spectrum-global-dimension-size-200) - 2px);
+    padding-block-start: calc(var(--spectrum-global-dimension-size-50) - 1px);
+    padding-block-end: calc(var(--spectrum-global-dimension-size-50) + 1px);
+    border-width: 2px;
+    border-style: solid;
+    border-color: transparent;
     border-radius: var(--spectrum-alias-border-radius-large);
     font-family: var(--spectrum-alias-body-text-font-family, inherit);
     font-size: var(--spectrum-alias-font-size-default);
-    font-weight: var(--spectrum-alias-body-text-font-weight);
+    font-weight: 700;
     line-height: var(--spectrum-alias-body-text-line-height);
     cursor: pointer;
     outline: none;
@@ -78,29 +84,35 @@
 /* Secondary variant */
 .button[data-variant="secondary"] {
     background-color: var(--spectrum-global-color-gray-200);
+    border-color: var(--spectrum-global-color-gray-200);
     color: var(--spectrum-global-color-gray-800);
 }
 
 .button[data-variant="secondary"][data-hovered] {
     background-color: var(--spectrum-global-color-gray-300);
+    border-color: var(--spectrum-global-color-gray-300);
 }
 
 .button[data-variant="secondary"][data-pressed] {
     background-color: var(--spectrum-global-color-gray-400);
+    border-color: var(--spectrum-global-color-gray-400);
 }
 
-/* CTA variant - call-to-action */
+/* CTA variant - call-to-action (matches Spectrum accent button) */
 .button[data-variant="cta"] {
-    background-color: var(--spectrum-global-color-blue-600);
+    background-color: var(--spectrum-accent-background-color-default);
+    border-color: var(--spectrum-accent-background-color-default);
     color: var(--spectrum-global-color-static-white, #ffffff);
 }
 
 .button[data-variant="cta"][data-hovered] {
-    background-color: var(--spectrum-global-color-blue-700);
+    background-color: var(--spectrum-accent-background-color-hover);
+    border-color: var(--spectrum-accent-background-color-hover);
 }
 
 .button[data-variant="cta"][data-pressed] {
-    background-color: var(--spectrum-global-color-blue-800);
+    background-color: var(--spectrum-accent-background-color-down);
+    border-color: var(--spectrum-accent-background-color-down);
 }
 
 /* Negative variant - destructive action */
