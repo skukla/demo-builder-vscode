@@ -156,6 +156,7 @@
         /* Border radius */
         --spectrum-alias-border-radius-regular: 4px;
         --spectrum-alias-border-radius-small: 2px;
+        --spectrum-alias-border-radius-large: 16px;
 
         /* =========================================
            TYPOGRAPHY ALIASES

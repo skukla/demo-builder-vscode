@@ -26,7 +26,7 @@
     gap: var(--spectrum-global-dimension-size-75);
     padding: var(--spectrum-global-dimension-size-85) var(--spectrum-global-dimension-size-200);
     border: 2px solid transparent;
-    border-radius: var(--spectrum-alias-border-radius-regular);
+    border-radius: var(--spectrum-alias-border-radius-large);
     font-family: var(--spectrum-alias-body-text-font-family, inherit);
     font-size: var(--spectrum-alias-font-size-default);
     font-weight: var(--spectrum-alias-body-text-font-weight);
