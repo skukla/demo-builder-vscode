@@ -5,7 +5,6 @@ import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import React from 'react';
 import { useAuthStatus } from '../hooks/useAuthStatus';
-import { getOrgSelectionMessage } from './authHelpers';
 import {
     isTokenExpiringSoon,
     isAuthenticatedWithOrg,
@@ -18,7 +17,25 @@ import { AuthLoadingState } from './components/AuthLoadingState';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { ErrorCode } from '@/types/errorCodes';
+import { AdobeAuthState } from '@/types/webview';
 import { BaseStepProps } from '@/types/wizard';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Get organization selection message based on auth state
+ */
+function getOrgSelectionMessage(adobeAuth: AdobeAuthState): string {
+    if (adobeAuth.orgLacksAccess) {
+        return 'No organizations are currently accessible. Please choose an organization with App Builder enabled.';
+    }
+    if (adobeAuth.requiresOrgSelection) {
+        return 'Your previous organization is no longer accessible. Please select a new organization.';
+    }
+    return "You're signed in to Adobe, but haven't selected an organization yet.";
+}
 
 export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepProps) {
     const {

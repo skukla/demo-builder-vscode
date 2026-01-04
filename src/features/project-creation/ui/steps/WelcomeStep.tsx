@@ -2,6 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import { BrandGallery } from '../components/BrandGallery';
 import { deriveComponentsFromStack } from '../helpers/stackHelpers';
 import { TextField, Text } from '@/core/ui/components/aria';
+import { cn } from '@/core/ui/utils/classNames';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -180,7 +181,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
 
     // Project Name Input - shared between both layouts
     const projectNameField = (
-        <div className="brand-section">
+        <div className={cn('mb-5', 'min-h-96')}>
             <TextField
                 label="Project Name"
                 placeholder="Enter project name..."

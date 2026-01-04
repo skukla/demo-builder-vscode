@@ -6,8 +6,11 @@
  */
 
 import React, { useCallback, useRef } from 'react';
-import styles from '../styles/project-creation.module.css';
+import stylesImport from '../styles/project-creation.module.css';
 import { Text } from '@/core/ui/components/aria';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 import { Stack } from '@/types/stacks';
 
 export interface StackSelectorProps {

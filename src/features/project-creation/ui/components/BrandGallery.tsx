@@ -7,17 +7,40 @@
  * 3. Card expands to show the confirmed selection (at-a-glance confirmation)
  */
 
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useMemo, useCallback } from 'react';
-import styles from '../styles/project-creation.module.css';
-import { filterPackagesBySearchQuery } from './brandGalleryHelpers';
+import stylesImport from '../styles/project-creation.module.css';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
+
+import type { DemoPackage } from '@/types/demoPackages';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Filters packages based on a search query.
+ * Matches packages where the name OR description contains the query (case-insensitive).
+ */
+function filterPackagesBySearchQuery(packages: DemoPackage[], searchQuery: string): DemoPackage[] {
+    if (!searchQuery.trim()) {
+        return packages;
+    }
+    const query = searchQuery.toLowerCase();
+    return packages.filter(
+        (p) =>
+            p.name.toLowerCase().includes(query) ||
+            p.description.toLowerCase().includes(query),
+    );
+}
 import { Text, Checkbox, Divider } from '@/core/ui/components/aria';
+import { CheckmarkCircleIcon } from '@/core/ui/components/aria/icons';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
 import { cn } from '@/core/ui/utils/classNames';
-import { DemoPackage } from '@/types/demoPackages';
 import { Stack } from '@/types/stacks';
 
 /** Addon metadata for display */
@@ -109,7 +132,7 @@ const PackageCard: React.FC<PackageCardProps> = ({
                         {pkg.name}
                     </Text>
                     {isComplete && (
-                        <CheckmarkCircle size="S" />
+                        <CheckmarkCircleIcon size="S" />
                     )}
                 </div>
                 <Text className={styles.brandCardDescription}>
@@ -257,7 +280,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
             {/* Services Section - only shown if package supports addons */}
             {availableAddons.length > 0 && (
                 <div className="animate-fade-in">
-                    <Divider size="S" marginTop="size-300" marginBottom="size-200" />
+                    <Divider size="S" className={styles.servicesDivider} />
                     <Text className="description-block-sm">
                         Optional Services
                     </Text>

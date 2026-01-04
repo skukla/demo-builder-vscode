@@ -1,7 +1,6 @@
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useEffect, useCallback } from 'react';
-import { getCancelButtonText } from '../helpers/buttonTextHelpers';
 import { isProgressActive } from './projectCreationPredicates';
 import { Text, Flex, Button } from '@/core/ui/components/aria';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
@@ -29,6 +28,23 @@ interface MeshCheckResult {
 }
 
 type StepPhase = 'checking-mesh' | 'mesh-error' | 'creating' | 'completed' | 'failed' | 'cancelled';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Get the cancel/back button text based on the current creation phase.
+ */
+function getCancelButtonText(isCheckingMesh: boolean, isCancelling: boolean): string {
+    if (isCheckingMesh) {
+        return 'Back';
+    }
+    if (isCancelling) {
+        return 'Cancelling...';
+    }
+    return 'Cancel';
+}
 
 export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps) {
     const progress = state.creationProgress;
