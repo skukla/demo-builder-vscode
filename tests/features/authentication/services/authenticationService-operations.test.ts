@@ -24,11 +24,15 @@ import {
 // Only mock external dependencies
 jest.mock('@/core/logging');
 jest.mock('@/features/authentication/services/adobeSDKClient');
-jest.mock('@/features/authentication/services/adobeEntityService');
+jest.mock('@/features/authentication/services/adobeEntityFetcher');
+jest.mock('@/features/authentication/services/adobeContextResolver');
+jest.mock('@/features/authentication/services/adobeEntitySelector');
 
 import { getLogger } from '@/core/logging';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
-import { AdobeEntityService } from '@/features/authentication/services/adobeEntityService';
+import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import { AdobeContextResolver } from '@/features/authentication/services/adobeContextResolver';
+import { AdobeEntitySelector } from '@/features/authentication/services/adobeEntitySelector';
 
 describe('AuthenticationService - Login/Logout Operations', () => {
     let authService: AuthenticationService;
@@ -36,7 +40,9 @@ describe('AuthenticationService - Login/Logout Operations', () => {
     let mockLogger: jest.Mocked<Logger>;
     let mockStepLogger: jest.Mocked<StepLogger>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
-    let mockEntityService: jest.Mocked<AdobeEntityService>;
+    let mockFetcher: jest.Mocked<AdobeEntityFetcher>;
+    let mockResolver: jest.Mocked<AdobeContextResolver>;
+    let mockSelector: jest.Mocked<AdobeEntitySelector>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -59,14 +65,33 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             clear: jest.fn(),
         } as any;
 
-        // Create mock entity service
-        mockEntityService = {
+        // Create mock specialized services
+        mockFetcher = {
             getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
+            getProjects: jest.fn().mockResolvedValue([]),
+            getWorkspaces: jest.fn().mockResolvedValue([]),
+        } as any;
+
+        mockResolver = {
+            getCurrentOrganization: jest.fn().mockResolvedValue(undefined),
+            getCurrentProject: jest.fn().mockResolvedValue(undefined),
+            getCurrentWorkspace: jest.fn().mockResolvedValue(undefined),
+            getCurrentContext: jest.fn().mockResolvedValue({}),
+        } as any;
+
+        mockSelector = {
+            selectOrganization: jest.fn().mockResolvedValue(true),
+            selectProject: jest.fn().mockResolvedValue(true),
+            selectWorkspace: jest.fn().mockResolvedValue(true),
+            autoSelectOrganizationIfNeeded: jest.fn().mockResolvedValue(undefined),
+            clearConsoleContext: jest.fn().mockResolvedValue(undefined),
         } as any;
 
         // Mock constructors
         (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(() => mockSDKClient);
-        (AdobeEntityService as jest.MockedClass<typeof AdobeEntityService>).mockImplementation(() => mockEntityService);
+        (AdobeEntityFetcher as jest.MockedClass<typeof AdobeEntityFetcher>).mockImplementation(() => mockFetcher);
+        (AdobeContextResolver as jest.MockedClass<typeof AdobeContextResolver>).mockImplementation(() => mockResolver);
+        (AdobeEntitySelector as jest.MockedClass<typeof AdobeEntitySelector>).mockImplementation(() => mockSelector);
 
         authService = new AuthenticationService('/mock/extension/path', mockLogger, mockCommandExecutor);
     });

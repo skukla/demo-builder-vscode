@@ -287,13 +287,6 @@ describe('Feature Barrel Exports', () => {
             expect(typeof exports.AuthenticationService).toBe('function');
         });
 
-        it('should export AdobeEntityService', async () => {
-            const exports = await import('@/features/authentication');
-
-            expect(exports.AdobeEntityService).toBeDefined();
-            expect(typeof exports.AdobeEntityService).toBe('function');
-        });
-
         it('should export TokenManager', async () => {
             const exports = await import('@/features/authentication');
 

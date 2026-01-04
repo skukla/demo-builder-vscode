@@ -1,17 +1,107 @@
 import * as path from 'path';
-import { isValidTokenResponse } from './authPredicates';
 import { getLogger, StepLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
+import { formatDuration } from '@/core/utils';
 import { TIMEOUTS, CACHE_TTL } from '@/core/utils/timeoutConfig';
-import { AdobeEntityService } from '@/features/authentication/services/adobeEntityService';
+import { AdobeContextResolver } from '@/features/authentication/services/adobeContextResolver';
+import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import { AdobeEntitySelector } from '@/features/authentication/services/adobeEntitySelector';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import { AuthenticationErrorFormatter } from '@/features/authentication/services/authenticationErrorFormatter';
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
-import { PerformanceTracker } from '@/features/authentication/services/performanceTracker';
 import { TokenManager } from '@/features/authentication/services/tokenManager';
-import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation } from '@/features/authentication/services/types';
+import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation, PerformanceMetric } from '@/features/authentication/services/types';
 import type { Logger } from '@/types/logger';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TOKEN VALIDATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Validate token response from Adobe CLI
+ * Valid token: exists, length > 50, no error messages
+ */
+function isValidTokenResponse(token: string | undefined): boolean {
+    if (!token) return false;
+    if (token.length <= 50) return false;
+    if (token.includes('Error')) return false;
+    if (token.includes('error')) return false;
+    return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PERFORMANCE TRACKING
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Tracks performance timing for authentication operations
+ * Provides metrics and warnings for slow operations
+ */
+class PerformanceTracker {
+    private timings = new Map<string, number>();
+    private logger = getLogger();
+
+    /**
+     * Expected operation times in milliseconds (performance benchmarks)
+     * Used only for slow operation detection and logging.
+     */
+    private readonly expectedTimes: Record<string, number> = {
+        'isAuthenticated': 3000,
+        'isFullyAuthenticated': 4000,
+        'getOrganizations': 5000,
+        'getProjects': 5000,
+        'getWorkspaces': 5000,
+        'selectOrganization': 8000,
+        'selectProject': 15000,
+        'selectWorkspace': 15000,
+        'getCurrentOrganization': 5000,
+        'getCurrentProject': 5000,
+        'getCurrentWorkspace': 5000,
+        'login': 30000,
+    };
+
+    startTiming(operation: string): void {
+        this.timings.set(operation, Date.now());
+    }
+
+    endTiming(operation: string): number {
+        const start = this.timings.get(operation);
+        if (!start) {
+            return 0;
+        }
+
+        const duration = Date.now() - start;
+        this.timings.delete(operation);
+
+        const expected = this.expectedTimes[operation];
+        const warning = expected && duration > expected ? ` ⚠️ SLOW (expected <${formatDuration(expected)})` : '';
+        if (warning) {
+            this.logger.debug(`[Performance] ${operation} took ${formatDuration(duration)}${warning}`);
+        }
+
+        return duration;
+    }
+
+    getMetrics(): PerformanceMetric[] {
+        const metrics: PerformanceMetric[] = [];
+        const now = Date.now();
+
+        this.timings.forEach((timestamp, operation) => {
+            metrics.push({
+                operation,
+                duration: now - timestamp,
+                timestamp,
+            });
+        });
+
+        return metrics;
+    }
+
+    clear(): void {
+        this.timings.clear();
+    }
+}
 
 /**
  * Main authentication service - orchestrates all authentication operations
@@ -28,7 +118,10 @@ export class AuthenticationService {
     private tokenManager: TokenManager;
     private organizationValidator: OrganizationValidator;
     private sdkClient: AdobeSDKClient;
-    private entityService: AdobeEntityService | null = null;
+    // Specialized entity services (lazy-initialized)
+    private fetcher: AdobeEntityFetcher | null = null;
+    private resolver: AdobeContextResolver | null = null;
+    private selector: AdobeEntitySelector | null = null;
 
     constructor(
         extensionPath: string,
@@ -50,8 +143,8 @@ export class AuthenticationService {
             this.cacheManager,
             logger,
         );
-        // Note: entityService will be initialized lazily when first needed
-        // because it depends on stepLogger which requires async initialization
+        // Note: entity services (fetcher, resolver, selector) are initialized lazily
+        // when first needed because they depend on stepLogger which requires async initialization
     }
 
     /**
@@ -76,16 +169,49 @@ export class AuthenticationService {
         ).then(stepLogger => {
             this.stepLogger = stepLogger;
 
-            // Initialize entityService now that stepLogger is ready
-            if (!this.entityService) {
-                this.entityService = new AdobeEntityService(
+            // Initialize entity services now that stepLogger is ready
+            // Uses circular callback pattern: fetcher needs selector's clearConsoleContext
+            if (!this.fetcher) {
+                // Create temporary reference for circular callback
+                // eslint-disable-next-line prefer-const -- reassigned after selector creation
+                let selectorRef: AdobeEntitySelector | undefined;
+
+                // Create fetcher with callback to selector's clearConsoleContext
+                this.fetcher = new AdobeEntityFetcher(
                     this.commandManager,
                     this.sdkClient,
                     this.cacheManager,
+                    this.logger,
+                    stepLogger,
+                    {
+                        onNoOrgsAccessible: async () => {
+                            if (selectorRef) {
+                                await selectorRef.clearConsoleContext();
+                            }
+                        },
+                    },
+                );
+
+                // Create resolver (depends on fetcher)
+                this.resolver = new AdobeContextResolver(
+                    this.commandManager,
+                    this.cacheManager,
+                    this.fetcher,
+                );
+
+                // Create selector (depends on fetcher and resolver)
+                this.selector = new AdobeEntitySelector(
+                    this.commandManager,
+                    this.cacheManager,
                     this.organizationValidator,
+                    this.fetcher,
+                    this.resolver,
                     this.logger,
                     stepLogger,
                 );
+
+                // Set the reference for the callback
+                selectorRef = this.selector;
             }
 
             return stepLogger;
@@ -95,14 +221,36 @@ export class AuthenticationService {
     }
 
     /**
-     * Ensure entityService is initialized (depends on stepLogger)
+     * Ensure fetcher service is initialized (depends on stepLogger)
      */
-    private async ensureEntityService(): Promise<AdobeEntityService> {
+    private async ensureFetcher(): Promise<AdobeEntityFetcher> {
         await this.ensureStepLogger();
-        if (!this.entityService) {
-            throw new Error('EntityService failed to initialize');
+        if (!this.fetcher) {
+            throw new Error('EntityFetcher failed to initialize');
         }
-        return this.entityService;
+        return this.fetcher;
+    }
+
+    /**
+     * Ensure resolver service is initialized (depends on stepLogger)
+     */
+    private async ensureResolver(): Promise<AdobeContextResolver> {
+        await this.ensureStepLogger();
+        if (!this.resolver) {
+            throw new Error('ContextResolver failed to initialize');
+        }
+        return this.resolver;
+    }
+
+    /**
+     * Ensure selector service is initialized (depends on stepLogger)
+     */
+    private async ensureSelector(): Promise<AdobeEntitySelector> {
+        await this.ensureStepLogger();
+        if (!this.selector) {
+            throw new Error('EntitySelector failed to initialize');
+        }
+        return this.selector;
     }
 
     /**
@@ -434,15 +582,15 @@ export class AuthenticationService {
         return this.organizationValidator.testDeveloperPermissions();
     }
 
-    // Entity Service Methods - Delegating to EntityService
+    // Entity Service Methods - Delegating to Specialized Services
 
     /**
      * Get organizations
      */
     async getOrganizations(): Promise<AdobeOrg[]> {
         this.performanceTracker.startTiming('getOrganizations');
-        const entityService = await this.ensureEntityService();
-        const result = await entityService.getOrganizations();
+        const fetcher = await this.ensureFetcher();
+        const result = await fetcher.getOrganizations();
         this.performanceTracker.endTiming('getOrganizations');
         return result;
     }
@@ -452,8 +600,8 @@ export class AuthenticationService {
      */
     async getProjects(): Promise<AdobeProject[]> {
         this.performanceTracker.startTiming('getProjects');
-        const entityService = await this.ensureEntityService();
-        const result = await entityService.getProjects();
+        const fetcher = await this.ensureFetcher();
+        const result = await fetcher.getProjects();
         this.performanceTracker.endTiming('getProjects');
         return result;
     }
@@ -463,8 +611,8 @@ export class AuthenticationService {
      */
     async getWorkspaces(): Promise<AdobeWorkspace[]> {
         this.performanceTracker.startTiming('getWorkspaces');
-        const entityService = await this.ensureEntityService();
-        const result = await entityService.getWorkspaces();
+        const fetcher = await this.ensureFetcher();
+        const result = await fetcher.getWorkspaces();
         this.performanceTracker.endTiming('getWorkspaces');
         return result;
     }
@@ -523,8 +671,8 @@ export class AuthenticationService {
      */
     async getCurrentOrganization(): Promise<AdobeOrg | undefined> {
         this.performanceTracker.startTiming('getCurrentOrganization');
-        const entityService = await this.ensureEntityService();
-        const result = await entityService.getCurrentOrganization();
+        const resolver = await this.ensureResolver();
+        const result = await resolver.getCurrentOrganization();
         this.performanceTracker.endTiming('getCurrentOrganization');
         return result;
     }
@@ -534,8 +682,8 @@ export class AuthenticationService {
      */
     async getCurrentProject(): Promise<AdobeProject | undefined> {
         this.performanceTracker.startTiming('getCurrentProject');
-        const entityService = await this.ensureEntityService();
-        const result = await entityService.getCurrentProject();
+        const resolver = await this.ensureResolver();
+        const result = await resolver.getCurrentProject();
         this.performanceTracker.endTiming('getCurrentProject');
         return result;
     }
@@ -545,8 +693,8 @@ export class AuthenticationService {
      */
     async getCurrentWorkspace(): Promise<AdobeWorkspace | undefined> {
         this.performanceTracker.startTiming('getCurrentWorkspace');
-        const entityService = await this.ensureEntityService();
-        const result = await entityService.getCurrentWorkspace();
+        const resolver = await this.ensureResolver();
+        const result = await resolver.getCurrentWorkspace();
         this.performanceTracker.endTiming('getCurrentWorkspace');
         return result;
     }
@@ -555,8 +703,8 @@ export class AuthenticationService {
      * Get current context
      */
     async getCurrentContext(): Promise<AdobeContext> {
-        const entityService = await this.ensureEntityService();
-        return entityService.getCurrentContext();
+        const resolver = await this.ensureResolver();
+        return resolver.getCurrentContext();
     }
 
     /**
@@ -564,8 +712,8 @@ export class AuthenticationService {
      */
     async selectOrganization(orgId: string): Promise<boolean> {
         this.performanceTracker.startTiming('selectOrganization');
-        const entityService = await this.ensureEntityService();
-        const result = await entityService.selectOrganization(orgId);
+        const selector = await this.ensureSelector();
+        const result = await selector.selectOrganization(orgId);
         this.performanceTracker.endTiming('selectOrganization');
         return result;
     }
@@ -577,8 +725,8 @@ export class AuthenticationService {
      */
     async selectProject(projectId: string, orgId: string): Promise<boolean> {
         this.performanceTracker.startTiming('selectProject');
-        const entityService = await this.ensureEntityService();
-        const result = await entityService.selectProject(projectId, orgId);
+        const selector = await this.ensureSelector();
+        const result = await selector.selectProject(projectId, orgId);
         this.performanceTracker.endTiming('selectProject');
         return result;
     }
@@ -590,8 +738,8 @@ export class AuthenticationService {
      */
     async selectWorkspace(workspaceId: string, projectId: string): Promise<boolean> {
         this.performanceTracker.startTiming('selectWorkspace');
-        const entityService = await this.ensureEntityService();
-        const result = await entityService.selectWorkspace(workspaceId, projectId);
+        const selector = await this.ensureSelector();
+        const result = await selector.selectWorkspace(workspaceId, projectId);
         this.performanceTracker.endTiming('selectWorkspace');
         return result;
     }
@@ -600,7 +748,7 @@ export class AuthenticationService {
      * Auto-select organization if only one available
      */
     async autoSelectOrganizationIfNeeded(skipCurrentCheck = false): Promise<AdobeOrg | undefined> {
-        const entityService = await this.ensureEntityService();
-        return entityService.autoSelectOrganizationIfNeeded(skipCurrentCheck);
+        const selector = await this.ensureSelector();
+        return selector.autoSelectOrganizationIfNeeded(skipCurrentCheck);
     }
 }

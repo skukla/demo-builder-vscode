@@ -2,7 +2,6 @@ import type { CommandExecutor, CommandResult } from '@/core/shell';
 import type { Logger, StepLogger } from '@/core/logging';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authentication/services/types';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
-import type { AdobeEntityService } from '@/features/authentication/services/adobeEntityService';
 
 /**
  * Shared test utilities for AuthenticationService tests
@@ -100,24 +99,3 @@ export const createMockSDKClient = (): jest.Mocked<AdobeSDKClient> => ({
     clear: jest.fn(),
 } as any);
 
-/**
- * Creates a mock entity service with default behavior.
- * IMPORTANT: Returns a function to create fresh instances per test to avoid closure issues.
- */
-export const createMockEntityService = (): jest.Mocked<AdobeEntityService> => ({
-    getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
-    getProjects: jest.fn().mockResolvedValue([mockProject]),
-    getWorkspaces: jest.fn().mockResolvedValue([mockWorkspace]),
-    getCurrentOrganization: jest.fn().mockResolvedValue(mockOrg),
-    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-    getCurrentWorkspace: jest.fn().mockResolvedValue(mockWorkspace),
-    getCurrentContext: jest.fn().mockResolvedValue({
-        org: mockOrg,
-        project: mockProject,
-        workspace: mockWorkspace
-    }),
-    selectOrganization: jest.fn().mockResolvedValue(true),
-    selectProject: jest.fn().mockResolvedValue(true),
-    selectWorkspace: jest.fn().mockResolvedValue(true),
-    autoSelectOrganizationIfNeeded: jest.fn().mockResolvedValue(undefined),
-} as any);

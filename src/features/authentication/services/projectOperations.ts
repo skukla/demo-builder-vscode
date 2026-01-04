@@ -6,7 +6,7 @@
  */
 
 import { getConsoleWhereContext, ensureContext, type ContextOperationsDeps } from './contextOperations';
-import { mapProjects } from './entityMappers';
+import { mapProjects } from './adobeEntityMapper';
 import { getLogger, StepLogger } from '@/core/logging';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { validateProjectId } from '@/core/validation';

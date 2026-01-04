@@ -25,11 +25,15 @@ import {
 // Only mock external dependencies
 jest.mock('@/core/logging');
 jest.mock('@/features/authentication/services/adobeSDKClient');
-jest.mock('@/features/authentication/services/adobeEntityService');
+jest.mock('@/features/authentication/services/adobeEntityFetcher');
+jest.mock('@/features/authentication/services/adobeContextResolver');
+jest.mock('@/features/authentication/services/adobeEntitySelector');
 
 import { getLogger } from '@/core/logging';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
-import { AdobeEntityService } from '@/features/authentication/services/adobeEntityService';
+import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import { AdobeContextResolver } from '@/features/authentication/services/adobeContextResolver';
+import { AdobeEntitySelector } from '@/features/authentication/services/adobeEntitySelector';
 
 describe('AuthenticationService - Entity Retrieval and Selection', () => {
     let authService: AuthenticationService;
@@ -37,7 +41,9 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
     let mockLogger: jest.Mocked<Logger>;
     let mockStepLogger: jest.Mocked<StepLogger>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
-    let mockEntityService: jest.Mocked<AdobeEntityService>;
+    let mockFetcher: jest.Mocked<AdobeEntityFetcher>;
+    let mockResolver: jest.Mocked<AdobeContextResolver>;
+    let mockSelector: jest.Mocked<AdobeEntitySelector>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -60,24 +66,33 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             clear: jest.fn(),
         } as any;
 
-        // Create mock entity service with full functionality
-        mockEntityService = {
+        // Create mock specialized services
+        mockFetcher = {
             getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
             getProjects: jest.fn().mockResolvedValue([mockProject]),
             getWorkspaces: jest.fn().mockResolvedValue([mockWorkspace]),
+        } as any;
+
+        mockResolver = {
             getCurrentOrganization: jest.fn().mockResolvedValue(mockOrg),
             getCurrentProject: jest.fn().mockResolvedValue(mockProject),
             getCurrentWorkspace: jest.fn().mockResolvedValue(mockWorkspace),
             getCurrentContext: jest.fn().mockResolvedValue({ org: mockOrg, project: mockProject, workspace: mockWorkspace }),
+        } as any;
+
+        mockSelector = {
             selectOrganization: jest.fn().mockResolvedValue(true),
             selectProject: jest.fn().mockResolvedValue(true),
             selectWorkspace: jest.fn().mockResolvedValue(true),
             autoSelectOrganizationIfNeeded: jest.fn().mockResolvedValue(undefined),
+            clearConsoleContext: jest.fn().mockResolvedValue(undefined),
         } as any;
 
         // Mock constructors
         (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(() => mockSDKClient);
-        (AdobeEntityService as jest.MockedClass<typeof AdobeEntityService>).mockImplementation(() => mockEntityService);
+        (AdobeEntityFetcher as jest.MockedClass<typeof AdobeEntityFetcher>).mockImplementation(() => mockFetcher);
+        (AdobeContextResolver as jest.MockedClass<typeof AdobeContextResolver>).mockImplementation(() => mockResolver);
+        (AdobeEntitySelector as jest.MockedClass<typeof AdobeEntitySelector>).mockImplementation(() => mockSelector);
 
         authService = new AuthenticationService('/mock/extension/path', mockLogger, mockCommandExecutor);
     });
@@ -87,49 +102,49 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             const result = await authService.getOrganizations();
 
             expect(result).toEqual([mockOrg]);
-            expect(mockEntityService.getOrganizations).toHaveBeenCalled();
+            expect(mockFetcher.getOrganizations).toHaveBeenCalled();
         });
 
         it('should get projects', async () => {
             const result = await authService.getProjects();
 
             expect(result).toEqual([mockProject]);
-            expect(mockEntityService.getProjects).toHaveBeenCalled();
+            expect(mockFetcher.getProjects).toHaveBeenCalled();
         });
 
         it('should get workspaces', async () => {
             const result = await authService.getWorkspaces();
 
             expect(result).toEqual([mockWorkspace]);
-            expect(mockEntityService.getWorkspaces).toHaveBeenCalled();
+            expect(mockFetcher.getWorkspaces).toHaveBeenCalled();
         });
 
         it('should get current organization', async () => {
             const result = await authService.getCurrentOrganization();
 
             expect(result).toEqual(mockOrg);
-            expect(mockEntityService.getCurrentOrganization).toHaveBeenCalled();
+            expect(mockResolver.getCurrentOrganization).toHaveBeenCalled();
         });
 
         it('should get current project', async () => {
             const result = await authService.getCurrentProject();
 
             expect(result).toEqual(mockProject);
-            expect(mockEntityService.getCurrentProject).toHaveBeenCalled();
+            expect(mockResolver.getCurrentProject).toHaveBeenCalled();
         });
 
         it('should get current workspace', async () => {
             const result = await authService.getCurrentWorkspace();
 
             expect(result).toEqual(mockWorkspace);
-            expect(mockEntityService.getCurrentWorkspace).toHaveBeenCalled();
+            expect(mockResolver.getCurrentWorkspace).toHaveBeenCalled();
         });
 
         it('should get current context', async () => {
             const result = await authService.getCurrentContext();
 
             expect(result).toEqual({ org: mockOrg, project: mockProject, workspace: mockWorkspace });
-            expect(mockEntityService.getCurrentContext).toHaveBeenCalled();
+            expect(mockResolver.getCurrentContext).toHaveBeenCalled();
         });
     });
 
@@ -138,30 +153,30 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             const result = await authService.selectOrganization('org123');
 
             expect(result).toBe(true);
-            expect(mockEntityService.selectOrganization).toHaveBeenCalledWith('org123');
+            expect(mockSelector.selectOrganization).toHaveBeenCalledWith('org123');
         });
 
         it('should select project with org context guard', async () => {
             const result = await authService.selectProject('proj123', 'org123');
 
             expect(result).toBe(true);
-            expect(mockEntityService.selectProject).toHaveBeenCalledWith('proj123', 'org123');
+            expect(mockSelector.selectProject).toHaveBeenCalledWith('proj123', 'org123');
         });
 
         it('should select workspace with project context guard', async () => {
             const result = await authService.selectWorkspace('ws123', 'proj123');
 
             expect(result).toBe(true);
-            expect(mockEntityService.selectWorkspace).toHaveBeenCalledWith('ws123', 'proj123');
+            expect(mockSelector.selectWorkspace).toHaveBeenCalledWith('ws123', 'proj123');
         });
 
         it('should auto-select organization if needed', async () => {
-            mockEntityService.autoSelectOrganizationIfNeeded.mockResolvedValue(mockOrg);
+            mockSelector.autoSelectOrganizationIfNeeded.mockResolvedValue(mockOrg);
 
             const result = await authService.autoSelectOrganizationIfNeeded();
 
             expect(result).toEqual(mockOrg);
-            expect(mockEntityService.autoSelectOrganizationIfNeeded).toHaveBeenCalledWith(false);
+            expect(mockSelector.autoSelectOrganizationIfNeeded).toHaveBeenCalledWith(false);
         });
     });
 });
