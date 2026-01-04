@@ -164,10 +164,12 @@ export class PrerequisitesManager {
                 } else {
                     const { checkPerNodeVersionStatus } = await import('@/features/prerequisites/handlers/shared');
 
+                    // Cast to HandlerContext - checkPerNodeVersionStatus only uses logger/debugLogger
+                    // from the context when called during cache warming
                     const perNodeStatus = await checkPerNodeVersionStatus(
                         prereq,
                         installedNodeVersions,
-                        this.createMinimalContext(),
+                        this.createMinimalContext() as unknown as import('@/commands/handlers/HandlerContext').HandlerContext,
                     );
 
                     // Cache per-version results

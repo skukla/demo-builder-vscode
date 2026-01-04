@@ -17,25 +17,40 @@
 import * as vscode from 'vscode';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
+import {
+    getRequiredNodeVersions,
+    getNodeVersionMapping,
+    checkPerNodeVersionStatus,
+    determinePrerequisiteStatus,
+    hasNodeVersions,
+    getNodeVersionKeys,
+} from '@/features/prerequisites/handlers/shared';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning';
 import { ErrorCode } from '@/types/errorCodes';
 import { isTimeout, toAppError } from '@/types/errors';
+import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 
+// Alias for backwards compatibility with previous naming
+type PrerequisiteResult = PrerequisiteStatus;
+
+// ============================================================================
+// VERSION HELPERS
+// ============================================================================
+
 /**
- * Get target Node versions for installation (SOP §3 compliance)
+ * Get target Node versions for installation
  *
- * Extracts nested ternary: `sortedMissing.length > 0 ? sortedMissing : (version ? [version] : undefined)`
- * to explicit helper with clear fallback logic.
+ * Determines which Node versions need to be installed based on
+ * the missing majors and optional fallback version.
  *
  * @param sortedMissingMajors - Sorted array of missing major version numbers
  * @param fallbackVersion - Optional single version to use if no missing majors
  * @returns Array of versions to install, or undefined if none needed
  */
-function getTargetNodeVersions(
+export function getTargetNodeVersions(
     sortedMissingMajors: string[],
     fallbackVersion?: string,
 ): string[] | undefined {
@@ -59,7 +74,7 @@ function getTargetNodeVersions(
  * - Node.js prerequisite: Use explicit version if provided, otherwise all required versions
  * - Other prerequisites: No nodeVersions needed (undefined)
  */
-function determineNodeVersionsForInstall(
+export function determineNodeVersionsForInstall(
     prereq: { id: string; perNodeVersion?: boolean },
     nodeVersions: string[],
     version?: string,
@@ -80,6 +95,155 @@ function determineNodeVersionsForInstall(
     // Other prerequisites don't need nodeVersions
     return undefined;
 }
+
+/**
+ * Sort version strings in ascending numeric order
+ */
+export function sortVersionsAscending(versions: string[]): string[] {
+    return [...versions].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+}
+
+/**
+ * Filter to only versions that are installable in fnm
+ */
+export function filterInstallableVersions(
+    versions: string[],
+    fnmInstalledVersions: string[],
+): string[] {
+    const fnmSet = new Set(fnmInstalledVersions);
+    return versions.filter(v => fnmSet.has(v));
+}
+
+/**
+ * Get missing Node versions from status
+ */
+export function getMissingNodeVersions(
+    nodeVersionMapping: Record<string, string>,
+    nodeStatus: { version: string; installed: boolean }[] | undefined,
+): string[] {
+    if (!nodeStatus) return [];
+
+    return getNodeVersionKeys(nodeVersionMapping)
+        .filter(m => !nodeStatus.some(s => s.version.startsWith(`Node ${m}`) && s.installed));
+}
+
+// ============================================================================
+// PLUGIN INSTALLATION HELPERS
+// ============================================================================
+
+/**
+ * Determine plugin installation versions based on component requirements
+ */
+export async function determinePluginNodeVersions(params: {
+    prereq: PrerequisiteDefinition;
+    plugin: { id: string; requiredFor?: string[] };
+    nodeVersionMapping: Record<string, string>;
+    targetVersions: string[] | undefined;
+    context: HandlerContext;
+    getInstalledNodeVersions: (logger: unknown) => Promise<string[]>;
+}): Promise<string[] | undefined> {
+    const { prereq, plugin, nodeVersionMapping, targetVersions, context, getInstalledNodeVersions: getVersions } = params;
+
+    if (!prereq.perNodeVersion || !hasNodeVersions(nodeVersionMapping)) {
+        return undefined;
+    }
+
+    const requiredForComponents = plugin.requiredFor || [];
+    const pluginNodeVersions: string[] = [];
+
+    // Find Node versions used by components that require this plugin
+    for (const [nodeVersion, componentId] of Object.entries(nodeVersionMapping)) {
+        if (requiredForComponents.includes(componentId)) {
+            pluginNodeVersions.push(nodeVersion);
+            context.debugLogger.debug(`[Prerequisites] Plugin ${plugin.id} needed for ${componentId} (Node ${nodeVersion})`);
+        }
+    }
+
+    // Also check dependencies
+    const selection = context.sharedState.currentComponentSelection;
+    if (selection?.dependencies) {
+        for (const dep of selection.dependencies) {
+            if (requiredForComponents.includes(dep)) {
+                const depNodeVersion = Object.entries(nodeVersionMapping)
+                    .find(([_, compId]) => compId === dep)?.[0];
+                if (depNodeVersion && !pluginNodeVersions.includes(depNodeVersion)) {
+                    pluginNodeVersions.push(depNodeVersion);
+                    context.debugLogger.debug(`[Prerequisites] Plugin ${plugin.id} needed for dependency ${dep} (Node ${depNodeVersion})`);
+                }
+            }
+        }
+    }
+
+    if (pluginNodeVersions.length > 0) {
+        // Filter to only Node versions that exist in fnm
+        const fnmVersions = await getVersions(context.logger);
+        const installable = filterInstallableVersions(pluginNodeVersions, fnmVersions);
+        return installable.length > 0 ? installable : undefined;
+    }
+
+    // Fallback: use first target version if no specific mapping found
+    if (targetVersions?.length) {
+        context.debugLogger.debug(`[Prerequisites] Plugin ${plugin.id}: no specific version mapping, using ${targetVersions[0]}`);
+        return [targetVersions[0]];
+    }
+
+    return undefined;
+}
+
+// ============================================================================
+// STATUS MESSAGE HELPERS
+// ============================================================================
+
+/**
+ * Build final status message based on prerequisite type and results
+ */
+export function buildFinalStatusMessage(params: {
+    prereq: PrerequisiteDefinition;
+    installResult: PrerequisiteResult;
+    nodeVersionStatus?: { version: string; component: string; installed: boolean }[];
+}): string {
+    const { prereq, installResult, nodeVersionStatus } = params;
+
+    if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0) {
+        if (nodeVersionStatus.every(s => s.installed)) {
+            const versions = nodeVersionStatus.map(s => s.version).join(', ');
+            return `${prereq.name} is installed: ${versions}`;
+        }
+        const missing = nodeVersionStatus
+            .filter(s => !s.installed)
+            .map(s => s.version)
+            .join(', ');
+        return `${prereq.name} is missing in ${missing}`;
+    }
+
+    if (installResult.installed) {
+        const version = installResult.version ? `: ${installResult.version}` : '';
+        return `${prereq.name} is installed${version}`;
+    }
+
+    return `${prereq.name} is not installed`;
+}
+
+/**
+ * Determine overall installed status for per-node-version prerequisites
+ */
+export function determineOverallInstalled(params: {
+    prereq: PrerequisiteDefinition;
+    installResult: PrerequisiteResult;
+    perNodeVersionStatus?: { version: string; component: string; installed: boolean }[];
+}): boolean {
+    const { prereq, installResult, perNodeVersionStatus } = params;
+
+    if (prereq.perNodeVersion && perNodeVersionStatus && perNodeVersionStatus.length > 0) {
+        return perNodeVersionStatus.every(s => s.installed);
+    }
+
+    return installResult.installed;
+}
+
+// ============================================================================
+// MAIN HANDLER
+// ============================================================================
 
 /**
  * install-prerequisite - Install a missing prerequisite
@@ -137,7 +301,7 @@ export async function handleInstallPrerequisite(
                 : [];
             context.debugLogger.trace(`[Prerequisites] Missing major versions: ${JSON.stringify(missingMajors)}`);
             // Sort versions in ascending order (18, 20, 24) for predictable installation order
-            const sortedMissingMajors = missingMajors.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+            const sortedMissingMajors = sortVersionsAscending(missingMajors);
             context.debugLogger.trace(`[Prerequisites] Sorted missing majors for installation: ${JSON.stringify(sortedMissingMajors)}`);
             targetVersions = getTargetNodeVersions(sortedMissingMajors, version);
 
@@ -179,9 +343,9 @@ export async function handleInstallPrerequisite(
             // they're installed under. This ensures each component's required Node version
             // has all necessary tools installed in its context.
             // CRITICAL: Use the same version resolution logic as getInstallSteps to ensure consistency
-            const versionsToCheck = nodeVersions.length ? nodeVersions : [version || '20'];
-            // Sort versions in ascending order (18, 20, 24) for predictable installation order
-            versionsToCheck.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+            const versionsToCheck = sortVersionsAscending(
+                nodeVersions.length ? nodeVersions : [version || '20'],
+            );
 
             // Use shared utility to check which Node versions need the prerequisite installed
             const perNodeStatus = await checkPerNodeVersionStatus(prereq, versionsToCheck, context);
@@ -190,15 +354,14 @@ export async function handleInstallPrerequisite(
             // Filter to only Node versions actually installed in fnm
             // (prevents trying to install under system Node when fnm has nothing)
             const fnmInstalledVersions = await getInstalledNodeVersions(context.logger);
-            const fnmInstalledSet = new Set(fnmInstalledVersions);
-            const installableVersions = missingNodeVersions.filter(v => fnmInstalledSet.has(v));
+            const installableVersions = filterInstallableVersions(missingNodeVersions, fnmInstalledVersions);
 
             if (installableVersions.length < missingNodeVersions.length) {
                 context.logger.debug(`[Prerequisites] Some Node versions not in fnm, will only install ${prereq.name} for: ${installableVersions.join(', ') || 'none'}`);
             }
 
             // Sort versions in ascending order for predictable installation order
-            targetVersions = installableVersions.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+            targetVersions = sortVersionsAscending(installableVersions);
 
             // If no versions need installation, return early
             if (!targetVersions || targetVersions.length === 0) {
@@ -467,35 +630,19 @@ export async function handleInstallPrerequisite(
             states.set(prereqId, { prereq, result: installResult, nodeVersionStatus: finalNodeVersionStatus });
         }
 
-        // Build final status message based on prerequisite type
-        let finalMessage: string;
-        if (prereq.id === 'node' && finalNodeVersionStatus && finalNodeVersionStatus.length > 0) {
-            // Node.js: Show version-specific status
-            if (finalNodeVersionStatus.every(s => s.installed)) {
-                const versions = finalNodeVersionStatus.map(s => s.version).join(', ');
-                finalMessage = `${prereq.name} is installed: ${versions}`;
-            } else {
-                const missing = finalNodeVersionStatus
-                    .filter(s => !s.installed)
-                    .map(s => s.version)
-                    .join(', ');
-                finalMessage = `${prereq.name} is missing in ${missing}`;
-            }
-        } else {
-            // Other prerequisites: Show simple status
-            if (installResult.installed) {
-                const version = installResult.version ? `: ${installResult.version}` : '';
-                finalMessage = `${prereq.name} is installed${version}`;
-            } else {
-                finalMessage = `${prereq.name} is not installed`;
-            }
-        }
+        // Build final status message using helper (extracted for testability)
+        const finalMessage = buildFinalStatusMessage({
+            prereq,
+            installResult,
+            nodeVersionStatus: finalNodeVersionStatus,
+        });
 
-        // For perNodeVersion prerequisites, determine overall status from per-node checks
-        // For other prerequisites, use the global check result
-        const overallInstalled = prereq.perNodeVersion && finalPerNodeVersionStatus && finalPerNodeVersionStatus.length > 0
-            ? finalPerNodeVersionStatus.every(s => s.installed)
-            : installResult.installed;
+        // Determine overall installed status using helper (extracted for testability)
+        const overallInstalled = determineOverallInstalled({
+            prereq,
+            installResult,
+            perNodeVersionStatus: finalPerNodeVersionStatus,
+        });
 
         // Summarize result in both channels
         if (overallInstalled) {

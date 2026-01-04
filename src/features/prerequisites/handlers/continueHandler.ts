@@ -10,10 +10,196 @@
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getNodeVersionMapping, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteStatusMessage, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
+import {
+    getNodeVersionMapping,
+    areDependenciesInstalled,
+    handlePrerequisiteCheckError,
+    getPrerequisiteStatusMessage,
+    getNodeVersionKeys,
+    hasNodeVersions,
+} from '@/features/prerequisites/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
+import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import { SimpleResult } from '@/types/results';
 import { DEFAULT_SHELL } from '@/types/shell';
+
+// Alias for backwards compatibility with previous naming
+type PrerequisiteResult = PrerequisiteStatus;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Result from per-node-version check during continue flow
+ */
+interface ContinuePerNodeVersionResult {
+    perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[];
+    perNodeVariantMissing: boolean;
+    missingVariantMajors: string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FNM VERSION HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Get list of installed Node major versions from fnm
+ */
+async function getInstalledFnmMajors(
+    context: HandlerContext,
+): Promise<Set<string>> {
+    const commandManager = ServiceLocator.getCommandExecutor();
+    const fnmListResult = await commandManager.execute('fnm list', {
+        timeout: TIMEOUTS.PREREQUISITE_CHECK,
+        shell: DEFAULT_SHELL,
+    });
+
+    const installedVersions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
+    const installedMajors = new Set<string>();
+
+    for (const version of installedVersions) {
+        const match = /v?(\d+)/.exec(version);
+        if (match) {
+            installedMajors.add(match[1]);
+        }
+    }
+
+    return installedMajors;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PER-NODE-VERSION STATUS CHECKING
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Check per-node-version prerequisites during continue flow
+ *
+ * This is used when resuming prerequisite checking after an installation.
+ * It checks which Node versions have the prerequisite installed.
+ */
+async function checkPerNodeVersionDuringContinue(params: {
+    prereq: PrerequisiteDefinition;
+    checkResult: PrerequisiteResult;
+    nodeVersionMapping: Record<string, string>;
+    context: HandlerContext;
+}): Promise<ContinuePerNodeVersionResult> {
+    const { prereq, checkResult, nodeVersionMapping, context } = params;
+
+    const perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[] = [];
+    const missingVariantMajors: string[] = [];
+    let perNodeVariantMissing = false;
+
+    if (!prereq.perNodeVersion || !hasNodeVersions(nodeVersionMapping)) {
+        return { perNodeVersionStatus, perNodeVariantMissing, missingVariantMajors };
+    }
+
+    const requiredMajors = getNodeVersionKeys(nodeVersionMapping);
+
+    if (!checkResult.installed) {
+        // Main tool not installed: populate with all NOT installed
+        for (const major of requiredMajors) {
+            perNodeVersionStatus.push({
+                version: `Node ${major}`,
+                major,
+                component: '',
+                installed: false,
+            });
+        }
+        perNodeVariantMissing = true;
+        missingVariantMajors.push(...requiredMajors);
+        return { perNodeVersionStatus, perNodeVariantMissing, missingVariantMajors };
+    }
+
+    // Main tool installed: check each Node version
+    const installedMajors = await getInstalledFnmMajors(context);
+    const commandManager = ServiceLocator.getCommandExecutor();
+
+    for (const major of requiredMajors) {
+        // Check if this Node version is actually installed
+        if (!installedMajors.has(major)) {
+            context.logger.debug(`[Prerequisites] Node ${major} not installed, skipping ${prereq.name} check for this version`);
+            perNodeVariantMissing = true;
+            missingVariantMajors.push(major);
+            perNodeVersionStatus.push({ version: `Node ${major}`, major, component: '', installed: false });
+            continue;
+        }
+
+        try {
+            const result = await commandManager.execute(prereq.check.command, {
+                useNodeVersion: major,
+                timeout: TIMEOUTS.PREREQUISITE_CHECK,
+            });
+
+            if (result.code === 0) {
+                // Parse CLI version if regex provided
+                let cliVersion = '';
+                if (prereq.check.parseVersion) {
+                    try {
+                        const match = new RegExp(prereq.check.parseVersion).exec(result.stdout);
+                        if (match) cliVersion = match[1] || '';
+                    } catch {
+                        // Ignore regex parse errors
+                    }
+                }
+                perNodeVersionStatus.push({ version: `Node ${major}`, major, component: cliVersion, installed: true });
+            } else {
+                perNodeVariantMissing = true;
+                missingVariantMajors.push(major);
+                perNodeVersionStatus.push({ version: `Node ${major}`, major, component: '', installed: false });
+            }
+        } catch {
+            perNodeVariantMissing = true;
+            missingVariantMajors.push(major);
+            perNodeVersionStatus.push({ version: `Node ${major}`, major, component: '', installed: false });
+        }
+    }
+
+    return { perNodeVersionStatus, perNodeVariantMissing, missingVariantMajors };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATUS COMPUTATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Determine if a Node version is missing based on version status
+ */
+function isNodeVersionMissing(
+    prereq: PrerequisiteDefinition,
+    nodeVersionStatus?: { version: string; component: string; installed: boolean }[],
+): boolean {
+    if (prereq.id !== 'node' || !nodeVersionStatus || nodeVersionStatus.length === 0) {
+        return false;
+    }
+    return nodeVersionStatus.some(v => !v.installed);
+}
+
+/**
+ * Determine the overall status string for a prerequisite
+ */
+function determineOverallStatusForContinue(params: {
+    installed: boolean;
+    optional: boolean;
+    nodeMissing: boolean;
+    perNodeVariantMissing: boolean;
+}): 'success' | 'error' | 'warning' {
+    const { installed, optional, nodeMissing, perNodeVariantMissing } = params;
+
+    let status: 'success' | 'error' | 'warning' = installed
+        ? 'success'
+        : (optional ? 'warning' : 'error');
+
+    if (nodeMissing || perNodeVariantMissing) {
+        status = 'error';
+    }
+
+    return status;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN HANDLER
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * continue-prerequisites - Resume checking prerequisites after an install
@@ -64,101 +250,26 @@ export async function handleContinuePrerequisites(
                 nodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(nodeVersionMapping);
             }
 
-            let perNodeVariantMissing = false;
-            const missingVariantMajors: string[] = [];
-            const perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[] = [];
-            // Always show required Node versions from component selection
-            // If main tool not installed: show all as "not installed"
-            // If main tool installed: check each Node version properly
-            if (prereq.perNodeVersion && hasNodeVersions(nodeVersionMapping)) {
-                const requiredMajors = getNodeVersionKeys(nodeVersionMapping);
-
-                if (!checkResult.installed) {
-                    // Main tool not installed: populate with all NOT installed
-                    // This shows users what Node versions they'll need for this tool
-                    for (const major of requiredMajors) {
-                        perNodeVersionStatus.push({
-                            version: `Node ${major}`,
-                            major,
-                            component: '',
-                            installed: false,
-                        });
-                    }
-                    perNodeVariantMissing = true;
-                    missingVariantMajors.push(...requiredMajors);
-                } else {
-                    // Main tool installed: check each Node version properly
-                    // CRITICAL: Get list of actually installed Node versions FIRST
-                    // This prevents false positives when fnm falls back to other versions
-                    const commandManager = ServiceLocator.getCommandExecutor();
-                    const fnmListResult = await commandManager.execute('fnm list', {
-                        timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                        shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
-                    });
-                    const installedVersions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
-                    const installedMajors = new Set<string>();
-                    for (const version of installedVersions) {
-                        const match = /v?(\d+)/.exec(version);
-                        if (match) {
-                            installedMajors.add(match[1]);
-                        }
-                    }
-
-                    for (const major of requiredMajors) {
-                        // Check if this Node version is actually installed
-                        if (!installedMajors.has(major)) {
-                            // Node version not installed - tool cannot be installed for this version
-                            context.logger.debug(`[Prerequisites] Node ${major} not installed, skipping ${prereq.name} check for this version`);
-                            perNodeVariantMissing = true;
-                            missingVariantMajors.push(major);
-                            perNodeVersionStatus.push({ version: `Node ${major}`, major, component: '', installed: false });
-                            continue;
-                        }
-
-                        try {
-                            // Node version is installed - now check if the tool is installed for it
-                            const result = await commandManager.execute(prereq.check.command, { useNodeVersion: major, timeout: TIMEOUTS.PREREQUISITE_CHECK });
-
-                            // CRITICAL: Check exit code to determine command success
-                            // Exit code 0 = success, non-zero = failure (e.g., 127 = command not found)
-                            if (result.code === 0) {
-                                // Parse CLI version if regex provided
-                                let cliVersion = '';
-                                if (prereq.check.parseVersion) {
-                                    try {
-                                        const match = new RegExp(prereq.check.parseVersion).exec(result.stdout);
-                                        if (match) cliVersion = match[1] || '';
-                                    } catch {
-                                        // Ignore regex parse errors
-                                    }
-                                }
-                                perNodeVersionStatus.push({ version: `Node ${major}`, major, component: cliVersion, installed: true });
-                            } else {
-                                // Non-zero exit code means tool is not installed for this Node version
-                                perNodeVariantMissing = true;
-                                missingVariantMajors.push(major);
-                                perNodeVersionStatus.push({ version: `Node ${major}`, major, component: '', installed: false });
-                            }
-                        } catch {
-                            perNodeVariantMissing = true;
-                            missingVariantMajors.push(major);
-                            perNodeVersionStatus.push({ version: `Node ${major}`, major, component: '', installed: false });
-                        }
-                    }
-                }
-            }
+            // Check per-node-version status using helper (extracted for testability)
+            const perNodeResult = await checkPerNodeVersionDuringContinue({
+                prereq,
+                checkResult,
+                nodeVersionMapping,
+                context,
+            });
+            const { perNodeVersionStatus, perNodeVariantMissing, missingVariantMajors } = perNodeResult;
 
             // Dependency gating
             const depsInstalled = areDependenciesInstalled(prereq, context);
 
-            // Overall status and canInstall
-            let overallStatus = determinePrerequisiteStatus(checkResult.installed, !!prereq.optional);
-            let nodeMissing = false;
-            if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0) {
-                nodeMissing = nodeVersionStatus.some(v => !v.installed);
-                if (nodeMissing) overallStatus = 'error';
-            }
-            if (prereq.perNodeVersion && perNodeVariantMissing) overallStatus = 'error';
+            // Compute nodeMissing and overall status using helpers (extracted for testability)
+            const nodeMissing = isNodeVersionMissing(prereq, nodeVersionStatus);
+            const overallStatus = determineOverallStatusForContinue({
+                installed: checkResult.installed,
+                optional: !!prereq.optional,
+                nodeMissing,
+                perNodeVariantMissing,
+            });
 
             // Persist nodeVersionStatus to state for downstream gating
             // For Node.js: use nodeVersionStatus; for perNodeVersion prereqs: use perNodeVersionStatus

@@ -6,6 +6,8 @@
  * Public API:
  * - StartDemoCommand: Start the demo server
  * - StopDemoCommand: Stop the demo server
+ * - DeleteProjectCommand: Delete project with cleanup
+ * - ViewStatusCommand: View project status
  * - lifecycleHandlers: Handler map for wizard lifecycle events
  *
  * Internal Services (not exported):
@@ -16,6 +18,8 @@
 // Commands
 export { StartDemoCommand } from './commands/startDemo';
 export { StopDemoCommand } from './commands/stopDemo';
+export { DeleteProjectCommand } from './commands/deleteProject';
+export { ViewStatusCommand } from './commands/viewStatus';
 
 // Handler map (Step 3: Handler Registry Simplification)
 export { lifecycleHandlers } from './handlers';

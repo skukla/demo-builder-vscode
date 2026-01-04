@@ -9,11 +9,32 @@
 
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getNodeVersionMapping, getNodeVersionIdMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys, getPluginNodeVersions } from '@/features/prerequisites/handlers/shared';
+import {
+    getNodeVersionMapping,
+    getNodeVersionIdMapping,
+    areDependenciesInstalled,
+    handlePrerequisiteCheckError,
+    determinePrerequisiteStatus,
+    getPrerequisiteDisplayMessage,
+    formatProgressMessage,
+    formatVersionSuffix,
+    checkPerNodeVersionStatus,
+    getPluginNodeVersions,
+    getNodeVersionKeys,
+    hasNodeVersions,
+} from '@/features/prerequisites/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
 import type { PrerequisiteCheckState } from '@/types/handlers';
+import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
+
+// Alias for backwards compatibility with previous naming
+type PrerequisiteResult = PrerequisiteStatus;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Summary of a prerequisite check result for UI display
@@ -28,13 +49,203 @@ interface PrerequisiteSummary {
 }
 
 /**
+ * Result from checking a Node.js prerequisite
+ */
+interface NodePrerequisiteCheckResult {
+    checkResult: PrerequisiteResult;
+    nodeVersionStatus?: { version: string; component: string; installed: boolean }[];
+}
+
+/**
+ * Result from building per-node-version status
+ */
+interface PerNodeVersionStatusResult {
+    perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[];
+    perNodeVariantMissing: boolean;
+    missingVariantMajors: string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NODE VERSION CHECKING
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Check Node.js prerequisite with multi-version support
+ *
+ * Handles the component-driven Node check where versions are determined
+ * by component requirements and managed via fnm.
+ */
+async function checkNodePrerequisite(params: {
+    prereq: PrerequisiteDefinition;
+    nodeVersionMapping: Record<string, string>;
+    context: HandlerContext;
+}): Promise<NodePrerequisiteCheckResult> {
+    const { prereq, nodeVersionMapping, context } = params;
+
+    if (hasNodeVersions(nodeVersionMapping)) {
+        const nodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(nodeVersionMapping);
+
+        const allVersionsInstalled = nodeVersionStatus?.every(v => v.installed) ?? false;
+        const installedVersions = nodeVersionStatus?.filter(v => v.installed).map(v => v.version).join(', ');
+
+        context.logger.debug(`[Prerequisites] Node fnm check: ${allVersionsInstalled ? 'all installed' : 'missing versions'} (installed: ${installedVersions || 'none'})`);
+
+        return {
+            checkResult: {
+                id: prereq.id,
+                name: prereq.name,
+                description: prereq.description,
+                installed: allVersionsInstalled,
+                optional: prereq.optional || false,
+                canInstall: true,
+                version: installedVersions || undefined,
+            },
+            nodeVersionStatus,
+        };
+    }
+
+    // No components require Node.js (e.g., EDS + PaaS without mesh)
+    context.logger.debug('[Prerequisites] Node.js not required for selected components');
+    return {
+        checkResult: {
+            id: prereq.id,
+            name: prereq.name,
+            description: 'Not required for selected components',
+            installed: true,
+            optional: prereq.optional || false,
+            canInstall: false,
+        },
+    };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PER-NODE-VERSION STATUS BUILDING
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Build per-node-version status for prerequisites that need to be installed per Node version
+ *
+ * Handles prerequisites like Adobe I/O CLI that need to be installed separately
+ * for each Node.js major version.
+ */
+async function buildPerNodeVersionStatus(params: {
+    prereq: PrerequisiteDefinition;
+    checkResult: PrerequisiteResult;
+    nodeVersionMapping: Record<string, string>;
+    nodeVersionIdMapping: Record<string, string>;
+    context: HandlerContext;
+}): Promise<PerNodeVersionStatusResult> {
+    const { prereq, checkResult, nodeVersionMapping, nodeVersionIdMapping, context } = params;
+
+    const perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[] = [];
+    const missingVariantMajors: string[] = [];
+    let perNodeVariantMissing = false;
+
+    if (!prereq.perNodeVersion || !hasNodeVersions(nodeVersionMapping)) {
+        return { perNodeVersionStatus, perNodeVariantMissing, missingVariantMajors };
+    }
+
+    // Filter Node versions by requiredFor array if specified
+    let requiredForComponents: string[] | undefined = prereq.requiredFor;
+    if ((!requiredForComponents || requiredForComponents.length === 0) && prereq.plugins) {
+        const allPluginRequired = prereq.plugins
+            .filter((p): p is typeof p & { requiredFor: string[] } =>
+                p.requiredFor !== undefined && p.requiredFor.length > 0)
+            .flatMap(p => p.requiredFor);
+        if (allPluginRequired.length > 0) {
+            requiredForComponents = [...new Set(allPluginRequired)];
+        }
+    }
+
+    const requiredMajors = requiredForComponents && requiredForComponents.length > 0
+        ? getPluginNodeVersions(nodeVersionIdMapping, requiredForComponents)
+        : getNodeVersionKeys(nodeVersionMapping);
+
+    if (!checkResult.installed) {
+        // Main tool not installed: populate with all NOT installed
+        for (const major of requiredMajors) {
+            perNodeVersionStatus.push({
+                version: `Node ${major}`,
+                major,
+                component: '',
+                installed: false,
+            });
+        }
+        perNodeVariantMissing = true;
+        missingVariantMajors.push(...requiredMajors);
+    } else {
+        // Main tool installed: filter cached per-version results to required versions
+        const cachedResults = context.prereqManager?.getCacheManager().getPerVersionResults(prereq.id);
+
+        if (cachedResults && cachedResults.length > 0) {
+            context.logger.debug(`[Prerequisites] Reusing cached per-version results for ${prereq.name} (${requiredMajors.length} required versions)`);
+
+            for (const major of requiredMajors) {
+                const cached = cachedResults.find(r => r.version === `Node ${major}`);
+                if (cached) {
+                    perNodeVersionStatus.push(cached);
+                    if (!cached.installed) {
+                        missingVariantMajors.push(major);
+                    }
+                } else {
+                    perNodeVersionStatus.push({
+                        version: `Node ${major}`,
+                        major,
+                        component: nodeVersionMapping[major] || '',
+                        installed: false,
+                    });
+                    missingVariantMajors.push(major);
+                }
+            }
+            perNodeVariantMissing = missingVariantMajors.length > 0;
+        } else {
+            // Fallback: no cached results, run the check
+            context.logger.warn(`[Prerequisites] No cached per-version results for ${prereq.name}, falling back to re-check`);
+            const result = await checkPerNodeVersionStatus(prereq, requiredMajors, context);
+            perNodeVariantMissing = result.perNodeVariantMissing;
+            missingVariantMajors.push(...result.missingVariantMajors);
+            perNodeVersionStatus.push(...result.perNodeVersionStatus);
+        }
+    }
+
+    return { perNodeVersionStatus, perNodeVariantMissing, missingVariantMajors };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATUS COMPUTATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Compute the overall status for a prerequisite
+ *
+ * Takes into account Node version status and per-node-version variants.
+ */
+function computeOverallStatus(params: {
+    baseStatus: 'success' | 'error' | 'warning';
+    prereq: PrerequisiteDefinition;
+    nodeVersionStatus?: { version: string; component: string; installed: boolean }[];
+    perNodeVariantMissing: boolean;
+}): 'success' | 'error' | 'warning' {
+    const { baseStatus, prereq, nodeVersionStatus, perNodeVariantMissing } = params;
+
+    let overallStatus = baseStatus;
+
+    if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0) {
+        const nodeMissing = nodeVersionStatus.some(v => !v.installed);
+        if (nodeMissing) {
+            overallStatus = 'error';
+        }
+    }
+
+    if (prereq.perNodeVersion && perNodeVariantMissing) {
+        overallStatus = 'error';
+    }
+
+    return overallStatus;
+}
+
+/**
  * Transform prerequisite state to summary object for UI
- *
- * SOP §6: Extracted 6-property callback to named transformation
- *
- * @param id - The prerequisite index
- * @param state - The prerequisite check state
- * @returns Summary object for UI consumption
  */
 function toPrerequisiteSummary(
     id: number,
@@ -49,6 +260,10 @@ function toPrerequisiteSummary(
         canInstall: state.result.canInstall,
     };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN HANDLER
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * check-prerequisites - Check all prerequisites for selected components
@@ -127,39 +342,14 @@ export async function handleCheckPrerequisites(
 
             try {
                 if (prereq.id === 'node') {
-                    // COMPONENT-DRIVEN NODE CHECK:
-                    // Node versions are determined by component requirements and managed via fnm.
-                    // System Node is irrelevant - we only care about fnm-managed versions.
-                    if (hasNodeVersions(nodeVersionMapping)) {
-                        nodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(nodeVersionMapping);
-
-                        const allVersionsInstalled = nodeVersionStatus?.every(v => v.installed) ?? false;
-                        const installedVersions = nodeVersionStatus?.filter(v => v.installed).map(v => v.version).join(', ');
-
-                        context.logger.debug(`[Prerequisites] Node fnm check: ${allVersionsInstalled ? 'all installed' : 'missing versions'} (installed: ${installedVersions || 'none'})`);
-
-                        checkResult = {
-                            id: prereq.id,
-                            name: prereq.name,
-                            description: prereq.description,
-                            installed: allVersionsInstalled,
-                            optional: prereq.optional || false,
-                            canInstall: true,
-                            version: installedVersions || undefined,
-                        };
-                    } else {
-                        // No components require Node.js (e.g., EDS + PaaS without mesh)
-                        // Mark as satisfied - Node is not needed for this configuration
-                        context.logger.debug('[Prerequisites] Node.js not required for selected components');
-                        checkResult = {
-                            id: prereq.id,
-                            name: prereq.name,
-                            description: 'Not required for selected components',
-                            installed: true, // Requirement is satisfied (nothing needed)
-                            optional: prereq.optional || false,
-                            canInstall: false,
-                        };
-                    }
+                    // Use helper for Node.js multi-version check
+                    const nodeResult = await checkNodePrerequisite({
+                        prereq,
+                        nodeVersionMapping,
+                        context,
+                    });
+                    checkResult = nodeResult.checkResult;
+                    nodeVersionStatus = nodeResult.nodeVersionStatus;
                 } else {
                     // Standard check for non-Node prerequisites
                     checkResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;
@@ -171,86 +361,15 @@ export async function handleCheckPrerequisites(
 
             if (!checkResult || !prereq) continue;
 
-            // For per-node-version prerequisites (e.g., Adobe I/O CLI), detect partial installs across required Node majors
-            // OPTIMIZATION: Reuse cached per-version results from checkPrerequisite() instead of re-checking
-            // The initial check already ran checkPerNodeVersionStatus for ALL installed Node versions
-            // We just need to filter to required versions and determine missing variants
-            let perNodeVariantMissing = false;
-            const missingVariantMajors: string[] = [];
-            const perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[] = [];
-            if (prereq.perNodeVersion && hasNodeVersions(nodeVersionMapping)) {
-                // Filter Node versions by requiredFor array if specified, else use all Node versions
-                // Note: For CLI tools with plugins (e.g., aio-cli), the requiredFor is on the plugin, not the prereq
-                let requiredForComponents: string[] | undefined = prereq.requiredFor;
-                if ((!requiredForComponents || requiredForComponents.length === 0) && prereq.plugins) {
-                    // Collect all requiredFor from plugins
-                    const allPluginRequired = prereq.plugins
-                        .filter((p): p is typeof p & { requiredFor: string[] } =>
-                            p.requiredFor !== undefined && p.requiredFor.length > 0)
-                        .flatMap(p => p.requiredFor);
-                    if (allPluginRequired.length > 0) {
-                        requiredForComponents = [...new Set(allPluginRequired)];
-                    }
-                }
-
-                const requiredMajors = requiredForComponents && requiredForComponents.length > 0
-                    ? getPluginNodeVersions(
-                        nodeVersionIdMapping,
-                        requiredForComponents,
-                    )
-                    : getNodeVersionKeys(nodeVersionMapping);
-
-                if (!checkResult.installed) {
-                    // Main tool not installed: populate with all NOT installed
-                    // This shows users what Node versions they'll need for this tool
-                    for (const major of requiredMajors) {
-                        perNodeVersionStatus.push({
-                            version: `Node ${major}`,
-                            major,
-                            component: '',
-                            installed: false,
-                        });
-                    }
-                    perNodeVariantMissing = true;
-                    missingVariantMajors.push(...requiredMajors);
-                } else {
-                    // Main tool installed: filter cached per-version results to required versions only
-                    // This avoids duplicate checks - checkPrerequisite() already checked all versions
-                    const cachedResults = context.prereqManager?.getCacheManager().getPerVersionResults(prereq.id);
-
-                    if (cachedResults && cachedResults.length > 0) {
-                        // Use cached results - just filter to required versions
-                        context.logger.debug(`[Prerequisites] Reusing cached per-version results for ${prereq.name} (${requiredMajors.length} required versions)`);
-
-                        for (const major of requiredMajors) {
-                            const cached = cachedResults.find(r => r.version === `Node ${major}`);
-                            if (cached) {
-                                perNodeVersionStatus.push(cached);
-                                if (!cached.installed) {
-                                    missingVariantMajors.push(major);
-                                }
-                            } else {
-                                // Fallback: version not in cache, assume not installed
-                                perNodeVersionStatus.push({
-                                    version: `Node ${major}`,
-                                    major,
-                                    component: nodeVersionMapping[major] || '',
-                                    installed: false,
-                                });
-                                missingVariantMajors.push(major);
-                            }
-                        }
-                        perNodeVariantMissing = missingVariantMajors.length > 0;
-                    } else {
-                        // Fallback: no cached results, run the check (shouldn't happen but be safe)
-                        context.logger.warn(`[Prerequisites] No cached per-version results for ${prereq.name}, falling back to re-check`);
-                        const result = await checkPerNodeVersionStatus(prereq, requiredMajors, context);
-                        perNodeVariantMissing = result.perNodeVariantMissing;
-                        missingVariantMajors.push(...result.missingVariantMajors);
-                        perNodeVersionStatus.push(...result.perNodeVersionStatus);
-                    }
-                }
-            }
+            // Build per-node-version status
+            const perNodeResult = await buildPerNodeVersionStatus({
+                prereq,
+                checkResult,
+                nodeVersionMapping,
+                nodeVersionIdMapping,
+                context,
+            });
+            const { perNodeVersionStatus, perNodeVariantMissing, missingVariantMajors } = perNodeResult;
 
             // Store state for this prerequisite (include nodeVersionStatus if available)
             context.sharedState.currentPrerequisiteStates.set(i, {
@@ -259,7 +378,7 @@ export async function handleCheckPrerequisites(
                 nodeVersionStatus: prereq.id === 'node' ? nodeVersionStatus : perNodeVersionStatus,
             });
 
-            // Log the result - for Node.js, show all installed versions (SOP §2)
+            // Log the result - for Node.js, show all installed versions
             if (checkResult.installed) {
                 const versionDisplay = formatVersionSuffix(prereq, nodeVersionStatus, checkResult.version);
                 context.stepLogger?.log('prerequisites', `✓ ${prereq.name} is installed${versionDisplay}`, 'info');
@@ -270,18 +389,18 @@ export async function handleCheckPrerequisites(
             // Compute dependency gating (disable install until deps are installed)
             const depsInstalled = areDependenciesInstalled(prereq, context);
 
-            // Determine overall status for Node when specific required versions are missing
-            let overallStatus = determinePrerequisiteStatus(checkResult.installed, !!prereq.optional);
-            let nodeMissing = false;
-            if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0) {
-                nodeMissing = nodeVersionStatus.some(v => !v.installed);
-                if (nodeMissing) {
-                    overallStatus = 'error';
-                }
-            }
-            if (prereq.perNodeVersion && perNodeVariantMissing) {
-                overallStatus = 'error';
-            }
+            // Compute nodeMissing for canInstall calculation
+            const nodeMissing = prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0
+                ? nodeVersionStatus.some(v => !v.installed)
+                : false;
+
+            // Compute overall status
+            const overallStatus = computeOverallStatus({
+                baseStatus: determinePrerequisiteStatus(checkResult.installed, !!prereq.optional),
+                prereq,
+                nodeVersionStatus,
+                perNodeVariantMissing,
+            });
 
             // Send result with proper status values
             await context.sendMessage('prerequisite-status', {

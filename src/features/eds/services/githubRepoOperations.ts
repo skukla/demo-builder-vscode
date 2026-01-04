@@ -183,7 +183,7 @@ export class GitHubRepoOperations {
                         cloneUrl: repo.clone_url,
                         defaultBranch: repo.default_branch,
                         description: repo.description,
-                        updatedAt: repo.updated_at,
+                        updatedAt: repo.updated_at ?? undefined,
                         isPrivate: repo.private,
                     }));
 
