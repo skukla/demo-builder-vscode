@@ -5,13 +5,13 @@
  * Shows different views depending on whether user has a project, is in wizard, etc.
  */
 
+import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
 import React from 'react';
 import type { SidebarContext, NavItem } from '../types';
 import { SidebarNav } from './components/SidebarNav';
 import stylesImport from './styles/sidebar.module.css';
 import { UtilityBar } from './views';
 import { Flex, Text, ActionButton, Divider } from '@/core/ui/components/aria';
-import { ChevronLeftIcon } from '@/core/ui/components/aria/icons';
 import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
 
 // Defensive: handle case where CSS Module import fails during bundling
@@ -117,7 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Back button */}
             {onBack && (
                 <ActionButton onPress={onBack}>
-                    <ChevronLeftIcon size="S" />
+                    <ChevronLeft size="S" />
                     <Text>Projects</Text>
                 </ActionButton>
             )}

@@ -34,8 +34,8 @@ function filterPackagesBySearchQuery(packages: DemoPackage[], searchQuery: strin
             p.description.toLowerCase().includes(query),
     );
 }
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import { Text, Checkbox, Divider } from '@/core/ui/components/aria';
-import { CheckmarkCircleIcon } from '@/core/ui/components/aria/icons';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -132,7 +132,7 @@ const PackageCard: React.FC<PackageCardProps> = ({
                         {pkg.name}
                     </Text>
                     {isComplete && (
-                        <CheckmarkCircleIcon size="S" />
+                        <CheckmarkCircle size="S" />
                     )}
                 </div>
                 <Text className={styles.brandCardDescription}>
