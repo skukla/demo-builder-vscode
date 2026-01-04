@@ -8,7 +8,9 @@
 import React from 'react';
 import styles from '../styles/sidebar.module.css';
 import { Flex, Text, ActionButton } from '@/core/ui/components/aria';
-import { BookIcon, HelpIcon, SettingsIcon } from '@/core/ui/components/aria/icons';
+import Book from '@spectrum-icons/workflow/Book';
+import Help from '@spectrum-icons/workflow/Help';
+import Settings from '@spectrum-icons/workflow/Settings';
 
 export interface UtilityBarProps {
     /** Callback when user clicks Documentation link */
@@ -41,7 +43,7 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             {onOpenDocs && (
                 <Flex direction="column" alignItems="center" gap="size-50">
                     <ActionButton onPress={onOpenDocs} aria-label="Documentation">
-                        <BookIcon size="L" />
+                        <Book size="L" />
                     </ActionButton>
                     <Text className="text-sm opacity-70">Docs</Text>
                 </Flex>
@@ -50,7 +52,7 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             {onOpenHelp && (
                 <Flex direction="column" alignItems="center" gap="size-50">
                     <ActionButton onPress={onOpenHelp} aria-label="Get Help">
-                        <HelpIcon size="L" />
+                        <Help size="L" />
                     </ActionButton>
                     <Text className="text-sm opacity-70">Help</Text>
                 </Flex>
@@ -59,7 +61,7 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             {onOpenSettings && (
                 <Flex direction="column" alignItems="center" gap="size-50">
                     <ActionButton onPress={onOpenSettings} aria-label="Settings">
-                        <SettingsIcon size="L" />
+                        <Settings size="L" />
                     </ActionButton>
                     <Text className="text-sm opacity-70">Settings</Text>
                 </Flex>
