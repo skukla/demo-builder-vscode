@@ -43,7 +43,7 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             {onOpenDocs && (
                 <Flex direction="column" alignItems="center" gap="size-50">
                     <ActionButton onPress={onOpenDocs} aria-label="Documentation">
-                        <Book size="L" />
+                        <Book size="S" />
                     </ActionButton>
                     <Text className="text-sm opacity-70">Docs</Text>
                 </Flex>
@@ -52,7 +52,7 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             {onOpenHelp && (
                 <Flex direction="column" alignItems="center" gap="size-50">
                     <ActionButton onPress={onOpenHelp} aria-label="Get Help">
-                        <Help size="L" />
+                        <Help size="S" />
                     </ActionButton>
                     <Text className="text-sm opacity-70">Help</Text>
                 </Flex>
@@ -61,7 +61,7 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             {onOpenSettings && (
                 <Flex direction="column" alignItems="center" gap="size-50">
                     <ActionButton onPress={onOpenSettings} aria-label="Settings">
-                        <Settings size="L" />
+                        <Settings size="S" />
                     </ActionButton>
                     <Text className="text-sm opacity-70">Settings</Text>
                 </Flex>
