@@ -10,9 +10,12 @@
  */
 
 import React, { forwardRef, CSSProperties } from 'react';
-import styles from './Divider.module.css';
+import stylesImport from './Divider.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export interface DividerProps {
     /** Divider thickness: S (1px), M (2px), L (4px) */
@@ -26,13 +29,16 @@ export interface DividerProps {
 }
 
 /**
- * Size class mapping
+ * Get size class - lazy evaluation to avoid module load timing issues
  */
-const sizeClasses: Record<'S' | 'M' | 'L', string> = {
-    S: styles.sizeS,
-    M: styles.sizeM,
-    L: styles.sizeL,
-};
+function getSizeClass(size: 'S' | 'M' | 'L'): string {
+    const classes: Record<'S' | 'M' | 'L', string> = {
+        S: styles.sizeS,
+        M: styles.sizeM,
+        L: styles.sizeL,
+    };
+    return classes[size];
+}
 
 /**
  * Divider primitive component
@@ -54,7 +60,7 @@ export const Divider = forwardRef<HTMLHRElement, DividerProps>(
         return (
             <hr
                 ref={ref}
-                className={cn(styles.divider, sizeClasses[size], className)}
+                className={cn(styles.divider, getSizeClass(size), className)}
                 style={Object.keys(style).length > 0 ? style : undefined}
             />
         );

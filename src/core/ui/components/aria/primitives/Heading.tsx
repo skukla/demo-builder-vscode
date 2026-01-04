@@ -11,9 +11,12 @@
  */
 
 import React, { forwardRef, CSSProperties } from 'react';
-import styles from './Heading.module.css';
+import stylesImport from './Heading.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export interface HeadingProps {
     /** Heading content */

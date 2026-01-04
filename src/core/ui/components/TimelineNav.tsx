@@ -7,10 +7,13 @@
 
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useRef, useEffect, useState } from 'react';
-import styles from './TimelineNav.module.css';
+import stylesImport from './TimelineNav.module.css';
 import { View, Text } from '@/core/ui/components/aria';
 import { cn } from '@/core/ui/utils/classNames';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 /**
  * Timeline step status type
@@ -18,21 +21,24 @@ import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 type TimelineStatus = 'completed' | 'completed-current' | 'current' | 'upcoming' | 'review';
 
 /**
- * Lookup map for timeline step dot status classes (CSS Module)
+ * Get timeline step dot status class - lazy evaluation to avoid module load timing issues
  */
-const TIMELINE_DOT_STATUS_CLASS: Record<TimelineStatus, string> = {
-    'completed': styles.stepDotCompleted,
-    'completed-current': styles.stepDotCompleted,
-    'current': styles.stepDotCurrent,
-    'upcoming': styles.stepDotUpcoming,
-    'review': styles.stepDotReview,
-};
+function getTimelineDotStatusClass(status: TimelineStatus): string {
+    const classes: Record<TimelineStatus, string> = {
+        'completed': styles.stepDotCompleted,
+        'completed-current': styles.stepDotCompleted,
+        'current': styles.stepDotCurrent,
+        'upcoming': styles.stepDotUpcoming,
+        'review': styles.stepDotReview,
+    };
+    return classes[status] ?? styles.stepDotUpcoming;
+}
 
 /**
  * Build timeline step dot classes based on status
  */
 function getTimelineStepDotClasses(status: TimelineStatus): string {
-    const statusClass = TIMELINE_DOT_STATUS_CLASS[status] ?? styles.stepDotUpcoming;
+    const statusClass = getTimelineDotStatusClass(status);
     return cn(styles.stepDot, statusClass);
 }
 

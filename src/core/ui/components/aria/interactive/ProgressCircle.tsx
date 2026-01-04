@@ -17,8 +17,11 @@
  */
 
 import React, { forwardRef } from 'react';
-import styles from './ProgressCircle.module.css';
+import stylesImport from './ProgressCircle.module.css';
 import { cn } from '@/core/ui/utils/classNames';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export type ProgressCircleSize = 'S' | 'M' | 'L';
 

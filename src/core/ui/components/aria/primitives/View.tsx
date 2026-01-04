@@ -11,9 +11,12 @@
  */
 
 import React, { forwardRef, CSSProperties } from 'react';
-import styles from './View.module.css';
+import stylesImport from './View.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { buildDimensionStyle, DimensionValue } from '@/core/ui/utils/spectrumTokens';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export interface ViewProps {
     /** View content */

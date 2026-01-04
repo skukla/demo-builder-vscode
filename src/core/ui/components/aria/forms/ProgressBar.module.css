@@ -5,6 +5,9 @@
  * Zero !important - uses data attributes for state styling.
  *
  * VS Code theme variables with Spectrum fallbacks.
+ *
+ * Note: Spectrum tokens cascade from body.spectrum--dark in vscode-theme.css.
+ * No fallback values needed since theme class is applied in HTML template.
  */
 
 .progressBar {
@@ -17,14 +20,14 @@
 /* Label */
 .label {
     font-size: 13px;
-    color: var(--vscode-foreground, #cccccc);
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-800));
 }
 
 /* Track (background) */
 .track {
     width: 100%;
     border-radius: 2px;
-    background-color: var(--spectrum-global-color-gray-300, #d3d3d3);
+    background-color: var(--spectrum-global-color-gray-300);
     overflow: hidden;
 }
 
@@ -44,7 +47,7 @@
 /* Fill (progress indicator) */
 .fill {
     height: 100%;
-    background-color: var(--spectrum-global-color-blue-500, #0078d4);
+    background-color: var(--spectrum-global-color-blue-500);
     border-radius: 2px;
     transition: width 0.3s ease;
 }

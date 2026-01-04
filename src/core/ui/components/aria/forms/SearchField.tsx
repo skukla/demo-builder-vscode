@@ -20,9 +20,12 @@ import {
     Input,
     Button,
 } from 'react-aria-components';
-import styles from './SearchField.module.css';
+import stylesImport from './SearchField.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export interface SearchFieldProps {
     /** Current search value */

@@ -20,8 +20,11 @@ import {
     type Key,
     type Selection,
 } from 'react-aria-components';
-import styles from './List.module.css';
+import stylesImport from './List.module.css';
 import { cn } from '@/core/ui/utils/classNames';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export type SelectionMode = 'none' | 'single' | 'multiple';
 

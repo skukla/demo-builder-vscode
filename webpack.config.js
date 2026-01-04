@@ -67,7 +67,11 @@ module.exports = {
             loader: 'css-loader',
             options: {
               modules: {
-                localIdentName: '[name]__[local]--[hash:base64:5]'
+                localIdentName: '[name]__[local]--[hash:base64:5]',
+                // css-loader v7+ defaults namedExport to true, which breaks
+                // `import styles from './file.module.css'` pattern.
+                // Set to false to restore default export object with class mappings.
+                namedExport: false
               }
             }
           }

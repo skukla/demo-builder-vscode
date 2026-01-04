@@ -11,14 +11,17 @@
  * - [data-hovered]: Item is being hovered
  * - [data-pressed]: Item is being pressed
  * - [data-disabled]: Item is disabled
+ *
+ * Note: Spectrum tokens cascade from body.spectrum--dark in vscode-theme.css.
+ * No fallback values needed since theme class is applied in HTML template.
  */
 
 /* Popover container */
 .popover {
-    background-color: var(--vscode-menu-background, var(--spectrum-global-color-gray-50, #ffffff));
-    border: 1px solid var(--vscode-menu-border, var(--spectrum-global-color-gray-300, #d3d3d3));
+    background-color: var(--vscode-menu-background, var(--spectrum-global-color-gray-50));
+    border: 1px solid var(--vscode-menu-border, var(--spectrum-global-color-gray-300));
     border-radius: 6px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.32);
     min-width: 160px;
     max-width: 280px;
     z-index: 1100;
@@ -69,7 +72,7 @@
     gap: 8px;
     padding: 8px 12px;
     cursor: pointer;
-    color: var(--vscode-menu-foreground, var(--spectrum-global-color-gray-800, #2c2c2c));
+    color: var(--vscode-menu-foreground, var(--spectrum-global-color-gray-800));
     font-size: 13px;
     line-height: 1.4;
     outline: none;
@@ -78,18 +81,18 @@
 
 /* Hover state */
 .menuItem[data-hovered] {
-    background-color: var(--vscode-menu-selectionBackground, var(--spectrum-global-color-gray-200, #e1e1e1));
+    background-color: var(--vscode-menu-selectionBackground, var(--spectrum-global-color-gray-200));
 }
 
 /* Focus state */
 .menuItem[data-focused] {
-    background-color: var(--vscode-menu-selectionBackground, var(--spectrum-global-color-blue-100, #deebff));
-    color: var(--vscode-menu-selectionForeground, var(--spectrum-global-color-gray-900, #1a1a1a));
+    background-color: var(--vscode-menu-selectionBackground, var(--spectrum-global-color-gray-300));
+    color: var(--vscode-menu-selectionForeground, var(--spectrum-global-color-gray-900));
 }
 
 /* Pressed state */
 .menuItem[data-pressed] {
-    background-color: var(--vscode-list-activeSelectionBackground, var(--spectrum-global-color-blue-500, #1473e6));
+    background-color: var(--vscode-list-activeSelectionBackground, var(--spectrum-global-color-blue-500));
     color: var(--vscode-list-activeSelectionForeground, #ffffff);
 }
 
@@ -106,7 +109,7 @@
     justify-content: center;
     width: 16px;
     height: 16px;
-    color: var(--vscode-icon-foreground, var(--spectrum-global-color-gray-600, #6e6e6e));
+    color: var(--vscode-icon-foreground, var(--spectrum-global-color-gray-600));
     flex-shrink: 0;
 }
 
@@ -126,5 +129,5 @@
 .separator {
     height: 1px;
     margin: 4px 0;
-    background-color: var(--vscode-menu-separatorBackground, var(--spectrum-global-color-gray-300, #d3d3d3));
+    background-color: var(--vscode-menu-separatorBackground, var(--spectrum-global-color-gray-300));
 }

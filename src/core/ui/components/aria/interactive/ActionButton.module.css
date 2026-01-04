@@ -6,6 +6,9 @@
  *
  * ActionButton is always quiet (subtle) by default, optimized
  * for icon-only or icon+text patterns in toolbars and menus.
+ *
+ * Note: Spectrum tokens cascade from body.spectrum--dark in vscode-theme.css.
+ * No fallback values needed since theme class is applied in HTML template.
  */
 
 .actionButton {
@@ -13,13 +16,13 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--spectrum-global-dimension-size-50, 4px);
-    padding: var(--spectrum-global-dimension-size-65, 5px) var(--spectrum-global-dimension-size-100, 8px);
+    gap: var(--spectrum-global-dimension-size-50);
+    padding: var(--spectrum-global-dimension-size-65) var(--spectrum-global-dimension-size-100);
     border: 2px solid transparent;
-    border-radius: var(--spectrum-alias-border-radius-regular, 4px);
+    border-radius: var(--spectrum-alias-border-radius-regular);
     font-family: var(--spectrum-alias-body-text-font-family, inherit);
-    font-size: var(--spectrum-alias-font-size-default, 14px);
-    font-weight: var(--spectrum-alias-body-text-font-weight, 400);
+    font-size: var(--spectrum-alias-font-size-default);
+    font-weight: var(--spectrum-alias-body-text-font-weight);
     line-height: 1;
     cursor: pointer;
     outline: none;
@@ -27,22 +30,22 @@
 
     /* Always quiet/subtle styling */
     background-color: transparent;
-    color: var(--spectrum-global-color-gray-800, #323232);
+    color: var(--spectrum-global-color-gray-800);
 }
 
 /* Hover state */
 .actionButton[data-hovered] {
-    background-color: var(--spectrum-global-color-gray-200, #e1e1e1);
+    background-color: var(--spectrum-global-color-gray-200);
 }
 
 /* Pressed state */
 .actionButton[data-pressed] {
-    background-color: var(--spectrum-global-color-gray-300, #d5d5d5);
+    background-color: var(--spectrum-global-color-gray-300);
 }
 
 /* Focus visible state - show focus ring */
 .actionButton[data-focus-visible] {
-    box-shadow: 0 0 0 2px var(--spectrum-alias-focus-ring-color, #0078d4);
+    box-shadow: 0 0 0 2px var(--spectrum-alias-focus-ring-color);
 }
 
 /* Disabled state */

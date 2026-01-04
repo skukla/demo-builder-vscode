@@ -7,6 +7,9 @@
  * Implements circular progress indicator with:
  * - Indeterminate mode: continuous spin animation
  * - Determinate mode: progress arc based on value
+ *
+ * Note: Spectrum tokens cascade from body.spectrum--dark in vscode-theme.css.
+ * No fallback values needed since theme class is applied in HTML template.
  */
 
 .progressCircle {
@@ -23,18 +26,18 @@
 
 .track {
     /* Background track circle */
-    stroke: var(--spectrum-global-color-gray-300, #d5d5d5);
+    stroke: var(--spectrum-global-color-gray-300);
 }
 
 .fill {
     /* Determinate progress fill */
-    stroke: var(--spectrum-global-color-blue-500, #0078d4);
+    stroke: var(--spectrum-global-color-blue-500);
     transition: stroke-dashoffset 250ms ease-out;
 }
 
 .spinnerFill {
     /* Indeterminate spinner fill with rotation animation */
-    stroke: var(--spectrum-global-color-blue-500, #0078d4);
+    stroke: var(--spectrum-global-color-blue-500);
 }
 
 /* Indeterminate mode - add spin animation to the wrapper */

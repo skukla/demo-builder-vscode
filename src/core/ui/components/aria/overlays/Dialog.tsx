@@ -45,9 +45,12 @@ import {
 } from 'react-aria-components';
 import { Button } from '../interactive/Button';
 import { Divider } from '../primitives/Divider';
-import styles from './Dialog.module.css';
+import stylesImport from './Dialog.module.css';
 import { hasSlotChildren } from './DialogSlots';
 import { cn } from '@/core/ui/utils/classNames';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 /**
  * Context to pass close function to children
@@ -81,13 +84,16 @@ export interface DialogAction {
 export type DialogSize = 'S' | 'M' | 'L';
 
 /**
- * Size to CSS class mapping
+ * Get size class - lazy evaluation to avoid module load timing issues
  */
-const sizeClasses: Record<DialogSize, string> = {
-    S: styles.sizeS,
-    M: styles.sizeM,
-    L: styles.sizeL,
-};
+function getSizeClass(size: DialogSize): string {
+    const classes: Record<DialogSize, string> = {
+        S: styles.sizeS,
+        M: styles.sizeM,
+        L: styles.sizeL,
+    };
+    return classes[size];
+}
 
 export interface DialogProps {
     /** Dialog title */
@@ -253,7 +259,7 @@ export function Dialog({
     // Detect if children contain slot components (DialogHeader, DialogContent, DialogFooter)
     const useSlotMode = hasSlotChildren(children);
 
-    const sizeClass = sizeClasses[size];
+    const sizeClass = getSizeClass(size);
 
     const modalContent = (
         <Modal

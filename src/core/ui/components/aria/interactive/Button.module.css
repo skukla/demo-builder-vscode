@@ -13,6 +13,9 @@
  * Custom data attributes:
  * - [data-variant]: accent, secondary, cta, negative
  * - [data-quiet]: Subtle/quiet styling
+ *
+ * Note: Spectrum tokens cascade from body.spectrum--dark in vscode-theme.css.
+ * No fallback values needed since theme class is applied in HTML template.
  */
 
 .button {
@@ -20,36 +23,36 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--spectrum-global-dimension-size-75, 6px);
-    padding: var(--spectrum-global-dimension-size-85, 7px) var(--spectrum-global-dimension-size-200, 16px);
+    gap: var(--spectrum-global-dimension-size-75);
+    padding: var(--spectrum-global-dimension-size-85) var(--spectrum-global-dimension-size-200);
     border: 2px solid transparent;
-    border-radius: var(--spectrum-alias-border-radius-regular, 4px);
+    border-radius: var(--spectrum-alias-border-radius-regular);
     font-family: var(--spectrum-alias-body-text-font-family, inherit);
-    font-size: var(--spectrum-alias-font-size-default, 14px);
-    font-weight: var(--spectrum-alias-body-text-font-weight, 400);
-    line-height: var(--spectrum-alias-body-text-line-height, 1.5);
+    font-size: var(--spectrum-alias-font-size-default);
+    font-weight: var(--spectrum-alias-body-text-font-weight);
+    line-height: var(--spectrum-alias-body-text-line-height);
     cursor: pointer;
     outline: none;
     transition: background-color 130ms ease-out, border-color 130ms ease-out;
 
     /* Default secondary variant styles */
-    background-color: var(--spectrum-global-color-gray-200, #e1e1e1);
-    color: var(--spectrum-global-color-gray-800, #323232);
+    background-color: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-gray-800);
 }
 
 /* Hover state */
 .button[data-hovered] {
-    background-color: var(--spectrum-global-color-gray-300, #d5d5d5);
+    background-color: var(--spectrum-global-color-gray-300);
 }
 
 /* Pressed state */
 .button[data-pressed] {
-    background-color: var(--spectrum-global-color-gray-400, #c8c8c8);
+    background-color: var(--spectrum-global-color-gray-400);
 }
 
 /* Focus visible state - show focus ring */
 .button[data-focus-visible] {
-    box-shadow: 0 0 0 2px var(--spectrum-alias-focus-ring-color, #0078d4);
+    box-shadow: 0 0 0 2px var(--spectrum-alias-focus-ring-color);
 }
 
 /* Disabled state */
@@ -60,80 +63,88 @@
 
 /* Accent variant - primary action */
 .button[data-variant="accent"] {
-    background-color: var(--spectrum-global-color-blue-500, #0078d4);
+    background-color: var(--spectrum-global-color-blue-500);
     color: var(--spectrum-global-color-static-white, #ffffff);
 }
 
 .button[data-variant="accent"][data-hovered] {
-    background-color: var(--spectrum-global-color-blue-600, #0066b8);
+    background-color: var(--spectrum-global-color-blue-600);
 }
 
 .button[data-variant="accent"][data-pressed] {
-    background-color: var(--spectrum-global-color-blue-700, #005299);
+    background-color: var(--spectrum-global-color-blue-700);
 }
 
 /* Secondary variant */
 .button[data-variant="secondary"] {
-    background-color: var(--spectrum-global-color-gray-200, #e1e1e1);
-    color: var(--spectrum-global-color-gray-800, #323232);
+    background-color: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-gray-800);
 }
 
 .button[data-variant="secondary"][data-hovered] {
-    background-color: var(--spectrum-global-color-gray-300, #d5d5d5);
+    background-color: var(--spectrum-global-color-gray-300);
 }
 
 .button[data-variant="secondary"][data-pressed] {
-    background-color: var(--spectrum-global-color-gray-400, #c8c8c8);
+    background-color: var(--spectrum-global-color-gray-400);
 }
 
 /* CTA variant - call-to-action */
 .button[data-variant="cta"] {
-    background-color: var(--spectrum-global-color-blue-600, #0066b8);
+    background-color: var(--spectrum-global-color-blue-600);
     color: var(--spectrum-global-color-static-white, #ffffff);
 }
 
 .button[data-variant="cta"][data-hovered] {
-    background-color: var(--spectrum-global-color-blue-700, #005299);
+    background-color: var(--spectrum-global-color-blue-700);
 }
 
 .button[data-variant="cta"][data-pressed] {
-    background-color: var(--spectrum-global-color-blue-800, #004480);
+    background-color: var(--spectrum-global-color-blue-800);
 }
 
 /* Negative variant - destructive action */
 .button[data-variant="negative"] {
-    background-color: var(--spectrum-global-color-red-500, #d83b01);
+    background-color: var(--spectrum-global-color-red-500);
     color: var(--spectrum-global-color-static-white, #ffffff);
 }
 
 .button[data-variant="negative"][data-hovered] {
-    background-color: var(--spectrum-global-color-red-600, #c43502);
+    background-color: var(--spectrum-global-color-red-600);
 }
 
 .button[data-variant="negative"][data-pressed] {
-    background-color: var(--spectrum-global-color-red-700, #a62d01);
+    background-color: var(--spectrum-global-color-red-700);
 }
 
 /* Quiet variant - subtle styling */
 .button[data-quiet] {
     background-color: transparent;
-    color: var(--spectrum-global-color-gray-800, #323232);
+    color: var(--spectrum-global-color-gray-800);
 }
 
 .button[data-quiet][data-hovered] {
-    background-color: var(--spectrum-global-color-gray-200, #e1e1e1);
+    background-color: var(--spectrum-global-color-gray-200);
 }
 
 .button[data-quiet][data-pressed] {
-    background-color: var(--spectrum-global-color-gray-300, #d5d5d5);
+    background-color: var(--spectrum-global-color-gray-300);
 }
 
 /* Quiet + Accent */
 .button[data-quiet][data-variant="accent"] {
     background-color: transparent;
-    color: var(--spectrum-global-color-blue-500, #0078d4);
+    color: var(--spectrum-global-color-blue-500);
 }
 
 .button[data-quiet][data-variant="accent"][data-hovered] {
-    background-color: var(--spectrum-global-color-blue-100, #e1f0ff);
+    background-color: var(--spectrum-global-color-blue-100);
+}
+
+/* Icon sizing within buttons - match Spectrum M button icon size (18px) */
+.button svg,
+.button [class*="spectrum-Icon"] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
 }

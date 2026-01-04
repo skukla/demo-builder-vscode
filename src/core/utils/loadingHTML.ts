@@ -75,7 +75,7 @@ function getLoadingHTML(message = 'Loading...'): string {
             }
         </style>
     </head>
-    <body>
+    <body class="vscode-dark spectrum--dark">
         <div class="spinner">
             <div class="spinner-track"></div>
             <div class="spinner-fill"></div>

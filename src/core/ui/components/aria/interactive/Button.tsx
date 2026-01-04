@@ -17,9 +17,12 @@
 
 import React, { forwardRef, CSSProperties } from 'react';
 import { Button as AriaButton, ButtonProps as AriaButtonProps } from 'react-aria-components';
-import styles from './Button.module.css';
+import stylesImport from './Button.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export type ButtonVariant = 'accent' | 'secondary' | 'cta' | 'negative';
 

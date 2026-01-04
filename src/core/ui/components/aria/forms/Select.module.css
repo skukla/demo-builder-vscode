@@ -5,6 +5,9 @@
  * Zero !important - uses data attributes for state styling.
  *
  * VS Code theme variables with Spectrum fallbacks.
+ *
+ * Note: Spectrum tokens cascade from body.spectrum--dark in vscode-theme.css.
+ * No fallback values needed since theme class is applied in HTML template.
  */
 
 .select {
@@ -19,7 +22,7 @@
     margin-bottom: 4px;
     font-size: 12px;
     font-weight: 600;
-    color: var(--vscode-foreground, var(--spectrum-global-color-gray-700, #464646));
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-700));
 }
 
 /* Trigger button */
@@ -30,10 +33,10 @@
     gap: 8px;
     padding: 8px 12px;
     min-width: 150px;
-    border: 1px solid var(--vscode-input-border, var(--spectrum-global-color-gray-400, #b3b3b3));
+    border: 1px solid var(--vscode-input-border, var(--spectrum-global-color-gray-400));
     border-radius: 4px;
-    background-color: var(--vscode-input-background, var(--spectrum-global-color-gray-50, #ffffff));
-    color: var(--vscode-input-foreground, var(--spectrum-global-color-gray-900, #2c2c2c));
+    background-color: var(--vscode-input-background, var(--spectrum-global-color-gray-50));
+    color: var(--vscode-input-foreground, var(--spectrum-global-color-gray-900));
     font-size: 14px;
     cursor: pointer;
     outline: none;
@@ -41,12 +44,12 @@
 }
 
 .trigger:hover:not(:disabled) {
-    border-color: var(--spectrum-global-color-gray-500, #6e6e6e);
+    border-color: var(--spectrum-global-color-gray-500);
 }
 
 .trigger:focus-visible {
-    border-color: var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
-    box-shadow: 0 0 0 1px var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+    border-color: var(--vscode-focusBorder, var(--spectrum-global-color-blue-500));
+    box-shadow: 0 0 0 1px var(--vscode-focusBorder, var(--spectrum-global-color-blue-500));
 }
 
 .trigger:disabled {
@@ -67,7 +70,7 @@
 .chevron {
     display: flex;
     align-items: center;
-    color: var(--vscode-foreground, var(--spectrum-global-color-gray-700, #464646));
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-700));
     transition: transform 0.15s ease;
 }
 
@@ -77,8 +80,8 @@
 
 /* Popover dropdown */
 .popover {
-    background-color: var(--vscode-dropdown-background, var(--spectrum-global-color-gray-50, #ffffff));
-    border: 1px solid var(--vscode-dropdown-border, var(--spectrum-global-color-gray-400, #b3b3b3));
+    background-color: var(--vscode-dropdown-background, var(--spectrum-global-color-gray-50));
+    border: 1px solid var(--vscode-dropdown-border, var(--spectrum-global-color-gray-400));
     border-radius: 4px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     overflow: hidden;
@@ -129,15 +132,15 @@
     padding: 8px 12px;
     cursor: pointer;
     outline: none;
-    color: var(--vscode-dropdown-foreground, var(--spectrum-global-color-gray-900, #2c2c2c));
+    color: var(--vscode-dropdown-foreground, var(--spectrum-global-color-gray-900));
 }
 
 .listbox [role="option"][data-focused] {
-    background-color: var(--vscode-list-hoverBackground, var(--spectrum-global-color-gray-200, #e1e1e1));
+    background-color: var(--vscode-list-hoverBackground, var(--spectrum-global-color-gray-200));
 }
 
 .listbox [role="option"][data-selected] {
-    background-color: var(--vscode-list-activeSelectionBackground, var(--spectrum-global-color-blue-500, #0078d4));
+    background-color: var(--vscode-list-activeSelectionBackground, var(--spectrum-global-color-blue-500));
     color: var(--vscode-list-activeSelectionForeground, var(--spectrum-global-color-static-white, #ffffff));
 }
 

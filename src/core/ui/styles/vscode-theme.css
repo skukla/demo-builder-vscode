@@ -16,9 +16,9 @@
     body.vscode-high-contrast,
     body.vscode-high-contrast-light {
         /* Use our design tokens, NOT VS Code variables */
-        /* Background: dark gray, Text: light gray for proper contrast */
+        /* Background: Custom dark theme gray-75 (#0d0d0d), Text: Spectrum white */
         background: var(--spectrum-global-color-gray-75);
-        color: var(--spectrum-global-color-gray-800);
+        color: var(--spectrum-global-color-gray-900);
     }
 
     /* =========================================
@@ -26,51 +26,259 @@
        Force dark theme tokens for consistency
        ========================================= */
 
+    /* Match when body itself has the class (WebviewApp adds it directly)
+       or when a descendant has it (legacy support) */
+    body.spectrum--dark,
+    body.spectrum--light,
     body .spectrum--dark,
     body .spectrum--light {
-        /* Background colors - use Spectrum dark theme values */
-        /* Depth layering: gray-50 is deepest (content), gray-75 is elevated (sticky bars) */
-        --spectrum-global-color-gray-50: #000000;
-        --spectrum-global-color-gray-75: #0d0d0d;
-        --spectrum-global-color-gray-100: #2d2d2d;
-        --spectrum-global-color-gray-200: #3d3d3d;
+        /* =========================================
+           GRAY SCALE (Dark Theme)
+           Custom overrides for gray-50 through gray-200 (DARKER than official Spectrum)
+           Spectrum defaults for gray-300 through gray-900 (from React Spectrum Provider)
+           In dark theme: lower numbers = darker, higher numbers = lighter (for text)
+           ========================================= */
+        /* CUSTOM OVERRIDES - Darker than default Spectrum */
+        --spectrum-global-color-gray-50: #000000;   /* Pure black (deepest) - custom override */
+        --spectrum-global-color-gray-75: #0d0d0d;   /* Very dark (elevated) - custom override */
+        --spectrum-global-color-gray-100: #2d2d2d;  /* Dark gray - custom override */
+        --spectrum-global-color-gray-200: #3d3d3d;  /* Slightly lighter - custom override */
+        /* Provider defaults (gray-300 through gray-900) */
+        --spectrum-global-color-gray-300: #545454;  /* rgb(84, 84, 84) */
+        --spectrum-global-color-gray-400: #707070;  /* rgb(112, 112, 112) */
+        --spectrum-global-color-gray-500: #909090;  /* rgb(144, 144, 144) */
+        --spectrum-global-color-gray-600: #b2b2b2;  /* rgb(178, 178, 178) */
+        --spectrum-global-color-gray-700: #d1d1d1;  /* rgb(209, 209, 209) */
+        --spectrum-global-color-gray-800: #ebebeb;  /* rgb(235, 235, 235) */
+        --spectrum-global-color-gray-900: #ffffff;  /* rgb(255, 255, 255) */
 
+        /* =========================================
+           BLUE (Accent/Informative)
+           Official Spectrum dark theme values
+           Source: @adobe/spectrum-css-temp/vars/spectrum-dark.css
+           ========================================= */
+        --spectrum-global-color-blue-100: rgba(3, 103, 224, 0.15);  /* Subtle blue background for hover states */
+        --spectrum-global-color-blue-400: #348ff4;  /* rgb(52, 143, 244) - hover */
+        --spectrum-global-color-blue-500: #0367e0;  /* rgb(3, 103, 224) - default */
+        --spectrum-global-color-blue-600: #0258c4;  /* darker for pressed */
+        --spectrum-global-color-blue-700: #348ff4;  /* rgb(52, 143, 244) */
+        --spectrum-global-color-blue-800: #014caa;  /* Darkest blue for CTA pressed */
+        --spectrum-global-color-blue-900: #72b7f9;  /* rgb(114, 183, 249) - informative visual */
+
+        /* =========================================
+           GREEN (Success/Positive)
+           Official Spectrum dark theme values
+           ========================================= */
+        --spectrum-global-color-green-100: rgba(0, 125, 78, 0.15);  /* Subtle green background */
+        --spectrum-global-color-green-400: #12a26c;  /* rgb(18, 162, 108) */
+        --spectrum-global-color-green-500: #007d4e;  /* rgb(0, 125, 78) */
+        --spectrum-global-color-green-600: #006b42;  /* darker for pressed */
+        --spectrum-global-color-green-700: #12a26c;  /* rgb(18, 162, 108) */
+        --spectrum-global-color-green-800: #2bb47d;  /* rgb(43, 180, 125) - positive visual */
+
+        /* =========================================
+           RED (Error/Negative)
+           Official Spectrum dark theme values
+           ========================================= */
+        --spectrum-global-color-red-100: rgba(215, 25, 19, 0.15);  /* Subtle red background for error states */
+        --spectrum-global-color-red-400: #e83d30;   /* lighter for hover */
+        --spectrum-global-color-red-500: #d71913;   /* rgb(215, 25, 19) */
+        --spectrum-global-color-red-600: #c11510;   /* darker for pressed */
+        --spectrum-global-color-red-700: #f65843;   /* rgb(246, 88, 67) - negative visual */
+        --spectrum-global-color-red-900: #ff9581;   /* rgb(255, 149, 129) */
+
+        /* =========================================
+           ORANGE (Warning/Notice)
+           Official Spectrum dark theme values
+           ========================================= */
+        --spectrum-global-color-orange-400: #ff9d3d; /* lighter for hover */
+        --spectrum-global-color-orange-500: #e98300; /* rgb(233, 117, 0) from static */
+        --spectrum-global-color-orange-600: #d17500; /* darker for pressed */
+        --spectrum-global-color-orange-700: #b66400;
+        --spectrum-global-color-orange-900: #fe9a2e; /* rgb(254, 154, 46) - notice visual */
+
+        /* =========================================
+           YELLOW (Caution)
+           Official Spectrum dark theme values
+           ========================================= */
+        --spectrum-global-color-yellow-400: #f5e000; /* rgb(238, 205, 0) from static */
+        --spectrum-global-color-yellow-500: #ddb900; /* rgb(221, 185, 0) from static */
+        --spectrum-global-color-yellow-600: #c9a400; /* rgb(201, 164, 0) from static */
+        --spectrum-global-color-yellow-700: #b59000; /* rgb(181, 144, 0) from static */
+        --spectrum-global-color-yellow-1100: #f4d500; /* rgb(244, 213, 0) */
+
+        /* =========================================
+           STATIC COLORS
+           Colors that don't change between themes
+           ========================================= */
+        --spectrum-global-color-static-white: #ffffff;
+        --spectrum-global-color-static-black: #000000;
+
+        /* =========================================
+           SEMANTIC ALIASES
+           Official Spectrum dark theme aliases
+           ========================================= */
         /* Input and interactive element backgrounds */
-        --spectrum-alias-background-color-default: var(--spectrum-global-color-gray-75);
+        --spectrum-alias-background-color-default: var(--spectrum-global-color-gray-100);
         --spectrum-alias-background-color-modal: var(--spectrum-global-color-gray-100);
         --spectrum-alias-background-color-overlay: var(--spectrum-global-color-gray-100);
 
-        /* Text colors - consistent light text on dark background */
-        --spectrum-alias-text-color: var(--spectrum-global-color-gray-800);
-        --spectrum-alias-text-color-secondary: var(--spectrum-global-color-gray-600);
-        --spectrum-alias-label-text-color: var(--spectrum-global-color-gray-800);
+        /* Text colors - using Spectrum's semantic values */
+        --spectrum-alias-text-color: var(--spectrum-global-color-gray-900);
+        --spectrum-alias-text-color-secondary: var(--spectrum-global-color-gray-700);
+        --spectrum-alias-label-text-color: var(--spectrum-global-color-gray-900);
 
-        /* Border colors - subtle borders for dark theme */
+        /* Border colors - using Spectrum's dark theme values */
         --spectrum-alias-border-color: var(--spectrum-global-color-gray-400);
-        --spectrum-alias-border-color-hover: var(--spectrum-global-color-blue-500);
-        --spectrum-alias-border-color-focus: var(--spectrum-global-color-blue-500);
+        --spectrum-alias-border-color-hover: var(--spectrum-global-color-blue-400);
+        --spectrum-alias-border-color-focus: var(--spectrum-global-color-blue-400);
 
-        /* Selection colors */
-        --spectrum-alias-highlight-hover: rgba(255, 255, 255, 0.06);
-        --spectrum-alias-highlight-active: rgba(255, 255, 255, 0.1);
-        --spectrum-alias-highlight-selected: rgba(255, 255, 255, 0.1);
+        /* Selection colors - Spectrum dark theme uses subtle white overlays */
+        --spectrum-alias-highlight-hover: rgba(255, 255, 255, 0.07);
+        --spectrum-alias-highlight-active: rgba(255, 255, 255, 0.10);
+        --spectrum-alias-highlight-selected: rgba(255, 255, 255, 0.10);
+
+        /* Accent colors (for buttons) - Official Spectrum dark theme */
+        --spectrum-accent-background-color-default: var(--spectrum-global-color-blue-500);
+        --spectrum-accent-background-color-hover: var(--spectrum-global-color-blue-400);
+        --spectrum-accent-background-color-down: var(--spectrum-global-color-blue-600);
+        --spectrum-accent-color-default: var(--spectrum-global-color-blue-500);
+
+        /* Status semantic colors - from Spectrum dark theme */
+        --spectrum-semantic-positive-color-default: var(--spectrum-global-color-green-800);
+        --spectrum-semantic-negative-color-default: var(--spectrum-global-color-red-700);
+        --spectrum-semantic-notice-color-default: var(--spectrum-global-color-orange-900);
+        --spectrum-semantic-informative-color-default: var(--spectrum-global-color-blue-900);
+
+        /* Focus ring color */
+        --spectrum-alias-focus-ring-color: var(--spectrum-global-color-blue-400);
+
+        /* Border radius */
+        --spectrum-alias-border-radius-regular: 4px;
+        --spectrum-alias-border-radius-small: 2px;
+
+        /* =========================================
+           TYPOGRAPHY ALIASES
+           Font properties for components
+           ========================================= */
+        --spectrum-alias-body-text-font-family: adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --spectrum-alias-font-size-default: 14px;
+        --spectrum-alias-body-text-font-weight: 400;
+        --spectrum-alias-body-text-line-height: 1.5;
+        --spectrum-font-family-code: 'Source Code Pro', Monaco, Consolas, 'Courier New', monospace;
+
+        /* =========================================
+           DIMENSION TOKENS
+           Spectrum sizing scale for icons and spacing
+           ========================================= */
+        --spectrum-global-dimension-size-50: 4px;
+        --spectrum-global-dimension-size-65: 5px;
+        --spectrum-global-dimension-size-75: 6px;
+        --spectrum-global-dimension-size-85: 7px;
+        --spectrum-global-dimension-size-100: 8px;
+        --spectrum-global-dimension-size-115: 9px;
+        --spectrum-global-dimension-size-125: 10px;
+        --spectrum-global-dimension-size-130: 11px;
+        --spectrum-global-dimension-size-150: 12px;
+        --spectrum-global-dimension-size-160: 13px;
+        --spectrum-global-dimension-size-175: 14px;
+        --spectrum-global-dimension-size-200: 16px;
+        --spectrum-global-dimension-size-225: 18px;
+        --spectrum-global-dimension-size-250: 20px;
+        --spectrum-global-dimension-size-300: 24px;
+        --spectrum-global-dimension-size-350: 28px;
+        --spectrum-global-dimension-size-400: 32px;
+        --spectrum-global-dimension-size-450: 36px;
+        --spectrum-global-dimension-size-500: 40px;
+        --spectrum-global-dimension-size-550: 44px;
+        --spectrum-global-dimension-size-600: 48px;
+        --spectrum-global-dimension-size-700: 56px;
+        --spectrum-global-dimension-size-800: 64px;
+        --spectrum-global-dimension-size-900: 72px;
+        --spectrum-global-dimension-size-1000: 80px;
+        /* Extended sizes for larger components */
+        --spectrum-global-dimension-size-1200: 96px;
+        --spectrum-global-dimension-size-1700: 136px;
+        --spectrum-global-dimension-size-2000: 160px;
+        --spectrum-global-dimension-size-2400: 192px;
+        --spectrum-global-dimension-size-3000: 240px;
+        --spectrum-global-dimension-size-3600: 288px;
+        --spectrum-global-dimension-size-4600: 368px;
+        --spectrum-global-dimension-size-5000: 400px;
+        --spectrum-global-dimension-size-6000: 480px;
+
+        /* Icon-specific dimension aliases */
+        --spectrum-alias-workflow-icon-size: var(--spectrum-global-dimension-size-225);
+        --spectrum-alias-ui-icon-size: var(--spectrum-global-dimension-size-175);
     }
 
     /* =========================================
        STATUS COLOR ATTRIBUTES
        Semantic color attributes for components
+       Using official Spectrum dark theme semantic colors
        ========================================= */
 
     [color="positive"] {
-        color: var(--db-status-success);
+        color: var(--spectrum-semantic-positive-color-default);
     }
 
     [color="negative"] {
-        color: var(--db-status-error);
+        color: var(--spectrum-semantic-negative-color-default);
     }
 
     [color="notice"] {
-        color: var(--db-status-warning);
+        color: var(--spectrum-semantic-notice-color-default);
+    }
+
+    [color="informative"] {
+        color: var(--spectrum-semantic-informative-color-default);
+    }
+
+    /* =========================================
+       SPECTRUM ICON SUPPORT
+       Ensure @spectrum-icons/workflow icons render correctly
+       with React Aria (without full React Spectrum Provider)
+       ========================================= */
+
+    /* Base icon styles - ensure SVGs have fill and proper display */
+    [class*="spectrum-Icon"],
+    [class*="spectrum-UIIcon"] {
+        color: inherit;
+        fill: currentColor;
+        display: inline-block;
+        pointer-events: none;
+    }
+
+    /* Icon sizing using Spectrum dimension tokens */
+    [class*="spectrum-Icon--sizeS"] svg,
+    [class*="spectrum-Icon--sizeS"] {
+        width: var(--spectrum-alias-workflow-icon-size, 18px);
+        height: var(--spectrum-alias-workflow-icon-size, 18px);
+    }
+
+    [class*="spectrum-Icon--sizeM"] svg,
+    [class*="spectrum-Icon--sizeM"] {
+        width: var(--spectrum-global-dimension-size-300, 24px);
+        height: var(--spectrum-global-dimension-size-300, 24px);
+    }
+
+    [class*="spectrum-Icon--sizeL"] svg,
+    [class*="spectrum-Icon--sizeL"] {
+        width: calc(var(--spectrum-alias-workflow-icon-size, 18px) * 2);
+        height: calc(var(--spectrum-alias-workflow-icon-size, 18px) * 2);
+    }
+
+    [class*="spectrum-Icon--sizeXL"] svg,
+    [class*="spectrum-Icon--sizeXL"] {
+        width: calc(var(--spectrum-global-dimension-size-300, 24px) * 2);
+        height: calc(var(--spectrum-global-dimension-size-300, 24px) * 2);
+    }
+
+    /* Ensure SVGs inside icons inherit fill */
+    [class*="spectrum-Icon"] svg,
+    [class*="spectrum-UIIcon"] svg {
+        fill: currentColor;
+        display: block;
     }
 
     /* =========================================

@@ -17,8 +17,11 @@
 
 import React, { forwardRef } from 'react';
 import { Button as AriaButton, ButtonProps as AriaButtonProps } from 'react-aria-components';
-import styles from './ActionButton.module.css';
+import stylesImport from './ActionButton.module.css';
 import { cn } from '@/core/ui/utils/classNames';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export interface ActionButtonProps extends Omit<AriaButtonProps, 'className' | 'style'> {
     /** Button content (typically icon or icon + text) */

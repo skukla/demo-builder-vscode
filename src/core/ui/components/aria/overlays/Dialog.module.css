@@ -7,6 +7,9 @@
  * React Aria provides these data attributes:
  * - [data-entering]: Element is entering (show animation)
  * - [data-exiting]: Element is exiting (hide animation)
+ *
+ * Note: Spectrum tokens cascade from body.spectrum--dark in vscode-theme.css.
+ * No fallback values needed since theme class is applied in HTML template.
  */
 
 /* Overlay backdrop */
@@ -50,7 +53,7 @@
 
 /* Modal container */
 .modal {
-    background-color: var(--vscode-editor-background, var(--spectrum-global-color-gray-100, #f5f5f5));
+    background-color: var(--vscode-editor-background, var(--spectrum-global-color-gray-100));
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
     max-height: 90vh;
@@ -127,7 +130,7 @@
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: var(--vscode-foreground, var(--spectrum-global-color-gray-900, #1a1a1a));
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-900));
 }
 
 /* Close button */
@@ -141,17 +144,17 @@
     border: none;
     border-radius: 4px;
     background-color: transparent;
-    color: var(--vscode-foreground, var(--spectrum-global-color-gray-700, #464646));
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-700));
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
 
 .closeButton:hover {
-    background-color: var(--vscode-toolbar-hoverBackground, var(--spectrum-global-color-gray-200, #e1e1e1));
+    background-color: var(--vscode-toolbar-hoverBackground, var(--spectrum-global-color-gray-200));
 }
 
 .closeButton:focus-visible {
-    outline: 2px solid var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+    outline: 2px solid var(--vscode-focusBorder, var(--spectrum-global-color-blue-500));
     outline-offset: 2px;
 }
 
@@ -160,7 +163,7 @@
     margin: 0;
     padding: 0 20px 8px;
     font-size: 14px;
-    color: var(--vscode-descriptionForeground, var(--spectrum-global-color-gray-700, #464646));
+    color: var(--vscode-descriptionForeground, var(--spectrum-global-color-gray-700));
 }
 
 /* Content area */
@@ -168,7 +171,7 @@
     flex: 1;
     padding: 16px 20px;
     overflow-y: auto;
-    color: var(--vscode-foreground, var(--spectrum-global-color-gray-800, #2c2c2c));
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-800));
 }
 
 /* Footer */
@@ -177,5 +180,5 @@
     justify-content: flex-end;
     gap: 8px;
     padding: 12px 20px 16px;
-    border-top: 1px solid var(--vscode-widget-border, var(--spectrum-global-color-gray-300, #d3d3d3));
+    border-top: 1px solid var(--vscode-widget-border, var(--spectrum-global-color-gray-300));
 }

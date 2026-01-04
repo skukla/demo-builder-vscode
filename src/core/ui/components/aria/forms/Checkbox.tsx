@@ -15,8 +15,11 @@
 
 import React, { forwardRef } from 'react';
 import { Checkbox as AriaCheckbox } from 'react-aria-components';
-import styles from './Checkbox.module.css';
+import stylesImport from './Checkbox.module.css';
 import { cn } from '@/core/ui/utils/classNames';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export interface CheckboxProps {
     /** Label content */

@@ -81,7 +81,8 @@ describe('getWebviewHTMLWithBundles', () => {
             expect(html).toContain('<meta charset="UTF-8">');
             expect(html).toContain('<meta name="viewport"');
             expect(html).toContain('<title>My Test Webview</title>');
-            expect(html).toContain('<body style="margin: 0;">');
+            // Body may have optional class attribute for theme
+            expect(html).toMatch(/<body[^>]*style="margin: 0;"/);
             expect(html).toContain('<div id="root"></div>');
             expect(html).toContain('</body>');
             expect(html).toContain('</html>');

@@ -3,13 +3,16 @@
  *
  * CSS Module for Divider primitive component.
  * Zero !important - relies on @layer cascade for specificity.
+ *
+ * Note: Spectrum tokens cascade from body.spectrum--dark in vscode-theme.css.
+ * No fallback values needed since theme class is applied in HTML template.
  */
 
 .divider {
     /* Base divider styles */
     border: none;
     width: 100%;
-    background-color: var(--spectrum-global-color-gray-300, #e1e1e1);
+    background-color: var(--spectrum-global-color-gray-300);
     margin: 0;
 }
 

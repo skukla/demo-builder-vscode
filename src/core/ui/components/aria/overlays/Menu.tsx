@@ -24,8 +24,11 @@ import {
     Separator,
     type Key,
 } from 'react-aria-components';
-import styles from './Menu.module.css';
+import stylesImport from './Menu.module.css';
 import { cn } from '@/core/ui/utils/classNames';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export interface MenuItemData {
     /** Unique key for the item */

@@ -22,3 +22,4 @@ export * from './primitives';
 export * from './interactive';
 export * from './forms';
 export * from './overlays';
+export * from './icons';

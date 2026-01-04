@@ -127,7 +127,7 @@ export function getWebviewHTMLWithBundles(options: WebviewHTMLWithBundlesOptions
     <title>${title}</title>
     ${baseUriScript}
 </head>
-<body style="margin: 0;">
+<body class="vscode-dark spectrum--dark" style="margin: 0;">
     <div id="root"></div>
     <script nonce="${nonce}" src="${bundleUris.runtime}"></script>
     <script nonce="${nonce}" src="${bundleUris.vendors}"></script>

@@ -12,12 +12,20 @@
  * - Configurable visibility and behavior
  */
 
-import Refresh from '@spectrum-icons/workflow/Refresh';
-import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
-import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
 import { Spinner } from '../ui/Spinner';
-import { Flex, Text, SearchField, ActionButton, Tooltip, TooltipTrigger } from '@/core/ui/components/aria';
+import {
+    Flex,
+    Text,
+    SearchField,
+    ActionButton,
+    Tooltip,
+    TooltipTrigger,
+    Icon,
+    RefreshIcon,
+    ViewGridIcon,
+    ViewListIcon,
+} from '@/core/ui/components/aria';
 
 /** Available view modes */
 export type ViewMode = 'cards' | 'rows';
@@ -115,7 +123,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
             isDisabled={isRefreshing}
             className="cursor-pointer"
         >
-            {isRefreshing ? <Spinner size="S" /> : <Refresh />}
+            {isRefreshing ? <Spinner size="S" /> : <Icon size="S"><RefreshIcon /></Icon>}
         </ActionButton>
     ) : null;
 
@@ -129,7 +137,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                     aria-pressed={viewMode === 'cards'}
                     className={`cursor-pointer ${viewMode === 'cards' ? 'is-selected' : ''}`}
                 >
-                    <ViewGrid />
+                    <Icon size="S"><ViewGridIcon /></Icon>
                 </ActionButton>
                 <Tooltip placement="bottom">Card view</Tooltip>
             </TooltipTrigger>
@@ -140,7 +148,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                     aria-pressed={viewMode === 'rows'}
                     className={`cursor-pointer ${viewMode === 'rows' ? 'is-selected' : ''}`}
                 >
-                    <ViewList />
+                    <Icon size="S"><ViewListIcon /></Icon>
                 </ActionButton>
                 <Tooltip placement="bottom">List view</Tooltip>
             </TooltipTrigger>

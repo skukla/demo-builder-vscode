@@ -27,8 +27,11 @@ import {
     Label,
     type Key,
 } from 'react-aria-components';
-import styles from './Select.module.css';
+import stylesImport from './Select.module.css';
 import { cn } from '@/core/ui/utils/classNames';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 // Re-export ListBoxItem as SelectItem for semantic clarity
 export { ListBoxItem as SelectItem };

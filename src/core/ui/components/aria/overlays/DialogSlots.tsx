@@ -22,8 +22,11 @@
  */
 
 import React, { forwardRef } from 'react';
-import styles from './Dialog.module.css';
+import stylesImport from './Dialog.module.css';
 import { cn } from '@/core/ui/utils/classNames';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 // Slot type markers for React.Children detection
 const DIALOG_HEADER_SLOT = Symbol('DialogHeader');

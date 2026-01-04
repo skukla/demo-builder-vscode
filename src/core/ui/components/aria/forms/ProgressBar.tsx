@@ -15,8 +15,11 @@
 
 import React, { forwardRef } from 'react';
 import { ProgressBar as AriaProgressBar, Label } from 'react-aria-components';
-import styles from './ProgressBar.module.css';
+import stylesImport from './ProgressBar.module.css';
 import { cn } from '@/core/ui/utils/classNames';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export type ProgressBarSize = 'S' | 'M' | 'L';
 

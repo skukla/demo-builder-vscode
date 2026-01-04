@@ -5,6 +5,9 @@
  * Zero !important - uses CSS class composition for state styling.
  *
  * VS Code theme variables with Spectrum fallbacks.
+ *
+ * Note: Spectrum tokens cascade from body.spectrum--dark in vscode-theme.css.
+ * No fallback values needed since theme class is applied in HTML template.
  */
 
 .searchField {
@@ -19,7 +22,7 @@
     left: 10px;
     display: flex;
     align-items: center;
-    color: var(--vscode-input-placeholderForeground, var(--spectrum-global-color-gray-500, #6e6e6e));
+    color: var(--vscode-input-placeholderForeground, var(--spectrum-global-color-gray-500));
     pointer-events: none;
     z-index: 1;
 }
@@ -31,21 +34,21 @@
     border-radius: 4px;
     font-size: 14px;
     line-height: 1.4;
-    border: 1px solid var(--vscode-input-border, var(--spectrum-global-color-gray-400, #b3b3b3));
-    background-color: var(--vscode-input-background, var(--spectrum-global-color-gray-50, #ffffff));
-    color: var(--vscode-input-foreground, var(--spectrum-global-color-gray-900, #2c2c2c));
+    border: 1px solid var(--vscode-input-border, var(--spectrum-global-color-gray-400));
+    background-color: var(--vscode-input-background, var(--spectrum-global-color-gray-50));
+    color: var(--vscode-input-foreground, var(--spectrum-global-color-gray-900));
     outline: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .input::placeholder {
-    color: var(--vscode-input-placeholderForeground, var(--spectrum-global-color-gray-500, #6e6e6e));
+    color: var(--vscode-input-placeholderForeground, var(--spectrum-global-color-gray-500));
 }
 
 /* Focus state */
 .input:focus {
-    border-color: var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
-    box-shadow: 0 0 0 1px var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+    border-color: var(--vscode-focusBorder, var(--spectrum-global-color-blue-500));
+    box-shadow: 0 0 0 1px var(--vscode-focusBorder, var(--spectrum-global-color-blue-500));
 }
 
 /* Disabled state */
@@ -63,7 +66,7 @@
 
 .quiet .input:focus {
     box-shadow: none;
-    border-bottom: 2px solid var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+    border-bottom: 2px solid var(--vscode-focusBorder, var(--spectrum-global-color-blue-500));
     border-radius: 0;
 }
 
@@ -83,19 +86,19 @@
     padding: 0;
     border: none;
     border-radius: 50%;
-    background-color: var(--spectrum-global-color-gray-300, #d3d3d3);
-    color: var(--spectrum-global-color-gray-700, #464646);
+    background-color: var(--spectrum-global-color-gray-300);
+    color: var(--spectrum-global-color-gray-700);
     cursor: pointer;
     transition: background-color 0.15s ease;
     outline: none;
 }
 
 .clearButton:hover {
-    background-color: var(--spectrum-global-color-gray-400, #b3b3b3);
+    background-color: var(--spectrum-global-color-gray-400);
 }
 
 .clearButton:focus-visible {
-    outline: 2px solid var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+    outline: 2px solid var(--vscode-focusBorder, var(--spectrum-global-color-blue-500));
     outline-offset: 2px;
 }
 

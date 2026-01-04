@@ -23,9 +23,12 @@ import {
     Text,
     FieldError,
 } from 'react-aria-components';
-import styles from './TextField.module.css';
+import stylesImport from './TextField.module.css';
 import { cn } from '@/core/ui/utils/classNames';
 import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export type ValidationState = 'valid' | 'invalid';
 

@@ -18,8 +18,11 @@ import {
     TooltipTrigger as AriaTooltipTrigger,
     OverlayArrow,
 } from 'react-aria-components';
-import styles from './Tooltip.module.css';
+import stylesImport from './Tooltip.module.css';
 import { cn } from '@/core/ui/utils/classNames';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right' | 'start' | 'end';
 

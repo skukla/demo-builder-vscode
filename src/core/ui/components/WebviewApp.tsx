@@ -85,7 +85,11 @@ export function WebviewApp({
         log.debug('Component mounted');
 
         // Apply VSCode dark theme class to body (unified theme system ignores user preferences)
-        document.body.classList.add('vscode-dark');
+        // Note: Both classes are needed:
+        // - 'vscode-dark' - Triggers vscode-theme.css body background/color rules
+        // - 'spectrum--dark' - Enables Spectrum token definitions (--spectrum-global-color-*)
+        //   that CSS Modules rely on (was previously provided by React Spectrum Provider)
+        document.body.classList.add('vscode-dark', 'spectrum--dark');
 
         // Listen for initialization from extension (set up listener BEFORE sending ready)
         const unsubscribeInit = webviewClient.onMessage('init', (data) => {

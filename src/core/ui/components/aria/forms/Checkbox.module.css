@@ -5,6 +5,9 @@
  * Zero !important - uses data attributes for state styling.
  *
  * VS Code theme variables with Spectrum fallbacks.
+ *
+ * Note: Spectrum tokens cascade from body.spectrum--dark in vscode-theme.css.
+ * No fallback values needed since theme class is applied in HTML template.
  */
 
 .checkbox {
@@ -13,7 +16,7 @@
     gap: 8px;
     cursor: pointer;
     font-size: 14px;
-    color: var(--vscode-foreground, #cccccc);
+    color: var(--vscode-foreground, var(--spectrum-global-color-gray-800));
 }
 
 .checkbox[data-disabled] {
@@ -25,9 +28,9 @@
 .box {
     width: 16px;
     height: 16px;
-    border: 1px solid var(--vscode-input-border, var(--spectrum-global-color-gray-400, #b3b3b3));
+    border: 1px solid var(--vscode-input-border, var(--spectrum-global-color-gray-400));
     border-radius: 3px;
-    background-color: var(--vscode-input-background, var(--spectrum-global-color-gray-50, #ffffff));
+    background-color: var(--vscode-input-background, var(--spectrum-global-color-gray-50));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -38,8 +41,8 @@
 /* Selected state */
 .box.selected,
 .box[data-selected] {
-    background-color: var(--spectrum-global-color-blue-500, #0078d4);
-    border-color: var(--spectrum-global-color-blue-500, #0078d4);
+    background-color: var(--spectrum-global-color-blue-500);
+    border-color: var(--spectrum-global-color-blue-500);
 }
 
 /* Checkmark icon */
@@ -56,10 +59,10 @@
 
 /* Focus state */
 .checkbox[data-focus-visible] .box {
-    box-shadow: 0 0 0 2px var(--vscode-focusBorder, var(--spectrum-global-color-blue-500, #1473e6));
+    box-shadow: 0 0 0 2px var(--vscode-focusBorder, var(--spectrum-global-color-blue-500));
 }
 
 /* Hover state */
 .checkbox:not([data-disabled]):hover .box:not(.selected) {
-    border-color: var(--spectrum-global-color-gray-500, #6e6e6e);
+    border-color: var(--spectrum-global-color-gray-500);
 }
