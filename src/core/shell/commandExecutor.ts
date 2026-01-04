@@ -1,6 +1,14 @@
 import type { ExecOptions } from 'child_process';
 import execa, { type ExecaError, type ExecaChildProcess } from 'execa';
 import { CommandQueue } from './commandQueue';
+import {
+    isAdobeCLICommand,
+    applyAdobeCliDefaults,
+    buildFnmCommand,
+    enhanceEnvironmentPath,
+    lookupCachedResult,
+    storeCachedResult,
+} from './commandExecutorHelpers';
 import { CommandResultCache } from './commandResultCache';
 import { CommandSequencer } from './commandSequencer';
 import { EnvironmentSetup } from './environmentSetup';
@@ -13,7 +21,6 @@ import type { CommandResult, ExecuteOptions, CommandConfig, PollOptions } from '
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateNodeVersion } from '@/core/validation';
-import { DEFAULT_SHELL } from '@/types/shell';
 
 /**
  * Main command executor - orchestrates all command execution operations
@@ -76,54 +83,45 @@ export class CommandExecutor {
 
     /**
      * Internal execution logic
+     * Orchestrates command execution using extracted helper functions
      */
     private async executeInternal(command: string, options: ExecuteOptions): Promise<CommandResult> {
         let finalCommand = command;
+        let effectiveOptions = { ...options };
         const finalOptions: ExecOptions = { ...options } as ExecOptions;
 
-        // Auto-detect Adobe CLI commands and automatically apply required defaults
-        const isAdobeCLI = command.startsWith('aio ') || command.startsWith('aio-');
+        // Step 1: Auto-detect Adobe CLI commands and apply defaults
+        const isAdobeCLI = isAdobeCLICommand(command);
         if (isAdobeCLI) {
-            // Ensure Node version is set once per session
+            // Ensure Node version is set once per session (skip for version checks)
             const isVersionCheck = command.includes('--version') || command.includes('-v');
             if (!isVersionCheck) {
                 await this.environmentSetup.ensureAdobeCLINodeVersion(this.execute.bind(this));
             }
 
-            // Auto-apply Adobe CLI defaults
-            if (!finalOptions.shell) {
-                finalOptions.shell = DEFAULT_SHELL;
-            }
-            if (options.configureTelemetry === undefined) {
-                options.configureTelemetry = false;
-            }
-            if (options.enhancePath === undefined) {
-                options.enhancePath = true;
-            }
-            if (options.useNodeVersion === undefined) {
-                options.useNodeVersion = null;
-            }
-            if (!options.retryStrategy) {
-                options.retryStrategy = this.retryManager.getStrategy('adobe-cli');
+            // Apply Adobe CLI defaults using helper
+            effectiveOptions = applyAdobeCliDefaults(effectiveOptions, this.retryManager);
+            if (!finalOptions.shell && typeof effectiveOptions.shell === 'string') {
+                finalOptions.shell = effectiveOptions.shell;
             }
         }
 
-        // Step 1: Handle telemetry configuration for Adobe CLI
+        // Step 2: Handle telemetry configuration for Adobe CLI
         const isVersionCheck = command.includes('--version') || command.includes('-v');
-        if (!isVersionCheck && (options.configureTelemetry || (command.startsWith('aio ') && options.configureTelemetry !== false))) {
+        if (!isVersionCheck && (effectiveOptions.configureTelemetry || (isAdobeCLI && effectiveOptions.configureTelemetry !== false))) {
             await this.environmentSetup.ensureAdobeCLIConfigured(this.execute.bind(this));
         }
 
-        // Step 2: Handle Node version management and resolve "auto" to actual version
-        let effectiveNodeVersion: string | null = options.useNodeVersion ?? null;
+        // Step 3: Handle Node version management and resolve "auto" to actual version
+        let effectiveNodeVersion: string | null = effectiveOptions.useNodeVersion ?? null;
 
-        if (options.useNodeVersion !== null && options.useNodeVersion !== undefined) {
+        if (effectiveOptions.useNodeVersion !== null && effectiveOptions.useNodeVersion !== undefined) {
             // SECURITY FIX (CWE-77): Validate nodeVersion BEFORE resolving "auto"
-            validateNodeVersion(options.useNodeVersion);
+            validateNodeVersion(effectiveOptions.useNodeVersion);
 
-            const nodeVersion = options.useNodeVersion === 'auto'
+            const nodeVersion = effectiveOptions.useNodeVersion === 'auto'
                 ? await this.environmentSetup.findAdobeCLINodeVersion()
-                : options.useNodeVersion;
+                : effectiveOptions.useNodeVersion;
 
             effectiveNodeVersion = nodeVersion;
 
@@ -132,69 +130,52 @@ export class CommandExecutor {
                 validateNodeVersion(nodeVersion);
             }
 
+            // Build fnm-wrapped command using helper
             if (nodeVersion) {
-                // Use fnm exec for guaranteed isolation
                 const fnmPath = this.environmentSetup.findFnmPath();
-                if (fnmPath && nodeVersion !== 'current') {
-                    finalCommand = `${fnmPath} exec --using=${nodeVersion} ${finalCommand}`;
-                    finalOptions.shell = '/bin/zsh';
-                } else if (nodeVersion === 'current') {
-                    finalCommand = `eval "$(fnm env)" && ${finalCommand}`;
-                    finalOptions.shell = '/bin/zsh';
+                const fnmResult = buildFnmCommand(finalCommand, nodeVersion, fnmPath);
+                finalCommand = fnmResult.command;
+                if (fnmResult.shell) {
+                    finalOptions.shell = fnmResult.shell;
                 }
             }
         }
 
-        // Step 2.5: Check cache for Adobe CLI commands
+        // Step 4: Check cache for Adobe CLI commands using helper
         if (isAdobeCLI) {
-            if (command === 'aio --version') {
-                const cachedResult = this.resultCache.getVersionResult(command, effectiveNodeVersion);
-                if (cachedResult) {
-                    return cachedResult;
-                }
-            } else if (command === 'aio plugins') {
-                const cachedResult = this.resultCache.getPluginsResult(command, effectiveNodeVersion);
-                if (cachedResult) {
-                    return cachedResult;
-                }
+            const cachedResult = lookupCachedResult(command, effectiveNodeVersion, this.resultCache);
+            if (cachedResult) {
+                return cachedResult;
             }
         }
 
-        // Step 3: Handle enhanced PATH
-        if (options.enhancePath || ((options.useNodeVersion === undefined) && command.startsWith('aio '))) {
+        // Step 5: Handle enhanced PATH using helper
+        if (effectiveOptions.enhancePath || ((effectiveOptions.useNodeVersion === undefined) && isAdobeCLI)) {
             const extraPaths = this.environmentSetup.findNpmGlobalPaths();
             if (extraPaths.length > 0) {
-                finalOptions.env = {
-                    ...process.env,
-                    ...finalOptions.env,
-                    PATH: `${extraPaths.join(':')}:${process.env.PATH || ''}`,
-                };
+                finalOptions.env = enhanceEnvironmentPath(finalOptions.env, extraPaths);
             }
         }
 
-        // Step 4: Set and validate timeout
-        finalOptions.timeout = this.validateTimeout(options.timeout);
+        // Step 6: Set and validate timeout
+        finalOptions.timeout = this.validateTimeout(effectiveOptions.timeout);
 
-        // Step 5: Handle streaming vs regular execution
-        if (options.streaming && options.onOutput) {
-            return this.executeStreamingInternal(finalCommand, finalOptions, options.onOutput, options.signal);
+        // Step 7: Handle streaming vs regular execution
+        if (effectiveOptions.streaming && effectiveOptions.onOutput) {
+            return this.executeStreamingInternal(finalCommand, finalOptions, effectiveOptions.onOutput, effectiveOptions.signal);
         }
 
-        // Step 6: Execute with retry logic
-        const retryStrategy = options.retryStrategy || this.retryManager.getDefaultStrategy();
+        // Step 8: Execute with retry logic
+        const retryStrategy = effectiveOptions.retryStrategy || this.retryManager.getDefaultStrategy();
         const result = await this.retryManager.executeWithRetry(
-            () => this.executeStreamingInternal(finalCommand, finalOptions, () => {}, options.signal),
+            () => this.executeStreamingInternal(finalCommand, finalOptions, () => {}, effectiveOptions.signal),
             retryStrategy,
             command.substring(0, 50),
         );
 
-        // Cache Adobe CLI results
+        // Step 9: Cache Adobe CLI results using helper
         if (isAdobeCLI && result.code === 0) {
-            if (command === 'aio --version') {
-                this.resultCache.setVersionResult(command, effectiveNodeVersion, result);
-            } else if (command === 'aio plugins') {
-                this.resultCache.setPluginsResult(command, effectiveNodeVersion, result);
-            }
+            storeCachedResult(command, effectiveNodeVersion, result, this.resultCache);
         }
 
         return result;

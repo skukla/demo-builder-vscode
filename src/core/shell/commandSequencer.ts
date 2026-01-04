@@ -107,25 +107,4 @@ export class CommandSequencer {
 
         return results;
     }
-
-    /**
-     * Execute commands in batches with concurrency limit
-     */
-    async executeInBatches(
-        commands: CommandConfig[],
-        executeCommand: (command: string, config: CommandConfig) => Promise<CommandResult>,
-        batchSize = 3,
-    ): Promise<CommandResult[]> {
-        const results: CommandResult[] = [];
-
-        for (let i = 0; i < commands.length; i += batchSize) {
-            const batch = commands.slice(i, i + batchSize);
-            this.logger.debug(`[Command Sequencer] Executing batch ${Math.floor(i / batchSize) + 1} (${batch.length} commands)`);
-
-            const batchResults = await this.executeParallel(batch, executeCommand);
-            results.push(...batchResults);
-        }
-
-        return results;
-    }
 }
