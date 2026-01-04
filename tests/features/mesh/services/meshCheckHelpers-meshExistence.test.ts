@@ -2,9 +2,12 @@
  * Tests for checkMeshExistence helper function
  *
  * Tests mesh existence detection via CLI commands.
+ *
+ * Note: Function was inlined into checkHandler.ts (Step 6.3)
+ * per "Extract for Reuse, Section for Clarity" SOP.
  */
 
-import { checkMeshExistence } from '@/features/mesh/services/meshCheckHelpers';
+import { checkMeshExistence } from '@/features/mesh/handlers/checkHandler';
 import { CommandExecutor } from '@/core/shell';
 
 describe('checkMeshExistence', () => {

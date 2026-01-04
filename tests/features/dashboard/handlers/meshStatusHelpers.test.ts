@@ -1,12 +1,15 @@
 /**
- * Tests for meshStatusHelpers
+ * Tests for mesh status helpers in dashboardHandlers
  *
  * Focuses on checkMeshConfigCompleteness which reads actual .env files
  * to detect missing configuration.
+ *
+ * Note: These helpers were inlined from meshStatusHelpers.ts into dashboardHandlers.ts
+ * as part of overengineering remediation (Step 6.1).
  */
 
 import * as fs from 'fs/promises';
-import { checkMeshConfigCompleteness, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
+import { checkMeshConfigCompleteness, determineMeshStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { parseEnvFile } from '@/core/utils/envParser';
 import type { ComponentInstance, Project } from '@/types';
 

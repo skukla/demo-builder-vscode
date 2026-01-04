@@ -2,9 +2,12 @@
  * Tests for checkApiMeshEnabled helper function
  *
  * Tests detection of API Mesh service in workspace configuration.
+ *
+ * Note: Function was inlined into checkHandler.ts (Step 6.3)
+ * per "Extract for Reuse, Section for Clarity" SOP.
  */
 
-import { checkApiMeshEnabled } from '@/features/mesh/services/meshCheckHelpers';
+import { checkApiMeshEnabled } from '@/features/mesh/handlers/checkHandler';
 
 describe('checkApiMeshEnabled', () => {
     describe('returns false when mesh service not found', () => {

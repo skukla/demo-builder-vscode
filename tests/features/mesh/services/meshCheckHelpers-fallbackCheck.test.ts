@@ -2,9 +2,12 @@
  * Tests for fallbackMeshCheck helper function
  *
  * Tests fallback mesh detection using CLI output pattern matching.
+ *
+ * Note: Function was inlined into checkHandler.ts (Step 6.3)
+ * per "Extract for Reuse, Section for Clarity" SOP.
  */
 
-import { fallbackMeshCheck } from '@/features/mesh/services/meshCheckHelpers';
+import { fallbackMeshCheck } from '@/features/mesh/handlers/checkHandler';
 import { CommandExecutor } from '@/core/shell';
 
 describe('fallbackMeshCheck', () => {
