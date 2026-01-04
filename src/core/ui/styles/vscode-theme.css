@@ -264,14 +264,14 @@
 
     [class*="spectrum-Icon--sizeL"] svg,
     [class*="spectrum-Icon--sizeL"] {
-        width: calc(var(--spectrum-alias-workflow-icon-size, 18px) * 2);
-        height: calc(var(--spectrum-alias-workflow-icon-size, 18px) * 2);
+        width: var(--spectrum-global-dimension-size-300, 24px);
+        height: var(--spectrum-global-dimension-size-300, 24px);
     }
 
     [class*="spectrum-Icon--sizeXL"] svg,
     [class*="spectrum-Icon--sizeXL"] {
-        width: calc(var(--spectrum-global-dimension-size-300, 24px) * 2);
-        height: calc(var(--spectrum-global-dimension-size-300, 24px) * 2);
+        width: calc(var(--spectrum-alias-workflow-icon-size, 18px) * 2);
+        height: calc(var(--spectrum-alias-workflow-icon-size, 18px) * 2);
     }
 
     /* Ensure SVGs inside icons inherit fill */
