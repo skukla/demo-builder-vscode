@@ -17,11 +17,14 @@ import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
-import styles from '../styles/dashboard.module.css';
+import stylesImport from '../styles/dashboard.module.css';
 import {
     ActionButton,
     Text,
 } from '@/core/ui/components/aria';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 import { GridLayout } from '@/core/ui/components/layout';
 
 /**

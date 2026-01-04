@@ -134,7 +134,8 @@ describe('Sidebar', () => {
 
             // Project context now renders UtilityBar, not project details
             // With no icon callbacks, it renders an empty utility bar
-            expect(container.querySelector('.sidebar-utility-bar')).toBeInTheDocument();
+            // CSS Modules transforms .utilityBar to 'utilityBar' class
+            expect(container.querySelector('[class*="utilityBar"]')).toBeInTheDocument();
         });
 
         it('should render Documentation icon when onOpenDocs provided (project context)', () => {

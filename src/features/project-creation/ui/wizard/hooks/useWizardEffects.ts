@@ -1,8 +1,25 @@
 import { useEffect, useRef } from 'react';
 import { getCompletedStepIndices } from '../wizardHelpers';
 import { FOCUSABLE_SELECTOR } from '@/core/ui/hooks';
-import { hasValidTitle } from '@/core/ui/utils/titleHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER TYPES & FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Item with optional title and name properties */
+interface TitleableItem {
+    title?: string;
+    name?: string;
+}
+
+/**
+ * Check if an item has a valid title (exists and differs from name).
+ */
+function hasValidTitle(item: TitleableItem | null | undefined): boolean {
+    if (!item) return false;
+    return Boolean(item.title && item.title !== item.name);
+}
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

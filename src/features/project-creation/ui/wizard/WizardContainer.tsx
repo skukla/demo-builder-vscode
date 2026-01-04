@@ -331,7 +331,6 @@ export function WizardContainer({
                     >
                         <div
                             className={cn(
-                                'h-full',
                                 'w-full',
                                 'step-content',
                                 animationDirection,

@@ -153,6 +153,58 @@ describe('GitHubServiceCard', () => {
             // Then: onChangeAccount should be called
             expect(mockOnChangeAccount).toHaveBeenCalledTimes(1);
         });
+
+        it('should show only Connected text when compact and authenticated', async () => {
+            // Given: User is authenticated with compact=true
+            const { GitHubServiceCard } = await import(
+                '@/features/eds/ui/components/GitHubServiceCard'
+            );
+
+            // When: Component renders with compact mode
+            render(
+                <TestWrapper>
+                    <GitHubServiceCard
+                        isChecking={false}
+                        isAuthenticating={false}
+                        isAuthenticated={true}
+                        user={{ login: 'testuser' }}
+                        compact={true}
+                        onConnect={mockOnConnect}
+                        onChangeAccount={mockOnChangeAccount}
+                    />
+                </TestWrapper>
+            );
+
+            // Then: Should show "Connected" text only
+            expect(screen.getByText('Connected')).toBeInTheDocument();
+            // And: Should NOT show the username
+            expect(screen.queryByText('testuser')).not.toBeInTheDocument();
+        });
+
+        it('should not show Change button when compact and authenticated', async () => {
+            // Given: User is authenticated with compact=true
+            const { GitHubServiceCard } = await import(
+                '@/features/eds/ui/components/GitHubServiceCard'
+            );
+
+            // When: Component renders with compact mode
+            render(
+                <TestWrapper>
+                    <GitHubServiceCard
+                        isChecking={false}
+                        isAuthenticating={false}
+                        isAuthenticated={true}
+                        user={{ login: 'testuser' }}
+                        compact={true}
+                        onConnect={mockOnConnect}
+                        onChangeAccount={mockOnChangeAccount}
+                    />
+                </TestWrapper>
+            );
+
+            // Then: Should NOT show change button in compact mode
+            expect(screen.queryByRole('button', { name: /change/i })).not.toBeInTheDocument();
+        });
     });
 
     describe('Connect Button', () => {

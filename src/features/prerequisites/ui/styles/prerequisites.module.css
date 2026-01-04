@@ -174,3 +174,79 @@
 .prerequisiteItem button {
     transition: opacity 0.3s ease, transform 0.2s ease;
 }
+
+/* ===========================================
+   Layout Classes (migrated from inline styles)
+   =========================================== */
+
+/**
+ * Prerequisites list container
+ * Replaces: <Flex direction="column" gap="size-150">
+ */
+.prerequisitesList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* size-150 */
+}
+
+/**
+ * Recheck section container
+ * Replaces: <Flex gap="size-150" marginTop="size-200">
+ */
+.recheckSection {
+    display: flex;
+    gap: 12px; /* size-150 */
+    margin-top: 16px; /* size-200 */
+}
+
+/**
+ * Plugin item row
+ * Replaces: <Flex alignItems="center" marginBottom="size-50">
+ */
+.pluginItemRow {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px; /* size-50 */
+}
+
+/**
+ * Version item row (same as pluginItemRow)
+ * For renderNodeVersionSuccess and renderAioCliErrorVersions
+ */
+.versionItemRow {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px; /* size-50 */
+}
+
+/**
+ * Progress bar container
+ * Replaces: <View marginTop="size-100">
+ */
+.progressBarContainer {
+    margin-top: 8px; /* size-100 */
+}
+
+/**
+ * Plugin details container - standard spacing
+ * Replaces: <View marginTop="size-100">
+ */
+.pluginDetails {
+    margin-top: 8px; /* size-100 */
+}
+
+/**
+ * Plugin details container - compact spacing when nodeVersionStatus exists
+ * Replaces: <View marginTop="size-50">
+ */
+.pluginDetailsCompact {
+    margin-top: 4px; /* size-50 */
+}
+
+/**
+ * Description text with bottom margin
+ * Replaces: <Text marginBottom="size-200">
+ */
+.descriptionText {
+    margin-bottom: 16px; /* size-200 */
+}

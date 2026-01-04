@@ -10,8 +10,11 @@ import React, { useState } from 'react';
 import { GitHubServiceCard, DaLiveServiceCard } from '../components';
 import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
 import { useGitHubAuth } from '../hooks/useGitHubAuth';
-import styles from '../styles/connect-services.module.css';
+import stylesImport from '../styles/connect-services.module.css';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 import { useCanProceedAll } from '@/core/ui/hooks';
 import type { BaseStepProps } from '@/types/wizard';
 

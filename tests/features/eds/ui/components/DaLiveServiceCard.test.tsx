@@ -200,6 +200,64 @@ describe('DaLiveServiceCard', () => {
             // Then: onReset should be called
             expect(mockOnReset).toHaveBeenCalledTimes(1);
         });
+
+        it('should show only Connected text when compact and authenticated', async () => {
+            // Given: User is authenticated with compact=true
+            const { DaLiveServiceCard } = await import(
+                '@/features/eds/ui/components/DaLiveServiceCard'
+            );
+
+            // When: Component renders with compact mode
+            render(
+                <TestWrapper>
+                    <DaLiveServiceCard
+                        isChecking={false}
+                        isAuthenticating={false}
+                        isAuthenticated={true}
+                        verifiedOrg="my-org"
+                        showInput={false}
+                        compact={true}
+                        onSetup={mockOnSetup}
+                        onSubmit={mockOnSubmit}
+                        onReset={mockOnReset}
+                        onCancelInput={mockOnCancelInput}
+                    />
+                </TestWrapper>
+            );
+
+            // Then: Should show "Connected" text only
+            expect(screen.getByText('Connected')).toBeInTheDocument();
+            // And: Should NOT show the org name
+            expect(screen.queryByText('my-org')).not.toBeInTheDocument();
+        });
+
+        it('should not show Change button when compact and authenticated', async () => {
+            // Given: User is authenticated with compact=true
+            const { DaLiveServiceCard } = await import(
+                '@/features/eds/ui/components/DaLiveServiceCard'
+            );
+
+            // When: Component renders with compact mode
+            render(
+                <TestWrapper>
+                    <DaLiveServiceCard
+                        isChecking={false}
+                        isAuthenticating={false}
+                        isAuthenticated={true}
+                        verifiedOrg="my-org"
+                        showInput={false}
+                        compact={true}
+                        onSetup={mockOnSetup}
+                        onSubmit={mockOnSubmit}
+                        onReset={mockOnReset}
+                        onCancelInput={mockOnCancelInput}
+                    />
+                </TestWrapper>
+            );
+
+            // Then: Should NOT show change button in compact mode
+            expect(screen.queryByRole('button', { name: /change/i })).not.toBeInTheDocument();
+        });
     });
 
     describe('Input Form', () => {

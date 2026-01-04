@@ -16,7 +16,11 @@ import { DashboardEmptyState } from './components/DashboardEmptyState';
 import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { buildMenuItems } from './projectsDashboardHelpers';
-import styles from './styles/projects-dashboard.module.css';
+import stylesImport from './styles/projects-dashboard.module.css';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
+
 import {
     View,
     Flex,

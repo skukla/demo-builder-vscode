@@ -9,8 +9,11 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import styles from '../styles/projects-dashboard.module.css';
+import stylesImport from '../styles/projects-dashboard.module.css';
 import { ProjectActionsMenu } from './ProjectActionsMenu';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 import { Flex, Text } from '@/core/ui/components/aria';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';

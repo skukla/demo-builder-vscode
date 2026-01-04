@@ -6,8 +6,11 @@
 
 import React from 'react';
 import type { NavItem } from '../../types';
-import styles from '../styles/sidebar.module.css';
+import stylesImport from '../styles/sidebar.module.css';
 import { Flex, Text } from '@/core/ui/components/aria';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export interface SidebarNavProps {
     /** Navigation items to display */

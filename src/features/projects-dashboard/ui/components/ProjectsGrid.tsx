@@ -5,8 +5,11 @@
  */
 
 import React from 'react';
-import styles from '../styles/projects-dashboard.module.css';
+import stylesImport from '../styles/projects-dashboard.module.css';
 import { ProjectCard } from './ProjectCard';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 import type { Project } from '@/types/base';
 
 export interface ProjectsGridProps {

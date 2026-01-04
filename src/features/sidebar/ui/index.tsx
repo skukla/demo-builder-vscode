@@ -10,7 +10,8 @@ import { createRoot } from 'react-dom/client';
 import type { SidebarContext } from '../types';
 import { Sidebar } from './Sidebar';
 import { Flex, ProgressCircle } from '@/core/ui/components/aria';
-import '@/core/ui/styles/custom-spectrum.css';
+// Import global styles - index.css includes vscode-theme.css with Spectrum icon styles
+import '@/core/ui/styles/index.css';
 
 // Acquire VS Code API
 declare const acquireVsCodeApi: () => {

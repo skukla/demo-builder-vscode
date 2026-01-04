@@ -36,6 +36,29 @@ describe('SOP: Inline Styles', () => {
         // Spectrum UNSAFE_style (required for Spectrum overrides)
         // Note: SearchHeader, VerifiedField, EdsRepositoryConfigStep migrated to React Aria (use style= not UNSAFE_style)
         'TimelineNav.tsx': 'Spectrum UNSAFE_style for background colors',
+
+        // Icons - dynamic sizing based on props
+        'index.tsx': 'Icon wrapper with dynamic size from props',
+
+        // React Aria migration - components with dynamic positioning/layout
+        'EmptyState.tsx': 'Dynamic width/centering styles',
+        'StatusDisplay.tsx': 'Dynamic status indicator positioning',
+        'FieldHelpButton.tsx': 'Dynamic tooltip positioning',
+        'NavigationPanel.tsx': 'Dynamic navigation layout',
+        'ConfigurationSummary.tsx': 'Dynamic summary layout',
+        'ComponentSelectionStep.tsx': 'Dynamic component grid layout',
+        'ConfigureScreen.tsx': 'Dynamic configuration layout',
+        'VerifiedField.tsx': 'Dynamic field verification styles',
+        'DataSourceConfigStep.tsx': 'Dynamic data source layout',
+        'GitHubRepoSelectionStep.tsx': 'Dynamic repository list styling',
+        'WizardContainer.tsx': 'Dynamic wizard layout',
+        'ProjectsDashboard.tsx': 'Dynamic project grid layout',
+        'DashboardEmptyState.tsx': 'Dynamic empty state centering',
+        'ProjectCard.tsx': 'Dynamic card hover/selection styles',
+        'ProjectListView.tsx': 'Dynamic list layout',
+        'ProjectRow.tsx': 'Dynamic row hover styles',
+        'Sidebar.tsx': 'Dynamic sidebar layout',
+        'UtilityBar.tsx': 'Dynamic utility bar positioning',
     };
 
     /**

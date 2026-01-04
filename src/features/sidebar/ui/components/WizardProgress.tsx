@@ -6,8 +6,11 @@
 
 import React from 'react';
 import type { WizardStep } from '../../types';
-import styles from '../styles/sidebar.module.css';
+import stylesImport from '../styles/sidebar.module.css';
 import { Text } from '@/core/ui/components/aria';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 export interface WizardProgressProps {
     /** Wizard steps */

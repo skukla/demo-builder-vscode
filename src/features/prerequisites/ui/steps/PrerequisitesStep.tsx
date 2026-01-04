@@ -1,5 +1,9 @@
 import React, { useRef, useCallback } from 'react';
-import styles from '../styles/prerequisites.module.css';
+import stylesImport from '../styles/prerequisites.module.css';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
+
 import {
     usePrerequisiteState,
     usePrerequisiteAutoScroll,
@@ -11,8 +15,6 @@ import {
     renderPrerequisiteMessage,
 } from './hooks';
 import {
-    View,
-    Flex,
     Text,
     Button,
     ProgressBar,
@@ -68,14 +70,14 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
 
     return (
         <div className="container-wizard">
-            <Text marginBottom="size-200" className={cn('text-gray-700', 'text-md')}>
+            <Text className={cn(styles.descriptionText, 'text-gray-700', 'text-md')}>
                 Checking required tools. Missing tools can be installed automatically.
             </Text>
 
             <div
                 ref={scrollContainerRef}
                 className={styles.prerequisitesContainer}>
-                <Flex direction="column" gap="size-150">
+                <div className={styles.prerequisitesList}>
                     {checks.map((check, index) => (
                         <div
                             key={check.name}
@@ -117,7 +119,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                             <div className={styles.prerequisiteExpandable}>
                                 {renderPrerequisiteMessage(check)}
                                 {check.status === 'checking' && check.unifiedProgress && (
-                                    <View marginTop="size-100" className="animate-fade-in">
+                                    <div className={cn(styles.progressBarContainer, 'animate-fade-in')}>
                                         <ProgressBar
                                             label={
                                                 `Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}${
@@ -129,11 +131,14 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                                             size="S"
                                             className="progress-bar-spacing progress-bar-small-label progress-bar-full-width"
                                         />
-                                    </View>
+                                    </div>
                                 )}
                                 {check.plugins && check.plugins.length > 0 &&
                                     shouldShowPluginDetails(check.status, check.nodeVersionStatus) && (
-                                    <View marginTop={check.nodeVersionStatus ? 'size-50' : 'size-100'} className="animate-fade-in">
+                                    <div className={cn(
+                                        check.nodeVersionStatus ? styles.pluginDetailsCompact : styles.pluginDetails,
+                                        'animate-fade-in'
+                                    )}>
                                         {(() => {
                                             if (check.nodeVersionStatus && check.plugins.length === 1) {
                                                 const plugin = check.plugins[0];
@@ -142,38 +147,38 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                                                     .map(v => v.version)
                                                     .join(', ');
                                                 return (
-                                                    <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
+                                                    <div key={plugin.id} className={styles.pluginItemRow}>
                                                         <Text className={cn(check.status === 'success' ? 'text-sm' : styles.prerequisitePluginItem)}>
                                                             {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
                                                             {versions ? ` (${versions})` : ''}
                                                         </Text>
                                                         {renderPluginStatusIcon(check.status, plugin.installed)}
-                                                    </Flex>
+                                                    </div>
                                                 );
                                             }
                                             return (
                                                 <>
                                                     {check.plugins.map(plugin => (
-                                                        <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
+                                                        <div key={plugin.id} className={styles.pluginItemRow}>
                                                             <Text className={cn(check.status === 'success' ? 'text-sm' : styles.prerequisitePluginItem)}>
                                                                 {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
                                                             </Text>
                                                             {renderPluginStatusIcon(check.status, plugin.installed)}
-                                                        </Flex>
+                                                        </div>
                                                     ))}
                                                 </>
                                             );
                                         })()}
-                                    </View>
+                                    </div>
                                 )}
                             </div>
                         </div>
                     ))}
-                </Flex>
+                </div>
 
             </div>
 
-            <Flex gap="size-150" marginTop="size-200">
+            <div className={styles.recheckSection}>
                 <Button
                     variant="secondary"
                     onPress={() => checkPrerequisites(true)}
@@ -182,7 +187,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                 >
                     Recheck
                 </Button>
-            </Flex>
+            </div>
         </div>
     );
 }

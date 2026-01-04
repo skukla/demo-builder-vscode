@@ -134,7 +134,8 @@ describe('StackSelector', () => {
                 card.textContent?.includes('Headless')
             );
 
-            expect(headlessCard).toHaveAttribute('aria-selected', 'true');
+            // Component uses aria-pressed (button) not aria-selected (listbox item)
+            expect(headlessCard).toHaveAttribute('aria-pressed', 'true');
         });
 
         it('should not show selected state for unselected stacks', () => {
@@ -151,7 +152,8 @@ describe('StackSelector', () => {
                 card.textContent?.includes('Edge Delivery')
             );
 
-            expect(edgeDeliveryCard).toHaveAttribute('aria-selected', 'false');
+            // Component uses aria-pressed (button) not aria-selected (listbox item)
+            expect(edgeDeliveryCard).toHaveAttribute('aria-pressed', 'false');
         });
 
         it('should show no selected state when selectedStack is undefined', () => {
@@ -165,7 +167,8 @@ describe('StackSelector', () => {
 
             const cards = screen.getAllByTestId('stack-card');
             cards.forEach(card => {
-                expect(card).toHaveAttribute('aria-selected', 'false');
+                // Component uses aria-pressed (button) not aria-selected (listbox item)
+                expect(card).toHaveAttribute('aria-pressed', 'false');
             });
         });
     });

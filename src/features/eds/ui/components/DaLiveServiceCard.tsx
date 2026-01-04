@@ -22,8 +22,11 @@
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState } from 'react';
-import styles from '../styles/connect-services.module.css';
-import { Flex, Text, ProgressCircle } from '@/core/ui/components/aria';
+import stylesImport from '../styles/connect-services.module.css';
+import { Text, ProgressCircle } from '@/core/ui/components/aria';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 /** Props for DaLiveServiceCard component */
 export interface DaLiveServiceCardProps {
@@ -93,6 +96,111 @@ export function DaLiveServiceCard({
         onCancelInput();
     };
 
+    /**
+     * Renders the status content based on current state.
+     * Uses explicit if/else for clarity instead of nested ternaries.
+     */
+    const renderStatusContent = (): React.ReactElement => {
+        // Loading state (checking or authenticating)
+        if (isLoading) {
+            return (
+                <div className={styles.statusRow}>
+                    <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
+                    <Text className={styles.statusText}>
+                        {isAuthenticating ? 'Verifying...' : 'Checking...'}
+                    </Text>
+                </div>
+            );
+        }
+
+        // Authenticated state
+        if (isAuthenticated) {
+            if (compact) {
+                return (
+                    <div className={styles.statusRow}>
+                        <CheckmarkCircle size="S" />
+                        <Text className={styles.statusText}>Connected</Text>
+                    </div>
+                );
+            }
+            return (
+                <div className={styles.statusRowSpaced}>
+                    <div className={styles.statusRow}>
+                        <CheckmarkCircle size="S" />
+                        <Text className={styles.statusText}>
+                            {verifiedOrg || 'Connected'}
+                        </Text>
+                    </div>
+                    <button className={styles.serviceActionLink} onClick={onReset}>
+                        Change
+                    </button>
+                </div>
+            );
+        }
+
+        // Input form state
+        if (showInput) {
+            return (
+                <div className={styles.daliveInputForm}>
+                    <input
+                        type="text"
+                        placeholder="Organization"
+                        value={orgValue}
+                        onChange={(e) => setOrgValue(e.target.value)}
+                        className={styles.serviceInput}
+                    />
+                    <input
+                        type="password"
+                        placeholder="Token"
+                        value={tokenValue}
+                        onChange={(e) => setTokenValue(e.target.value)}
+                        className={styles.serviceInput}
+                    />
+                    {error && (
+                        <Text className={styles.statusTextError}>{error}</Text>
+                    )}
+                    <div className={styles.buttonRow}>
+                        <button
+                            className={styles.serviceActionButton}
+                            onClick={handleSubmit}
+                            disabled={!canSubmit}
+                        >
+                            Verify
+                        </button>
+                        <button
+                            className={styles.serviceActionLink}
+                            onClick={handleCancel}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // Error state (without input form)
+        if (error) {
+            return (
+                <div className={styles.statusColumn}>
+                    <div className={styles.statusRow}>
+                        <Alert size="S" />
+                        <Text className={styles.statusTextError}>{error}</Text>
+                    </div>
+                    <button className={styles.serviceActionButton} onClick={onSetup}>
+                        Try Again
+                    </button>
+                </div>
+            );
+        }
+
+        // Default: Setup button
+        return (
+            <button className={styles.serviceActionButton} onClick={onSetup}>
+                {setupComplete ? 'Connect DA.live' : 'Set up DA.live'}
+            </button>
+        );
+    };
+
     return (
         <div
             className={styles.serviceCard}
@@ -106,82 +214,7 @@ export function DaLiveServiceCard({
                 Content authoring and management
             </div>
             <div className={styles.serviceCardStatus}>
-                {isLoading ? (
-                    <Flex alignItems="center" gap="size-100">
-                        <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
-                        <Text className={styles.statusText}>
-                            {isAuthenticating ? 'Verifying...' : 'Checking...'}
-                        </Text>
-                    </Flex>
-                ) : isAuthenticated ? (
-                    compact ? (
-                        <Flex alignItems="center" gap="size-100">
-                            <CheckmarkCircle size="S" />
-                            <Text className={styles.statusText}>Connected</Text>
-                        </Flex>
-                    ) : (
-                        <Flex alignItems="center" justifyContent="space-between">
-                            <Flex alignItems="center" gap="size-100">
-                                <CheckmarkCircle size="S" />
-                                <Text className={styles.statusText}>
-                                    {verifiedOrg || 'Connected'}
-                                </Text>
-                            </Flex>
-                            <button className={styles.serviceActionLink} onClick={onReset}>
-                                Change
-                            </button>
-                        </Flex>
-                    )
-                ) : showInput ? (
-                    <div className={styles.daliveInputForm}>
-                        <input
-                            type="text"
-                            placeholder="Organization"
-                            value={orgValue}
-                            onChange={(e) => setOrgValue(e.target.value)}
-                            className={styles.serviceInput}
-                        />
-                        <input
-                            type="password"
-                            placeholder="Token"
-                            value={tokenValue}
-                            onChange={(e) => setTokenValue(e.target.value)}
-                            className={styles.serviceInput}
-                        />
-                        {error && (
-                            <Text className={styles.statusTextError}>{error}</Text>
-                        )}
-                        <Flex gap="size-100">
-                            <button
-                                className={styles.serviceActionButton}
-                                onClick={handleSubmit}
-                                disabled={!canSubmit}
-                            >
-                                Verify
-                            </button>
-                            <button
-                                className={styles.serviceActionLink}
-                                onClick={handleCancel}
-                            >
-                                Cancel
-                            </button>
-                        </Flex>
-                    </div>
-                ) : error ? (
-                    <Flex direction="column" gap="size-100">
-                        <Flex alignItems="center" gap="size-100">
-                            <Alert size="S" />
-                            <Text className={styles.statusTextError}>{error}</Text>
-                        </Flex>
-                        <button className={styles.serviceActionButton} onClick={onSetup}>
-                            Try Again
-                        </button>
-                    </Flex>
-                ) : (
-                    <button className={styles.serviceActionButton} onClick={onSetup}>
-                        {setupComplete ? 'Connect DA.live' : 'Set up DA.live'}
-                    </button>
-                )}
+                {renderStatusContent()}
             </div>
         </div>
     );

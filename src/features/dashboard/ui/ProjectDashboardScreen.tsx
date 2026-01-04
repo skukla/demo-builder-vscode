@@ -12,7 +12,11 @@ import { ActionGrid } from './components/ActionGrid';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
-import styles from './styles/dashboard.module.css';
+import stylesImport from './styles/dashboard.module.css';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
+
 import {
     View,
     Flex,

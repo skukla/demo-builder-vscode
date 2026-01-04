@@ -323,3 +323,16 @@
     color: var(--spectrum-global-color-gray-600);
     line-height: 1.4;
 }
+
+/* ===========================================
+   Services Section (migrated from inline styles)
+   =========================================== */
+
+/**
+ * Divider for services section
+ * Replaces: <Divider marginTop="size-300" marginBottom="size-200">
+ */
+.servicesDivider {
+    margin-top: 24px; /* size-300 */
+    margin-bottom: 16px; /* size-200 */
+}

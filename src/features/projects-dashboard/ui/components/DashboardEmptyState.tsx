@@ -7,7 +7,7 @@
 import Add from '@spectrum-icons/workflow/Add';
 import Import from '@spectrum-icons/workflow/Import';
 import React, { useEffect, useRef } from 'react';
-import { Flex, Text, Button } from '@/core/ui/components/aria';
+import { Flex, Text, Heading, Button } from '@/core/ui/components/aria';
 
 export interface DashboardEmptyStateProps {
     /** Callback when the create button is clicked */
@@ -54,10 +54,10 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
                 gap="size-300"
                 className="centered-content-narrow"
             >
-                <Text className="text-lg">
-                    <strong>{title}</strong>
-                </Text>
-                <Text className="description-text">
+                <Heading level={3} marginBottom="size-100">
+                    {title}
+                </Heading>
+                <Text className="text-gray-600">
                     Get started by creating your first demo project.
                 </Text>
                 <Flex gap="size-200" alignItems="center">
@@ -66,7 +66,7 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
                         variant="cta"
                         onPress={onCreate}
                     >
-                        <Add />
+                        <Add size="S" />
                         <Text>{buttonText}</Text>
                     </Button>
 
@@ -76,7 +76,7 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
                             variant="secondary"
                             onPress={onImportFromFile}
                         >
-                            <Import />
+                            <Import size="S" />
                             <Text>Import</Text>
                         </Button>
                     )}

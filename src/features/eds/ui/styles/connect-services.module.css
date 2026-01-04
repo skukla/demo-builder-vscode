@@ -154,3 +154,46 @@
     display: flex;
     flex-direction: column;
 }
+
+/* ===========================================
+   Status Layout Classes (migrated from inline styles)
+   =========================================== */
+
+/**
+ * Status row - horizontal alignment with gap
+ * Replaces: <Flex alignItems="center" gap="size-100">
+ */
+.statusRow {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* size-100 */
+}
+
+/**
+ * Status row with space-between
+ * Replaces: <Flex alignItems="center" justifyContent="space-between">
+ */
+.statusRowSpaced {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/**
+ * Status column - vertical layout with gap
+ * Replaces: <Flex direction="column" gap="size-100">
+ */
+.statusColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* size-100 */
+}
+
+/**
+ * Button row - horizontal layout with gap
+ * Replaces: <Flex gap="size-100">
+ */
+.buttonRow {
+    display: flex;
+    gap: 8px; /* size-100 */
+}

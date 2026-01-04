@@ -3,8 +3,11 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import React from 'react';
-import styles from '../../styles/prerequisites.module.css';
-import { View, Flex, Text } from '@/core/ui/components/aria';
+import stylesImport from '../../styles/prerequisites.module.css';
+import { View, Text } from '@/core/ui/components/aria';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { cn } from '@/core/ui/utils/classNames';
 import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
@@ -82,13 +85,13 @@ export function renderNodeVersionSuccess(message: string): React.ReactNode {
         const component = match?.[2] || '';
 
         return (
-            <Flex key={idx} alignItems="center" marginBottom="size-50">
+            <div key={idx} className={styles.versionItemRow}>
                 <Text className={cn('animate-fade-in', 'text-sm')}>
                     {version}
                     {component && ` (${component})`}
                 </Text>
                 <span className="text-green-600 ml-50"><CheckmarkCircle size="XS" /></span>
-            </Flex>
+            </div>
         );
     });
 }
@@ -100,10 +103,10 @@ export function renderAioCliErrorVersions(message: string): React.ReactNode {
     const nodes = (message.match(/Node\s+([\d.]+)/g) || []).map(s => s.replace('Node ', 'Node '));
     if (nodes.length) {
         return nodes.map((n, idx) => (
-            <Flex key={idx} alignItems="center" marginBottom="size-50">
+            <div key={idx} className={styles.versionItemRow}>
                 <Text className={cn('animate-fade-in', 'text-sm')}>{n}</Text>
                 <span className="text-red-600 ml-50"><CloseCircle size="XS" /></span>
-            </Flex>
+            </div>
         ));
     }
     return null;
@@ -118,7 +121,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
         return (
             <View className={cn(styles.prerequisiteMessage, 'animate-fade-in')}>
                 {check.nodeVersionStatus.map((item, idx) => (
-                    <Flex key={idx} alignItems="center" marginBottom="size-50">
+                    <div key={idx} className={styles.versionItemRow}>
                         <Text className={cn('animate-fade-in', 'text-sm')}>
                             {item.version}
                             {item.component ? ` – ${item.component}` : ''}
@@ -128,7 +131,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
                         ) : (
                             <span className="text-red-600 ml-50"><CloseCircle size="XS" /></span>
                         )}
-                    </Flex>
+                    </div>
                 ))}
             </View>
         );

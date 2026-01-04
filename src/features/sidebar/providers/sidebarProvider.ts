@@ -600,7 +600,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         }
     </style>
 </head>
-<body>
+<body class="vscode-dark spectrum--dark">
     <div id="root">
         <div class="initial-spinner">
             <div class="spinner"></div>

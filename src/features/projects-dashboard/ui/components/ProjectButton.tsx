@@ -7,8 +7,11 @@
  */
 
 import React, { useCallback } from 'react';
-import styles from '../styles/projects-dashboard.module.css';
+import stylesImport from '../styles/projects-dashboard.module.css';
 import { Flex, Text } from '@/core/ui/components/aria';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import {
     getStatusText,

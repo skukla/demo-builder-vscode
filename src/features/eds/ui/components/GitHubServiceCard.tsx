@@ -19,8 +19,11 @@
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
-import styles from '../styles/connect-services.module.css';
-import { Flex, Text, ProgressCircle } from '@/core/ui/components/aria';
+import stylesImport from '../styles/connect-services.module.css';
+import { Text, ProgressCircle } from '@/core/ui/components/aria';
+
+// Defensive: handle case where CSS Module import fails during bundling
+const styles = stylesImport || {};
 
 /** GitHub user information */
 export interface GitHubUser {
@@ -74,6 +77,73 @@ export function GitHubServiceCard({
 }: GitHubServiceCardProps): React.ReactElement {
     const isLoading = isChecking || isAuthenticating;
 
+    /**
+     * Renders the status content based on current state.
+     * Uses explicit if/else for clarity instead of nested ternaries.
+     */
+    const renderStatusContent = (): React.ReactElement => {
+        // Loading state (checking or authenticating)
+        if (isLoading) {
+            return (
+                <div className={styles.statusRow}>
+                    <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
+                    <Text className={styles.statusText}>
+                        {isAuthenticating ? 'Connecting...' : 'Checking...'}
+                    </Text>
+                </div>
+            );
+        }
+
+        // Authenticated state
+        if (isAuthenticated && user) {
+            if (compact) {
+                return (
+                    <div className={styles.statusRow}>
+                        <CheckmarkCircle size="S" />
+                        <Text className={styles.statusText}>Connected</Text>
+                    </div>
+                );
+            }
+            return (
+                <div className={styles.statusRowSpaced}>
+                    <div className={styles.statusRow}>
+                        <CheckmarkCircle size="S" />
+                        <Text className={styles.statusText}>
+                            {user.login}
+                        </Text>
+                    </div>
+                    {onChangeAccount && (
+                        <button className={styles.serviceActionLink} onClick={onChangeAccount}>
+                            Change
+                        </button>
+                    )}
+                </div>
+            );
+        }
+
+        // Error state
+        if (error) {
+            return (
+                <div className={styles.statusColumn}>
+                    <div className={styles.statusRow}>
+                        <Alert size="S" />
+                        <Text className={styles.statusTextError}>{error}</Text>
+                    </div>
+                    <button className={styles.serviceActionButton} onClick={onConnect}>
+                        Try Again
+                    </button>
+                </div>
+            );
+        }
+
+        // Default: Connect button
+        return (
+            <button className={styles.serviceActionButton} onClick={onConnect}>
+                Connect GitHub
+            </button>
+        );
+    };
+
     return (
         <div
             className={styles.serviceCard}
@@ -89,49 +159,7 @@ export function GitHubServiceCard({
                 Repository for your project code
             </div>
             <div className={styles.serviceCardStatus}>
-                {isLoading ? (
-                    <Flex alignItems="center" gap="size-100">
-                        <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
-                        <Text className={styles.statusText}>
-                            {isAuthenticating ? 'Connecting...' : 'Checking...'}
-                        </Text>
-                    </Flex>
-                ) : isAuthenticated && user ? (
-                    compact ? (
-                        <Flex alignItems="center" gap="size-100">
-                            <CheckmarkCircle size="S" />
-                            <Text className={styles.statusText}>Connected</Text>
-                        </Flex>
-                    ) : (
-                        <Flex alignItems="center" justifyContent="space-between">
-                            <Flex alignItems="center" gap="size-100">
-                                <CheckmarkCircle size="S" />
-                                <Text className={styles.statusText}>
-                                    {user.login}
-                                </Text>
-                            </Flex>
-                            {onChangeAccount && (
-                                <button className={styles.serviceActionLink} onClick={onChangeAccount}>
-                                    Change
-                                </button>
-                            )}
-                        </Flex>
-                    )
-                ) : error ? (
-                    <Flex direction="column" gap="size-100">
-                        <Flex alignItems="center" gap="size-100">
-                            <Alert size="S" />
-                            <Text className={styles.statusTextError}>{error}</Text>
-                        </Flex>
-                        <button className={styles.serviceActionButton} onClick={onConnect}>
-                            Try Again
-                        </button>
-                    </Flex>
-                ) : (
-                    <button className={styles.serviceActionButton} onClick={onConnect}>
-                        Connect GitHub
-                    </button>
-                )}
+                {renderStatusContent()}
             </div>
         </div>
     );

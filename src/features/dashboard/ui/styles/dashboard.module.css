@@ -47,8 +47,11 @@
 /* ===========================================
    Dashboard Action Buttons
    Matches project-card-spectrum patterns
+
+   Uses .grid descendant selector for higher specificity
+   to override base ActionButton.module.css styles.
    =========================================== */
-.actionButton {
+.grid .actionButton {
     /* Base - lighter background matching cards */
     background: var(--spectrum-global-color-gray-50);
     border-radius: 8px;
@@ -73,13 +76,13 @@
 }
 
 /* Scale icons */
-.actionButton svg {
+.grid .actionButton svg {
     width: 28px;
     height: 28px;
 }
 
-.actionButton:hover,
-.actionButton:focus {
+.grid .actionButton:hover,
+.grid .actionButton:focus {
     /* Layered depth matching cards */
     background: var(--spectrum-global-color-gray-75);
     border-color: var(--spectrum-global-color-gray-400);
@@ -93,22 +96,22 @@
     outline: none;
 }
 
-.actionButton:focus-visible {
+.grid .actionButton:focus-visible {
     outline: 2px solid var(--spectrum-global-color-blue-400);
     outline-offset: 2px;
 }
 
 /* Prevent internal Spectrum elements from showing their own hover states */
-.actionButton:hover *,
-.actionButton:focus * {
+.grid .actionButton:hover *,
+.grid .actionButton:focus * {
     background: transparent;
     background-color: transparent;
 }
 
 /* Temporarily suppress hover/focus after click to prevent stuck state during layout shift */
-.hoverSuppressed,
-.hoverSuppressed:hover,
-.hoverSuppressed:focus {
+.grid .hoverSuppressed,
+.grid .hoverSuppressed:hover,
+.grid .hoverSuppressed:focus {
     background: var(--spectrum-global-color-gray-50);
     border-color: var(--spectrum-global-color-gray-300);
     transform: none;
