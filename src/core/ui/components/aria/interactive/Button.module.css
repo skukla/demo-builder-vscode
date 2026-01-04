@@ -29,6 +29,7 @@
     padding: var(--spectrum-global-dimension-size-50) calc(var(--spectrum-global-dimension-size-200) - 2px);
     padding-block-start: calc(var(--spectrum-global-dimension-size-50) - 1px);
     padding-block-end: calc(var(--spectrum-global-dimension-size-50) + 1px);
+    margin: 0;
     border-width: 2px;
     border-style: solid;
     border-color: transparent;
@@ -37,6 +38,10 @@
     font-size: var(--spectrum-alias-font-size-default);
     font-weight: 700;
     line-height: var(--spectrum-alias-body-text-line-height);
+    text-align: center;
+    text-transform: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     cursor: pointer;
     outline: none;
     transition: background-color 130ms ease-out, border-color 130ms ease-out;
