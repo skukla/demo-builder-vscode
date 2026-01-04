@@ -556,6 +556,26 @@ Each core module has one clear purpose:
 ### 4. Avoid Circular Dependencies
 Core → Features → Commands (one-way dependency flow)
 
+### 5. Mixed DI Patterns (Intentional)
+
+The codebase uses **three DI patterns** deliberately chosen for different contexts:
+
+| Pattern | When Used | Example |
+|---------|-----------|---------|
+| **ServiceLocator** | Core singletons, extension-scoped services | `getLogger()`, `getStateManager()` |
+| **Constructor Injection** | Class dependencies, testability priority | `BaseCommand(context, stateManager)` |
+| **Factory Functions** | Stateless utilities, handler creation | `createErrorResponse()`, `wrapHandler()` |
+
+**Why Not a Unified Strategy Pattern?**
+
+A unified strategy/interface pattern was explicitly rejected (commit 902e6fd) because:
+- Added abstraction layer without benefit for this codebase size
+- Each pattern serves distinct use case with clear boundaries
+- Simpler code is more maintainable than "correct" architecture
+- VS Code extension context makes some patterns more natural
+
+**Guideline**: Match the pattern to existing similar code. Don't abstract prematurely.
+
 ## Testing Core Modules
 
 Core modules should have comprehensive tests:

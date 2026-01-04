@@ -626,8 +626,12 @@ function DashboardContent() { ... }
 | Function length | 1-30 | 31-50 | 51+ |
 | Parameter count | 1-3 | 4-5 | 6+ |
 | Nesting depth | 1-2 | 3 | 4+ |
-| File length | 1-200 | 201-400 | 401+ |
+| File length (handler) | 1-500 | 501-800 | 801+ |
+| File length (component) | 1-300 | 301-450 | 451+ |
+| File length (service) | 1-400 | 401-600 | 601+ |
 | Class method count | 1-10 | 11-20 | 21+ |
+
+**Note**: File length thresholds are higher than traditional guidance. Files can exceed thresholds if organized with section headers and all code relates to a single responsibility. See `god-file-decomposition.md` for the "Extract for Reuse, Section for Clarity" philosophy.
 
 ---
 

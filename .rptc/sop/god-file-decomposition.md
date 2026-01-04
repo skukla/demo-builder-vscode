@@ -1,7 +1,7 @@
 # God File Decomposition - Project-Specific SOP
 
-**Version**: 1.0.0
-**Last Updated**: 2025-12-17
+**Version**: 1.1.0
+**Last Updated**: 2026-01-03
 **Priority**: Project-specific
 
 ---
@@ -9,6 +9,10 @@
 ## Overview
 
 This SOP defines detection criteria, decomposition patterns, and refactoring workflows for "god files" - large files with multiple responsibilities that violate the Single Responsibility Principle. God files are maintenance hazards that make code harder to understand, test, and modify.
+
+**Core Philosophy**: **Extract for Reuse, Section for Clarity**
+
+Files should only be split when code is genuinely reused (2+ callers). For single-caller code, use section headers for organization rather than file extraction. Premature extraction creates artificial boundaries and increases cognitive overhead without benefit.
 
 ---
 
@@ -18,11 +22,16 @@ This SOP defines detection criteria, decomposition patterns, and refactoring wor
 
 | File Type | Warning | Action Required | Notes |
 |-----------|---------|-----------------|-------|
-| **Service classes** (`.ts`) | >300 lines | >400 lines | Multiple entity domains or operations |
-| **React components** (`.tsx`) | >250 lines | >350 lines | Mixed rendering, state, and logic |
-| **Handler files** (`.ts`) | >350 lines | >500 lines | After helper extraction |
-| **Utility files** (`.ts`) | >200 lines | >300 lines | Too many unrelated utilities |
-| **Hook files** (`.ts`) | >150 lines | >200 lines | Should be single-purpose |
+| **Service classes** (`.ts`) | >400 lines | >600 lines | Multiple entity domains or operations |
+| **React components** (`.tsx`) | >300 lines | >450 lines | Mixed rendering, state, and logic |
+| **Handler files** (`.ts`) | >500 lines | >800 lines | Section headers preferred over extraction |
+| **Utility files** (`.ts`) | >250 lines | >400 lines | Only unrelated utilities grouped together |
+| **Hook files** (`.ts`) | >150 lines | >250 lines | Should be single-purpose |
+
+**Important**: Line count alone does NOT trigger extraction. Files can exceed thresholds if:
+- All code relates to a single responsibility
+- Code is organized with clear section headers
+- Helper functions are only used by a single parent (no reuse)
 
 ### Coupling Indicators (beyond line count)
 
@@ -167,49 +176,83 @@ function WizardContainer() {
 
 ---
 
-### Pattern C: Helper Extraction (Handler Files)
+### Pattern C: Section-Based Organization (Handler Files) ⭐ PREFERRED
 
-**When to use**: Handler file has shared logic, type guards, or utility functions.
+**When to use**: Handler file has related logic that's only used by one caller (no reuse).
+
+**Key Principle**: Extract for reuse, section for clarity. If helpers are only used by one handler, keep them in the same file with section headers.
 
 **Structure**:
 ```
-godHandlers.ts (784 lines)
-↓ Decompose to:
-├── godHelpers.ts (~200 lines)         ← Pure helper functions
-├── godTypeGuards.ts (~50 lines)       ← Type guard functions
-└── godHandlers.ts (~500 lines)        ← Message handlers only
+checkHandler.ts (500 lines)
+├── // ─────────────────────────────────────────────────────────────────────────────
+├── // TYPES
+├── // ─────────────────────────────────────────────────────────────────────────────
+├── interface NodePrerequisiteCheckResult { ... }
+├── interface PerNodeVersionStatusResult { ... }
+├──
+├── // ─────────────────────────────────────────────────────────────────────────────
+├── // NODE VERSION CHECKING
+├── // ─────────────────────────────────────────────────────────────────────────────
+├── function checkNodePrerequisite(...) { ... }
+├──
+├── // ─────────────────────────────────────────────────────────────────────────────
+├── // PER-NODE-VERSION STATUS BUILDING
+├── // ─────────────────────────────────────────────────────────────────────────────
+├── function buildPerNodeVersionStatus(...) { ... }
+├──
+├── // ─────────────────────────────────────────────────────────────────────────────
+├── // MAIN HANDLER
+├── // ─────────────────────────────────────────────────────────────────────────────
+└── export async function handleCheckPrerequisites(...) { ... }
+```
+
+**Benefits**:
+- Single file = single context to understand
+- No import/export ceremony for internal code
+- Section headers provide visual navigation
+- IDE "Go to Symbol" works for all functions
+- Easier refactoring (no cross-file changes)
+
+---
+
+### Pattern D: Helper Extraction (Multi-Caller Reuse)
+
+**When to use**: Helper functions are used by **2+ different callers** (actual reuse, not hypothetical).
+
+**Structure**:
+```
+handlers/
+├── shared.ts (~200 lines)             ← Shared helpers (2+ callers)
+├── checkHandler.ts (~500 lines)       ← Uses shared + internal helpers
+└── installHandler.ts (~400 lines)     ← Uses shared + internal helpers
 ```
 
 **Implementation**:
 ```typescript
-// ❌ BEFORE: Handlers mixed with helpers
-// godHandlers.ts
-function hasAdobeWorkspaceContext(data: unknown): data is WithWorkspace { /* ... */ }
-function buildStatusPayload(project: Project): StatusPayload { /* ... */ }
-function determineMeshStatus(record: MeshRecord): MeshStatus { /* ... */ }
+// ✅ shared.ts - ONLY for code with 2+ callers
+// Used by: checkHandler.ts, continueHandler.ts, installHandler.ts
+export function getNodeVersionMapping(context: HandlerContext): Record<string, string> { /* ... */ }
+export function hasNodeVersions(mapping: Record<string, string>): boolean { /* ... */ }
+export function areDependenciesInstalled(prereq: PrerequisiteDefinition, context: HandlerContext): boolean { /* ... */ }
 
-export function handleRequestStatus(context: HandlerContext) {
-    // Uses above helpers
-}
-
-// ✅ AFTER: Separated helpers
-// godHelpers.ts
-export function buildStatusPayload(project: Project): StatusPayload { /* ... */ }
-export function determineMeshStatus(record: MeshRecord): MeshStatus { /* ... */ }
-
-// godTypeGuards.ts
-export function hasAdobeWorkspaceContext(data: unknown): data is WithWorkspace { /* ... */ }
-
-// godHandlers.ts
-import { buildStatusPayload, determineMeshStatus } from './godHelpers';
-import { hasAdobeWorkspaceContext } from './godTypeGuards';
-
-export function handleRequestStatus(context: HandlerContext) { /* ... */ }
+// ❌ BAD: Single-caller helper extracted to shared
+// Only used by checkHandler.ts - should stay in checkHandler.ts
+export function buildPerNodeVersionStatus(...) { /* ... */ }  // Don't do this!
 ```
+
+**Reuse Verification**:
+Before extracting to a shared file, verify actual reuse:
+```bash
+# Count callers of a function
+grep -rn "functionName" src/ --include="*.ts" | grep -v "export\|function\|//" | wc -l
+```
+- **0-1 callers**: Keep inline with section headers
+- **2+ callers**: Extract to shared file
 
 ---
 
-### Pattern D: Repository + Service Layer
+### Pattern E: Repository + Service Layer
 
 **When to use**: Service mixes data fetching (API/CLI calls) with business logic.
 
@@ -333,20 +376,70 @@ npm test -- --selectProjects node --testPathPatterns="features/auth"
 
 ## 4. Anti-Patterns to Avoid
 
-### 4.1 Premature Extraction
+### 4.1 Single-Caller Extraction ⚠️ MOST COMMON MISTAKE
 
-**Problem**: Extracting code that has only one use case.
+**Problem**: Extracting code to a separate file when it has only one caller. This creates artificial boundaries, increases cognitive overhead, and provides no reuse benefit.
+
+**Detection**:
+```bash
+# Find helpers with only 1 import
+for f in src/**/*Helpers.ts; do
+  imports=$(grep -rn "from '.*${f%.*}'" src/ --include="*.ts" | wc -l)
+  echo "$f: $imports imports"
+done
+```
 
 ```typescript
-// ❌ Over-extracted: 30-line helper used once
-// userNameFormatter.ts
-export function formatUserName(user: User): string { /* 30 lines */ }
+// ❌ WRONG: Extracted helper with single caller
+// checkHandlerHelpers.ts (200 lines)
+export function checkNodePrerequisite(...) { /* only used by checkHandler.ts */ }
+export function buildPerNodeVersionStatus(...) { /* only used by checkHandler.ts */ }
 
-// ✅ Keep inline until 2+ use cases exist
+// checkHandler.ts
+import { checkNodePrerequisite, buildPerNodeVersionStatus } from './checkHandlerHelpers';
+
+// ✅ CORRECT: Keep in same file with section headers
+// checkHandler.ts (500 lines)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NODE VERSION CHECKING
+// ─────────────────────────────────────────────────────────────────────────────
+function checkNodePrerequisite(...) { /* inline */ }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATUS BUILDING
+// ─────────────────────────────────────────────────────────────────────────────
+function buildPerNodeVersionStatus(...) { /* inline */ }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN HANDLER
+// ─────────────────────────────────────────────────────────────────────────────
+export async function handleCheckPrerequisites(...) { /* uses above */ }
+```
+
+**Why This Matters**:
+- **More files ≠ better organization** - files should represent reuse boundaries
+- **Import ceremony adds noise** - imports/exports for single-caller code is pure overhead
+- **Cross-file changes harder** - refactoring touches multiple files needlessly
+- **Cognitive load increases** - reader must jump between files to understand flow
+
+---
+
+### 4.2 Premature Abstraction
+
+**Problem**: Extracting code for hypothetical future reuse that never materializes.
+
+```typescript
+// ❌ Over-abstracted: Generic helper "for extensibility"
+// formatters.ts
+export function formatUserName(user: User): string { /* 30 lines */ }
+// ^ Created because "we might format other things later"
+
+// ✅ Keep inline until 2+ ACTUAL use cases exist
 function formatUserName(user: User): string { /* inline */ }
 ```
 
-### 4.2 Facade Accumulation
+### 4.3 Facade Accumulation
 
 **Problem**: Facade grows new methods instead of delegating.
 
@@ -366,7 +459,7 @@ class EntitySelector {
 }
 ```
 
-### 4.3 Shared State Coupling
+### 4.4 Shared State Coupling
 
 **Problem**: Extracted services share internal state.
 
@@ -392,7 +485,7 @@ class EntityFetcher {
 }
 ```
 
-### 4.4 Circular Dependencies
+### 4.5 Circular Dependencies
 
 **Problem**: Extracted units depend on each other cyclically.
 
@@ -526,9 +619,16 @@ npm test -- --selectProjects node --testPathPatterns="features/authentication"
 |---------|-------------|---------------------|
 | **Facade + Services** | Service with multiple entity domains | Facade + 2-4 specialized services |
 | **Hook Extraction** | Component with 100+ lines of logic | Thin component + 2-3 custom hooks |
-| **Helper Extraction** | Handler with shared utilities | Handlers + helpers file |
+| **Section-Based** ⭐ | Handler with single-caller helpers | Single file with section headers |
+| **Helper Extraction** | Helpers with **2+ callers** (actual reuse) | Shared file + consumers |
 | **Repository + Service** | Mixed data access and business logic | Repository + Service layers |
 
 **Golden Rule**: A god file should be split when it has multiple reasons to change. Each resulting file should have exactly one reason to change.
 
-**Decomposition Mantra**: Extract by responsibility, not by size. Size is the symptom; mixed responsibilities are the disease.
+**Core Philosophy**: **Extract for Reuse, Section for Clarity**
+
+- **Single caller?** → Keep inline with section headers (Pattern C)
+- **2+ callers?** → Extract to shared file (Pattern D)
+- **Different responsibilities?** → Split into specialized services (Pattern A)
+
+**Decomposition Mantra**: Extract by reuse, not by size. Size is the symptom; lack of reuse is often the disease being misdiagnosed as needing extraction.
