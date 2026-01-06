@@ -38,6 +38,9 @@ describe('SOP: Inline Styles', () => {
         'TimelineNav.tsx': 'Spectrum UNSAFE_style for background colors',
         'VerifiedField.tsx': 'Spectrum UNSAFE_style for semantic colors',
         'EdsRepositoryConfigStep.tsx': 'Spectrum UNSAFE_style for semantic colors',
+
+        // Grid layouts (CSS Grid properties for complex layouts)
+        'ReviewStep.tsx': 'CSS Grid layout for two-column review summary',
     };
 
     /**
