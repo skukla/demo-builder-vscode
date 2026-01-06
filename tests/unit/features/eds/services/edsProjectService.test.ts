@@ -399,7 +399,7 @@ describe('EdsProjectService', () => {
             );
         });
 
-        it('should use skukla/citisignal-one as template', async () => {
+        it('should use demo-system-stores/accs-citisignal as template', async () => {
             // Given: Valid config
             mockGitHubRepoOps.cloneRepository!.mockRejectedValue(new Error('stop here'));
 
@@ -408,8 +408,8 @@ describe('EdsProjectService', () => {
 
             // Then: Should use correct template
             expect(mockGitHubRepoOps.createFromTemplate).toHaveBeenCalledWith(
-                'skukla',
-                'citisignal-one',
+                'demo-system-stores',
+                'accs-citisignal',
                 expect.any(String),
                 expect.any(Boolean),
             );
@@ -593,8 +593,8 @@ describe('EdsProjectService', () => {
             expect(codePolls.length).toBeGreaterThan(1);
         });
 
-        it('should timeout after max polling attempts', async () => {
-            // Given: Code sync never succeeds
+        it('should detect GitHub App not installed when code sync fails', async () => {
+            // Given: Code sync never succeeds and app not installed
             mockFetch.mockResolvedValue({ ok: false, status: 404 });
 
             // When: Running setup
@@ -605,10 +605,11 @@ describe('EdsProjectService', () => {
 
             const result = await resultPromise;
 
-            // Then: Should fail at code-sync phase
+            // Then: Should fail at code-sync phase with app not installed error
             expect(result.success).toBe(false);
             expect(result.phase).toBe('code-sync');
-            expect(result.error).toContain('timeout');
+            // The error message now comes from GitHubAppNotInstalledError
+            expect(result.error).toContain('GitHub App not installed');
         });
 
         it('should generate preview URL on sync success', async () => {

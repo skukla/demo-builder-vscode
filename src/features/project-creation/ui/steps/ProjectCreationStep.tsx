@@ -10,6 +10,7 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { MeshErrorDialog } from '@/features/mesh/ui/steps/components/MeshErrorDialog';
+import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
 import { getCancelButtonText } from '../helpers/buttonTextHelpers';
 import { WizardState } from '@/types/webview';
 
@@ -28,7 +29,14 @@ interface MeshCheckResult {
     setupInstructions?: { step: string; details: string; important?: boolean }[];
 }
 
-type StepPhase = 'checking-mesh' | 'mesh-error' | 'creating' | 'completed' | 'failed' | 'cancelled';
+type StepPhase = 'checking-mesh' | 'mesh-error' | 'github-app-install' | 'creating' | 'completed' | 'failed' | 'cancelled';
+
+interface GitHubAppInstallData {
+    owner: string;
+    repo: string;
+    installUrl: string;
+    message: string;
+}
 
 export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps) {
     const progress = state.creationProgress;
@@ -36,6 +44,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
     const [isOpeningProject, setIsOpeningProject] = useState(false);
     const [phase, setPhase] = useState<StepPhase>('checking-mesh');
     const [meshCheckResult, setMeshCheckResult] = useState<MeshCheckResult | null>(null);
+    const [githubAppInstallData, setGitHubAppInstallData] = useState<GitHubAppInstallData | null>(null);
 
     // Determine if mesh check is needed (only if commerce-mesh is selected)
     const needsMeshCheck = state.components?.dependencies?.includes('commerce-mesh') ?? false;
@@ -92,14 +101,27 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
     useEffect(() => {
         if (!progress) return;
 
+        // Check for GitHub app install phase (sent from executor)
+        const progressData = progress as unknown as { phase?: string; data?: Record<string, unknown> };
+        if (progressData.phase === 'github-app-install' && progressData.data) {
+            setGitHubAppInstallData({
+                owner: String(progressData.data.owner || ''),
+                repo: String(progressData.data.repo || ''),
+                installUrl: String(progressData.data.installUrl || ''),
+                message: progress.message || 'GitHub App installation required',
+            });
+            setPhase('github-app-install');
+            return;
+        }
+
         if (progress.currentOperation === 'Cancelled') {
             setPhase('cancelled');
         } else if (progress.currentOperation === 'Failed' || progress.error) {
             setPhase('failed');
         } else if (progress.currentOperation === 'Project Created') {
             setPhase('completed');
-        } else if (phase === 'creating') {
-            // Stay in creating phase while progress is active
+        } else if (phase === 'creating' || phase === 'github-app-install') {
+            // Stay in current phase while progress is active
         }
     }, [progress, phase]);
 
@@ -133,12 +155,25 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
         checkMeshAccess();
     }, [checkMeshAccess]);
 
+    const handleRetryEdsSetup = useCallback(() => {
+        // Clear the github app install data and return to creating phase
+        setGitHubAppInstallData(null);
+        setPhase('creating');
+        // Send message to executor to retry EDS setup
+        vscode.postMessage('retry-eds-setup');
+    }, []);
+
     const isCancelled = phase === 'cancelled';
     const isFailed = phase === 'failed';
     const isCompleted = phase === 'completed';
     const isActive = phase === 'creating' && isProgressActive(progress, isCancelled, isFailed, isCompleted);
+
+    // Helper: Should show generic error UI (not mesh-error or github-app-install dialogs)
+    const showGenericError = (progress?.error || isCancelled || isFailed) &&
+        phase !== 'mesh-error' && phase !== 'github-app-install';
     const isCheckingMesh = phase === 'checking-mesh';
     const isMeshError = phase === 'mesh-error';
+    const isGitHubAppInstall = phase === 'github-app-install';
 
     return (
         <div className="flex-column h-full w-full">
@@ -164,6 +199,18 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                             onRetry={handleRetryMeshCheck}
                             onBack={onBack}
                             onOpenConsole={handleOpenConsole}
+                        />
+                    )}
+
+                    {/* GitHub App installation required - show install dialog */}
+                    {isGitHubAppInstall && githubAppInstallData && (
+                        <GitHubAppInstallDialog
+                            owner={githubAppInstallData.owner}
+                            repo={githubAppInstallData.repo}
+                            installUrl={githubAppInstallData.installUrl}
+                            message={githubAppInstallData.message}
+                            onRetry={handleRetryEdsSetup}
+                            onBack={onBack}
                         />
                     )}
 
@@ -208,7 +255,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                     )}
 
                     {/* Error state */}
-                    {(progress?.error || isCancelled || isFailed) && phase !== 'mesh-error' && (
+                    {showGenericError && (
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
                                 <AlertCircle size="L" UNSAFE_className="text-red-600" />
@@ -244,8 +291,8 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
 
             {/* Footer - uses PageFooter for consistency with WizardContainer */}
 
-            {/* Show Cancel during checking or active creation */}
-            {(isCheckingMesh || isActive) && (
+            {/* Show Cancel during checking, active creation, or GitHub app install */}
+            {(isCheckingMesh || isActive || isGitHubAppInstall) && (
                 <PageFooter
                     leftContent={
                         <Button

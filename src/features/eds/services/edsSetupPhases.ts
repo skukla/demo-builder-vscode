@@ -25,10 +25,12 @@ import type { GitHubTokenService } from './githubTokenService';
 import type { GitHubRepoOperations } from './githubRepoOperations';
 import {
     EdsProjectError,
+    GitHubAppNotInstalledError,
     type EdsProjectConfig,
     type GitHubRepo,
     type PhaseProgressCallback,
 } from './types';
+import type { GitHubAppService } from './githubAppService';
 
 // Re-export PhaseProgressCallback for consumers
 export type { PhaseProgressCallback } from './types';
@@ -42,9 +44,11 @@ export interface GitHubServicesForPhases {
 }
 
 // Constants
+// Demo System Stores CitiSignal template (EDS + Adobe Commerce)
+// https://github.com/demo-system-stores/accs-citisignal
 const CITISIGNAL_TEMPLATE = {
-    owner: 'skukla',
-    repo: 'citisignal-one',
+    owner: 'demo-system-stores',
+    repo: 'accs-citisignal',
 };
 
 const INGESTION_TOOL_DEF = {
@@ -227,6 +231,7 @@ export class HelixConfigPhase {
     constructor(
         private authService: AuthenticationService,
         private logger: Logger,
+        private githubAppService: GitHubAppService,
     ) {
         this.pollingService = new PollingService();
     }
@@ -334,6 +339,10 @@ export class HelixConfigPhase {
 
     /**
      * Priority 2: Verify code sync using PollingService
+     *
+     * If code sync fails, checks if the GitHub app is installed.
+     * If not installed, throws GitHubAppNotInstalledError with install URL
+     * so the executor can pause and prompt the user.
      */
     async verifyCodeSync(
         config: EdsProjectConfig,
@@ -369,6 +378,29 @@ export class HelixConfigPhase {
 
             this.logger.debug(`[EDS] Code sync verified`);
         } catch (error) {
+            // Code sync failed - check if GitHub app is installed
+            this.logger.debug('[EDS] Code sync failed, checking app installation');
+
+            const isInstalled = await this.githubAppService.isAppInstalled(
+                config.githubOwner,
+                config.repoName,
+            );
+
+            if (!isInstalled) {
+                // App not installed - throw specific error for executor to handle
+                const installUrl = this.githubAppService.getInstallUrl(
+                    config.githubOwner,
+                    config.repoName,
+                );
+                this.logger.info(`[EDS] GitHub app not installed. Install URL: ${installUrl}`);
+                throw new GitHubAppNotInstalledError(
+                    config.githubOwner,
+                    config.repoName,
+                    installUrl,
+                );
+            }
+
+            // App is installed but sync still failed - throw original error
             throw new EdsProjectError(
                 `Code sync timeout: ${(error as Error).message}`,
                 'code-sync',

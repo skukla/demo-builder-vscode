@@ -18,3 +18,6 @@ export type { DaLiveServiceCardProps } from './DaLiveServiceCard';
 // Verified field for forms
 export { VerifiedField } from './VerifiedField';
 export type { VerifiedFieldProps } from './VerifiedField';
+
+// Error dialogs for EDS setup
+export { GitHubAppInstallDialog } from './GitHubAppInstallDialog';

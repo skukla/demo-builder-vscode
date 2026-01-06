@@ -34,6 +34,7 @@ import type {
     EdsProgressCallback,
     EdsProjectSetupResult,
 } from '@/features/eds/services/types';
+import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 
 // ============================================================================
 // Helper Functions
@@ -265,7 +266,54 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             );
 
             context.logger.info(`[Project Creation] Running EDS setup for: ${typedConfig.projectName}`);
-            edsResult = await edsProjectService.setupProject(edsProjectConfig, edsProgressCallback);
+
+            // Run EDS setup with GitHub app installation handling
+            // If code sync fails due to missing GitHub app, pause and prompt user to install
+            const runEdsSetup = async (): Promise<EdsProjectSetupResult> => {
+                try {
+                    return await edsProjectService.setupProject(edsProjectConfig, edsProgressCallback);
+                } catch (error) {
+                    // Handle GitHub app not installed - pause and prompt user
+                    if (error instanceof GitHubAppNotInstalledError) {
+                        context.logger.info(`[Project Creation] GitHub app not installed: ${error.installUrl}`);
+
+                        // Send pause message to UI (same pattern as mesh-error)
+                        await context.sendMessage('creationProgress', {
+                            phase: 'github-app-install',
+                            currentOperation: 'GitHub App Required',
+                            progress: 50,
+                            message: error.message,
+                            data: {
+                                owner: error.owner,
+                                repo: error.repo,
+                                installUrl: error.installUrl,
+                            },
+                        });
+
+                        // Wait for user retry or cancel
+                        await new Promise<void>((resolve, reject) => {
+                            const handleRetry = context.comm.onMessage('retry-eds-setup', () => {
+                                handleRetry();
+                                handleCancel();
+                                context.logger.info('[Project Creation] Retrying EDS setup after app install');
+                                resolve();
+                            });
+
+                            const handleCancel = context.comm.onMessage('cancel-creation', () => {
+                                handleRetry();
+                                handleCancel();
+                                reject(new Error('User cancelled'));
+                            });
+                        });
+
+                        // Retry EDS setup after user confirms app installation
+                        return await edsProjectService.setupProject(edsProjectConfig, edsProgressCallback);
+                    }
+                    throw error;
+                }
+            };
+
+            edsResult = await runEdsSetup();
 
             if (!edsResult.success) {
                 const errorMsg = `EDS setup failed at phase '${edsResult.phase}': ${edsResult.error}`;

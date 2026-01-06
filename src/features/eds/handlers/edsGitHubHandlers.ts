@@ -69,9 +69,10 @@ export async function handleCheckGitHubAuth(
 
         // Check VS Code for existing GitHub session (without prompting)
         // This catches users who are already signed into GitHub in VS Code
+        // Note: delete_repo scope is needed for the repurpose/overwrite repo flow
         const existingSession = await vscode.authentication.getSession(
             'github',
-            ['repo', 'user', 'read:org'],
+            ['repo', 'user', 'read:org', 'delete_repo'],
             { createIfNone: false, silent: true },
         );
 
@@ -82,7 +83,7 @@ export async function handleCheckGitHubAuth(
             await tokenService.storeToken({
                 token: existingSession.accessToken,
                 tokenType: 'bearer',
-                scopes: ['repo', 'user', 'read:org'],
+                scopes: ['repo', 'user', 'read:org', 'delete_repo'],
             });
 
             // Get full user info by validating the new token
@@ -128,10 +129,11 @@ export async function handleGitHubOAuth(
         context.logger.debug('[EDS] Starting GitHub OAuth via VS Code authentication');
 
         // Use VS Code's built-in GitHub authentication
-        // Scopes: repo (for repository operations), user (for user info)
+        // Scopes: repo (for repository operations), user (for user info),
+        //         delete_repo (for repurpose/overwrite repo flow)
         const session = await vscode.authentication.getSession(
             'github',
-            ['repo', 'user', 'read:org'],
+            ['repo', 'user', 'read:org', 'delete_repo'],
             { createIfNone: true },
         );
 
@@ -150,7 +152,7 @@ export async function handleGitHubOAuth(
         await tokenService.storeToken({
             token: session.accessToken,
             tokenType: 'bearer',
-            scopes: ['repo', 'user', 'read:org'],
+            scopes: ['repo', 'user', 'read:org', 'delete_repo'],
         });
 
         // Get full user info by validating the token
@@ -192,9 +194,10 @@ export async function handleGitHubChangeAccount(
         await tokenService.clearToken();
 
         // Initiate new OAuth - VS Code will prompt for account selection
+        // Include delete_repo for repurpose/overwrite repo flow
         const session = await vscode.authentication.getSession(
             'github',
-            ['repo', 'user', 'read:org'],
+            ['repo', 'user', 'read:org', 'delete_repo'],
             { createIfNone: true, clearSessionPreference: true },
         );
 
@@ -210,7 +213,7 @@ export async function handleGitHubChangeAccount(
         await tokenService.storeToken({
             token: session.accessToken,
             tokenType: 'bearer',
-            scopes: ['repo', 'user', 'read:org'],
+            scopes: ['repo', 'user', 'read:org', 'delete_repo'],
         });
 
         // Get user info by validating the token

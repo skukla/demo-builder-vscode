@@ -105,8 +105,12 @@ export interface OAuthCallbackParams {
 
 /**
  * Required OAuth scopes for EDS operations
+ *
+ * - repo: Full control of private repositories (create, clone, push)
+ * - user:email: Access user email addresses
+ * - delete_repo: Delete repositories (required for repurpose/overwrite flow)
  */
-export const REQUIRED_SCOPES = ['repo', 'user:email'] as const;
+export const REQUIRED_SCOPES = ['repo', 'user:email', 'delete_repo'] as const;
 
 /**
  * GitHub API error with status
@@ -345,6 +349,26 @@ export class EdsProjectError extends Error {
     ) {
         super(message);
         this.name = 'EdsProjectError';
+    }
+}
+
+/**
+ * Error thrown when the AEM Code Sync GitHub app is not installed on a repository.
+ *
+ * This error contains the installation URL so the executor can pause and prompt
+ * the user to install the app before retrying.
+ */
+export class GitHubAppNotInstalledError extends EdsProjectError {
+    constructor(
+        public readonly owner: string,
+        public readonly repo: string,
+        public readonly installUrl: string,
+    ) {
+        super(
+            'GitHub App not installed. Code sync requires the AEM Code Sync app.',
+            'code-sync',
+        );
+        this.name = 'GitHubAppNotInstalledError';
     }
 }
 

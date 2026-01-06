@@ -41,6 +41,7 @@ import {
     generatePreviewUrl,
     generateLiveUrl,
 } from './edsSetupPhases';
+import { GitHubAppService } from './githubAppService';
 
 // Re-export phase classes for direct use
 export { GitHubRepoPhase, HelixConfigPhase, ContentPhase, EnvConfigPhase } from './edsSetupPhases';
@@ -100,9 +101,12 @@ export class EdsProjectService {
 
         this.logger = logger ?? getLogger();
 
+        // Create GitHubAppService for app installation detection
+        const githubAppService = new GitHubAppService(githubServices.tokenService, this.logger);
+
         // Initialize phase handlers
         this.githubPhase = new GitHubRepoPhase(githubServices, daLiveServices.orgOperations, this.logger);
-        this.helixPhase = new HelixConfigPhase(authService, this.logger);
+        this.helixPhase = new HelixConfigPhase(authService, this.logger, githubAppService);
         this.contentPhase = new ContentPhase(daLiveServices.contentOperations, componentManager, this.logger);
         this.envPhase = new EnvConfigPhase(this.logger);
     }

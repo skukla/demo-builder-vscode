@@ -41,6 +41,16 @@ jest.mock('@/core/shell/pollingService', () => ({
     })),
 }));
 
+// Mock GitHubAppService
+const mockIsAppInstalled = jest.fn().mockResolvedValue(false);
+const mockGetInstallUrl = jest.fn().mockReturnValue('https://admin.hlx.page/github/install/owner/repo');
+jest.mock('@/features/eds/services/githubAppService', () => ({
+    GitHubAppService: jest.fn().mockImplementation(() => ({
+        isAppInstalled: mockIsAppInstalled,
+        getInstallUrl: mockGetInstallUrl,
+    })),
+}));
+
 // Mock timeouts - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
@@ -139,7 +149,7 @@ describe('EDS Setup Phases - Verification', () => {
     describe('Priority 1: Helix Config Verification', () => {
         it('should verify Helix config exists after configuration', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
             // Configure should succeed
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
@@ -155,7 +165,7 @@ describe('EDS Setup Phases - Verification', () => {
 
         it('should call verifyHelixConfig after configure', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
             // Mock configure success, then verify success
             mockFetch
@@ -181,7 +191,7 @@ describe('EDS Setup Phases - Verification', () => {
         it('should throw EdsProjectError if Helix config verification fails', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
             const { EdsProjectError } = await import('@/features/eds/services/types');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
             // Configure succeeds but verification fails
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // configure POST
@@ -192,7 +202,7 @@ describe('EDS Setup Phases - Verification', () => {
 
         it('should verify config at correct URL', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
             mockPollUntilCondition.mockImplementation(async (checkFn) => {
@@ -217,7 +227,7 @@ describe('EDS Setup Phases - Verification', () => {
     describe('Priority 2: PollingService Integration', () => {
         it('should use PollingService for code sync verification', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
             mockPollUntilCondition.mockResolvedValue(undefined);
@@ -236,7 +246,7 @@ describe('EDS Setup Phases - Verification', () => {
 
         it('should pass correct options to PollingService', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
             mockPollUntilCondition.mockResolvedValue(undefined);
@@ -253,7 +263,7 @@ describe('EDS Setup Phases - Verification', () => {
 
         it('should check correct code URL in polling function', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
             mockPollUntilCondition.mockImplementation(async (checkFn) => {
@@ -272,7 +282,7 @@ describe('EDS Setup Phases - Verification', () => {
         it('should throw EdsProjectError on polling timeout', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
             const { EdsProjectError } = await import('@/features/eds/services/types');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
             mockPollUntilCondition.mockRejectedValue(new Error('Polling timeout'));
 
@@ -349,34 +359,39 @@ describe('EDS Setup Phases - Verification', () => {
     });
 
     describe('Error Handling Integration', () => {
-        it('should wrap polling errors in EdsProjectError with correct phase', async () => {
+        it('should throw GitHubAppNotInstalledError when app not installed and polling fails', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const { GitHubAppNotInstalledError } = await import('@/features/eds/services/types');
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
             mockPollUntilCondition.mockRejectedValue(new Error('Network error'));
+            mockIsAppInstalled.mockResolvedValue(false); // App not installed
 
             try {
                 await phase.verifyCodeSync(defaultConfig, mockRepo);
-                throw new Error('Should have thrown EdsProjectError');
+                throw new Error('Should have thrown GitHubAppNotInstalledError');
             } catch (error: any) {
+                expect(error).toBeInstanceOf(GitHubAppNotInstalledError);
                 expect(error.phase).toBe('code-sync');
+                expect(error.installUrl).toBeDefined();
             }
         });
 
-        it('should preserve original error in EdsProjectError', async () => {
+        it('should throw EdsProjectError when app is installed but polling fails', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
-            const originalError = new Error('Original polling error');
+            const originalError = new Error('Network error');
             mockPollUntilCondition.mockRejectedValue(originalError);
+            mockIsAppInstalled.mockResolvedValue(true); // App is installed, so it's a real error
 
             try {
                 await phase.verifyCodeSync(defaultConfig, mockRepo);
                 throw new Error('Should have thrown EdsProjectError');
             } catch (error: any) {
-                // EdsProjectError stores original error in 'cause' property
+                // EdsProjectError with phase and cause
                 expect(error.phase).toBe('code-sync');
-                expect(error.cause).toBeDefined();
+                expect(error.message).toContain('Code sync timeout');
             }
         });
     });

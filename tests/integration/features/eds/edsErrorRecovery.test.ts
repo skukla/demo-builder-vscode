@@ -405,30 +405,23 @@ describe('EDS Error Recovery - Integration Tests', () => {
             expect(formattedError.recoveryHint).toMatch(/try again|few minutes/i);
         });
 
-        it('should handle Code Sync verification timeout', async () => {
-            // Given: Code sync never completes
+        it('should handle Code Sync verification timeout with GitHub App check', async () => {
+            // Given: Code sync never completes (GitHub App not installed)
             mockFetch
                 .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config POST
                 .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config verification GET
-                .mockResolvedValue({ ok: false, status: 404 }); // code sync always 404
+                .mockResolvedValue({ ok: false, status: 404 }); // code sync always 404 + app install check
 
-            // When: Running setup (will timeout)
+            // When: Running setup (will timeout and check app installation)
             const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
             await jest.advanceTimersByTimeAsync(130000); // Past max attempts
             const result = await resultPromise;
 
-            // Then: Should fail with timeout error
+            // Then: Should fail with GitHub App not installed error
             expect(result.success).toBe(false);
             expect(result.phase).toBe('code-sync');
-            expect(result.error).toContain('timeout');
-
-            const syncTimeoutError = new Error('Code sync timeout');
-            (syncTimeoutError as any).code = 'SYNC_TIMEOUT';
-
-            const formattedError = formatHelixError(syncTimeoutError);
-            expect(formattedError.code).toBe('SYNC_TIMEOUT');
-            expect(formattedError.userMessage).toMatch(/synchronization|longer than expected/i);
-            expect(formattedError.recoveryHint).toMatch(/retry|try again/i);
+            // Now throws GitHubAppNotInstalledError when app is not installed
+            expect(result.error).toContain('GitHub App not installed');
         });
     });
 });

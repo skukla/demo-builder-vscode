@@ -304,8 +304,8 @@ describe('EDS Project Creation - Integration Tests', () => {
             // Then: Should complete and use EDS-specific repo
             expect(result.success).toBe(true);
             expect(mockGitHubRepoOps.createFromTemplate).toHaveBeenCalledWith(
-                'skukla', // template owner
-                'citisignal-one', // EDS template
+                'demo-system-stores', // template owner
+                'accs-citisignal', // EDS template
                 expect.any(String),
                 expect.any(Boolean),
             );
