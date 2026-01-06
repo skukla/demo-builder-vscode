@@ -151,13 +151,14 @@ export async function deployMeshComponent(
         }
 
         logger.info('[Mesh Deployment] ✅ Mesh verified and deployed successfully');
+        logger.debug(`[Mesh Deployment] Verification result: meshId=${verificationResult.meshId}, endpoint=${verificationResult.endpoint}`);
         onProgress?.('✓ Deployment Complete', 'Mesh deployed successfully');
 
         return {
             success: true,
             data: {
-                meshId: verificationResult.meshId!,
-                endpoint: verificationResult.endpoint!,
+                meshId: verificationResult.meshId || '',
+                endpoint: verificationResult.endpoint || '',
             },
         };
 

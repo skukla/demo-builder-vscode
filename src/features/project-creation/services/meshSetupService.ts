@@ -170,9 +170,16 @@ export async function deployNewMesh(
                 let meshId = meshDeployResult.data?.meshId || apiMeshConfig?.meshId;
                 let endpoint = meshDeployResult.data?.endpoint || apiMeshConfig?.endpoint;
 
+                // Debug logging for mesh endpoint tracking
+                logger.debug(`[Project Creation] Mesh info sources:`);
+                logger.debug(`  - meshDeployResult.data: ${JSON.stringify(meshDeployResult.data)}`);
+                logger.debug(`  - apiMeshConfig: ${JSON.stringify(apiMeshConfig)}`);
+                logger.debug(`  - Resolved meshId: ${meshId}`);
+                logger.debug(`  - Resolved endpoint: ${endpoint}`);
+
                 // If wizard didn't capture mesh info (e.g., still provisioning), fetch it now
                 if (!meshId || !endpoint) {
-                    logger.debug('[Project Creation] Fetching mesh info via describe...');
+                    logger.debug('[Project Creation] Fetching mesh info via describe (meshId or endpoint missing)...');
                     try {
                         const describeResult = await commandManager.execute('aio api-mesh:describe', {
                             timeout: TIMEOUTS.NORMAL,
@@ -193,10 +200,14 @@ export async function deployNewMesh(
                                 endpoint = meshData.meshEndpoint || meshData.endpoint;
                             }
                         }
-                    } catch {
+                    } catch (describeError) {
                         logger.warn('[Project Creation] Could not fetch mesh info, continuing without it');
+                        logger.debug(`[Project Creation] Describe error: ${describeError}`);
                     }
                 }
+
+                // Log final resolved values
+                logger.debug(`[Project Creation] Final mesh info - meshId: ${meshId}, endpoint: ${endpoint}`);
 
                 // Update component instance with deployment info
                 // Note: endpoint is stored in meshState (authoritative), not componentInstance
