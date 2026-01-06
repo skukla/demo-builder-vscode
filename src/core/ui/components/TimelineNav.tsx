@@ -239,19 +239,16 @@ export function TimelineNav({
 
     const getStepStatus = (index: number): TimelineStatus => {
         const isCompleted = completedStepIndices.includes(index);
-        const isConfirmed = confirmedStepIndices.includes(index);
         const isCurrent = index === currentStepIndex;
 
-        // In edit mode:
-        // - Confirmed steps (user clicked Continue) → green checkmark
-        // - Unconfirmed but completed → blue filled (can still review/edit)
-        if (isEditMode && isCompleted && !isCurrent) {
-            return isConfirmed ? 'completed' : 'review';
-        }
+        // Current step is always shown as "current" (blue pulsing)
+        // regardless of whether it has data - user is actively viewing it
+        if (isCurrent) return 'current';
 
-        if (isCurrent && isCompleted) return 'completed-current';
-        if (isCurrent && !isCompleted) return 'current';
+        // Completed steps show as completed (green checkmark)
         if (isCompleted) return 'completed';
+
+        // Future/incomplete steps
         return 'upcoming';
     };
 
