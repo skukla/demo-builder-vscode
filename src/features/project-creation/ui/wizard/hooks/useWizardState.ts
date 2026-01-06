@@ -288,9 +288,16 @@ export function useWizardState({
             if (isReviewMode) {
                 // Recompute which steps are still satisfied with the new state
                 // IMPORTANT: Preserve any steps that were manually completed by user actions
-                // Only recalculate org-dependent steps (project, workspace)
+                // Reset all org-dependent steps (project → workspace → mesh → settings)
+                // These form a cascade: org owns projects, projects own workspaces,
+                // workspaces own meshes, and settings may reference org credentials
                 setCompletedSteps(prev => {
-                    const orgDependentSteps: WizardStep[] = ['adobe-project', 'adobe-workspace'];
+                    const orgDependentSteps: WizardStep[] = [
+                        'adobe-project',
+                        'adobe-workspace',
+                        'api-mesh',
+                        'settings',
+                    ];
                     // Remove org-dependent steps that are no longer satisfied
                     const preserved = prev.filter(stepId => !orgDependentSteps.includes(stepId));
                     // Re-add org-dependent steps if still satisfied
@@ -300,7 +307,12 @@ export function useWizardState({
                     return [...preserved, ...satisfiedOrgSteps];
                 });
                 setConfirmedSteps(prev => {
-                    const orgDependentSteps: WizardStep[] = ['adobe-project', 'adobe-workspace'];
+                    const orgDependentSteps: WizardStep[] = [
+                        'adobe-project',
+                        'adobe-workspace',
+                        'api-mesh',
+                        'settings',
+                    ];
                     const preserved = prev.filter(stepId => !orgDependentSteps.includes(stepId));
                     const satisfiedOrgSteps = orgDependentSteps.filter(stepId =>
                         isStepSatisfied(stepId, state),
