@@ -138,18 +138,25 @@ export function useAuthStatus({
                 setAuthTimeout(false);
             }
 
-            // Check if org changed after re-auth
-            // Only clear project/workspace if the org actually changed
+            // Check if org changed after auth
+            // Clear project/workspace if authenticated org differs from:
+            // 1. Pre-auth org (for re-auth scenario)
+            // 2. Imported/initial org in state (for first auth with imported settings)
+            // IMPORTANT: Only compare when we have an actual newOrgId (auth complete)
+            // Skip comparison when newOrgId is undefined (still checking)
             const newOrgId = authData.organization?.id;
-            const orgChanged = preAuthOrgIdRef.current !== undefined &&
-                               preAuthOrgIdRef.current !== newOrgId;
+            const previousOrgId = preAuthOrgIdRef.current ?? state.adobeOrg?.id;
+            const orgChanged = newOrgId !== undefined &&
+                               previousOrgId !== undefined &&
+                               previousOrgId !== newOrgId;
 
-            if (preAuthOrgIdRef.current !== undefined) {
-                log.debug('Re-auth org comparison:', {
-                    previousOrgId: preAuthOrgIdRef.current,
+            if (previousOrgId !== undefined) {
+                log.debug('Auth org comparison:', {
+                    previousOrgId,
                     newOrgId,
                     orgChanged,
                     willClearProject: orgChanged,
+                    source: preAuthOrgIdRef.current !== undefined ? 'pre-auth-ref' : 'state',
                 });
             }
 
@@ -174,9 +181,11 @@ export function useAuthStatus({
                     name: authData.organization.name,
                 } : undefined,
                 // Only clear dependent state if org actually changed
+                // Project/workspace/mesh form a cascade: org → project → workspace → mesh
                 ...(orgChanged && {
                     adobeProject: undefined,
                     adobeWorkspace: undefined,
+                    apiMesh: undefined,
                 }),
             });
             setAuthStatus(authData.message || '');

@@ -500,7 +500,10 @@ describe('useAuthStatus', () => {
             });
         });
 
-        it('should not clear state on regular auth check (non-forced)', async () => {
+        it('should clear state on regular auth check if org differs from state', async () => {
+            // FIX: When importing settings from Org A but logged into Org B,
+            // the first auth check should detect the mismatch and clear project/workspace.
+            // This prevents mesh deployment to wrong org's project/workspace.
             let authCallback: ((data: unknown) => void) | null = null;
             mockOnMessage.mockImplementation((type: string, callback: (data: unknown) => void) => {
                 if (type === 'auth-status') {
@@ -519,8 +522,9 @@ describe('useAuthStatus', () => {
 
             mockUpdateState.mockClear();
 
-            // Simulate regular auth-status (not from forced re-auth)
-            // The preAuthOrgIdRef should be undefined, so no clearing should happen
+            // Simulate regular auth-status with DIFFERENT org than in state
+            // Even without forced re-auth, state.adobeOrg differs from response org
+            // so project/workspace SHOULD be cleared
             act(() => {
                 authCallback?.(reAuthDifferentOrgData);
             });
@@ -529,7 +533,44 @@ describe('useAuthStatus', () => {
                 expect(mockUpdateState).toHaveBeenCalled();
             });
 
-            // Should NOT clear project/workspace because this wasn't a forced re-auth
+            // SHOULD clear project/workspace because org in state differs from auth response
+            const allCalls = mockUpdateState.mock.calls;
+            const clearedProject = allCalls.some(
+                (call) => call[0]?.adobeProject === undefined && 'adobeProject' in call[0]
+            );
+            expect(clearedProject).toBe(true);
+        });
+
+        it('should NOT clear state on regular auth check if org matches state', async () => {
+            // When the auth response org matches the state org, project/workspace should be preserved
+            let authCallback: ((data: unknown) => void) | null = null;
+            mockOnMessage.mockImplementation((type: string, callback: (data: unknown) => void) => {
+                if (type === 'auth-status') {
+                    authCallback = callback;
+                }
+                return jest.fn();
+            });
+
+            renderHook(() =>
+                useAuthStatus({
+                    state: stateWithProjectSelected as WizardState,
+                    updateState: mockUpdateState,
+                    setCanProceed: mockSetCanProceed,
+                })
+            );
+
+            mockUpdateState.mockClear();
+
+            // Simulate regular auth-status with SAME org as in state
+            act(() => {
+                authCallback?.(reAuthSameOrgData);  // org-123, matches stateWithProjectSelected
+            });
+
+            await waitFor(() => {
+                expect(mockUpdateState).toHaveBeenCalled();
+            });
+
+            // Should NOT clear project/workspace because org matches
             const allCalls = mockUpdateState.mock.calls;
             const clearedProject = allCalls.some(
                 (call) => call[0]?.adobeProject === undefined && 'adobeProject' in call[0]
