@@ -16,6 +16,8 @@ import {
     getNextButtonText,
     getNavigationDirection,
     shouldShowWizardFooter,
+    getWizardTitle,
+    isStepSatisfied,
     ImportedSettings,
     EditProjectConfig,
     WizardStepConfigWithRequirements,
@@ -203,9 +205,6 @@ export function WizardContainer({
             return;
         }
 
-        // Clear completed steps (keep only 'welcome' since user is on that step)
-        setCompletedSteps(['welcome']);
-
         // Filter component configs - retain configs for components that exist in both stacks
         const filteredConfigs = filterComponentConfigsForStackChange(
             oldStack,
@@ -214,6 +213,35 @@ export function WizardContainer({
         );
 
         log.info(`Retained configs for components: ${Object.keys(filteredConfigs).join(', ') || 'none'}`);
+
+        // Build the new state after stack change
+        const newState = {
+            ...state,
+            componentConfigs: filteredConfigs,
+            selectedStack: newStackId,
+            // Clear EDS state (architecture-dependent)
+            githubAuth: undefined,
+            githubUser: undefined,
+            selectedRepository: undefined,
+            repositoryName: undefined,
+            repositoryVisibility: undefined,
+            edsContentSource: undefined,
+        };
+
+        // In review mode, recompute which steps are still satisfied with the new state
+        // This preserves green checkmarks for steps that still have valid data
+        const isReviewMode = state.wizardMode && state.wizardMode !== 'create';
+        if (isReviewMode) {
+            const satisfiedSteps = WIZARD_STEPS
+                .filter(step => step.id !== 'project-creation' && step.id !== 'review')
+                .filter(step => isStepSatisfied(step.id, newState))
+                .map(step => step.id);
+            log.info(`Recomputed satisfied steps after stack change: ${satisfiedSteps.join(', ') || 'none'}`);
+            setCompletedSteps(satisfiedSteps);
+        } else {
+            // In create mode, reset to just 'welcome'
+            setCompletedSteps(['welcome']);
+        }
 
         // Update state with filtered configs
         // Clear EDS-specific state (GitHub, repository, etc.) since it's architecture-dependent
@@ -321,7 +349,7 @@ export function WizardContainer({
                 <div className="wizard-main-content">
                     {/* Header */}
                     <PageHeader
-                        title={state.editMode ? "Edit Project" : "Create Demo Project"}
+                        title={getWizardTitle(state.wizardMode)}
                         subtitle={currentStepName}
                         description={currentStepDescription}
                     />
@@ -392,7 +420,7 @@ export function WizardContainer({
                                         onPress={goNext}
                                         isDisabled={!canProceed || isConfirmingSelection}
                                     >
-                                        {getNextButtonText(isConfirmingSelection, currentStepIndex, WIZARD_STEPS.length, state.editMode)}
+                                        {getNextButtonText(isConfirmingSelection, currentStepIndex, WIZARD_STEPS.length, state.wizardMode)}
                                     </Button>
                                 </Flex>
                             }

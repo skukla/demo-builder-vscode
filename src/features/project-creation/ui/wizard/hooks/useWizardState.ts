@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
     getEnabledWizardSteps,
     initializeComponentsFromImport,
     initializeAdobeContextFromImport,
     initializeProjectName,
     getFirstEnabledStep,
+    isStepSatisfied,
     ImportedSettings,
     EditProjectConfig,
     WizardStepConfigWithRequirements,
@@ -100,7 +101,8 @@ function computeInitialState(
         return {
             currentStep: firstStep,
             projectName: editProject.projectName,
-            editMode: true,
+            wizardMode: 'edit',
+            editMode: true,  // Legacy, use wizardMode
             editProjectPath: editProject.projectPath,
             editOriginalName: editProject.projectName,  // For duplicate validation
             componentConfigs: editSettings.configs || {},
@@ -136,18 +138,20 @@ function computeInitialState(
         };
     }
 
-    // CREATE MODE: Use helper functions for cleaner initialization
+    // CREATE/IMPORT MODE: Use helper functions for cleaner initialization
     const initialComponents = initializeComponentsFromImport(importedSettings, componentDefaults);
     const adobeContext = initializeAdobeContextFromImport(importedSettings);
     const initialProjectName = initializeProjectName(importedSettings, existingProjectNames);
 
+    // Determine wizard mode: 'import' if settings provided, otherwise 'create'
+    const wizardMode = importedSettings ? 'import' : 'create';
+
     if (importedSettings) {
-        log.info('Initializing wizard with imported settings', {
+        log.info(`Initializing wizard in ${wizardMode} mode`, {
             hasSelections: !!importedSettings.selections,
             hasAdobe: !!importedSettings.adobe,
             hasConfigs: !!importedSettings.configs,
             configKeys: importedSettings.configs ? Object.keys(importedSettings.configs) : [],
-            sampleConfigs: importedSettings.configs ? JSON.stringify(importedSettings.configs).slice(0, 500) : 'none',
             sourceProject: importedSettings.source?.project,
             generatedName: initialProjectName,
         });
@@ -156,6 +160,7 @@ function computeInitialState(
     return {
         currentStep: firstStep,
         projectName: initialProjectName,
+        wizardMode,
         componentConfigs: importedSettings?.configs || {},
         adobeAuth: {
             isAuthenticated: false,  // Start as false, will be checked on auth step
@@ -229,19 +234,90 @@ export function useWizardState({
     }, [wizardSteps, stacks, state.selectedStack]);
 
     // Step completion tracking
+    // In edit/import mode, mark steps as completed if they have data (satisfied)
+    // Steps without data (new from stack change) remain incomplete
     const [completedSteps, setCompletedSteps] = useState<WizardStep[]>(() => {
-        if (editProject) {
-            // All steps completed except project-creation (terminal step)
+        const isReviewMode = editProject || importedSettings;
+        if (isReviewMode) {
+            // Mark steps as completed only if they have data (satisfied)
             return WIZARD_STEPS
-                .filter(step => step.id !== 'project-creation')
-                .map(step => step.id as WizardStep);
+                .filter(step => step.id !== 'project-creation' && step.id !== 'review')
+                .filter(step => isStepSatisfied(step.id, state))
+                .map(step => step.id);
         }
         return [];
     });
-    // Steps confirmed by user in edit mode (user clicked Continue on these)
-    // In edit mode: blue = completed but not confirmed, green = confirmed
-    const [confirmedSteps, setConfirmedSteps] = useState<WizardStep[]>([]);
+    // Steps confirmed by user in review mode
+    // In review mode, satisfied steps start as confirmed (green checkmark)
+    // because they already have valid data from import/edit
+    const [confirmedSteps, setConfirmedSteps] = useState<WizardStep[]>(() => {
+        const isReviewMode = editProject || importedSettings;
+        if (isReviewMode) {
+            // Auto-confirm all satisfied steps (they have data)
+            return WIZARD_STEPS
+                .filter(step => step.id !== 'project-creation' && step.id !== 'review')
+                .filter(step => isStepSatisfied(step.id, state))
+                .map(step => step.id);
+        }
+        return [];
+    });
     const [highestCompletedStepIndex, setHighestCompletedStepIndex] = useState(-1);
+
+    // Track org ID to detect changes (for recomputing completedSteps)
+    const prevOrgIdRef = useRef<string | undefined>(state.adobeOrg?.id);
+    // Track if we've seen the first org (to distinguish initial mount from actual changes)
+    const hasSeenOrgRef = useRef<boolean>(Boolean(state.adobeOrg?.id));
+
+    // Recompute completedSteps when organization changes
+    // When user re-authenticates with a different org, project/workspace are cleared
+    // and those steps should no longer show as completed
+    useEffect(() => {
+        const currentOrgId = state.adobeOrg?.id;
+        const prevOrgId = prevOrgIdRef.current;
+
+        // Only act if:
+        // 1. We've seen an org before (not first-time setting)
+        // 2. The org actually changed to a DIFFERENT value
+        const orgActuallyChanged = hasSeenOrgRef.current &&
+            prevOrgId !== undefined &&
+            currentOrgId !== undefined &&
+            prevOrgId !== currentOrgId;
+
+        if (orgActuallyChanged) {
+            const isReviewMode = state.wizardMode && state.wizardMode !== 'create';
+            if (isReviewMode) {
+                // Recompute which steps are still satisfied with the new state
+                // IMPORTANT: Preserve any steps that were manually completed by user actions
+                // Only recalculate org-dependent steps (project, workspace)
+                setCompletedSteps(prev => {
+                    const orgDependentSteps: WizardStep[] = ['adobe-project', 'adobe-workspace'];
+                    // Remove org-dependent steps that are no longer satisfied
+                    const preserved = prev.filter(stepId => !orgDependentSteps.includes(stepId));
+                    // Re-add org-dependent steps if still satisfied
+                    const satisfiedOrgSteps = orgDependentSteps.filter(stepId =>
+                        isStepSatisfied(stepId, state),
+                    );
+                    return [...preserved, ...satisfiedOrgSteps];
+                });
+                setConfirmedSteps(prev => {
+                    const orgDependentSteps: WizardStep[] = ['adobe-project', 'adobe-workspace'];
+                    const preserved = prev.filter(stepId => !orgDependentSteps.includes(stepId));
+                    const satisfiedOrgSteps = orgDependentSteps.filter(stepId =>
+                        isStepSatisfied(stepId, state),
+                    );
+                    return [...preserved, ...satisfiedOrgSteps];
+                });
+                log.info(`Org changed (${prevOrgId} → ${currentOrgId}), updated org-dependent steps`);
+            }
+        }
+
+        // Track that we've seen an org
+        if (currentOrgId) {
+            hasSeenOrgRef.current = true;
+        }
+        // Update ref for next comparison
+        prevOrgIdRef.current = currentOrgId;
+    }, [state.adobeOrg?.id, state.wizardMode, state.adobeProject?.id, state.adobeWorkspace?.id, WIZARD_STEPS]);
 
     // Transition/animation state
     const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');

@@ -3,7 +3,7 @@
  */
 
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
-import type { WizardStep, WizardState, ComponentSelection } from '@/types/webview';
+import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
 
 /**
  * Step configuration for wizard navigation
@@ -425,20 +425,130 @@ export function shouldShowWizardFooter(
 }
 
 /**
+ * Get wizard title based on mode
+ *
+ * - create: "Create Demo Project"
+ * - edit: "Edit Project"
+ * - import: "Import Project" (covers both file import and project copy)
+ */
+export function getWizardTitle(wizardMode?: WizardMode): string {
+    switch (wizardMode) {
+        case 'edit': return 'Edit Project';
+        case 'import': return 'Import Project';
+        default: return 'Create Demo Project';
+    }
+}
+
+/**
+ * Required steps that must always be visited in review mode (edit/import)
+ * These steps are never auto-skipped because they require fresh validation:
+ * - welcome: User may want to change project name or stack
+ * - prerequisites: Runtime checks that may have changed
+ * - adobe-auth: Token validation required
+ * - settings: User should verify component configuration values
+ */
+export const REQUIRED_REVIEW_STEPS: WizardStep[] = ['welcome', 'prerequisites', 'adobe-auth', 'settings'];
+
+/**
+ * Check if a step is "satisfied" (has data from import/edit)
+ *
+ * A step is satisfied if it has the necessary data filled in from
+ * imported settings or an edited project. This is used to determine
+ * which steps can be auto-completed vs which need user input.
+ *
+ * Note: Required review steps (welcome, prerequisites, adobe-auth)
+ * should always be visited regardless of satisfaction.
+ */
+export function isStepSatisfied(stepId: WizardStep, state: WizardState): boolean {
+    // Required review steps NEVER start as satisfied
+    // These always need fresh validation/action regardless of imported data
+    if (REQUIRED_REVIEW_STEPS.includes(stepId)) {
+        return false;
+    }
+
+    switch (stepId) {
+        // Component selection
+        case 'component-selection':
+            return Boolean(state.components?.frontend || state.components?.backend);
+
+        // Adobe I/O context (after auth is validated, these can be satisfied)
+        case 'adobe-org':
+            return Boolean(state.adobeOrg?.id);
+
+        case 'adobe-project':
+            return Boolean(state.adobeProject?.id);
+
+        case 'adobe-workspace':
+            return Boolean(state.adobeWorkspace?.id);
+
+        // EDS configuration
+        case 'eds-repository-config':
+            return Boolean(state.edsConfig?.repoName || state.edsConfig?.selectedRepo);
+
+        case 'data-source-config':
+            return Boolean(state.edsConfig?.daLiveSite || state.edsConfig?.selectedSite);
+
+        case 'connect-services':
+            return Boolean(state.edsConfig?.githubAuth?.isAuthenticated);
+
+        // Component configuration (step ID can be 'settings' or 'component-config')
+        case 'settings':
+        case 'component-config':
+            return Boolean(state.componentConfigs && Object.keys(state.componentConfigs).length > 0);
+
+        // API Mesh (if enabled)
+        case 'api-mesh':
+            return Boolean(state.apiMesh?.meshExists);
+
+        // Terminal steps - never satisfied (need user action)
+        case 'review':
+        case 'project-creation':
+            return false;
+
+        default:
+            return false;
+    }
+}
+
+/**
+ * Find the first incomplete step after a given index
+ *
+ * Used for smart navigation in review mode - skips satisfied steps
+ * to jump directly to steps that need user input.
+ *
+ * @returns The index of the first incomplete step, or -1 if all complete
+ */
+export function findFirstIncompleteStep(
+    state: WizardState,
+    steps: Array<{ id: WizardStep; name: string }>,
+    afterIndex: number,
+    beforeIndex: number,
+): number {
+    for (let i = afterIndex + 1; i < beforeIndex; i++) {
+        const step = steps[i];
+        if (!isStepSatisfied(step.id, state)) {
+            return i;
+        }
+    }
+    return -1; // All steps complete
+}
+
+/**
  * Determine next button text based on wizard state
  *
- * Extracts nested ternary (SOP §3):
- * `isConfirmingSelection ? 'Continue' : (currentStepIndex === totalSteps - 2 ? 'Create Project' : 'Continue')`
+ * - Edit mode: "Save Changes" (modifying in place)
+ * - All other modes: "Create Project" (creating new project)
  */
 export function getNextButtonText(
     isConfirmingSelection: boolean,
     currentStepIndex: number,
     totalSteps: number,
-    isEditMode?: boolean,
+    wizardMode?: WizardMode,
 ): string {
     if (isConfirmingSelection) return 'Continue';
     if (currentStepIndex === totalSteps - 2) {
-        return isEditMode ? 'Save Changes' : 'Create Project';
+        // Only edit mode uses "Save Changes" - import/copy still create new projects
+        return wizardMode === 'edit' ? 'Save Changes' : 'Create Project';
     }
     return 'Continue';
 }
@@ -555,5 +665,19 @@ export function buildProjectConfig(
         // Edit mode: re-use existing project directory
         editMode: wizardState.editMode,
         editProjectPath: wizardState.editProjectPath,
+        // EDS configuration (for Edge Delivery Services stacks)
+        edsConfig: wizardState.edsConfig ? {
+            repoName: wizardState.edsConfig.repoName || '',
+            repoMode: wizardState.edsConfig.repoMode || 'new',
+            existingRepo: wizardState.edsConfig.selectedRepo?.fullName || wizardState.edsConfig.existingRepo,
+            resetToTemplate: wizardState.edsConfig.resetToTemplate,
+            daLiveOrg: wizardState.edsConfig.daLiveOrg || '',
+            daLiveSite: wizardState.edsConfig.selectedSite?.name || wizardState.edsConfig.daLiveSite || '',
+            accsEndpoint: wizardState.edsConfig.accsHost,
+            githubOwner: wizardState.edsConfig.githubAuth?.user?.login || '',
+            isPrivate: wizardState.edsConfig.selectedRepo?.isPrivate,
+            skipContent: wizardState.edsConfig.skipContent,
+            skipTools: wizardState.edsConfig.skipTools,
+        } : undefined,
     };
 }

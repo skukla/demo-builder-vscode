@@ -13,6 +13,9 @@ import {
     initializeProjectName,
     getFirstEnabledStep,
     shouldShowWizardFooter,
+    isStepSatisfied,
+    findFirstIncompleteStep,
+    REQUIRED_REVIEW_STEPS,
     WizardStepConfig,
     ImportedSettings,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
@@ -230,11 +233,15 @@ describe('wizardHelpers', () => {
         });
 
         it('should return "Save Changes" on second-to-last step in edit mode', () => {
-            expect(getNextButtonText(false, 3, 5, true)).toBe('Save Changes');
+            expect(getNextButtonText(false, 3, 5, 'edit')).toBe('Save Changes');
         });
 
         it('should return "Create Project" on second-to-last step when not in edit mode', () => {
-            expect(getNextButtonText(false, 3, 5, false)).toBe('Create Project');
+            expect(getNextButtonText(false, 3, 5, 'create')).toBe('Create Project');
+        });
+
+        it('should return "Create Project" on second-to-last step in import mode', () => {
+            expect(getNextButtonText(false, 3, 5, 'import')).toBe('Create Project');
         });
     });
 
@@ -575,6 +582,233 @@ describe('wizardHelpers', () => {
             expect(shouldShowWizardFooter(false, 'mesh-deployment', true)).toBe(false);
             // All conditions true (edge case)
             expect(shouldShowWizardFooter(true, 'mesh-deployment', true)).toBe(false);
+        });
+    });
+
+    describe('REQUIRED_REVIEW_STEPS', () => {
+        it('should include welcome, prerequisites, adobe-auth, and settings', () => {
+            expect(REQUIRED_REVIEW_STEPS).toContain('welcome');
+            expect(REQUIRED_REVIEW_STEPS).toContain('prerequisites');
+            expect(REQUIRED_REVIEW_STEPS).toContain('adobe-auth');
+            expect(REQUIRED_REVIEW_STEPS).toContain('settings');
+        });
+
+        it('should have exactly 4 required steps', () => {
+            expect(REQUIRED_REVIEW_STEPS).toHaveLength(4);
+        });
+    });
+
+    describe('isStepSatisfied', () => {
+        const createEmptyState = (): WizardState => ({
+            currentStep: 'welcome',
+            projectName: '',
+        });
+
+        describe('welcome step (required review step)', () => {
+            it('should always return false (required review step)', () => {
+                // Welcome is a required review step - user must always review name/stack
+                const state = { ...createEmptyState(), projectName: 'abc' };
+                expect(isStepSatisfied('welcome', state)).toBe(false);
+            });
+
+            it('should return false even with valid project name', () => {
+                const state = { ...createEmptyState(), projectName: 'my-valid-project' };
+                expect(isStepSatisfied('welcome', state)).toBe(false);
+            });
+
+            it('should return false when projectName is empty', () => {
+                expect(isStepSatisfied('welcome', createEmptyState())).toBe(false);
+            });
+        });
+
+        describe('component-selection step', () => {
+            it('should return true when frontend is selected', () => {
+                const state = {
+                    ...createEmptyState(),
+                    components: { frontend: 'headless' },
+                };
+                expect(isStepSatisfied('component-selection', state)).toBe(true);
+            });
+
+            it('should return true when backend is selected', () => {
+                const state = {
+                    ...createEmptyState(),
+                    components: { backend: 'commerce-paas' },
+                };
+                expect(isStepSatisfied('component-selection', state)).toBe(true);
+            });
+
+            it('should return false when no components selected', () => {
+                expect(isStepSatisfied('component-selection', createEmptyState())).toBe(false);
+            });
+        });
+
+        describe('prerequisites step', () => {
+            it('should always return false (requires runtime check)', () => {
+                const state = { ...createEmptyState(), projectName: 'test' };
+                expect(isStepSatisfied('prerequisites', state)).toBe(false);
+            });
+        });
+
+        describe('adobe context steps', () => {
+            it('should return false for adobe-auth (required review step)', () => {
+                // adobe-auth is a required review step - always needs fresh authentication
+                const state = {
+                    ...createEmptyState(),
+                    adobeOrg: { id: 'org123', code: 'ORG', name: 'Test Org' },
+                };
+                expect(isStepSatisfied('adobe-auth', state)).toBe(false);
+            });
+
+            it('should return true for adobe-org when adobeOrg is set', () => {
+                const state = {
+                    ...createEmptyState(),
+                    adobeOrg: { id: 'org123', code: 'ORG', name: 'Test Org' },
+                };
+                expect(isStepSatisfied('adobe-org', state)).toBe(true);
+            });
+
+            it('should return true for adobe-project when adobeProject is set', () => {
+                const state = {
+                    ...createEmptyState(),
+                    adobeProject: { id: 'proj123', name: 'TestProject', title: 'Test' },
+                };
+                expect(isStepSatisfied('adobe-project', state)).toBe(true);
+            });
+
+            it('should return true for adobe-workspace when adobeWorkspace is set', () => {
+                const state = {
+                    ...createEmptyState(),
+                    adobeWorkspace: { id: 'ws123', name: 'Development', title: 'Dev' },
+                };
+                expect(isStepSatisfied('adobe-workspace', state)).toBe(true);
+            });
+        });
+
+        describe('eds config steps', () => {
+            it('should return true for eds-repository-config when repoName is set', () => {
+                const state = {
+                    ...createEmptyState(),
+                    edsConfig: { repoName: 'my-repo' },
+                };
+                expect(isStepSatisfied('eds-repository-config', state)).toBe(true);
+            });
+
+            it('should return true for data-source-config when daLiveSite is set', () => {
+                const state = {
+                    ...createEmptyState(),
+                    edsConfig: { daLiveSite: 'my-site' },
+                };
+                expect(isStepSatisfied('data-source-config', state)).toBe(true);
+            });
+        });
+
+        describe('settings step (required review step)', () => {
+            it('should always return false for settings (required review step)', () => {
+                // Settings is a required review step - user must always verify config values
+                const state = {
+                    ...createEmptyState(),
+                    componentConfigs: { 'headless': { port: 3000 } },
+                };
+                expect(isStepSatisfied('settings', state)).toBe(false);
+            });
+
+            it('should return true for component-config when componentConfigs has data', () => {
+                // component-config is NOT a required review step (legacy ID)
+                const state = {
+                    ...createEmptyState(),
+                    componentConfigs: { 'commerce-mesh': { endpoint: 'https://...' } },
+                };
+                expect(isStepSatisfied('component-config', state)).toBe(true);
+            });
+
+            it('should return false for component-config when componentConfigs is empty', () => {
+                const state = {
+                    ...createEmptyState(),
+                    componentConfigs: {},
+                };
+                expect(isStepSatisfied('component-config', state)).toBe(false);
+            });
+
+            it('should return false for component-config when componentConfigs is undefined', () => {
+                expect(isStepSatisfied('component-config', createEmptyState())).toBe(false);
+            });
+        });
+
+        describe('terminal steps', () => {
+            it('should return false for review step', () => {
+                expect(isStepSatisfied('review', createEmptyState())).toBe(false);
+            });
+
+            it('should return false for project-creation step', () => {
+                expect(isStepSatisfied('project-creation', createEmptyState())).toBe(false);
+            });
+        });
+    });
+
+    describe('findFirstIncompleteStep', () => {
+        const createMockSteps = (): Array<{ id: WizardStep; name: string }> => [
+            { id: 'welcome', name: 'Welcome' },
+            { id: 'prerequisites', name: 'Prerequisites' },
+            { id: 'adobe-auth', name: 'Adobe Auth' },
+            { id: 'adobe-project', name: 'Adobe Project' },
+            { id: 'adobe-workspace', name: 'Adobe Workspace' },
+            { id: 'component-selection', name: 'Components' },
+            { id: 'component-config', name: 'Settings' },
+            { id: 'review', name: 'Review' },
+        ];
+
+        it('should return first incomplete step after given index', () => {
+            const state: WizardState = {
+                currentStep: 'adobe-auth',
+                projectName: 'test-project',
+                // Adobe project/workspace not set - should be incomplete
+            };
+            const steps = createMockSteps();
+            // After adobe-auth (index 2), before review (index 7)
+            const result = findFirstIncompleteStep(state, steps, 2, 7);
+            expect(result).toBe(3); // adobe-project is first incomplete
+        });
+
+        it('should return -1 when all steps are complete', () => {
+            const state: WizardState = {
+                currentStep: 'adobe-auth',
+                projectName: 'test-project',
+                adobeOrg: { id: 'org', code: 'ORG', name: 'Org' },
+                adobeProject: { id: 'proj', name: 'Proj', title: 'Project' },
+                adobeWorkspace: { id: 'ws', name: 'WS', title: 'Workspace' },
+                components: { frontend: 'headless' },
+                componentConfigs: { 'headless': { port: 3000 } },
+            };
+            const steps = createMockSteps();
+            const result = findFirstIncompleteStep(state, steps, 2, 7);
+            expect(result).toBe(-1); // All complete
+        });
+
+        it('should skip satisfied steps to find first incomplete', () => {
+            const state: WizardState = {
+                currentStep: 'adobe-auth',
+                projectName: 'test-project',
+                adobeOrg: { id: 'org', code: 'ORG', name: 'Org' },
+                adobeProject: { id: 'proj', name: 'Proj', title: 'Project' },
+                adobeWorkspace: { id: 'ws', name: 'WS', title: 'Workspace' },
+                // components not selected - this step should be incomplete
+            };
+            const steps = createMockSteps();
+            const result = findFirstIncompleteStep(state, steps, 2, 7);
+            expect(result).toBe(5); // component-selection is first incomplete
+        });
+
+        it('should respect beforeIndex boundary', () => {
+            const state: WizardState = {
+                currentStep: 'adobe-auth',
+                projectName: 'test-project',
+                // Everything incomplete
+            };
+            const steps = createMockSteps();
+            // Only check between indices 2 and 4
+            const result = findFirstIncompleteStep(state, steps, 2, 4);
+            expect(result).toBe(3); // adobe-project
         });
     });
 });

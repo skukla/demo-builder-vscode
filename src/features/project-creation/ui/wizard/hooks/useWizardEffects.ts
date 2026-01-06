@@ -83,7 +83,8 @@ export function useWizardEffects({
                 completedSteps: getCompletedStepIndices(completedSteps, WIZARD_STEPS),
                 confirmedSteps: getCompletedStepIndices(confirmedSteps, WIZARD_STEPS),
                 steps: sidebarSteps,
-                isEditMode: state.editMode,
+                // Show confirmed step indicators for any review mode (edit/import/copy)
+                isEditMode: state.wizardMode ? state.wizardMode !== 'create' : state.editMode,
             });
         }
     }, [state.currentStep, completedSteps, confirmedSteps, WIZARD_STEPS]);

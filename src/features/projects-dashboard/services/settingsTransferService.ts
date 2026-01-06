@@ -81,7 +81,7 @@ export async function importSettingsFromFile(
         // Launch wizard with imported settings
         await vscode.commands.executeCommand('demoBuilder.createProject', {
             importedSettings: settings,
-            sourceDescription: `Imported from ${vscode.workspace.asRelativePath(fileUri)}`,
+            sourceDescription: vscode.workspace.asRelativePath(fileUri),
         });
 
         return {
@@ -171,7 +171,7 @@ export async function copySettingsFromProject(
         // Launch wizard with copied settings
         await vscode.commands.executeCommand('demoBuilder.createProject', {
             importedSettings: settings,
-            sourceDescription: `Copied from ${sourceProject.name}`,
+            sourceDescription: sourceProject.name,
         });
 
         return {

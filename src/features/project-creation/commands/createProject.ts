@@ -11,7 +11,6 @@ import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundle
 import { ProgressUnifier } from '@/core/utils/progressUnifier';
 import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
-import { ComponentHandler } from '@/features/components/handlers/componentHandler';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 // Handler utilities and handlers
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
@@ -87,7 +86,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     // Prerequisites are handled by PrerequisitesManager
     private prereqManager: PrerequisitesManager;
     private authManager: AuthenticationService;
-    private componentHandler: ComponentHandler;
     private errorLogger: ErrorLogger;
     private debugLogger = getLogger();
     private progressUnifier: ProgressUnifier;
@@ -120,7 +118,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         // PrerequisitesManager is initialized with proper path
         this.prereqManager = new PrerequisitesManager(context.extensionPath, logger);
         this.authManager = ServiceLocator.getAuthenticationService();
-        this.componentHandler = new ComponentHandler(context);
         this.errorLogger = new ErrorLogger(context);
         this.progressUnifier = new ProgressUnifier(logger);
 
@@ -304,7 +301,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Managers
             prereqManager: this.prereqManager,
             authManager: this.authManager,
-            componentHandler: this.componentHandler,
             errorLogger: this.errorLogger,
             progressUnifier: this.progressUnifier,
             stepLogger,

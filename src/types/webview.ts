@@ -75,11 +75,22 @@ export interface WizardState {
         setupInstructions?: Array<{ step: string; details: string; important?: boolean }>;
     };
 
-    // Edit mode properties
+    // Wizard mode - determines flow behavior and UI labels
+    wizardMode?: WizardMode;
+
+    // Edit mode properties (legacy, use wizardMode instead)
     editMode?: boolean;  // True when editing existing project
     editProjectPath?: string;  // Path to existing project being edited
     editOriginalName?: string;  // Original project name (for duplicate validation)
 }
+
+/**
+ * Wizard mode determines the flow behavior and UI labels
+ * - 'create': New project from scratch
+ * - 'edit': Editing existing project in place
+ * - 'import': Creating from imported settings (file or project copy)
+ */
+export type WizardMode = 'create' | 'edit' | 'import';
 
 export interface AdobeAuthState {
     isAuthenticated: boolean;

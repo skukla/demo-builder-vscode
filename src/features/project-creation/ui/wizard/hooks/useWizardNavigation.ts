@@ -5,6 +5,8 @@ import {
     getAdobeStepIndices,
     computeStateUpdatesForBackwardNav,
     buildProjectConfig,
+    findFirstIncompleteStep,
+    REQUIRED_REVIEW_STEPS,
     ImportedSettings,
 } from '../wizardHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
@@ -194,50 +196,76 @@ export function useWizardNavigation({
 
     const goNext = useCallback(async () => {
         const currentIndex = getCurrentStepIndex();
+        const isReviewMode = state.wizardMode && state.wizardMode !== 'create';
+        const reviewIndex = WIZARD_STEPS.findIndex(step => step.id === 'review');
 
-        // IMPORT MODE: Skip to review when clicking Continue on auth step
-        // Only valid if:
-        // 1. We have imported settings
-        // 2. User hasn't changed the architecture (package AND stack match OR weren't specified)
-        // 3. We're on the adobe-auth step
-        const hasImportedSettings = Boolean(importedSettings);
-        // Architecture is "unchanged" if:
-        // - Imported file had no package/stack (old project format) → nothing to change from
-        // - OR imported values match current state (user didn't modify)
-        const packageUnchanged = !importedSettings?.selectedPackage ||
-            state.selectedPackage === importedSettings.selectedPackage;
-        const stackUnchanged = !importedSettings?.selectedStack ||
-            state.selectedStack === importedSettings.selectedStack;
-        const architectureUnchanged = packageUnchanged && stackUnchanged;
+        // SMART SKIP: After required steps, skip to first incomplete step or review
+        // Required steps (welcome, prerequisites, adobe-auth) always go sequentially
+        // After auth, we can skip satisfied steps and jump to first incomplete
+        const isAfterRequiredSteps = isReviewMode &&
+            !REQUIRED_REVIEW_STEPS.includes(state.currentStep as WizardStep) ||
+            (state.currentStep === 'adobe-auth');
 
-        if (hasImportedSettings && architectureUnchanged && state.currentStep === 'adobe-auth') {
-            const reviewIndex = WIZARD_STEPS.findIndex(step => step.id === 'review');
-            if (reviewIndex === -1) {
-                log.warn('Review step not found in wizard steps');
+        if (isReviewMode && isAfterRequiredSteps && state.currentStep === 'adobe-auth') {
+            // Find first incomplete step after auth, before review
+            const firstIncomplete = findFirstIncompleteStep(
+                state,
+                WIZARD_STEPS as Array<{ id: WizardStep; name: string }>,
+                currentIndex,
+                reviewIndex,
+            );
+
+            if (firstIncomplete === -1) {
+                // All steps complete → skip to review
+                log.info('Review mode: all steps satisfied, navigating to review');
+                setIsPreparingReview(true);
+
+                importNavTimerRef.current = setTimeout(() => {
+                    // Mark current step as completed and confirmed
+                    if (!completedSteps.includes(state.currentStep)) {
+                        setCompletedSteps(prev => [...prev, state.currentStep]);
+                    }
+                    if (!confirmedSteps.includes(state.currentStep)) {
+                        setConfirmedSteps(prev => [...prev, state.currentStep]);
+                    }
+                    setHighestCompletedStepIndex(reviewIndex - 1);
+
+                    navigateToStep('review', reviewIndex, currentIndex);
+
+                    importNavClearTimerRef.current = setTimeout(() => {
+                        setIsPreparingReview(false);
+                    }, TIMEOUTS.STEP_TRANSITION);
+                }, TIMEOUTS.IMPORT_TRANSITION_FEEDBACK);
+
+                return;
+            } else {
+                // Jump to first incomplete step
+                const targetStep = WIZARD_STEPS[firstIncomplete];
+                log.info(`Review mode: jumping to first incomplete step: ${targetStep.id}`);
+
+                try {
+                    setIsConfirmingSelection(true);
+                    await handleStepBackendCalls(state.currentStep, targetStep.id, state, importedSettings, packages);
+
+                    // Mark current step as completed and confirmed
+                    if (!completedSteps.includes(state.currentStep)) {
+                        setCompletedSteps(prev => [...prev, state.currentStep]);
+                    }
+                    if (!confirmedSteps.includes(state.currentStep)) {
+                        setConfirmedSteps(prev => [...prev, state.currentStep]);
+                    }
+
+                    setIsConfirmingSelection(false);
+                    navigateToStep(targetStep.id, firstIncomplete, currentIndex);
+                } catch (error) {
+                    log.error('Failed to skip to incomplete step', error instanceof Error ? error : undefined);
+                    setIsConfirmingSelection(false);
+                }
                 return;
             }
-
-            log.info('Import mode: navigating from auth to review');
-            setIsPreparingReview(true);
-
-            importNavTimerRef.current = setTimeout(() => {
-                const stepsToComplete: WizardStep[] = [];
-                for (let i = 0; i < reviewIndex; i++) {
-                    stepsToComplete.push(WIZARD_STEPS[i].id);
-                }
-                setCompletedSteps(stepsToComplete);
-                setHighestCompletedStepIndex(reviewIndex - 1);
-
-                navigateToStep('review', reviewIndex, currentIndex);
-
-                importNavClearTimerRef.current = setTimeout(() => {
-                    setIsPreparingReview(false);
-                }, TIMEOUTS.STEP_TRANSITION);
-            }, TIMEOUTS.IMPORT_TRANSITION_FEEDBACK);
-
-            return;
         }
 
+        // Standard navigation: go to next step
         if (currentIndex < WIZARD_STEPS.length - 1) {
             const nextStep = WIZARD_STEPS[currentIndex + 1];
 
@@ -250,8 +278,8 @@ export function useWizardNavigation({
                     setHighestCompletedStepIndex(Math.max(highestCompletedStepIndex, currentIndex));
                 }
 
-                // In edit mode, mark step as confirmed (user explicitly clicked Continue)
-                if (state.editMode && !confirmedSteps.includes(state.currentStep)) {
+                // In review mode, mark step as confirmed (user explicitly clicked Continue)
+                if (isReviewMode && !confirmedSteps.includes(state.currentStep)) {
                     setConfirmedSteps(prev => [...prev, state.currentStep]);
                 }
 
