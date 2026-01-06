@@ -6,6 +6,7 @@ import {
     computeStateUpdatesForBackwardNav,
     buildProjectConfig,
     findFirstIncompleteStep,
+    isStepSatisfied,
     REQUIRED_REVIEW_STEPS,
     ImportedSettings,
 } from '../wizardHelpers';
@@ -200,13 +201,15 @@ export function useWizardNavigation({
         const reviewIndex = WIZARD_STEPS.findIndex(step => step.id === 'review');
 
         // SMART SKIP: After required steps, skip to first incomplete step or review
-        // Required steps (welcome, prerequisites, adobe-auth) always go sequentially
-        // After auth, we can skip satisfied steps and jump to first incomplete
-        const isAfterRequiredSteps = isReviewMode &&
-            !REQUIRED_REVIEW_STEPS.includes(state.currentStep as WizardStep) ||
-            (state.currentStep === 'adobe-auth');
+        // Required steps (welcome, prerequisites, adobe-auth, settings) always go sequentially
+        // After completing a required step OR any satisfied step, skip to first incomplete
+        const isLeavingRequiredStep = REQUIRED_REVIEW_STEPS.includes(state.currentStep as WizardStep);
+        const shouldSmartSkip = isReviewMode && (
+            isLeavingRequiredStep ||  // Just finished a required step
+            completedSteps.includes(state.currentStep)  // Current step was already satisfied
+        );
 
-        if (isReviewMode && isAfterRequiredSteps && state.currentStep === 'adobe-auth') {
+        if (shouldSmartSkip) {
             // Find first incomplete step after auth, before review
             const firstIncomplete = findFirstIncompleteStep(
                 state,
