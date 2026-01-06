@@ -126,11 +126,10 @@ export function SelectionStepContent<T extends SelectableItem>({
     renderDescription,
     headerAction,
 }: SelectionStepContentProps<T>) {
-    // Header with optional action (only render if heading provided or headerAction exists)
-    const header = (labels.heading || headerAction) ? (
+    // Header with heading (headerAction is now passed to SearchableList for inline display)
+    const header = labels.heading ? (
         <Flex justifyContent="space-between" alignItems="center" marginBottom="size-300">
-            {labels.heading && <Heading level={2} margin={0}>{labels.heading}</Heading>}
-            {headerAction}
+            <Heading level={2} margin={0}>{labels.heading}</Heading>
         </Flex>
     ) : null;
 
@@ -221,6 +220,7 @@ export function SelectionStepContent<T extends SelectableItem>({
                 itemNounPlural={labels.itemNounPlural}
                 searchPlaceholder={labels.searchPlaceholder}
                 refreshAriaLabel={`Refresh ${labels.itemNounPlural || labels.itemNoun + 's'}`}
+                action={headerAction}
             />
         </div>
     );

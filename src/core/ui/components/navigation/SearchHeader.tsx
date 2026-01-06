@@ -59,6 +59,9 @@ export interface SearchHeaderProps {
     autoFocus?: boolean;
     /** Always show count even below threshold (default: false) */
     alwaysShowCount?: boolean;
+
+    /** Optional action element to show inline (e.g., "+ New" button) */
+    action?: React.ReactNode;
 }
 
 /**
@@ -98,6 +101,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
     hasLoadedOnce,
     autoFocus = false,
     alwaysShowCount = false,
+    action,
 }) => {
     const showSearch = totalCount > searchThreshold;
     const showCount = hasLoadedOnce && (alwaysShowCount || totalCount > 0);
@@ -158,11 +162,12 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
         </Flex>
     ) : null;
 
-    // Action buttons (view toggle + refresh)
-    const ActionButtons = (RefreshButton || ViewToggle) ? (
+    // Action buttons (view toggle + refresh + custom action)
+    const ActionButtons = (RefreshButton || ViewToggle || action) ? (
         <Flex gap="size-100" alignItems="center">
             {ViewToggle}
             {RefreshButton}
+            {action}
         </Flex>
     ) : null;
 

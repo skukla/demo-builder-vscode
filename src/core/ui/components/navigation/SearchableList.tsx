@@ -51,6 +51,8 @@ export interface SearchableListProps<T extends SearchableListItem> {
     searchPlaceholder?: string;
     /** Aria label for refresh button (default: "Refresh list") */
     refreshAriaLabel?: string;
+    /** Optional action element to show inline (e.g., "+ New" button) */
+    action?: React.ReactNode;
 }
 
 /**
@@ -101,6 +103,7 @@ export function SearchableList<T extends SearchableListItem>({
     itemNounPlural,
     searchPlaceholder = 'Type to filter...',
     refreshAriaLabel = 'Refresh list',
+    action,
 }: SearchableListProps<T>) {
     // Use provided plural or default to simple +s
     const nounPlural = itemNounPlural || `${itemNoun}s`;
@@ -217,7 +220,7 @@ export function SearchableList<T extends SearchableListItem>({
 
     return (
         <div className="searchable-list-container">
-            {/* Search Header (search field + refresh + count) */}
+            {/* Search Header (search field + refresh + count + action) */}
             <SearchHeader
                 searchQuery={searchQuery}
                 onSearchQueryChange={onSearchQueryChange}
@@ -233,6 +236,7 @@ export function SearchableList<T extends SearchableListItem>({
                 hasLoadedOnce={hasLoadedOnce}
                 autoFocus={autoFocus && !selectedKeys.length}
                 alwaysShowCount={true}
+                action={action}
             />
 
             {/* List Container (with refresh opacity) */}
