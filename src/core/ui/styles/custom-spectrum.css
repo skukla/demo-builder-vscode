@@ -172,7 +172,14 @@ button[class*="spectrum-Button"][disabled],
         font-size: 14px !important;
         padding: 0 20px !important;
     }
+
 } /* End of first @layer theme block */
+
+/* Search header - padding provides space for focus ring (2px outline + 2px offset) */
+.search-header {
+    padding: 4px !important;
+    margin: -4px !important;
+}
 
 /* ============================================
    CTA BUTTON OVERRIDES
@@ -1162,6 +1169,13 @@ button[class*="spectrum-Button"][disabled],
     font-size: 11px !important;
     color: var(--spectrum-global-color-gray-600) !important;
     line-height: 1.4 !important;
+}
+
+/* Checkbox focus ring for keyboard navigation */
+.architecture-addons label:has(input[type="checkbox"]):focus-within > input[type="checkbox"] + span {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+    border-radius: 4px !important;
 }
 
 .architecture-addons .addon-required-badge {
@@ -2709,7 +2723,7 @@ button[class*="spectrum-Button"][disabled],
     flex-direction: column !important;
     flex: 1 !important;
     min-height: 0 !important;  /* Allow shrinking below content size */
-    overflow: hidden !important;
+    overflow: visible !important;  /* Allow focus rings to show */
 }
 
 /* ===========================================
@@ -2737,7 +2751,7 @@ button[class*="spectrum-Button"][disabled],
     flex-direction: column !important;
     flex: 1 !important;
     min-height: 0 !important;  /* Allow shrinking below content size */
-    overflow: hidden !important;
+    overflow: visible !important;  /* Allow focus rings to show */
 }
 
 /* SearchField input padding - accounts for magnifying glass icon */
