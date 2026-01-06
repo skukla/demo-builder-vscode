@@ -47,12 +47,6 @@ export async function generateEnvironmentFiles(
     const deployedMeshEndpoint = project.meshState?.endpoint || project.componentInstances?.['commerce-mesh']?.endpoint;
     const typedConfig = config as { apiMesh?: { endpoint?: string } };
 
-    // Debug logging for mesh endpoint tracking
-    logger.debug(`[Project Creation] Phase 4 - Mesh endpoint sources:`);
-    logger.debug(`  - project.meshState: ${JSON.stringify(project.meshState)}`);
-    logger.debug(`  - componentInstances['commerce-mesh']?.endpoint: ${project.componentInstances?.['commerce-mesh']?.endpoint}`);
-    logger.debug(`  - deployedMeshEndpoint: ${deployedMeshEndpoint}`);
-
     // Create config with mesh endpoint for .env generation
     const envConfig: EnvGenerationConfig = {
         ...config,

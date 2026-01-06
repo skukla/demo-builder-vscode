@@ -87,20 +87,30 @@ export async function getEndpoint(
             );
 
             if (result.code === 0) {
+                // Debug: Log raw describe output for troubleshooting
+                debugLogger.debug(`[API Mesh] describe stdout (${result.stdout.length} chars): ${result.stdout.substring(0, 500)}`);
+                
                 // Parse JSON response
                 const jsonMatch = /\{[\s\S]*\}/.exec(result.stdout);
                 if (jsonMatch) {
+                    debugLogger.debug(`[API Mesh] JSON match found: ${jsonMatch[0].substring(0, 300)}`);
                     const meshData = parseJSON<{ meshEndpoint?: string; endpoint?: string }>(jsonMatch[0]);
                     if (!meshData) {
                         logger.warn('[Mesh] Failed to parse mesh data from describe');
                         // Continue to fallback
                     } else {
+                        debugLogger.debug(`[API Mesh] Parsed meshData keys: ${Object.keys(meshData).join(', ')}`);
+                        debugLogger.debug(`[API Mesh] meshEndpoint: ${meshData.meshEndpoint}, endpoint: ${meshData.endpoint}`);
                         const endpoint = meshData.meshEndpoint || meshData.endpoint;
                         if (endpoint) {
                             logger.debug('[API Mesh] Retrieved endpoint from describe:', endpoint);
                             return endpoint;
+                        } else {
+                            debugLogger.debug('[API Mesh] No endpoint field found in parsed data');
                         }
                     }
+                } else {
+                    debugLogger.debug('[API Mesh] No JSON object found in describe output');
                 }
             }
         } catch {

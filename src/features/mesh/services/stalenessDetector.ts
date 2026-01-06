@@ -513,6 +513,7 @@ export async function detectMeshChanges(
 async function updateMeshStateImpl(project: Project, endpoint: string | undefined, logger: Logger): Promise<void> {
     const meshInstance = project.componentInstances?.['commerce-mesh'];
     if (!meshInstance?.path) {
+        logger.debug('[Mesh State] No mesh component path, skipping state update');
         return;
     }
 
