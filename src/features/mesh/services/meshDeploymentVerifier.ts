@@ -99,7 +99,7 @@ export async function waitForMeshDeployment(
                 // Parse JSON response
                 const jsonMatch = /\{[\s\S]*\}/.exec(verifyResult.stdout);
                 if (jsonMatch) {
-                    const meshData = parseJSON<{ meshStatus?: string; meshId?: string; endpoint?: string; error?: string }>(jsonMatch[0]);
+                    const meshData = parseJSON<{ meshStatus?: string; meshId?: string; mesh_id?: string; endpoint?: string; error?: string }>(jsonMatch[0]);
                     if (!meshData) {
                         logger?.warn('[Mesh Verification] Failed to parse mesh data');
                         continue;
@@ -113,14 +113,12 @@ export async function waitForMeshDeployment(
                         const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
                         logger?.info(`[Mesh Verification] ✅ Verified deployment after ${totalTime}s`);
 
-                        deployedMeshId = meshData.meshId;
-                        logger?.debug(`[Mesh Verification] meshData from get: ${JSON.stringify(meshData)}`);
-                        logger?.debug(`[Mesh Verification] Extracted meshId: ${deployedMeshId}`);
+                        // Handle both camelCase (meshId) and snake_case (mesh_id) responses from Adobe CLI
+                        deployedMeshId = meshData.meshId || meshData.mesh_id;
 
                         // Get endpoint using describe command
                         if (deployedMeshId) {
                             deployedEndpoint = await getEndpoint(deployedMeshId, logger);
-                            logger?.debug(`[Mesh Verification] Retrieved endpoint: ${deployedEndpoint}`);
                         } else {
                             logger?.warn(`[Mesh Verification] No meshId found in response, cannot retrieve endpoint`);
                         }
@@ -175,7 +173,6 @@ async function getEndpoint(meshId: string, logger?: Logger): Promise<string | un
 
     try {
         const commandManager = ServiceLocator.getCommandExecutor();
-        logger?.debug(`[Mesh Verification] Running aio api-mesh:describe to get endpoint...`);
         const result = await commandManager.execute(
             'aio api-mesh:describe',
             {
@@ -186,36 +183,27 @@ async function getEndpoint(meshId: string, logger?: Logger): Promise<string | un
             },
         );
 
-        logger?.debug(`[Mesh Verification] describe result code: ${result.code}`);
-        logger?.debug(`[Mesh Verification] describe stdout: ${result.stdout?.substring(0, 500)}`);
-
         if (result.code === 0 && result.stdout) {
-            // Parse the output to extract endpoint
+            // Parse the output to extract endpoint - try regex first (handles non-JSON output)
             const endpointMatch = /endpoint[:\s]+([^\s\n]+)/i.exec(result.stdout);
             if (endpointMatch && endpointMatch[1]) {
-                logger?.debug(`[Mesh Verification] Found endpoint via regex: ${endpointMatch[1]}`);
                 return endpointMatch[1].trim();
             }
 
-            // Try JSON parsing
+            // Try JSON parsing as fallback
             try {
                 const meshData = parseJSON<{ endpoint?: string }>(result.stdout);
                 if (meshData?.endpoint) {
-                    logger?.debug(`[Mesh Verification] Found endpoint via JSON parse: ${meshData.endpoint}`);
                     return meshData.endpoint;
                 }
             } catch {
-                // Not JSON, continue
+                // Not JSON, continue to fallback
             }
-
-            logger?.debug(`[Mesh Verification] Could not extract endpoint from describe output`);
         }
 
         // Fallback: construct endpoint from mesh ID
         if (meshId) {
-            const constructedEndpoint = `https://graph.adobe.io/api/${meshId}/graphql`;
-            logger?.debug(`[Mesh Verification] Constructing endpoint from mesh ID: ${constructedEndpoint}`);
-            return constructedEndpoint;
+            return `https://graph.adobe.io/api/${meshId}/graphql`;
         }
 
     } catch (error) {

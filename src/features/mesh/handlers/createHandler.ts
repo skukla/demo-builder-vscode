@@ -191,7 +191,7 @@ export async function handleCreateApiMesh(
                     // Parse JSON response to check meshStatus
                     try {
                         // Extract JSON from output using Step 2 helper (skips "Successfully retrieved mesh" line)
-                        const meshData = extractAndParseJSON<{ meshId?: string; meshStatus?: string; error?: string }>(verifyResult.stdout);
+                        const meshData = extractAndParseJSON<{ meshId?: string; mesh_id?: string; meshStatus?: string; error?: string }>(verifyResult.stdout);
                         if (!meshData) {
                             context.logger.warn('[API Mesh] Could not parse JSON from get response');
                             context.debugLogger.trace('[API Mesh] Output:', verifyResult.stdout);
@@ -200,16 +200,18 @@ export async function handleCreateApiMesh(
                         const rawMeshStatus = meshData.meshStatus || '';
                         const statusCategory = getMeshStatusCategory(rawMeshStatus);
 
-                        context.debugLogger.debug('[API Mesh] Mesh status:', { rawMeshStatus, statusCategory, meshId: meshData.meshId });
+                        // Handle both camelCase (meshId) and snake_case (mesh_id) responses from Adobe CLI
+                        const extractedMeshId = meshData.meshId || meshData.mesh_id;
+                        context.debugLogger.debug('[API Mesh] Mesh status:', { rawMeshStatus, statusCategory, meshId: extractedMeshId });
 
                         switch (statusCategory) {
                             case 'deployed': {
                                 // Success! Mesh is fully deployed - store the mesh data
                                 const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
                                 context.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
-                                deployedMeshId = meshData.meshId;
+                                deployedMeshId = extractedMeshId;
                                 // Get endpoint using single source of truth
-                                deployedEndpoint = meshData.meshId ? await getEndpoint(context, meshData.meshId) : undefined;
+                                deployedEndpoint = extractedMeshId ? await getEndpoint(context, extractedMeshId) : undefined;
                                 meshDeployed = true;
                                 break;
                             }

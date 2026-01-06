@@ -37,6 +37,7 @@ interface ApiServicesConfig {
  */
 interface MeshData {
     meshId?: string;
+    mesh_id?: string;  // Adobe CLI also uses snake_case in some responses
     meshStatus?: string;
     error?: string;
 }
@@ -107,7 +108,8 @@ export async function checkMeshExistence(
 
         const rawMeshStatus = meshData.meshStatus || '';
         const statusCategory = getMeshStatusCategory(rawMeshStatus);
-        const meshId = meshData.meshId;
+        // Handle both camelCase (meshId) and snake_case (mesh_id) responses from Adobe CLI
+        const meshId = meshData.meshId || meshData.mesh_id;
 
         // Map status category to result
         switch (statusCategory) {
