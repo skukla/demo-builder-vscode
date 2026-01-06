@@ -166,9 +166,9 @@ export async function deployNewMesh(
                     onMeshCreated(adobeConfig.adobe?.workspace);
                 }
 
-                // Get mesh info - prefer from wizard, but fetch if not available
-                let meshId = apiMeshConfig?.meshId;
-                let endpoint = apiMeshConfig?.endpoint;
+                // Get mesh info - prefer from deployment result, fall back to wizard config
+                let meshId = meshDeployResult.data?.meshId || apiMeshConfig?.meshId;
+                let endpoint = meshDeployResult.data?.endpoint || apiMeshConfig?.endpoint;
 
                 // If wizard didn't capture mesh info (e.g., still provisioning), fetch it now
                 if (!meshId || !endpoint) {
