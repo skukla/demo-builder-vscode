@@ -4,9 +4,9 @@ import * as path from 'path';
 import axios from 'axios';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import type { Logger } from '@/types/logger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { UpdateInfo } from '@/types';
+import type { Logger } from '@/types/logger';
 
 export class AutoUpdater {
     private context: vscode.ExtensionContext;
