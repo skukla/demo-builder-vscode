@@ -152,7 +152,7 @@ describe('WelcomeStep', () => {
             );
 
             // Should show validation error
-            expect(screen.getByText(/Use lowercase letters, numbers, and hyphens only/)).toBeInTheDocument();
+            expect(screen.getByText(/Must start with a letter/)).toBeInTheDocument();
 
             // setCanProceed should be false
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
@@ -173,7 +173,7 @@ describe('WelcomeStep', () => {
                 </Provider>
             );
 
-            expect(screen.getByText(/Use lowercase letters, numbers, and hyphens only/)).toBeInTheDocument();
+            expect(screen.getByText(/Must start with a letter/)).toBeInTheDocument();
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
         });
 
@@ -192,7 +192,7 @@ describe('WelcomeStep', () => {
                 </Provider>
             );
 
-            expect(screen.getByText(/Use lowercase letters, numbers, and hyphens only/)).toBeInTheDocument();
+            expect(screen.getByText(/Must start with a letter/)).toBeInTheDocument();
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
         });
 
@@ -289,8 +289,28 @@ describe('WelcomeStep', () => {
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);
         });
 
-        it('should accept project name with only hyphens and numbers', () => {
-            const validState = { ...baseState, projectName: '123-456' };
+        it('should reject project name starting with number', () => {
+            const invalidState = { ...baseState, projectName: '123-abc' };
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <WelcomeStep
+                        state={invalidState as WizardState}
+                        updateState={mockUpdateState}
+                        onNext={mockOnNext}
+                        onBack={mockOnBack}
+                        setCanProceed={mockSetCanProceed}
+                    />
+                </Provider>
+            );
+
+            // Must start with a letter
+            expect(screen.getByText(/Must start with a letter/)).toBeInTheDocument();
+            expect(mockSetCanProceed).toHaveBeenCalledWith(false);
+        });
+
+        it('should accept project name with hyphens and numbers after first letter', () => {
+            const validState = { ...baseState, projectName: 'a123-456' };
 
             render(
                 <Provider theme={defaultTheme}>
@@ -390,7 +410,7 @@ describe('WelcomeStep', () => {
             );
 
             // Validation error should be visible (format error takes precedence for 'AB')
-            expect(screen.getByText(/Use lowercase letters, numbers, and hyphens only/)).toBeInTheDocument();
+            expect(screen.getByText(/Must start with a letter/)).toBeInTheDocument();
         });
     });
 });

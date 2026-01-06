@@ -61,7 +61,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     const validateProjectName = useCallback((value: string): string | undefined => {
         const validator = compose(
             required('Project name is required'),
-            pattern(/^[a-z0-9-]+$/, 'Use lowercase letters, numbers, and hyphens only'),
+            pattern(/^[a-z][a-z0-9-]*$/, 'Must start with a letter and contain only lowercase letters, numbers, and hyphens'),
             minLength(3, 'Name must be at least 3 characters'),
             maxLength(30, 'Name must be less than 30 characters'),
             notDuplicate('A project with this name already exists'),

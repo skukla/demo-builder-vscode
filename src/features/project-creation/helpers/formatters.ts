@@ -4,6 +4,7 @@
 
 // Re-export name normalization from core for backward compatibility
 export {
+    normalizeIdentifierName,
     normalizeProjectName,
     normalizeRepositoryName,
     isValidRepositoryName,

@@ -13,6 +13,34 @@
 const REPO_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
 
 /**
+ * Normalize identifier name for valid format (projects, sites, etc.).
+ *
+ * Transforms user input to valid identifier:
+ * - Converts to lowercase
+ * - Converts spaces and underscores to hyphens
+ * - Removes special characters (keeps only a-z, 0-9, hyphens)
+ * - Collapses multiple consecutive hyphens to single hyphen
+ * - Ensures name starts with a letter (strips leading non-alpha characters)
+ *
+ * Used for project names, DA.live site names, and other identifiers
+ * that must start with a letter for consistency and portability.
+ *
+ * @example
+ * normalizeIdentifierName('My Project') // returns 'my-project'
+ * normalizeIdentifierName('Test_Demo') // returns 'test-demo'
+ * normalizeIdentifierName('2024 Project') // returns 'project'
+ * normalizeIdentifierName('--Hello') // returns 'hello'
+ */
+export function normalizeIdentifierName(input: string): string {
+    return input
+        .toLowerCase()
+        .replace(/[\s_]+/g, '-')       // Convert spaces and underscores to hyphens
+        .replace(/[^a-z0-9-]/g, '')    // Remove special characters
+        .replace(/-+/g, '-')           // Collapse multiple hyphens
+        .replace(/^[^a-z]+/, '');      // MUST start with letter (strip leading non-alpha)
+}
+
+/**
  * Normalize project name for valid directory/identifier format.
  *
  * Transforms user input to valid project name:
@@ -20,7 +48,7 @@ const REPO_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
  * - Converts spaces and underscores to hyphens
  * - Removes special characters (keeps only a-z, 0-9, hyphens)
  * - Collapses multiple consecutive hyphens to single hyphen
- * - Trims leading hyphens only (preserves trailing for typing flow)
+ * - Ensures name starts with a letter
  *
  * @example
  * normalizeProjectName('My Project') // returns 'my-project'
@@ -29,12 +57,7 @@ const REPO_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
  * normalizeProjectName('Demo--Name') // returns 'demo-name'
  */
 export function normalizeProjectName(input: string): string {
-    return input
-        .toLowerCase()
-        .replace(/[\s_]+/g, '-')      // Convert spaces and underscores to hyphens
-        .replace(/[^a-z0-9-]/g, '')   // Remove special characters
-        .replace(/-+/g, '-')          // Collapse multiple hyphens
-        .replace(/^-/, '');           // Trim leading hyphen only (preserve trailing for typing)
+    return normalizeIdentifierName(input);
 }
 
 /**
@@ -99,3 +122,4 @@ export function getRepositoryNameError(name: string): string | undefined {
     }
     return undefined;
 }
+

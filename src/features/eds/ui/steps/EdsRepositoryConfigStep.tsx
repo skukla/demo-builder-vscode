@@ -31,6 +31,7 @@ import {
     isValidRepositoryName,
     getRepositoryNameError,
     normalizeRepositoryName,
+    normalizeIdentifierName,
 } from '@/core/validation/normalizers';
 import { getValidationState } from '../helpers/validationHelpers';
 import type { BaseStepProps } from '@/types/wizard';
@@ -201,9 +202,10 @@ export function EdsRepositoryConfigStep({
 
     /**
      * Handle DA.live site change
+     * Uses shared normalizer for consistent identifier formatting
      */
     const handleDaLiveSiteChange = useCallback((value: string) => {
-        updateEdsConfig({ daLiveSite: value });
+        updateEdsConfig({ daLiveSite: normalizeIdentifierName(value) });
     }, [updateEdsConfig]);
 
     /**
