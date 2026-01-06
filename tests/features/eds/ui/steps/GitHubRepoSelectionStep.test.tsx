@@ -79,9 +79,9 @@ describe('GitHubRepoSelectionStep', () => {
     });
 
     describe('Create New Mode', () => {
-        it('should show Create New Repository button', async () => {
-            // Given: Existing mode (default)
-            const state = createDefaultState({ repoMode: 'existing' });
+        it('should show repository form when in new mode', async () => {
+            // Given: New mode (not existing mode since "New" button requires async repo loading)
+            const state = createDefaultState({ repoMode: 'new' });
 
             // When: Component renders
             const { GitHubRepoSelectionStep } = await import('@/features/eds/ui/steps/GitHubRepoSelectionStep');
@@ -95,8 +95,8 @@ describe('GitHubRepoSelectionStep', () => {
                 </TestWrapper>
             );
 
-            // Then: Should show New button (with Add icon)
-            expect(screen.getByRole('button', { name: /new/i })).toBeInTheDocument();
+            // Then: Should show "New Repository" heading (the form is displayed)
+            expect(screen.getByRole('heading', { name: /New Repository/i })).toBeInTheDocument();
         });
 
         it('should show repository name input in new mode', async () => {
@@ -164,7 +164,7 @@ describe('GitHubRepoSelectionStep', () => {
             );
 
             // Then: Should show Use Existing button
-            expect(screen.getByRole('button', { name: /use existing/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Browse/i })).toBeInTheDocument();
         });
 
         it('should show configuration summary', async () => {

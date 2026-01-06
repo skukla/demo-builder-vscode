@@ -15,7 +15,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-    ActionButton,
     Button,
     Flex,
     Heading,
@@ -27,7 +26,6 @@ import {
 } from '@adobe/react-spectrum';
 // Note: Heading is still used for the "Create New Site" subsection (level={3})
 import Add from '@spectrum-icons/workflow/Add';
-import Close from '@spectrum-icons/workflow/Close';
 import Info from '@spectrum-icons/workflow/Info';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
@@ -36,6 +34,7 @@ import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredF
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { useSelectionStep } from '@/core/ui/hooks';
+import { normalizeIdentifierName } from '@/core/validation/normalizers';
 import type { DaLiveSiteItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 
@@ -138,10 +137,10 @@ export function DataSourceConfigStep({
 
     /**
      * Handle site name change (for new site)
+     * Uses shared normalizer for consistent identifier formatting
      */
     const handleSiteNameChange = useCallback((value: string) => {
-        // Convert to lowercase automatically
-        const normalizedValue = value.toLowerCase();
+        const normalizedValue = normalizeIdentifierName(value);
         setSiteNameError(undefined);
         updateEdsConfig({ daLiveSite: normalizedValue });
     }, [updateEdsConfig]);
@@ -291,10 +290,9 @@ export function DataSourceConfigStep({
                 >
                     <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
                         <Heading level={3} margin={0}>Create New Site</Heading>
-                        <ActionButton onPress={handleCancelNew} isQuiet>
-                            <Close size="S" />
-                            <Text>Cancel</Text>
-                        </ActionButton>
+                        <Button variant="secondary" onPress={handleCancelNew}>
+                            Browse
+                        </Button>
                     </Flex>
 
                     <TextField

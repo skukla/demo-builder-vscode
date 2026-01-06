@@ -311,7 +311,7 @@ export function GitHubRepoSelectionStep({
                     <Flex justifyContent="space-between" alignItems="center" marginBottom="size-300">
                         <Heading level={2}>New Repository</Heading>
                         <Button variant="secondary" onPress={handleUseExisting}>
-                            Use Existing
+                            Browse
                         </Button>
                     </Flex>
 

@@ -421,13 +421,15 @@ describe('DataSourceConfigStep', () => {
             });
             await userEvent.click(screen.getByRole('button', { name: /New/i }));
 
-            // Type invalid site name (starts with number)
+            // Type site name starting with number - normalizer will remove leading numbers
             const siteInput = screen.getByLabelText(/Site Name/i);
             await userEvent.type(siteInput, '123-invalid');
             fireEvent.blur(siteInput);
 
+            // With normalizer, "123-invalid" becomes "invalid" (leading numbers removed)
+            // so the input should be valid and updateState called with normalized value
             await waitFor(() => {
-                expect(screen.getByText(/Must start with a letter/i)).toBeInTheDocument();
+                expect(mockUpdateState).toHaveBeenCalled();
             });
         });
 
@@ -498,8 +500,8 @@ describe('DataSourceConfigStep', () => {
                 expect(screen.getByText(/Create New Site/i)).toBeInTheDocument();
             });
 
-            const cancelButton = screen.getByRole('button', { name: /Cancel/i });
-            await userEvent.click(cancelButton);
+            const browseButton = screen.getByRole('button', { name: /Browse/i });
+            await userEvent.click(browseButton);
 
             // Should be back to list view
             await waitFor(() => {
