@@ -771,7 +771,7 @@ describe('wizardHelpers', () => {
             expect(result).toBe(3); // adobe-project is first incomplete
         });
 
-        it('should return -1 when all steps are complete', () => {
+        it('should return -1 when all steps are complete and confirmed', () => {
             const state: WizardState = {
                 currentStep: 'adobe-auth',
                 projectName: 'test-project',
@@ -782,11 +782,18 @@ describe('wizardHelpers', () => {
                 componentConfigs: { 'headless': { port: 3000 } },
             };
             const steps = createMockSteps();
-            const result = findFirstIncompleteStep(state, steps, 2, 7);
-            expect(result).toBe(-1); // All complete
+            // All steps between afterIndex and beforeIndex are confirmed
+            const completedSteps: WizardStep[] = [
+                'adobe-project',
+                'adobe-workspace',
+                'component-selection',
+                'component-config',
+            ];
+            const result = findFirstIncompleteStep(state, steps, 2, 7, completedSteps);
+            expect(result).toBe(-1); // All complete and confirmed
         });
 
-        it('should skip satisfied steps to find first incomplete', () => {
+        it('should skip satisfied and confirmed steps to find first incomplete', () => {
             const state: WizardState = {
                 currentStep: 'adobe-auth',
                 projectName: 'test-project',
@@ -796,8 +803,26 @@ describe('wizardHelpers', () => {
                 // components not selected - this step should be incomplete
             };
             const steps = createMockSteps();
-            const result = findFirstIncompleteStep(state, steps, 2, 7);
-            expect(result).toBe(5); // component-selection is first incomplete
+            // Project and workspace are confirmed, but component-selection is not
+            const completedSteps: WizardStep[] = ['adobe-project', 'adobe-workspace'];
+            const result = findFirstIncompleteStep(state, steps, 2, 7, completedSteps);
+            expect(result).toBe(5); // component-selection is first incomplete (no data)
+        });
+
+        it('should return unconfirmed step even if it has data', () => {
+            // This tests the new behavior: step must be BOTH satisfied AND confirmed
+            const state: WizardState = {
+                currentStep: 'adobe-auth',
+                projectName: 'test-project',
+                adobeOrg: { id: 'org', code: 'ORG', name: 'Org' },
+                adobeProject: { id: 'proj', name: 'Proj', title: 'Project' },
+                adobeWorkspace: { id: 'ws', name: 'WS', title: 'Workspace' },
+            };
+            const steps = createMockSteps();
+            // Project is NOT in completedSteps (e.g., removed after stack change)
+            const completedSteps: WizardStep[] = ['adobe-workspace']; // workspace confirmed, but not project
+            const result = findFirstIncompleteStep(state, steps, 2, 7, completedSteps);
+            expect(result).toBe(3); // adobe-project needs confirmation despite having data
         });
 
         it('should respect beforeIndex boundary', () => {

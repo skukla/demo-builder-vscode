@@ -230,13 +230,21 @@ export function WizardContainer({
 
         // In review mode, recompute which steps are still satisfied with the new state
         // This preserves green checkmarks for steps that still have valid data
+        // IMPORTANT: Stack changes mean brand changes which mean different mesh code
+        // Force user to re-confirm project/workspace selection even if state is preserved
         const isReviewMode = state.wizardMode && state.wizardMode !== 'create';
         if (isReviewMode) {
+            // Steps that require re-confirmation on stack change
+            // (stack/brand affects mesh code, so deployment target must be verified)
+            const stackDependentSteps = ['adobe-project', 'adobe-workspace'];
+            
             const satisfiedSteps = WIZARD_STEPS
                 .filter(step => step.id !== 'project-creation' && step.id !== 'review')
                 .filter(step => isStepSatisfied(step.id, newState))
+                .filter(step => !stackDependentSteps.includes(step.id)) // Force re-confirmation
                 .map(step => step.id);
             log.info(`Recomputed satisfied steps after stack change: ${satisfiedSteps.join(', ') || 'none'}`);
+            log.info(`Requiring re-confirmation for: ${stackDependentSteps.join(', ')}`);
             setCompletedSteps(satisfiedSteps);
         } else {
             // In create mode, reset to just 'welcome'

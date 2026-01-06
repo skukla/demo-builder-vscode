@@ -210,12 +210,15 @@ export function useWizardNavigation({
         );
 
         if (shouldSmartSkip) {
-            // Find first incomplete step after auth, before review
+            // Find first incomplete step after current, before review
+            // Pass completedSteps to ensure steps removed from completedSteps
+            // (e.g., after stack change) are not skipped
             const firstIncomplete = findFirstIncompleteStep(
                 state,
                 WIZARD_STEPS as Array<{ id: WizardStep; name: string }>,
                 currentIndex,
                 reviewIndex,
+                completedSteps,
             );
 
             if (firstIncomplete === -1) {

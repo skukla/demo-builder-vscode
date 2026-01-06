@@ -516,6 +516,13 @@ export function isStepSatisfied(stepId: WizardStep, state: WizardState): boolean
  * Used for smart navigation in review mode - skips satisfied steps
  * to jump directly to steps that need user input.
  *
+ * A step is considered "complete" only if BOTH:
+ * 1. isStepSatisfied() returns true (has valid data)
+ * 2. Step is in completedSteps (user has confirmed it)
+ *
+ * This ensures steps removed from completedSteps (e.g., after stack change)
+ * will not be skipped even if they still have data.
+ *
  * @returns The index of the first incomplete step, or -1 if all complete
  */
 export function findFirstIncompleteStep(
@@ -523,10 +530,15 @@ export function findFirstIncompleteStep(
     steps: Array<{ id: WizardStep; name: string }>,
     afterIndex: number,
     beforeIndex: number,
+    completedSteps?: WizardStep[],
 ): number {
     for (let i = afterIndex + 1; i < beforeIndex; i++) {
         const step = steps[i];
-        if (!isStepSatisfied(step.id, state)) {
+        const isSatisfied = isStepSatisfied(step.id, state);
+        const isConfirmed = completedSteps?.includes(step.id) ?? false;
+        
+        // Step is incomplete if either: no data OR not confirmed by user
+        if (!isSatisfied || !isConfirmed) {
             return i;
         }
     }
