@@ -660,6 +660,8 @@ export function buildProjectConfig(
         // Package/Stack selections
         selectedPackage: wizardState.selectedPackage,
         selectedStack: wizardState.selectedStack,
+        // Selected optional addons (e.g., ['demo-inspector'])
+        selectedAddons: wizardState.selectedAddons || [],
         // Frontend source from package storefront (source of truth for repos)
         frontendSource,
         // Edit mode: re-use existing project directory

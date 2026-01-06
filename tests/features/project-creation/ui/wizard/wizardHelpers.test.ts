@@ -15,6 +15,7 @@ import {
     shouldShowWizardFooter,
     isStepSatisfied,
     findFirstIncompleteStep,
+    buildProjectConfig,
     REQUIRED_REVIEW_STEPS,
     WizardStepConfig,
     ImportedSettings,
@@ -809,6 +810,106 @@ describe('wizardHelpers', () => {
             // Only check between indices 2 and 4
             const result = findFirstIncompleteStep(state, steps, 2, 4);
             expect(result).toBe(3); // adobe-project
+        });
+    });
+
+    describe('buildProjectConfig', () => {
+        it('should include selectedAddons in the config', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+                selectedAddons: ['demo-inspector'],
+                components: {
+                    frontend: 'headless',
+                    backend: 'adobe-commerce-paas',
+                },
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.selectedAddons).toEqual(['demo-inspector']);
+        });
+
+        it('should default to empty array when no addons selected', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+                // No selectedAddons
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.selectedAddons).toEqual([]);
+        });
+
+        it('should include package and stack selections', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+                selectedPackage: 'citisignal',
+                selectedStack: 'headless-paas',
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.selectedPackage).toBe('citisignal');
+            expect(config.selectedStack).toBe('headless-paas');
+        });
+
+        it('should include adobe org/project/workspace IDs', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+                adobeOrg: { id: 'org-123', code: 'ORG', name: 'Test Org' },
+                adobeProject: { id: 'proj-456', name: 'test-proj', title: 'Test Project' },
+                adobeWorkspace: { id: 'ws-789', name: 'Stage' },
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.adobe?.organization).toBe('org-123');
+            expect(config.adobe?.projectId).toBe('proj-456');
+            expect(config.adobe?.workspace).toBe('ws-789');
+        });
+
+        it('should include editMode and editProjectPath for edit flows', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+                editMode: true,
+                editProjectPath: '/path/to/project',
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.editMode).toBe(true);
+            expect(config.editProjectPath).toBe('/path/to/project');
+        });
+
+        it('should include edsConfig for EDS stacks', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+                edsConfig: {
+                    repoName: 'my-repo',
+                    repoMode: 'new',
+                    daLiveOrg: 'myorg',
+                    daLiveSite: 'mysite',
+                    githubAuth: {
+                        isAuthenticated: true,
+                        user: { login: 'testuser', name: 'Test User', avatarUrl: '' },
+                    },
+                },
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.edsConfig).toBeDefined();
+            expect(config.edsConfig?.repoName).toBe('my-repo');
+            expect(config.edsConfig?.repoMode).toBe('new');
+            expect(config.edsConfig?.daLiveOrg).toBe('myorg');
+            expect(config.edsConfig?.daLiveSite).toBe('mysite');
+            expect(config.edsConfig?.githubOwner).toBe('testuser');
         });
     });
 });

@@ -80,6 +80,8 @@ interface ProjectCreationConfig {
     // Package/Stack selections
     selectedPackage?: string;
     selectedStack?: string;
+    // Selected optional addons (e.g., ['demo-inspector'])
+    selectedAddons?: string[];
     // Frontend source from template (templates are source of truth for repos)
     frontendSource?: FrontendSource;
     // Edit mode: re-use existing project directory
@@ -662,10 +664,13 @@ async function loadComponentDefinitions(
         }
 
         // Determine submodules for frontend components
+        // Submodules can be selected via dependencies (required) or addons (optional)
         const installOptions: { selectedSubmodules?: string[]; skipDependencies?: boolean } = { skipDependencies: true };
         if (comp.type === 'frontend' && componentDef.submodules) {
-            const allSelectedDeps = typedConfig.components?.dependencies || [];
-            const selectedSubmodules = allSelectedDeps.filter(
+            const dependencies = typedConfig.components?.dependencies || [];
+            const addons = typedConfig.selectedAddons || [];
+            const allSelected = [...dependencies, ...addons];
+            const selectedSubmodules = allSelected.filter(
                 (depId: string) => componentDef?.submodules?.[depId] !== undefined,
             );
             if (selectedSubmodules.length > 0) {
