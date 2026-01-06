@@ -415,4 +415,73 @@ describe('ReviewStep', () => {
             expect(screen.getByText('COMPONENTS')).toBeInTheDocument();
         });
     });
+
+    describe('Demo Inspector display', () => {
+        it('should show Demo Inspector when in dependencies', () => {
+            const stateWithDemoInspectorInDeps: Partial<WizardState> = {
+                ...completeState,
+                components: {
+                    ...completeState.components,
+                    dependencies: ['commerce-mesh', 'demo-inspector'],
+                },
+            };
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ReviewStep
+                        state={stateWithDemoInspectorInDeps as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            expect(screen.getByText('Demo Inspector')).toBeInTheDocument();
+        });
+
+        it('should show Demo Inspector when in selectedAddons', () => {
+            const stateWithDemoInspectorInAddons: Partial<WizardState> = {
+                ...completeState,
+                selectedAddons: ['demo-inspector'],
+            };
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ReviewStep
+                        state={stateWithDemoInspectorInAddons as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            expect(screen.getByText('Demo Inspector')).toBeInTheDocument();
+        });
+
+        it('should not show Demo Inspector when not selected', () => {
+            const stateWithoutDemoInspector: Partial<WizardState> = {
+                ...completeState,
+                components: {
+                    ...completeState.components,
+                    dependencies: ['commerce-mesh'], // No demo-inspector
+                },
+                selectedAddons: [], // No addons
+            };
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ReviewStep
+                        state={stateWithoutDemoInspector as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            expect(screen.queryByText('Demo Inspector')).not.toBeInTheDocument();
+        });
+    });
 });

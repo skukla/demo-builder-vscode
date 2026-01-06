@@ -90,8 +90,11 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
     // Use custom validator for review step requirements
     useCanProceed(state, setCanProceed, hasRequiredReviewData);
 
-    // Check if Demo Inspector is enabled as explicit dependency
-    const hasDemoInspector = state.components?.dependencies?.includes('demo-inspector') ?? false;
+    // Check if Demo Inspector is enabled (can be in dependencies OR selectedAddons)
+    const hasDemoInspector = 
+        state.components?.dependencies?.includes('demo-inspector') ||
+        state.selectedAddons?.includes('demo-inspector') ||
+        false;
 
     // Get backend services - resolve from raw registry services
     const backendServiceNames = useMemo(
