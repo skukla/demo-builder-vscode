@@ -691,7 +691,10 @@ export function buildProjectConfig(
             githubOwner: wizardState.edsConfig.githubAuth?.user?.login || '',
             isPrivate: wizardState.edsConfig.selectedRepo?.isPrivate,
             skipContent: wizardState.edsConfig.skipContent,
-            skipTools: wizardState.edsConfig.skipTools,
+            // Ingestion tool is only needed when ACO addon is selected
+            skipTools: !wizardState.selectedAddons?.includes('adobe-commerce-aco'),
+            // Whether to reset existing site content (replaces all content with demo data)
+            resetSiteContent: wizardState.edsConfig.resetSiteContent || false,
         } : undefined,
     };
 }
