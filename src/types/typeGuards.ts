@@ -306,7 +306,7 @@ export function isEdsProject(project: Project | undefined | null): boolean {
 /**
  * Get the live URL for an EDS project
  *
- * The live URL is stored in the 'eds' component instance metadata.
+ * The live URL is stored in the 'eds-storefront' component instance metadata.
  *
  * SOP §4: Extracted deep optional chain to named getter
  *
@@ -315,14 +315,14 @@ export function isEdsProject(project: Project | undefined | null): boolean {
  */
 export function getEdsLiveUrl(project: Project | undefined | null): string | undefined {
     if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.['eds'];
+    const edsInstance = project?.componentInstances?.['eds-storefront'];
     return edsInstance?.metadata?.liveUrl as string | undefined;
 }
 
 /**
  * Get the preview URL for an EDS project
  *
- * The preview URL is stored in the 'eds' component instance metadata.
+ * The preview URL is stored in the 'eds-storefront' component instance metadata.
  *
  * SOP §4: Extracted deep optional chain to named getter
  *
@@ -331,22 +331,21 @@ export function getEdsLiveUrl(project: Project | undefined | null): string | und
  */
 export function getEdsPreviewUrl(project: Project | undefined | null): string | undefined {
     if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.['eds'];
+    const edsInstance = project?.componentInstances?.['eds-storefront'];
     return edsInstance?.metadata?.previewUrl as string | undefined;
 }
-
 
 /**
  * Get the DA.live authoring URL for an EDS project
  *
- * Constructs the URL from DA.live org and site stored in 'eds' component instance metadata.
+ * Constructs the URL from DA.live org and site stored in 'eds-storefront' component instance metadata.
  *
  * @param project - The EDS project (can be undefined/null)
  * @returns The DA.live authoring URL (e.g., https://da.live/#/org/site), or undefined if not available
  */
 export function getEdsDaLiveUrl(project: Project | undefined | null): string | undefined {
     if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.['eds'];
+    const edsInstance = project?.componentInstances?.['eds-storefront'];
     const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
     const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
     
