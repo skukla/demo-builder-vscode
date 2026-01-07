@@ -1,7 +1,7 @@
 import { Text, Flex, Button } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { isProgressActive } from './projectCreationPredicates';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
@@ -13,10 +13,13 @@ import { MeshErrorDialog } from '@/features/mesh/ui/steps/components/MeshErrorDi
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
 import { getCancelButtonText } from '../helpers/buttonTextHelpers';
 import { WizardState } from '@/types/webview';
+import { buildProjectConfig } from '../wizard/wizardHelpers';
 
 interface ProjectCreationStepProps {
     state: WizardState;
     onBack: () => void;
+    importedSettings?: unknown;
+    packages?: unknown;
 }
 
 interface MeshCheckResult {
@@ -38,7 +41,7 @@ interface GitHubAppInstallData {
     message: string;
 }
 
-export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps) {
+export function ProjectCreationStep({ state, onBack, importedSettings, packages }: ProjectCreationStepProps) {
     const progress = state.creationProgress;
     const [isCancelling, setIsCancelling] = useState(false);
     const [isOpeningProject, setIsOpeningProject] = useState(false);
@@ -46,73 +49,182 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
     const [meshCheckResult, setMeshCheckResult] = useState<MeshCheckResult | null>(null);
     const [githubAppInstallData, setGitHubAppInstallData] = useState<GitHubAppInstallData | null>(null);
 
-    // Determine if mesh check is needed (only if commerce-mesh is selected)
+    // Determine if checks are needed
     const needsMeshCheck = state.components?.dependencies?.includes('commerce-mesh') ?? false;
+    const needsGitHubAppCheck = useMemo(() => {
+        const stackId = state.selectedStack;
+        if (!stackId) return false;
+        // Check if this is an EDS stack
+        return stackId.includes('eds');
+    }, [state.selectedStack]);
+
+    /**
+     * Check GitHub App installation for EDS projects
+     */
+    const checkGitHubApp = useCallback(async () => {
+        if (!needsGitHubAppCheck || !state.edsConfig) {
+            console.log('[GitHub App Check] Skipped:', { needsGitHubAppCheck, hasEdsConfig: !!state.edsConfig });
+            return true; // Not needed or no config, proceed
+        }
+
+        // Get authenticated GitHub user (owner)
+        const authenticatedUser = state.edsConfig.githubAuth?.user?.login;
+        
+        // Extract owner and repo from available sources
+        let owner: string | undefined;
+        let repo: string | undefined;
+        
+        // If using existing repo, extract owner and repo from "owner/repo" format
+        if (state.edsConfig.existingRepo && state.edsConfig.existingRepo.includes('/')) {
+            const [existingOwner, existingRepo] = state.edsConfig.existingRepo.split('/');
+            owner = existingOwner;
+            repo = existingRepo;
+        } 
+        // If using selected repo from list, use its properties
+        else if (state.edsConfig.selectedRepo) {
+            owner = state.edsConfig.selectedRepo.owner;
+            repo = state.edsConfig.selectedRepo.name;
+        }
+        // If creating new repo, use authenticated user as owner
+        else if (state.edsConfig.repoName && authenticatedUser) {
+            owner = authenticatedUser;
+            repo = state.edsConfig.repoName;
+        }
+
+        console.log('[GitHub App Check] Resolved:', {
+            owner,
+            repo,
+            authenticatedUser,
+            repoMode: state.edsConfig.repoMode,
+            repoName: state.edsConfig.repoName,
+            selectedRepo: state.edsConfig.selectedRepo,
+            existingRepo: state.edsConfig.existingRepo,
+        });
+
+        if (!owner || !repo) {
+            console.log('[GitHub App Check] Missing owner or repo, skipping check');
+            return true; // Can't check without owner/repo, let it proceed and fail later if needed
+        }
+
+        try {
+            const result = await webviewClient.request<{
+                success: boolean;
+                isInstalled: boolean;
+                installUrl?: string;
+                error?: string;
+            }>('check-github-app', { owner, repo });
+
+            console.log('[GitHub App Check] Result:', result);
+
+            // webviewClient.request wraps the response in { success, data }
+            const data = result.data as { success: boolean; isInstalled: boolean; installUrl?: string };
+            
+            if (data.success && !data.isInstalled && data.installUrl) {
+                // App not installed, show dialog
+                setGitHubAppInstallData({
+                    owner,
+                    repo,
+                    installUrl: data.installUrl,
+                    message: 'GitHub App installation required for code sync',
+                });
+                setPhase('github-app-install');
+                return false;
+            }
+
+            return true; // App installed or check failed (proceed anyway)
+        } catch (error) {
+            console.error('[GitHub App Check] Failed:', error);
+            return true; // On error, proceed and let creation handle it
+        }
+    }, [needsGitHubAppCheck, state.edsConfig]);
+
+    /**
+     * Run pre-flight checks before starting project creation
+     */
+    const runPreFlightChecks = useCallback(async () => {
+        console.log('[Pre-Flight] Starting checks...', {
+            needsMeshCheck,
+            needsGitHubAppCheck,
+            hasEdsConfig: !!state.edsConfig,
+        });
+
+        // First check mesh (if needed)
+        if (needsMeshCheck) {
+            setPhase('checking-mesh');
+            setMeshCheckResult(null);
+
+            try {
+                const result = await webviewClient.request<MeshCheckResult>('check-api-mesh', {
+                    workspaceId: state.adobeWorkspace?.id,
+                    selectedComponents: [
+                        state.components?.frontend,
+                        state.components?.backend,
+                        ...(state.components?.dependencies || []),
+                    ].filter(Boolean),
+                });
+
+                if (!result.success || !result.apiEnabled) {
+                    setMeshCheckResult(result);
+                    setPhase('mesh-error');
+                    return; // Stop here
+                }
+            } catch (error) {
+                setMeshCheckResult({
+                    success: false,
+                    apiEnabled: false,
+                    error: error instanceof Error ? error.message : 'Failed to check API Mesh access',
+                });
+                setPhase('mesh-error');
+                return; // Stop here
+            }
+        }
+
+        // Then check GitHub app (if needed)
+        console.log('[Pre-Flight] Running GitHub app check...');
+        const githubAppOk = await checkGitHubApp();
+        console.log('[Pre-Flight] GitHub app check result:', githubAppOk);
+        if (!githubAppOk) {
+            console.log('[Pre-Flight] GitHub app not installed, stopping here');
+            return; // Stop here, dialog is showing
+        }
+
+        // All checks passed, start creation
+        console.log('[Pre-Flight] All checks passed, starting project creation');
+        setPhase('creating');
+        const projectConfig = buildProjectConfig(state, importedSettings, packages);
+        vscode.createProject(projectConfig);
+    }, [needsMeshCheck, needsGitHubAppCheck, checkGitHubApp, state, importedSettings, packages]);
+
+    /**
+     * Handle detected GitHub app installation
+     * Called by the dialog when polling detects the app is now installed
+     */
+    const handleGitHubAppInstalled = useCallback(() => {
+        console.log('[GitHub App] Installation confirmed, proceeding with creation');
+        // App now installed, proceed with creation
+        setPhase('creating');
+        const projectConfig = buildProjectConfig(state, importedSettings, packages);
+        vscode.createProject(projectConfig);
+    }, [state, importedSettings, packages]);
 
     /**
      * Check API Mesh access for the selected workspace
+     * @deprecated Use runPreFlightChecks instead
      */
     const checkMeshAccess = useCallback(async () => {
-        if (!needsMeshCheck) {
-            // No mesh needed, proceed directly to creation
-            setPhase('creating');
-            vscode.postMessage('start-project-creation');
-            return;
-        }
+        // Delegated to runPreFlightChecks
+        await runPreFlightChecks();
+    }, [runPreFlightChecks]);
 
-        setPhase('checking-mesh');
-        setMeshCheckResult(null);
-
-        try {
-            const result = await webviewClient.request<MeshCheckResult>('check-api-mesh', {
-                workspaceId: state.adobeWorkspace?.id,
-                selectedComponents: [
-                    state.components?.frontend,
-                    state.components?.backend,
-                    ...(state.components?.dependencies || []),
-                ].filter(Boolean),
-            });
-
-            if (result.success && result.apiEnabled) {
-                // API Mesh is enabled, proceed with creation
-                setPhase('creating');
-                vscode.postMessage('start-project-creation');
-            } else {
-                // API Mesh not enabled, show error
-                setMeshCheckResult(result);
-                setPhase('mesh-error');
-            }
-        } catch (error) {
-            setMeshCheckResult({
-                success: false,
-                apiEnabled: false,
-                error: error instanceof Error ? error.message : 'Failed to check API Mesh access',
-            });
-            setPhase('mesh-error');
-        }
-    }, [needsMeshCheck, state.adobeWorkspace?.id, state.components]);
-
-    // Run mesh check on mount
+    // Run pre-flight checks on mount
     useEffect(() => {
-        checkMeshAccess();
+        console.log('[ProjectCreationStep] Component mounted, starting pre-flight checks');
+        runPreFlightChecks();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Update phase based on progress
     useEffect(() => {
         if (!progress) return;
-
-        // Check for GitHub app install phase (sent from executor)
-        const progressData = progress as unknown as { phase?: string; data?: Record<string, unknown> };
-        if (progressData.phase === 'github-app-install' && progressData.data) {
-            setGitHubAppInstallData({
-                owner: String(progressData.data.owner || ''),
-                repo: String(progressData.data.repo || ''),
-                installUrl: String(progressData.data.installUrl || ''),
-                message: progress.message || 'GitHub App installation required',
-            });
-            setPhase('github-app-install');
-            return;
-        }
 
         if (progress.currentOperation === 'Cancelled') {
             setPhase('cancelled');
@@ -120,8 +232,8 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
             setPhase('failed');
         } else if (progress.currentOperation === 'Project Created') {
             setPhase('completed');
-        } else if (phase === 'creating' || phase === 'github-app-install') {
-            // Stay in current phase while progress is active
+        } else if (phase === 'creating') {
+            // Stay in creating phase while progress is active
         }
     }, [progress, phase]);
 
@@ -154,14 +266,6 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
     const handleRetryMeshCheck = useCallback(() => {
         checkMeshAccess();
     }, [checkMeshAccess]);
-
-    const handleRetryEdsSetup = useCallback(() => {
-        // Clear the github app install data and return to creating phase
-        setGitHubAppInstallData(null);
-        setPhase('creating');
-        // Send message to executor to retry EDS setup
-        vscode.postMessage('retry-eds-setup');
-    }, []);
 
     const isCancelled = phase === 'cancelled';
     const isFailed = phase === 'failed';
@@ -202,15 +306,14 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                         />
                     )}
 
-                    {/* GitHub App installation required - show install dialog */}
+                    {/* GitHub App installation required - show install message */}
                     {isGitHubAppInstall && githubAppInstallData && (
                         <GitHubAppInstallDialog
                             owner={githubAppInstallData.owner}
                             repo={githubAppInstallData.repo}
                             installUrl={githubAppInstallData.installUrl}
                             message={githubAppInstallData.message}
-                            onRetry={handleRetryEdsSetup}
-                            onBack={onBack}
+                            onInstallDetected={handleGitHubAppInstalled}
                         />
                     )}
 

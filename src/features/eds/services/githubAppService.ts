@@ -12,8 +12,11 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import type { GitHubTokenService } from './githubTokenService';
 
-/** Helix admin base URL for GitHub app installation */
+/** Helix admin base URL for code sync checks */
 const HELIX_ADMIN_BASE_URL = 'https://admin.hlx.page';
+
+/** GitHub App installation URL - direct to GitHub's app installation flow */
+const GITHUB_APP_INSTALL_URL = 'https://github.com/apps/aem-code-sync/installations/select_target';
 
 /**
  * GitHub App Service for AEM Code Sync app detection and installation
@@ -31,8 +34,8 @@ export class GitHubAppService {
     /**
      * Check if the AEM Code Sync GitHub app is installed on a repository.
      *
-     * Uses the GitHub API to check for app installation. The API returns 200 if
-     * an app is installed, 404 if not.
+     * Uses the Helix admin code endpoint to check if code sync is working.
+     * If the endpoint is accessible, the app is installed.
      *
      * @param owner - Repository owner (user or organization)
      * @param repo - Repository name
@@ -69,14 +72,17 @@ export class GitHubAppService {
     /**
      * Generate the installation URL for the AEM Code Sync GitHub app.
      *
-     * This URL takes the user to the Helix admin page where they can
-     * install the app on their repository.
+     * Returns the GitHub app installation page where users can select
+     * which repositories to grant the app access to. This uses GitHub's
+     * native app installation flow (same as storefront-tools).
      *
-     * @param owner - Repository owner (user or organization)
-     * @param repo - Repository name
+     * @param _owner - Repository owner (not used, kept for API compatibility)
+     * @param _repo - Repository name (not used, kept for API compatibility)
      * @returns Installation URL
      */
-    getInstallUrl(owner: string, repo: string): string {
-        return `${HELIX_ADMIN_BASE_URL}/github/install/${owner}/${repo}`;
+    getInstallUrl(_owner: string, _repo: string): string {
+        // Use GitHub's native app installation flow
+        // Users will select the target repository on GitHub's UI
+        return GITHUB_APP_INSTALL_URL;
     }
 }

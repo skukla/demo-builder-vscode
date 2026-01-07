@@ -2796,7 +2796,6 @@ button[class*="spectrum-Button"][disabled],
    =========================================== */
 .instruction-card {
     padding: 16px !important;
-    background-color: var(--spectrum-global-color-gray-100) !important;
     border-radius: 6px !important;
 }
 

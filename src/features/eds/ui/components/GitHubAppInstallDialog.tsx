@@ -1,18 +1,19 @@
 /**
- * GitHub App Install Dialog
+ * GitHub App Install Message
  *
- * Dialog displayed when EDS code sync fails due to missing AEM Code Sync GitHub app.
- * Follows the same pattern as MeshErrorDialog - pauses creation, shows instructions,
- * and allows user to continue after installing the app.
+ * Wizard step message displayed when EDS code sync requires the AEM Code Sync GitHub app.
+ * Uses StatusDisplay and NumberedInstructions to match the mesh modal's look and feel.
  */
 
-import { Flex, Text, DialogTrigger, ActionButton } from '@adobe/react-spectrum';
-import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
-import React from 'react';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { Text } from '@adobe/react-spectrum';
+import LinkOut from '@spectrum-icons/workflow/LinkOut';
+import Refresh from '@spectrum-icons/workflow/Refresh';
+import React, { useState } from 'react';
+import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
-import { vscode } from '@/core/ui/utils/vscode-api';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 
 interface GitHubAppInstallDialogProps {
     /** GitHub repository owner */
@@ -23,81 +24,111 @@ interface GitHubAppInstallDialogProps {
     installUrl: string;
     /** Error message from code sync failure */
     message: string;
-    /** Called when user clicks Continue after installing app */
-    onRetry: () => void;
-    /** Called when user clicks Back */
-    onBack: () => void;
+    /** Called when app installation is detected */
+    onInstallDetected: () => void;
 }
-
-/**
- * Installation instructions for the AEM Code Sync app
- */
-const INSTALL_INSTRUCTIONS = [
-    {
-        step: 'Click "Open Installation Page" below',
-        details: 'This opens the Helix admin page for app installation.',
-    },
-    {
-        step: 'Review the app permissions and click "Install & Authorize"',
-        details: 'The app needs read access to your repository code.',
-    },
-    {
-        step: 'Return to this window and click "Continue"',
-        details: 'The setup will resume and verify code sync.',
-    },
-];
 
 export function GitHubAppInstallDialog({
     owner,
     repo,
     installUrl,
-    message,
-    onRetry,
-    onBack,
+    onInstallDetected,
 }: GitHubAppInstallDialogProps) {
+    const [isChecking, setIsChecking] = useState(false);
+    const [hasError, setHasError] = useState(false);
+
     const handleOpenInstallPage = () => {
-        vscode.postMessage({ type: 'openExternal', url: installUrl });
+        // Open the URL in the system browser via VS Code API
+        vscode.postMessage('openExternal', { url: installUrl });
     };
+
+    const handleCheckInstallation = async () => {
+        setIsChecking(true);
+        setHasError(false);
+
+        try {
+            const result = await webviewClient.request<{
+                success: boolean;
+                isInstalled: boolean;
+            }>('check-github-app', { owner, repo });
+
+            if (result.data?.success && result.data?.isInstalled) {
+                console.log('[GitHub App] Installation detected!');
+                onInstallDetected();
+            } else {
+                // App not installed yet
+                setHasError(true);
+            }
+        } catch (error) {
+            console.error('[GitHub App] Check failed:', error);
+            setHasError(true);
+        } finally {
+            setIsChecking(false);
+        }
+    };
+
+    // Show loading state while checking for app installation
+    if (isChecking) {
+        return (
+            <CenteredFeedbackContainer>
+                <LoadingDisplay
+                    size="L"
+                    message="Checking for GitHub App Installation"
+                    subMessage={`Verifying ${owner}/${repo}...`}
+                />
+            </CenteredFeedbackContainer>
+        );
+    }
 
     return (
         <StatusDisplay
-            variant="warning"
+            variant="info"
             title="GitHub App Installation Required"
-            message={message}
             actions={[
-                { label: 'Continue', variant: 'accent', onPress: onRetry },
-                { label: 'Back', variant: 'secondary', onPress: onBack },
+                { 
+                    label: 'Open Installation Page', 
+                    icon: <LinkOut />,
+                    variant: 'secondary', 
+                    onPress: handleOpenInstallPage 
+                },
+                { 
+                    label: 'Check Installation', 
+                    icon: <Refresh />,
+                    variant: 'accent', 
+                    onPress: handleCheckInstallation 
+                },
             ]}
         >
-            <Flex direction="column" gap="size-100" marginTop="size-200" alignItems="center">
-                <Text UNSAFE_className="text-sm text-gray-600">
-                    Code sync requires the AEM Code Sync GitHub App on {owner}/{repo}.
+            <Text UNSAFE_className="text-sm text-gray-600 mb-4">
+                Code sync requires the AEM Code Sync GitHub App to be installed on <Text UNSAFE_className="font-mono font-semibold">{owner}/{repo}</Text>.
+            </Text>
+            
+            <NumberedInstructions
+                instructions={[
+                    {
+                        step: 'Click "Open Installation Page" below',
+                        details: 'The GitHub app installation page will open in your browser.',
+                    },
+                    {
+                        step: `Select "${owner}/${repo}" from the repository list`,
+                        details: 'Choose which repositories the AEM Code Sync app can access.',
+                    },
+                    {
+                        step: 'Click "Install" or "Save" to authorize the app',
+                        details: 'The app needs read access to your repository code for content synchronization.',
+                    },
+                    {
+                        step: 'Click "Check Installation" when complete',
+                        details: 'We\'ll verify the app is installed and continue with project creation.',
+                    },
+                ]}
+            />
+            
+            {hasError && (
+                <Text UNSAFE_className="text-sm text-orange-700 text-center" marginTop="size-200">
+                    ⚠️ App not detected yet. Please complete the installation and try again.
                 </Text>
-                <DialogTrigger type="modal">
-                    <ActionButton isQuiet>
-                        <InfoOutline />
-                        <Text>View Installation Instructions</Text>
-                    </ActionButton>
-                    {(close) => (
-                        <Modal
-                            title="Install AEM Code Sync App"
-                            actionButtons={[
-                                {
-                                    label: 'Open Installation Page',
-                                    variant: 'accent',
-                                    onPress: handleOpenInstallPage,
-                                },
-                            ]}
-                            onClose={close}
-                        >
-                            <NumberedInstructions
-                                description={`Install the AEM Code Sync app on ${owner}/${repo}:`}
-                                instructions={INSTALL_INSTRUCTIONS}
-                            />
-                        </Modal>
-                    )}
-                </DialogTrigger>
-            </Flex>
+            )}
         </StatusDisplay>
     );
 }
