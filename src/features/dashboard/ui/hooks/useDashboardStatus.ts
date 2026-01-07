@@ -174,7 +174,6 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
 
     // Memoize status displays for performance
     const demoStatusDisplay = useMemo((): StatusDisplay => {
-        console.log('[useDashboardStatus] isEds:', isEds, 'status:', status);
         // EDS projects are always published/live
         if (isEds) {
             return { color: 'green', text: 'Published' };

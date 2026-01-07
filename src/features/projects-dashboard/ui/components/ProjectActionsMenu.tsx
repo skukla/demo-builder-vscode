@@ -120,7 +120,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 items.push({ key: 'openLive', label: 'Open in Browser', icon: 'globe' });
             }
             if (onOpenDaLive) {
-                items.push({ key: 'openDaLive', label: 'Open in DA.live', icon: 'dalive' });
+                items.push({ key: 'openDaLive', label: 'Author in DA.live', icon: 'dalive' });
             }
             // Edit is always available for EDS (no running state)
             if (onEdit) {

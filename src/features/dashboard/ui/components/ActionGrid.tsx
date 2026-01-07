@@ -133,7 +133,7 @@ export function ActionGrid({
                 </ActionButton>
             )}
 
-            {/* Open in DA.live - EDS projects (second tile) */}
+            {/* Author in DA.live - EDS projects (second tile) */}
             {isEds && (
                 <ActionButton
                     onPress={handleOpenDaLive}
@@ -142,7 +142,7 @@ export function ActionGrid({
                     UNSAFE_className="dashboard-action-button"
                 >
                     <Edit size="L" />
-                    <Text UNSAFE_className="icon-label">Open in DA.live</Text>
+                    <Text UNSAFE_className="icon-label">Author in DA.live</Text>
                 </ActionButton>
             )}
 

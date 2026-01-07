@@ -63,6 +63,18 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
     }
     const isEdsStable = isEdsRef.current;
     
+    // Capture EDS URLs on first render and preserve them (URLs don't change during dashboard session)
+    const edsLiveUrlRef = useRef(edsLiveUrl);
+    const edsDaLiveUrlRef = useRef(edsDaLiveUrl);
+    if (edsLiveUrl && !edsLiveUrlRef.current) {
+        edsLiveUrlRef.current = edsLiveUrl;
+    }
+    if (edsDaLiveUrl && !edsDaLiveUrlRef.current) {
+        edsDaLiveUrlRef.current = edsDaLiveUrl;
+    }
+    const edsLiveUrlStable = edsLiveUrlRef.current;
+    const edsDaLiveUrlStable = edsDaLiveUrlRef.current;
+    
     // State for browser opening and logs hover suppression (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
@@ -100,8 +112,8 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         setIsTransitioning,
         setIsOpeningBrowser,
         setIsLogsHoverSuppressed,
-        edsLiveUrl,
-        edsDaLiveUrl,
+        edsLiveUrl: edsLiveUrlStable,
+        edsDaLiveUrl: edsDaLiveUrlStable,
     });
 
     // Focus trap for accessibility
