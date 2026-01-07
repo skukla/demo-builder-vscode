@@ -13,7 +13,7 @@ import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack, StacksConfig } from '@/types/stacks';
 import { loadDemoPackages } from '@/features/project-creation/ui/helpers/demoPackageLoader';
 import { HandlerContext, SharedState } from '@/types/handlers';
-import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl } from '@/types/typeGuards';
+import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
 
 /**
  * Command to show the "Project Dashboard" after project creation
@@ -73,6 +73,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         stackName?: string;
         isEds: boolean;
         edsLiveUrl?: string;
+        edsDaLiveUrl?: string;
     }> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
@@ -82,9 +83,10 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         // Resolve package/stack names from IDs
         const { packageName, stackName } = await this.resolvePackageStackNames(project ?? null);
 
-        // Detect EDS projects and get live URL (using shared typeGuards functions)
+        // Detect EDS projects and get URLs (using shared typeGuards functions)
         const isEds = isEdsProject(project);
         const edsLiveUrl = getEdsLiveUrl(project);
+        const edsDaLiveUrl = getEdsDaLiveUrl(project);
 
         return {
             theme,
@@ -97,6 +99,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             stackName,
             isEds,
             edsLiveUrl,
+            edsDaLiveUrl,
         };
     }
 

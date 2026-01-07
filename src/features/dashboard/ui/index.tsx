@@ -26,6 +26,7 @@ root.render(
                     stackName={data?.stackName}
                     isEds={data?.isEds}
                     edsLiveUrl={data?.edsLiveUrl}
+                    edsDaLiveUrl={data?.edsDaLiveUrl}
                 />
             )}
         </WebviewApp>

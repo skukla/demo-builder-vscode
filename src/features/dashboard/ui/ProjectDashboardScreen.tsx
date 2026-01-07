@@ -40,6 +40,8 @@ interface ProjectDashboardScreenProps {
     isEds?: boolean;
     /** Live URL for EDS projects */
     edsLiveUrl?: string;
+    /** DA.live authoring URL for EDS projects */
+    edsDaLiveUrl?: string;
 }
 
 /**
@@ -53,7 +55,7 @@ interface ProjectDashboardScreenProps {
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl }: ProjectDashboardScreenProps) {
     // State for browser opening and logs hover suppression (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
@@ -80,6 +82,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         handleDeployMesh,
         handleOpenBrowser,
         handleOpenLiveSite,
+        handleOpenDaLive,
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,
@@ -91,6 +94,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         setIsOpeningBrowser,
         setIsLogsHoverSuppressed,
         edsLiveUrl,
+        edsDaLiveUrl,
     });
 
     // Focus trap for accessibility
@@ -204,6 +208,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                             handleStopDemo={handleStopDemo}
                             handleOpenBrowser={handleOpenBrowser}
                             handleOpenLiveSite={handleOpenLiveSite}
+                            handleOpenDaLive={handleOpenDaLive}
                             handleViewLogs={handleViewLogs}
                             handleDeployMesh={handleDeployMesh}
                             handleConfigure={handleConfigure}

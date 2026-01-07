@@ -344,6 +344,31 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
 };
 
 /**
+ * Handle 'openDaLive' message - Open DA.live for authoring (EDS projects)
+ */
+export const handleOpenDaLive: MessageHandler = async (context, data) => {
+    const payload = data as { url?: string };
+
+    if (!payload?.url) {
+        context.logger.warn('[Dashboard] openDaLive called without URL');
+        return { success: false, error: 'No URL provided', code: ErrorCode.CONFIG_INVALID };
+    }
+
+    // Validate URL before opening (security: prevents malicious URL injection)
+    try {
+        validateURL(payload.url);
+    } catch (validationError) {
+        context.logger.error('[Dashboard] DA.live URL validation failed', validationError as Error);
+        return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
+    }
+
+    await vscode.env.openExternal(vscode.Uri.parse(payload.url));
+    context.logger.debug(`[Dashboard] Opening DA.live: ${payload.url}`);
+
+    return { success: true };
+};
+
+/**
  * Handle 'viewLogs' message - Toggle the logs output panel
  */
 export const handleViewLogs: MessageHandler = async () => {
@@ -538,6 +563,7 @@ export const dashboardHandlers = defineHandlers({
     // Navigation handlers
     'openBrowser': handleOpenBrowser,
     'openLiveSite': handleOpenLiveSite,
+    'openDaLive': handleOpenDaLive,
     'viewLogs': handleViewLogs,
     'viewDebugLogs': handleViewDebugLogs,
     'configure': handleConfigure,

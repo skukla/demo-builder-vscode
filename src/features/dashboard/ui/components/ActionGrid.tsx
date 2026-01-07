@@ -13,6 +13,7 @@ import {
 } from '@adobe/react-spectrum';
 import Code from '@spectrum-icons/workflow/Code';
 import Delete from '@spectrum-icons/workflow/Delete';
+import Edit from '@spectrum-icons/workflow/Edit';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Globe from '@spectrum-icons/workflow/Globe';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
@@ -49,6 +50,8 @@ export interface ActionGridProps {
     handleOpenBrowser: () => void;
     /** Handler for Open Live Site button (EDS only) */
     handleOpenLiveSite?: () => void;
+    /** Handler for Open DA.live button (EDS only) */
+    handleOpenDaLive?: () => void;
     /** Handler for Logs button */
     handleViewLogs: () => void;
     /** Handler for Deploy Mesh button */
@@ -83,6 +86,7 @@ export function ActionGrid({
     handleStopDemo,
     handleOpenBrowser,
     handleOpenLiveSite,
+    handleOpenDaLive,
     handleViewLogs,
     handleDeployMesh,
     handleConfigure,
@@ -116,7 +120,7 @@ export function ActionGrid({
                 </ActionButton>
             )}
 
-            {/* Open Live Site - EDS projects only (always enabled) */}
+            {/* Open in Browser - EDS projects (first tile) */}
             {isEds && (
                 <ActionButton
                     onPress={handleOpenLiveSite}
@@ -125,7 +129,20 @@ export function ActionGrid({
                     UNSAFE_className="dashboard-action-button"
                 >
                     <Globe size="L" />
-                    <Text UNSAFE_className="icon-label">Open Live Site</Text>
+                    <Text UNSAFE_className="icon-label">Open in Browser</Text>
+                </ActionButton>
+            )}
+
+            {/* Open in DA.live - EDS projects (second tile) */}
+            {isEds && (
+                <ActionButton
+                    onPress={handleOpenDaLive}
+                    isQuiet
+                    isDisabled={isOpeningBrowser}
+                    UNSAFE_className="dashboard-action-button"
+                >
+                    <Edit size="L" />
+                    <Text UNSAFE_className="icon-label">Open in DA.live</Text>
                 </ActionButton>
             )}
 

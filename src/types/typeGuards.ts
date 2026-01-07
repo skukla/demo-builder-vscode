@@ -335,3 +335,22 @@ export function getEdsPreviewUrl(project: Project | undefined | null): string | 
     return edsInstance?.metadata?.previewUrl as string | undefined;
 }
 
+
+/**
+ * Get the DA.live authoring URL for an EDS project
+ *
+ * Constructs the URL from DA.live org and site stored in 'eds' component instance metadata.
+ *
+ * @param project - The EDS project (can be undefined/null)
+ * @returns The DA.live authoring URL (e.g., https://da.live/#/org/site), or undefined if not available
+ */
+export function getEdsDaLiveUrl(project: Project | undefined | null): string | undefined {
+    if (!isEdsProject(project)) return undefined;
+    const edsInstance = project?.componentInstances?.['eds'];
+    const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
+    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+    
+    if (!daLiveOrg || !daLiveSite) return undefined;
+    
+    return `https://da.live/#/${daLiveOrg}/${daLiveSite}`;
+}

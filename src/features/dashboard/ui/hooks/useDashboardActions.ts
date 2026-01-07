@@ -26,6 +26,8 @@ export interface UseDashboardActionsProps {
     setIsLogsHoverSuppressed: Dispatch<SetStateAction<boolean>>;
     /** Live URL for EDS projects (opens in browser) */
     edsLiveUrl?: string;
+    /** DA.live authoring URL for EDS projects */
+    edsDaLiveUrl?: string;
 }
 
 /**
@@ -46,6 +48,8 @@ export interface UseDashboardActionsReturn {
     handleOpenBrowser: () => void;
     /** Open live site in browser (EDS projects) */
     handleOpenLiveSite: () => void;
+    /** Open DA.live for authoring (EDS projects) */
+    handleOpenDaLive: () => void;
     /** Open configure screen */
     handleConfigure: () => void;
     /** Open Adobe Developer Console */
@@ -73,6 +77,7 @@ export function useDashboardActions({
     setIsOpeningBrowser,
     setIsLogsHoverSuppressed,
     edsLiveUrl,
+    edsDaLiveUrl,
 }: UseDashboardActionsProps): UseDashboardActionsReturn {
     const handleStartDemo = useCallback(() => {
         setIsTransitioning(true);
@@ -118,6 +123,14 @@ export function useDashboardActions({
         setTimeout(() => setIsOpeningBrowser(false), FRONTEND_TIMEOUTS.DOUBLE_CLICK_PREVENTION);
     }, [isOpeningBrowser, setIsOpeningBrowser, edsLiveUrl]);
 
+    const handleOpenDaLive = useCallback(() => {
+        if (isOpeningBrowser || !edsDaLiveUrl) return; // Prevent double-click or missing URL
+        setIsOpeningBrowser(true);
+        webviewClient.postMessage('openDaLive', { url: edsDaLiveUrl });
+        // Re-enable after delay
+        setTimeout(() => setIsOpeningBrowser(false), FRONTEND_TIMEOUTS.DOUBLE_CLICK_PREVENTION);
+    }, [isOpeningBrowser, setIsOpeningBrowser, edsDaLiveUrl]);
+
     const handleConfigure = useCallback(() => {
         webviewClient.postMessage('configure');
     }, []);
@@ -146,6 +159,7 @@ export function useDashboardActions({
         handleDeployMesh,
         handleOpenBrowser,
         handleOpenLiveSite,
+        handleOpenDaLive,
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,
