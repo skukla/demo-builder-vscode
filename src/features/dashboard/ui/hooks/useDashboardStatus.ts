@@ -105,7 +105,7 @@ export const isMeshBusy = (status: MeshStatus | undefined): boolean =>
  * @param props - Hook configuration
  * @returns Object containing status state and computed displays
  */
-export function useDashboardStatus(props: UseDashboardStatusProps = {}): UseDashboardStatusReturn {
+export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = false): UseDashboardStatusReturn {
     const { hasMesh } = props;
 
     const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
@@ -174,6 +174,11 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}): UseDash
 
     // Memoize status displays for performance
     const demoStatusDisplay = useMemo((): StatusDisplay => {
+        // EDS projects are always published/live
+        if (isEds) {
+            return { color: 'green', text: 'Published' };
+        }
+
         switch (status) {
             case 'starting':
                 return { color: 'blue', text: 'Starting...' };
@@ -194,7 +199,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}): UseDash
             default:
                 return { color: 'gray', text: 'Ready' };
         }
-    }, [status, frontendConfigChanged, port]);
+    }, [isEds, status, frontendConfigChanged, port]);
 
     const meshStatusDisplay = useMemo((): StatusDisplay | null => {
         // If no mesh status yet, show checking state until we have definitive info

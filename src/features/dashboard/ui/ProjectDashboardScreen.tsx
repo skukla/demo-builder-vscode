@@ -71,7 +71,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         displayName: statusDisplayName,
         status,
         meshStatus,
-    } = useDashboardStatus({ hasMesh });
+    } = useDashboardStatus({ hasMesh }, isEds);
 
     // Action handlers via extracted hook
     const {
