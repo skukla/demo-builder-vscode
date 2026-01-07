@@ -13,7 +13,7 @@ import {
     Button,
     ProgressCircle,
 } from '@adobe/react-spectrum';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { ActionGrid } from './components/ActionGrid';
 import { useDashboardActions } from './hooks/useDashboardActions';
@@ -56,6 +56,13 @@ interface ProjectDashboardScreenProps {
  * @param props - Component props
  */
 export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl }: ProjectDashboardScreenProps) {
+    // Capture isEds on first render and never change it (project type doesn't change)
+    const isEdsRef = useRef(isEds);
+    if (isEds && !isEdsRef.current) {
+        isEdsRef.current = true;
+    }
+    const isEdsStable = isEdsRef.current;
+    
     // State for browser opening and logs hover suppression (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
@@ -71,7 +78,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         displayName: statusDisplayName,
         status,
         meshStatus,
-    } = useDashboardStatus({ hasMesh }, isEds);
+    } = useDashboardStatus({ hasMesh }, isEdsStable);
 
     // Action handlers via extracted hook
     const {
@@ -197,7 +204,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                     {/* Center the grid of fixed-width buttons */}
                     <div className="dashboard-grid-container">
                         <ActionGrid
-                            isEds={isEds}
+                            isEds={isEdsStable}
                             isRunning={isRunning}
                             isStartDisabled={isStartDisabled}
                             isStopDisabled={isStopDisabled}
