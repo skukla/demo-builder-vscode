@@ -172,6 +172,8 @@ export class DaLiveContentOperations {
 
     /**
      * Copy a single file with retry logic
+     * Uses the /source endpoint (like storefront-tools) which creates content directly,
+     * rather than /copy which requires the destination site to already exist.
      */
     private async copySingleFile(
         token: string,
@@ -180,15 +182,45 @@ export class DaLiveContentOperations {
         destination: { org: string; site: string },
         destPath: string,
     ): Promise<boolean> {
-        const url = `${DA_LIVE_BASE_URL}/copy/${destination.org}/${destination.site}/${normalizePath(destPath)}`;
+        // Fetch content from source
         const sourceUrl = `https://main--${source.site}--${source.org}.aem.live${sourcePath}`;
-
-        const formData = new FormData();
-        formData.append('source', sourceUrl);
-
+        
         for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try {
-                const response = await fetch(url, {
+                // Step 1: Fetch content from source
+                const sourceResponse = await fetch(sourceUrl, {
+                    signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+                });
+
+                if (!sourceResponse.ok) {
+                    this.logger.warn(`[DA.live] Failed to fetch source ${sourcePath}: ${sourceResponse.status}`);
+                    return false;
+                }
+
+                const contentType = sourceResponse.headers.get('content-type') || '';
+                const content = await sourceResponse.blob();
+
+                // Step 2: Determine file extension and DA.live path
+                // DA.live uses /source endpoint and requires proper file extensions
+                let daPath = normalizePath(destPath);
+                
+                // Ensure proper extension for HTML content
+                if (contentType.includes('text/html') && !daPath.endsWith('.html')) {
+                    // If path ends with '/', add 'index.html'
+                    if (daPath.endsWith('/')) {
+                        daPath = `${daPath}index.html`;
+                    } else {
+                        daPath = `${daPath}.html`;
+                    }
+                }
+
+                // Step 3: POST content directly to /source endpoint (creates the content)
+                const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${daPath}`;
+
+                const formData = new FormData();
+                formData.append('data', content);
+
+                const response = await fetch(destUrl, {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${token}` },
                     body: formData,
@@ -202,7 +234,16 @@ export class DaLiveContentOperations {
                     continue;
                 }
 
-                this.logger.warn(`[DA.live] Copy failed for ${destPath}: ${response.status}`);
+                // Log error details for debugging
+                let errorDetail = '';
+                try {
+                    const errorBody = await response.text();
+                    errorDetail = errorBody ? `: ${errorBody}` : '';
+                } catch {
+                    // Ignore if response body can't be read
+                }
+                
+                this.logger.warn(`[DA.live] Copy failed for ${destPath}: ${response.status}${errorDetail}`);
                 return false;
             } catch (error) {
                 if (attempt < MAX_RETRY_ATTEMPTS) {
