@@ -71,19 +71,23 @@ export class DaLiveOrgOperations {
             if (!response.ok) {
                 // 404 means org doesn't exist
                 if (response.status === 404) {
+                    this.logger.warn(`[DA.live] Organization not found: ${orgName} (404)`);
                     return [];
                 }
                 // 403 means no access
                 if (response.status === 403) {
+                    this.logger.warn(`[DA.live] Access denied to organization: ${orgName} (403)`);
                     return [];
                 }
                 throw this.createErrorFromResponse(response, 'list organization sites');
             }
 
             const entries: DaLiveEntry[] = await response.json();
-
-            // Filter to only return folders (sites are top-level folders)
-            return entries.filter(entry => entry.type === 'folder');
+            this.logger.debug(`[DA.live] Retrieved ${entries.length} entries for ${orgName}`);
+            
+            // Note: DA.live API returns entries with just 'name' field at org level
+            // All top-level entries in an org are sites/projects, no filtering needed
+            return entries;
         } catch (error) {
             if (error instanceof DaLiveAuthError) {
                 throw error;

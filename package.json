@@ -77,6 +77,11 @@
         "command": "demoBuilder.testDaLiveAuth",
         "title": "Test DA.live Auth (Dev)",
         "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.cleanupDaLiveSites",
+        "title": "Manage DA.live Projects",
+        "category": "Demo Builder"
       }
     ],
     "configuration": {

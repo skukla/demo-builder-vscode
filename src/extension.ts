@@ -17,6 +17,7 @@ import { SidebarProvider } from '@/features/sidebar';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 
 /**
  * Check if projects list should auto-open when activity bar icon is clicked
@@ -269,6 +270,10 @@ export async function activate(context: vscode.ExtensionContext) {
                     await vscode.env.openExternal(vscode.Uri.parse(url));
                 }
             }),
+        );
+
+        context.subscriptions.push(
+            vscode.commands.registerCommand('demoBuilder.cleanupDaLiveSites', cleanupDaLiveSitesCommand),
         );
 
         // Initialize auto-updater (but don't check yet - wait for sidebar activation)
