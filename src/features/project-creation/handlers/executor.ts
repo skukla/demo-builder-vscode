@@ -34,11 +34,28 @@ import type {
     EdsProgressCallback,
     EdsProjectSetupResult,
 } from '@/features/eds/services/types';
-import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
+import { GitHubAppNotInstalledError, EDS_COMPONENT_ID } from '@/features/eds/services/types';
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/**
+ * Map EDS setup phase to user-friendly operation name
+ */
+function getEdsOperationName(phase: string): string {
+    const phaseMap: Record<string, string> = {
+        'github-repo': 'GitHub Repository',
+        'github-clone': 'Cloning Repository',
+        'helix-config': 'Helix Configuration',
+        'code-sync': 'Code Sync Verification',
+        'dalive-content': 'DA.live Content',
+        'tools-clone': 'Ingestion Tool',
+        'env-config': 'Environment Setup',
+        'complete': 'EDS Setup Complete',
+    };
+    return phaseMap[phase] || 'EDS Setup';
+}
 
 /**
  * Frontend source from template (same shape as TemplateSource)
@@ -191,6 +208,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const isEdsStack = isEdsStackId(typedConfig.selectedStack);
     let edsResult: EdsProjectSetupResult | undefined;
 
+    // EDS frontend is cloned to components/eds-storefront like other frontends
+    const edsComponentPath = path.join(projectPath, 'components', EDS_COMPONENT_ID);
+
     if (isEdsStack && typedConfig.edsConfig) {
         progressTracker('EDS Setup', 16, 'Initializing Edge Delivery Services...');
 
@@ -202,6 +222,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             const edsProjectConfig: EdsProjectConfig = {
                 projectName: typedConfig.projectName,
                 projectPath,
+                componentPath: edsComponentPath,
                 repoName: typedConfig.edsConfig.repoName,
                 daLiveOrg: typedConfig.edsConfig.daLiveOrg,
                 daLiveSite: typedConfig.edsConfig.daLiveSite,
@@ -217,9 +238,13 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
             // Map EdsProgressCallback to executor progressTracker
             // EDS progress (0-100) maps to executor progress (16-30)
+            // Show each phase as a distinct operation for better visibility
             const edsProgressCallback: EdsProgressCallback = (phase, progress, message) => {
                 const mappedProgress = 16 + Math.round(progress * 0.14);
-                progressTracker('EDS Setup', mappedProgress, message);
+                
+                // Map phase to user-friendly operation name
+                const operationName = getEdsOperationName(phase);
+                progressTracker(operationName, mappedProgress, message);
             };
 
             // Lazy-load EDS services (only for EDS stacks)
@@ -269,53 +294,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
             context.logger.info(`[Project Creation] Running EDS setup for: ${typedConfig.projectName}`);
 
-            // Run EDS setup with GitHub app installation handling
-            // If code sync fails due to missing GitHub app, pause and prompt user to install
-            const runEdsSetup = async (): Promise<EdsProjectSetupResult> => {
-                try {
-                    return await edsProjectService.setupProject(edsProjectConfig, edsProgressCallback);
-                } catch (error) {
-                    // Handle GitHub app not installed - pause and prompt user
-                    if (error instanceof GitHubAppNotInstalledError) {
-                        context.logger.info(`[Project Creation] GitHub app not installed: ${error.installUrl}`);
-
-                        // Send pause message to UI (same pattern as mesh-error)
-                        await context.sendMessage('creationProgress', {
-                            phase: 'github-app-install',
-                            currentOperation: 'GitHub App Required',
-                            progress: 50,
-                            message: error.message,
-                            data: {
-                                owner: error.owner,
-                                repo: error.repo,
-                                installUrl: error.installUrl,
-                            },
-                        });
-
-                        // Wait for user retry or cancel
-                        await new Promise<void>((resolve, reject) => {
-                            const handleRetry = context.comm.onMessage('retry-eds-setup', () => {
-                                handleRetry();
-                                handleCancel();
-                                context.logger.info('[Project Creation] Retrying EDS setup after app install');
-                                resolve();
-                            });
-
-                            const handleCancel = context.comm.onMessage('cancel-creation', () => {
-                                handleRetry();
-                                handleCancel();
-                                reject(new Error('User cancelled'));
-                            });
-                        });
-
-                        // Retry EDS setup after user confirms app installation
-                        return await edsProjectService.setupProject(edsProjectConfig, edsProgressCallback);
-                    }
-                    throw error;
-                }
-            };
-
-            edsResult = await runEdsSetup();
+            // Run EDS setup - pre-flight check in UI ensures GitHub app is installed
+            edsResult = await edsProjectService.setupProject(edsProjectConfig, edsProgressCallback);
 
             if (!edsResult.success) {
                 const errorMsg = `EDS setup failed at phase '${edsResult.phase}': ${edsResult.error}`;
@@ -324,27 +304,28 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             }
 
             context.logger.info(`[Project Creation] EDS setup complete: ${edsResult.repoUrl}`);
-        }
 
-        // Create frontend ComponentInstance from EDS project path
-        const frontendId = typedConfig.components?.frontend;
-        if (frontendId) {
+            // Register EDS frontend as a component instance (like other frontends)
+            // Uses EDS_COMPONENT_ID for consistency, cloned to components/eds-storefront
             const frontendInstance: import('@/types').ComponentInstance = {
-                id: frontendId,
+                id: EDS_COMPONENT_ID,
                 name: 'EDS Storefront',
                 type: 'frontend',
-                path: projectPath,  // EDS clones to project root
+                path: edsComponentPath,
+                repoUrl: edsResult?.repoUrl,
                 status: 'ready',
                 lastUpdated: new Date(),
-                metadata: edsResult ? {
+                metadata: {
                     previewUrl: edsResult.previewUrl,
                     liveUrl: edsResult.liveUrl,
                     repoUrl: edsResult.repoUrl,
-                } : undefined,
+                    daLiveOrg: typedConfig.edsConfig.daLiveOrg,
+                    daLiveSite: typedConfig.edsConfig.daLiveSite,
+                },
             };
-            project.componentInstances![frontendId] = frontendInstance;
+            project.componentInstances![EDS_COMPONENT_ID] = frontendInstance;
 
-            context.logger.debug(`[Project Creation] Created EDS frontend instance: ${frontendId}`);
+            context.logger.debug(`[Project Creation] Registered EDS frontend component: ${EDS_COMPONENT_ID} at ${edsComponentPath}`);
         }
 
         // Save project state after EDS setup completes (ensures EDS metadata is persisted

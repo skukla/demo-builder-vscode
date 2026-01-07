@@ -35,7 +35,7 @@ interface ReviewStepProps extends BaseStepProps {
 
 /**
  * LabelValue - Single row with label and value
- * Uses 14px fonts for readability with fixed-width labels
+ * Uses fixed-width labels for consistent alignment across all cards
  * Supports optional sub-items displayed as a secondary line
  */
 function LabelValue({ label, value, icon, subItems }: {
@@ -46,7 +46,15 @@ function LabelValue({ label, value, icon, subItems }: {
 }) {
     return (
         <Flex gap="size-200" alignItems="start">
-            <Text UNSAFE_className="review-label">{label}</Text>
+            <Text 
+                UNSAFE_className="review-label"
+                UNSAFE_style={{ 
+                    minWidth: '120px',
+                    flexShrink: 0,
+                }}
+            >
+                {label}
+            </Text>
             <Flex direction="column" gap="size-50" flex={1}>
                 <Flex gap="size-100" alignItems="center">
                     {icon}
@@ -67,14 +75,17 @@ function LabelValue({ label, value, icon, subItems }: {
 }
 
 /**
- * Section - Group of label/value pairs with heading
+ * Section - Group of label/value pairs with heading in a subtle card
+ * Uses background instead of dividers for cleaner visual separation
  */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <View
-            marginBottom="size-300"
-            paddingBottom="size-300"
-            UNSAFE_style={{ borderBottom: '1px solid var(--spectrum-gray-300)' }}
+            padding="size-200"
+            borderRadius="medium"
+            UNSAFE_style={{
+                backgroundColor: 'var(--spectrum-gray-75)',
+            }}
         >
             <Text UNSAFE_className={cn('text-sm', 'font-semibold', 'text-gray-600', 'text-uppercase', 'letter-spacing-05')}>
                 {title}
@@ -193,78 +204,63 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
 
             <Divider size="M" marginBottom="size-400" />
 
-            {/* Two-Column Grid Layout with aligned rows */}
+            {/* Two-Column Grid Layout - cards provide visual separation */}
             <div
                 style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr 1fr',
-                    gap: 'var(--spectrum-global-dimension-size-400)',
-                    alignItems: 'start',
+                    gap: 'var(--spectrum-global-dimension-size-200)',
                 }}
             >
                 {/* Row 1: Project Config | Adobe I/O */}
-                <View
-                    paddingEnd="size-300"
-                    UNSAFE_style={{ borderRight: '1px solid var(--spectrum-gray-300)' }}
-                >
-                    {hasPackageStackContext ? (
-                        <Section title="PROJECT CONFIGURATION">
-                            {packageName && <LabelValue label="Package" value={packageName} />}
-                            {stackName && <LabelValue label="Architecture" value={stackName} />}
-                        </Section>
-                    ) : (
-                        <View /> // Empty placeholder for alignment
-                    )}
-                </View>
-                <View>
-                    {hasAdobeContext ? (
-                        <Section title="ADOBE I/O">
-                            {adobeOrgName && <LabelValue label="Organization" value={adobeOrgName} />}
-                            {adobeProjectName && <LabelValue label="Project" value={adobeProjectName} />}
-                            {adobeWorkspaceName && <LabelValue label="Workspace" value={adobeWorkspaceName} />}
-                        </Section>
-                    ) : (
-                        <View /> // Empty placeholder for alignment
-                    )}
-                </View>
+                {hasPackageStackContext ? (
+                    <Section title="PROJECT CONFIGURATION">
+                        {packageName && <LabelValue label="Package" value={packageName} />}
+                        {stackName && <LabelValue label="Architecture" value={stackName} />}
+                    </Section>
+                ) : (
+                    <View /> 
+                )}
+                {hasAdobeContext ? (
+                    <Section title="ADOBE I/O">
+                        {adobeOrgName && <LabelValue label="Organization" value={adobeOrgName} />}
+                        {adobeProjectName && <LabelValue label="Project" value={adobeProjectName} />}
+                        {adobeWorkspaceName && <LabelValue label="Workspace" value={adobeWorkspaceName} />}
+                    </Section>
+                ) : (
+                    <View />
+                )}
 
                 {/* Row 2: EDS | Components */}
-                <View
-                    paddingEnd="size-300"
-                    UNSAFE_style={{ borderRight: '1px solid var(--spectrum-gray-300)' }}
-                >
-                    {hasEdsConfig ? (
-                        <Section title="EDGE DELIVERY SERVICES">
-                            {githubRepoInfo && (
-                                <LabelValue
-                                    label="GitHub Repository"
-                                    value={githubRepoInfo.fullName}
-                                    subItems={[githubRepoInfo.mode]}
-                                />
-                            )}
-                            {daLiveInfo && (
-                                <LabelValue
-                                    label="DA.live Project"
-                                    value={daLiveInfo.org ? `${daLiveInfo.org}/${daLiveInfo.site}` : daLiveInfo.site}
-                                    subItems={[daLiveInfo.mode]}
-                                />
-                            )}
-                        </Section>
-                    ) : (
-                        <View /> // Empty placeholder for alignment
-                    )}
-                </View>
-                <View>
-                    {componentInfo.length > 0 ? (
-                        <Section title="COMPONENTS">
-                            {componentInfo.map((item, index) => (
-                                <LabelValue key={index} label={item.label} value={item.value} subItems={item.subItems} />
-                            ))}
-                        </Section>
-                    ) : (
-                        <View /> // Empty placeholder for alignment
-                    )}
-                </View>
+                {hasEdsConfig ? (
+                    <Section title="EDGE DELIVERY SERVICES">
+                        {githubRepoInfo && (
+                            <LabelValue
+                                label="GitHub Repository"
+                                value={githubRepoInfo.fullName}
+                                subItems={[githubRepoInfo.mode]}
+                            />
+                        )}
+                        {daLiveInfo && (
+                            <LabelValue
+                                label="DA.live Project"
+                                value={daLiveInfo.org ? `${daLiveInfo.org}/${daLiveInfo.site}` : daLiveInfo.site}
+                                subItems={[daLiveInfo.mode]}
+                            />
+                        )}
+                    </Section>
+                ) : (
+                    <View />
+                )}
+                {componentInfo.length > 0 ? (
+                    <Section title="COMPONENTS">
+                        {componentInfo.map((item, index) => (
+                            <LabelValue key={index} label={item.label} value={item.value} subItems={item.subItems} />
+                        ))}
+                    </Section>
+                ) : (
+                    <View />
+                )}
             </div>
         </div>
     );

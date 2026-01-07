@@ -173,8 +173,14 @@ export async function handleCreateProject(
         context.logger.error(`[Project Creation] Failed after ${elapsedMin}m ${elapsedSec}s`, error as Error);
 
         // Cleanup partial project directory on failure
+        // IMPORTANT: In edit mode, preserve the existing project - don't delete it
+        const isEditMode = (config as { editMode?: boolean }).editMode === true;
         try {
-            if (fs.existsSync(projectPath)) {
+            if (isEditMode) {
+                // In edit mode, preserve the project - user's existing project should not be deleted
+                context.logger.debug('[Project Edit] Edit failed - preserving existing project (not deleting)');
+                context.logger.info('[Project Edit] Edit operation failed. Your existing project has been preserved.');
+            } else if (fs.existsSync(projectPath)) {
                 context.logger.debug(`[Project Creation] Cleaning up partial project at ${projectPath}`);
                 await fsPromises.rm(projectPath, { recursive: true, force: true });
                 context.logger.debug('[Project Creation] Cleanup complete');

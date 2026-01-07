@@ -12,7 +12,11 @@
 
 import { Octokit } from '@octokit/core';
 import { retry } from '@octokit/plugin-retry';
+import * as path from 'path';
 import { getLogger } from '@/core/logging';
+import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS } from '@/core/utils';
+import { DEFAULT_SHELL } from '@/types/shell';
 import type { Logger } from '@/types/logger';
 import type {
     GitHubRepo,
@@ -311,18 +315,35 @@ export class GitHubRepoOperations {
         }
 
         const authedUrl = injectTokenIntoUrl(repoUrl, token.token);
-        await this.executeGitCommand(`git clone ${authedUrl}`, localPath);
-    }
 
-    /**
-     * Execute a git command
-     * @param command - Git command to execute
-     * @param _cwd - Working directory (currently unused, placeholder for actual implementation)
-     */
-    private async executeGitCommand(command: string, _cwd: string): Promise<void> {
-        const safeCommand = command.replace(/https:\/\/[^@]+@/g, 'https://***@');
-        this.logger.debug(`[GitHub] Executing: ${safeCommand}`);
-        // Note: Actual git execution is handled elsewhere in the codebase
+        // Clone to a temp name first (git clone creates the target folder)
+        // localPath is where we want the repo files to end up
+        const cloneCommand = `git clone "${authedUrl}" "${localPath}"`;
+
+        // Log safely (hide token)
+        const safeCommand = cloneCommand.replace(/https:\/\/[^@]+@/g, 'https://***@');
+        this.logger.debug(`[GitHub] Cloning repository to ${localPath}`);
+        this.logger.trace(`[GitHub] Executing: ${safeCommand}`);
+
+        const commandManager = ServiceLocator.getCommandExecutor();
+
+        // Clone from the parent directory of localPath
+        const parentDir = path.dirname(localPath);
+
+        const result = await commandManager.execute(cloneCommand, {
+            timeout: TIMEOUTS.LONG,
+            enhancePath: true,
+            shell: DEFAULT_SHELL,
+            cwd: parentDir,
+        });
+
+        if (result.code !== 0) {
+            this.logger.error(`[GitHub] Git clone failed`);
+            this.logger.debug(`[GitHub] Clone stderr: ${result.stderr}`);
+            throw new Error(`Git clone failed: ${result.stderr}`);
+        }
+
+        this.logger.debug(`[GitHub] Clone completed successfully`);
     }
 
     /**

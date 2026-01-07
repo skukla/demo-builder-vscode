@@ -23,6 +23,7 @@ import type { ComponentManager } from '@/features/components/services/componentM
 import type { Logger } from '@/types/logger';
 import type { DaLiveOrgOperations } from './daLiveOrgOperations';
 import type { DaLiveContentOperations } from './daLiveContentOperations';
+import { GitHubAppNotInstalledError } from './types';
 import type { GitHubTokenService } from './githubTokenService';
 import type { GitHubRepoOperations } from './githubRepoOperations';
 import {
@@ -217,6 +218,13 @@ export class EdsProjectService {
             };
         } catch (error) {
             const err = error as Error;
+            
+            // Re-throw GitHubAppNotInstalledError so executor can handle it
+            // This error requires user interaction (installing the GitHub app)
+            if (err instanceof GitHubAppNotInstalledError) {
+                throw err;
+            }
+
             const phase = this.getFailedPhase(err);
 
             this.logger.error(`[EDS] Project setup failed at phase: ${phase}`, err);

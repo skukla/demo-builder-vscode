@@ -79,13 +79,8 @@ async function handleStepBackendCalls(
         }
     }
 
-    // Project creation: Trigger project creation when moving from review to project-creation step
-    if (currentStep === 'review' && nextStepId === 'project-creation') {
-        // Pass importedSettings so we can detect same-workspace imports and skip mesh deployment
-        // Pass packages so we can resolve the storefront source for frontend cloning
-        const projectConfig = buildProjectConfig(wizardState, importedSettings, packages);
-        vscode.createProject(projectConfig);
-    }
+    // Note: Project creation is now triggered by ProjectCreationStep's pre-flight checks
+    // (after mesh and GitHub app checks pass), not here during navigation
 }
 
 /**
