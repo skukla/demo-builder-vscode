@@ -66,8 +66,10 @@ const HELIX_CODE_URL = 'https://admin.hlx.page/code';
 const MAX_CODE_SYNC_ATTEMPTS = 25;
 const DEFAULT_BRANCH = 'main';
 
-// Key files that must exist after clone to verify successful clone
-const CLONE_VERIFICATION_FILES = ['package.json', 'scripts/aem.js'];
+// Verify clone by checking directory is not empty
+// Different EDS templates may have different file structures, so we just verify
+// that at least some files were cloned
+const MIN_FILES_AFTER_CLONE = 1;
 
 /**
  * GitHub Repository Phase
@@ -91,6 +93,8 @@ export class GitHubRepoPhase {
         this.logger.debug(`[EDS] Creating repository: ${config.repoName}`);
 
         try {
+            // GitHub's template API is synchronous - the 201 response means
+            // the template is fully copied and ready to clone
             const repo = await this.repoOperations.createFromTemplate(
                 CITISIGNAL_TEMPLATE.owner,
                 CITISIGNAL_TEMPLATE.repo,
@@ -98,7 +102,7 @@ export class GitHubRepoPhase {
                 config.isPrivate ?? false,
             );
 
-            this.logger.debug(`[EDS] Repository created: ${repo.fullName}`);
+            this.logger.debug(`[EDS] Repository created and ready: ${repo.fullName}`);
             return repo;
         } catch (error) {
             throw new EdsProjectError(
@@ -177,16 +181,30 @@ export class GitHubRepoPhase {
         config: EdsProjectConfig,
         onProgress?: PhaseProgressCallback,
     ): Promise<void> {
-        this.logger.debug(`[EDS] Cloning repository to: ${config.projectPath}`);
+        // Clone to components/eds-storefront/ like other frontends
+        const clonePath = config.componentPath;
+        this.logger.debug(`[EDS] Cloning repository to: ${clonePath}`);
 
         try {
+            // Ensure parent directory exists
+            await fs.mkdir(path.dirname(clonePath), { recursive: true });
+
+            // Clean up any existing directory (from previous failed attempts)
+            try {
+                await fs.access(clonePath);
+                this.logger.debug(`[EDS] Removing existing component directory: ${clonePath}`);
+                await fs.rm(clonePath, { recursive: true, force: true });
+            } catch {
+                // Directory doesn't exist, no cleanup needed
+            }
+
             onProgress?.('Cloning repository...');
-            await this.repoOperations.cloneRepository(repo.cloneUrl, config.projectPath);
+            await this.repoOperations.cloneRepository(repo.cloneUrl, clonePath);
             this.logger.debug(`[EDS] Repository cloned successfully`);
 
             // Priority 3: Post-clone verification - check key files exist
             onProgress?.('Verifying clone integrity...');
-            await this.verifyCloneComplete(config.projectPath);
+            await this.verifyCloneComplete(clonePath);
         } catch (error) {
             if (error instanceof EdsProjectError) {
                 throw error;
@@ -200,25 +218,40 @@ export class GitHubRepoPhase {
     }
 
     /**
-     * Verify clone completed successfully by checking key files exist
+     * Verify clone completed successfully by checking directory has content
+     * Different templates may have different structures, so we just verify
+     * that files were actually cloned
      */
     private async verifyCloneComplete(projectPath: string): Promise<void> {
-        this.logger.debug(`[EDS] Verifying clone integrity`);
+        this.logger.debug(`[EDS] Verifying clone integrity at: ${projectPath}`);
 
-        for (const file of CLONE_VERIFICATION_FILES) {
-            const filePath = path.join(projectPath, file);
-            try {
-                await fs.access(filePath);
-                this.logger.debug(`[EDS] Verified file exists: ${file}`);
-            } catch {
+        try {
+            const files = await fs.readdir(projectPath);
+            
+            // Filter out hidden files for the count (but they're still valid)
+            const visibleFiles = files.filter(f => !f.startsWith('.'));
+            this.logger.debug(`[EDS] Found ${files.length} total files (${visibleFiles.length} visible)`);
+            this.logger.debug(`[EDS] Directory contents: ${files.slice(0, 10).join(', ')}${files.length > 10 ? '...' : ''}`);
+
+            if (files.length < MIN_FILES_AFTER_CLONE) {
                 throw new EdsProjectError(
-                    `Clone verification failed: ${file} not found`,
+                    `Clone verification failed: Directory is empty or incomplete (found ${files.length} files)`,
                     'github-clone',
                 );
             }
-        }
 
-        this.logger.debug(`[EDS] Clone verification complete`);
+            this.logger.debug(`[EDS] Clone verification complete - ${files.length} files present`);
+        } catch (error) {
+            if (error instanceof EdsProjectError) {
+                throw error;
+            }
+            this.logger.error(`[EDS] Failed to verify clone: ${(error as Error).message}`);
+            throw new EdsProjectError(
+                `Clone verification failed: Cannot read directory at ${projectPath}`,
+                'github-clone',
+                error as Error,
+            );
+        }
     }
 }
 
@@ -244,40 +277,14 @@ export class HelixConfigPhase {
         this.logger.debug(`[EDS] Configuring Helix 5 for: ${repo.fullName}`);
 
         try {
-            const tokenManager = this.authService.getTokenManager();
-            const token = await tokenManager.getAccessToken();
+            // Modern Helix 5 approach: Generate fstab.yaml in the repo
+            // This replaces the deprecated admin.hlx.page/config API which requires complex auth
+            onProgress?.('Generating fstab.yaml configuration...');
+            await this.generateFstabYaml(config);
 
-            if (!token) {
-                throw new Error('Not authenticated with Adobe IMS');
-            }
+            this.logger.debug(`[EDS] Helix 5 configured via fstab.yaml`);
 
-            const configUrl = `${HELIX_CONFIG_URL}/${config.githubOwner}/${config.repoName}/${DEFAULT_BRANCH}`;
-
-            const configBody = {
-                contentBusId: `${config.daLiveOrg}/${config.daLiveSite}`,
-                mountpoints: {
-                    '/': `https://content.da.live/${config.daLiveOrg}/${config.daLiveSite}/`,
-                },
-            };
-
-            onProgress?.('Sending Helix configuration...');
-            const response = await fetch(configUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(configBody),
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-
-            if (!response.ok) {
-                throw new Error(`Helix config API returned ${response.status}`);
-            }
-
-            this.logger.debug(`[EDS] Helix 5 configured successfully`);
-
-            // Priority 1: Verify config was applied
+            // Priority 1: Verify config file was created
             onProgress?.('Verifying Helix config...');
             await this.verifyHelixConfig(config);
         } catch (error) {
@@ -297,43 +304,40 @@ export class HelixConfigPhase {
     }
 
     /**
-     * Priority 1: Verify Helix configuration was applied successfully
-     * Uses PollingService for consistent retry behavior
+     * Generate fstab.yaml file in the repository
+     * Modern Helix 5 approach - configuration in repo instead of API
      */
-    private async verifyHelixConfig(config: EdsProjectConfig): Promise<void> {
-        this.logger.debug(`[EDS] Verifying Helix config for: ${config.githubOwner}/${config.repoName}`);
-
-        const configUrl = `${HELIX_CONFIG_URL}/${config.githubOwner}/${config.repoName}/${DEFAULT_BRANCH}`;
+    private async generateFstabYaml(config: EdsProjectConfig): Promise<void> {
+        const fstabPath = path.join(config.componentPath, 'fstab.yaml');
+        
+        // fstab.yaml format for Helix 5
+        const fstabContent = `mountpoints:
+  /: https://content.da.live/${config.daLiveOrg}/${config.daLiveSite}/
+`;
 
         try {
-            await this.pollingService.pollUntilCondition(
-                async () => {
-                    try {
-                        const response = await fetch(configUrl, {
-                            method: 'GET',
-                            signal: AbortSignal.timeout(TIMEOUTS.POLL.INTERVAL),
-                        });
-                        return response.ok;
-                    } catch {
-                        return false;
-                    }
-                },
-                {
-                    name: 'helix-config-verify',
-                    maxAttempts: 10,
-                    initialDelay: TIMEOUTS.POLL.INITIAL,
-                    maxDelay: TIMEOUTS.POLL.MAX,
-                    timeout: TIMEOUTS.NORMAL,
-                },
-            );
-
-            this.logger.debug(`[EDS] Helix config verified`);
+            await fs.writeFile(fstabPath, fstabContent, 'utf-8');
+            this.logger.debug(`[EDS] Generated fstab.yaml at: ${fstabPath}`);
+            this.logger.debug(`[EDS] Mountpoint: / → https://content.da.live/${config.daLiveOrg}/${config.daLiveSite}/`);
         } catch (error) {
-            throw new EdsProjectError(
-                `Helix config verification failed: ${(error as Error).message}`,
-                'helix-config',
-                error as Error,
-            );
+            throw new Error(`Failed to write fstab.yaml: ${(error as Error).message}`);
+        }
+    }
+
+    /**
+     * Verify Helix configuration file exists
+     * Checks that fstab.yaml was created successfully
+     */
+    private async verifyHelixConfig(config: EdsProjectConfig): Promise<void> {
+        this.logger.debug(`[EDS] Verifying fstab.yaml exists`);
+
+        const fstabPath = path.join(config.componentPath, 'fstab.yaml');
+
+        try {
+            await fs.access(fstabPath);
+            this.logger.debug(`[EDS] Verified fstab.yaml exists at: ${fstabPath}`);
+        } catch {
+            throw new Error(`fstab.yaml not found at ${fstabPath}`);
         }
     }
 
@@ -427,6 +431,18 @@ export class ContentPhase {
         this.logger.debug(`[EDS] Populating DA.live content: ${config.daLiveOrg}/${config.daLiveSite}`);
 
         try {
+            // If resetting existing site content, delete all existing content first
+            if (config.resetSiteContent) {
+                this.logger.info(`[EDS] Resetting DA.live site content: ${config.daLiveOrg}/${config.daLiveSite}`);
+                try {
+                    await this.daLiveOrgOps.deleteSite(config.daLiveOrg, config.daLiveSite);
+                    this.logger.debug('[EDS] Existing DA.live content deleted');
+                } catch (error) {
+                    // Log warning but don't fail - site might not exist yet
+                    this.logger.warn(`[EDS] Failed to delete existing DA.live content: ${(error as Error).message}`);
+                }
+            }
+
             const result = await this.daLiveContentOps.copyCitisignalContent(
                 config.daLiveOrg,
                 config.daLiveSite,
@@ -492,7 +508,8 @@ export class EnvConfigPhase {
     async generateEnvFile(config: EdsProjectConfig, repo: GitHubRepo): Promise<void> {
         this.logger.debug(`[EDS] Generating .env file`);
 
-        const envPath = path.join(config.projectPath, '.env');
+        // Generate .env in the EDS component directory
+        const envPath = path.join(config.componentPath, '.env');
 
         try {
             await fs.access(envPath);

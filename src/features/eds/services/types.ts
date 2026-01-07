@@ -246,6 +246,9 @@ export type EdsSetupPhase =
     | 'env-config'
     | 'complete';
 
+/** EDS component ID for registration */
+export const EDS_COMPONENT_ID = 'eds-storefront';
+
 /**
  * Configuration for EDS project setup
  */
@@ -254,6 +257,8 @@ export interface EdsProjectConfig {
     projectName: string;
     /** Local path where project will be created */
     projectPath: string;
+    /** Path where EDS component will be cloned (components/eds-storefront) */
+    componentPath: string;
     /** GitHub repository name (without owner, for new repos) */
     repoName: string;
     /** DA.live organization name */
@@ -276,6 +281,8 @@ export interface EdsProjectConfig {
     existingRepo?: string;
     /** Whether to reset existing repo to template (repurpose flow) */
     resetToTemplate?: boolean;
+    /** Whether to reset existing DA.live site content (requires cleanup before content copy) */
+    resetSiteContent?: boolean;
 }
 
 /**

@@ -16,6 +16,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
     Button,
+    Checkbox,
     Flex,
     Heading,
     Item,
@@ -26,6 +27,7 @@ import {
 } from '@adobe/react-spectrum';
 // Note: Heading is still used for the "Create New Site" subsection (level={3})
 import Add from '@spectrum-icons/workflow/Add';
+import Alert from '@spectrum-icons/workflow/Alert';
 import Info from '@spectrum-icons/workflow/Info';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
@@ -57,6 +59,7 @@ export function DataSourceConfigStep({
 }: BaseStepProps): React.ReactElement {
     const edsConfig = state.edsConfig;
     const selectedSite = edsConfig?.selectedSite;
+    const resetSiteContent = edsConfig?.resetSiteContent || false;
     const daLiveOrg = edsConfig?.daLiveOrg || '';
     const daLiveSite = edsConfig?.daLiveSite || '';
 
@@ -94,6 +97,7 @@ export function DataSourceConfigStep({
             updateEdsConfig({
                 selectedSite: site,
                 daLiveSite: site.name,
+                resetSiteContent: false, // Reset checkbox when selecting a site
             });
         },
     });
@@ -153,6 +157,13 @@ export function DataSourceConfigStep({
             setSiteNameError('Must start with a letter and contain only lowercase letters, numbers, and hyphens');
         }
     }, [daLiveSite]);
+
+    /**
+     * Handle reset site content checkbox change
+     */
+    const handleResetSiteContentChange = useCallback((isSelected: boolean) => {
+        updateEdsConfig({ resetSiteContent: isSelected });
+    }, [updateEdsConfig]);
 
     /**
      * Handle list selection change
@@ -269,6 +280,36 @@ export function DataSourceConfigStep({
                             </Item>
                         )}
                     </ListView>
+
+                    {/* Reset site content option - only show when site is selected */}
+                    {selectedSite && (
+                        <Flex direction="column" gap="size-100" marginTop="size-300">
+                            <Checkbox
+                                isSelected={resetSiteContent}
+                                onChange={handleResetSiteContentChange}
+                            >
+                                Reset content (replaces all content)
+                            </Checkbox>
+
+                            {/* Warning notice - fixed height container prevents layout jump */}
+                            <View
+                                marginStart="size-300"
+                                minHeight="size-250"
+                                UNSAFE_className="reset-warning-container"
+                            >
+                                <Flex
+                                    alignItems="center"
+                                    gap="size-100"
+                                    UNSAFE_className={resetSiteContent ? 'reset-warning-visible' : 'reset-warning-hidden'}
+                                >
+                                    <Alert size="S" UNSAFE_className="text-orange-500 flex-shrink-0" />
+                                    <Text UNSAFE_className="text-xs text-orange-600">
+                                        This will delete and repopulate the site with demo content.
+                                    </Text>
+                                </Flex>
+                            </View>
+                        </Flex>
+                    )}
 
                     {/* No results */}
                     {searchQuery && filteredSites.length === 0 && (
