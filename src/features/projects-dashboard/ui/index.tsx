@@ -224,6 +224,28 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
+    // Handle open live site (EDS projects)
+    const handleOpenLiveSite = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('openLiveSite', {
+                projectPath: project.path,
+            });
+        } catch (error) {
+            console.error('Failed to open live site:', error);
+        }
+    }, []);
+
+    // Handle open DA.live (EDS projects)
+    const handleOpenDaLive = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('openDaLive', {
+                projectPath: project.path,
+            });
+        } catch (error) {
+            console.error('Failed to open DA.live:', error);
+        }
+    }, []);
+
     // Handle edit project
     const handleEditProject = useCallback(async (project: Project) => {
         try {
@@ -254,6 +276,8 @@ const ProjectsDashboardApp: React.FC = () => {
             onStartDemo={handleStartDemo}
             onStopDemo={handleStopDemo}
             onOpenBrowser={handleOpenBrowser}
+            onOpenLiveSite={handleOpenLiveSite}
+            onOpenDaLive={handleOpenDaLive}
             onEditProject={handleEditProject}
             onExportProject={handleExportProject}
             onDeleteProject={handleDeleteProject}

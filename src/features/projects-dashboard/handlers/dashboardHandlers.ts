@@ -441,3 +441,57 @@ export const handleOpenBrowser: MessageHandler<{ projectPath: string }> = async 
 ): Promise<HandlerResponse> => {
     return executeCommandForProject(context, payload?.projectPath, 'demoBuilder.openBrowser');
 };
+
+/**
+ * Open EDS live site in browser
+ */
+export const handleOpenLiveSite: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    if (!payload?.projectPath) {
+        return { success: false, error: 'Project path is required' };
+    }
+
+    const project = await context.stateManager.getProjectByPath(payload.projectPath);
+    if (!project) {
+        return { success: false, error: 'Project not found' };
+    }
+
+    const { getEdsLiveUrl } = await import('@/types/typeGuards');
+    const liveUrl = getEdsLiveUrl(project);
+
+    if (!liveUrl) {
+        return { success: false, error: 'EDS live URL not available' };
+    }
+
+    await vscode.env.openExternal(vscode.Uri.parse(liveUrl));
+    return { success: true };
+};
+
+/**
+ * Open DA.live for authoring
+ */
+export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    if (!payload?.projectPath) {
+        return { success: false, error: 'Project path is required' };
+    }
+
+    const project = await context.stateManager.getProjectByPath(payload.projectPath);
+    if (!project) {
+        return { success: false, error: 'Project not found' };
+    }
+
+    const { getEdsDaLiveUrl } = await import('@/types/typeGuards');
+    const daLiveUrl = getEdsDaLiveUrl(project);
+
+    if (!daLiveUrl) {
+        return { success: false, error: 'DA.live URL not available' };
+    }
+
+    await vscode.env.openExternal(vscode.Uri.parse(daLiveUrl));
+    return { success: true };
+};

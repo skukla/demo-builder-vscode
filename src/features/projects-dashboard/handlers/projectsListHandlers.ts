@@ -19,6 +19,8 @@ import {
     handleStartDemo,
     handleStopDemo,
     handleOpenBrowser,
+    handleOpenLiveSite,
+    handleOpenDaLive,
     handleEditProject,
     handleOpenDocs,
     handleOpenHelp,
@@ -54,6 +56,8 @@ export const projectsListHandlers = defineHandlers({
     'startDemo': handleStartDemo,
     'stopDemo': handleStopDemo,
     'openBrowser': handleOpenBrowser,
+    'openLiveSite': handleOpenLiveSite,
+    'openDaLive': handleOpenDaLive,
 
     // Project edit handler
     'editProject': handleEditProject,

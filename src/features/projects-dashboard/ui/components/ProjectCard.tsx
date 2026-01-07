@@ -36,6 +36,8 @@ export interface ProjectCardProps {
     onOpenBrowser?: (project: Project) => void;
     /** Callback to open the live site (for EDS projects) */
     onOpenLiveSite?: (project: Project) => void;
+    /** Callback to open DA.live for authoring (for EDS projects) */
+    onOpenDaLive?: (project: Project) => void;
     /** Callback to edit project settings */
     onEdit?: (project: Project) => void;
     /** Callback to export project settings */
@@ -57,6 +59,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     onStopDemo,
     onOpenBrowser,
     onOpenLiveSite,
+    onOpenDaLive,
     onEdit,
     onExport,
     onDelete,
@@ -104,6 +107,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                     onStopDemo={onStopDemo}
                     onOpenBrowser={onOpenBrowser}
                     onOpenLiveSite={onOpenLiveSite}
+                    onOpenDaLive={onOpenDaLive}
                     onEdit={onEdit}
                     onExport={onExport}
                     onDelete={onDelete}

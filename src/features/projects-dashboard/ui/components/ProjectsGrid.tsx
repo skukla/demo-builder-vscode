@@ -21,6 +21,10 @@ export interface ProjectsGridProps {
     onStopDemo?: (project: Project) => void;
     /** Callback to open demo in browser */
     onOpenBrowser?: (project: Project) => void;
+    /** Callback to open live site (for EDS projects) */
+    onOpenLiveSite?: (project: Project) => void;
+    /** Callback to open DA.live for authoring (for EDS projects) */
+    onOpenDaLive?: (project: Project) => void;
     /** Callback to edit project settings */
     onEditProject?: (project: Project) => void;
     /** Callback to export project settings */
@@ -39,6 +43,8 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
     onStartDemo,
     onStopDemo,
     onOpenBrowser,
+    onOpenLiveSite,
+    onOpenDaLive,
     onEditProject,
     onExportProject,
     onDeleteProject,
@@ -57,6 +63,8 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
                     onStartDemo={onStartDemo}
                     onStopDemo={onStopDemo}
                     onOpenBrowser={onOpenBrowser}
+                    onOpenLiveSite={onOpenLiveSite}
+                    onOpenDaLive={onOpenDaLive}
                     onEdit={onEditProject}
                     onExport={onExportProject}
                     onDelete={onDeleteProject}

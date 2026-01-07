@@ -27,7 +27,7 @@ import { isEdsProject } from '@/types/typeGuards';
 interface MenuItem {
     key: string;
     label: string;
-    icon: 'play' | 'stop' | 'globe' | 'edit' | 'export' | 'delete';
+    icon: 'play' | 'stop' | 'globe' | 'dalive' | 'edit' | 'export' | 'delete';
 }
 
 export interface ProjectActionsMenuProps {
@@ -43,6 +43,8 @@ export interface ProjectActionsMenuProps {
     onOpenBrowser?: (project: Project) => void;
     /** Callback to open the live site (for EDS projects) */
     onOpenLiveSite?: (project: Project) => void;
+    /** Callback to open DA.live for authoring (for EDS projects) */
+    onOpenDaLive?: (project: Project) => void;
     /** Callback to edit project settings */
     onEdit?: (project: Project) => void;
     /** Callback to export project settings */
@@ -66,6 +68,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     onStopDemo,
     onOpenBrowser,
     onOpenLiveSite,
+    onOpenDaLive,
     onEdit,
     onExport,
     onDelete,
@@ -87,6 +90,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             case 'openLive':
                 onOpenLiveSite?.(project);
                 break;
+            case 'openDaLive':
+                onOpenDaLive?.(project);
+                break;
             case 'edit':
                 onEdit?.(project);
                 break;
@@ -97,7 +103,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 onDelete?.(project);
                 break;
         }
-    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onEdit, onExport, onDelete]);
+    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onEdit, onExport, onDelete]);
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
@@ -109,9 +115,12 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         const items: MenuItem[] = [];
 
         if (isEds) {
-            // EDS projects: No Start/Stop, always show "Open Live Site"
+            // EDS projects: No Start/Stop, always show "Open in Browser" and "Open in DA.live" first
             if (onOpenLiveSite) {
-                items.push({ key: 'openLive', label: 'Open Live Site', icon: 'globe' });
+                items.push({ key: 'openLive', label: 'Open in Browser', icon: 'globe' });
+            }
+            if (onOpenDaLive) {
+                items.push({ key: 'openDaLive', label: 'Open in DA.live', icon: 'dalive' });
             }
             // Edit is always available for EDS (no running state)
             if (onEdit) {
@@ -144,7 +153,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             items.push({ key: 'delete', label: 'Delete Project', icon: 'delete' });
         }
         return items;
-    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onEdit, onExport, onDelete]);
+    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onEdit, onExport, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {
@@ -167,6 +176,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                             {item.icon === 'play' && <Play size="S" />}
                             {item.icon === 'stop' && <Stop size="S" />}
                             {item.icon === 'globe' && <Globe size="S" />}
+                            {item.icon === 'dalive' && <Edit size="S" />}
                             {item.icon === 'edit' && <Edit size="S" />}
                             {item.icon === 'export' && <Export size="S" />}
                             {item.icon === 'delete' && <Delete size="S" />}

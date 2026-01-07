@@ -51,6 +51,10 @@ export interface ProjectsDashboardProps {
     onStopDemo?: (project: Project) => void;
     /** Callback to open demo in browser */
     onOpenBrowser?: (project: Project) => void;
+    /** Callback to open live site (for EDS projects) */
+    onOpenLiveSite?: (project: Project) => void;
+    /** Callback to open DA.live for authoring (for EDS projects) */
+    onOpenDaLive?: (project: Project) => void;
     /** Callback to edit project settings */
     onEditProject?: (project: Project) => void;
     /** Callback to export project settings */
@@ -91,6 +95,8 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     onStartDemo,
     onStopDemo,
     onOpenBrowser,
+    onOpenLiveSite,
+    onOpenDaLive,
     onEditProject,
     onExportProject,
     onDeleteProject,
@@ -258,6 +264,8 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         onStartDemo={onStartDemo}
                         onStopDemo={onStopDemo}
                         onOpenBrowser={onOpenBrowser}
+                        onOpenLiveSite={onOpenLiveSite}
+                        onOpenDaLive={onOpenDaLive}
                         onEditProject={onEditProject}
                         onExportProject={onExportProject}
                         onDeleteProject={onDeleteProject}
@@ -271,6 +279,8 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         onStartDemo={onStartDemo}
                         onStopDemo={onStopDemo}
                         onOpenBrowser={onOpenBrowser}
+                        onOpenLiveSite={onOpenLiveSite}
+                        onOpenDaLive={onOpenDaLive}
                         onEditProject={onEditProject}
                         onExportProject={onExportProject}
                         onDeleteProject={onDeleteProject}
