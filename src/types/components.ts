@@ -28,6 +28,8 @@ export interface EnvVarDefinition {
         pattern?: string;
         message?: string;
     };
+    /** Array of source variable names to derive this variable from (first non-empty value wins) */
+    derivedFrom?: string[];
 }
 
 /**
@@ -53,6 +55,36 @@ export interface ServiceDefinition {
     optionalEnvVars?: string[];
     description?: string;
     envVars?: EnvVarDefinition[]; // Added during transformation
+    backendSpecific?: boolean; // Whether this service has backend-specific implementations
+    requiredEnvVarsByBackend?: Record<string, string[]>; // Env vars grouped by backend ID
+}
+
+/**
+ * ConfigFileDefinition - Configuration file definition
+ * 
+ * All config files are peers - .env and .json are just different formats for
+ * the same purpose (storing component configuration). Components can define
+ * multiple config files in different formats (e.g., EDS needs both .env and site.json).
+ * 
+ * @example
+ * // EDS needs both .env (for build) and site.json (for browser runtime)
+ * "configFiles": {
+ *   ".env": { "format": "env" },
+ *   "site.json": {
+ *     "format": "json",
+ *     "fieldRenames": { "MESH_ENDPOINT": "commerce-core-endpoint" }
+ *   }
+ * }
+ */
+export interface ConfigFileDefinition {
+    /** File format: env (KEY=VALUE), json, yaml, or ini */
+    format: 'env' | 'json' | 'yaml' | 'ini';
+    /** Optional template file name (relative to component root) */
+    template?: string;
+    /** Rename env vars for this format. Source (env var key) → Target (output field name) */
+    fieldRenames?: Record<string, string>;
+    /** Additional fields with static values not from env vars */
+    additionalFields?: Record<string, unknown>;
 }
 
 /**
@@ -90,6 +122,7 @@ export interface RawComponentDefinition {
         // Flat structure - requiredEnvVars/optionalEnvVars directly in configuration
         requiredEnvVars?: string[];
         optionalEnvVars?: string[];
+        configFiles?: Record<string, ConfigFileDefinition>;
         port?: number;
         nodeVersion?: string;
         buildScript?: string;
@@ -101,6 +134,7 @@ export interface RawComponentDefinition {
             validation?: string;
         }>;
         requiredServices?: string[];
+        providesServices?: string[]; // Service IDs this component provides to others
         services?: string[];
         meshIntegration?: {
             sources?: Record<string, unknown>;

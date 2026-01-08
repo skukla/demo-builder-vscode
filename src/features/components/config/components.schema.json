@@ -1,59 +1,59 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Demo Builder Component Registry Schema v2.0",
-  "description": "Schema for defining components, services, and environment variables in a normalized structure",
-  "type": "object",
-  "required": ["version", "selectionGroups", "components"],
-  "properties": {
-    "version": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "description": "Schema version (e.g., '2.0.0')"
-    },
-    "selectionGroups": {
-      "type": "object",
-      "description": "Groups that populate primary UI sections (dropdowns and selection areas)",
-      "properties": {
-        "frontends": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Component IDs for frontend dropdown"
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Demo Builder Component Registry Schema v2.0",
+    "description": "Schema for defining components, services, and environment variables in a normalized structure",
+    "type": "object",
+    "required": ["version", "selectionGroups", "components"],
+    "properties": {
+        "version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "description": "Schema version (e.g., '2.0.0')"
         },
-        "backends": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Component IDs for backend dropdown"
+        "selectionGroups": {
+            "type": "object",
+            "description": "Groups that populate primary UI sections (dropdowns and selection areas)",
+            "properties": {
+                "frontends": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Component IDs for frontend dropdown"
+                },
+                "backends": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Component IDs for backend dropdown"
+                },
+                "dependencies": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Component IDs for dependencies (components pulled in via relationships, not directly selected)"
+                },
+                "appBuilderApps": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Component IDs for App Builder Apps section (YOUR custom apps)"
+                },
+                "integrations": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Component IDs for Adobe Integrations section (ADOBE services)"
+                }
+            }
         },
-        "dependencies": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Component IDs for dependencies (components pulled in via relationships, not directly selected)"
+        "components": {
+            "type": "object",
+            "description": "Flat map of all components by ID",
+            "additionalProperties": {
+                "$ref": "#/definitions/component"
+            }
         },
-        "appBuilderApps": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Component IDs for App Builder Apps section (YOUR custom apps)"
-        },
-        "integrations": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Component IDs for Adobe Integrations section (ADOBE services)"
+        "envVars": {
+            "type": "object",
+            "description": "Shared environment variables registry (single source of truth)",
+            "additionalProperties": {
+                "$ref": "#/definitions/envVar"
         }
-      }
-    },
-    "components": {
-      "type": "object",
-      "description": "Flat map of all components by ID",
-      "additionalProperties": {
-        "$ref": "#/definitions/component"
-      }
-    },
-    "envVars": {
-      "type": "object",
-      "description": "Shared environment variables registry (single source of truth)",
-      "additionalProperties": {
-        "$ref": "#/definitions/envVar"
-      }
     },
     "services": {
       "type": "object",
@@ -64,268 +64,335 @@
     }
   },
   "definitions": {
-    "component": {
-      "type": "object",
-      "required": ["name"],
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Human-readable component name"
-        },
-        "description": {
-          "type": "string",
-          "description": "Component description"
-        },
-        "icon": {
-          "oneOf": [
-            {
-              "type": "string",
-              "description": "VSCode ThemeIcon name or codicon identifier"
-            },
-            {
-              "type": "object",
-              "description": "Custom icon paths for light and dark themes",
-              "required": ["light", "dark"],
-              "properties": {
-                "light": { "type": "string" },
-                "dark": { "type": "string" }
-              }
-            }
-          ]
-        },
-        "version": {
-          "type": "string",
-          "description": "Component version"
-        },
-        "source": {
-          "$ref": "#/definitions/source"
-        },
-        "dependencies": {
-          "type": "object",
-          "description": "Component dependencies",
-          "properties": {
-            "required": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Required dependency component IDs"
-            },
-            "optional": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Optional dependency component IDs"
-            }
-          }
-        },
-        "compatibleBackends": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Compatible backend component IDs"
-        },
-        "configuration": {
-          "type": "object",
-          "description": "Component configuration",
-          "properties": {
-            "port": {
-              "type": "number",
-              "description": "Port number for local server"
-            },
-            "nodeVersion": {
-              "type": "string",
-              "description": "Required Node.js version"
-            },
-            "requiredEnvVars": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Required environment variable keys (references envVars registry)"
-            },
-            "optionalEnvVars": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Optional environment variable keys (references envVars registry)"
+        "component": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Human-readable component name"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Component description"
+                },
+                "icon": {
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "description": "VSCode ThemeIcon name or codicon identifier"
+                        },
+                        {
+                            "type": "object",
+                            "description": "Custom icon paths for light and dark themes",
+                            "required": ["light", "dark"],
+                            "properties": {
+                                "light": { "type": "string" },
+                                "dark": { "type": "string" }
+                            }
+                        }
+                    ]
+                },
+                "version": {
+                    "type": "string",
+                    "description": "Component version"
+                },
+                "source": {
+                    "$ref": "#/definitions/source"
+                },
+                "dependencies": {
+                    "type": "object",
+                    "description": "Component dependencies",
+                    "properties": {
+                        "required": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Required dependency component IDs"
+                        },
+                        "optional": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Optional dependency component IDs"
+                        }
+                    }
+                },
+                "compatibleBackends": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Compatible backend component IDs"
+                },
+                "configuration": {
+                    "type": "object",
+                    "description": "Component configuration",
+                    "properties": {
+                        "port": {
+                            "type": "number",
+                            "description": "Port number for local server"
+                        },
+                        "nodeVersion": {
+                            "type": "string",
+                            "description": "Required Node.js version"
+                        },
+                        "requiredEnvVars": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Required environment variable keys (references envVars registry)"
+                        },
+                        "optionalEnvVars": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Optional environment variable keys (references envVars registry)"
+                        },
+                        "configFiles": {
+                            "type": "object",
+                            "description": "Configuration files to generate. If omitted, defaults to .env (or .env.local for Next.js). Specify explicitly when component needs multiple formats (e.g., EDS needs both .env and site.json)",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/configFile"
+                            }
             },
             "requiredServices": {
               "type": "array",
               "items": { "type": "string" },
               "description": "Required service IDs (references services registry)"
             },
+            "providesServices": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Service IDs that this component provides to others (e.g., ACCS provides catalog-service built-in)"
+            },
             "providesEnvVars": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Environment variable keys this component provides"
-            },
-            "requiresDeployment": {
-              "type": "boolean",
-              "description": "Whether component requires deployment"
-            },
-            "deploymentTarget": {
-              "type": "string",
-              "description": "Deployment target (e.g., 'adobe-io')"
-            },
-            "buildScript": {
-              "type": "string",
-              "description": "Build script name"
-            },
-            "runtime": {
-              "type": "string",
-              "description": "Runtime environment (e.g., 'nodejs:22')"
-            },
-            "actions": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "App Builder action names"
-            },
-            "defaultEnabled": {
-              "type": "boolean",
-              "description": "Whether component is enabled by default"
-            },
-            "position": {
-              "type": "string",
-              "description": "UI position (e.g., 'right')"
-            },
-            "startOpen": {
-              "type": "boolean",
-              "description": "Whether to start in open state"
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Environment variable keys this component provides"
+                        },
+                        "requiresDeployment": {
+                            "type": "boolean",
+                            "description": "Whether component requires deployment"
+                        },
+                        "deploymentTarget": {
+                            "type": "string",
+                            "description": "Deployment target (e.g., 'adobe-io')"
+                        },
+                        "buildScript": {
+                            "type": "string",
+                            "description": "Build script name"
+                        },
+                        "runtime": {
+                            "type": "string",
+                            "description": "Runtime environment (e.g., 'nodejs:22')"
+                        },
+                        "actions": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "App Builder action names"
+                        },
+                        "defaultEnabled": {
+                            "type": "boolean",
+                            "description": "Whether component is enabled by default"
+                        },
+                        "position": {
+                            "type": "string",
+                            "description": "UI position (e.g., 'right')"
+                        },
+                        "startOpen": {
+                            "type": "boolean",
+                            "description": "Whether to start in open state"
+                        }
+                    }
+                },
+                "requiresApiKey": {
+                    "type": "boolean",
+                    "description": "Whether component requires API key"
+                },
+                "endpoint": {
+                    "type": "string",
+                    "description": "Component endpoint URL"
+                },
+                "requiresDeployment": {
+                    "type": "boolean",
+                    "description": "Whether component requires deployment"
+                },
+                "impact": {
+                    "enum": ["minimal", "moderate", "significant"],
+                    "description": "Performance/complexity impact"
+                },
+                "removable": {
+                    "type": "boolean",
+                    "description": "Whether component can be removed after installation"
+                }
             }
-          }
         },
-        "requiresApiKey": {
-          "type": "boolean",
-          "description": "Whether component requires API key"
-        },
-        "endpoint": {
-          "type": "string",
-          "description": "Component endpoint URL"
-        },
-        "requiresDeployment": {
-          "type": "boolean",
-          "description": "Whether component requires deployment"
-        },
-        "impact": {
-          "enum": ["minimal", "moderate", "significant"],
-          "description": "Performance/complexity impact"
-        },
-        "removable": {
-          "type": "boolean",
-          "description": "Whether component can be removed after installation"
-        }
-      }
-    },
-    "source": {
-      "type": "object",
-      "required": ["type"],
-      "properties": {
-        "type": {
-          "enum": ["git", "npm", "local"],
-          "description": "Source type"
-        },
-        "url": {
-          "type": "string",
-          "description": "Git repository URL"
-        },
-        "package": {
-          "type": "string",
-          "description": "NPM package name"
-        },
-        "version": {
-          "type": "string",
-          "description": "Package version"
-        },
-        "branch": {
-          "type": "string",
-          "description": "Git branch name"
-        },
-        "gitOptions": {
-          "type": "object",
-          "properties": {
-            "shallow": {
-              "type": "boolean",
-              "description": "Whether to perform shallow clone"
-            }
-          }
-        }
-      }
-    },
-    "envVar": {
-      "type": "object",
-      "required": ["label", "type"],
-      "properties": {
-        "label": {
-          "type": "string",
-          "description": "Human-readable label"
-        },
-        "type": {
-          "enum": ["text", "url", "password", "boolean", "select"],
-          "description": "Input field type"
-        },
-        "required": {
-          "type": "boolean",
-          "description": "Whether field is required"
-        },
-        "default": {
-          "type": ["string", "boolean", "number"],
-          "description": "Default value"
-        },
-        "placeholder": {
-          "type": "string",
-          "description": "Placeholder text"
-        },
-        "description": {
-          "type": "string",
-          "description": "Field description (displayed under input)"
-        },
-        "helpText": {
-          "type": "string",
-          "description": "Additional help text (reserved for future use)"
-        },
-        "group": {
-          "type": "string",
-          "description": "Grouping category for UI display"
-        },
-        "options": {
-          "type": "array",
-          "items": {
+        "source": {
             "type": "object",
-            "required": ["value", "label"],
+            "required": ["type"],
             "properties": {
-              "value": { "type": "string" },
-              "label": { "type": "string" }
+                "type": {
+                    "enum": ["git", "npm", "local"],
+                    "description": "Source type"
+                },
+                "url": {
+                    "type": "string",
+                    "description": "Git repository URL"
+                },
+                "package": {
+                    "type": "string",
+                    "description": "NPM package name"
+                },
+                "version": {
+                    "type": "string",
+                    "description": "Package version"
+                },
+                "branch": {
+                    "type": "string",
+                    "description": "Git branch name"
+                },
+                "gitOptions": {
+                    "type": "object",
+                    "properties": {
+                        "shallow": {
+                            "type": "boolean",
+                            "description": "Whether to perform shallow clone"
+                        },
+                        "tag": {
+                            "type": "string",
+                            "description": "Git tag to clone (preferred over branch for stability)"
+                        },
+                        "recursive": {
+                            "type": "boolean",
+                            "description": "Whether to clone submodules recursively"
+                        }
+                    }
+                }
             }
-          },
-          "description": "Options for select type"
         },
-        "validation": {
-          "type": "object",
-          "properties": {
-            "pattern": {
-              "type": "string",
-              "description": "Regex validation pattern"
-            },
-            "message": {
-              "type": "string",
-              "description": "Validation error message"
+        "envVar": {
+            "type": "object",
+            "required": ["label", "type"],
+            "properties": {
+                "label": {
+                    "type": "string",
+                    "description": "Human-readable label"
+                },
+                "type": {
+                    "enum": ["text", "url", "password", "boolean", "select"],
+                    "description": "Input field type"
+                },
+                "required": {
+                    "type": "boolean",
+                    "description": "Whether field is required"
+                },
+                "default": {
+                    "type": ["string", "boolean", "number"],
+                    "description": "Default value"
+                },
+                "placeholder": {
+                    "type": "string",
+                    "description": "Placeholder text"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Field description (displayed under input)"
+                },
+                "helpText": {
+                    "type": "string",
+                    "description": "Additional help text (reserved for future use)"
+                },
+                "group": {
+                    "type": "string",
+                    "description": "Grouping category for UI display"
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["value", "label"],
+                        "properties": {
+                            "value": { "type": "string" },
+                            "label": { "type": "string" }
+                        }
+                    },
+                    "description": "Options for select type"
+                },
+                "validation": {
+                    "type": "object",
+                    "properties": {
+                        "pattern": {
+                            "type": "string",
+                            "description": "Regex validation pattern"
+                        },
+                        "message": {
+                            "type": "string",
+                            "description": "Validation error message"
+                        }
+                    }
+                },
+                "derivedFrom": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Array of source variable names to derive this variable from (first non-empty value wins)"
+                }
             }
-          }
-        }
-      }
-    },
-    "service": {
-      "type": "object",
-      "required": ["name"],
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Service name"
         },
-        "description": {
-          "type": "string",
-          "description": "Service description"
+        "configFile": {
+            "type": "object",
+            "required": ["format"],
+            "description": "Configuration file definition. All config files are peers - .env and .json are just different formats for the same purpose (storing component configuration)",
+            "properties": {
+                "format": {
+                    "type": "string",
+                    "enum": ["env", "json", "yaml", "ini"],
+                    "description": "File format: env (KEY=VALUE), json, yaml, or ini"
+                },
+                "template": {
+                    "type": "string",
+                    "description": "Optional template file name (relative to component root)"
+                },
+                "fieldRenames": {
+                    "type": "object",
+                    "description": "Rename env vars for this format (e.g., MESH_ENDPOINT → commerce-core-endpoint). Source (env var key) → Target (output field name)",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "additionalFields": {
+                    "type": "object",
+                    "description": "Additional fields with static values not from env vars",
+                    "additionalProperties": true
+                }
+            }
         },
-        "requiredEnvVars": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Required environment variable keys (references envVars registry)"
+        "service": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Service name"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Service description"
+                },
+                "backendSpecific": {
+                    "type": "boolean",
+                    "description": "Whether this service has backend-specific implementations (e.g., PaaS vs ACCS endpoints)"
+                },
+                "requiredEnvVars": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Required environment variable keys (references envVars registry)"
+                },
+                "requiredEnvVarsByBackend": {
+                    "type": "object",
+                    "description": "Environment variables required by this service, grouped by backend ID",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                    }
+                }
+            }
         }
-      }
     }
-  }
 }

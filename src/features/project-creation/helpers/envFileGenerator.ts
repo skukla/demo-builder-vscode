@@ -5,11 +5,15 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { formatGroupName } from './formatters';
-import { TransformedComponentDefinition, EnvVarDefinition } from '@/types/components';
+import { generateConfigFile } from '@/core/config/configFileGenerator';
+import { resolveComponentEnvVars } from '@/features/components/services/envVarResolver';
+import { TransformedComponentDefinition, EnvVarDefinition, ConfigFileDefinition } from '@/types/components';
+import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { Logger } from '@/types/logger';
 
 /**
- * ProjectConfig interface for .env generation
+ * @deprecated Use ProjectSetupContext instead
+ * Kept for backward compatibility with dashboard configure command
  */
 export interface EnvGenerationConfig {
     componentConfigs?: Record<string, Record<string, string | number | boolean | undefined>>;
@@ -19,23 +23,18 @@ export interface EnvGenerationConfig {
 }
 
 /**
- * Generate component-specific .env file
- * Each component gets its own .env with only the variables it needs
- *
+ * Generate component-specific .env file using ProjectSetupContext
+ * 
  * @param componentPath - Path to the component directory
  * @param componentId - ID of the component
  * @param componentDef - Component definition from components.json
- * @param sharedEnvVars - Shared environment variable definitions dictionary
- * @param config - Project configuration with user values
- * @param logger - Logger instance for info messages
+ * @param context - Project setup context with registry, config, logger
  */
 export async function generateComponentEnvFile(
     componentPath: string,
     componentId: string,
     componentDef: TransformedComponentDefinition,
-    sharedEnvVars: Record<string, Omit<EnvVarDefinition, 'key'>>,
-    config: EnvGenerationConfig,
-    logger: Logger,
+    context: ProjectSetupContext,
 ): Promise<void> {
     const lines: string[] = [
         `# ${componentDef.name} - Environment Configuration`,
@@ -44,23 +43,67 @@ export async function generateComponentEnvFile(
         '',
     ];
 
-    // Get environment variable keys from flat structure (directly in configuration)
-    const requiredKeys = componentDef.configuration?.requiredEnvVars || [];
-    const optionalKeys = componentDef.configuration?.optionalEnvVars || [];
-    const allKeys = [...requiredKeys, ...optionalKeys];
+    // Use centralized env var resolution to get all relevant keys (component vars + service vars)
+    const { allEnvVarKeys } = resolveComponentEnvVars({
+        componentDef,
+        registry: context.registry,
+        backendId: context.getBackendId(),
+        logger: context.logger,
+    });
+    
+    const allKeys = allEnvVarKeys;
+
+    // Helper to get value from config
+    const getConfigValue = (key: string): string | undefined => {
+        const componentConfigs = context.getComponentConfigs();
+        if (componentConfigs) {
+            for (const compId in componentConfigs) {
+                const configValue = componentConfigs[compId]?.[key];
+                if (configValue !== undefined) {
+                    return String(configValue);
+                }
+            }
+        }
+        return undefined;
+    };
 
     // Build EnvVarDefinition objects by looking up from shared dictionary
-    const relevantVars: EnvVarDefinition[] = [];
+    const sharedEnvVars = context.getEnvVarDefinitions();
+    const varsByKey = new Map<string, EnvVarDefinition>();
+    
+    // Collect all explicitly required vars, deduplicating by key (first one wins)
     for (const key of allKeys) {
-        const envVar = sharedEnvVars[key];
-        if (envVar) {
-            relevantVars.push({
-                key,
-                ...envVar,
-                usedBy: [componentId],
-            });
+        if (!varsByKey.has(key)) {
+            const envVar = sharedEnvVars[key];
+            if (envVar) {
+                varsByKey.set(key, {
+                    key,
+                    ...envVar,
+                    usedBy: [componentId],
+                });
+            }
         }
     }
+
+    // Compute derived values using declarative metadata (derivedFrom)
+    const derivedValues = new Map<string, string>();
+    
+    for (const [key, envVar] of varsByKey.entries()) {
+        if (envVar.derivedFrom && envVar.derivedFrom.length > 0) {
+            // Try each source in order, use first non-empty value
+            for (const sourceKey of envVar.derivedFrom) {
+                const sourceValue = getConfigValue(sourceKey);
+                if (sourceValue) {
+                    derivedValues.set(key, sourceValue);
+                    context.logger.debug(`[Env Generator] Computed ${key} from ${sourceKey}: ${sourceValue}`);
+                    break;
+                }
+            }
+        }
+    }
+
+    // Convert deduplicated map to array
+    const relevantVars = Array.from(varsByKey.values());
 
     if (relevantVars.length > 0) {
         // Group variables by their group
@@ -83,20 +126,29 @@ export async function generateComponentEnvFile(
                 let value = '';
 
                 // Priority order for values:
-                // 1. Runtime values (e.g., MESH_ENDPOINT from deployment)
-                // 2. User-provided values (from wizard - check all components)
-                // 3. Default value (from components.json)
-                // 4. Empty string
+                // 1. Derived/computed values (e.g., ADOBE_CATALOG_SERVICE_ENDPOINT)
+                // 2. Runtime values (e.g., MESH_ENDPOINT from deployment)
+                // 3. User-provided values (from wizard - check all components)
+                // 4. Default value (from components.json)
+                // 5. Empty string
 
-                if (key === 'MESH_ENDPOINT' && config.apiMesh?.endpoint) {
-                    value = config.apiMesh.endpoint;
-                } else if (config.componentConfigs) {
-                    // Check if ANY component has this value (field might be entered under different component)
-                    for (const compId in config.componentConfigs) {
-                        const configValue = config.componentConfigs[compId]?.[key];
-                        if (configValue !== undefined) {
-                            value = String(configValue);
-                            break;
+                if (derivedValues.has(key)) {
+                    value = derivedValues.get(key)!;
+                } else if (key === 'MESH_ENDPOINT') {
+                    const meshEndpoint = context.getMeshEndpoint();
+                    if (meshEndpoint) {
+                        value = meshEndpoint;
+                    }
+                } else {
+                    const componentConfigs = context.getComponentConfigs();
+                    if (componentConfigs) {
+                        // Check if ANY component has this value (field might be entered under different component)
+                        for (const compId in componentConfigs) {
+                            const configValue = componentConfigs[compId]?.[key];
+                            if (configValue !== undefined) {
+                                value = String(configValue);
+                                break;
+                            }
                         }
                     }
                 }
@@ -126,5 +178,175 @@ export async function generateComponentEnvFile(
     // Write the file
     await fsPromises.writeFile(envFilePath, lines.join('\n'));
 
-    logger.debug(`[Project Creation] Created ${envFileName} for ${componentDef.name}`);
+    context.logger.debug(`[Project Creation] Created ${envFileName} for ${componentDef.name}`);
+}
+
+/**
+ * Generate all configuration files for a component using ProjectSetupContext
+ * 
+ * If component has explicit configFiles definition, generates only those files.
+ * Otherwise, defaults to generating .env (or .env.local for Next.js).
+ * 
+ * @param componentPath - Path to the component directory
+ * @param componentId - ID of the component
+ * @param componentDef - Component definition from components.json
+ * @param context - Project setup context with registry, config, logger
+ */
+export async function generateComponentConfigFiles(
+    componentPath: string,
+    componentId: string,
+    componentDef: TransformedComponentDefinition,
+    context: ProjectSetupContext,
+): Promise<void> {
+    const configFiles = componentDef.configuration?.configFiles;
+    
+    // If no explicit configFiles, use default .env behavior
+    if (!configFiles || Object.keys(configFiles).length === 0) {
+        await generateComponentEnvFile(componentPath, componentId, componentDef, context);
+        return;
+    }
+    
+    // Generate all explicitly defined config files
+    context.logger.debug(`[Project Creation] Generating ${Object.keys(configFiles).length} config file(s) for ${componentDef.name}`);
+    
+    for (const [filename, configFileDef] of Object.entries(configFiles)) {
+        if (configFileDef.format === 'env') {
+            // Generate .env format file
+            await generateComponentEnvFile(componentPath, componentId, componentDef, context);
+        } else {
+            // Generate other format files (json, yaml, etc.)
+            await generateSingleConfigFile(
+                componentPath,
+                filename,
+                configFileDef,
+                componentDef,
+                context,
+            );
+        }
+    }
+}
+
+/**
+ * Generate a single non-env configuration file (json, yaml, etc.) using ProjectSetupContext
+ * 
+ * Takes env vars and optionally renames them for the output format.
+ */
+async function generateSingleConfigFile(
+    componentPath: string,
+    filename: string,
+    configFileDef: ConfigFileDefinition,
+    componentDef: TransformedComponentDefinition,
+    context: ProjectSetupContext,
+): Promise<void> {
+    if (configFileDef.format !== 'json') {
+        context.logger.warn(`[Project Creation] Unsupported config file format: ${configFileDef.format} for ${filename}`);
+        return;
+    }
+    
+    const filePath = path.join(componentPath, filename);
+    const templatePath = configFileDef.template 
+        ? path.join(componentPath, configFileDef.template)
+        : undefined;
+    
+    // Use centralized env var resolution to get all relevant keys (component vars + service vars)
+    const { allEnvVarKeys } = resolveComponentEnvVars({
+        componentDef,
+        registry: context.registry,
+        backendId: context.getBackendId(),
+        logger: context.logger,
+    });
+    
+    // Helper to get value from config
+    const getConfigValue = (key: string): string | undefined => {
+        const componentConfigs = context.getComponentConfigs();
+        if (componentConfigs) {
+            for (const componentConfig of Object.values(componentConfigs)) {
+                if (componentConfig[key] !== undefined) {
+                    return String(componentConfig[key]);
+                }
+            }
+        }
+        return undefined;
+    };
+    
+    // Compute derived values FIRST (before processing keys)
+    const derivedValues = new Map<string, string>();
+    
+    // Derive ADOBE_CATALOG_SERVICE_ENDPOINT from backend-specific source
+    const paasEndpoint = getConfigValue('PAAS_CATALOG_SERVICE_ENDPOINT');
+    const accsEndpoint = getConfigValue('ACCS_CATALOG_SERVICE_ENDPOINT');
+    if (paasEndpoint || accsEndpoint) {
+        const derivedEndpoint = paasEndpoint || accsEndpoint;
+        derivedValues.set('ADOBE_CATALOG_SERVICE_ENDPOINT', derivedEndpoint!);
+        context.logger.debug(`[Config Generator] Computed ADOBE_CATALOG_SERVICE_ENDPOINT from ${paasEndpoint ? 'PAAS' : 'ACCS'}_CATALOG_SERVICE_ENDPOINT: ${derivedEndpoint}`);
+    }
+    
+    // Add derived keys to the list of keys to process
+    const allKeys = [...allEnvVarKeys, ...Array.from(derivedValues.keys())];
+    
+    // Build the output config
+    const outputConfig: Record<string, unknown> = {};
+    
+    // Process each env var (including derived ones)
+    for (const envVarKey of allKeys) {
+        let value = '';
+        
+        // Get value from config
+        // Priority: 1. Derived values, 2. Runtime values, 3. User-provided values
+        if (derivedValues.has(envVarKey)) {
+            value = derivedValues.get(envVarKey)!;
+        } else if (envVarKey === 'MESH_ENDPOINT') {
+            const meshEndpoint = context.getMeshEndpoint();
+            if (meshEndpoint) {
+                value = meshEndpoint;
+            }
+        } else {
+            const componentConfigs = context.getComponentConfigs();
+            if (componentConfigs) {
+                for (const componentConfig of Object.values(componentConfigs)) {
+                    if (componentConfig[envVarKey]) {
+                        value = String(componentConfig[envVarKey]);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Determine output field name (rename if mapping exists)
+        const outputFieldName = configFileDef.fieldRenames?.[envVarKey] || envVarKey;
+        outputConfig[outputFieldName] = value;
+    }
+    
+    // Add additional static fields
+    if (configFileDef.additionalFields) {
+        Object.assign(outputConfig, configFileDef.additionalFields);
+    }
+    
+    // Generate the file
+    if (templatePath) {
+        // Build placeholders for template replacement
+        const placeholders: Record<string, string> = {};
+        for (const [fieldName, value] of Object.entries(outputConfig)) {
+            const placeholderKey = `{${fieldName.toUpperCase().replace(/-/g, '_')}}`;
+            placeholders[placeholderKey] = String(value || '');
+        }
+        
+        await generateConfigFile({
+            filePath,
+            templatePath,
+            defaultConfig: outputConfig,
+            placeholders,
+            logger: context.logger,
+            description: `${filename} for ${componentDef.name}`,
+        });
+    } else {
+        // No template, write directly
+        await fsPromises.writeFile(
+            filePath,
+            JSON.stringify(outputConfig, null, 2),
+            'utf-8'
+        );
+    }
+    
+    context.logger.debug(`[Project Creation] Created ${filename} for ${componentDef.name}`);
 }

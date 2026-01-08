@@ -56,6 +56,15 @@ export function resolveServiceNames(
         return [];
     }
 
+    // Check if backend PROVIDES services (e.g., ACCS has them built-in)
+    const providesServices = (backend.configuration?.providesServices as string[] | undefined) || [];
+    if (providesServices.length > 0) {
+        return providesServices
+            .map((id) => services[id]?.name ? `${services[id].name} (built-in)` : null)
+            .filter((name): name is string => Boolean(name));
+    }
+
+    // Otherwise, check REQUIRED services (e.g., PaaS needs them)
     const serviceIds = (backend.configuration?.requiredServices as string[] | undefined) || [];
     return serviceIds
         .map((id) => services[id]?.name)
@@ -72,7 +81,6 @@ export function resolveServiceNames(
  * @param meshStatus - Current API mesh deployment status
  * @param componentsData - Full components registry data
  * @param hasDemoInspector - Whether demo inspector is enabled
- * @param backendServiceNames - Pre-resolved backend service names
  * @returns Array of component info items for display
  */
 export function buildComponentInfoList(
@@ -80,7 +88,7 @@ export function buildComponentInfoList(
     meshStatus: string | undefined,
     componentsData: ComponentsData | undefined,
     hasDemoInspector: boolean,
-    backendServiceNames: string[]
+    backendServiceNames?: string[]
 ): ComponentInfoItem[] {
     if (!components || !componentsData) {
         return [];
@@ -121,14 +129,15 @@ export function buildComponentInfoList(
         }
     }
 
-    // Backend with services
+    // Backend with features
     if (components.backend && componentsData.backends) {
         const backend = componentsData.backends.find((b) => b.id === components.backend);
         if (backend) {
+            const features = backendServiceNames || [];
             info.push({
                 label: 'Backend',
                 value: backend.name,
-                subItems: backendServiceNames.length > 0 ? backendServiceNames : undefined,
+                subItems: features.length > 0 ? features : undefined,
             });
         }
     }

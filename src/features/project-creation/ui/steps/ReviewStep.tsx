@@ -1,7 +1,7 @@
 import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
 import { hasRequiredReviewData } from './reviewPredicates';
-import { resolveServiceNames, buildComponentInfoList } from './reviewStepHelpers';
+import { buildComponentInfoList, resolveServiceNames } from './reviewStepHelpers';
 import { useCanProceed } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -49,7 +49,7 @@ function LabelValue({ label, value, icon, subItems }: {
             <Text 
                 UNSAFE_className="review-label"
                 UNSAFE_style={{ 
-                    minWidth: '120px',
+                    minWidth: '180px',
                     flexShrink: 0,
                 }}
             >
@@ -107,7 +107,7 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
         state.selectedAddons?.includes('demo-inspector') ||
         false;
 
-    // Get backend services - resolve from raw registry services
+    // Derive component info using extracted helper
     const backendServiceNames = useMemo(
         () => resolveServiceNames(
             state.components?.backend,
@@ -117,7 +117,6 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
         [state.components?.backend, componentsData?.backends, componentsData?.services]
     );
 
-    // Derive component info using extracted helper
     const componentInfo = useMemo(
         () => buildComponentInfoList(
             state.components,
@@ -231,7 +230,16 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
                     <View />
                 )}
 
-                {/* Row 2: EDS | Components */}
+                {/* Row 2: Components | EDS (Repository/Content) */}
+                {componentInfo.length > 0 ? (
+                    <Section title="COMPONENTS">
+                        {componentInfo.map((item, index) => (
+                            <LabelValue key={index} label={item.label} value={item.value} subItems={item.subItems} />
+                        ))}
+                    </Section>
+                ) : (
+                    <View />
+                )}
                 {hasEdsConfig ? (
                     <Section title="EDGE DELIVERY SERVICES">
                         {githubRepoInfo && (
@@ -248,15 +256,6 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
                                 subItems={[daLiveInfo.mode]}
                             />
                         )}
-                    </Section>
-                ) : (
-                    <View />
-                )}
-                {componentInfo.length > 0 ? (
-                    <Section title="COMPONENTS">
-                        {componentInfo.map((item, index) => (
-                            <LabelValue key={index} label={item.label} value={item.value} subItems={item.subItems} />
-                        ))}
                     </Section>
                 ) : (
                     <View />
