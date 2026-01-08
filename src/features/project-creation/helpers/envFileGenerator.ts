@@ -6,10 +6,43 @@ import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { formatGroupName } from './formatters';
 import { generateConfigFile } from '@/core/config/configFileGenerator';
-import { resolveComponentEnvVars } from '@/features/components/services/envVarResolver';
-import { TransformedComponentDefinition, EnvVarDefinition, ConfigFileDefinition } from '@/types/components';
+import { TransformedComponentDefinition, EnvVarDefinition, ConfigFileDefinition, ComponentRegistry } from '@/types/components';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
-import type { Logger } from '@/types/logger';
+
+/**
+ * Resolves all environment variable keys for a component, including backend-specific service env vars.
+ * Service env vars are only added if NOT already explicitly declared by the component.
+ */
+function resolveComponentEnvVars(
+    componentDef: TransformedComponentDefinition,
+    registry: ComponentRegistry,
+    backendId?: string,
+): string[] {
+    const requiredKeys = componentDef.configuration?.requiredEnvVars || [];
+    const optionalKeys = componentDef.configuration?.optionalEnvVars || [];
+    const explicitKeys = new Set([...requiredKeys, ...optionalKeys]);
+    const allEnvVarKeys = [...requiredKeys, ...optionalKeys];
+
+    // Add backend-specific service env vars if component requires services
+    if (componentDef.configuration?.requiredServices && backendId) {
+        for (const serviceId of componentDef.configuration.requiredServices) {
+            const serviceDef = registry.services?.[serviceId];
+
+            if (serviceDef?.backendSpecific && serviceDef.requiredEnvVarsByBackend) {
+                const backendSpecificVars = serviceDef.requiredEnvVarsByBackend[backendId];
+                if (backendSpecificVars) {
+                    const newVars = backendSpecificVars.filter(v => !explicitKeys.has(v));
+                    allEnvVarKeys.push(...newVars);
+                }
+            } else if (serviceDef?.requiredEnvVars) {
+                const newVars = serviceDef.requiredEnvVars.filter(v => !explicitKeys.has(v));
+                allEnvVarKeys.push(...newVars);
+            }
+        }
+    }
+
+    return allEnvVarKeys;
+}
 
 /**
  * @deprecated Use ProjectSetupContext instead
@@ -43,15 +76,8 @@ export async function generateComponentEnvFile(
         '',
     ];
 
-    // Use centralized env var resolution to get all relevant keys (component vars + service vars)
-    const { allEnvVarKeys } = resolveComponentEnvVars({
-        componentDef,
-        registry: context.registry,
-        backendId: context.getBackendId(),
-        logger: context.logger,
-    });
-    
-    const allKeys = allEnvVarKeys;
+    // Get all relevant env var keys (component vars + service vars)
+    const allKeys = resolveComponentEnvVars(componentDef, context.registry, context.getBackendId());
 
     // Helper to get value from config
     const getConfigValue = (key: string): string | undefined => {
@@ -248,13 +274,8 @@ async function generateSingleConfigFile(
         ? path.join(componentPath, configFileDef.template)
         : undefined;
     
-    // Use centralized env var resolution to get all relevant keys (component vars + service vars)
-    const { allEnvVarKeys } = resolveComponentEnvVars({
-        componentDef,
-        registry: context.registry,
-        backendId: context.getBackendId(),
-        logger: context.logger,
-    });
+    // Get all relevant env var keys (component vars + service vars)
+    const allEnvVarKeys = resolveComponentEnvVars(componentDef, context.registry, context.getBackendId());
     
     // Helper to get value from config
     const getConfigValue = (key: string): string | undefined => {

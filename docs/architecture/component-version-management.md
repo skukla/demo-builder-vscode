@@ -236,6 +236,5 @@ git push
 
 ## Related Documentation
 
-- `docs/fixes/component-tag-pinning.md` - Why we use tags
 - `src/features/updates/README.md` - Update system architecture
 - `src/features/components/config/components.json` - Component definitions

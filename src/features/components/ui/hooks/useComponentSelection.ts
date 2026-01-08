@@ -3,8 +3,37 @@ import { useDebouncedValue, useSetToggle } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WizardState } from '@/types/webview';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
-import { resolveServices } from '@/features/components/services/serviceResolver';
 import { RawComponentDefinition } from '@/types/components';
+
+/**
+ * Resolves service dependencies for a given stack configuration.
+ * Determines which services are missing based on backend requirements and addon provisions.
+ *
+ * @param backend - The selected backend component
+ * @param addons - Array of selected addon components
+ * @param explicitServices - Services explicitly selected by the user
+ * @returns Object with missingServices array
+ */
+function resolveServices(
+    backend: RawComponentDefinition,
+    addons: RawComponentDefinition[],
+    explicitServices: string[] = [],
+): { missingServices: string[] } {
+    // Collect all required services from backend
+    const requiredServices = backend.configuration?.requiredServices || [];
+
+    // Collect all provided services from backend, addons, and explicit services
+    const providedServices = new Set<string>([
+        ...(backend.configuration?.providesServices || []),
+        ...addons.flatMap((addon) => addon.configuration?.providesServices || []),
+        ...explicitServices,
+    ]);
+
+    // Determine missing services
+    const missingServices = requiredServices.filter((serviceId) => !providedServices.has(serviceId));
+
+    return { missingServices };
+}
 
 /** Component option for required dependencies or services */
 interface ComponentOption {

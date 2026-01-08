@@ -140,7 +140,6 @@ constructor(context: vscode.ExtensionContext, logger: Logger) {
 **Files**:
 - `src/features/updates/README.md` - Updated repository configuration section
 - `docs/architecture/update-system-refactoring.md` - This document
-- `docs/fixes/component-tag-pinning.md` - Updated to reference dynamic resolution
 
 ## Migration Guide
 
@@ -270,6 +269,5 @@ Extend to support npm registry or other sources:
 ## Related Documentation
 
 - `src/features/updates/README.md` - Update system overview
-- `docs/fixes/component-tag-pinning.md` - Why we use tags
 - `docs/architecture/component-version-management.md` - Version management strategy
 - `src/features/components/README.md` - Component registry architecture

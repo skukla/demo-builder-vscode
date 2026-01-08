@@ -117,17 +117,6 @@
 
 ---
 
-### [`overview-archived-planning.md`](overview-archived-planning.md) ⚠️ **ARCHIVED**
-**Purpose**: Historical planning document from initial design phase
-
-**⚠️ Warning**: This document contains **outdated** information about approaches that were **never implemented** or were **rejected**. Do not use for current implementation guidance.
-
-**Preserved For**: Historical context and understanding design evolution
-
-**Do Not Read For**: Current architecture or implementation details
-
----
-
 ## Reading Paths
 
 ### For New Contributors
@@ -150,9 +139,8 @@
 1. **Start**: [`overview.md`](overview.md) - Current architecture
 2. **Then**: [`graph-based-dependencies.md`](graph-based-dependencies.md) - Dependency algorithm
 3. **Then**: [`working-directory-and-node-version.md`](working-directory-and-node-version.md) - Execution context
-4. **Review**: [`overview-archived-planning.md`](overview-archived-planning.md) - What was considered but not implemented
 
-**Time Investment**: 45-60 minutes  
+**Time Investment**: 30-45 minutes
 **Result**: Complete understanding of system design and trade-offs
 
 ---
