@@ -145,7 +145,7 @@ describe('errorHandling', () => {
 
         it('should work with async handlers', async () => {
             const handler = jest.fn().mockImplementation(async () => {
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise(resolve => process.nextTick(resolve));
                 return { success: true, message: 'async complete' };
             });
             const wrapped = wrapHandler(handler, 'AsyncHandler');

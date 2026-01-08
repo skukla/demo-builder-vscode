@@ -188,7 +188,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             mockWatchers[0]._simulateChange(uri);
 
             // Wait for async processing
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => process.nextTick(resolve));
 
             // Then: No notification shown (within grace period)
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
@@ -223,7 +223,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             let uri = vscode.Uri.file(filePath);
             mockWatchers[0]._simulateChange(uri);
 
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => process.nextTick(resolve));
 
             // Then: First change shows notification
             expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(1);
@@ -238,7 +238,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             uri = vscode.Uri.file(filePath);
             mockWatchers[0]._simulateChange(uri);
 
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => process.nextTick(resolve));
 
             // Then: Second change suppressed
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
@@ -269,7 +269,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             let uri = vscode.Uri.file(filePath);
             mockWatchers[0]._simulateChange(uri);
 
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => process.nextTick(resolve));
 
             expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(1);
 
@@ -286,7 +286,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             uri = vscode.Uri.file(filePath);
             mockWatchers[0]._simulateChange(uri);
 
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => process.nextTick(resolve));
 
             // Then: Notification shown again
             expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(1);

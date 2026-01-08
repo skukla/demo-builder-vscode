@@ -17,6 +17,7 @@ import {
 
 describe('WizardContainer - Focus Management', () => {
     beforeEach(() => {
+        jest.useFakeTimers();
         setupTest();
     });
 
@@ -24,11 +25,14 @@ describe('WizardContainer - Focus Management', () => {
         cleanup();
         await cleanupTest();
         jest.restoreAllMocks();
+        jest.runOnlyPendingTimers();
+        jest.useRealTimers();
     });
 
     describe('Self-Managed Steps - Skip Auto-Focus', () => {
         it('should skip auto-focus for component-selection step', async () => {
-            const user = userEvent.setup();
+            // Configure userEvent to work with fake timers
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const focusSpy = jest.spyOn(HTMLElement.prototype, 'focus');
 
             renderWithTheme(
@@ -68,8 +72,8 @@ describe('WizardContainer - Focus Management', () => {
             // Clear any focus calls from previous steps
             focusSpy.mockClear();
 
-            // Wait for potential auto-focus delay (300ms + buffer)
-            await new Promise(resolve => setTimeout(resolve, 400));
+            // Advance past potential auto-focus delay (300ms + buffer)
+            jest.advanceTimersByTime(400);
 
             // WizardContainer should NOT have called focus() because component-selection is self-managed
             expect(focusSpy).not.toHaveBeenCalled();

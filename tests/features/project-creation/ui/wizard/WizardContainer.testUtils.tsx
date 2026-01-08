@@ -173,8 +173,8 @@ export const setupTest = () => {
 // Common test cleanup
 export const cleanupTest = async () => {
     jest.resetAllMocks();
-    // Wait for any pending timers/promises to complete
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Allow any pending microtasks to complete
+    await Promise.resolve();
 };
 
 // Custom render with theme provider wrapper

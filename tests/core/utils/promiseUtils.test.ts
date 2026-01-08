@@ -1,6 +1,15 @@
 import { withTimeout, tryWithTimeout, WithTimeoutResult } from '@/core/utils/promiseUtils';
 
 describe('promiseUtils', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+        jest.runOnlyPendingTimers();
+        jest.useRealTimers();
+    });
+
     describe('withTimeout', () => {
         it('should resolve successfully when operation completes before timeout', async () => {
             const promise = Promise.resolve('success');
@@ -15,9 +24,12 @@ describe('promiseUtils', () => {
                 setTimeout(() => resolve('too late'), 2000);
             });
 
-            await expect(
-                withTimeout(promise, { timeoutMs: 100 })
-            ).rejects.toThrow('Operation timed out after 100ms');
+            const resultPromise = withTimeout(promise, { timeoutMs: 100 });
+
+            // Advance past timeout but not past resolution
+            jest.advanceTimersByTime(100);
+
+            await expect(resultPromise).rejects.toThrow('Operation timed out after 100ms');
         });
 
         it('should use custom timeout message', async () => {
@@ -25,12 +37,14 @@ describe('promiseUtils', () => {
                 setTimeout(() => resolve('too late'), 2000);
             });
 
-            await expect(
-                withTimeout(promise, {
-                    timeoutMs: 100,
-                    timeoutMessage: 'Custom timeout message'
-                })
-            ).rejects.toThrow('Custom timeout message');
+            const resultPromise = withTimeout(promise, {
+                timeoutMs: 100,
+                timeoutMessage: 'Custom timeout message'
+            });
+
+            jest.advanceTimersByTime(100);
+
+            await expect(resultPromise).rejects.toThrow('Custom timeout message');
         });
 
         it('should handle promise rejection', async () => {
@@ -49,12 +63,15 @@ describe('promiseUtils', () => {
 
             setTimeout(() => controller.abort(), 100);
 
-            await expect(
-                withTimeout(promise, {
-                    timeoutMs: 5000,
-                    signal: controller.signal
-                })
-            ).rejects.toThrow('Operation cancelled by user');
+            const resultPromise = withTimeout(promise, {
+                timeoutMs: 5000,
+                signal: controller.signal
+            });
+
+            // Advance to trigger the abort
+            jest.advanceTimersByTime(100);
+
+            await expect(resultPromise).rejects.toThrow('Operation cancelled by user');
         });
 
         it('should race between timeout and cancellation', async () => {
@@ -66,12 +83,15 @@ describe('promiseUtils', () => {
             // Cancel before timeout
             setTimeout(() => controller.abort(), 50);
 
-            await expect(
-                withTimeout(promise, {
-                    timeoutMs: 1000,
-                    signal: controller.signal
-                })
-            ).rejects.toThrow('Operation cancelled');
+            const resultPromise = withTimeout(promise, {
+                timeoutMs: 1000,
+                signal: controller.signal
+            });
+
+            // Advance to trigger the abort (50ms)
+            jest.advanceTimersByTime(50);
+
+            await expect(resultPromise).rejects.toThrow('Operation cancelled');
         });
 
         it('should complete before both timeout and cancellation', async () => {
@@ -94,7 +114,12 @@ describe('promiseUtils', () => {
                 return 'async result';
             };
 
-            const result = await withTimeout(asyncOp(), { timeoutMs: 1000 });
+            const resultPromise = withTimeout(asyncOp(), { timeoutMs: 1000 });
+
+            // Advance past the async delay
+            jest.advanceTimersByTime(50);
+
+            const result = await resultPromise;
 
             expect(result).toBe('async result');
         });
@@ -131,7 +156,12 @@ describe('promiseUtils', () => {
                 setTimeout(() => resolve('too late'), 2000);
             });
 
-            const result = await tryWithTimeout(promise, { timeoutMs: 100 });
+            const resultPromise = tryWithTimeout(promise, { timeoutMs: 100 });
+
+            // Advance past timeout
+            jest.advanceTimersByTime(100);
+
+            const result = await resultPromise;
 
             expect(result.result).toBeUndefined();
             expect(result.timedOut).toBe(true);
@@ -148,10 +178,15 @@ describe('promiseUtils', () => {
 
             setTimeout(() => controller.abort(), 50);
 
-            const result = await tryWithTimeout(promise, {
+            const resultPromise = tryWithTimeout(promise, {
                 timeoutMs: 5000,
                 signal: controller.signal
             });
+
+            // Advance to trigger the abort
+            jest.advanceTimersByTime(50);
+
+            const result = await resultPromise;
 
             expect(result.result).toBeUndefined();
             expect(result.timedOut).toBe(false);
@@ -186,9 +221,11 @@ describe('promiseUtils', () => {
                 setTimeout(() => resolve('too late'), 2000);
             });
 
-            await expect(
-                tryWithTimeout(promise, { timeoutMs: 100 })
-            ).resolves.toBeDefined();
+            const resultPromise = tryWithTimeout(promise, { timeoutMs: 100 });
+
+            jest.advanceTimersByTime(100);
+
+            await expect(resultPromise).resolves.toBeDefined();
         });
 
         it('should not throw on cancellation', async () => {
@@ -199,12 +236,16 @@ describe('promiseUtils', () => {
 
             controller.abort();
 
-            await expect(
-                tryWithTimeout(promise, {
-                    timeoutMs: 5000,
-                    signal: controller.signal
-                })
-            ).resolves.toBeDefined();
+            const resultPromise = tryWithTimeout(promise, {
+                timeoutMs: 5000,
+                signal: controller.signal
+            });
+
+            // Already aborted - advance past the timeout to ensure resolution
+            // The implementation should detect the already-aborted signal
+            jest.advanceTimersByTime(5000);
+
+            await expect(resultPromise).resolves.toBeDefined();
         });
     });
 
@@ -215,7 +256,11 @@ describe('promiseUtils', () => {
                 return { status: 200, data: 'response' };
             };
 
-            const result = await tryWithTimeout(networkRequest(), { timeoutMs: 500 });
+            const resultPromise = tryWithTimeout(networkRequest(), { timeoutMs: 500 });
+
+            jest.advanceTimersByTime(100);
+
+            const result = await resultPromise;
 
             expect(result.result).toEqual({ status: 200, data: 'response' });
             expect(result.timedOut).toBe(false);
@@ -227,7 +272,12 @@ describe('promiseUtils', () => {
                 return { status: 200, data: 'slow response' };
             };
 
-            const result = await tryWithTimeout(slowRequest(), { timeoutMs: 100 });
+            const resultPromise = tryWithTimeout(slowRequest(), { timeoutMs: 100 });
+
+            // Advance past timeout
+            jest.advanceTimersByTime(100);
+
+            const result = await resultPromise;
 
             expect(result.timedOut).toBe(true);
             expect(result.result).toBeUndefined();
@@ -243,10 +293,15 @@ describe('promiseUtils', () => {
             // Simulate user clicking cancel after 100ms
             setTimeout(() => controller.abort(), 100);
 
-            const result = await tryWithTimeout(longOperation(), {
+            const resultPromise = tryWithTimeout(longOperation(), {
                 timeoutMs: 10000,
                 signal: controller.signal
             });
+
+            // Advance to trigger abort
+            jest.advanceTimersByTime(100);
+
+            const result = await resultPromise;
 
             expect(result.cancelled).toBe(true);
             expect(result.result).toBeUndefined();
@@ -258,10 +313,14 @@ describe('promiseUtils', () => {
                 return { stdout: 'command output', stderr: '', code: 0 };
             };
 
-            const result = await tryWithTimeout(aioCommand(), {
+            const resultPromise = tryWithTimeout(aioCommand(), {
                 timeoutMs: 5000,
                 timeoutMessage: 'Adobe CLI command timed out'
             });
+
+            jest.advanceTimersByTime(200);
+
+            const result = await resultPromise;
 
             expect(result.result).toBeDefined();
             expect(result.result?.stdout).toBe('command output');
@@ -273,7 +332,11 @@ describe('promiseUtils', () => {
                 return { path: '/tmp/file.txt', size: 1024 };
             };
 
-            const result = await withTimeout(fileOp(), { timeoutMs: 1000 });
+            const resultPromise = withTimeout(fileOp(), { timeoutMs: 1000 });
+
+            jest.advanceTimersByTime(50);
+
+            const result = await resultPromise;
 
             expect(result.path).toBe('/tmp/file.txt');
             expect(result.size).toBe(1024);
@@ -304,7 +367,12 @@ describe('promiseUtils', () => {
             });
 
             // Zero timeout should timeout immediately
-            const result = await tryWithTimeout(promise, { timeoutMs: 0 });
+            const resultPromise = tryWithTimeout(promise, { timeoutMs: 0 });
+
+            // Advance slightly to trigger timeout
+            jest.advanceTimersByTime(1);
+
+            const result = await resultPromise;
 
             // Due to event loop timing, this may not timeout, so accept either result
             expect(result.timedOut || result.result === undefined).toBe(true);
@@ -346,10 +414,15 @@ describe('promiseUtils', () => {
                 setTimeout(() => resolve('value'), 1000);
             });
 
-            const result = await tryWithTimeout(promise, {
+            const resultPromise = tryWithTimeout(promise, {
                 timeoutMs: 5000,
                 signal: controller.signal
             });
+
+            // Advance past timeout to ensure resolution
+            jest.advanceTimersByTime(5000);
+
+            const result = await resultPromise;
 
             // The implementation only listens for future abort events
             // since the signal is already aborted before addEventListener

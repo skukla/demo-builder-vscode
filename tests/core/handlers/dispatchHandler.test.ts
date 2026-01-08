@@ -59,9 +59,9 @@ describe('dispatchHandler', () => {
         });
 
         it('should await async handlers and return resolved value', async () => {
-            // Given: An async handler that resolves after delay
+            // Given: An async handler that resolves asynchronously
             const asyncHandler = jest.fn().mockImplementation(async () => {
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise(resolve => process.nextTick(resolve));
                 return { success: true, data: 'async-result' };
             });
             const handlers: HandlerMap = {

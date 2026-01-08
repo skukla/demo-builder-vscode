@@ -28,7 +28,8 @@ export interface TestMocks {
 
 export function setupMocks(): TestMocks {
     jest.clearAllMocks();
-    jest.useFakeTimers();
+    // Note: Timer mode (fake/real) should be managed by each test file
+    // to avoid nested timer context issues
 
     // Create mock webview
     const mockWebview: vscode.Webview = {

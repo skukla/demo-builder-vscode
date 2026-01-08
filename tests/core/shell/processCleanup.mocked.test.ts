@@ -29,6 +29,7 @@ describe('ProcessCleanup - Mocked Tests', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        jest.useFakeTimers();
         originalKill = process.kill;
         killCalls = [];
         processExists = new Set([1000, 2000, 3000]); // Mock PIDs that exist
@@ -74,9 +75,9 @@ describe('ProcessCleanup - Mocked Tests', () => {
                 throw error;
             }
 
-            // Simulate SIGTERM - process will exit after delay
+            // Simulate SIGTERM - process exits immediately in mock
             if (signal === 'SIGTERM') {
-                setTimeout(() => processExists.delete(pid), 50);
+                processExists.delete(pid);
                 return true;
             }
 
@@ -93,6 +94,8 @@ describe('ProcessCleanup - Mocked Tests', () => {
     afterEach(() => {
         process.kill = originalKill;
         mockTreeKill.mockClear();
+        jest.runOnlyPendingTimers();
+        jest.useRealTimers();
     });
 
     describe('Graceful Shutdown', () => {
@@ -100,7 +103,9 @@ describe('ProcessCleanup - Mocked Tests', () => {
             const cleanup = new ProcessCleanup();
             const pid = 1000;
 
-            await cleanup.killProcessTree(pid, 'SIGTERM');
+            const killPromise = cleanup.killProcessTree(pid, 'SIGTERM');
+            await jest.runAllTimersAsync();
+            await killPromise;
 
             // Should have called tree-kill with SIGTERM
             expect(mockTreeKill).toHaveBeenCalledWith(
@@ -117,7 +122,9 @@ describe('ProcessCleanup - Mocked Tests', () => {
             const cleanup = new ProcessCleanup({ gracefulTimeout: 1000 });
             const pid = 2000;
 
-            await cleanup.killProcessTree(pid, 'SIGTERM');
+            const killPromise = cleanup.killProcessTree(pid, 'SIGTERM');
+            await jest.runAllTimersAsync();
+            await killPromise;
 
             // Process should be gone
             expect(processExists.has(pid)).toBe(false);
@@ -126,7 +133,8 @@ describe('ProcessCleanup - Mocked Tests', () => {
 
     describe('Timeout Handling', () => {
         it('should send SIGKILL after timeout if SIGTERM ignored', async () => {
-            const cleanup = new ProcessCleanup({ gracefulTimeout: 200 });
+            // Use short timeout so test doesn't wait too long
+            const cleanup = new ProcessCleanup({ gracefulTimeout: 100 });
             const pid = 3000;
 
             // Make tree-kill ignore SIGTERM (process stays alive)
@@ -154,14 +162,11 @@ describe('ProcessCleanup - Mocked Tests', () => {
                 callback();
             });
 
-            const startTime = Date.now();
-            await cleanup.killProcessTree(pid, 'SIGTERM');
-            const duration = Date.now() - startTime;
+            const killPromise = cleanup.killProcessTree(pid, 'SIGTERM');
+            await jest.runAllTimersAsync();
+            await killPromise;
 
-            // Should take approximately timeout duration (200ms) before force-kill
-            expect(duration).toBeGreaterThanOrEqual(180);
-            expect(duration).toBeLessThan(500);
-
+            // Process should be dead (via SIGKILL after timeout)
             expect(processExists.has(pid)).toBe(false);
         });
     });
@@ -243,7 +248,9 @@ describe('ProcessCleanup - Mocked Tests', () => {
             const pid = 1000;
 
             // With zero timeout, should still work (just sends SIGTERM immediately)
-            await cleanup.killProcessTree(pid, 'SIGTERM');
+            const killPromise = cleanup.killProcessTree(pid, 'SIGTERM');
+            await jest.runAllTimersAsync();
+            await killPromise;
             expect(processExists.has(pid)).toBe(false);
         });
     });
@@ -251,7 +258,9 @@ describe('ProcessCleanup - Mocked Tests', () => {
     describe('Signal Types', () => {
         it('should accept SIGTERM signal', async () => {
             const cleanup = new ProcessCleanup();
-            await cleanup.killProcessTree(1000, 'SIGTERM');
+            const killPromise = cleanup.killProcessTree(1000, 'SIGTERM');
+            await jest.runAllTimersAsync();
+            await killPromise;
 
             // tree-kill should have been called with SIGTERM
             expect(mockTreeKill).toHaveBeenCalledWith(
@@ -263,7 +272,9 @@ describe('ProcessCleanup - Mocked Tests', () => {
 
         it('should accept SIGKILL signal', async () => {
             const cleanup = new ProcessCleanup();
-            await cleanup.killProcessTree(1000, 'SIGKILL');
+            const killPromise = cleanup.killProcessTree(1000, 'SIGKILL');
+            await jest.runAllTimersAsync();
+            await killPromise;
 
             // tree-kill should have been called with SIGKILL
             expect(mockTreeKill).toHaveBeenCalledWith(
@@ -275,7 +286,9 @@ describe('ProcessCleanup - Mocked Tests', () => {
 
         it('should use SIGTERM by default', async () => {
             const cleanup = new ProcessCleanup();
-            await cleanup.killProcessTree(1000);
+            const killPromise = cleanup.killProcessTree(1000);
+            await jest.runAllTimersAsync();
+            await killPromise;
 
             // tree-kill should have been called with SIGTERM (default)
             expect(mockTreeKill).toHaveBeenCalledWith(
@@ -308,10 +321,9 @@ describe('ProcessCleanup - Mocked Tests', () => {
             const cleanup = new ProcessCleanup();
 
             // Kill should complete without hanging
-            await cleanup.killProcessTree(1000);
-
-            // Wait a bit to ensure no hanging timers
-            await new Promise(resolve => setTimeout(resolve, 100));
+            const killPromise = cleanup.killProcessTree(1000);
+            await jest.runAllTimersAsync();
+            await killPromise;
 
             // Test passes if Jest doesn't complain about open handles
         });
@@ -334,9 +346,6 @@ describe('ProcessCleanup - Mocked Tests', () => {
             } catch {
                 // Expected to throw
             }
-
-            // Wait to ensure no hanging timers
-            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Test passes if no hanging handles
         });

@@ -31,7 +31,7 @@ describe('StartDemoCommand - Concurrent Execution Prevention Pattern', () => {
                     executionOrder.push('start');
                     executionCount++;
                     // Simulate async work
-                    await new Promise(resolve => setTimeout(resolve, 50));
+                    await new Promise(resolve => process.nextTick(resolve));
                     executionOrder.push('end');
                 });
             };
@@ -56,7 +56,7 @@ describe('StartDemoCommand - Concurrent Execution Prevention Pattern', () => {
                 }
                 await lock.run(async () => {
                     executionCount++;
-                    await new Promise(resolve => setTimeout(resolve, 10));
+                    await new Promise(resolve => process.nextTick(resolve));
                 });
             };
 

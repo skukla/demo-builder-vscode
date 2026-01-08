@@ -20,6 +20,7 @@ describe('FileWatcher', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        jest.useFakeTimers();
 
         mockPollingService = new PollingService() as jest.Mocked<PollingService>;
         mockPollingService.pollUntilCondition = jest.fn().mockResolvedValue(undefined);
@@ -48,16 +49,23 @@ describe('FileWatcher', () => {
         (vscode.workspace.createFileSystemWatcher as jest.Mock).mockImplementation(mockWatcherFactory);
     });
 
+    afterEach(() => {
+        jest.runOnlyPendingTimers();
+        jest.useRealTimers();
+    });
+
     describe('waitForFileSystem', () => {
         it('should wait for file system change without condition', async () => {
             const promise = fileWatcher.waitForFileSystem('/path/to/file.txt');
 
-            // Get the created watcher and emit change event
+            // Get the created watcher and emit change event using fake timers
             setTimeout(() => {
-                // Get the last created watcher from the mock call
                 const mockCall = (vscode.workspace.createFileSystemWatcher as jest.Mock).mock.results[0].value;
                 mockCall.emit('change');
             }, 100);
+
+            // Advance fake timers to trigger the setTimeout callback
+            jest.advanceTimersByTime(100);
 
             await promise;
         });
@@ -65,11 +73,14 @@ describe('FileWatcher', () => {
         it('should wait for file creation', async () => {
             const promise = fileWatcher.waitForFileSystem('/path/to/newfile.txt');
 
-            // Get the created watcher and emit create event
+            // Get the created watcher and emit create event using fake timers
             setTimeout(() => {
                 const mockCall = (vscode.workspace.createFileSystemWatcher as jest.Mock).mock.results[0].value;
                 mockCall.emit('create');
             }, 100);
+
+            // Advance fake timers to trigger the setTimeout callback
+            jest.advanceTimersByTime(100);
 
             await promise;
         });
@@ -77,19 +88,25 @@ describe('FileWatcher', () => {
         it('should wait for file deletion', async () => {
             const promise = fileWatcher.waitForFileSystem('/path/to/oldfile.txt');
 
-            // Get the created watcher and emit delete event
+            // Get the created watcher and emit delete event using fake timers
             setTimeout(() => {
                 const mockCall = (vscode.workspace.createFileSystemWatcher as jest.Mock).mock.results[0].value;
                 mockCall.emit('delete');
             }, 100);
 
+            // Advance fake timers to trigger the setTimeout callback
+            jest.advanceTimersByTime(100);
+
             await promise;
         });
 
         it('should timeout if no change occurs', async () => {
-            await expect(
-                fileWatcher.waitForFileSystem('/path/to/file.txt', undefined, 100)
-            ).rejects.toThrow('File system wait timeout');
+            const promise = fileWatcher.waitForFileSystem('/path/to/file.txt', undefined, 100);
+
+            // Advance fake timers to trigger the timeout
+            jest.advanceTimersByTime(100);
+
+            await expect(promise).rejects.toThrow('File system wait timeout');
         });
 
         it('should poll for expected condition', async () => {

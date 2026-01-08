@@ -159,8 +159,8 @@ describe('StateManager - Project Management', () => {
             // Capture time before save
             const timeBefore = new Date().toISOString();
 
-            // Ensure some time passes
-            await new Promise(resolve => setTimeout(resolve, 10));
+            // Ensure async operation completes
+            await new Promise(resolve => process.nextTick(resolve));
 
             await stateManager.saveProject(project as Project);
 

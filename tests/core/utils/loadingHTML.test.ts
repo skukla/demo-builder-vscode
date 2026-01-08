@@ -371,46 +371,47 @@ describe('loadingHTML', () => {
     });
 
     describe('UX considerations - timing verification', () => {
-        // These tests use real timers to verify actual timing behavior
-        // They are slower but ensure the production code works correctly
+        // These tests use fake timers to verify timing behavior
+        // without actually waiting for real time to pass
 
         it('should prevent jarring flash for fast loads', async () => {
-            // Use real timers for this specific timing test
-            jest.useRealTimers();
-
             const fastGetContent = jest.fn().mockResolvedValue('<div>Fast</div>');
 
-            const startTime = Date.now();
-            await setLoadingState(mockPanel, fastGetContent);
-            const duration = Date.now() - startTime;
+            const promise = setLoadingState(mockPanel, fastGetContent);
 
-            // Should wait at least MIN_DISPLAY_TIME (1500ms)
-            expect(duration).toBeGreaterThanOrEqual(1500);
+            // After INIT_DELAY, loading should be shown
+            await advanceTime(100);
+            expect(mockPanel.webview.html).toContain('Loading...');
 
-            // Restore fake timers
-            jest.useFakeTimers();
+            // At 1400ms (before MIN_DISPLAY_TIME of 1500), content should not be loaded yet
+            await advanceTime(1300);
+            expect(mockPanel.webview.html).toContain('Loading...');
+
+            // After MIN_DISPLAY_TIME passes, content should be shown
+            await advanceTime(200);
+            await promise;
+            expect(mockPanel.webview.html).toContain('Fast');
         });
 
         it('should not delay unnecessarily for slow loads', async () => {
-            // Use real timers for this specific timing test
-            jest.useRealTimers();
-
             const slowGetContent = jest.fn().mockImplementation(async () => {
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 return '<div>Slow</div>';
             });
 
-            const startTime = Date.now();
-            await setLoadingState(mockPanel, slowGetContent);
-            const duration = Date.now() - startTime;
+            const promise = setLoadingState(mockPanel, slowGetContent);
 
-            // Should not add MIN_DISPLAY_TIME on top of 2s load time
-            // Allow tolerance for INIT_DELAY (100ms) and execution overhead
-            expect(duration).toBeGreaterThanOrEqual(2000);
-            expect(duration).toBeLessThan(2300);
+            // After INIT_DELAY + 2000ms (slow load), content should be ready
+            // without additional MIN_DISPLAY_TIME wait (since 2000ms > 1500ms)
+            await advanceTime(100);
+            expect(mockPanel.webview.html).toContain('Loading...');
 
-            // Restore fake timers
-            jest.useFakeTimers();
+            // Advance past the slow load time
+            await advanceTime(2000);
+            await promise;
+
+            // Content should be shown immediately after slow load completes
+            expect(mockPanel.webview.html).toContain('Slow');
         });
     });
 });

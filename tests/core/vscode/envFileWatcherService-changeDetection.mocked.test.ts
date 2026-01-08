@@ -181,7 +181,7 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockWatchers[0]._simulateChange(uri);
 
             // Wait for async processing
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => process.nextTick(resolve));
 
             // Then: No notification shown
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
@@ -215,7 +215,7 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockWatchers[0]._simulateChange(uri);
 
             // Wait for async processing
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => process.nextTick(resolve));
 
             // Then: Notification shown
             expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
@@ -257,7 +257,7 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockWatchers[0]._simulateChange(uri);
 
             // Wait for async processing
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => process.nextTick(resolve));
 
             // Then: No notification shown
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();

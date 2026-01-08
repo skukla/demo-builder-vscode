@@ -5,11 +5,11 @@ module.exports = {
   // Note: Heap size configured via package.json test script (--max-old-space-size=4096)
   cache: true,
   cacheDirectory: '<rootDir>/.jest-cache',
-  maxWorkers: '50%',
+  maxWorkers: '25%',
 
-  // Memory management - recycle workers when they exceed 512MB
-  // Critical for preventing memory crashes during large test runs
-  workerIdleMemoryLimit: '512MB',
+  // Memory management - recycle workers when they exceed 256MB
+  // Reduced from 512MB to prevent OOM issues during large test runs
+  workerIdleMemoryLimit: '256MB',
 
   // Separate test environments for Node and React tests
   projects: [
