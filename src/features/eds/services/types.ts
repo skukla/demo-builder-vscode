@@ -265,8 +265,12 @@ export interface EdsProjectConfig {
     daLiveOrg: string;
     /** DA.live site name */
     daLiveSite: string;
-    /** ACCS endpoint URL */
-    accsEndpoint: string;
+    /** Selected backend component ID (from stack definition) */
+    backendComponentId: string;
+    /** ACCS endpoint URL (for ACCS backend) */
+    accsEndpoint?: string;
+    /** API Mesh GraphQL endpoint (for PaaS backend) */
+    meshEndpoint?: string;
     /** GitHub username (owner for created/existing repo) */
     githubOwner: string;
     /** Whether to make the GitHub repo private */

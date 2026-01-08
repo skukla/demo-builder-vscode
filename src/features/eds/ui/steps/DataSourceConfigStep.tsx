@@ -17,6 +17,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
     Button,
     Checkbox,
+    Divider,
     Flex,
     Heading,
     Item,
@@ -33,17 +34,76 @@ import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
-import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
+import { StatusSection } from '@/core/ui/components/wizard';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { useSelectionStep } from '@/core/ui/hooks';
 import { normalizeIdentifierName } from '@/core/validation/normalizers';
 import type { DaLiveSiteItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
+import '../styles/eds-steps.css';
 
 /** Validate site name format */
 function isValidSiteName(name: string): boolean {
     // DA.live site names: lowercase alphanumeric and hyphens, must start with letter
     return /^[a-z][a-z0-9-]*$/.test(name);
+}
+
+/**
+ * ContentConfigurationSummary - Right column summary for content selection
+ */
+interface ContentConfigurationSummaryProps {
+    daLiveOrg?: string;
+    selectedSite?: DaLiveSiteItem;
+    isCreatingNew: boolean;
+    newSiteName: string;
+}
+
+function ContentConfigurationSummary({
+    daLiveOrg,
+    selectedSite,
+    isCreatingNew,
+    newSiteName,
+}: ContentConfigurationSummaryProps) {
+    // Build display value for site
+    const getSiteDisplayValue = () => {
+        if (isCreatingNew) {
+            if (newSiteName && daLiveOrg) {
+                return `${daLiveOrg}/${newSiteName}`;
+            }
+            return newSiteName || undefined;
+        }
+        return selectedSite?.name;
+    };
+
+    const siteDisplayValue = getSiteDisplayValue();
+    const isSiteComplete = isCreatingNew ? !!newSiteName : !!selectedSite;
+
+    return (
+        <View height="100%">
+            <Heading level={3} marginBottom="size-300">
+                Configuration Summary
+            </Heading>
+
+            {/* DA.live Organization */}
+            <StatusSection
+                label="DA.live Organization"
+                value={daLiveOrg}
+                status={daLiveOrg ? 'completed' : 'empty'}
+                emptyText="Not connected"
+            />
+
+            <Divider size="S" />
+
+            {/* Site Selection */}
+            <StatusSection
+                label="DA.live Site"
+                value={siteDisplayValue}
+                status={isSiteComplete ? 'completed' : 'empty'}
+                emptyText={isCreatingNew ? 'Enter site name' : 'Not selected'}
+            />
+        </View>
+    );
 }
 
 /**
@@ -187,51 +247,82 @@ export function DataSourceConfigStep({
     // Loading state
     if (showLoading || (isLoading && !hasLoadedOnce)) {
         return (
-            <SingleColumnLayout>
-                <CenteredFeedbackContainer>
-                    <LoadingDisplay
-                        size="L"
-                        message="Loading sites..."
-                        subMessage={`Fetching sites from ${daLiveOrg}`}
+            <TwoColumnLayout
+                leftContent={
+                    <CenteredFeedbackContainer>
+                        <LoadingDisplay
+                            size="L"
+                            message="Loading sites..."
+                            subMessage={`Fetching sites from ${daLiveOrg}`}
+                        />
+                    </CenteredFeedbackContainer>
+                }
+                rightContent={
+                    <ContentConfigurationSummary
+                        daLiveOrg={daLiveOrg}
+                        selectedSite={selectedSite}
+                        isCreatingNew={isCreatingNew}
+                        newSiteName={daLiveSite}
                     />
-                </CenteredFeedbackContainer>
-            </SingleColumnLayout>
+                }
+            />
         );
     }
 
     // Error state
     if (error && !isLoading) {
         return (
-            <SingleColumnLayout>
-                <StatusDisplay
-                    variant="error"
-                    title="Error Loading Sites"
-                    message={error}
-                    actions={[{ label: 'Try Again', onPress: refresh, variant: 'accent' }]}
-                />
-            </SingleColumnLayout>
+            <TwoColumnLayout
+                leftContent={
+                    <StatusDisplay
+                        variant="error"
+                        title="Error Loading Sites"
+                        message={error}
+                        actions={[{ label: 'Try Again', onPress: refresh, variant: 'accent' }]}
+                    />
+                }
+                rightContent={
+                    <ContentConfigurationSummary
+                        daLiveOrg={daLiveOrg}
+                        selectedSite={selectedSite}
+                        isCreatingNew={isCreatingNew}
+                        newSiteName={daLiveSite}
+                    />
+                }
+            />
         );
     }
 
     // Empty state
     if (sites.length === 0 && !isLoading && !isCreatingNew) {
         return (
-            <SingleColumnLayout>
-                <EmptyState
-                    title="No Sites Found"
-                    description={`No existing sites found in ${daLiveOrg}.`}
-                >
-                    <Button variant="accent" onPress={handleCreateNew}>
-                        <Add size="S" />
-                        <Text>Create New Site</Text>
-                    </Button>
-                </EmptyState>
-            </SingleColumnLayout>
+            <TwoColumnLayout
+                leftContent={
+                    <EmptyState
+                        title="No Sites Found"
+                        description={`No existing sites found in ${daLiveOrg}.`}
+                    >
+                        <Button variant="accent" onPress={handleCreateNew}>
+                            <Add size="S" />
+                            <Text>Create New Site</Text>
+                        </Button>
+                    </EmptyState>
+                }
+                rightContent={
+                    <ContentConfigurationSummary
+                        daLiveOrg={daLiveOrg}
+                        selectedSite={selectedSite}
+                        isCreatingNew={isCreatingNew}
+                        newSiteName={daLiveSite}
+                    />
+                }
+            />
         );
     }
 
     return (
-        <SingleColumnLayout>
+        <TwoColumnLayout
+            leftContent={<>
             {/* Site Selection */}
             {!isCreatingNew && (
                 <>
@@ -304,7 +395,7 @@ export function DataSourceConfigStep({
                                 >
                                     <Alert size="S" UNSAFE_className="text-orange-500 flex-shrink-0" />
                                     <Text UNSAFE_className="text-xs text-orange-600">
-                                        This will delete and repopulate the site with demo content.
+                                        This will delete all existing content and repopulate with demo content.
                                     </Text>
                                 </Flex>
                             </View>
@@ -358,20 +449,15 @@ export function DataSourceConfigStep({
                     </Flex>
                 </View>
             )}
-
-            <style>{`
-                .text-sm { font-size: 0.875rem; }
-                .text-xs { font-size: 0.75rem; }
-                .text-gray-500 { color: var(--spectrum-global-color-gray-500); }
-                .text-gray-600 { color: var(--spectrum-global-color-gray-600); }
-                .text-blue-500 { color: var(--spectrum-global-color-blue-500); }
-                .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
-                .site-list {
-                    max-height: 320px;
-                    border: 1px solid var(--spectrum-global-color-gray-300);
-                    border-radius: 4px;
-                }
-            `}</style>
-        </SingleColumnLayout>
+            </>}
+            rightContent={
+                <ContentConfigurationSummary
+                    daLiveOrg={daLiveOrg}
+                    selectedSite={selectedSite}
+                    isCreatingNew={isCreatingNew}
+                    newSiteName={daLiveSite}
+                />
+            }
+        />
     );
 }

@@ -136,6 +136,86 @@ export class GitHubRepoOperations {
     }
 
     /**
+     * Check if repository has content (not empty)
+     * Used to verify template population completed before cloning
+     * 
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param branch - Branch to check (default: 'main')
+     * @returns True if repository has files, false if empty
+     */
+    async hasContent(owner: string, repo: string, branch = 'main'): Promise<boolean> {
+        const octokit = await this.ensureAuthenticated();
+
+        try {
+            // Check if repository root has any files
+            const response = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+                owner,
+                repo,
+                path: '',
+                ref: branch,
+            });
+
+            // If we get a response with data, the repository has content
+            return Array.isArray(response.data) && response.data.length > 0;
+        } catch (error) {
+            const apiError = error as GitHubApiError;
+            
+            // 404 means the branch/content doesn't exist yet (empty repo)
+            if (apiError.status === 404) {
+                this.logger.debug(`[GitHub] Repository ${owner}/${repo} is empty or branch doesn't exist yet`);
+                return false;
+            }
+
+            // Other errors should be thrown
+            throw error;
+        }
+    }
+
+    /**
+     * Wait for repository to have content after template creation
+     * Uses PollingService for proper backoff, rate limiting, and timeout handling
+     * 
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @returns True if repository has content within timeout
+     */
+    async waitForContent(owner: string, repo: string): Promise<boolean> {
+        this.logger.debug(`[GitHub] Waiting for repository ${owner}/${repo} to have content...`);
+
+        const { PollingService } = await import('@/core/shell/pollingService');
+        const pollingService = new PollingService();
+
+        try {
+            await pollingService.pollUntilCondition(
+                async () => {
+                    try {
+                        return await this.hasContent(owner, repo);
+                    } catch (error) {
+                        // Log but don't throw - let polling continue
+                        this.logger.debug(`[GitHub] Content check error: ${(error as Error).message}`);
+                        return false;
+                    }
+                },
+                {
+                    name: `github-repo-${owner}/${repo}`,
+                    maxAttempts: 10,
+                    initialDelay: TIMEOUTS.POLL.INTERVAL,
+                    maxDelay: TIMEOUTS.POLL.MAX,
+                    timeout: TIMEOUTS.NORMAL, // 30 seconds total
+                },
+            );
+
+            this.logger.debug(`[GitHub] Repository ${owner}/${repo} has content`);
+            return true;
+        } catch (error) {
+            // Polling failed (timeout or max attempts)
+            this.logger.warn(`[GitHub] Repository ${owner}/${repo} content check failed: ${(error as Error).message}`);
+            return false;
+        }
+    }
+
+    /**
      * List repositories accessible to the authenticated user
      * @returns Array of repositories with write access
      */

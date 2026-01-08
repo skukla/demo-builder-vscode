@@ -27,9 +27,9 @@ import {
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import Alert from '@spectrum-icons/workflow/Alert';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Info from '@spectrum-icons/workflow/Info';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
+import { StatusSection } from '@/core/ui/components/wizard';
 import {
     isValidRepositoryName,
     getRepositoryNameError,
@@ -39,51 +39,7 @@ import { SelectionStepContent } from '@/core/ui/components/selection';
 import { useSelectionStep } from '@/core/ui/hooks';
 import type { GitHubRepoItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
-
-/**
- * StatusSection - Reusable status display section (matches ConfigurationSummary pattern)
- */
-interface StatusSectionProps {
-    label: string;
-    value?: string;
-    status: 'completed' | 'pending' | 'empty';
-    emptyText?: string;
-}
-
-function StatusSection({ label, value, status, emptyText = 'Not selected' }: StatusSectionProps) {
-    const renderIcon = () => {
-        switch (status) {
-            case 'completed':
-                return <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />;
-            default:
-                return null;
-        }
-    };
-
-    const renderContent = () => {
-        if (status === 'empty') {
-            return <Text UNSAFE_className="text-sm text-gray-600">{emptyText}</Text>;
-        }
-
-        return (
-            <Flex gap="size-100" alignItems="center">
-                {renderIcon()}
-                <Text UNSAFE_className="text-sm">{value}</Text>
-            </Flex>
-        );
-    };
-
-    return (
-        <View marginTop="size-200" marginBottom="size-200">
-            <Text UNSAFE_className="text-xs font-semibold text-gray-700 text-uppercase letter-spacing-05">
-                {label}
-            </Text>
-            <View marginTop="size-100">
-                {renderContent()}
-            </View>
-        </View>
-    );
-}
+import '../styles/eds-steps.css';
 
 /**
  * GitHubConfigurationSummary - Right column summary for GitHub selection
@@ -138,19 +94,6 @@ function GitHubConfigurationSummary({
                 status={isRepoComplete ? 'completed' : 'empty'}
                 emptyText={repoMode === 'new' ? 'Enter repository name' : 'Not selected'}
             />
-
-            <style>{`
-                .text-uppercase { text-transform: uppercase; }
-                .letter-spacing-05 { letter-spacing: 0.05em; }
-                .font-semibold { font-weight: 600; }
-                .text-xs { font-size: 0.75rem; }
-                .text-sm { font-size: 0.875rem; }
-                .text-gray-600 { color: var(--spectrum-global-color-gray-600); }
-                .text-gray-700 { color: var(--spectrum-global-color-gray-700); }
-                .text-green-600 { color: var(--spectrum-global-color-green-600); }
-                .text-orange-500 { color: var(--spectrum-global-color-orange-500); }
-                .text-orange-600 { color: var(--spectrum-global-color-orange-600); }
-            `}</style>
         </View>
     );
 }
@@ -423,45 +366,6 @@ export function GitHubRepoSelectionStep({
                     )}
                 </>
             )}
-
-            <style>{`
-                .font-medium { font-weight: 500; }
-                .text-sm { font-size: 0.875rem; }
-                .text-xs { font-size: 0.75rem; }
-                .text-gray-400 { color: var(--spectrum-global-color-gray-400); }
-                .text-gray-600 { color: var(--spectrum-global-color-gray-600); }
-                .text-green-600 { color: var(--spectrum-global-color-green-600); }
-                .text-blue-500 { color: var(--spectrum-global-color-blue-500); }
-                .text-orange-500 { color: var(--spectrum-global-color-orange-500); }
-                .flex-shrink-0 { flex-shrink: 0; }
-
-                /* Repository list item styling */
-                .repo-private-badge {
-                    display: inline-flex;
-                    align-items: center;
-                    padding: 1px 6px;
-                    margin-right: 6px;
-                    background: var(--spectrum-global-color-gray-200);
-                    border-radius: 4px;
-                    font-size: 0.6875rem;
-                    font-weight: 500;
-                    text-transform: uppercase;
-                    letter-spacing: 0.02em;
-                }
-                .repo-no-description {
-                    font-style: italic;
-                }
-
-                /* Reset Warning - Simple fade transition */
-                .reset-warning-visible {
-                    opacity: 1;
-                    transition: opacity 0.15s ease-out;
-                }
-                .reset-warning-hidden {
-                    opacity: 0;
-                    transition: opacity 0.15s ease-out;
-                }
-            `}</style>
         </>
     );
 

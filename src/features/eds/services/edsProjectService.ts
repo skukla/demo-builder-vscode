@@ -196,10 +196,14 @@ export class EdsProjectService {
                 reportProgress('tools-clone', PROGRESS.TOOLS_CLONE.end, 'Tool clone skipped');
             }
 
-            // Phase 7: Generate .env file
-            reportProgress('env-config', PROGRESS.ENV_CONFIG.start, 'Generating environment configuration...');
-            await this.envPhase.generateEnvFile(config, createdRepo);
-            reportProgress('env-config', PROGRESS.ENV_CONFIG.end, 'Environment configured');
+            // Phase 7: Generate EDS-specific configuration
+            reportProgress('env-config', PROGRESS.ENV_CONFIG.start, 'Generating EDS configuration...');
+            
+            // Generate site.json for PaaS projects (required for EDS runtime)
+            // NOTE: Standard .env generation happens in Phase 4 via generateComponentEnvFile()
+            await this.envPhase.generateSiteJson(config);
+            
+            reportProgress('env-config', PROGRESS.ENV_CONFIG.end, 'EDS configuration complete');
 
             // Complete
             reportProgress('complete', PROGRESS.COMPLETE, 'Setup complete!');

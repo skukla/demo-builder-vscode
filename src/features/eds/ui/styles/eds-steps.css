@@ -1,0 +1,122 @@
+/**
+ * EDS Steps Styles
+ * 
+ * Shared styles for GitHub Repository Selection and DA.live Project Configuration steps.
+ * These styles follow the platform's design token system for consistent theming.
+ */
+
+/* ========== Typography Utilities ========== */
+.font-medium {
+    font-weight: 500;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.text-xs {
+    font-size: 0.75rem;
+}
+
+.text-uppercase {
+    text-transform: uppercase;
+}
+
+.letter-spacing-05 {
+    letter-spacing: 0.05em;
+}
+
+/* ========== Color Utilities (Spectrum Design Tokens) ========== */
+.text-gray-400 {
+    color: var(--spectrum-global-color-gray-400);
+}
+
+.text-gray-500 {
+    color: var(--spectrum-global-color-gray-500);
+}
+
+.text-gray-600 {
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.text-gray-700 {
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.text-gray-900 {
+    color: var(--spectrum-global-color-gray-900);
+}
+
+.text-green-600 {
+    color: var(--spectrum-global-color-green-600);
+}
+
+.text-blue-500 {
+    color: var(--spectrum-global-color-blue-500);
+}
+
+.text-orange-500 {
+    color: var(--spectrum-global-color-orange-500);
+}
+
+.text-orange-600 {
+    color: var(--spectrum-global-color-orange-600);
+}
+
+/* ========== Layout Utilities ========== */
+.flex-shrink-0 {
+    flex-shrink: 0;
+}
+
+.py-4 {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+/* ========== GitHub Repository List Styling ========== */
+.repo-private-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    margin-right: 6px;
+    background: var(--spectrum-global-color-gray-200);
+    border-radius: 4px;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.repo-no-description {
+    font-style: italic;
+}
+
+/* ========== DA.live Site List Styling ========== */
+.site-list {
+    max-height: 320px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 4px;
+}
+
+/* ========== Reset Warning Animation ========== */
+/* 
+ * Smooth fade in/out transition for the "Reset to template" warning message.
+ * Used in both GitHub and DA.live steps when the reset checkbox is toggled.
+ */
+.reset-warning-container {
+    /* Fixed height container prevents layout jump during animation */
+}
+
+.reset-warning-visible {
+    opacity: 1;
+    transition: opacity 0.15s ease-out;
+}
+
+.reset-warning-hidden {
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+}
