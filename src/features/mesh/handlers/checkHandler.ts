@@ -64,7 +64,7 @@ function getWorkspaceServices(config: WorkspaceConfig | null): unknown[] {
  */
 export async function handleCheckApiMesh(
     context: HandlerContext,
-    payload: { workspaceId: string; selectedComponents?: string[] },
+    payload: { workspaceId: string; projectId?: string; selectedComponents?: string[] },
 ): Promise<{
     success: boolean;
     apiEnabled: boolean;
@@ -76,7 +76,7 @@ export async function handleCheckApiMesh(
     code?: ErrorCode;
     setupInstructions?: { step: string; details: string; important?: boolean }[];
 }> {
-    const { workspaceId, selectedComponents = [] } = payload;
+    const { workspaceId, projectId, selectedComponents = [] } = payload;
 
     // SECURITY: Validate workspaceId to prevent command injection
     try {
@@ -104,6 +104,34 @@ export async function handleCheckApiMesh(
             error: authResult.error,
             code: authResult.code,
         };
+    }
+
+    // CRITICAL: Ensure workspace context is selected before mesh check
+    // The Adobe CLI commands (workspace download, api-mesh get) require a project/workspace
+    // to be selected in the CLI's global context. The --workspaceId flag alone is not sufficient.
+    // Without this, commands fail with "You have not selected a Project" even with --workspaceId.
+    //
+    // Try to get projectId from:
+    // 1. Payload (provided by wizard in edit/create mode)
+    // 2. Current project (for dashboard/other contexts)
+    let effectiveProjectId = projectId;
+    if (!effectiveProjectId) {
+        const project = await context.stateManager.getCurrentProject();
+        effectiveProjectId = project?.adobe?.projectId;
+    }
+
+    if (context.authManager && workspaceId && effectiveProjectId) {
+        context.debugLogger.trace(`[Mesh Setup] Ensuring workspace context before check: ${workspaceId}`);
+        const contextOk = await context.authManager.selectWorkspace(
+            workspaceId,
+            effectiveProjectId,
+        );
+        if (!contextOk) {
+            context.logger.warn('[Mesh Setup] Failed to set workspace context - check may fail');
+            // Continue anyway - the mesh command may still work if context happens to be correct
+        }
+    } else {
+        context.logger.warn('[Mesh Setup] Missing projectId - cannot ensure workspace context, check may fail');
     }
 
     const commandManager = ServiceLocator.getCommandExecutor();

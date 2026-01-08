@@ -13,11 +13,11 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import {
+    ProjectSetupContext,
     generateComponentEnvFile,
     deployMeshComponent,
 } from '@/features/project-creation/helpers';
-import type { Project, TransformedComponentDefinition, EnvVarDefinition } from '@/types';
-import type { Logger } from '@/types/logger';
+import type { Project, TransformedComponentDefinition } from '@/types';
 import type { MeshPhaseState } from '@/types/webview';
 
 /** Maximum number of mesh deployment retry attempts */
@@ -27,12 +27,9 @@ const MAX_MESH_ATTEMPTS = 3;
 export type MeshUserDecision = 'retry' | 'cancel';
 
 export interface MeshSetupContext {
-    project: Project;
+    setupContext: ProjectSetupContext;
     meshDefinition?: TransformedComponentDefinition;
-    sharedEnvVars: Record<string, Omit<EnvVarDefinition, 'key'>>;
-    config: Record<string, unknown>;
     progressTracker: ProgressTracker;
-    logger: Logger;
     onMeshCreated?: (workspace: string | undefined) => void;
     /** Send mesh phase state for UI display */
     onMeshPhaseUpdate?: (meshPhase: MeshPhaseState) => void;
@@ -77,16 +74,14 @@ export async function deployNewMesh(
     apiMeshConfig: MeshApiConfig | undefined,
 ): Promise<void> {
     const {
-        project,
+        setupContext,
         meshDefinition,
-        sharedEnvVars,
-        config,
         progressTracker,
-        logger,
         onMeshCreated,
         onMeshPhaseUpdate,
         waitForMeshDecision,
     } = context;
+    const { project, logger } = setupContext;
     const meshComponent = project.componentInstances?.['commerce-mesh'];
 
     if (!meshComponent?.path || !meshDefinition) {
@@ -101,9 +96,7 @@ export async function deployNewMesh(
         meshComponent.path,
         'commerce-mesh',
         meshDefinition,
-        sharedEnvVars,
-        config,
-        logger,
+        setupContext,
     );
     logger.debug('[Project Creation] Mesh .env generated');
 
@@ -154,6 +147,7 @@ export async function deployNewMesh(
                         message: subMessage || message,
                     });
                 },
+                apiMeshConfig?.meshId, // Pass existing mesh ID to enable update strategy
             );
 
             if (meshDeployResult.success) {
@@ -162,7 +156,7 @@ export async function deployNewMesh(
 
                 // Notify that mesh was created for this workspace
                 if (onMeshCreated) {
-                    const adobeConfig = config as { adobe?: { workspace?: string } };
+                    const adobeConfig = setupContext.config as { adobe?: { workspace?: string } };
                     onMeshCreated(adobeConfig.adobe?.workspace);
                 }
 
@@ -284,23 +278,53 @@ export async function linkExistingMesh(
     context: MeshSetupContext,
     meshConfig: MeshApiConfig,
 ): Promise<void> {
-    const { project, meshDefinition, sharedEnvVars, config, progressTracker, logger } = context;
+    const { setupContext, meshDefinition, progressTracker } = context;
+    const { project, logger } = setupContext;
 
-    progressTracker('Configuring API Mesh', 75, 'Adding existing mesh to project...');
-    logger.info('[Project Creation] Phase 3: Linking existing API Mesh...');
+    progressTracker('Configuring API Mesh', 75, 'Updating existing mesh configuration...');
+    logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh...');
 
-    // Generate mesh .env file (even when linking existing mesh)
+    // Generate mesh .env file (needed for deployment)
     const meshComponent = project.componentInstances?.['commerce-mesh'];
     if (meshComponent?.path && meshDefinition) {
         await generateComponentEnvFile(
             meshComponent.path,
             'commerce-mesh',
             meshDefinition,
-            sharedEnvVars,
-            config,
-            logger,
+            setupContext,
         );
         logger.debug('[Project Creation] Mesh .env generated');
+
+        // CRITICAL: Deploy/update the mesh with the configuration from the cloned repository
+        // Even if a mesh exists in the workspace, we need to update it with our mesh.json
+        // This ensures the mesh has the correct schema (e.g., CATALOG_SERVICE_ENDPOINT vs ADOBE_CATALOG_SERVICE_ENDPOINT)
+        logger.debug('[Mesh Setup] Deploying mesh configuration to Adobe I/O...');
+        
+        const commandManager = ServiceLocator.getCommandExecutor();
+        const meshDeployResult = await deployMeshComponent(
+            meshComponent.path,
+            commandManager,
+            logger,
+            (message: string, subMessage?: string) => {
+                progressTracker('Deploying API Mesh', 78, subMessage || message);
+            },
+            meshConfig.meshId, // Pass existing mesh ID to enable update strategy
+        );
+
+        if (!meshDeployResult.success) {
+            // Deployment failed - throw error to trigger cleanup
+            throw new Error(`Mesh deployment failed: ${meshDeployResult.error || 'Unknown error'}`);
+        }
+
+        // Update mesh config with deployment result
+        meshConfig = {
+            ...meshConfig,
+            meshId: meshDeployResult.data?.meshId || meshConfig.meshId,
+            endpoint: meshDeployResult.data?.endpoint || meshConfig.endpoint,
+            meshStatus: 'deployed',
+        };
+
+        logger.debug('[Project Creation] Mesh deployment complete');
     }
 
     // Preserve existing component properties (like path from Phase 1 cloning)

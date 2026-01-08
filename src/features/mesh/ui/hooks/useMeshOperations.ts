@@ -187,6 +187,7 @@ export function useMeshOperations({
         try {
             const result = await webviewClient.request<CheckApiMeshResponse>('check-api-mesh', {
                 workspaceId: state.adobeWorkspace?.id,
+                projectId: state.adobeProject?.id,  // Include projectId for context selection
                 selectedComponents: [],
             });
 

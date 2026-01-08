@@ -324,7 +324,7 @@ export function WizardContainer({
             case 'review':
                 return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} packages={packages} stacks={stacks} />;
             case 'project-creation':
-                return <ProjectCreationStep state={state} onBack={goBack} importedSettings={importedSettings} packages={packages} />;
+                return <ProjectCreationStep state={state} updateState={updateState} onBack={goBack} importedSettings={importedSettings} packages={packages} />;
             default:
                 return null;
         }

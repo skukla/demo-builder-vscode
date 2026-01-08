@@ -12,19 +12,15 @@ import * as vscode from 'vscode';
 import { ProgressTracker } from '../handlers/shared';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { generateComponentEnvFile, EnvGenerationConfig } from '@/features/project-creation/helpers';
-import type { Project, EnvVarDefinition } from '@/types';
-import type { Logger } from '@/types/logger';
+import { ProjectSetupContext, generateComponentConfigFiles } from '@/features/project-creation/helpers';
+import type { Project } from '@/types';
 import { getComponentIds, getEntryCount } from '@/types/typeGuards';
 
 export interface FinalizationContext {
-    project: Project;
+    setupContext: ProjectSetupContext;
     projectPath: string;
     componentDefinitions: Map<string, ComponentDefinitionEntry>;
-    sharedEnvVars: Record<string, Omit<EnvVarDefinition, 'key'>>;
-    config: Record<string, unknown>;
     progressTracker: ProgressTracker;
-    logger: Logger;
     saveProject: () => Promise<void>;
     sendMessage: (type: string, data: Record<string, unknown>) => Promise<void>;
     panel?: vscode.WebviewPanel;
@@ -36,27 +32,14 @@ export interface FinalizationContext {
 export async function generateEnvironmentFiles(
     context: FinalizationContext,
 ): Promise<void> {
-    const { project, componentDefinitions, sharedEnvVars, config, progressTracker, logger } = context;
+    const { setupContext, componentDefinitions, progressTracker } = context;
+    const { project, logger } = setupContext;
 
     progressTracker('Configuring Environment', 85, 'Generating environment files...');
     logger.debug('[Project Creation] Phase 4: Generating environment configuration...');
 
-    // Get deployed mesh endpoint from meshState (SINGLE SOURCE OF TRUTH)
-    // with fallback to componentInstances for backward compatibility.
-    // See docs/architecture/state-ownership.md for details.
-    const deployedMeshEndpoint = project.meshState?.endpoint || project.componentInstances?.['commerce-mesh']?.endpoint;
-    const typedConfig = config as { apiMesh?: { endpoint?: string } };
-
-    // Create config with mesh endpoint for .env generation
-    const envConfig: EnvGenerationConfig = {
-        ...config,
-        apiMesh: deployedMeshEndpoint ? {
-            ...typedConfig.apiMesh,
-            endpoint: deployedMeshEndpoint,
-        } : typedConfig.apiMesh,
-    };
-
-    // Generate .env for all non-mesh components (frontend, app-builder, etc.)
+    // Generate all config files for all non-mesh components
+    // (treats .env and site.json as peers - all just "config files in different formats")
     for (const [compId, { definition }] of componentDefinitions) {
         // Skip mesh - already generated in Phase 3
         if (compId === 'commerce-mesh') continue;
@@ -64,13 +47,14 @@ export async function generateEnvironmentFiles(
         const componentPath = project.componentInstances?.[compId]?.path;
         if (!componentPath) continue;
 
-        await generateComponentEnvFile(
+        // Generate all config files for this component
+        // If component has explicit configFiles, generates those.
+        // Otherwise defaults to .env (or .env.local for Next.js)
+        await generateComponentConfigFiles(
             componentPath,
             compId,
             definition,
-            sharedEnvVars,
-            envConfig,
-            logger,
+            setupContext,
         );
     }
 
@@ -86,7 +70,8 @@ export async function generateEnvironmentFiles(
 export async function finalizeProject(
     context: FinalizationContext,
 ): Promise<void> {
-    const { project, progressTracker, logger, saveProject } = context;
+    const { setupContext, progressTracker, saveProject } = context;
+    const { project, logger } = setupContext;
 
     progressTracker('Finalizing Project', 95, 'Saving project state...');
 
@@ -131,7 +116,8 @@ export async function finalizeProject(
 export async function sendCompletionAndCleanup(
     context: FinalizationContext,
 ): Promise<void> {
-    const { projectPath, logger, sendMessage, panel } = context;
+    const { projectPath, sendMessage, panel, setupContext } = context;
+    const { logger } = setupContext;
 
     logger.debug('[Project Creation] Sending completion message to webview...');
     try {
