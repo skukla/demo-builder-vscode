@@ -19,6 +19,9 @@ export { ComponentUpdater } from './services/componentUpdater';
 
 export { ExtensionUpdater } from './services/extensionUpdater';
 
+export { ComponentRepositoryResolver } from './services/componentRepositoryResolver';
+export type { ComponentRepositoryInfo } from './services/componentRepositoryResolver';
+
 // Commands
 export { CheckUpdatesCommand } from './commands/checkUpdates';
 

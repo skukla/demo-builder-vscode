@@ -8,6 +8,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project, SubmoduleConfig } from '@/types';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { getComponentIds, getComponentVersion } from '@/types/typeGuards';
+import { ComponentRepositoryResolver } from './componentRepositoryResolver';
 
 export type { UpdateCheckResult };
 
@@ -31,20 +32,15 @@ export interface MultiProjectUpdateResult {
 export class UpdateManager {
     private logger: Logger;
     private context: vscode.ExtensionContext;
+    private repositoryResolver: ComponentRepositoryResolver;
   
-    // Repository configurations
+    // Extension repository (not in components.json)
     private readonly EXTENSION_REPO = 'skukla/demo-builder-vscode';
-    // Component ID → GitHub repository mapping (IDs must match keys in components.json)
-    private readonly COMPONENT_REPOS: Record<string, string> = {
-        'headless': 'skukla/citisignal-nextjs',
-        'commerce-mesh': 'skukla/commerce-mesh',
-        'integration-service': 'skukla/kukla-integration-service',
-        'demo-inspector': 'skukla/demo-inspector',
-    };
 
     constructor(context: vscode.ExtensionContext, logger: Logger) {
         this.context = context;
         this.logger = logger;
+        this.repositoryResolver = new ComponentRepositoryResolver(context.extensionPath, logger);
     }
 
     /**
@@ -86,16 +82,17 @@ export class UpdateManager {
         this.logger.debug(`[Updates] Checking ${componentIds.length} components: ${componentIds.join(', ')}`);
 
         for (const componentId of componentIds) {
-            const repoPath = this.COMPONENT_REPOS[componentId];
-            if (!repoPath) {
-                this.logger.debug(`[Updates] Skipping ${componentId}: no repository mapping`);
+            // Get repository from components.json
+            const repoInfo = await this.repositoryResolver.getRepositoryInfo(componentId);
+            if (!repoInfo) {
+                this.logger.debug(`[Updates] Skipping ${componentId}: no Git source in components.json`);
                 continue;
             }
 
             const currentVersion = getComponentVersion(project, componentId) || 'unknown';
-            this.logger.debug(`[Updates] ${componentId}: current=${currentVersion}, channel=${channel}`);
+            this.logger.debug(`[Updates] ${componentId}: current=${currentVersion}, channel=${channel}, repo=${repoInfo.repository}`);
 
-            const latestRelease = await this.fetchLatestRelease(repoPath, channel);
+            const latestRelease = await this.fetchLatestRelease(repoInfo.repository, channel);
 
             if (!latestRelease) {
                 this.logger.debug(`[Updates] ${componentId}: no release found`);
@@ -158,13 +155,14 @@ export class UpdateManager {
 
         // For each unique component, fetch latest version once and check all projects
         for (const [componentId, projectVersions] of componentProjectMap.entries()) {
-            const repoPath = this.COMPONENT_REPOS[componentId];
-            if (!repoPath) {
-                this.logger.debug(`[Updates] Skipping ${componentId}: no repository mapping`);
+            // Get repository from components.json
+            const repoInfo = await this.repositoryResolver.getRepositoryInfo(componentId);
+            if (!repoInfo) {
+                this.logger.debug(`[Updates] Skipping ${componentId}: no Git source in components.json`);
                 continue;
             }
 
-            const latestRelease = await this.fetchLatestRelease(repoPath, channel);
+            const latestRelease = await this.fetchLatestRelease(repoInfo.repository, channel);
             if (!latestRelease) {
                 this.logger.debug(`[Updates] ${componentId}: no release found`);
                 continue;
@@ -206,9 +204,10 @@ export class UpdateManager {
         const channel = this.getUpdateChannel();
 
         for (const [submoduleId, submoduleConfig] of Object.entries(submodules)) {
-            const repoPath = this.COMPONENT_REPOS[submoduleId];
-            if (!repoPath) {
-                this.logger.debug(`[Updates] Skipping submodule ${submoduleId}: no repository mapping`);
+            // Get repository from components.json (submodules may also be registered as components)
+            const repoInfo = await this.repositoryResolver.getRepositoryInfo(submoduleId);
+            if (!repoInfo) {
+                this.logger.debug(`[Updates] Skipping submodule ${submoduleId}: no Git source in components.json`);
                 continue;
             }
 
@@ -219,7 +218,7 @@ export class UpdateManager {
             this.logger.debug(`[Updates] Checking submodule ${submoduleId}: current=${currentCommit?.substring(0, 8) || 'unknown'}`);
 
             // Fetch latest release from GitHub
-            const latestRelease = await this.fetchLatestRelease(repoPath, channel);
+            const latestRelease = await this.fetchLatestRelease(repoInfo.repository, channel);
 
             if (!latestRelease) {
                 results.set(submoduleId, {

@@ -20,6 +20,35 @@ The Updates feature manages extension and component updates via GitHub Releases.
 
 ## Key Services
 
+### ComponentRepositoryResolver
+
+**Purpose**: Dynamically extract Git repository URLs from components.json
+
+**Why**: Eliminates hardcoded repository mappings and ensures update system uses the same configuration source as component installation.
+
+**Key Methods**:
+- `getRepositoryInfo(componentId)` - Get repository info for specific component
+- `getAllRepositories()` - Get all component repositories (cached)
+- `clearCache()` - Clear the repository cache
+
+**Example Usage**:
+```typescript
+import { ComponentRepositoryResolver } from '@/features/updates';
+
+const resolver = new ComponentRepositoryResolver(extensionPath, logger);
+
+// Get specific component
+const meshInfo = await resolver.getRepositoryInfo('commerce-mesh');
+console.log(meshInfo);
+// { id: 'commerce-mesh', repository: 'skukla/commerce-mesh', name: 'Adobe Commerce API Mesh' }
+
+// Get all components with Git sources
+const allRepos = await resolver.getAllRepositories();
+for (const [id, info] of allRepos.entries()) {
+    console.log(`${id} → ${info.repository}`);
+}
+```
+
 ### UpdateManager
 
 **Purpose**: Check for updates and manage update channels
@@ -362,13 +391,18 @@ setInterval(async () => {
 
 ### Repository Configuration
 ```typescript
+// REMOVED: Hardcoded repository mapping
+// Components are now dynamically resolved from components.json
+
 // In UpdateManager
-private readonly EXTENSION_REPO = 'skukla/demo-builder-vscode';
-private readonly COMPONENT_REPOS: Record<string, string> = {
-    'citisignal-nextjs': 'skukla/citisignal-nextjs',
-    'commerce-mesh': 'skukla/commerce-mesh',
-    'integration-service': 'skukla/kukla-integration-service'
-};
+private readonly EXTENSION_REPO = 'skukla/demo-builder-vscode'; // Extension only
+
+// Components are resolved via ComponentRepositoryResolver
+private repositoryResolver: ComponentRepositoryResolver;
+
+// Example: Getting repository for a component
+const repoInfo = await this.repositoryResolver.getRepositoryInfo('commerce-mesh');
+// Returns: { id: 'commerce-mesh', repository: 'skukla/commerce-mesh', name: 'Adobe Commerce API Mesh' }
 ```
 
 ### Version Tracking
