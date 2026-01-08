@@ -247,6 +247,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 daLiveOrg: typedConfig.edsConfig.daLiveOrg,
                 daLiveSite: typedConfig.edsConfig.daLiveSite,
                 backendComponentId,
+                backendEnvVars: typedConfig.componentConfigs?.[backendComponentId],
                 accsEndpoint: typedConfig.edsConfig.accsEndpoint,
                 meshEndpoint,
                 githubOwner: typedConfig.edsConfig.githubOwner || '',

@@ -267,6 +267,8 @@ export interface EdsProjectConfig {
     daLiveSite: string;
     /** Selected backend component ID (from stack definition) */
     backendComponentId: string;
+    /** Backend environment variables (from componentConfigs) */
+    backendEnvVars?: Record<string, string | number | boolean | undefined>;
     /** ACCS endpoint URL (for ACCS backend) */
     accsEndpoint?: string;
     /** API Mesh GraphQL endpoint (for PaaS backend) */

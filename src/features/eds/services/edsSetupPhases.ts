@@ -539,6 +539,14 @@ export class EnvConfigPhase {
         const siteJsonPath = path.join(config.componentPath, 'site.json');
         const templatePath = path.join(config.componentPath, 'default-site.json');
 
+        // Extract backend env vars (with type safety)
+        const backendEnv = config.backendEnvVars || {};
+        const commerceApiKey = String(backendEnv.ADOBE_CATALOG_API_KEY || '');
+        const commerceEnvironmentId = String(backendEnv.ADOBE_COMMERCE_ENVIRONMENT_ID || '');
+        const storeViewCode = String(backendEnv.ADOBE_COMMERCE_STORE_VIEW_CODE || 'default');
+        const websiteCode = String(backendEnv.ADOBE_COMMERCE_WEBSITE_CODE || 'base');
+        const storeCode = String(backendEnv.ADOBE_COMMERCE_STORE_CODE || 'main_website_store');
+
         try {
             // Use shared config file generator
             await generateConfigFile({
@@ -547,16 +555,18 @@ export class EnvConfigPhase {
                 defaultConfig: {
                     'commerce-core-endpoint': '',
                     'commerce-endpoint': 'https://catalog-service.adobe.io/graphql',
-                    'store-view-code': 'default',
-                    'website-code': 'base',
-                    'store-code': 'main_website_store',
+                    'store-view-code': storeViewCode,
+                    'website-code': websiteCode,
+                    'store-code': storeCode,
                 },
                 placeholders: {
                     '{ENDPOINT}': config.meshEndpoint || '',
                     '{CS_ENDPOINT}': 'https://catalog-service.adobe.io/graphql',
-                    '{STORE_VIEW_CODE}': 'default',
-                    '{WEBSITE_CODE}': 'base',
-                    '{STORE_CODE}': 'main_website_store',
+                    '{COMMERCE_API_KEY}': commerceApiKey,
+                    '{COMMERCE_ENVIRONMENT_ID}': commerceEnvironmentId,
+                    '{STORE_VIEW_CODE}': storeViewCode,
+                    '{WEBSITE_CODE}': websiteCode,
+                    '{STORE_CODE}': storeCode,
                     '{ORG}': config.githubOwner,
                     '{REPO}': config.repoName,
                 },
