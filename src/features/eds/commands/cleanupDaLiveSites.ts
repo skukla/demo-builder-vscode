@@ -175,17 +175,24 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
 
         // Step 7: Show results
         if (deleted.length > 0 && failed.length === 0) {
-            vscode.window.showInformationMessage(
-                `✅ Successfully deleted ${deleted.length} project${deleted.length !== 1 ? 's' : ''}`,
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Successfully deleted ${deleted.length} project${deleted.length !== 1 ? 's' : ''}.`,
+                    cancellable: false,
+                },
+                async () => {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                },
             );
         } else if (deleted.length > 0 && failed.length > 0) {
             const failedList = failed.map(f => f.site).join(', ');
             vscode.window.showWarningMessage(
-                `✅ Deleted ${deleted.length}, ❌ Failed ${failed.length}: ${failedList}`,
+                `Deleted ${deleted.length}, failed ${failed.length}: ${failedList}`,
             );
         } else {
             vscode.window.showErrorMessage(
-                `❌ Failed to delete all ${failed.length} projects`,
+                `Failed to delete all ${failed.length} projects.`,
             );
         }
 

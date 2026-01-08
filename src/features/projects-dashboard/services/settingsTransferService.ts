@@ -233,8 +233,17 @@ export async function exportProjectSettings(
 
         context.logger.info(`Exported settings to: ${saveUri.fsPath}`);
 
-        // Show success message
-        vscode.window.showInformationMessage(`${project.name} exported.`);
+        // Show auto-dismissing success message
+        await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: `${project.name} exported.`,
+                cancellable: false,
+            },
+            async () => {
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 2 seconds
+            },
+        );
 
         return {
             success: true,
