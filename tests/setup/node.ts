@@ -6,9 +6,14 @@
  * - Restore fake timers to real timers
  * - Clear pending timers
  * - Restore all spies and mocks
+ * - Reset ServiceLocator singletons
  */
 
+import { ServiceLocator } from '@/core/di/ServiceLocator';
+
 afterEach(() => {
+    // Reset ServiceLocator to prevent singleton pollution between tests
+    ServiceLocator.reset();
     // Clear any pending timers before switching to real timers
     // Use try-catch because some tests may leave globals in an inconsistent state
     try {

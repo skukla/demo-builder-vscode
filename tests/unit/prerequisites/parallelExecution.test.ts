@@ -26,15 +26,26 @@ describe('Parallel Per-Node-Version Checking', () => {
     let mockCommandExecutor: jest.Mocked<{
         execute: jest.Mock;
     }>;
+    const pendingTimers: NodeJS.Timeout[] = [];
 
     beforeEach(() => {
         jest.clearAllMocks();
+        pendingTimers.length = 0; // Clear array
 
         mockCommandExecutor = {
             execute: jest.fn(),
         };
 
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
+    });
+
+    afterEach(async () => {
+        // Clear any timers that were tracked
+        pendingTimers.forEach(timer => clearTimeout(timer));
+        pendingTimers.length = 0;
+        
+        // Give a moment for any untracked async operations to complete
+        await new Promise(resolve => setImmediate(resolve));
     });
 
     describe('1. Performance: Parallel checks faster than sequential', () => {

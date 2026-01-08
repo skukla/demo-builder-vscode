@@ -165,11 +165,14 @@ describe('ComponentUpdater (Step 1)', () => {
 
             await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
 
-            // Verify snapshot creation
+            // Verify snapshot creation (with filter to exclude node_modules)
             expect(fs.cp).toHaveBeenCalledWith(
                 '/path/to/project/components/test-component',
                 expect.stringContaining('snapshot'),
-                { recursive: true }
+                expect.objectContaining({ 
+                    recursive: true,
+                    filter: expect.any(Function)
+                })
             );
         });
 

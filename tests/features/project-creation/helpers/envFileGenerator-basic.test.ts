@@ -7,9 +7,8 @@ import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
 import { TransformedComponentDefinition } from '@/types/components';
-import type { Logger } from '@/types/logger';
 import {
-    createMockLogger,
+    createMockSetupContext,
     sharedEnvVars,
     TEST_COMPONENT_PATH,
 } from './envFileGenerator.testUtils';
@@ -29,11 +28,8 @@ jest.mock('@/features/project-creation/helpers/formatters', () => ({
 }));
 
 describe('envFileGenerator - Basic Generation', () => {
-    let mockLogger: Logger;
-
     beforeEach(() => {
         jest.clearAllMocks();
-        mockLogger = createMockLogger();
     });
 
     describe('file generation and headers', () => {
@@ -48,13 +44,16 @@ describe('envFileGenerator - Basic Generation', () => {
                 },
             } as TransformedComponentDefinition;
 
+            const setupContext = createMockSetupContext({
+                registry: { envVars: sharedEnvVars } as any,
+                config: {},
+            });
+
             await generateComponentEnvFile(
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                sharedEnvVars,
-                {},
-                mockLogger,
+                setupContext,
             );
 
             expect(fsPromises.writeFile).toHaveBeenCalledWith(
@@ -78,13 +77,16 @@ describe('envFileGenerator - Basic Generation', () => {
                 },
             } as TransformedComponentDefinition;
 
+            const setupContext = createMockSetupContext({
+                registry: { envVars: sharedEnvVars } as any,
+                config: {},
+            });
+
             await generateComponentEnvFile(
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                sharedEnvVars,
-                {},
-                mockLogger,
+                setupContext,
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;
@@ -99,18 +101,21 @@ describe('envFileGenerator - Basic Generation', () => {
                 configuration: {},
             } as TransformedComponentDefinition;
 
+            const setupContext = createMockSetupContext({
+                registry: { envVars: sharedEnvVars } as any,
+                config: {},
+            });
+
             await generateComponentEnvFile(
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                sharedEnvVars,
-                {},
-                mockLogger,
+                setupContext,
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;
             expect(content).toContain('# Test Component - Environment Configuration');
-            expect(mockLogger.debug).toHaveBeenCalled();
+            expect(setupContext.logger.debug).toHaveBeenCalled();
         });
     });
 
@@ -126,20 +131,23 @@ describe('envFileGenerator - Basic Generation', () => {
                 },
             } as TransformedComponentDefinition;
 
+            const setupContext = createMockSetupContext({
+                registry: { envVars: sharedEnvVars } as any,
+                config: {},
+            });
+
             await generateComponentEnvFile(
                 TEST_COMPONENT_PATH,
                 'nextjs-storefront',
                 componentDef,
-                sharedEnvVars,
-                {},
-                mockLogger,
+                setupContext,
             );
 
             expect(fsPromises.writeFile).toHaveBeenCalledWith(
                 path.join(TEST_COMPONENT_PATH, '.env.local'),
                 expect.any(String),
             );
-            expect(mockLogger.debug).toHaveBeenCalledWith(
+            expect(setupContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('.env.local'),
             );
         });

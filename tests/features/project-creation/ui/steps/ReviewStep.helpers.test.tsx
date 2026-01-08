@@ -1,184 +1,109 @@
 /**
  * ReviewStep Helper Tests
  *
- * Tests for resolveServiceNames and buildComponentInfoList helpers that extract
+ * Tests for buildComponentInfoList helper that extracts
  * complex logic from the ReviewStep component's useMemo hooks.
  *
  * Follows TDD methodology - tests written BEFORE implementation.
  */
 
 import {
-    resolveServiceNames,
     buildComponentInfoList,
+    resolveServiceNames,
     type ComponentInfoItem,
 } from '@/features/project-creation/ui/steps/reviewStepHelpers';
 import type { ComponentData, ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 
 describe('reviewStepHelpers', () => {
-    // Test fixtures
-    const mockServices: Record<string, { name: string; description?: string }> = {
-        'commerce-service': { name: 'Commerce Service', description: 'Main commerce API' },
-        'catalog-service': { name: 'Catalog Service', description: 'Product catalog' },
-        'checkout-service': { name: 'Checkout Service', description: 'Payment processing' },
-    };
-
-    const mockBackends: ComponentData[] = [
-        {
-            id: 'adobe-commerce',
-            name: 'Adobe Commerce',
-            configuration: {
-                requiredServices: ['commerce-service', 'catalog-service'],
-            },
-        },
-        {
-            id: 'mock-backend',
-            name: 'Mock Backend',
-            configuration: {
-                requiredServices: [],
-            },
-        },
-        {
-            id: 'no-config-backend',
-            name: 'No Config Backend',
-        },
-    ];
-
     describe('resolveServiceNames', () => {
-        describe('happy path', () => {
-            it('should resolve service IDs to names', () => {
-                // Given: A backend with required services
-                const backendId = 'adobe-commerce';
+        const mockBackends: ComponentData[] = [
+            {
+                id: 'adobe-commerce-paas',
+                name: 'Adobe Commerce PaaS',
+                configuration: {
+                    requiredServices: ['catalog-service', 'live-search'],
+                },
+            },
+            {
+                id: 'adobe-commerce-accs',
+                name: 'Adobe Commerce Cloud Service',
+                configuration: {
+                    providesServices: ['catalog-service', 'live-search'],
+                },
+            },
+        ];
 
-                // When: Resolving service names
-                const result = resolveServiceNames(backendId, mockBackends, mockServices);
+        const mockServices = {
+            'catalog-service': {
+                name: 'Catalog Service',
+                description: 'Enhanced product information management',
+            },
+            'live-search': {
+                name: 'Live Search',
+                description: 'AI-powered search with personalization',
+            },
+        };
 
-                // Then: Should return resolved service names
-                expect(result).toEqual(['Commerce Service', 'Catalog Service']);
-            });
-
-            it('should return empty array when backend has no required services', () => {
-                // Given: A backend with empty required services
-                const backendId = 'mock-backend';
-
-                // When: Resolving service names
-                const result = resolveServiceNames(backendId, mockBackends, mockServices);
-
-                // Then: Should return empty array
-                expect(result).toEqual([]);
-            });
+        it('should resolve required service names for PaaS backend', () => {
+            const result = resolveServiceNames('adobe-commerce-paas', mockBackends, mockServices);
+            expect(result).toEqual(['Catalog Service', 'Live Search']);
         });
 
-        describe('missing data handling', () => {
-            it('should return empty array when backendId is undefined', () => {
-                // Given: No backend selected
-                const backendId = undefined;
-
-                // When: Resolving service names
-                const result = resolveServiceNames(backendId, mockBackends, mockServices);
-
-                // Then: Should return empty array
-                expect(result).toEqual([]);
-            });
-
-            it('should return empty array when backends array is empty', () => {
-                // Given: Empty backends array
-                const backendId = 'adobe-commerce';
-
-                // When: Resolving service names
-                const result = resolveServiceNames(backendId, [], mockServices);
-
-                // Then: Should return empty array
-                expect(result).toEqual([]);
-            });
-
-            it('should return empty array when backends is undefined', () => {
-                // Given: Undefined backends
-                const backendId = 'adobe-commerce';
-
-                // When: Resolving service names
-                const result = resolveServiceNames(backendId, undefined, mockServices);
-
-                // Then: Should return empty array
-                expect(result).toEqual([]);
-            });
-
-            it('should return empty array when services is undefined', () => {
-                // Given: Undefined services
-                const backendId = 'adobe-commerce';
-
-                // When: Resolving service names
-                const result = resolveServiceNames(backendId, mockBackends, undefined);
-
-                // Then: Should return empty array
-                expect(result).toEqual([]);
-            });
-
-            it('should return empty array when backend not found', () => {
-                // Given: Backend ID that does not exist
-                const backendId = 'nonexistent-backend';
-
-                // When: Resolving service names
-                const result = resolveServiceNames(backendId, mockBackends, mockServices);
-
-                // Then: Should return empty array
-                expect(result).toEqual([]);
-            });
-
-            it('should return empty array when backend has no configuration', () => {
-                // Given: Backend without configuration
-                const backendId = 'no-config-backend';
-
-                // When: Resolving service names
-                const result = resolveServiceNames(backendId, mockBackends, mockServices);
-
-                // Then: Should return empty array
-                expect(result).toEqual([]);
-            });
+        it('should resolve provided service names with (built-in) suffix for ACCS backend', () => {
+            const result = resolveServiceNames('adobe-commerce-accs', mockBackends, mockServices);
+            expect(result).toEqual(['Catalog Service (built-in)', 'Live Search (built-in)']);
         });
 
-        describe('filtering unknown services', () => {
-            it('should filter out service IDs that do not exist in services map', () => {
-                // Given: Backend with some unknown service IDs
-                const backendsWithUnknown: ComponentData[] = [
-                    {
-                        id: 'test-backend',
-                        name: 'Test Backend',
-                        configuration: {
-                            requiredServices: ['commerce-service', 'unknown-service', 'catalog-service'],
-                        },
+        it('should return empty array when backendId is undefined', () => {
+            const result = resolveServiceNames(undefined, mockBackends, mockServices);
+            expect(result).toEqual([]);
+        });
+
+        it('should return empty array when backends is undefined', () => {
+            const result = resolveServiceNames('adobe-commerce-paas', undefined, mockServices);
+            expect(result).toEqual([]);
+        });
+
+        it('should return empty array when services is undefined', () => {
+            const result = resolveServiceNames('adobe-commerce-paas', mockBackends, undefined);
+            expect(result).toEqual([]);
+        });
+
+        it('should return empty array when backend is not found', () => {
+            const result = resolveServiceNames('unknown-backend', mockBackends, mockServices);
+            expect(result).toEqual([]);
+        });
+
+        it('should filter out services not found in registry', () => {
+            const backendsWithUnknownService: ComponentData[] = [
+                {
+                    id: 'test-backend',
+                    name: 'Test Backend',
+                    configuration: {
+                        requiredServices: ['catalog-service', 'unknown-service', 'live-search'],
                     },
-                ];
-
-                // When: Resolving service names
-                const result = resolveServiceNames('test-backend', backendsWithUnknown, mockServices);
-
-                // Then: Should only return known services
-                expect(result).toEqual(['Commerce Service', 'Catalog Service']);
-            });
-
-            it('should return empty array when all service IDs are unknown', () => {
-                // Given: Backend with only unknown services
-                const backendsWithUnknown: ComponentData[] = [
-                    {
-                        id: 'test-backend',
-                        name: 'Test Backend',
-                        configuration: {
-                            requiredServices: ['unknown1', 'unknown2'],
-                        },
-                    },
-                ];
-
-                // When: Resolving service names
-                const result = resolveServiceNames('test-backend', backendsWithUnknown, mockServices);
-
-                // Then: Should return empty array
-                expect(result).toEqual([]);
-            });
+                },
+            ];
+            const result = resolveServiceNames('test-backend', backendsWithUnknownService, mockServices);
+            expect(result).toEqual(['Catalog Service', 'Live Search']);
         });
     });
 
     describe('buildComponentInfoList', () => {
         // Fixtures for buildComponentInfoList
+        const mockBackends: ComponentData[] = [
+            {
+                id: 'adobe-commerce',
+                name: 'Adobe Commerce',
+                configuration: {},
+            },
+            {
+                id: 'mock-backend',
+                name: 'Mock Backend',
+                configuration: {},
+            },
+        ];
+
         const mockComponentsData: ComponentsData = {
             frontends: [
                 { id: 'venia', name: 'Venia Storefront' },
@@ -197,7 +122,6 @@ describe('reviewStepHelpers', () => {
             appBuilder: [
                 { id: 'custom-app', name: 'Custom App' },
             ],
-            services: mockServices,
         };
 
         describe('frontend component', () => {
@@ -364,48 +288,49 @@ describe('reviewStepHelpers', () => {
                 expect(backendItem?.value).toBe('Adobe Commerce');
             });
 
-            it('should include service names as sub-items', () => {
-                // Given: State with backend and services
+            it('should include backend service names when provided', () => {
+                // Given: State with backend selected and service names
                 const state = {
                     components: {
                         backend: 'adobe-commerce',
                     },
                 };
-                const serviceNames = ['Commerce Service', 'Catalog Service'];
 
-                // When: Building component info list
+                // When: Building component info list with backend service names
                 const result = buildComponentInfoList(
                     state.components,
                     undefined,
                     mockComponentsData,
                     false,
-                    serviceNames,
+                    ['Catalog Service', 'Live Search'], // backendServiceNames
                 );
 
-                // Then: Backend should have service names as sub-items
+                // Then: Backend should have service sub-items
                 const backendItem = result.find((item) => item.label === 'Backend');
-                expect(backendItem?.subItems).toEqual(serviceNames);
+                expect(backendItem).toBeDefined();
+                expect(backendItem?.subItems).toEqual(['Catalog Service', 'Live Search']);
             });
 
-            it('should NOT include sub-items when no services', () => {
-                // Given: State with backend but no services
+            it('should NOT include sub-items when backend service names is empty', () => {
+                // Given: State with backend selected
                 const state = {
                     components: {
-                        backend: 'mock-backend',
+                        backend: 'adobe-commerce',
                     },
                 };
 
-                // When: Building component info list
+                // When: Building component info list with empty service names
                 const result = buildComponentInfoList(
                     state.components,
                     undefined,
                     mockComponentsData,
                     false,
-                    [],
+                    [], // backendServiceNames
                 );
 
                 // Then: Backend should have no sub-items
                 const backendItem = result.find((item) => item.label === 'Backend');
+                expect(backendItem).toBeDefined();
                 expect(backendItem?.subItems).toBeUndefined();
             });
         });

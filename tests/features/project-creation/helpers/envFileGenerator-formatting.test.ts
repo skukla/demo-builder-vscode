@@ -6,9 +6,8 @@
 import { promises as fsPromises } from 'fs';
 import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
 import { TransformedComponentDefinition } from '@/types/components';
-import type { Logger } from '@/types/logger';
 import {
-    createMockLogger,
+    createMockSetupContext,
     sharedEnvVars,
     TEST_COMPONENT_PATH,
 } from './envFileGenerator.testUtils';
@@ -28,11 +27,8 @@ jest.mock('@/features/project-creation/helpers/formatters', () => ({
 }));
 
 describe('envFileGenerator - Formatting', () => {
-    let mockLogger: Logger;
-
     beforeEach(() => {
         jest.clearAllMocks();
-        mockLogger = createMockLogger();
     });
 
     describe('comment formatting', () => {
@@ -47,13 +43,16 @@ describe('envFileGenerator - Formatting', () => {
                 },
             } as TransformedComponentDefinition;
 
+            const setupContext = createMockSetupContext({
+                registry: { envVars: sharedEnvVars } as any,
+                config: {},
+            });
+
             await generateComponentEnvFile(
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                sharedEnvVars,
-                {},
-                mockLogger,
+                setupContext,
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;
@@ -74,13 +73,16 @@ describe('envFileGenerator - Formatting', () => {
                 },
             } as TransformedComponentDefinition;
 
+            const setupContext = createMockSetupContext({
+                registry: { envVars: sharedEnvVars } as any,
+                config: {},
+            });
+
             await generateComponentEnvFile(
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                sharedEnvVars,
-                {},
-                mockLogger,
+                setupContext,
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;

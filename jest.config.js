@@ -133,4 +133,7 @@ module.exports = {
   clearMocks: true,
   resetMocks: true,
   restoreMocks: true,
+
+  // Global teardown to clean up any remaining handles
+  globalTeardown: '<rootDir>/tests/setup/globalTeardown.ts',
 };

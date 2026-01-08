@@ -114,16 +114,17 @@ const COMPONENT_DEFINITION_FIELDS = new Set([
 const COMPONENT_CONFIGURATION_FIELDS = new Set([
     'requiredEnvVars',
     'optionalEnvVars',
+    'requiredServices',
+    'providesServices',
     'port',
     'nodeVersion',
     'buildScript',
     'required',
-    'requiredServices',
-    'services',
     'meshIntegration',
     'providesEndpoint',
     'providesEnvVars',
     'requiresDeployment',
+    'configFiles',  // Config file generation settings (e.g., .env, site.json)
     'deploymentTarget',
     'runtime',
     'actions',
@@ -173,6 +174,7 @@ const ENV_VAR_DEFINITION_FIELDS = new Set([
     'group',
     'providedBy',
     'usedBy',
+    'derivedFrom',  // NEW: For computed variables (e.g., ADOBE_CATALOG_SERVICE_ENDPOINT from PAAS_...)
     'options',
     'validation',
 ]);
@@ -190,6 +192,22 @@ const SELECTION_GROUPS_FIELDS = new Set([
     'integrations',
     'addons',
     'tools',
+]);
+
+/**
+ * Service definition fields
+ * From ServiceDefinition
+ */
+const SERVICE_DEFINITION_FIELDS = new Set([
+    'name',
+    'description',
+    'backendSpecific',
+    'requiredEnvVars',
+    'requiredEnvVarsByBackend',
+    'optionalEnvVars',
+    'required',
+    'endpoint',
+    'requiresApiKey',
 ]);
 
 // ============================================================================
@@ -393,7 +411,7 @@ describe('Type/JSON Alignment Validation', () => {
             const rootAllowed = new Set(['$schema', 'version', 'stacks']);
             const unknown = findUnknownFields(stacksConfig, rootAllowed);
             if (unknown.length > 0) {
-                fail(`stacks.json root has unknown fields: ${unknown.join(', ')}. ` +
+                throw new Error(`stacks.json root has unknown fields: ${unknown.join(', ')}. ` +
                      `Add to StacksConfig (src/types/stacks.ts) or remove from JSON.`);
             }
         });
@@ -403,7 +421,7 @@ describe('Type/JSON Alignment Validation', () => {
             stacks.forEach(stack => {
                 const unknown = findUnknownFields(stack, STACK_FIELDS);
                 if (unknown.length > 0) {
-                    fail(formatUnknownFieldsError(
+                    throw new Error(formatUnknownFieldsError(
                         'Stack',
                         stack.id,
                         unknown,
@@ -439,7 +457,7 @@ describe('Type/JSON Alignment Validation', () => {
             Object.entries(section).forEach(([id, entry]) => {
                 const unknown = findUnknownFields(entry, allowedFields);
                 if (unknown.length > 0) {
-                    fail(formatUnknownFieldsError(
+                    throw new Error(formatUnknownFieldsError(
                         typeLabel,
                         id,
                         unknown,
@@ -452,7 +470,7 @@ describe('Type/JSON Alignment Validation', () => {
         it('should have no unknown fields in root config', () => {
             const unknown = findUnknownFields(componentsConfig, COMPONENTS_ROOT_FIELDS);
             if (unknown.length > 0) {
-                fail(`components.json root has unknown fields: ${unknown.join(', ')}. ` +
+                throw new Error(`components.json root has unknown fields: ${unknown.join(', ')}. ` +
                      `Add to COMPONENTS_ROOT_FIELDS or RawComponentRegistry (src/types/components.ts) or remove from JSON.`);
             }
         });
@@ -467,7 +485,6 @@ describe('Type/JSON Alignment Validation', () => {
             ['integrations', 'Integration'],
             ['addons', 'Addon'],
             ['tools', 'Tool'],
-            ['services', 'Service'],
             ['infrastructure', 'Infrastructure component'],
             ['brands', 'Brand (in components.json)'],
             ['stacks', 'Stack (in components.json)'],
@@ -493,11 +510,11 @@ describe('Type/JSON Alignment Validation', () => {
                 Object.entries(components).forEach(([id, component]) => {
                     if (!component.configuration) return;
                     const config = component.configuration as Record<string, unknown>;
-                    const unknown = findUnknownFields(config, COMPONENT_CONFIGURATION_FIELDS);
-                    if (unknown.length > 0) {
-                        fail(`${section}.${id}.configuration has unknown fields: ${unknown.join(', ')}. ` +
-                             `Add to COMPONENT_CONFIGURATION_FIELDS or RawComponentDefinition.configuration (src/types/components.ts) or remove from JSON.`);
-                    }
+                const unknown = findUnknownFields(config, COMPONENT_CONFIGURATION_FIELDS);
+                if (unknown.length > 0) {
+                    throw new Error(`${section}.${id}.configuration has unknown fields: ${unknown.join(', ')}. ` +
+                         `Add to COMPONENT_CONFIGURATION_FIELDS or RawComponentDefinition.configuration (src/types/components.ts) or remove from JSON.`);
+                }
                 });
             });
         });
@@ -514,7 +531,7 @@ describe('Type/JSON Alignment Validation', () => {
                     const source = component.source as Record<string, unknown>;
                     const unknown = findUnknownFields(source, COMPONENT_SOURCE_FIELDS);
                     if (unknown.length > 0) {
-                        fail(`${section}.${id}.source has unknown fields: ${unknown.join(', ')}. ` +
+                        throw new Error(`${section}.${id}.source has unknown fields: ${unknown.join(', ')}. ` +
                              `Add to COMPONENT_SOURCE_FIELDS or RawComponentDefinition.source (src/types/components.ts) or remove from JSON.`);
                     }
                 });
@@ -535,7 +552,7 @@ describe('Type/JSON Alignment Validation', () => {
                     const gitOptions = source.gitOptions as Record<string, unknown>;
                     const unknown = findUnknownFields(gitOptions, COMPONENT_GIT_OPTIONS_FIELDS);
                     if (unknown.length > 0) {
-                        fail(`${section}.${id}.source.gitOptions has unknown fields: ${unknown.join(', ')}. ` +
+                        throw new Error(`${section}.${id}.source.gitOptions has unknown fields: ${unknown.join(', ')}. ` +
                              `Add to COMPONENT_GIT_OPTIONS_FIELDS (src/types/components.ts) or remove from JSON.`);
                     }
                 });
@@ -547,11 +564,11 @@ describe('Type/JSON Alignment Validation', () => {
             if (!envVars) return;
 
             Object.entries(envVars).forEach(([key, envVar]) => {
-                const unknown = findUnknownFields(envVar, ENV_VAR_DEFINITION_FIELDS);
-                if (unknown.length > 0) {
-                    fail(`envVars.${key} has unknown fields: ${unknown.join(', ')}. ` +
-                         `Add to ENV_VAR_DEFINITION_FIELDS or EnvVarDefinition (src/types/components.ts) or remove from JSON.`);
-                }
+            const unknown = findUnknownFields(envVar, ENV_VAR_DEFINITION_FIELDS);
+            if (unknown.length > 0) {
+                throw new Error(`envVars.${key} has unknown fields: ${unknown.join(', ')}. ` +
+                     `Add to ENV_VAR_DEFINITION_FIELDS or EnvVarDefinition (src/types/components.ts) or remove from JSON.`);
+            }
             });
         });
 
@@ -561,9 +578,22 @@ describe('Type/JSON Alignment Validation', () => {
 
             const unknown = findUnknownFields(selectionGroups, SELECTION_GROUPS_FIELDS);
             if (unknown.length > 0) {
-                fail(`selectionGroups has unknown fields: ${unknown.join(', ')}. ` +
+                throw new Error(`selectionGroups has unknown fields: ${unknown.join(', ')}. ` +
                      `Add to SELECTION_GROUPS_FIELDS or RawComponentRegistry.selectionGroups (src/types/components.ts) or remove from JSON.`);
             }
+        });
+
+        it('should have no unknown fields in services', () => {
+            const services = componentsConfig.services as Record<string, Record<string, unknown>> | undefined;
+            if (!services) return;
+
+            Object.entries(services).forEach(([serviceId, service]) => {
+                const unknown = findUnknownFields(service, SERVICE_DEFINITION_FIELDS);
+                if (unknown.length > 0) {
+                    throw new Error(`services.${serviceId} has unknown fields: ${unknown.join(', ')}. ` +
+                         `Add to SERVICE_DEFINITION_FIELDS or ServiceDefinition (src/types/components.ts) or remove from JSON.`);
+                }
+            });
         });
     });
 
@@ -575,7 +605,7 @@ describe('Type/JSON Alignment Validation', () => {
         it('should have no unknown fields in root config', () => {
             const unknown = findUnknownFields(prerequisitesConfig, PREREQUISITES_ROOT_FIELDS);
             if (unknown.length > 0) {
-                fail(`prerequisites.json root has unknown fields: ${unknown.join(', ')}. ` +
+                throw new Error(`prerequisites.json root has unknown fields: ${unknown.join(', ')}. ` +
                      `Add to PrerequisitesConfig (src/features/prerequisites/services/types.ts) or remove from JSON.`);
             }
         });
@@ -585,7 +615,7 @@ describe('Type/JSON Alignment Validation', () => {
             prerequisites.forEach(prereq => {
                 const unknown = findUnknownFields(prereq, PREREQUISITE_DEFINITION_FIELDS);
                 if (unknown.length > 0) {
-                    fail(formatUnknownFieldsError(
+                    throw new Error(formatUnknownFieldsError(
                         'Prerequisite',
                         prereq.id,
                         unknown,
@@ -602,7 +632,7 @@ describe('Type/JSON Alignment Validation', () => {
                     const check = prereq.check as Record<string, unknown>;
                     const unknown = findUnknownFields(check, PREREQUISITE_CHECK_FIELDS);
                     if (unknown.length > 0) {
-                        fail(`Prerequisite "${prereq.id}" check has unknown fields: ${unknown.join(', ')}. ` +
+                        throw new Error(`Prerequisite "${prereq.id}" check has unknown fields: ${unknown.join(', ')}. ` +
                              `Add to PrerequisiteCheck (src/features/prerequisites/services/types.ts) or remove from JSON.`);
                     }
                 }
@@ -616,7 +646,7 @@ describe('Type/JSON Alignment Validation', () => {
                     const versionCheck = prereq.versionCheck as Record<string, unknown>;
                     const unknown = findUnknownFields(versionCheck, PREREQUISITE_CHECK_FIELDS);
                     if (unknown.length > 0) {
-                        fail(`Prerequisite "${prereq.id}" versionCheck has unknown fields: ${unknown.join(', ')}. ` +
+                        throw new Error(`Prerequisite "${prereq.id}" versionCheck has unknown fields: ${unknown.join(', ')}. ` +
                              `Add to PrerequisiteCheck (src/features/prerequisites/services/types.ts) or remove from JSON.`);
                     }
                 }
@@ -630,7 +660,7 @@ describe('Type/JSON Alignment Validation', () => {
                     const install = prereq.install as Record<string, unknown>;
                     const unknown = findUnknownFields(install, PREREQUISITE_INSTALL_FIELDS);
                     if (unknown.length > 0) {
-                        fail(`Prerequisite "${prereq.id}" install has unknown fields: ${unknown.join(', ')}. ` +
+                        throw new Error(`Prerequisite "${prereq.id}" install has unknown fields: ${unknown.join(', ')}. ` +
                              `Add to PrerequisiteInstall (src/features/prerequisites/services/types.ts) or remove from JSON.`);
                     }
                 }
@@ -644,7 +674,7 @@ describe('Type/JSON Alignment Validation', () => {
                     const uninstall = prereq.uninstall as Record<string, unknown>;
                     const unknown = findUnknownFields(uninstall, PREREQUISITE_INSTALL_FIELDS);
                     if (unknown.length > 0) {
-                        fail(`Prerequisite "${prereq.id}" uninstall has unknown fields: ${unknown.join(', ')}. ` +
+                        throw new Error(`Prerequisite "${prereq.id}" uninstall has unknown fields: ${unknown.join(', ')}. ` +
                              `Add to PrerequisiteInstall (src/features/prerequisites/services/types.ts) or remove from JSON.`);
                     }
                 }
@@ -658,7 +688,7 @@ describe('Type/JSON Alignment Validation', () => {
                     const postInstall = prereq.postInstall as Record<string, unknown>;
                     const unknown = findUnknownFields(postInstall, POST_INSTALL_FIELDS);
                     if (unknown.length > 0) {
-                        fail(`Prerequisite "${prereq.id}" postInstall has unknown fields: ${unknown.join(', ')}. ` +
+                        throw new Error(`Prerequisite "${prereq.id}" postInstall has unknown fields: ${unknown.join(', ')}. ` +
                              `Add to PostInstall (src/features/prerequisites/services/types.ts) or remove from JSON.`);
                     }
                 }
@@ -675,7 +705,7 @@ describe('Type/JSON Alignment Validation', () => {
                         steps.forEach((step, index) => {
                             const unknown = findUnknownFields(step, INSTALL_STEP_FIELDS);
                             if (unknown.length > 0) {
-                                fail(`Prerequisite "${prereq.id}" install.steps[${index}] has unknown fields: ` +
+                                throw new Error(`Prerequisite "${prereq.id}" install.steps[${index}] has unknown fields: ` +
                                      `${unknown.join(', ')}. Add to InstallStep (src/features/prerequisites/services/types.ts) or remove from JSON.`);
                             }
                         });
@@ -697,7 +727,7 @@ describe('Type/JSON Alignment Validation', () => {
                                 milestones.forEach((milestone, milestoneIndex) => {
                                     const unknown = findUnknownFields(milestone, PROGRESS_MILESTONE_FIELDS);
                                     if (unknown.length > 0) {
-                                        fail(`Prerequisite "${prereq.id}" install.steps[${stepIndex}].milestones[${milestoneIndex}] ` +
+                                        throw new Error(`Prerequisite "${prereq.id}" install.steps[${stepIndex}].milestones[${milestoneIndex}] ` +
                                              `has unknown fields: ${unknown.join(', ')}. ` +
                                              `Add to ProgressMilestone (src/features/prerequisites/services/types.ts) or remove from JSON.`);
                                     }
@@ -717,7 +747,7 @@ describe('Type/JSON Alignment Validation', () => {
                     plugins.forEach((plugin, index) => {
                         const unknown = findUnknownFields(plugin, PREREQUISITE_PLUGIN_FIELDS);
                         if (unknown.length > 0) {
-                            fail(`Prerequisite "${prereq.id}" plugins[${index}] has unknown fields: ` +
+                            throw new Error(`Prerequisite "${prereq.id}" plugins[${index}] has unknown fields: ` +
                                  `${unknown.join(', ')}. Add to PrerequisitePlugin (src/features/prerequisites/services/types.ts) or remove from JSON.`);
                         }
                     });
@@ -735,7 +765,7 @@ describe('Type/JSON Alignment Validation', () => {
                             const check = plugin.check as Record<string, unknown>;
                             const unknown = findUnknownFields(check, PREREQUISITE_CHECK_FIELDS);
                             if (unknown.length > 0) {
-                                fail(`Prerequisite "${prereq.id}" plugins[${index}].check has unknown fields: ` +
+                                throw new Error(`Prerequisite "${prereq.id}" plugins[${index}].check has unknown fields: ` +
                                      `${unknown.join(', ')}. Add to PrerequisiteCheck (src/features/prerequisites/services/types.ts) or remove from JSON.`);
                             }
                         }
@@ -754,7 +784,7 @@ describe('Type/JSON Alignment Validation', () => {
                             const install = plugin.install as Record<string, unknown>;
                             const unknown = findUnknownFields(install, PREREQUISITE_INSTALL_FIELDS);
                             if (unknown.length > 0) {
-                                fail(`Prerequisite "${prereq.id}" plugins[${index}].install has unknown fields: ` +
+                                throw new Error(`Prerequisite "${prereq.id}" plugins[${index}].install has unknown fields: ` +
                                      `${unknown.join(', ')}. Add to PrerequisiteInstall (src/features/prerequisites/services/types.ts) or remove from JSON.`);
                             }
                         }
@@ -776,7 +806,7 @@ describe('Type/JSON Alignment Validation', () => {
                                 steps.forEach((step, stepIndex) => {
                                     const unknown = findUnknownFields(step, INSTALL_STEP_FIELDS);
                                     if (unknown.length > 0) {
-                                        fail(`Prerequisite "${prereq.id}" plugins[${pluginIndex}].install.steps[${stepIndex}] ` +
+                                        throw new Error(`Prerequisite "${prereq.id}" plugins[${pluginIndex}].install.steps[${stepIndex}] ` +
                                              `has unknown fields: ${unknown.join(', ')}. ` +
                                              `Add to InstallStep (src/features/prerequisites/services/types.ts) or remove from JSON.`);
                                     }
@@ -795,7 +825,7 @@ describe('Type/JSON Alignment Validation', () => {
             Object.entries(requirements).forEach(([componentId, requirement]) => {
                 const unknown = findUnknownFields(requirement, COMPONENT_REQUIREMENT_FIELDS);
                 if (unknown.length > 0) {
-                    fail(`componentRequirements["${componentId}"] has unknown fields: ${unknown.join(', ')}. ` +
+                    throw new Error(`componentRequirements["${componentId}"] has unknown fields: ${unknown.join(', ')}. ` +
                          `Add to ComponentRequirement (src/features/prerequisites/services/types.ts) or remove from JSON.`);
                 }
             });
@@ -810,7 +840,7 @@ describe('Type/JSON Alignment Validation', () => {
         it('should have no unknown fields in root config', () => {
             const unknown = findUnknownFields(loggingConfig, LOGGING_ROOT_FIELDS);
             if (unknown.length > 0) {
-                fail(`logging.json root has unknown fields: ${unknown.join(', ')}. ` +
+                throw new Error(`logging.json root has unknown fields: ${unknown.join(', ')}. ` +
                      `Add to LoggingTemplates (src/core/logging/stepLogger.ts) or remove from JSON.`);
             }
         });
@@ -831,7 +861,7 @@ describe('Type/JSON Alignment Validation', () => {
             const operations = loggingConfig.operations as Record<string, unknown>;
             Object.entries(operations).forEach(([key, value]) => {
                 if (typeof value !== 'string') {
-                    fail(`logging.json operations.${key} is not a string: found ${typeof value}. ` +
+                    throw new Error(`logging.json operations.${key} is not a string: found ${typeof value}. ` +
                          `All logging template values must be strings.`);
                 }
             });
@@ -841,7 +871,7 @@ describe('Type/JSON Alignment Validation', () => {
             const operations = loggingConfig.operations as Record<string, unknown>;
             Object.entries(operations).forEach(([key, value]) => {
                 if (typeof value === 'string' && value.trim() === '') {
-                    fail(`logging.json operations.${key} is empty. ` +
+                    throw new Error(`logging.json operations.${key} is empty. ` +
                          `Logging templates must contain message text.`);
                 }
             });
@@ -851,7 +881,7 @@ describe('Type/JSON Alignment Validation', () => {
             const statuses = loggingConfig.statuses as Record<string, unknown>;
             Object.entries(statuses).forEach(([key, value]) => {
                 if (typeof value !== 'string') {
-                    fail(`logging.json statuses.${key} is not a string: found ${typeof value}. ` +
+                    throw new Error(`logging.json statuses.${key} is not a string: found ${typeof value}. ` +
                          `All logging template values must be strings.`);
                 }
             });
@@ -861,7 +891,7 @@ describe('Type/JSON Alignment Validation', () => {
             const statuses = loggingConfig.statuses as Record<string, unknown>;
             Object.entries(statuses).forEach(([key, value]) => {
                 if (typeof value === 'string' && value.trim() === '') {
-                    fail(`logging.json statuses.${key} is empty. ` +
+                    throw new Error(`logging.json statuses.${key} is empty. ` +
                          `Logging templates must contain message text.`);
                 }
             });

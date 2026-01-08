@@ -6,9 +6,8 @@
 import { promises as fsPromises } from 'fs';
 import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
 import { TransformedComponentDefinition } from '@/types/components';
-import type { Logger } from '@/types/logger';
 import {
-    createMockLogger,
+    createMockSetupContext,
     sharedEnvVars,
     TEST_COMPONENT_PATH,
 } from './envFileGenerator.testUtils';
@@ -28,11 +27,8 @@ jest.mock('@/features/project-creation/helpers/formatters', () => ({
 }));
 
 describe('envFileGenerator - Value Resolution', () => {
-    let mockLogger: Logger;
-
     beforeEach(() => {
         jest.clearAllMocks();
-        mockLogger = createMockLogger();
     });
 
     describe('runtime config values', () => {
@@ -47,19 +43,28 @@ describe('envFileGenerator - Value Resolution', () => {
                 },
             } as TransformedComponentDefinition;
 
-            const config = {
-                apiMesh: {
+            const projectWithMeshState = {
+                name: 'test-project',
+                path: '/test/path',
+                status: 'ready',
+                created: new Date().toISOString(),
+                meshState: {
                     endpoint: 'https://runtime-endpoint.adobe.io/graphql',
+                    workspace: 'test-workspace',
                 },
-            };
+            } as any;
+
+            const setupContext = createMockSetupContext({
+                registry: { envVars: sharedEnvVars } as any,
+                project: projectWithMeshState,
+                config: {},
+            });
 
             await generateComponentEnvFile(
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                sharedEnvVars,
-                config,
-                mockLogger,
+                setupContext,
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;
@@ -87,13 +92,16 @@ describe('envFileGenerator - Value Resolution', () => {
                 },
             };
 
+            const setupContext = createMockSetupContext({
+                registry: { envVars: sharedEnvVars } as any,
+                config,
+            });
+
             await generateComponentEnvFile(
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                sharedEnvVars,
-                config,
-                mockLogger,
+                setupContext,
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;
@@ -119,13 +127,16 @@ describe('envFileGenerator - Value Resolution', () => {
                 },
             };
 
+            const setupContext = createMockSetupContext({
+                registry: { envVars: sharedEnvVars } as any,
+                config,
+            });
+
             await generateComponentEnvFile(
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                sharedEnvVars,
-                config,
-                mockLogger,
+                setupContext,
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;
@@ -145,13 +156,16 @@ describe('envFileGenerator - Value Resolution', () => {
                 },
             } as TransformedComponentDefinition;
 
+            const setupContext = createMockSetupContext({
+                registry: { envVars: sharedEnvVars } as any,
+                config: {},
+            });
+
             await generateComponentEnvFile(
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                sharedEnvVars,
-                {},
-                mockLogger,
+                setupContext,
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;
@@ -169,13 +183,16 @@ describe('envFileGenerator - Value Resolution', () => {
                 },
             } as TransformedComponentDefinition;
 
+            const setupContext = createMockSetupContext({
+                registry: { envVars: sharedEnvVars } as any,
+                config: {},
+            });
+
             await generateComponentEnvFile(
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                sharedEnvVars,
-                {},
-                mockLogger,
+                setupContext,
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;

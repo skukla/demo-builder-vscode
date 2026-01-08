@@ -190,6 +190,7 @@
     "test:no-compile": "node --max-old-space-size=4096 node_modules/.bin/jest",
     "test:watch": "node --max-old-space-size=4096 node_modules/.bin/jest --watch",
     "test:coverage": "node --max-old-space-size=4096 node_modules/.bin/jest --coverage",
+    "test:force": "node --max-old-space-size=4096 node_modules/.bin/jest --forceExit",
     "test:unit": "node --max-old-space-size=4096 node_modules/.bin/jest --selectProjects node --testPathIgnorePatterns='integration'",
     "test:integration": "node --max-old-space-size=4096 node_modules/.bin/jest --testPathPattern='integration'",
     "test:ui": "node --max-old-space-size=4096 node_modules/.bin/jest --selectProjects react",
