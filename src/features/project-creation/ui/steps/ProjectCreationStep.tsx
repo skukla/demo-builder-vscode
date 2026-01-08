@@ -17,6 +17,7 @@ import { buildProjectConfig } from '../wizard/wizardHelpers';
 
 interface ProjectCreationStepProps {
     state: WizardState;
+    updateState: (updates: Partial<WizardState>) => void;
     onBack: () => void;
     importedSettings?: unknown;
     packages?: unknown;
@@ -41,7 +42,7 @@ interface GitHubAppInstallData {
     message: string;
 }
 
-export function ProjectCreationStep({ state, onBack, importedSettings, packages }: ProjectCreationStepProps) {
+export function ProjectCreationStep({ state, updateState, onBack, importedSettings, packages }: ProjectCreationStepProps) {
     const progress = state.creationProgress;
     const [isCancelling, setIsCancelling] = useState(false);
     const [isOpeningProject, setIsOpeningProject] = useState(false);
@@ -148,6 +149,9 @@ export function ProjectCreationStep({ state, onBack, importedSettings, packages 
             hasEdsConfig: !!state.edsConfig,
         });
 
+        // Store mesh info from check result (React state updates are async, can't rely on state)
+        let detectedMeshInfo: { meshId?: string; meshStatus?: string; endpoint?: string } | undefined;
+
         // First check mesh (if needed)
         if (needsMeshCheck) {
             setPhase('checking-mesh');
@@ -156,6 +160,7 @@ export function ProjectCreationStep({ state, onBack, importedSettings, packages 
             try {
                 const result = await webviewClient.request<MeshCheckResult>('check-api-mesh', {
                     workspaceId: state.adobeWorkspace?.id,
+                    projectId: state.adobeProject?.id,
                     selectedComponents: [
                         state.components?.frontend,
                         state.components?.backend,
@@ -167,6 +172,24 @@ export function ProjectCreationStep({ state, onBack, importedSettings, packages 
                     setMeshCheckResult(result);
                     setPhase('mesh-error');
                     return; // Stop here
+                }
+
+                // Update wizard state with mesh info (if mesh exists)
+                if (result.meshExists && result.meshId) {
+                    detectedMeshInfo = {
+                        meshId: result.meshId,
+                        meshStatus: result.meshStatus,
+                        endpoint: result.endpoint,
+                    };
+                    
+                    updateState({
+                        apiMesh: {
+                            isChecking: false,
+                            apiEnabled: true,
+                            meshExists: true,
+                            ...detectedMeshInfo,
+                        },
+                    });
                 }
             } catch (error) {
                 setMeshCheckResult({
@@ -191,9 +214,12 @@ export function ProjectCreationStep({ state, onBack, importedSettings, packages 
         // All checks passed, start creation
         console.log('[Pre-Flight] All checks passed, starting project creation');
         setPhase('creating');
-        const projectConfig = buildProjectConfig(state, importedSettings, packages);
+        
+        // Build config with fresh mesh info (React state may be stale)
+        const stateWithMeshInfo = detectedMeshInfo ? { ...state, apiMesh: detectedMeshInfo } : state;
+        const projectConfig = buildProjectConfig(stateWithMeshInfo, importedSettings, packages);
         vscode.createProject(projectConfig);
-    }, [needsMeshCheck, needsGitHubAppCheck, checkGitHubApp, state, importedSettings, packages]);
+    }, [needsMeshCheck, needsGitHubAppCheck, checkGitHubApp, state, updateState, importedSettings, packages]);
 
     /**
      * Handle detected GitHub app installation

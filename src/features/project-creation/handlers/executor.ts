@@ -158,8 +158,18 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         ? typedConfig.editProjectPath!
         : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
 
+    // Load existing project state if in edit mode (to preserve creation date)
+    let existingProject: import('@/types').Project | undefined;
     if (isEditMode) {
         context.logger.info(`[Project Edit] Editing existing project at: ${projectPath}`);
+        try {
+            existingProject = await context.stateManager.loadProjectFromPath(projectPath);
+            if (existingProject) {
+                context.logger.debug('[Project Edit] Loaded existing project state for creation date preservation');
+            }
+        } catch (error) {
+            context.logger.warn(`[Project Edit] Could not load existing project state: ${(error as Error).message}`);
+        }
     } else {
         // Clean up orphaned/invalid directories (new project only)
         await cleanupOrphanedDirectory(projectPath, context, progressTracker, fs);
@@ -181,7 +191,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     const project: import('@/types').Project = {
         name: typedConfig.projectName,
-        created: new Date(),
+        created: existingProject?.created || new Date(), // Preserve original creation date in edit mode
         lastModified: new Date(),
         path: projectPath,
         status: 'created',
@@ -197,6 +207,10 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         componentConfigs: (typedConfig.componentConfigs || {}) as Record<string, Record<string, string | number | boolean | undefined>>,
         selectedPackage: typedConfig.selectedPackage,
         selectedStack: typedConfig.selectedStack,
+        // Note: componentVersions, meshState, etc. are NOT preserved during edit
+        // - componentVersions: Regenerated from fresh component installation
+        // - meshState: Must be clean slate - old sourceHash won't match fresh files
+        // - frontendEnvState: Only valid if demo is running (cleared during edit)
     };
 
     context.logger.debug('[Project Creation] Deferring project state save until after installation');
@@ -219,6 +233,12 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             context.logger.warn('[Project Creation] AuthenticationService not available - skipping EDS setup');
         } else {
             // Build EdsProjectConfig from wizard config
+            // Get backend component ID from component selections (set by stack)
+            const backendComponentId = typedConfig.components?.backend || '';
+            const meshEndpoint = typedConfig.apiMesh?.endpoint;
+            
+            context.logger.debug(`[EDS Setup] Backend component: ${backendComponentId}, Mesh endpoint: ${meshEndpoint || 'N/A'}`);
+            
             const edsProjectConfig: EdsProjectConfig = {
                 projectName: typedConfig.projectName,
                 projectPath,
@@ -226,7 +246,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 repoName: typedConfig.edsConfig.repoName,
                 daLiveOrg: typedConfig.edsConfig.daLiveOrg,
                 daLiveSite: typedConfig.edsConfig.daLiveSite,
-                accsEndpoint: typedConfig.edsConfig.accsEndpoint || '',
+                backendComponentId,
+                accsEndpoint: typedConfig.edsConfig.accsEndpoint,
+                meshEndpoint,
                 githubOwner: typedConfig.edsConfig.githubOwner || '',
                 isPrivate: typedConfig.edsConfig.isPrivate,
                 skipContent: typedConfig.edsConfig.skipContent,
@@ -336,6 +358,28 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     }
 
     // ========================================================================
+    // REGISTER EDS IN COMPONENT DEFINITIONS (for Phase 4 env generation)
+    // ========================================================================
+    
+    // If EDS was set up, register it in componentDefinitions so Phase 4's
+    // generateEnvironmentFiles() will handle its .env using standard pattern
+    if (isEdsStack && edsComponentPath && project.componentInstances?.[EDS_COMPONENT_ID]) {
+        const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
+        const registryManager = new ComponentRegistryManager(context.context.extensionPath);
+        const registry = await registryManager.loadRegistry();
+        
+        // Find EDS component definition from registry
+        const edsDefinition = registry.components?.frontends?.find(f => f.id === 'eds');
+        if (edsDefinition) {
+            componentDefinitions.set(EDS_COMPONENT_ID, {
+                definition: edsDefinition,
+                installOptions: { skipDependencies: true },
+            });
+            context.logger.debug(`[Project Creation] Registered EDS in componentDefinitions for Phase 4`);
+        }
+    }
+
+    // ========================================================================
     // LOAD COMPONENT DEFINITIONS
     // ========================================================================
 
@@ -344,7 +388,11 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
     const registryManager = new ComponentRegistryManager(context.context.extensionPath);
     const registry = await registryManager.loadRegistry();
-    const sharedEnvVars = registry.envVars || {};
+
+    // Create unified setup context (eliminates parameter threading)
+    // Composes HandlerContext to avoid duplicating logger and other common dependencies
+    const { ProjectSetupContext } = await import('@/features/project-creation/services/ProjectSetupContext');
+    const setupContext = new ProjectSetupContext(context, registry, project, config);
 
     const componentDefinitions = await loadComponentDefinitions(typedConfig, registryManager, context, isEdsStack);
 
@@ -386,12 +434,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const meshDefinition = componentDefinitions.get('commerce-mesh')?.definition;
 
     const meshContext = {
-        project,
+        setupContext,
         meshDefinition,
-        sharedEnvVars,
-        config,
         progressTracker,
-        logger: context.logger,
         onMeshCreated: (workspace: string | undefined) => {
             context.sharedState.meshCreatedForWorkspace = workspace;
         },
@@ -418,6 +463,16 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint, typedConfig.meshStepEnabled)) {
         // Check for existing mesh (takes precedence - don't deploy if workspace already has mesh)
         await linkExistingMesh(meshContext, typedConfig.apiMesh!);
+    } else if (isEditMode && existingProject?.meshState?.endpoint) {
+        // EDIT MODE: Reuse existing mesh from current project if it exists
+        context.logger.info('[Mesh Setup] Edit mode - reusing existing mesh from project');
+        const existingMesh = {
+            endpoint: existingProject.meshState.endpoint,
+            meshId: existingProject.componentInstances?.['commerce-mesh']?.metadata?.meshId || '',
+            meshStatus: 'deployed' as const,
+            workspace: typedConfig.adobe?.workspace,
+        };
+        await linkExistingMesh(meshContext, existingMesh);
     } else if (meshComponent?.path && meshDefinition && !typedConfig.meshStepEnabled) {
         // No existing mesh in workspace - deploy new one
         // If imported from different workspace, mesh endpoint won't work - must deploy fresh
@@ -472,15 +527,16 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // ========================================================================
     // PHASE 4-5: FINALIZATION
     // ========================================================================
+    // 
+    // Phase 4 now generates ALL config files (.env + site.json) using the
+    // component registry pattern. EDS site.json is generated via configFiles
+    // definition in components.json, eliminating custom hooks.
 
     const finalizationContext = {
-        project,
+        setupContext,
         projectPath,
         componentDefinitions,
-        sharedEnvVars,
-        config,
         progressTracker,
-        logger: context.logger,
         saveProject: () => context.stateManager.saveProject(project),
         sendMessage: (type: string, data: Record<string, unknown>) => context.sendMessage(type, data),
         panel: context.panel,

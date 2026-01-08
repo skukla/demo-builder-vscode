@@ -183,6 +183,10 @@ export async function handleCreateProject(
             } else if (fs.existsSync(projectPath)) {
                 context.logger.debug(`[Project Creation] Cleaning up partial project at ${projectPath}`);
                 await fsPromises.rm(projectPath, { recursive: true, force: true });
+                
+                // Clear current project from state to stop status bar from polling deleted project
+                await context.stateManager.clearProject();
+                
                 context.logger.debug('[Project Creation] Cleanup complete');
             }
 

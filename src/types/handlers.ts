@@ -24,17 +24,51 @@ import {
  * (Legacy type - kept for backwards compatibility)
  */
 export interface ProjectConfig {
-    envVars: Record<string, string>;
-    frontend: {
+    projectName?: string;
+    envVars?: Record<string, string>;
+    components?: {
+        frontend?: string;
+        backend?: string;
+        dependencies?: string[];
+        integrations?: string[];
+        appBuilder?: string[];
+    };
+    componentConfigs?: Record<string, Record<string, unknown>>;
+    adobe?: {
+        organization?: string;
+        projectId?: string;
+        projectName?: string;
+        projectTitle?: string;
+        workspace?: string;
+        workspaceName?: string;
+        workspaceTitle?: string;
+    };
+    apiMesh?: {
+        meshId?: string;
+        endpoint?: string;
+        meshStatus?: string;
+    };
+    selectedPackage?: string;
+    selectedStack?: string;
+    selectedAddons?: string[];
+    importedWorkspaceId?: string;
+    importedMeshEndpoint?: string;
+    meshStepEnabled?: boolean;
+    frontendSource?: unknown;
+    editMode?: boolean;
+    editProjectPath?: string;
+    edsConfig?: unknown;
+    // Legacy fields (kept for backwards compatibility)
+    frontend?: {
         id: string;
         port: number;
         nodeVersion: string;
     };
-    backend: {
+    backend?: {
         id: string;
         configuration: Record<string, unknown>;
     };
-    dependencies: {
+    dependencies?: {
         id: string;
         type: string;
         configuration: Record<string, unknown>;

@@ -549,7 +549,7 @@ export function findFirstIncompleteStep(
  * Determine next button text based on wizard state
  *
  * - Edit mode: "Save Changes" (modifying in place)
- * - All other modes: "Create Project" (creating new project)
+ * - All other modes: "Create" (creating new project)
  */
 export function getNextButtonText(
     isConfirmingSelection: boolean,
@@ -560,7 +560,7 @@ export function getNextButtonText(
     if (isConfirmingSelection) return 'Continue';
     if (currentStepIndex === totalSteps - 2) {
         // Only edit mode uses "Save Changes" - import/copy still create new projects
-        return wizardMode === 'edit' ? 'Save Changes' : 'Create Project';
+        return wizardMode === 'edit' ? 'Save Changes' : 'Create';
     }
     return 'Continue';
 }
@@ -697,4 +697,9 @@ export function buildProjectConfig(
             resetSiteContent: wizardState.edsConfig.resetSiteContent || false,
         } : undefined,
     };
+    
+    console.log('[buildProjectConfig] RETURNING selectedPackage:', config.selectedPackage);
+    console.log('[buildProjectConfig] RETURNING selectedStack:', config.selectedStack);
+    
+    return config;
 }
