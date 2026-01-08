@@ -85,11 +85,15 @@ export class ProjectConfigWriter {
     }
 
     /**
-     * Write the .demo-builder.json manifest file
+     * Write the .demo-builder.json manifest file using atomic write pattern.
+     * Writes to temp file first, then renames (atomic on POSIX filesystems).
+     * This prevents JSON corruption from interrupted or concurrent writes.
      */
     private async writeManifest(project: Project): Promise<void> {
+        const manifestPath = path.join(project.path, '.demo-builder.json');
+        const tempPath = `${manifestPath}.tmp`;
+
         try {
-            const manifestPath = path.join(project.path, '.demo-builder.json');
             const manifest = {
                 name: project.name,
                 version: '1.0.0',
@@ -111,8 +115,16 @@ export class ProjectConfigWriter {
                 selectedStack: project.selectedStack,
             };
 
-            await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+            // Atomic write: write to temp file first, then rename
+            await fs.writeFile(tempPath, JSON.stringify(manifest, null, 2));
+            await fs.rename(tempPath, manifestPath);
         } catch (error) {
+            // Clean up temp file on error (ignore cleanup failures)
+            try {
+                await fs.unlink(tempPath);
+            } catch {
+                // Temp file may not exist if write failed early - ignore
+            }
             this.logger.error('Failed to update project manifest', error instanceof Error ? error : undefined);
             throw error;
         }
