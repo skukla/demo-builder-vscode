@@ -160,15 +160,31 @@ export class ProjectFileLoader {
         }
 
         // Merge componentVersions - ensure discovered components have version entries
+        // Prefer componentInstance.version (from recent installation) over manifest data
         const mergedComponentVersions = { ...(manifestVersions || {}) };
         for (const componentId of Object.keys(discoveredComponents)) {
+            // Check if the merged componentInstance has version data (from recent installation)
+            const instanceVersion = mergedComponentInstances[componentId]?.version;
+            
             if (!mergedComponentVersions[componentId]) {
-                // Component exists on disk but has no version tracking - add placeholder
+                // Component exists on disk but has no version tracking in project file
                 mergedComponentVersions[componentId] = {
-                    version: 'unknown',
+                    version: instanceVersion || 'unknown',
                     lastUpdated: new Date().toISOString(),
                 };
-                this.logger.debug(`[ProjectFileLoader] Discovered untracked component: ${componentId}`);
+                
+                if (instanceVersion) {
+                    this.logger.debug(`[ProjectFileLoader] Component version detected: ${componentId} (${instanceVersion})`);
+                } else {
+                    this.logger.debug(`[ProjectFileLoader] Component found with unknown version: ${componentId}`);
+                }
+            } else if (instanceVersion && instanceVersion !== mergedComponentVersions[componentId].version) {
+                // Component version was updated (e.g., during project edit) - prefer the fresh instance version
+                this.logger.debug(`[ProjectFileLoader] Updating component version: ${componentId} (${mergedComponentVersions[componentId].version} → ${instanceVersion})`);
+                mergedComponentVersions[componentId] = {
+                    version: instanceVersion,
+                    lastUpdated: new Date().toISOString(),
+                };
             }
         }
 
