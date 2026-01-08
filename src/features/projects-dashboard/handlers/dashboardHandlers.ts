@@ -385,6 +385,8 @@ export const handleEditProject: MessageHandler<{ projectPath: string }> = async 
         const settings = extractSettingsFromProject(project, true);
 
         context.logger.info(`Opening edit wizard for project: ${project.name}`);
+        context.logger.info(`[Edit Debug] selectedPackage: ${project.selectedPackage}, selectedStack: ${project.selectedStack}`);
+        context.logger.info(`[Edit Debug] settings.selectedPackage: ${settings.selectedPackage}, settings.selectedStack: ${settings.selectedStack}`);
 
         // Open wizard in edit mode
         await vscode.commands.executeCommand('demoBuilder.createProject', {

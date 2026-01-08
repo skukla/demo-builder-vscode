@@ -35,6 +35,7 @@ export interface PollOptions {
     backoffFactor?: number;
     timeout?: number;
     name?: string;
+    abortSignal?: AbortSignal;
 }
 
 /**

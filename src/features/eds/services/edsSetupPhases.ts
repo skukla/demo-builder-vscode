@@ -108,7 +108,7 @@ export class GitHubRepoPhase {
             // Poll repository until template content is populated
             // This prevents cloning an empty repository
             const [owner, repoName] = repo.fullName.split('/');
-            const hasContent = await this.repoOperations.waitForContent(owner, repoName);
+            const hasContent = await this.repoOperations.waitForContent(owner, repoName, config.abortSignal);
 
             if (!hasContent) {
                 this.logger.warn('[EDS] Repository may still be populating, proceeding with clone anyway');

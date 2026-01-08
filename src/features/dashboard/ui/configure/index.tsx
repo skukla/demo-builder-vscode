@@ -21,20 +21,19 @@ if (!container) {
 }
 
 // Create React root and render app
+// Note: StrictMode removed to prevent double-execution of effects in development
 const root = createRoot(container);
 root.render(
-    <React.StrictMode>
-        <WebviewApp>
-            {(initData) => {
-                const data = initData as ConfigureInitData;
-                return data?.project && data?.componentsData ? (
-                    <ConfigureScreen
-                        project={data.project}
-                        componentsData={data.componentsData}
-                        existingEnvValues={data.existingEnvValues}
-                    />
-                ) : null;
-            }}
-        </WebviewApp>
-    </React.StrictMode>,
+    <WebviewApp>
+        {(initData) => {
+            const data = initData as ConfigureInitData;
+            return data?.project && data?.componentsData ? (
+                <ConfigureScreen
+                    project={data.project}
+                    componentsData={data.componentsData}
+                    existingEnvValues={data.existingEnvValues}
+                />
+            ) : null;
+        }}
+    </WebviewApp>,
 );

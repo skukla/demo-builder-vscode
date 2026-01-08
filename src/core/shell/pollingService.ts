@@ -27,6 +27,7 @@ export class PollingService {
             backoffFactor = 1.5,
             timeout = TIMEOUTS.LONG,
             name = 'condition',
+            abortSignal,
         } = options;
 
         const startTime = Date.now();
@@ -35,6 +36,11 @@ export class PollingService {
 
         while (attempt < maxAttempts) {
             attempt++;
+
+            // Check if operation was aborted
+            if (abortSignal?.aborted) {
+                throw new Error(`Polling aborted for: ${name}`);
+            }
 
             // Check timeout
             if (Date.now() - startTime > timeout) {

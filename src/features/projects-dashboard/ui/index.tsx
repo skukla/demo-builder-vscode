@@ -297,11 +297,10 @@ if (!container) {
     throw new Error('Root element not found');
 }
 
+// Note: StrictMode removed to prevent double-execution of effects in development
 const root = createRoot(container);
 root.render(
-    <React.StrictMode>
-        <WebviewApp>
-            <ProjectsDashboardApp />
-        </WebviewApp>
-    </React.StrictMode>,
+    <WebviewApp>
+        <ProjectsDashboardApp />
+    </WebviewApp>,
 );

@@ -178,9 +178,10 @@ export class GitHubRepoOperations {
      * 
      * @param owner - Repository owner
      * @param repo - Repository name
+     * @param abortSignal - Optional abort signal to cancel polling
      * @returns True if repository has content within timeout
      */
-    async waitForContent(owner: string, repo: string): Promise<boolean> {
+    async waitForContent(owner: string, repo: string, abortSignal?: AbortSignal): Promise<boolean> {
         this.logger.debug(`[GitHub] Waiting for repository ${owner}/${repo} to have content...`);
 
         const { PollingService } = await import('@/core/shell/pollingService');
@@ -203,6 +204,7 @@ export class GitHubRepoOperations {
                     initialDelay: TIMEOUTS.POLL.INTERVAL,
                     maxDelay: TIMEOUTS.POLL.MAX,
                     timeout: TIMEOUTS.NORMAL, // 30 seconds total
+                    abortSignal,
                 },
             );
 

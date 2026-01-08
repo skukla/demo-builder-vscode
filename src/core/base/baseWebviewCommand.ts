@@ -335,7 +335,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
      */
     protected async sendMessage(type: string, payload?: unknown): Promise<void> {
         if (!this.communicationManager) {
-            this.logger.warn(`Cannot send message '${type}' - communication not initialized`);
+            // Silently ignore if communication not initialized (expected during webview disposal)
             return;
         }
 

@@ -257,6 +257,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 repoMode: typedConfig.edsConfig.repoMode,
                 existingRepo: typedConfig.edsConfig.existingRepo,
                 resetToTemplate: typedConfig.edsConfig.resetToTemplate,
+                abortSignal: context.sharedState.projectCreationAbortController?.signal,
             };
 
             // Map EdsProgressCallback to executor progressTracker

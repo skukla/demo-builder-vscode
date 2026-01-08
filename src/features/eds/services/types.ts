@@ -289,6 +289,8 @@ export interface EdsProjectConfig {
     resetToTemplate?: boolean;
     /** Whether to reset existing DA.live site content (requires cleanup before content copy) */
     resetSiteContent?: boolean;
+    /** Abort signal for cancelling the setup process */
+    abortSignal?: AbortSignal;
 }
 
 /**

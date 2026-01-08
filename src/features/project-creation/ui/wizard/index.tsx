@@ -26,31 +26,31 @@ if (!container) {
 
 // Create React root and render app
 const root = createRoot(container);
+// Note: StrictMode removed to prevent double-execution of effects in development
+// This was causing 3x handler execution and noisy logs. See research findings.
 root.render(
-    <React.StrictMode>
-        <WebviewApp
-            onInit={(_data) => {
-                // Initialization complete
-            }}
-            loadingContent={
-                <View padding="size-400">
-                    <div>Initializing...</div>
-                </View>
-            }
-        >
-            {(initData) => {
-                const data = initData as WizardInitData;
-                return (
-                    <WizardContainer
-                        componentDefaults={data?.componentDefaults}
-                        wizardSteps={data?.wizardSteps}
-                        existingProjectNames={data?.existingProjectNames}
-                        importedSettings={data?.importedSettings}
-                        editProject={data?.editProject ?? undefined}
-                        projectsViewMode={data?.projectsViewMode}
-                    />
-                );
-            }}
-        </WebviewApp>
-    </React.StrictMode>,
+    <WebviewApp
+        onInit={(_data) => {
+            // Initialization complete
+        }}
+        loadingContent={
+            <View padding="size-400">
+                <div>Initializing...</div>
+            </View>
+        }
+    >
+        {(initData) => {
+            const data = initData as WizardInitData;
+            return (
+                <WizardContainer
+                    componentDefaults={data?.componentDefaults}
+                    wizardSteps={data?.wizardSteps}
+                    existingProjectNames={data?.existingProjectNames}
+                    importedSettings={data?.importedSettings}
+                    editProject={data?.editProject ?? undefined}
+                    projectsViewMode={data?.projectsViewMode}
+                />
+            );
+        }}
+    </WebviewApp>,
 );

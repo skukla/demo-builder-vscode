@@ -14,21 +14,20 @@ if (!container) {
 }
 
 // Create React root and render app
+// Note: StrictMode removed to prevent double-execution of effects in development
 const root = createRoot(container);
 root.render(
-    <React.StrictMode>
-        <WebviewApp>
-            {(data) => (
-                <ProjectDashboardScreen
-                    project={data?.project}
-                    hasMesh={data?.hasMesh}
-                    brandName={data?.brandName}
-                    stackName={data?.stackName}
-                    isEds={data?.isEds}
-                    edsLiveUrl={data?.edsLiveUrl}
-                    edsDaLiveUrl={data?.edsDaLiveUrl}
-                />
-            )}
-        </WebviewApp>
-    </React.StrictMode>,
+    <WebviewApp>
+        {(data) => (
+            <ProjectDashboardScreen
+                project={data?.project}
+                hasMesh={data?.hasMesh}
+                brandName={data?.brandName}
+                stackName={data?.stackName}
+                isEds={data?.isEds}
+                edsLiveUrl={data?.edsLiveUrl}
+                edsDaLiveUrl={data?.edsDaLiveUrl}
+            />
+        )}
+    </WebviewApp>,
 );
