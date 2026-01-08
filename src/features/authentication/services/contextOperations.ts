@@ -100,7 +100,6 @@ export async function ensureContext(
     // Check organization context
     const currentOrgId = extractContextId(context?.org);
     if (expected.orgId && currentOrgId !== expected.orgId) {
-        // Note: currentOrgId may be a name (from CLI), expected.orgId is always an ID
         debugLogger.debug(
             `[Context Ops] Context sync: org mismatch (current: "${currentOrgId || 'none'}"), re-selecting...`,
         );
@@ -115,10 +114,22 @@ export async function ensureContext(
     if (expected.projectId) {
         const currentContext = expected.orgId ? await getConsoleWhereContext(deps) : context;
         const currentProjectId = extractContextId(currentContext?.project);
-        if (currentProjectId !== expected.projectId) {
-            // Note: currentProjectId may be a name (from CLI), expected.projectId is always an ID
+        
+        // If currentProjectId is a name (string from CLI), check cache to resolve to ID
+        let resolvedProjectId = currentProjectId;
+        if (currentProjectId && typeof currentContext?.project === 'string') {
+            const cachedProject = deps.cacheManager.getCachedProject();
+            if (cachedProject?.id) {
+                resolvedProjectId = cachedProject.id;
+                debugLogger.trace(`[Context Ops] Resolved project name "${currentProjectId}" to ID: ${resolvedProjectId}`);
+            } else {
+                debugLogger.trace(`[Context Ops] Cannot resolve project name "${currentProjectId}" - no cached project`);
+            }
+        }
+        
+        if (resolvedProjectId !== expected.projectId) {
             debugLogger.debug(
-                `[Context Ops] Context sync: project mismatch (current: "${currentProjectId || 'none'}"), re-selecting...`,
+                `[Context Ops] Context sync: project mismatch (current: "${resolvedProjectId || currentProjectId || 'none'}"), re-selecting...`,
             );
             const projectSelected = await doSelectProject(expected.projectId);
             if (!projectSelected) {

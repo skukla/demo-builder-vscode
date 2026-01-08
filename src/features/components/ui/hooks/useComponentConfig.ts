@@ -21,7 +21,16 @@ interface ComponentData {
     configuration?: {
         requiredEnvVars?: string[];
         optionalEnvVars?: string[];
+        requiredServices?: string[];
     };
+}
+
+interface ServiceDefinition {
+    id: string;
+    name: string;
+    backendSpecific?: boolean;
+    requiredEnvVars?: string[];
+    requiredEnvVarsByBackend?: Record<string, string[]>;
 }
 
 interface ComponentsData {
@@ -31,6 +40,7 @@ interface ComponentsData {
     integrations?: ComponentData[];
     appBuilder?: ComponentData[];
     envVars?: Record<string, ComponentEnvVar>;
+    services?: Record<string, ServiceDefinition>;
 }
 
 export interface UniqueField extends ComponentEnvVar {
@@ -233,8 +243,30 @@ export function useComponentConfig({
                 }
             };
 
+            // Use centralized env var resolution (includes component vars + service vars)
+            // Note: Can't use resolveComponentEnvVars() here directly because we're in browser context
+            // and need to use componentsData (loaded via vscode.request), not ComponentRegistryManager
+            
+            // Add component's own env vars
             data.configuration?.requiredEnvVars?.forEach(addField);
             data.configuration?.optionalEnvVars?.forEach(addField);
+
+            // Add backend-specific service env vars using inline resolution
+            // (This logic mirrors resolveComponentEnvVars but uses browser-loaded componentsData)
+            if (data.configuration?.requiredServices && state.components?.backend) {
+                const backendId = state.components.backend;
+                data.configuration.requiredServices.forEach(serviceId => {
+                    const serviceDef = componentsData.services?.[serviceId];
+                    if (serviceDef?.backendSpecific && serviceDef.requiredEnvVarsByBackend) {
+                        const backendSpecificVars = serviceDef.requiredEnvVarsByBackend[backendId];
+                        if (backendSpecificVars) {
+                            backendSpecificVars.forEach(addField);
+                        }
+                    } else if (serviceDef?.requiredEnvVars) {
+                        serviceDef.requiredEnvVars.forEach(addField);
+                    }
+                });
+            }
         });
 
         const groups: Record<string, UniqueField[]> = {};
@@ -245,7 +277,7 @@ export function useComponentConfig({
             groups[groupKey].push(field);
         });
 
-        return SERVICE_GROUP_DEFS
+            return SERVICE_GROUP_DEFS
             .map(def => toServiceGroupWithSortedFields(def, groups))
             .filter(group => group.fields.length > 0)
             .sort((a, b) => {
@@ -253,7 +285,7 @@ export function useComponentConfig({
                 const bOrder = SERVICE_GROUP_DEFS.find(d => d.id === b.id)?.order || 99;
                 return aOrder - bOrder;
             });
-    }, [selectedComponents, componentsData.envVars]);
+    }, [selectedComponents, componentsData.envVars, componentsData.services, state.components]);
 
     // Initialize defaults (field defaults + brand-specific defaults)
     useEffect(() => {

@@ -116,11 +116,7 @@ export function useDashboardActions({
     }, [isOpeningBrowser, setIsOpeningBrowser]);
 
     const handleOpenLiveSite = useCallback(() => {
-        console.log('[Dashboard] handleOpenLiveSite called, edsLiveUrl:', edsLiveUrl);
-        if (isOpeningBrowser || !edsLiveUrl) {
-            console.warn('[Dashboard] Cannot open live site - isOpeningBrowser:', isOpeningBrowser, 'edsLiveUrl:', edsLiveUrl);
-            return;
-        }
+        if (isOpeningBrowser || !edsLiveUrl) return; // Prevent double-click or missing URL
         setIsOpeningBrowser(true);
         webviewClient.postMessage('openLiveSite', { url: edsLiveUrl });
         // Re-enable after delay
@@ -128,11 +124,7 @@ export function useDashboardActions({
     }, [isOpeningBrowser, setIsOpeningBrowser, edsLiveUrl]);
 
     const handleOpenDaLive = useCallback(() => {
-        console.log('[Dashboard] handleOpenDaLive called, edsDaLiveUrl:', edsDaLiveUrl);
-        if (isOpeningBrowser || !edsDaLiveUrl) {
-            console.warn('[Dashboard] Cannot open DA.live - isOpeningBrowser:', isOpeningBrowser, 'edsDaLiveUrl:', edsDaLiveUrl);
-            return;
-        }
+        if (isOpeningBrowser || !edsDaLiveUrl) return; // Prevent double-click or missing URL
         setIsOpeningBrowser(true);
         webviewClient.postMessage('openDaLive', { url: edsDaLiveUrl });
         // Re-enable after delay

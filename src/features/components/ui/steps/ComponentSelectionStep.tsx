@@ -39,6 +39,8 @@ interface ComponentsData {
     backends?: PickerOption[];
     integrations?: PickerOption[];
     appBuilder?: PickerOption[];
+    addons?: Array<{ id: string; name: string; configuration?: { providesServices?: string[] } }>;
+    services?: Record<string, { id: string; name: string }>;
 }
 
 // Required frontend dependencies (always selected, locked)
@@ -49,12 +51,6 @@ const FRONTEND_DEPENDENCIES: ComponentOption[] = [
 // Optional frontend addons (pre-selected by default, user can uncheck)
 const FRONTEND_ADDONS: ComponentOption[] = [
     { id: 'demo-inspector', name: 'Demo Inspector' },
-];
-
-// Required backend services (always selected, locked)
-const BACKEND_SERVICES: ComponentOption[] = [
-    { id: 'catalog-service', name: 'Catalog Service' },
-    { id: 'live-search', name: 'Live Search' },
 ];
 
 // Default options (used if componentsData not provided)
@@ -84,6 +80,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         setSelectedBackend,
         selectedDependencies,
         selectedServices,
+        servicesToShow,
         // Note: selectedIntegrations, selectedAppBuilder, handleIntegrationToggle, handleAppBuilderToggle
         // are still available from the hook but not destructured since sections were removed
         handleDependencyToggle,
@@ -94,7 +91,12 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         setCanProceed,
         frontendDependencies: FRONTEND_DEPENDENCIES,
         frontendAddons: FRONTEND_ADDONS,
-        backendServices: BACKEND_SERVICES,
+        componentsData: (componentsData || {}) as {
+            backends?: Array<{ id: string; configuration?: { requiredServices?: string[]; providesServices?: string[] } }>;
+            addons?: Array<{ id: string; configuration?: { providesServices?: string[] } }>;
+            services?: Record<string, { id: string; name: string }>;
+        },
+        selectedAddons: state.selectedAddons,
     });
 
     // Get options from data or use defaults
@@ -197,10 +199,10 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                             ))}
                         </Picker>
                     </ErrorBoundary>
-                    {selectedBackend && (
+                    {selectedBackend && servicesToShow.length > 0 && (
                         <View marginTop="size-150">
-                            {/* All backend services are required (locked) */}
-                            {BACKEND_SERVICES.map(svc => (
+                            {/* Required backend services (dynamically resolved) */}
+                            {servicesToShow.map(svc => (
                                 <Checkbox
                                     key={svc.id}
                                     isSelected={selectedServices.has(svc.id)}

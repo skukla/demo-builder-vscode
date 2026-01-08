@@ -4,8 +4,9 @@
  */
 
 export { formatGroupName } from './formatters';
-export { generateComponentEnvFile, EnvGenerationConfig } from './envFileGenerator';
+export { generateComponentEnvFile, generateComponentConfigFiles } from './envFileGenerator';
 export { getSetupInstructions, SetupInstruction } from './setupInstructions';
+export { ProjectSetupContext } from '../services/ProjectSetupContext';
 export { getEndpoint } from '@/features/mesh/services/meshEndpoint';
 export { deployMeshComponent, MeshDeploymentResult } from '@/features/mesh/services/meshDeployment';
 

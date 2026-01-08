@@ -1,13 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useDebouncedValue, useSetToggle } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WizardState } from '@/types/webview';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
+import { resolveServices } from '@/features/components/services/serviceResolver';
+import { RawComponentDefinition } from '@/types/components';
 
 /** Component option for required dependencies or services */
 interface ComponentOption {
     id: string;
     name: string;
+}
+
+interface ComponentsData {
+    backends?: RawComponentDefinition[];
+    addons?: RawComponentDefinition[];
+    services?: Record<string, { id: string; name: string }>;
 }
 
 interface UseComponentSelectionProps {
@@ -18,8 +26,10 @@ interface UseComponentSelectionProps {
     frontendDependencies: ComponentOption[];
     /** Optional frontend addons (pre-selected by default, user can uncheck) */
     frontendAddons: ComponentOption[];
-    /** Required backend services (always selected, locked) */
-    backendServices: ComponentOption[];
+    /** Components data from registry (for service resolution) */
+    componentsData?: ComponentsData;
+    /** Selected addons from state (for service resolution) */
+    selectedAddons?: string[];
 }
 
 interface UseComponentSelectionReturn {
@@ -35,6 +45,8 @@ interface UseComponentSelectionReturn {
     handleServiceToggle: (id: string, selected: boolean) => void;
     handleIntegrationToggle: (id: string, selected: boolean) => void;
     handleAppBuilderToggle: (id: string, selected: boolean) => void;
+    /** Services that need to be shown in the UI (missing services that need to be added) */
+    servicesToShow: ComponentOption[];
 }
 
 export function useComponentSelection({
@@ -43,7 +55,8 @@ export function useComponentSelection({
     setCanProceed,
     frontendDependencies,
     frontendAddons,
-    backendServices,
+    componentsData,
+    selectedAddons = [],
 }: UseComponentSelectionProps): UseComponentSelectionReturn {
     // Initialize from state (includes defaults from init)
     const [selectedFrontend, setSelectedFrontend] = useState<string>(state.components?.frontend || '');
@@ -62,6 +75,33 @@ export function useComponentSelection({
     const [selectedAppBuilder, handleAppBuilderToggle] = useSetToggle<string>(
         state.components?.appBuilder || [],
     );
+
+    // Dynamically resolve which services need to be shown based on backend and addons
+    const servicesToShow = useMemo<ComponentOption[]>(() => {
+        if (!selectedBackend || !componentsData) {
+            return [];
+        }
+
+        // Find the selected backend definition
+        const backend = componentsData.backends?.find(b => b.id === selectedBackend);
+        if (!backend) {
+            return [];
+        }
+
+        // Find selected addon definitions
+        const addons = componentsData.addons?.filter(a => selectedAddons.includes(a.id)) || [];
+
+        // Resolve missing services using the service resolution algorithm
+        const { missingServices } = resolveServices(backend, addons, []);
+
+        // Map missing service IDs to ComponentOptions with names from the services registry
+        return missingServices
+            .map(serviceId => {
+                const service = componentsData.services?.[serviceId];
+                return service ? { id: serviceId, name: service.name } : null;
+            })
+            .filter((svc): svc is ComponentOption => svc !== null);
+    }, [selectedBackend, selectedAddons, componentsData]);
 
     // Track last sent selection to prevent duplicate messages
     const lastSentSelectionRef = useRef<string>('');
@@ -90,18 +130,23 @@ export function useComponentSelection({
         }
     }, [selectedFrontend, frontendDependencies, frontendAddons]);
 
-    // Initialize required services when backend changes
+    // Initialize required services when backend changes or addons change
+    // Services are now dynamically determined based on what's missing
     useEffect(() => {
-        if (selectedBackend) {
-            // All backend services are required (locked)
-            const servicesToAdd = backendServices.map(s => s.id);
+        if (selectedBackend && servicesToShow.length > 0) {
+            // Add all missing services (they're required)
+            const serviceIds = servicesToShow.map(s => s.id);
             setSelectedServices(prev => {
                 const newSet = new Set(prev);
-                servicesToAdd.forEach(service => newSet.add(service));
+                serviceIds.forEach(service => newSet.add(service));
                 return newSet;
             });
+        } else if (selectedBackend && servicesToShow.length === 0) {
+            // No services needed (e.g., ACCS backend or PaaS + ACO)
+            // Clear services since backend/addons provide everything
+            setSelectedServices(new Set());
         }
-    }, [selectedBackend, backendServices]);
+    }, [selectedBackend, servicesToShow, setSelectedServices]);
 
     // Update parent state and canProceed using debounced values
     useEffect(() => {
@@ -142,5 +187,6 @@ export function useComponentSelection({
         handleServiceToggle,
         handleIntegrationToggle,
         handleAppBuilderToggle,
+        servicesToShow,
     };
 }

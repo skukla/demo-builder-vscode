@@ -71,7 +71,6 @@ export class AdobeEntitySelector {
         // Check organization context
         const currentOrgId = this.extractContextId(context?.org);
         if (expected.orgId && currentOrgId !== expected.orgId) {
-            // Note: currentOrgId may be a name (from CLI), expected.orgId is always an ID
             this.debugLogger.debug(
                 `[Entity Selector] Context sync: org mismatch (current: "${currentOrgId || 'none'}"), re-selecting...`,
             );
@@ -86,10 +85,22 @@ export class AdobeEntitySelector {
         if (expected.projectId) {
             const currentContext = expected.orgId ? await this.resolver.getConsoleWhereContext() : context;
             const currentProjectId = this.extractContextId(currentContext?.project);
-            if (currentProjectId !== expected.projectId) {
-                // Note: currentProjectId may be a name (from CLI), expected.projectId is always an ID
+            
+            // If currentProjectId is a name (string from CLI), check cache to resolve to ID
+            let resolvedProjectId = currentProjectId;
+            if (currentProjectId && typeof currentContext?.project === 'string') {
+                const cachedProject = this.cacheManager.getCachedProject();
+                if (cachedProject?.id) {
+                    resolvedProjectId = cachedProject.id;
+                    this.debugLogger.trace(`[Entity Selector] Resolved project name "${currentProjectId}" to ID: ${resolvedProjectId}`);
+                } else {
+                    this.debugLogger.trace(`[Entity Selector] Cannot resolve project name "${currentProjectId}" - no cached project`);
+                }
+            }
+            
+            if (resolvedProjectId !== expected.projectId) {
                 this.debugLogger.debug(
-                    `[Entity Selector] Context sync: project mismatch (current: "${currentProjectId || 'none'}"), re-selecting...`,
+                    `[Entity Selector] Context sync: project mismatch (current: "${resolvedProjectId || currentProjectId || 'none'}"), re-selecting...`,
                 );
                 const projectSelected = await this.doSelectProject(expected.projectId);
                 if (!projectSelected) {

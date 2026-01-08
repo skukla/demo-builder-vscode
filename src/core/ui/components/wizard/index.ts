@@ -5,6 +5,7 @@
  */
 
 export { ConfigurationSummary } from './ConfigurationSummary';
+export { StatusSection, type StatusSectionProps } from './StatusSection';
 export { getStepStatus } from './stepStatusHelpers';
 export {
     renderApiMeshStatus,

@@ -21,7 +21,7 @@ export class ComponentUpdater {
     /**
    * Update a component to a specific version with automatic rollback on failure
    * - Prevents concurrent updates to same component
-   * - ALWAYS creates snapshot before update (for rollback safety)
+   * - ALWAYS creates snapshot before update (excludes node_modules for speed - can be reinstalled)
    * - Downloads and extracts new version
    * - Verifies component structure post-extraction
    * - Merges .env files (preserves user config)
@@ -54,9 +54,15 @@ export class ComponentUpdater {
             const snapshotPath = `${component.path}.snapshot-${Date.now()}`;
 
             try {
-                // 1. Create pre-update snapshot (full directory backup)
+                // 1. Create pre-update snapshot (exclude node_modules for speed)
                 this.logger.debug(`[Updates] Creating snapshot at ${snapshotPath}`);
-                await fs.cp(component.path, snapshotPath, { recursive: true });
+                await fs.cp(component.path, snapshotPath, { 
+                    recursive: true,
+                    filter: (src: string) => {
+                        // Exclude node_modules - can be regenerated with npm install
+                        return !src.includes('node_modules');
+                    }
+                });
 
                 // 2. Preserve .env file(s) for merge
                 const envFiles = await this.backupEnvFiles(component.path);
@@ -103,6 +109,38 @@ export class ComponentUpdater {
                     await fs.rename(snapshotPath, component.path);
           
                     this.logger.debug('[Updates] Rollback successful - component restored to previous state');
+          
+                    // Reinstall node_modules (not included in snapshot)
+                    this.logger.debug('[Updates] Reinstalling dependencies after rollback...');
+                    const { ServiceLocator } = await import('@/core/di');
+                    const commandManager = ServiceLocator.getCommandExecutor();
+                    
+                    // Try to get node version from registry, but don't fail if we can't
+                    // During rollback, we just want to get dependencies installed
+                    let nodeVersion: string | null = null;
+                    try {
+                        const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
+                        const registryManager = new ComponentRegistryManager(this.extensionPath, this.logger);
+                        const registry = await registryManager.loadRegistry();
+                        const componentDef = registry.definitions[componentId];
+                        nodeVersion = componentDef?.configuration?.nodeVersion || null;
+                    } catch (error) {
+                        this.logger.debug('[Updates] Could not determine node version from registry, using default');
+                    }
+                    
+                    const installResult = await commandManager.execute('npm install --no-fund --prefer-offline', {
+                        cwd: component.path,
+                        timeout: TIMEOUTS.VERY_LONG,
+                        shell: DEFAULT_SHELL,
+                        enhancePath: true,
+                        useNodeVersion: nodeVersion,
+                    });
+                    
+                    if (installResult.code !== 0) {
+                        this.logger.warn(`[Updates] Failed to reinstall dependencies after rollback: ${installResult.stderr}`);
+                    } else {
+                        this.logger.debug('[Updates] ✓ Dependencies reinstalled');
+                    }
           
                     // RESILIENCE: Format user-friendly error message
                     throw new Error(this.formatUpdateError(error as Error));

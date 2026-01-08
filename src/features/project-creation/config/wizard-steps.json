@@ -61,7 +61,7 @@
     },
     {
       "id": "eds-data-source",
-      "name": "DA.live Project",
+      "name": "Content Configuration",
       "description": "Select or create a DA.live site for your content.",
       "enabled": true,
       "condition": {
