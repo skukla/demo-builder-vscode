@@ -113,6 +113,7 @@ export class ProjectConfigWriter {
                 components: getComponentIds(project.componentInstances),
                 selectedPackage: project.selectedPackage,
                 selectedStack: project.selectedStack,
+                selectedAddons: project.selectedAddons,
             };
 
             // Atomic write: write to temp file first, then rename

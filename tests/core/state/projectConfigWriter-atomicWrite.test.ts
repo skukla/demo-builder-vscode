@@ -156,5 +156,31 @@ describe('ProjectConfigWriter atomic writes', () => {
             expect(parsed.version).toBe('1.0.0');
             expect(parsed.adobe).toBeDefined();
         });
+
+        it('should include selectedAddons in manifest', async () => {
+            // Given: A project with selectedAddons (e.g., demo-inspector)
+            const project = createTestProject({
+                name: 'project-with-addons',
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+                selectedAddons: ['demo-inspector', 'adobe-commerce-aco'],
+            });
+
+            // When: Saving project config
+            await writer.saveProjectConfig(project, project.path);
+
+            // Then: Written content should include selectedAddons
+            const writeCall = mockFs.writeFile.mock.calls.find(
+                (call) => call[0].toString().endsWith('.tmp'),
+            );
+            expect(writeCall).toBeDefined();
+
+            const writtenContent = writeCall![1] as string;
+            const parsed = JSON.parse(writtenContent);
+
+            expect(parsed.selectedPackage).toBe('citisignal');
+            expect(parsed.selectedStack).toBe('eds-paas');
+            expect(parsed.selectedAddons).toEqual(['demo-inspector', 'adobe-commerce-aco']);
+        });
     });
 });
