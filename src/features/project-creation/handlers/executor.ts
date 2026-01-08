@@ -275,6 +275,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             const { EdsProjectService } = await import('@/features/eds/services/edsProjectService');
             const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
             const { GitHubRepoOperations } = await import('@/features/eds/services/githubRepoOperations');
+            const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
             const { DaLiveOrgOperations } = await import('@/features/eds/services/daLiveOrgOperations');
             const { DaLiveContentOperations } = await import('@/features/eds/services/daLiveContentOperations');
             const { ComponentManager } = await import('@/features/components/services/componentManager');
@@ -291,9 +292,11 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             // GitHub services
             const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
             const githubRepoOperations = new GitHubRepoOperations(githubTokenService, context.logger);
+            const githubFileOperations = new GitHubFileOperations(githubTokenService, context.logger);
             const githubServices = {
                 tokenService: githubTokenService,
                 repoOperations: githubRepoOperations,
+                fileOperations: githubFileOperations,
             };
 
             // DA.live services
