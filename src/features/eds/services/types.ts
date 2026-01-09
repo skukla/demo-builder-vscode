@@ -265,6 +265,10 @@ export interface EdsProjectConfig {
     daLiveOrg: string;
     /** DA.live site name */
     daLiveSite: string;
+    /** Template repository owner (GitHub username or org) */
+    templateOwner?: string;
+    /** Template repository name */
+    templateRepo?: string;
     /** Selected backend component ID (from stack definition) */
     backendComponentId: string;
     /** Backend environment variables (from componentConfigs) */

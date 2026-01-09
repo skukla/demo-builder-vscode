@@ -35,23 +35,47 @@ import type {
     EdsProjectSetupResult,
 } from '@/features/eds/services/types';
 import { GitHubAppNotInstalledError, EDS_COMPONENT_ID } from '@/features/eds/services/types';
+import { updateConfigJsonWithMesh } from '@/features/eds/services/edsSetupPhases';
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
 /**
+ * Parse GitHub URL to extract owner and repo name
+ * Handles formats: https://github.com/owner/repo or https://github.com/owner/repo.git
+ */
+function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
+    try {
+        const urlObj = new URL(url);
+        if (urlObj.hostname !== 'github.com') {
+            return null;
+        }
+        const parts = urlObj.pathname.split('/').filter(Boolean);
+        if (parts.length >= 2) {
+            return {
+                owner: parts[0],
+                repo: parts[1].replace(/\.git$/, ''),
+            };
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Map EDS setup phase to user-friendly operation name
  */
 function getEdsOperationName(phase: string): string {
     const phaseMap: Record<string, string> = {
-        'github-repo': 'GitHub Repository',
+        'github-repo': 'Creating Repository',
         'github-clone': 'Cloning Repository',
-        'helix-config': 'Helix Configuration',
-        'code-sync': 'Code Sync Verification',
-        'dalive-content': 'DA.live Content',
-        'tools-clone': 'Ingestion Tool',
-        'env-config': 'Environment Setup',
+        'helix-config': 'Configuring Helix',
+        'code-sync': 'Verifying Code Sync',
+        'dalive-content': 'Copying Content',
+        'tools-clone': 'Installing Tools',
+        'env-config': 'Configuring Environment',
         'complete': 'EDS Setup Complete',
     };
     return phaseMap[phase] || 'EDS Setup';
@@ -207,6 +231,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         componentConfigs: (typedConfig.componentConfigs || {}) as Record<string, Record<string, string | number | boolean | undefined>>,
         selectedPackage: typedConfig.selectedPackage,
         selectedStack: typedConfig.selectedStack,
+        selectedAddons: typedConfig.selectedAddons,
         // Note: componentVersions, meshState, etc. are NOT preserved during edit
         // - componentVersions: Regenerated from fresh component installation
         // - meshState: Must be clean slate - old sourceHash won't match fresh files
@@ -236,9 +261,20 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             // Get backend component ID from component selections (set by stack)
             const backendComponentId = typedConfig.components?.backend || '';
             const meshEndpoint = typedConfig.apiMesh?.endpoint;
-            
+
+            // Parse template owner/repo from frontendSource URL (configuration-driven, not hardcoded)
+            const templateInfo = typedConfig.frontendSource?.url
+                ? parseGitHubUrl(typedConfig.frontendSource.url)
+                : null;
+
+            if (templateInfo) {
+                context.logger.debug(`[EDS Setup] Template: ${templateInfo.owner}/${templateInfo.repo} (from frontendSource)`);
+            } else {
+                context.logger.warn(`[EDS Setup] No template info in frontendSource - will use fallback`);
+            }
+
             context.logger.debug(`[EDS Setup] Backend component: ${backendComponentId}, Mesh endpoint: ${meshEndpoint || 'N/A'}`);
-            
+
             const edsProjectConfig: EdsProjectConfig = {
                 projectName: typedConfig.projectName,
                 projectPath,
@@ -246,6 +282,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 repoName: typedConfig.edsConfig.repoName,
                 daLiveOrg: typedConfig.edsConfig.daLiveOrg,
                 daLiveSite: typedConfig.edsConfig.daLiveSite,
+                templateOwner: templateInfo?.owner,
+                templateRepo: templateInfo?.repo,
                 backendComponentId,
                 backendEnvVars: typedConfig.componentConfigs?.[backendComponentId],
                 accsEndpoint: typedConfig.edsConfig.accsEndpoint,
@@ -530,9 +568,81 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     }
 
     // ========================================================================
+    // EDS POST-MESH: Update config.json with mesh endpoint and push to GitHub
+    // ========================================================================
+    //
+    // CRITICAL: EDS setup runs BEFORE mesh deployment, so config.json was
+    // pushed to GitHub with an EMPTY commerce-core-endpoint. Now that mesh
+    // deployment is complete, we need to:
+    // 1. Update local config.json with the actual mesh endpoint
+    // 2. Re-push config.json to GitHub for the EDS runtime to access
+
+    if (isEdsStack && edsResult?.success && project.meshState?.endpoint) {
+        const isPaasBackend = typedConfig.components?.backend === 'adobe-commerce-paas';
+
+        if (isPaasBackend) {
+            progressTracker('Updating EDS Config', 86, 'Updating config.json with mesh endpoint...');
+            context.logger.info('[EDS Post-Mesh] Updating config.json with mesh endpoint');
+
+            try {
+                // Step 1: Update local config.json with mesh endpoint
+                await updateConfigJsonWithMesh(edsComponentPath, project.meshState.endpoint, context.logger);
+                context.logger.debug('[EDS Post-Mesh] Local config.json updated');
+
+                // Step 2: Re-push config.json to GitHub
+                // Re-instantiate GitHub file operations (services were local to EDS setup block)
+                const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
+                const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
+
+                const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
+                const githubFileOperations = new GitHubFileOperations(githubTokenService, context.logger);
+
+                // Get repo info from EDS result
+                const repoUrl = edsResult.repoUrl;
+                if (repoUrl) {
+                    const repoInfo = parseGitHubUrl(repoUrl);
+                    if (repoInfo) {
+                        // Read updated config.json
+                        const configJsonPath = path.join(edsComponentPath, 'config.json');
+                        const fs = await import('fs/promises');
+                        const content = await fs.readFile(configJsonPath, 'utf-8');
+
+                        // Get existing file SHA for update (required by GitHub API)
+                        const existingFile = await githubFileOperations.getFileContent(
+                            repoInfo.owner,
+                            repoInfo.repo,
+                            'config.json',
+                        );
+
+                        // Push updated config.json to GitHub
+                        await githubFileOperations.createOrUpdateFile(
+                            repoInfo.owner,
+                            repoInfo.repo,
+                            'config.json',
+                            content,
+                            'chore: update config.json with mesh endpoint',
+                            existingFile?.sha,
+                        );
+
+                        context.logger.info('[EDS Post-Mesh] config.json pushed to GitHub with mesh endpoint');
+                    } else {
+                        context.logger.warn('[EDS Post-Mesh] Could not parse repo URL, skipping GitHub push');
+                    }
+                } else {
+                    context.logger.warn('[EDS Post-Mesh] No repo URL available, skipping GitHub push');
+                }
+            } catch (error) {
+                // Log error but don't fail project creation - mesh and local files are correct
+                context.logger.error('[EDS Post-Mesh] Failed to update config.json on GitHub', error as Error);
+                context.logger.warn('[EDS Post-Mesh] The site may show a configuration error until config.json is manually updated');
+            }
+        }
+    }
+
+    // ========================================================================
     // PHASE 4-5: FINALIZATION
     // ========================================================================
-    // 
+    //
     // Phase 4 now generates ALL config files (.env + site.json) using the
     // component registry pattern. EDS site.json is generated via configFiles
     // definition in components.json, eliminating custom hooks.

@@ -45,13 +45,6 @@ export interface GitHubServicesForPhases {
 }
 
 // Constants
-// Demo System Stores CitiSignal template (EDS + Adobe Commerce)
-// https://github.com/demo-system-stores/accs-citisignal
-const CITISIGNAL_TEMPLATE = {
-    owner: 'demo-system-stores',
-    repo: 'accs-citisignal',
-};
-
 const INGESTION_TOOL_DEF = {
     id: 'commerce-demo-ingestion',
     name: 'Commerce Demo Ingestion',
@@ -91,14 +84,23 @@ export class GitHubRepoPhase {
     }
 
     async createFromTemplate(config: EdsProjectConfig): Promise<GitHubRepo> {
-        this.logger.debug(`[EDS] Creating repository: ${config.repoName}`);
+        // Template must be provided via configuration (demo-packages.json → frontendSource)
+        if (!config.templateOwner || !config.templateRepo) {
+            throw new EdsProjectError(
+                'Template repository not configured. Ensure frontendSource is defined in demo-packages.json ' +
+                'with a valid GitHub URL (e.g., https://github.com/owner/repo)',
+                'github-repo',
+            );
+        }
+
+        this.logger.debug(`[EDS] Creating repository: ${config.repoName} from template: ${config.templateOwner}/${config.templateRepo}`);
 
         try {
             // GitHub's template API returns 201 when request is accepted, but
             // the actual template copy happens asynchronously on GitHub's side.
             const repo = await this.repoOperations.createFromTemplate(
-                CITISIGNAL_TEMPLATE.owner,
-                CITISIGNAL_TEMPLATE.repo,
+                config.templateOwner,
+                config.templateRepo,
                 config.repoName,
                 config.isPrivate ?? false,
             );
@@ -518,25 +520,26 @@ export class EnvConfigPhase {
     constructor(private logger: Logger) {}
 
     /**
-     * Generate site.json configuration file for EDS runtime
+     * Generate config.json configuration file for EDS runtime
      * This is required for PaaS backend projects to configure commerce endpoints
-     * 
+     *
      * Uses shared config file generation pattern (same as .env generation conceptually).
-     * NOTE: Creates site.json even if mesh endpoint is not yet available (will be updated post-mesh)
+     * NOTE: Creates config.json even if mesh endpoint is not yet available (will be updated post-mesh)
      */
-    async generateSiteJson(config: EdsProjectConfig): Promise<void> {
-        // Only generate site.json for PaaS backends (adobe-commerce-paas)
+    async generateConfigJson(config: EdsProjectConfig): Promise<void> {
+        // Only generate config.json for PaaS backends (adobe-commerce-paas)
         const isPaasBackend = config.backendComponentId === 'adobe-commerce-paas';
-        
+
         if (!isPaasBackend) {
-            this.logger.debug(`[EDS] Skipping site.json generation (backend: ${config.backendComponentId})`);
+            this.logger.debug(`[EDS] Skipping config.json generation (backend: ${config.backendComponentId})`);
             return;
         }
 
         const hasMeshEndpoint = !!config.meshEndpoint;
-        this.logger.info(`[EDS] Generating site.json for PaaS backend (mesh endpoint ${hasMeshEndpoint ? 'available' : 'pending'})`);
+        this.logger.info(`[EDS] Generating config.json for PaaS backend (mesh endpoint ${hasMeshEndpoint ? 'available' : 'pending'})`);
 
-        const siteJsonPath = path.join(config.componentPath, 'site.json');
+        const configJsonPath = path.join(config.componentPath, 'config.json');
+        // Template is named default-site.json in the citisignal repo, but we output to config.json
         const templatePath = path.join(config.componentPath, 'default-site.json');
 
         // Extract backend env vars (with type safety)
@@ -550,7 +553,7 @@ export class EnvConfigPhase {
         try {
             // Use shared config file generator
             await generateConfigFile({
-                filePath: siteJsonPath,
+                filePath: configJsonPath,
                 templatePath,
                 defaultConfig: {
                     'commerce-core-endpoint': '',
@@ -571,17 +574,17 @@ export class EnvConfigPhase {
                     '{REPO}': config.repoName,
                 },
                 logger: this.logger,
-                description: 'EDS runtime configuration (site.json)',
+                description: 'EDS runtime configuration (config.json)',
             });
 
             if (config.meshEndpoint) {
-                this.logger.info('[EDS] Generated site.json with mesh endpoint');
+                this.logger.info('[EDS] Generated config.json with mesh endpoint');
             } else {
-                this.logger.info('[EDS] Generated site.json template (mesh endpoint will be added post-deployment)');
+                this.logger.info('[EDS] Generated config.json template (mesh endpoint will be added post-deployment)');
             }
         } catch (error) {
             throw new EdsProjectError(
-                `Failed to generate site.json: ${(error as Error).message}`,
+                `Failed to generate config.json: ${(error as Error).message}`,
                 'env-config',
                 error as Error,
             );
@@ -595,37 +598,37 @@ export class EnvConfigPhase {
      * - Uses sharedEnvVars registry for field definitions
      * - Auto-populates MESH_ENDPOINT from project.meshState.endpoint
      * - Applies standard priority order: runtime → wizard → defaults
-     * 
+     *
      * No custom .env generation needed here!
      */
 }
 
 /**
- * Update site.json with mesh endpoint after mesh deployment
+ * Update config.json with mesh endpoint after mesh deployment
  * This is called post-mesh to fill in the commerce-core-endpoint
- * 
+ *
  * Uses shared config file update pattern (consistent with generation).
  * NOTE: .env update is NOT needed - Phase 4's generateComponentEnvFile()
  * handles that using the standard pattern with project.meshState.endpoint
  */
-export async function updateSiteJsonWithMesh(
+export async function updateConfigJsonWithMesh(
     componentPath: string,
     meshEndpoint: string,
     logger: Logger,
 ): Promise<void> {
-    logger.info('[EDS] Updating site.json with mesh endpoint');
+    logger.info('[EDS] Updating config.json with mesh endpoint');
 
-    const siteJsonPath = path.join(componentPath, 'site.json');
-    
+    const configJsonPath = path.join(componentPath, 'config.json');
+
     // Use shared config file updater
     await updateConfigFile(
-        siteJsonPath,
+        configJsonPath,
         {
             'commerce-core-endpoint': meshEndpoint,
             'commerce-endpoint': 'https://catalog-service.adobe.io/graphql',
         },
         logger,
-        'EDS runtime configuration (site.json)',
+        'EDS runtime configuration (config.json)',
     );
 }
 
