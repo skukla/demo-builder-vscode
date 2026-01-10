@@ -15,6 +15,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateURL } from '@/core/validation';
 import { PollingService } from '@/core/shell/pollingService';
 import { generateConfigFile, updateConfigFile } from '@/core/config/configFileGenerator';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
@@ -514,10 +515,70 @@ export class ContentPhase {
 }
 
 /**
+ * Store configuration IDs from Commerce storeConfig query
+ * Used for dynamic ID lookup instead of hardcoded defaults
+ */
+interface StoreConfig {
+    storeViewId: string;
+    websiteId: string;
+    rootCategoryId: string;
+}
+
+/**
  * Environment Configuration Phase
  */
 export class EnvConfigPhase {
     constructor(private logger: Logger) {}
+
+    /**
+     * Fetch store configuration IDs from Commerce GraphQL endpoint
+     * Uses publicly accessible storeConfig query (no auth required)
+     *
+     * @param graphqlEndpoint - Full GraphQL URL (e.g., https://commerce.example.com/graphql)
+     * @returns StoreConfig if successful, null on any error
+     */
+    private async fetchStoreConfig(graphqlEndpoint: string): Promise<StoreConfig | null> {
+        try {
+            // SECURITY: Validate URL before making external request (SSRF prevention)
+            // Defense-in-depth: meshEndpoint is system-generated but could be tampered with
+            validateURL(graphqlEndpoint);
+
+            const response = await fetch(graphqlEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: '{ storeConfig { id website_id root_category_id } }',
+                }),
+                signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
+            });
+
+            if (!response.ok) {
+                this.logger.debug(`[EDS] storeConfig fetch failed: ${response.status}`);
+                return null;
+            }
+
+            const json = await response.json();
+            const config = json?.data?.storeConfig;
+
+            // Validate all required fields exist (allowing 0 as valid value)
+            // Uses == null to check for both undefined and null
+            if (config?.id == null || config?.website_id == null || config?.root_category_id == null) {
+                this.logger.debug('[EDS] storeConfig response missing required fields');
+                return null;
+            }
+
+            return {
+                storeViewId: String(config.id),
+                websiteId: String(config.website_id),
+                rootCategoryId: String(config.root_category_id),
+            };
+        } catch (error) {
+            this.logger.debug(`[EDS] storeConfig fetch error: ${(error as Error).message}`);
+            return null;
+        }
+    }
 
     /**
      * Generate config.json configuration file for EDS runtime
@@ -543,12 +604,13 @@ export class EnvConfigPhase {
         const templatePath = path.join(config.componentPath, 'default-site.json');
 
         // Extract backend env vars (with type safety)
+        // Store codes are required - collected from user in Settings Collection step
         const backendEnv = config.backendEnvVars || {};
         const commerceApiKey = String(backendEnv.ADOBE_CATALOG_API_KEY || '');
         const commerceEnvironmentId = String(backendEnv.ADOBE_COMMERCE_ENVIRONMENT_ID || '');
-        const storeViewCode = String(backendEnv.ADOBE_COMMERCE_STORE_VIEW_CODE || 'default');
-        const websiteCode = String(backendEnv.ADOBE_COMMERCE_WEBSITE_CODE || 'base');
-        const storeCode = String(backendEnv.ADOBE_COMMERCE_STORE_CODE || 'main_website_store');
+        const storeViewCode = String(backendEnv.ADOBE_COMMERCE_STORE_VIEW_CODE || '');
+        const websiteCode = String(backendEnv.ADOBE_COMMERCE_WEBSITE_CODE || '');
+        const storeCode = String(backendEnv.ADOBE_COMMERCE_STORE_CODE || '');
 
         // Build additional placeholder values
         // DA.live content source URL (used for content federation)
@@ -556,13 +618,28 @@ export class EnvConfigPhase {
         // Live domain URL for analytics and CDN config
         const liveDomain = `main--${config.repoName}--${config.githubOwner}.aem.live`;
 
-        // Commerce store numeric IDs (defaults for demo environments)
-        // These are internal Magento IDs, typically "1" for default store setup
+        // Commerce store numeric IDs
+        // Attempt dynamic lookup via storeConfig GraphQL query, fall back to demo defaults
+        // Note: storeId remains hardcoded - not available via storeConfig query
         const storeId = '1';
-        const storeViewId = '1';
-        const websiteId = '1';
-        // Root category ID for product picker (category 2 is typical default after root)
-        const rootCategoryId = '2';
+        let storeViewId = '1';
+        let websiteId = '1';
+        let rootCategoryId = '2';
+
+        if (config.meshEndpoint) {
+            const storeConfig = await this.fetchStoreConfig(config.meshEndpoint);
+            if (storeConfig) {
+                storeViewId = storeConfig.storeViewId;
+                websiteId = storeConfig.websiteId;
+                rootCategoryId = storeConfig.rootCategoryId;
+                this.logger.info('[EDS] Using dynamic store IDs from Commerce storeConfig');
+            } else {
+                this.logger.info('[EDS] Using default store IDs (storeConfig fetch failed)');
+            }
+        } else {
+            this.logger.debug('[EDS] Skipping storeConfig fetch (mesh endpoint not available)');
+        }
+
         // Admin email for Helix sidekick config_admin access (empty = not configured)
         const adminEmail = '';
 
