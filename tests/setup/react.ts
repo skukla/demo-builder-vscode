@@ -1,7 +1,24 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 
-// Mock VS Code API for webviews
+// =============================================================================
+// Global RAF Mock (CRITICAL for useFocusOnMount hook)
+// =============================================================================
+// useFocusOnMount uses a 3-tier focus strategy: immediate → RAF → setTimeout
+// Without this mock, RAF callbacks never execute, causing tests to hang
+const mockRAF = jest.fn((callback: FrameRequestCallback) => {
+    // Execute callback synchronously to avoid pending frames
+    callback(0);
+    return 1;
+});
+const mockCancelRAF = jest.fn();
+
+global.requestAnimationFrame = mockRAF;
+global.cancelAnimationFrame = mockCancelRAF;
+
+// =============================================================================
+// VS Code API Mock
+// =============================================================================
 const mockVSCodeApi = {
     postMessage: jest.fn(),
     setState: jest.fn(),
@@ -11,8 +28,22 @@ const mockVSCodeApi = {
 // Mock acquireVsCodeApi global function
 (global as any).acquireVsCodeApi = jest.fn(() => mockVSCodeApi);
 
-// Reset mocks before each test
+// =============================================================================
+// Test Lifecycle Hooks
+// =============================================================================
+
+// Enable fake timers and reset mocks before each test
 beforeEach(() => {
+    // CRITICAL: Enable fake timers for all React tests
+    // This prevents hangs from debounce hooks (useDebouncedValue, useDebouncedLoading)
+    // and polling hooks (usePollingWithTimeout)
+    jest.useFakeTimers();
+
+    // Clear RAF mocks
+    mockRAF.mockClear();
+    mockCancelRAF.mockClear();
+
+    // Clear VS Code API mocks
     mockVSCodeApi.postMessage.mockClear();
     mockVSCodeApi.setState.mockClear();
     mockVSCodeApi.getState.mockClear();
@@ -20,19 +51,25 @@ beforeEach(() => {
 
 // Clean up after each test
 afterEach(() => {
-    // Clean up any pending timers before React cleanup
+    // Run any pending timers to prevent state update warnings
     try {
-        if (typeof setTimeout !== 'undefined' && jest.isMockFunction(setTimeout)) {
-            jest.runOnlyPendingTimers();
-            jest.clearAllTimers();
-            jest.useRealTimers();
-        }
+        jest.runOnlyPendingTimers();
     } catch {
-        try {
-            jest.useRealTimers();
-        } catch {
-            // Ignore - timers may already be real
-        }
+        // Ignore if timers already cleared
+    }
+
+    // Clear all timers
+    try {
+        jest.clearAllTimers();
+    } catch {
+        // Ignore
+    }
+
+    // Always restore real timers for clean state
+    try {
+        jest.useRealTimers();
+    } catch {
+        // Ignore - timers may already be real
     }
 
     // Clean up React Testing Library

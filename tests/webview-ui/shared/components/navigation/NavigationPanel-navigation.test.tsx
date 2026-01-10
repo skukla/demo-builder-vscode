@@ -16,7 +16,7 @@ describe('NavigationPanel - Navigation', () => {
 
     describe('Field Navigation', () => {
         it('calls onNavigateToField when field clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handleNavigate = jest.fn();
             const mockSections = createMockSections();
 

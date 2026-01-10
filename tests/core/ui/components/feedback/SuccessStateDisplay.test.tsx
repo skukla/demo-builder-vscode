@@ -127,7 +127,7 @@ describe('SuccessStateDisplay', () => {
         });
 
         it('should call onPress handler when action button clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handlePress = jest.fn();
             renderWithProviders(
                 <SuccessStateDisplay
@@ -143,7 +143,7 @@ describe('SuccessStateDisplay', () => {
         });
 
         it('should handle multiple clicks on action buttons', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handlePress = jest.fn();
             renderWithProviders(
                 <SuccessStateDisplay

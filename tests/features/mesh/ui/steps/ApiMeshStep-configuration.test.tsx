@@ -190,7 +190,7 @@ describe('ApiMeshStep - Configuration & Status Checking', () => {
                 expect(retryButton).toHaveTextContent('Retry');
             });
 
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const retryButton = document.querySelector('button') as HTMLButtonElement;
             await user.click(retryButton);
 

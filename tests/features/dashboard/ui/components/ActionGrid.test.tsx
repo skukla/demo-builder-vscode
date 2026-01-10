@@ -202,7 +202,7 @@ describe('ActionGrid', () => {
 
     describe('Button Interactions', () => {
         it('should call handleStartDemo when Start clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} isRunning={false} />);
 
             await user.click(screen.getByText('Start'));
@@ -211,7 +211,7 @@ describe('ActionGrid', () => {
         });
 
         it('should call handleStopDemo when Stop clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} isRunning={true} />);
 
             await user.click(screen.getByText('Stop'));
@@ -220,7 +220,7 @@ describe('ActionGrid', () => {
         });
 
         it('should call handleOpenBrowser when Open clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} isRunning={true} />);
 
             await user.click(screen.getByText('Open in Browser'));
@@ -229,7 +229,7 @@ describe('ActionGrid', () => {
         });
 
         it('should call handleViewLogs when Logs clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);
 
             await user.click(screen.getByText('Logs'));
@@ -238,7 +238,7 @@ describe('ActionGrid', () => {
         });
 
         it('should call handleDeployMesh when Deploy Mesh clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);
 
             await user.click(screen.getByText('Deploy Mesh'));
@@ -247,7 +247,7 @@ describe('ActionGrid', () => {
         });
 
         it('should call handleConfigure when Configure clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);
 
             await user.click(screen.getByText('Configure'));
@@ -256,7 +256,7 @@ describe('ActionGrid', () => {
         });
 
         it('should call handleViewComponents when Components clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);
 
             await user.click(screen.getByText('Components'));
@@ -265,7 +265,7 @@ describe('ActionGrid', () => {
         });
 
         it('should call handleOpenDevConsole when Dev Console clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);
 
             await user.click(screen.getByText('Dev Console'));
@@ -274,7 +274,7 @@ describe('ActionGrid', () => {
         });
 
         it('should call handleDeleteProject when Delete clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);
 
             await user.click(screen.getByText('Delete'));

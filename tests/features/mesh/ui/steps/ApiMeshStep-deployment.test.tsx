@@ -22,7 +22,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
 
     describe('Mesh Creation Flow', () => {
         it('should trigger mesh creation when Create Mesh clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -49,7 +49,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should show loading during mesh creation', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -87,7 +87,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should enable continue after successful mesh creation', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -113,7 +113,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should update state after successful mesh creation', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -153,7 +153,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
 
     describe('Mesh Recreation', () => {
         it('should trigger mesh recreation for error mesh', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -182,7 +182,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should display "API Mesh Deployed" after successful recreation', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -214,7 +214,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should update state after successful recreation', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -255,7 +255,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should enable continue after successful recreation', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -307,7 +307,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should handle partial deployment response', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -345,7 +345,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
 
     describe('Timeout Handling', () => {
         it('should handle timeout during mesh creation', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -374,7 +374,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should allow proceeding after timeout', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({

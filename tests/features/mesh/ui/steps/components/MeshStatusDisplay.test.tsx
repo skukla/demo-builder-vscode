@@ -160,7 +160,7 @@ describe('MeshStatusDisplay', () => {
         });
 
         it('calls onRecreateMesh when Recreate Mesh button is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithSpectrum(
                 <MeshStatusDisplay
                     meshData={{
@@ -180,7 +180,7 @@ describe('MeshStatusDisplay', () => {
         });
 
         it('calls onBack when Back button is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithSpectrum(
                 <MeshStatusDisplay
                     meshData={{

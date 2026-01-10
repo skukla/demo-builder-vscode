@@ -40,7 +40,7 @@ describe('ErrorDisplay', () => {
         });
 
         it('calls onRetry when retry button clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handleRetry = jest.fn();
             renderWithProviders(<ErrorDisplay message="Error" onRetry={handleRetry} />);
 
@@ -162,7 +162,7 @@ describe('ErrorDisplay', () => {
         });
 
         it('handles multiple retry clicks', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handleRetry = jest.fn();
             renderWithProviders(<ErrorDisplay message="Error" onRetry={handleRetry} />);
 

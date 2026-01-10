@@ -58,7 +58,7 @@ describe('WizardContainer - Layout Components', () => {
         });
 
         it('should update subtitle when navigating to different step', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -105,7 +105,7 @@ describe('WizardContainer - Layout Components', () => {
         });
 
         it('should trigger handleCancel when Cancel button is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const { mockPostMessage } = require('./WizardContainer.testUtils');
 
             renderWithTheme(
@@ -140,7 +140,7 @@ describe('WizardContainer - Layout Components', () => {
         });
 
         it('should hide footer on last step (project-creation)', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             // Create steps that go directly to project-creation for testing
             const minimalSteps = [
                 { id: 'review', name: 'Review', enabled: true },
@@ -156,10 +156,10 @@ describe('WizardContainer - Layout Components', () => {
 
             // On review step, footer should be visible
             expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /create project/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /^create$/i })).toBeInTheDocument();
 
             // Navigate to project-creation (last step)
-            const createButton = screen.getByRole('button', { name: /create project/i });
+            const createButton = screen.getByRole('button', { name: /^create$/i });
             await user.click(createButton);
 
             // Wait for navigation
@@ -184,7 +184,7 @@ describe('WizardContainer - Layout Components', () => {
         });
 
         it('should trigger show-logs message when Logs button is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const { mockPostMessage } = require('./WizardContainer.testUtils');
 
             renderWithTheme(

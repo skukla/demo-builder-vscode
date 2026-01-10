@@ -75,7 +75,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
         });
 
         it('should trigger authentication when Sign In button is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: false, isChecking: false },
@@ -321,7 +321,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
 
     describe('UX Message Flash Fix - handleLogin() Message Behavior', () => {
         it('should set authStatus to empty string when Sign In clicked, not optimistic message', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: false, isChecking: false },
@@ -372,7 +372,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
             });
 
             // Click Sign In - should clear messages
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const signInButton = screen.getByText('Sign In with Adobe');
             await user.click(signInButton);
 
@@ -397,7 +397,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
             );
 
             // Click Sign In
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const signInButton = screen.getByText('Sign In with Adobe');
             await user.click(signInButton);
 
@@ -416,7 +416,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
         });
 
         it('should not display "Opening browser..." at any point during login flow', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: false, isChecking: false },

@@ -180,7 +180,7 @@ describe('AdobeProjectStep - Search and Refresh', () => {
                 </Provider>
             );
 
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const refreshButton = screen.getByLabelText('Refresh projects');
             await user.click(refreshButton);
 

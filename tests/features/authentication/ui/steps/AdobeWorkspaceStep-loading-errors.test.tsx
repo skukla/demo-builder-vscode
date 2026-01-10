@@ -153,7 +153,7 @@ describe('AdobeWorkspaceStep - Loading and Errors', () => {
                 </Provider>
             );
 
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const retryButton = screen.getByText('Try Again');
             await user.click(retryButton);
 

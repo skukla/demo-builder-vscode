@@ -91,7 +91,7 @@ describe('MeshErrorDialog', () => {
         });
 
         it('calls onRetry when Retry button is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -109,7 +109,7 @@ describe('MeshErrorDialog', () => {
         });
 
         it('calls onBack when Back button is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -158,7 +158,7 @@ describe('MeshErrorDialog', () => {
         });
 
         it('opens modal when View Setup Instructions is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -177,7 +177,7 @@ describe('MeshErrorDialog', () => {
         });
 
         it('renders numbered instructions in modal', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -198,7 +198,7 @@ describe('MeshErrorDialog', () => {
         });
 
         it('highlights important instructions', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -218,7 +218,7 @@ describe('MeshErrorDialog', () => {
         });
 
         it('renders Open Workspace in Console button in modal', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -236,7 +236,7 @@ describe('MeshErrorDialog', () => {
         });
 
         it('calls onOpenConsole when Open Workspace button is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"

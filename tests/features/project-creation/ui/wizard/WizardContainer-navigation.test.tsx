@@ -26,7 +26,7 @@ describe('WizardContainer - Navigation', () => {
 
     describe('Happy Path - Step Navigation', () => {
         it('should advance to next step when Continue is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -48,7 +48,7 @@ describe('WizardContainer - Navigation', () => {
         });
 
         it('should navigate backwards when Back button is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -74,7 +74,7 @@ describe('WizardContainer - Navigation', () => {
         });
 
         it('should mark steps as completed when navigating forward', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -105,7 +105,7 @@ describe('WizardContainer - Navigation', () => {
         // These tests verify the wizard responds to navigation messages from the sidebar.
 
         it('should allow backward navigation via sidebar message', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -133,7 +133,7 @@ describe('WizardContainer - Navigation', () => {
         });
 
         it('should not allow skipping steps via Continue', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -153,7 +153,7 @@ describe('WizardContainer - Navigation', () => {
 
     describe('Happy Path - Backend Call on Continue', () => {
         it('should call backend when selecting project and clicking Continue', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -185,7 +185,7 @@ describe('WizardContainer - Navigation', () => {
 
     describe('Integration - Full Wizard Flow', () => {
         it('should complete entire wizard flow from auth to project creation', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -195,7 +195,7 @@ describe('WizardContainer - Navigation', () => {
 
             // Navigate through all steps explicitly (no welcome step, no api-mesh step)
             // Note: api-mesh step is now disabled - mesh deployment happens in project-creation
-            const getButton = () => screen.getByRole('button', { name: /continue|create project/i });
+            const getButton = () => screen.getByRole('button', { name: /continue|^create$/i });
 
             // Start at adobe-auth (first step after welcome removal)
             expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
@@ -225,8 +225,8 @@ describe('WizardContainer - Navigation', () => {
             await user.click(getButton());
             await screen.findByTestId('review-step', {}, { timeout: 1000 });
 
-            // Review step should have Create Project button
-            expect(screen.getByRole('button', { name: /create project/i })).toBeInTheDocument();
+            // Review step should have Create button
+            expect(screen.getByRole('button', { name: /^create$/i })).toBeInTheDocument();
         });
     });
 });

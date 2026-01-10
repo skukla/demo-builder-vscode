@@ -81,7 +81,7 @@ describe('ApiMeshStep - Display & Layout', () => {
                 expect(screen.getByText('Create Mesh')).toBeInTheDocument();
             });
 
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const createButton = screen.getByText('Create Mesh');
             await user.click(createButton);
 
@@ -205,7 +205,7 @@ describe('ApiMeshStep - Display & Layout', () => {
                 expect(screen.getByText('Back')).toBeInTheDocument();
             });
 
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const backButton = screen.getByText('Back');
             await user.click(backButton);
 

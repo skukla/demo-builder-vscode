@@ -93,7 +93,7 @@ describe('ConfigureScreen - Operations', () => {
 
     describe('Save Functionality', () => {
         it('should send save-configuration message when Save clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest.mockResolvedValue({ success: true });
 
             // Use component IDs that match mockComponentsData: headless, adobe-commerce-paas, catalog-service
@@ -134,7 +134,7 @@ describe('ConfigureScreen - Operations', () => {
         });
 
         it('should disable save button while saving', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest.mockImplementation(
                 () => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 100))
             );
@@ -175,7 +175,7 @@ describe('ConfigureScreen - Operations', () => {
         });
 
         it('should handle save errors gracefully', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest.mockRejectedValue(new Error('Save failed'));
 
             // Use component IDs that match mockComponentsData
@@ -212,7 +212,7 @@ describe('ConfigureScreen - Operations', () => {
 
     describe('Close Functionality', () => {
         it('should send cancel message when Close clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithProvider(
                 <ConfigureScreen
                     project={mockProject as any}

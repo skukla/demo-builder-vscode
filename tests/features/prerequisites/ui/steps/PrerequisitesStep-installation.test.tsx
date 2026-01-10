@@ -90,7 +90,7 @@ describe('PrerequisitesStep - Installation Flow', () => {
     });
 
     it('should trigger installation when Install button clicked', async () => {
-        const user = userEvent.setup();
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         let loadedCallback: (data: any) => void = () => {};
         let statusCallback: (data: any) => void = () => {};
 

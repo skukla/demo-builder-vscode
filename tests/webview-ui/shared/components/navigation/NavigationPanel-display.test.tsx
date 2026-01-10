@@ -96,7 +96,7 @@ describe('NavigationPanel - Display', () => {
         });
 
         it('calls onToggleSection when section clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handleToggle = jest.fn();
             const mockSections = createMockSections();
 

@@ -15,7 +15,7 @@ describe('SearchableList - Selection and Loading', () => {
 
     describe('Selection', () => {
         it('calls onSelectionChange when item selected', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handleSelection = jest.fn();
 
             renderWithProviders(
@@ -105,7 +105,7 @@ describe('SearchableList - Selection and Loading', () => {
         });
 
         it('calls onRefresh when refresh button clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handleRefresh = jest.fn();
 
             renderWithProviders(

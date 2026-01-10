@@ -78,6 +78,9 @@ interface UseComponentSelectionReturn {
     servicesToShow: ComponentOption[];
 }
 
+// Stable empty array to prevent unnecessary re-renders
+const EMPTY_ADDONS: string[] = [];
+
 export function useComponentSelection({
     state,
     updateState,
@@ -85,8 +88,11 @@ export function useComponentSelection({
     frontendDependencies,
     frontendAddons,
     componentsData,
-    selectedAddons = [],
+    selectedAddons,
 }: UseComponentSelectionProps): UseComponentSelectionReturn {
+    // Use stable empty array if no addons provided (prevents infinite loops)
+    const stableAddons = selectedAddons ?? EMPTY_ADDONS;
+
     // Initialize from state (includes defaults from init)
     const [selectedFrontend, setSelectedFrontend] = useState<string>(state.components?.frontend || '');
     const [selectedBackend, setSelectedBackend] = useState<string>(state.components?.backend || '');
@@ -117,8 +123,8 @@ export function useComponentSelection({
             return [];
         }
 
-        // Find selected addon definitions
-        const addons = componentsData.addons?.filter(a => selectedAddons.includes(a.id)) || [];
+        // Find selected addon definitions (use stableAddons for stable reference)
+        const addons = componentsData.addons?.filter(a => stableAddons.includes(a.id)) || [];
 
         // Resolve missing services using the service resolution algorithm
         const { missingServices } = resolveServices(backend, addons, []);
@@ -130,7 +136,7 @@ export function useComponentSelection({
                 return service ? { id: serviceId, name: service.name } : null;
             })
             .filter((svc): svc is ComponentOption => svc !== null);
-    }, [selectedBackend, selectedAddons, componentsData]);
+    }, [selectedBackend, stableAddons, componentsData]);
 
     // Track last sent selection to prevent duplicate messages
     const lastSentSelectionRef = useRef<string>('');
@@ -166,6 +172,12 @@ export function useComponentSelection({
             // Add all missing services (they're required)
             const serviceIds = servicesToShow.map(s => s.id);
             setSelectedServices(prev => {
+                // IMPORTANT: Check if services are already selected to prevent infinite loop
+                // (React compares Sets by reference, returning same ref prevents re-render)
+                const hasAllServices = serviceIds.every(service => prev.has(service));
+                if (hasAllServices) {
+                    return prev; // No change needed
+                }
                 const newSet = new Set(prev);
                 serviceIds.forEach(service => newSet.add(service));
                 return newSet;
@@ -173,7 +185,9 @@ export function useComponentSelection({
         } else if (selectedBackend && servicesToShow.length === 0) {
             // No services needed (e.g., ACCS backend or PaaS + ACO)
             // Clear services since backend/addons provide everything
-            setSelectedServices(new Set());
+            // IMPORTANT: Return same reference if already empty to prevent infinite loop
+            // (React compares Sets by reference, not content)
+            setSelectedServices(prev => prev.size === 0 ? prev : new Set());
         }
     }, [selectedBackend, servicesToShow, setSelectedServices]);
 

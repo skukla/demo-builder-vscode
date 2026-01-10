@@ -106,7 +106,7 @@ describe('BackButton', () => {
     describe('click handling', () => {
         it('should call onPress when clicked', async () => {
             // Given: BackButton with onPress handler
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const onPress = jest.fn();
 
             // When: Button is clicked
@@ -155,7 +155,7 @@ describe('BackButton', () => {
 
         it('should trigger onPress on Enter key', async () => {
             // Given: BackButton with onPress handler
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const onPress = jest.fn();
 
             renderWithProvider(
@@ -173,7 +173,7 @@ describe('BackButton', () => {
 
         it('should trigger onPress on Space key', async () => {
             // Given: BackButton with onPress handler
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const onPress = jest.fn();
 
             renderWithProvider(
@@ -227,7 +227,7 @@ describe('BackButton', () => {
     describe('combined scenarios', () => {
         it('should render default label with icon and handle click', async () => {
             // Given: BackButton with default props
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const onPress = jest.fn();
 
             // When: Rendered and clicked
@@ -248,7 +248,7 @@ describe('BackButton', () => {
 
         it('should render custom label with icon and handle click', async () => {
             // Given: BackButton with custom label
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const onPress = jest.fn();
 
             // When: Rendered and clicked

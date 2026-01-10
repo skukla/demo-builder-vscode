@@ -64,7 +64,7 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
     });
 
     it('should trigger recheck when button clicked', async () => {
-        const user = userEvent.setup();
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         render(
             <Provider theme={defaultTheme}>
                 <PrerequisitesStep

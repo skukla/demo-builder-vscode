@@ -122,7 +122,7 @@ describe('AdobeAuthStep - Organization Selection', () => {
         });
 
         it('should trigger org selection when Select Organization is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,
                 adobeAuth: {
@@ -149,7 +149,7 @@ describe('AdobeAuthStep - Organization Selection', () => {
         it('should clear dependent state when org changes after re-auth', async () => {
             // Setup: User is authenticated with org1, has project/workspace selected
             const messageCallback = setupAuthStatusMock();
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const mockUpdate = jest.fn();
             const state = {
                 ...baseState,
@@ -195,7 +195,7 @@ describe('AdobeAuthStep - Organization Selection', () => {
         it('should preserve dependent state when re-authenticating with same org', async () => {
             // Setup: User is authenticated with org1, has project/workspace selected
             const messageCallback = setupAuthStatusMock();
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const mockUpdate = jest.fn();
             const state = {
                 ...baseState,

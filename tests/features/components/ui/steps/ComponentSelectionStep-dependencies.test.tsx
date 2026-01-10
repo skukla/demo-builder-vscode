@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
@@ -14,6 +14,9 @@ import {
     createStateInitial,
     resetMocks,
 } from './ComponentSelectionStep.testUtils';
+
+// NOTE: Fake timers and RAF mocking are handled globally in tests/setup/react.ts
+// Individual test files no longer need to set up timer mocking
 
 describe('ComponentSelectionStep - Dependencies', () => {
     beforeEach(() => {
@@ -35,7 +38,13 @@ describe('ComponentSelectionStep - Dependencies', () => {
                 </Provider>
             );
 
-            const meshCheckbox = screen.getByLabelText('API Mesh');
+            // Flush debounce timers
+            act(() => {
+                jest.runAllTimers();
+            });
+
+            // Use getByRole with name regex - works better with nested label content
+            const meshCheckbox = screen.getByRole('checkbox', { name: /API Mesh/i });
             expect(meshCheckbox).toBeChecked();
             expect(meshCheckbox).toBeDisabled();
         });
@@ -54,6 +63,10 @@ describe('ComponentSelectionStep - Dependencies', () => {
                 </Provider>
             );
 
+            act(() => {
+                jest.runAllTimers();
+            });
+
             // Simulate frontend selection
             const stateWithFrontend = createStateWithFrontend();
 
@@ -67,6 +80,10 @@ describe('ComponentSelectionStep - Dependencies', () => {
                     />
                 </Provider>
             );
+
+            act(() => {
+                jest.runAllTimers();
+            });
 
             expect(mockUpdateState).toHaveBeenCalled();
         });
@@ -85,8 +102,13 @@ describe('ComponentSelectionStep - Dependencies', () => {
                 </Provider>
             );
 
-            const catalogCheckbox = screen.getByLabelText('Catalog Service');
-            const liveSearchCheckbox = screen.getByLabelText('Live Search');
+            act(() => {
+                jest.runAllTimers();
+            });
+
+            // Use getByRole with name regex - works better with nested label content
+            const catalogCheckbox = screen.getByRole('checkbox', { name: /Catalog Service/i });
+            const liveSearchCheckbox = screen.getByRole('checkbox', { name: /Live Search/i });
 
             expect(catalogCheckbox).toBeChecked();
             expect(catalogCheckbox).toBeDisabled();
@@ -110,7 +132,11 @@ describe('ComponentSelectionStep - Dependencies', () => {
                 </Provider>
             );
 
-            const demoInspectorCheckbox = screen.getByLabelText('Demo Inspector');
+            act(() => {
+                jest.runAllTimers();
+            });
+
+            const demoInspectorCheckbox = screen.getByRole('checkbox', { name: /Demo Inspector/i });
             expect(demoInspectorCheckbox).not.toBeDisabled();
         });
 
@@ -127,6 +153,10 @@ describe('ComponentSelectionStep - Dependencies', () => {
                     />
                 </Provider>
             );
+
+            act(() => {
+                jest.runAllTimers();
+            });
 
             const platformCheckbox = screen.queryByLabelText('Experience Platform');
             expect(platformCheckbox).not.toBeInTheDocument();
@@ -145,6 +175,10 @@ describe('ComponentSelectionStep - Dependencies', () => {
                     />
                 </Provider>
             );
+
+            act(() => {
+                jest.runAllTimers();
+            });
 
             const appCheckbox = screen.queryByLabelText('Integration Service');
             expect(appCheckbox).not.toBeInTheDocument();

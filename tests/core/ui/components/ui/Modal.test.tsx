@@ -76,7 +76,7 @@ describe('Modal', () => {
 
     describe('close button', () => {
         it('calls onClose when close button clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const onClose = jest.fn();
 
             renderWithProvider(<Modal {...defaultProps} onClose={onClose} />);
@@ -116,7 +116,7 @@ describe('Modal', () => {
         });
 
         it('calls action button onPress when clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const onPress = jest.fn();
             const actionButtons: ActionButton[] = [
                 { label: 'Confirm', variant: 'primary', onPress },

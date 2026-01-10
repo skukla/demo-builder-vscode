@@ -30,8 +30,22 @@ export const mockComponentsData = {
         { id: 'headless', name: 'Headless CitiSignal', description: 'NextJS storefront' }
     ],
     backends: [
-        { id: 'adobe-commerce-paas', name: 'Adobe Commerce PaaS', description: 'Commerce DSN' }
+        {
+            id: 'adobe-commerce-paas',
+            name: 'Adobe Commerce PaaS',
+            description: 'Commerce DSN',
+            // Backend requires these services (dynamic service resolution)
+            configuration: {
+                requiredServices: ['catalog-service', 'live-search'],
+                providesServices: []
+            }
+        }
     ],
+    // Services registry for mapping IDs to display names
+    services: {
+        'catalog-service': { id: 'catalog-service', name: 'Catalog Service' },
+        'live-search': { id: 'live-search', name: 'Live Search' }
+    },
     integrations: [
         { id: 'experience-platform', name: 'Experience Platform', description: 'Adobe Experience Platform' }
     ],

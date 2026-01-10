@@ -80,7 +80,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
         });
 
         it('should trigger recheck when retry clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest.mockResolvedValue(createErrorResponse('Connection failed'));
 
             const state = createBaseState();
@@ -98,7 +98,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
         });
 
         it('should clear previous error on retry', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(createErrorResponse('Connection failed'))
                 .mockResolvedValueOnce(createMeshCheckResponse());
@@ -121,7 +121,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
 
     describe('Mesh Creation Errors', () => {
         it('should handle mesh creation failure', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -149,7 +149,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
         });
 
         it('should disable proceed after mesh creation failure', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -178,7 +178,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
         });
 
         it('should update state with creation error', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -296,7 +296,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
         });
 
         it('should allow back navigation on any error', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockRequest.mockResolvedValue(createErrorResponse('Generic error'));
 
             const mockOnBack = jest.fn();

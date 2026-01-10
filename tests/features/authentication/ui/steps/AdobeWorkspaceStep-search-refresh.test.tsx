@@ -141,7 +141,7 @@ describe('AdobeWorkspaceStep - Search and Refresh', () => {
                 </Provider>
             );
 
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const refreshButton = screen.getByLabelText('Refresh workspaces');
             await user.click(refreshButton);
 

@@ -20,7 +20,7 @@ describe('FormField', () => {
         });
 
         it('handles text input changes', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handleChange = jest.fn();
             renderWithProviders(
                 <FormField

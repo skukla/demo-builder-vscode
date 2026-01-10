@@ -75,7 +75,7 @@ describe('ConfigFieldRenderer', () => {
         });
 
         it('calls onUpdate when value changes', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
             renderWithProvider(
                 <ConfigFieldRenderer
@@ -338,7 +338,7 @@ describe('ConfigFieldRenderer', () => {
         });
 
         it('calls onUpdate when checkbox is toggled', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
             renderWithProvider(
                 <ConfigFieldRenderer

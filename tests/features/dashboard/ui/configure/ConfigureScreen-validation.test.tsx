@@ -101,7 +101,7 @@ describe('ConfigureScreen - Validation', () => {
         });
 
         it('should validate URL fields', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithProvider(
                 <ConfigureScreen
                     project={mockProject as any}

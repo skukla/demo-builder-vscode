@@ -27,7 +27,7 @@ describe('WizardContainer - State Management', () => {
 
     describe('Edge Cases - State Clearing', () => {
         it('should clear dependent state when navigating backward past selection steps', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -70,7 +70,7 @@ describe('WizardContainer - State Management', () => {
 
     describe('Error Conditions - Backend Failures', () => {
         it('should support forward navigation through multiple steps', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
             renderWithTheme(
                 <WizardContainer
@@ -112,7 +112,7 @@ describe('WizardContainer - State Management', () => {
         });
 
         it('should show loading overlay during backend calls', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             // Reset and mock slow backend call
             mockRequest.mockReset();
             mockRequest.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ success: true }), 200)));

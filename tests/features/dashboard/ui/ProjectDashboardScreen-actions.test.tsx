@@ -28,7 +28,7 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
         });
 
         it('should send startDemo message when Start clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             ctx.triggerMessage('statusUpdate', {
@@ -73,7 +73,7 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
         });
 
         it('should send stopDemo message when Stop clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             ctx.triggerMessage('statusUpdate', {
@@ -108,7 +108,7 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
 
     describe('Common Actions', () => {
         it('should send viewLogs message when Logs clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             const logsButton = screen.getByText('Logs');
@@ -118,7 +118,7 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
         });
 
         it('should send deployMesh message when Deploy Mesh clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             const deployButton = screen.getByText('Deploy Mesh');
@@ -128,7 +128,7 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
         });
 
         it('should send configure message when Configure clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             const configureButton = screen.getByText('Configure');
@@ -138,7 +138,7 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
         });
 
         it('should send openBrowser message when Open clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             ctx.triggerMessage('statusUpdate', {
@@ -156,7 +156,7 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
         });
 
         it('should send deleteProject message when Delete clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             const deleteButton = screen.getByText('Delete');

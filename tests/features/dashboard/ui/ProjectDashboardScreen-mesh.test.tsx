@@ -154,7 +154,7 @@ describe('ProjectDashboardScreen - Mesh Status Display', () => {
         });
 
         it('should send re-authenticate message when Sign in clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             ctx.triggerMessage('statusUpdate', {

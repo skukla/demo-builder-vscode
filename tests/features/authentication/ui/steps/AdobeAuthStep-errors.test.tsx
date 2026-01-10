@@ -104,7 +104,7 @@ describe('AdobeAuthStep - Error Handling', () => {
         });
 
         it('should allow retry on error', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,
                 adobeAuth: {
@@ -196,7 +196,7 @@ describe('AdobeAuthStep - Error Handling', () => {
                 expect(screen.getByText('Retry Login')).toBeInTheDocument();
             });
 
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const retryButton = screen.getByText('Retry Login');
             await user.click(retryButton);
 

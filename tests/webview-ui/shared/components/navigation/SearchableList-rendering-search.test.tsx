@@ -74,7 +74,7 @@ describe('SearchableList - Rendering and Search', () => {
         });
 
         it('calls onSearchQueryChange when typing in search', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handleSearch = jest.fn();
 
             renderWithProviders(

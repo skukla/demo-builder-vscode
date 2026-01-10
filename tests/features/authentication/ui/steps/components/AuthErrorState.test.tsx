@@ -79,7 +79,7 @@ describe('AuthErrorState', () => {
         });
 
         it('calls onRetry when Retry button is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithSpectrum(
                 <AuthErrorState
                     error="Authentication failed"
@@ -95,7 +95,7 @@ describe('AuthErrorState', () => {
         });
 
         it('calls onBack when Back button is clicked', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithSpectrum(
                 <AuthErrorState
                     error="Authentication failed"

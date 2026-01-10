@@ -91,7 +91,7 @@ describe('WelcomeStep', () => {
         });
 
         it('should update state when project name changes', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(
                 <Provider theme={defaultTheme}>
                     <WelcomeStep
@@ -352,7 +352,7 @@ describe('WelcomeStep', () => {
         });
 
         it('should handle rapid input changes', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(
                 <Provider theme={defaultTheme}>
                     <WelcomeStep

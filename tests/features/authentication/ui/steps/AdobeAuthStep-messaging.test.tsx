@@ -75,7 +75,7 @@ describe('AdobeAuthStep - Messaging and Edge Cases', () => {
         });
 
         it('should prevent race conditions during org switching', async () => {
-            const user = userEvent.setup();
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: true, isChecking: false },

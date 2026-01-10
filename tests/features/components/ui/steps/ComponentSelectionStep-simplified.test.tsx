@@ -183,7 +183,7 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
             );
 
             // Then: API Mesh checkbox should be present
-            expect(screen.getByLabelText('API Mesh')).toBeInTheDocument();
+            expect(screen.getByRole('checkbox', { name: /API Mesh/i })).toBeInTheDocument();
         });
 
         it('should render Demo Inspector checkbox when frontend selected', () => {
@@ -201,7 +201,7 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
             );
 
             // Then: Demo Inspector checkbox should be present
-            expect(screen.getByLabelText('Demo Inspector')).toBeInTheDocument();
+            expect(screen.getByRole('checkbox', { name: /Demo Inspector/i })).toBeInTheDocument();
         });
     });
 
@@ -221,7 +221,7 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
             );
 
             // Then: Catalog Service checkbox should be present
-            expect(screen.getByLabelText('Catalog Service')).toBeInTheDocument();
+            expect(screen.getByRole('checkbox', { name: /Catalog Service/i })).toBeInTheDocument();
         });
 
         it('should render Live Search checkbox when backend selected', () => {
@@ -239,7 +239,7 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
             );
 
             // Then: Live Search checkbox should be present
-            expect(screen.getByLabelText('Live Search')).toBeInTheDocument();
+            expect(screen.getByRole('checkbox', { name: /Live Search/i })).toBeInTheDocument();
         });
     });
 
