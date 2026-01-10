@@ -132,9 +132,10 @@ function computeInitialState(
                 name: editSettings.adobe.workspaceName || '',
                 title: editSettings.adobe.workspaceTitle,
             } : undefined,
-            // Package/Stack from source project
+            // Package/Stack/Addons from source project
             selectedPackage: editSettings.selectedPackage,
             selectedStack: editSettings.selectedStack,
+            selectedAddons: editSettings.selectedAddons,
         };
     }
 

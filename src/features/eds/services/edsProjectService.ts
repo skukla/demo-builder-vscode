@@ -108,7 +108,7 @@ export class EdsProjectService {
 
         this.logger = logger ?? getLogger();
 
-        // Store file operations for pushing site.json to GitHub
+        // Store file operations for pushing config.json to GitHub
         this.fileOperations = githubServices.fileOperations;
 
         // Create GitHubAppService for app installation detection
@@ -208,15 +208,15 @@ export class EdsProjectService {
             // Phase 7: Generate EDS-specific configuration
             reportProgress('env-config', PROGRESS.ENV_CONFIG.start, 'Generating EDS configuration...');
 
-            // Generate site.json for PaaS projects (required for EDS runtime)
+            // Generate config.json for PaaS projects (required for EDS runtime)
             // NOTE: Standard .env generation happens in Phase 4 via generateComponentEnvFile()
-            await this.envPhase.generateSiteJson(config);
+            await this.envPhase.generateConfigJson(config);
 
-            // Push site.json to GitHub for EDS runtime to access
-            // The EDS runtime serves site.json from the repository, not from local filesystem
+            // Push config.json to GitHub for EDS runtime to access
+            // The EDS runtime serves config.json from the repository, not from local filesystem
             const isPaasBackend = config.backendComponentId === 'adobe-commerce-paas';
             if (isPaasBackend) {
-                await this.pushSiteJsonToGitHub(config, createdRepo);
+                await this.pushConfigJsonToGitHub(config, createdRepo);
             }
 
             reportProgress('env-config', PROGRESS.ENV_CONFIG.end, 'EDS configuration complete');
@@ -259,44 +259,44 @@ export class EdsProjectService {
     }
 
     /**
-     * Push site.json to GitHub repository
+     * Push config.json to GitHub repository
      *
-     * The EDS runtime serves site.json from the GitHub repository, not from local filesystem.
-     * After generating site.json locally, we need to push it to GitHub for the site to work.
+     * The EDS runtime serves config.json from the GitHub repository, not from local filesystem.
+     * After generating config.json locally, we need to push it to GitHub for the site to work.
      */
-    private async pushSiteJsonToGitHub(
+    private async pushConfigJsonToGitHub(
         config: EdsProjectConfig,
         repo: GitHubRepo,
     ): Promise<void> {
-        const siteJsonPath = path.join(config.componentPath, 'site.json');
+        const configJsonPath = path.join(config.componentPath, 'config.json');
 
         try {
-            // Read the locally generated site.json
-            const content = await fs.readFile(siteJsonPath, 'utf-8');
+            // Read the locally generated config.json
+            const content = await fs.readFile(configJsonPath, 'utf-8');
 
             // Extract owner and repo name from full name
             const [owner, repoName] = repo.fullName.split('/');
 
-            this.logger.info(`[EDS] Pushing site.json to GitHub: ${owner}/${repoName}`);
+            this.logger.info(`[EDS] Pushing config.json to GitHub: ${owner}/${repoName}`);
 
-            // Check if site.json already exists in the repo (to get SHA for update)
-            const existingFile = await this.fileOperations.getFileContent(owner, repoName, 'site.json');
+            // Check if config.json already exists in the repo (to get SHA for update)
+            const existingFile = await this.fileOperations.getFileContent(owner, repoName, 'config.json');
             const sha = existingFile?.sha;
 
-            // Create or update site.json in the repository
+            // Create or update config.json in the repository
             await this.fileOperations.createOrUpdateFile(
                 owner,
                 repoName,
-                'site.json',
+                'config.json',
                 content,
-                'chore: configure site.json for commerce integration',
+                'chore: configure config.json for commerce integration',
                 sha,
             );
 
-            this.logger.info('[EDS] site.json pushed to GitHub successfully');
+            this.logger.info('[EDS] config.json pushed to GitHub successfully');
         } catch (error) {
             throw new EdsProjectError(
-                `Failed to push site.json to GitHub: ${(error as Error).message}`,
+                `Failed to push config.json to GitHub: ${(error as Error).message}`,
                 'env-config',
                 error as Error,
             );

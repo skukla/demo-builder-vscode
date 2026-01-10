@@ -20,7 +20,7 @@ import type { Logger } from '@/types/logger';
 export interface ComponentRepositoryInfo {
     /** Component ID (e.g., 'commerce-mesh', 'headless') */
     id: string;
-    /** GitHub repository in owner/repo format (e.g., 'skukla/commerce-mesh') */
+    /** GitHub repository in owner/repo format (e.g., 'skukla/headless-citisignal-mesh') */
     repository: string;
     /** Component name for display */
     name: string;

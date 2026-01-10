@@ -158,6 +158,7 @@ export async function handleGetDaLiveSites(
 
         // Get stored DA.live token (from bookmarklet flow)
         const token = context.context.globalState.get<string>('daLive.accessToken');
+        context.logger.debug(`[EDS:DaLive] Token present: ${!!token}, length: ${token?.length || 0}`);
         if (!token) {
             context.logger.error('[EDS] No DA.live token stored');
             await context.sendMessage('get-dalive-sites-error', {
@@ -167,12 +168,16 @@ export async function handleGetDaLiveSites(
         }
 
         // Fetch sites directly using stored token
-        const response = await fetch(`https://admin.da.live/list/${orgName}/`, {
+        const url = `https://admin.da.live/list/${orgName}/`;
+        context.logger.debug(`[EDS:DaLive] Request URL: ${url}`);
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
             },
         });
+
+        context.logger.debug(`[EDS:DaLive] Response status: ${response.status}, ok: ${response.ok}`);
 
         if (!response.ok) {
             if (response.status === 403) {
@@ -191,9 +196,13 @@ export async function handleGetDaLiveSites(
         const entries = await response.json();
 
         // Log raw response for debugging
-        context.logger.debug(`[EDS] DA.live API returned ${entries.length} entries`);
+        context.logger.debug(`[EDS:DaLive] Raw entries count: ${entries.length}`);
         if (entries.length > 0) {
-            context.logger.debug('[EDS] First entry sample:', JSON.stringify(entries[0]));
+            // Log first 3 entries as sample
+            const sample = entries.slice(0, 3).map((e: { name: string; ext?: string }) =>
+                `${e.name}${e.ext ? ` (file: .${e.ext})` : ' (folder)'}`
+            );
+            context.logger.debug(`[EDS:DaLive] Raw entries sample: ${JSON.stringify(sample)}`);
         }
 
         // Sites are top-level folders in DA.live
@@ -214,7 +223,7 @@ export async function handleGetDaLiveSites(
             }))
             .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name));
 
-        context.logger.debug(`[EDS] Found ${siteItems.length} DA.live sites`);
+        context.logger.debug(`[EDS:DaLive] Filter: ${entries.length} raw -> ${siteItems.length} sites (${entries.length - siteItems.length} filtered out)`);
         await context.sendMessage('get-dalive-sites', siteItems);
 
         return { success: true };

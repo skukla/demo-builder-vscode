@@ -36,7 +36,7 @@
                     ".env": {
                         "format": "env"
                     },
-                    "site.json": {
+                    "config.json": {
                         "format": "json",
                         "template": "default-site.json",
                         "fieldRenames": {
@@ -78,7 +78,7 @@
             },
             "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
             "dependencies": {
-                "required": ["commerce-mesh"],
+                "required": ["headless-commerce-mesh"],
                 "optional": []
             },
             "submodules": {
@@ -121,16 +121,49 @@
     },
 
     "mesh": {
-        "commerce-mesh": {
-            "name": "Adobe Commerce API Mesh",
-            "description": "GraphQL gateway for unifying commerce data sources",
+        "eds-commerce-mesh": {
+            "name": "EDS Commerce API Mesh",
+            "description": "Passthrough GraphQL mesh for EDS storefronts with dropin components (no prefixes)",
             "icon": {
                 "light": "adobe-file-icon-light.svg",
                 "dark": "adobe-file-icon-dark.svg"
             },
             "source": {
                 "type": "git",
-                "url": "https://github.com/skukla/commerce-mesh",
+                "url": "https://github.com/skukla/commerce-eds-mesh",
+                "gitOptions": {
+                    "shallow": true,
+                    "tag": "v1.0.0"
+                }
+            },
+            "configuration": {
+                "nodeVersion": "20",
+                "buildScript": "build",
+                "requiresDeployment": true,
+                "deploymentTarget": "adobe-io",
+                "requiredEnvVars": [
+                    "ADOBE_COMMERCE_GRAPHQL_ENDPOINT",
+                    "ADOBE_COMMERCE_URL",
+                    "ADOBE_COMMERCE_ENVIRONMENT_ID",
+                    "ADOBE_COMMERCE_STORE_VIEW_CODE",
+                    "ADOBE_COMMERCE_WEBSITE_CODE",
+                    "ADOBE_COMMERCE_STORE_CODE",
+                    "ADOBE_CATALOG_API_KEY",
+                    "ADOBE_CATALOG_SERVICE_ENDPOINT"
+                ],
+                "providesEnvVars": ["MESH_ENDPOINT"]
+            }
+        },
+        "headless-commerce-mesh": {
+            "name": "Headless Commerce API Mesh",
+            "description": "Prefixed/namespaced GraphQL mesh for Next.js headless storefronts",
+            "icon": {
+                "light": "adobe-file-icon-light.svg",
+                "dark": "adobe-file-icon-dark.svg"
+            },
+            "source": {
+                "type": "git",
+                "url": "https://github.com/skukla/headless-citisignal-mesh",
                 "gitOptions": {
                     "shallow": true,
                     "tag": "v1.0.0-beta.3"
@@ -195,7 +228,7 @@
             "description": "Edge Delivery Services with Adobe Commerce PaaS backend",
             "frontend": "eds",
             "backend": "adobe-commerce-paas",
-            "requiredComponents": ["commerce-mesh"],
+            "requiredComponents": ["eds-commerce-mesh"],
             "optionalComponents": ["demo-inspector", "integration-service"]
         },
         "eds-accs": {
@@ -211,7 +244,7 @@
             "description": "Next.js headless storefront with Adobe Commerce PaaS backend",
             "frontend": "headless",
             "backend": "adobe-commerce-paas",
-            "requiredComponents": ["commerce-mesh"],
+            "requiredComponents": ["headless-commerce-mesh"],
             "optionalComponents": ["demo-inspector", "integration-service"]
         }
     },

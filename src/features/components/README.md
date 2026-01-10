@@ -61,9 +61,9 @@ const compatible = await registry.checkCompatibility(
 const nodeVersions = await registry.getRequiredNodeVersions(
     'citisignal-nextjs',  // Node 20
     'commerce-cloud',     // Node 20
-    ['commerce-mesh']     // Node 18
+    ['headless-commerce-mesh']     // Node 20
 );
-// Result: Set { '20', '18' }
+// Result: Set { '20' }
 ```
 
 ### DependencyResolver
@@ -195,8 +195,8 @@ for (const frontend of frontends) {
     console.log(`  Node version: ${frontend.configuration?.nodeVersion}`);
 }
 
-// Get specific component
-const mesh = await registry.getComponentById('commerce-mesh');
+// Get specific component (EDS uses eds-commerce-mesh, Headless uses headless-commerce-mesh)
+const mesh = await registry.getComponentById('headless-commerce-mesh');
 console.log(`${mesh.name}: ${mesh.description}`);
 console.log(`  Required services:`, mesh.configuration?.requiredServices);
 ```
@@ -261,7 +261,7 @@ await registry.loadRegistry();
 const nodeVersions = await registry.getRequiredNodeVersions(
     'citisignal-nextjs',
     'commerce-cloud',
-    ['commerce-mesh'],
+    ['headless-commerce-mesh'],
     [],
     ['cif-actions-app']
 );
@@ -275,7 +275,7 @@ for (const version of nodeVersions) {
 const mapping = await registry.getNodeVersionToComponentMapping(
     'citisignal-nextjs',
     'commerce-cloud',
-    ['commerce-mesh'],
+    ['headless-commerce-mesh'],
     [],
     ['cif-actions-app']
 );
@@ -383,18 +383,41 @@ if (validation.warnings.length > 0) {
                 }
             }
         },
-        "commerce-mesh": {
-            "name": "Commerce Mesh",
-            "description": "Adobe API Mesh...",
+        "eds-commerce-mesh": {
+            "name": "EDS Commerce Mesh",
+            "description": "Passthrough GraphQL mesh for EDS storefronts (no prefixes)",
             "type": "dependency",
             "subType": "mesh",
             "source": {
                 "type": "github",
-                "repository": "skukla/commerce-mesh",
+                "repository": "skukla/commerce-eds-mesh",
+                "version": "v1.0.0"
+            },
+            "configuration": {
+                "nodeVersion": "20",
+                "providesEndpoint": true,
+                "requiredServices": ["adobe-commerce", "catalog-service"],
+                "envVars": {
+                    "requiredEnvVars": [
+                        "ADOBE_COMMERCE_GRAPHQL_ENDPOINT",
+                        "ADOBE_CATALOG_SERVICE_ENDPOINT",
+                        "ADOBE_CATALOG_API_KEY"
+                    ]
+                }
+            }
+        },
+        "headless-commerce-mesh": {
+            "name": "Headless Commerce Mesh",
+            "description": "Prefixed GraphQL mesh for Next.js headless storefronts",
+            "type": "dependency",
+            "subType": "mesh",
+            "source": {
+                "type": "github",
+                "repository": "skukla/headless-citisignal-mesh",
                 "version": "main"
             },
             "configuration": {
-                "nodeVersion": "18",
+                "nodeVersion": "20",
                 "providesEndpoint": true,
                 "requiredServices": ["adobe-commerce", "catalog-service"],
                 "envVars": {
@@ -410,7 +433,7 @@ if (validation.warnings.length > 0) {
     "selectionGroups": {
         "frontend": ["citisignal-nextjs"],
         "backend": ["commerce-cloud"],
-        "dependencies": ["commerce-mesh", "demo-inspector"],
+        "dependencies": ["eds-commerce-mesh", "headless-commerce-mesh", "demo-inspector"],
         "externalSystems": [],
         "appBuilder": ["cif-actions-app"]
     },

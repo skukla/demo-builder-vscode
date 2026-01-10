@@ -83,7 +83,7 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
             id: 'commerce-mesh',
             name: 'Adobe Commerce API Mesh',
             type: 'mesh',
-            source: { type: 'git', url: 'https://github.com/skukla/commerce-mesh' },
+            source: { type: 'git', url: 'https://github.com/skukla/headless-citisignal-mesh' },
             configuration: {
                 nodeVersion: '20',
                 requiresDeployment: true,
@@ -98,7 +98,7 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
                     id: 'commerce-mesh',
                     name: 'Adobe Commerce API Mesh',
                     type: 'mesh',
-                    source: { type: 'git', url: 'https://github.com/skukla/commerce-mesh' },
+                    source: { type: 'git', url: 'https://github.com/skukla/headless-citisignal-mesh' },
                 };
             }
             return undefined;

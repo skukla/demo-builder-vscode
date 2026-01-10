@@ -42,7 +42,7 @@ describe('ComponentRepositoryResolver', () => {
 
             const meshRepo = repositories.get('commerce-mesh');
             expect(meshRepo).toBeDefined();
-            expect(meshRepo?.repository).toBe('skukla/commerce-mesh');
+            expect(meshRepo?.repository).toBe('skukla/headless-citisignal-mesh');
             expect(meshRepo?.name).toBe('Adobe Commerce API Mesh');
         });
 
@@ -72,7 +72,7 @@ describe('ComponentRepositoryResolver', () => {
 
             expect(info).toEqual({
                 id: 'commerce-mesh',
-                repository: 'skukla/commerce-mesh',
+                repository: 'skukla/headless-citisignal-mesh',
                 name: 'Adobe Commerce API Mesh',
             });
         });

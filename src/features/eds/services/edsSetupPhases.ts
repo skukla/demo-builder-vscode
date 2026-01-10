@@ -550,6 +550,22 @@ export class EnvConfigPhase {
         const websiteCode = String(backendEnv.ADOBE_COMMERCE_WEBSITE_CODE || 'base');
         const storeCode = String(backendEnv.ADOBE_COMMERCE_STORE_CODE || 'main_website_store');
 
+        // Build additional placeholder values
+        // DA.live content source URL (used for content federation)
+        const contentSource = `https://content.da.live/${config.daLiveOrg}/${config.daLiveSite}`;
+        // Live domain URL for analytics and CDN config
+        const liveDomain = `main--${config.repoName}--${config.githubOwner}.aem.live`;
+
+        // Commerce store numeric IDs (defaults for demo environments)
+        // These are internal Magento IDs, typically "1" for default store setup
+        const storeId = '1';
+        const storeViewId = '1';
+        const websiteId = '1';
+        // Root category ID for product picker (category 2 is typical default after root)
+        const rootCategoryId = '2';
+        // Admin email for Helix sidekick config_admin access (empty = not configured)
+        const adminEmail = '';
+
         try {
             // Use shared config file generator
             await generateConfigFile({
@@ -557,21 +573,37 @@ export class EnvConfigPhase {
                 templatePath,
                 defaultConfig: {
                     'commerce-core-endpoint': '',
-                    'commerce-endpoint': 'https://catalog-service.adobe.io/graphql',
+                    'commerce-endpoint': config.meshEndpoint || '',
                     'store-view-code': storeViewCode,
                     'website-code': websiteCode,
                     'store-code': storeCode,
                 },
                 placeholders: {
+                    // Commerce endpoints
                     '{ENDPOINT}': config.meshEndpoint || '',
-                    '{CS_ENDPOINT}': 'https://catalog-service.adobe.io/graphql',
+                    '{CS_ENDPOINT}': config.meshEndpoint || '',
+                    // Commerce credentials
                     '{COMMERCE_API_KEY}': commerceApiKey,
                     '{COMMERCE_ENVIRONMENT_ID}': commerceEnvironmentId,
+                    // Commerce store codes
                     '{STORE_VIEW_CODE}': storeViewCode,
                     '{WEBSITE_CODE}': websiteCode,
                     '{STORE_CODE}': storeCode,
+                    // Commerce store IDs (numeric)
+                    '{STORE_ID}': storeId,
+                    '{STORE_VIEW_ID}': storeViewId,
+                    '{WEBSITE_ID}': websiteId,
+                    // Commerce catalog
+                    '{YOUR_ROOT_CATEGORY_ID}': rootCategoryId,
+                    // GitHub/Helix identifiers
                     '{ORG}': config.githubOwner,
                     '{REPO}': config.repoName,
+                    '{SITE}': config.repoName,
+                    // Content and domain
+                    '{CONTENT_SOURCE}': contentSource,
+                    '{DOMAIN}': liveDomain,
+                    // Access control
+                    '{ADMIN_USER_EMAIL}': adminEmail,
                 },
                 logger: this.logger,
                 description: 'EDS runtime configuration (config.json)',
@@ -625,7 +657,7 @@ export async function updateConfigJsonWithMesh(
         configJsonPath,
         {
             'commerce-core-endpoint': meshEndpoint,
-            'commerce-endpoint': 'https://catalog-service.adobe.io/graphql',
+            'commerce-endpoint': meshEndpoint,
         },
         logger,
         'EDS runtime configuration (config.json)',

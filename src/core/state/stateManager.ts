@@ -17,10 +17,16 @@ import { ProjectDirectoryScanner, ProjectSummary } from './projectDirectoryScann
 import { ProjectFileLoader } from './projectFileLoader';
 import { RecentProjectsManager, RecentProject } from './recentProjectsManager';
 import { getLogger } from '@/core/logging';
+import { ExecutionLock } from '@/core/utils';
 import { Project, StateData, ProcessInfo } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
 
 export class StateManager {
+    // Serialize save operations to prevent concurrent writes racing on temp file
+    // (Multiple concurrent saveProject calls would all write to same .tmp file,
+    // causing ENOENT when first rename succeeds and deletes it before others complete)
+    private static saveLock = new ExecutionLock('StateManager.save');
+
     private context: vscode.ExtensionContext;
     private state: StateData;
     private stateFile: string;
@@ -133,15 +139,19 @@ export class StateManager {
 
     public async getCurrentProject(): Promise<Project | undefined> {
         // If we have a cached project, reload it from disk to get latest data
+        // Use persistAfterLoad: false to avoid triggering saves during status bar polling
         if (this.state.currentProject?.path) {
             try {
-                const freshProject = await this.loadProjectFromPath(this.state.currentProject.path);
+                const freshProject = await this.loadProjectFromPath(
+                    this.state.currentProject.path,
+                    () => vscode.window.terminals,
+                    { persistAfterLoad: false },
+                );
 
                 if (freshProject === null) {
                     return this.state.currentProject;
                 }
 
-                this.state.currentProject = freshProject;
                 return freshProject;
             } catch {
                 return this.state.currentProject;
@@ -151,23 +161,27 @@ export class StateManager {
     }
 
     public async saveProject(project: Project): Promise<void> {
-        // GUARD: Prevent stale background saves from recreating deleted projects
-        const projectPathExists = await this.checkPathExists(project.path);
-        if (!projectPathExists && !this.state.currentProject) {
-            return;
-        }
+        // Serialize save operations to prevent concurrent writes racing on temp file
+        return StateManager.saveLock.run(async () => {
+            // GUARD: Prevent stale background saves from recreating deleted projects
+            const projectPathExists = await this.checkPathExists(project.path);
 
-        this.state.currentProject = project;
-        await this.saveState();
+            if (!projectPathExists && !this.state.currentProject) {
+                return;
+            }
 
-        // Save project-specific config via delegated service
-        await this.projectConfigWriter.saveProjectConfig(project, this.state.currentProject?.path);
+            this.state.currentProject = project;
+            await this.saveState();
 
-        // Update context variable for view switching
-        await vscode.commands.executeCommand('setContext', 'demoBuilder.projectLoaded', true);
+            // Save project-specific config via delegated service
+            await this.projectConfigWriter.saveProjectConfig(project, this.state.currentProject?.path);
 
-        // Notify listeners
-        this._onProjectChanged.fire(project);
+            // Update context variable for view switching
+            await vscode.commands.executeCommand('setContext', 'demoBuilder.projectLoaded', true);
+
+            // Notify listeners
+            this._onProjectChanged.fire(project);
+        });
     }
 
     public async clearProject(): Promise<void> {
@@ -241,11 +255,18 @@ export class StateManager {
      * IMPORTANT: Preserves selectedPackage and selectedStack from cached project
      * when reloading from disk. This prevents data loss during async reload cycles
      * (e.g., mesh status polling) where the disk manifest might be stale or incomplete.
+     *
+     * @param projectPath - Path to the project directory
+     * @param terminalProvider - Optional function to get terminals (for testing)
+     * @param options.persistAfterLoad - Whether to save the project after loading (default: true)
+     *                                   Set to false when just reloading for fresh data (e.g., getCurrentProject)
      */
     public async loadProjectFromPath(
         projectPath: string,
         terminalProvider: () => readonly vscode.Terminal[] = () => vscode.window.terminals,
+        options: { persistAfterLoad?: boolean } = {},
     ): Promise<Project | null> {
+        const { persistAfterLoad = true } = options;
         const project = await this.projectFileLoader.loadProject(projectPath, terminalProvider);
 
         if (project) {
@@ -265,11 +286,16 @@ export class StateManager {
                 }
             }
 
-            // Set as current project
-            await this.saveProject(project);
+            if (persistAfterLoad) {
+                // Set as current project and persist to disk
+                await this.saveProject(project);
 
-            // Add to recent projects
-            await this.addToRecentProjects(project);
+                // Add to recent projects
+                await this.addToRecentProjects(project);
+            } else {
+                // Just update in-memory state without disk writes
+                this.state.currentProject = project;
+            }
         }
 
         return project;

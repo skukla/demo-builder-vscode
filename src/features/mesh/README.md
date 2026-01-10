@@ -26,7 +26,7 @@ This feature provides seamless integration between local mesh configuration and 
 **Purpose**: Deploy mesh component from cloned repository (used during project creation)
 
 **Parameters**:
-- `componentPath` - Path to commerce-mesh component directory containing mesh.json
+- `componentPath` - Path to mesh component directory containing mesh.json (eds-commerce-mesh or headless-commerce-mesh)
 - `commandManager` - ExternalCommandManager for executing commands
 - `logger` - Logger for info/error messages
 - `onProgress?` - Optional callback for progress updates
@@ -38,7 +38,7 @@ This feature provides seamless integration between local mesh configuration and 
 import { deployMeshComponent } from '@/features/mesh';
 
 const result = await deployMeshComponent(
-    '/path/to/commerce-mesh',
+    '/path/to/eds-commerce-mesh',  // or headless-commerce-mesh
     commandManager,
     logger,
     (message, subMessage) => {
@@ -70,7 +70,7 @@ const deployer = new MeshDeployer(logger);
 
 const result = await deployer.deploy({
     meshConfigPath: '/path/to/mesh.json',
-    componentPath: '/path/to/commerce-mesh',
+    componentPath: '/path/to/mesh-component',  // eds-commerce-mesh or headless-commerce-mesh
     onProgress: (message) => console.log(message)
 });
 ```
@@ -276,9 +276,10 @@ const result = await deployMeshComponent(
 );
 
 if (result.success) {
-    // Update project state
-    project.componentInstances!['commerce-mesh'].status = 'deployed';
-    project.componentInstances!['commerce-mesh'].endpoint = result.endpoint;
+    // Update project state (use appropriate mesh component ID based on stack)
+    const meshId = 'eds-commerce-mesh'; // or 'headless-commerce-mesh' for headless stacks
+    project.componentInstances![meshId].status = 'deployed';
+    project.componentInstances![meshId].endpoint = result.endpoint;
     await stateManager.saveProject(project);
 }
 ```
@@ -343,8 +344,9 @@ if (deployedConfig) {
     console.log('  Commerce endpoint:', deployedConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT);
     console.log('  Catalog endpoint:', deployedConfig.ADOBE_CATALOG_SERVICE_ENDPOINT);
 
-    // Compare with local config
-    const localConfig = getMeshEnvVars(project.componentConfigs!['commerce-mesh']);
+    // Compare with local config (use appropriate mesh component ID based on stack)
+    const meshId = 'eds-commerce-mesh'; // or 'headless-commerce-mesh'
+    const localConfig = getMeshEnvVars(project.componentConfigs![meshId]);
 
     if (deployedConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT !== localConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT) {
         console.log('Commerce endpoint has changed - redeploy needed');

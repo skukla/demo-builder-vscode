@@ -80,6 +80,7 @@ export function ConnectServicesStep({
                     onSubmit={handleDaLiveSubmit}
                     onReset={handleDaLiveReset}
                     onCancelInput={handleCancelInput}
+                    onOpenDaLive={daLiveAuth.openDaLive}
                 />
             </div>
         </SingleColumnLayout>

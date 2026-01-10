@@ -134,6 +134,10 @@ export async function handleCreateProject(
     }
 
     // Create abort controller for cancellation
+    context.logger.debug('[Project Creation] Creating NEW AbortController', {
+        previousExists: !!context.sharedState.projectCreationAbortController,
+        timestamp: new Date().toISOString(),
+    });
     context.sharedState.projectCreationAbortController = new AbortController();
 
     try {
@@ -253,6 +257,13 @@ export async function handleCreateProject(
         return { success: true }; // Don't throw - handler completed successfully even if project creation failed
     } finally {
         // Cleanup
+        context.logger.debug('[Project Creation] Cleanup - clearing sharedState', {
+            hadAbortController: !!context.sharedState.projectCreationAbortController,
+            wasAborted: context.sharedState.projectCreationAbortController?.signal.aborted,
+            meshCreatedForWorkspace: context.sharedState.meshCreatedForWorkspace,
+            meshExistedBeforeSession: context.sharedState.meshExistedBeforeSession,
+            timestamp: new Date().toISOString(),
+        });
         context.sharedState.projectCreationAbortController = undefined;
         context.sharedState.meshCreatedForWorkspace = undefined;
         context.sharedState.meshExistedBeforeSession = undefined;

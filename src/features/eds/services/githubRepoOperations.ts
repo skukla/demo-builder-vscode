@@ -239,6 +239,7 @@ export class GitHubRepoOperations {
                 });
 
                 const repos = response.data;
+                this.logger.debug(`[GitHub:ListRepos] Page ${page}: received ${repos.length} repos`);
 
                 // Filter to only repos with push access and map to our type
                 const mappedRepos = repos
@@ -254,6 +255,11 @@ export class GitHubRepoOperations {
                         updatedAt: repo.updated_at,
                         isPrivate: repo.private,
                     }));
+
+                const filteredOut = repos.length - mappedRepos.length;
+                if (filteredOut > 0) {
+                    this.logger.debug(`[GitHub:ListRepos] Page ${page}: filtered out ${filteredOut} repos (no push access)`);
+                }
 
                 allRepos.push(...mappedRepos);
 
@@ -271,9 +277,12 @@ export class GitHubRepoOperations {
                 }
             }
 
+            this.logger.debug(`[GitHub:ListRepos] Total repos returned: ${allRepos.length}`);
             return allRepos;
         } catch (error) {
-            this.logger.error('[GitHub] Failed to list repositories', error as Error);
+            const apiError = error as GitHubApiError;
+            this.logger.error('[GitHub:ListRepos] Failed to list repositories', error as Error);
+            this.logger.debug(`[GitHub:ListRepos] Error status: ${apiError.status}, message: ${(error as Error).message}`);
             throw new Error(`Failed to list repositories: ${(error as Error).message}`);
         }
     }

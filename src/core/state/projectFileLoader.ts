@@ -25,6 +25,7 @@ export interface ProjectManifest {
     meshState?: Project['meshState'];
     selectedPackage?: string;
     selectedStack?: string;
+    selectedAddons?: string[];
 }
 
 export class ProjectFileLoader {
@@ -80,6 +81,7 @@ export class ProjectFileLoader {
                 meshState: manifest.meshState,
                 selectedPackage: manifest.selectedPackage,
                 selectedStack: manifest.selectedStack,
+                selectedAddons: manifest.selectedAddons,
             };
 
             // Detect if demo is actually running

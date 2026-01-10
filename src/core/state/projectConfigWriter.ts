@@ -60,9 +60,6 @@ export class ProjectConfigWriter {
             // Directory doesn't exist - check if this is expected (project was deleted)
             // If current project is undefined or different, this is a stale save - skip it
             if (!currentProjectPath || currentProjectPath !== project.path) {
-                this.logger.debug(
-                    `[ProjectConfigWriter] Skipping save for deleted project: ${project.name} (path: ${project.path})`,
-                );
                 return;
             }
             // Directory doesn't exist but this IS the current project - create it
@@ -90,6 +87,11 @@ export class ProjectConfigWriter {
      * This prevents JSON corruption from interrupted or concurrent writes.
      */
     private async writeManifest(project: Project): Promise<void> {
+        // GUARD: Validate project.path before proceeding
+        if (!project.path || typeof project.path !== 'string' || project.path.trim() === '') {
+            throw new Error(`Invalid project path: "${project.path}"`);
+        }
+
         const manifestPath = path.join(project.path, '.demo-builder.json');
         const tempPath = `${manifestPath}.tmp`;
 
@@ -118,6 +120,10 @@ export class ProjectConfigWriter {
 
             // Atomic write: write to temp file first, then rename
             await fs.writeFile(tempPath, JSON.stringify(manifest, null, 2));
+
+            // Verify temp file exists before rename
+            await fs.access(tempPath);
+
             await fs.rename(tempPath, manifestPath);
         } catch (error) {
             // Clean up temp file on error (ignore cleanup failures)

@@ -455,7 +455,7 @@ export const handleOpenLiveSite: MessageHandler<{ projectPath: string }> = async
         return { success: false, error: 'Project path is required' };
     }
 
-    const project = await context.stateManager.getProjectByPath(payload.projectPath);
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
     if (!project) {
         return { success: false, error: 'Project not found' };
     }
@@ -482,7 +482,7 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project path is required' };
     }
 
-    const project = await context.stateManager.getProjectByPath(payload.projectPath);
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
     if (!project) {
         return { success: false, error: 'Project not found' };
     }

@@ -209,7 +209,7 @@ describe('UpdateManager - Submodule Updates', () => {
                 },
                 'commerce-mesh': {
                     path: 'src/mesh',
-                    repository: 'skukla/commerce-mesh',
+                    repository: 'skukla/headless-citisignal-mesh',
                 },
             };
 

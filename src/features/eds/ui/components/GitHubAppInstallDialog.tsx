@@ -84,22 +84,23 @@ export function GitHubAppInstallDialog({
         <StatusDisplay
             variant="info"
             title="GitHub App Installation Required"
+            height="auto"
             actions={[
-                { 
-                    label: 'Open Installation Page', 
+                {
+                    label: 'Open Installation Page',
                     icon: <LinkOut />,
-                    variant: 'secondary', 
-                    onPress: handleOpenInstallPage 
+                    variant: 'secondary',
+                    onPress: handleOpenInstallPage
                 },
-                { 
-                    label: 'Check Installation', 
+                {
+                    label: 'Check Installation',
                     icon: <Refresh />,
-                    variant: 'accent', 
-                    onPress: handleCheckInstallation 
+                    variant: 'accent',
+                    onPress: handleCheckInstallation
                 },
             ]}
         >
-            <Text UNSAFE_className="text-sm text-gray-600 mb-4">
+            <Text UNSAFE_className="text-sm text-gray-600 mb-2">
                 Code sync requires the AEM Code Sync GitHub App to be installed on <Text UNSAFE_className="font-mono font-semibold">{owner}/{repo}</Text>.
             </Text>
             

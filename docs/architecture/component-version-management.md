@@ -64,7 +64,7 @@ Update `components.json` tags when:
 
 ```bash
 # Check what's available
-curl -s https://api.github.com/repos/skukla/commerce-mesh/releases/latest | jq '.tag_name'
+curl -s https://api.github.com/repos/skukla/headless-citisignal-mesh/releases/latest | jq '.tag_name'
 # Output: "v1.0.0-beta.4"
 ```
 

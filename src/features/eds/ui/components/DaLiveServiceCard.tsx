@@ -48,6 +48,8 @@ export interface DaLiveServiceCardProps {
     onReset: () => void;
     /** Called when input form cancelled */
     onCancelInput: () => void;
+    /** Called when "Connect DA.Live" button clicked to open DA.live in browser */
+    onOpenDaLive?: () => void;
     /** Show compact view (minimal details when another card is active) */
     compact?: boolean;
 }
@@ -70,6 +72,7 @@ export function DaLiveServiceCard({
     onSubmit,
     onReset,
     onCancelInput,
+    onOpenDaLive,
     compact = false,
 }: DaLiveServiceCardProps): React.ReactElement {
     const [orgValue, setOrgValue] = useState('');
@@ -150,20 +153,31 @@ export function DaLiveServiceCard({
                         {error && (
                             <Text UNSAFE_className="status-text-error">{error}</Text>
                         )}
-                        <Flex gap="size-100">
-                            <button
-                                className="service-action-button"
-                                onClick={handleSubmit}
-                                disabled={!canSubmit}
-                            >
-                                Verify
-                            </button>
-                            <button
-                                className="service-action-link"
-                                onClick={handleCancel}
-                            >
-                                Cancel
-                            </button>
+                        <Flex justifyContent="space-between" alignItems="center">
+                            <Flex gap="size-100">
+                                <button
+                                    className="service-action-button"
+                                    onClick={handleSubmit}
+                                    disabled={!canSubmit}
+                                >
+                                    Verify
+                                </button>
+                                <button
+                                    className="service-action-link"
+                                    onClick={handleCancel}
+                                >
+                                    Cancel
+                                </button>
+                            </Flex>
+                            {onOpenDaLive && (
+                                <button
+                                    className="service-action-link"
+                                    onClick={onOpenDaLive}
+                                    type="button"
+                                >
+                                    Open DA.live
+                                </button>
+                            )}
                         </Flex>
                     </div>
                 ) : error ? (

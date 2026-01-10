@@ -57,8 +57,9 @@ let cachedDaLiveAuthService: DaLiveAuthService | null = null;
  * Returns all GitHub-related services with explicit dependencies
  */
 export function getGitHubServices(context: HandlerContext): GitHubServices {
+    const logger = getLogger();
     if (!cachedGitHubServices) {
-        const logger = getLogger();
+        logger.debug('[EDS:ServiceCache] Creating NEW GitHub services (no cache)');
         const tokenService = new GitHubTokenService(context.context.secrets, logger);
         const repoOperations = new GitHubRepoOperations(tokenService, logger);
         const fileOperations = new GitHubFileOperations(tokenService, logger);
@@ -70,6 +71,9 @@ export function getGitHubServices(context: HandlerContext): GitHubServices {
             fileOperations,
             oauthService,
         };
+        logger.debug('[EDS:ServiceCache] GitHub services created and cached');
+    } else {
+        logger.debug('[EDS:ServiceCache] Returning CACHED GitHub services');
     }
     return cachedGitHubServices;
 }
@@ -79,12 +83,12 @@ export function getGitHubServices(context: HandlerContext): GitHubServices {
  * Returns all DA.live-related services with explicit dependencies
  */
 export function getDaLiveServices(context: HandlerContext): DaLiveServices {
+    const logger = getLogger();
     if (!cachedDaLiveServices) {
+        logger.debug('[EDS:ServiceCache] Creating NEW DA.live services (no cache)');
         if (!context.authManager) {
             throw new Error('Authentication service not available');
         }
-
-        const logger = getLogger();
 
         // Create token provider adapter from AuthenticationService
         const tokenProvider: TokenProvider = {
@@ -102,6 +106,9 @@ export function getDaLiveServices(context: HandlerContext): DaLiveServices {
             orgOperations,
             contentOperations,
         };
+        logger.debug('[EDS:ServiceCache] DA.live services created and cached');
+    } else {
+        logger.debug('[EDS:ServiceCache] Returning CACHED DA.live services');
     }
     return cachedDaLiveServices;
 }
@@ -122,12 +129,20 @@ export function getDaLiveAuthService(context: HandlerContext): DaLiveAuthService
  * Call this when extension is deactivated to clean up resources.
  */
 export function clearServiceCache(): void {
+    const logger = getLogger();
+    logger.debug('[EDS:ServiceCache] CLEARING all service caches', {
+        hadGitHubServices: !!cachedGitHubServices,
+        hadDaLiveServices: !!cachedDaLiveServices,
+        hadDaLiveAuthService: !!cachedDaLiveAuthService,
+        timestamp: new Date().toISOString(),
+    });
     cachedGitHubServices = null;
     cachedDaLiveServices = null;
     if (cachedDaLiveAuthService) {
         cachedDaLiveAuthService.dispose();
         cachedDaLiveAuthService = null;
     }
+    logger.debug('[EDS:ServiceCache] All service caches cleared');
 }
 
 // ==========================================================

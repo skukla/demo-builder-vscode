@@ -40,7 +40,7 @@ const resolver = new ComponentRepositoryResolver(extensionPath, logger);
 // Get specific component
 const meshInfo = await resolver.getRepositoryInfo('commerce-mesh');
 console.log(meshInfo);
-// { id: 'commerce-mesh', repository: 'skukla/commerce-mesh', name: 'Adobe Commerce API Mesh' }
+// { id: 'commerce-mesh', repository: 'skukla/headless-citisignal-mesh', name: 'Adobe Commerce API Mesh' }
 
 // Get all components with Git sources
 const allRepos = await resolver.getAllRepositories();
@@ -402,7 +402,7 @@ private repositoryResolver: ComponentRepositoryResolver;
 
 // Example: Getting repository for a component
 const repoInfo = await this.repositoryResolver.getRepositoryInfo('commerce-mesh');
-// Returns: { id: 'commerce-mesh', repository: 'skukla/commerce-mesh', name: 'Adobe Commerce API Mesh' }
+// Returns: { id: 'commerce-mesh', repository: 'skukla/headless-citisignal-mesh', name: 'Adobe Commerce API Mesh' }
 ```
 
 ### Version Tracking

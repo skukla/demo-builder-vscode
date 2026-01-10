@@ -1,0 +1,500 @@
+2026-01-09 15:59:54.130 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 15:59:54.130 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 15:59:54.130 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 15:59:54.131 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 15:59:54.131 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 15:59:54.131 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 15:59:54.131 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 15:59:54.131 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 15:59:54.131 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 15:59:54.131 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 15:59:54.132 [info] [debug] [StateManager] Loaded fresh project: my-commerce-demo-2
+2026-01-09 15:59:56.784 [info] [debug] [Retry Strategy] Command succeeded after 3.3s (attempt 1/2)
+2026-01-09 15:59:56.784 [info] [Mesh Verification] Status: building
+2026-01-09 15:59:57.791 [info] [Mesh Verification] Attempt 2/179 (1s elapsed)
+2026-01-09 15:59:59.134 [info] [debug] [StateManager] getCurrentProject called
+2026-01-09 15:59:59.134 [info] [debug] [StateManager] cached project: my-commerce-demo-2, path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 15:59:59.134 [info] [debug] [StateManager] Reloading project from disk...
+2026-01-09 15:59:59.134 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 15:59:59.134 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 15:59:59.134 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 15:59:59.135 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 15:59:59.135 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 15:59:59.135 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 15:59:59.135 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 15:59:59.135 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 15:59:59.135 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 15:59:59.135 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 15:59:59.135 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 15:59:59.135 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 15:59:59.135 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 15:59:59.135 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 15:59:59.135 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 15:59:59.136 [info] [debug] [StateManager] Loaded fresh project: my-commerce-demo-2
+2026-01-09 16:00:01.048 [info] [debug] [Retry Strategy] Command succeeded after 3.3s (attempt 1/2)
+2026-01-09 16:00:01.048 [info] [Mesh Verification] Status: building
+2026-01-09 16:00:02.051 [info] [Mesh Verification] Attempt 3/179 (2s elapsed)
+2026-01-09 16:00:04.140 [info] [debug] [StateManager] getCurrentProject called
+2026-01-09 16:00:04.140 [info] [debug] [StateManager] cached project: my-commerce-demo-2, path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:04.140 [info] [debug] [StateManager] Reloading project from disk...
+2026-01-09 16:00:04.142 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:04.142 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:04.142 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:04.144 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:04.144 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:04.144 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:04.144 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:04.145 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:04.145 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:04.145 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:04.145 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:04.145 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:04.145 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:04.145 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:04.146 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:04.151 [info] [debug] [StateManager] Loaded fresh project: my-commerce-demo-2
+2026-01-09 16:00:05.380 [info] [debug] [Retry Strategy] Command succeeded after 3.3s (attempt 1/2)
+2026-01-09 16:00:05.380 [info] [Mesh Verification] Status: building
+2026-01-09 16:00:06.386 [info] [Mesh Verification] Attempt 4/179 (3s elapsed)
+2026-01-09 16:00:09.143 [info] [debug] [StateManager] getCurrentProject called
+2026-01-09 16:00:09.143 [info] [debug] [StateManager] cached project: my-commerce-demo-2, path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:09.143 [info] [debug] [StateManager] Reloading project from disk...
+2026-01-09 16:00:09.144 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:09.144 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:09.144 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:09.145 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:09.145 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:09.145 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:09.145 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:09.145 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:09.145 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:09.145 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:09.145 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:09.145 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:09.146 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:09.146 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:09.146 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:09.149 [info] [debug] [StateManager] Loaded fresh project: my-commerce-demo-2
+2026-01-09 16:00:09.731 [info] [debug] [Retry Strategy] Command succeeded after 3.3s (attempt 1/2)
+2026-01-09 16:00:09.731 [info] [Mesh Verification] Status: success
+2026-01-09 16:00:09.731 [info] [Mesh Verification] ✅ Verified deployment after 3s
+2026-01-09 16:00:12.953 [info] [debug] [Retry Strategy] Command succeeded after 3.2s (attempt 1/2)
+2026-01-09 16:00:12.953 [info] [Mesh Deployment] ✅ Mesh verified and deployed successfully
+2026-01-09 16:00:12.953 [info] [debug] [Mesh Deployment] Verification result: meshId=f62031a8-fec4-466a-b4b5-6996d27fa74b, endpoint=https://edge-sandbox-graph.adobe.io/api/f62031a8-fec4-466a-b4b5-6996d27fa74b/graphql
+2026-01-09 16:00:12.953 [info] [debug] [Project Creation] Mesh deployment complete
+2026-01-09 16:00:12.961 [info] [debug] [Project Creation] Updated mesh state after deployment
+2026-01-09 16:00:12.961 [info] [Project Creation] Phase 3 complete: Existing mesh linked
+2026-01-09 16:00:12.961 [info] [debug] [Project Creation] Phase 4: Generating environment configuration...
+2026-01-09 16:00:12.962 [info] [debug] [Project Creation] Created .env for Headless Storefront
+2026-01-09 16:00:12.962 [info] [debug] [Project Creation] Phase 4 complete: Environment configured
+2026-01-09 16:00:12.962 [info] [debug] [Project Creation] Populated componentConfigs['commerce-mesh'] with 7 env vars
+2026-01-09 16:00:12.962 [info] [debug] [Project Creation] Saving project: my-commerce-demo-2 (2 components)
+2026-01-09 16:00:12.962 [info] [debug] [Project Creation] headless version: 1.0.0-beta.3
+2026-01-09 16:00:12.962 [info] [debug] [Project Creation] commerce-mesh version: 1.0.0-beta.3
+2026-01-09 16:00:12.962 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:12.962 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:12.962 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:12.963 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:12.963 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:12.963 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:12.963 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:12.963 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:12.963 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:12.963 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:12.963 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:12.963 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:12.963 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:12.963 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:12.964 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:12.964 [info] [debug] [Project Creation] Project state saved successfully
+2026-01-09 16:00:12.964 [info] [debug] [Project Creation] Phase 5 complete: Project finalized
+2026-01-09 16:00:12.964 [info] [debug] [Project Creation] Sending completion message to webview...
+2026-01-09 16:00:12.965 [info] [debug] [Project Creation] Completion message sent
+2026-01-09 16:00:12.965 [info] [debug] [Project Creation] ===== PROJECT CREATION WORKFLOW COMPLETE =====
+2026-01-09 16:00:12.965 [info] [debug] [Project Creation] Cleanup - clearing sharedState
+2026-01-09 16:00:12.965 [info] [debug] {
+  "hadAbortController": true,
+  "wasAborted": false,
+  "meshExistedBeforeSession": "4566206088345576198",
+  "timestamp": "2026-01-09T21:00:12.965Z"
+}
+2026-01-09 16:00:14.148 [info] [debug] [StateManager] getCurrentProject called
+2026-01-09 16:00:14.148 [info] [debug] [StateManager] cached project: my-commerce-demo-2, path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:14.148 [info] [debug] [StateManager] Reloading project from disk...
+2026-01-09 16:00:14.149 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:14.149 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:14.149 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:14.150 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:14.150 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:14.150 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:14.150 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:14.151 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:14.151 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:14.151 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:14.151 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:14.151 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:14.151 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:14.151 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:14.151 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:14.153 [info] [debug] [StateManager] Loaded fresh project: my-commerce-demo-2
+2026-01-09 16:00:19.149 [info] [debug] [StateManager] getCurrentProject called
+2026-01-09 16:00:19.149 [info] [debug] [StateManager] cached project: my-commerce-demo-2, path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.149 [info] [debug] [StateManager] Reloading project from disk...
+2026-01-09 16:00:19.152 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:19.152 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.152 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:19.152 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:19.152 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:19.153 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.153 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.153 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:19.153 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:19.153 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:19.153 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:19.153 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:19.153 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:19.153 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:19.154 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:19.156 [info] [debug] [StateManager] Loaded fresh project: my-commerce-demo-2
+2026-01-09 16:00:19.367 [info] [Project Creation] ✅ openProject message received
+2026-01-09 16:00:19.367 [info] [debug] [Project Creation] Current panel: exists
+2026-01-09 16:00:19.367 [info] [debug] [StateManager] getCurrentProject called
+2026-01-09 16:00:19.367 [info] [debug] [StateManager] cached project: my-commerce-demo-2, path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.367 [info] [debug] [StateManager] Reloading project from disk...
+2026-01-09 16:00:19.369 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:19.369 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.369 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:19.369 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:19.369 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:19.369 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.369 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.370 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:19.370 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:19.370 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:19.370 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:19.370 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:19.370 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:19.370 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:19.371 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:19.372 [info] [debug] [StateManager] Loaded fresh project: my-commerce-demo-2
+2026-01-09 16:00:19.373 [info] [debug] [Project Creation] Set dashboard reopen flag
+2026-01-09 16:00:19.374 [info] [debug] [Project Creation] Closed Projects List webview if it was open
+2026-01-09 16:00:19.374 [info] [debug] [Wizard:Instance] DISPOSE called for instance #1
+2026-01-09 16:00:19.374 [info] [debug] {
+  "sharedState": {
+    "hasAbortController": false,
+    "hasComponentSelection": true,
+    "hasComponentsData": false
+  },
+  "timestamp": "2026-01-09T21:00:19.373Z"
+}
+2026-01-09 16:00:19.374 [info] Clearing wizard context from sidebar
+2026-01-09 16:00:19.374 [info] [debug] [StateManager] getCurrentProject called
+2026-01-09 16:00:19.374 [info] [debug] [StateManager] cached project: my-commerce-demo-2, path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.374 [info] [debug] [StateManager] Reloading project from disk...
+2026-01-09 16:00:19.374 [info] [debug] [ProjectsList] Showing projects list
+2026-01-09 16:00:19.374 [info] [debug] [Project Creation] Wizard closed
+2026-01-09 16:00:19.374 [info] Setting showingProjectsList: true
+2026-01-09 16:00:19.374 [info] [debug] [StateManager] getCurrentProject called
+2026-01-09 16:00:19.374 [info] [debug] [StateManager] cached project: my-commerce-demo-2, path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.374 [info] [debug] [StateManager] Reloading project from disk...
+2026-01-09 16:00:19.375 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:19.375 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.375 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:19.375 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.375 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:19.375 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:19.376 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:19.376 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:19.376 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.376 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.376 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:19.376 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:19.376 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.376 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.376 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:19.376 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:19.376 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:19.376 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:19.376 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:19.377 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:19.377 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:19.377 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:19.377 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:19.377 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:19.377 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:19.377 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:19.377 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:19.377 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:19.377 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:19.377 [error] [ProjectConfigWriter] Failed to update manifest. Error: ENOENT: no such file or directory, rename '/Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp' -> '/Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json'
+2026-01-09 16:00:19.377 [error] [ProjectConfigWriter] Context: project.name="my-commerce-demo-2", project.path="/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:19.377 [error] Failed to update project manifest
+2026-01-09 16:00:19.377 [error]   Error: ENOENT: no such file or directory, rename '<path>/ -> '<path>/
+2026-01-09 16:00:19.377 [info] [debug] [StateManager] Error loading project: ENOENT: no such file or directory, rename '/Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp' -> '/Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json'
+2026-01-09 16:00:19.378 [info] [debug] [StateManager] Loaded fresh project: my-commerce-demo-2
+2026-01-09 16:00:19.379 [info] New sidebar context: projectsList
+2026-01-09 16:00:19.479 [info] [debug] [Extension] Webview disposed: demoBuilderWizard
+2026-01-09 16:00:21.100 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:21.100 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:21.100 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:21.100 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:21.100 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:21.100 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:21.101 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:21.101 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:21.101 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:21.101 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:21.101 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:21.101 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:21.101 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:21.101 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:21.101 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:21.103 [info] [debug] [StateManager] saveProject called for: my-commerce-demo
+2026-01-09 16:00:21.103 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo"
+2026-01-09 16:00:21.103 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:21.103 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:21.103 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:21.103 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo"
+2026-01-09 16:00:21.103 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo"
+2026-01-09 16:00:21.103 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo
+2026-01-09 16:00:21.103 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo" (type: string, length: 52)
+2026-01-09 16:00:21.103 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json
+2026-01-09 16:00:21.103 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json.tmp
+2026-01-09 16:00:21.103 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json.tmp
+2026-01-09 16:00:21.103 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:21.103 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json
+2026-01-09 16:00:21.104 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:23.613 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:23.613 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.614 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo
+2026-01-09 16:00:23.614 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:23.614 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:23.614 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.614 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.615 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:23.615 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:23.615 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:23.615 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:23.615 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:23.615 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:23.615 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:23.616 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:23.619 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:23.619 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.619 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:23.619 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:23.619 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:23.619 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.619 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.619 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:23.619 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:23.619 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:23.619 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:23.619 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:23.620 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:23.620 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:23.620 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:23.621 [info] [debug] [StateManager] getCurrentProject called
+2026-01-09 16:00:23.621 [info] [debug] [StateManager] cached project: my-commerce-demo-2, path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.621 [info] [debug] [StateManager] Reloading project from disk...
+2026-01-09 16:00:23.621 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:23.621 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.621 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:23.622 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:23.622 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:23.622 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.622 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.622 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:23.622 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:23.622 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:23.622 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:23.622 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:23.622 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:23.622 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:23.622 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:23.623 [info] [debug] [StateManager] Loaded fresh project: my-commerce-demo-2
+2026-01-09 16:00:23.624 [info] [debug] [Start Demo] Starting demo in: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/components/headless
+2026-01-09 16:00:23.624 [info] [debug] [Start Demo] Using Node 24
+2026-01-09 16:00:23.624 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:23.624 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.624 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:23.624 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:23.624 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:23.624 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.624 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:23.624 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:23.624 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:23.624 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:23.624 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:23.624 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:23.625 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:23.625 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:23.625 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:24.149 [info] [debug] [StateManager] getCurrentProject called
+2026-01-09 16:00:24.149 [info] [debug] [StateManager] cached project: my-commerce-demo-2, path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:24.149 [info] [debug] [StateManager] Reloading project from disk...
+2026-01-09 16:00:24.153 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:24.153 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:24.153 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:24.153 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:24.153 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:24.153 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:24.153 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:24.153 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:24.153 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:24.153 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:24.153 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:24.153 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:24.154 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:24.154 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:24.154 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:24.155 [info] [debug] [StateManager] Loaded fresh project: my-commerce-demo-2
+2026-01-09 16:00:26.648 [info] [debug] [Start Demo] Demo started on port 3000 after 3018ms
+2026-01-09 16:00:26.648 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:26.648 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:26.648 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:26.649 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:26.649 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:26.649 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:26.649 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:26.649 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:26.649 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:26.649 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:26.649 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:26.649 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:26.649 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:26.649 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:26.649 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:26.650 [info] [debug] [Start Demo] Projects panel found: true
+2026-01-09 16:00:26.650 [info] [debug] [Start Demo] Sending demoStateChanged with runningProjectPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2
+2026-01-09 16:00:28.666 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:28.666 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:28.666 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:28.667 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:28.667 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:28.667 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:28.667 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:28.668 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:28.668 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:28.668 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:28.668 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:28.668 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:28.668 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:28.668 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:28.669 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:28.672 [info] [debug] [StateManager] saveProject called for: my-commerce-demo
+2026-01-09 16:00:28.672 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo"
+2026-01-09 16:00:28.672 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:28.672 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:28.672 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:28.672 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo"
+2026-01-09 16:00:28.672 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo"
+2026-01-09 16:00:28.673 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo
+2026-01-09 16:00:28.673 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo" (type: string, length: 52)
+2026-01-09 16:00:28.673 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json
+2026-01-09 16:00:28.673 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json.tmp
+2026-01-09 16:00:28.673 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json.tmp
+2026-01-09 16:00:28.673 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:28.673 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json
+2026-01-09 16:00:28.673 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:29.151 [info] [debug] [StateManager] getCurrentProject called
+2026-01-09 16:00:29.151 [info] [debug] [StateManager] cached project: my-commerce-demo, path: "/Users/kukla/.demo-builder/projects/my-commerce-demo"
+2026-01-09 16:00:29.151 [info] [debug] [StateManager] Reloading project from disk...
+2026-01-09 16:00:29.153 [info] [debug] [StateManager] saveProject called for: my-commerce-demo
+2026-01-09 16:00:29.153 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo"
+2026-01-09 16:00:29.153 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo
+2026-01-09 16:00:29.154 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:29.154 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:29.154 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo"
+2026-01-09 16:00:29.154 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo"
+2026-01-09 16:00:29.154 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo
+2026-01-09 16:00:29.154 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo" (type: string, length: 52)
+2026-01-09 16:00:29.154 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json
+2026-01-09 16:00:29.154 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json.tmp
+2026-01-09 16:00:29.154 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json.tmp
+2026-01-09 16:00:29.155 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:29.155 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json
+2026-01-09 16:00:29.155 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:29.158 [info] [debug] [StateManager] Loaded fresh project: my-commerce-demo
+2026-01-09 16:00:32.095 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:32.095 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.095 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo
+2026-01-09 16:00:32.095 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:32.095 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:32.095 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.095 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.096 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:32.096 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:32.096 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:32.096 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:32.096 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:32.096 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:32.096 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:32.097 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:32.099 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:32.099 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.099 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:32.100 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:32.100 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:32.100 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.100 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.100 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:32.100 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:32.100 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:32.100 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:32.100 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:32.101 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:32.101 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:32.101 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:32.102 [info] [debug] [StateManager] getCurrentProject called
+2026-01-09 16:00:32.102 [info] [debug] [StateManager] cached project: my-commerce-demo-2, path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.102 [info] [debug] [StateManager] Reloading project from disk...
+2026-01-09 16:00:32.103 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:32.103 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.103 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:32.103 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:32.103 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:32.103 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.103 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.104 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:32.104 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:32.104 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:32.104 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:32.104 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:32.104 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:32.104 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:32.104 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:32.105 [info] [debug] [StateManager] Loaded fresh project: my-commerce-demo-2
+2026-01-09 16:00:32.105 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:32.105 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.105 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:32.105 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:32.105 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:32.105 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.105 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.105 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:32.105 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:32.105 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:32.105 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:32.105 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:32.105 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:32.105 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:32.107 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:32.338 [info] [debug] [Stop Demo] Demo stopped on port 3000
+2026-01-09 16:00:32.338 [info] [debug] [StateManager] saveProject called for: my-commerce-demo-2
+2026-01-09 16:00:32.338 [info] [debug] [StateManager] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.338 [info] [debug] [StateManager] projectPathExists: true, currentProject: my-commerce-demo-2
+2026-01-09 16:00:32.338 [info] [debug] [StateManager] Delegating to projectConfigWriter
+2026-01-09 16:00:32.338 [info] [debug] [ProjectConfigWriter] saveProjectConfig called
+2026-01-09 16:00:32.338 [info] [debug] [ProjectConfigWriter] project.name: "my-commerce-demo-2", project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.338 [info] [debug] [ProjectConfigWriter] currentProjectPath: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2"
+2026-01-09 16:00:32.339 [info] [debug] [ProjectConfigWriter] writeManifest called for project: my-commerce-demo-2
+2026-01-09 16:00:32.339 [info] [debug] [ProjectConfigWriter] project.path: "/Users/kukla/.demo-builder/projects/my-commerce-demo-2" (type: string, length: 54)
+2026-01-09 16:00:32.339 [info] [debug] [ProjectConfigWriter] manifestPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:32.339 [info] [debug] [ProjectConfigWriter] tempPath: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:32.339 [info] [debug] [ProjectConfigWriter] Writing temp file: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json.tmp
+2026-01-09 16:00:32.339 [info] [debug] [ProjectConfigWriter] Temp file written successfully
+2026-01-09 16:00:32.339 [info] [debug] [ProjectConfigWriter] Temp file verified, renaming to: /Users/kukla/.demo-builder/projects/my-commerce-demo-2/.demo-builder.json
+2026-01-09 16:00:32.339 [info] [debug] [ProjectConfigWriter] Manifest updated successfully
+2026-01-09 16:00:33.843 [info] Demo stopped

@@ -37,13 +37,13 @@ export async function handleReady(context: HandlerContext): Promise<SimpleResult
  * cancel - User cancels wizard
  *
  * Disposes the wizard panel and navigates back to the projects list.
+ * Note: Navigation to projects list is handled by wizard's dispose() method
+ * to avoid double-navigation race condition.
  */
 export async function handleCancel(context: HandlerContext): Promise<SimpleResult> {
-    context.panel?.dispose();
     context.logger.info('Wizard cancelled by user');
-
-    // Always return to projects list with sidebar closed
-    await vscode.commands.executeCommand('demoBuilder.showProjectsList');
+    // Disposing the panel triggers wizard's dispose() method which navigates to projects list
+    context.panel?.dispose();
 
     return { success: true };
 }

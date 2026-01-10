@@ -12,7 +12,7 @@ Refactored the update system to dynamically resolve component repositories from 
 // UpdateManager.ts
 private readonly COMPONENT_REPOS: Record<string, string> = {
     'headless': 'skukla/citisignal-nextjs',
-    'commerce-mesh': 'skukla/commerce-mesh',
+    'commerce-mesh': 'skukla/headless-citisignal-mesh',
     'integration-service': 'skukla/kukla-integration-service',
     'demo-inspector': 'skukla/demo-inspector',
 };
@@ -34,7 +34,7 @@ private repositoryResolver: ComponentRepositoryResolver;
 
 // Usage
 const repoInfo = await this.repositoryResolver.getRepositoryInfo('commerce-mesh');
-// Returns: { id: 'commerce-mesh', repository: 'skukla/commerce-mesh', name: 'Adobe Commerce API Mesh' }
+// Returns: { id: 'commerce-mesh', repository: 'skukla/headless-citisignal-mesh', name: 'Adobe Commerce API Mesh' }
 ```
 
 **Benefits**:
