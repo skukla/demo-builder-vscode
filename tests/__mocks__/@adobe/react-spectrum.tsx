@@ -42,13 +42,25 @@ export const Provider: React.FC<{ children: React.ReactNode; theme?: any }> = ({
 // Theme export
 export const defaultTheme = {};
 
+// Helper to convert Spectrum dimension props to inline styles
+const getDimensionStyle = (props: Record<string, any>): React.CSSProperties => {
+    const style: React.CSSProperties = {};
+    if (props.height) style.height = props.height;
+    if (props.width) style.width = props.width;
+    if (props.minHeight) style.minHeight = props.minHeight;
+    if (props.maxHeight) style.maxHeight = props.maxHeight;
+    if (props.minWidth) style.minWidth = props.minWidth;
+    if (props.maxWidth) style.maxWidth = props.maxWidth;
+    return style;
+};
+
 // Basic components that render their children
 export const View: React.FC<any> = ({ children, ...props }) => (
-    <div data-testid="spectrum-view" {...filterSpectrumProps(props)}>{children}</div>
+    <div data-testid="spectrum-view" style={getDimensionStyle(props)} {...filterSpectrumProps(props)}>{children}</div>
 );
 
-export const Flex: React.FC<any> = ({ children, ...props }) => (
-    <div data-testid="spectrum-flex" style={{ display: 'flex' }} {...filterSpectrumProps(props)}>{children}</div>
+export const Flex: React.FC<any> = ({ children, UNSAFE_className, ...props }) => (
+    <div data-testid="spectrum-flex" className={UNSAFE_className} style={{ display: 'flex', ...getDimensionStyle(props) }} {...filterSpectrumProps(props)}>{children}</div>
 );
 
 export const Text: React.FC<any> = ({ children, slot, ...props }) => (
@@ -138,6 +150,8 @@ export const TextField: React.FC<any> = ({
     onChange,
     isDisabled,
     isRequired,
+    description,
+    placeholder,
     ...props
 }) => (
     <label data-testid="spectrum-textfield">
@@ -148,8 +162,11 @@ export const TextField: React.FC<any> = ({
             onChange={(e) => onChange?.(e.target.value)}
             disabled={isDisabled}
             required={isRequired}
+            placeholder={placeholder}
+            description={description}
             {...filterSpectrumProps(props)}
         />
+        {description && <span data-testid="spectrum-textfield-description">{description}</span>}
     </label>
 );
 
@@ -231,8 +248,20 @@ export const Grid: React.FC<any> = ({ children, ...props }) => (
     <div data-testid="spectrum-grid" style={{ display: 'grid' }} {...filterSpectrumProps(props)}>{children}</div>
 );
 
-// DialogTrigger mock
-export const DialogTrigger: React.FC<any> = ({ children }) => <>{children}</>;
+// DialogTrigger mock - handles both simple children and render function pattern
+export const DialogTrigger: React.FC<any> = ({ children }) => {
+    // Extract children array - first child is trigger, second is dialog (or function)
+    const childArray = React.Children.toArray(children);
+    const trigger = childArray[0];
+    const dialogOrFunc = childArray[1];
+
+    // Handle render function pattern: {(close) => <Dialog>...</Dialog>}
+    const dialog = typeof dialogOrFunc === 'function'
+        ? (dialogOrFunc as (close: () => void) => React.ReactNode)(() => {})
+        : dialogOrFunc;
+
+    return <>{trigger}{dialog}</>;
+};
 
 // Dialog mock
 export const Dialog: React.FC<any> = ({ children, ...props }) => (
@@ -328,16 +357,16 @@ export const Radio: React.FC<any> = ({ children, value, selectedValue, onSelect,
 );
 
 // ProgressCircle mock - critical for LoadingDisplay component
-export const ProgressCircle: React.FC<any> = ({ size, 'aria-label': ariaLabel, ...props }) => (
+// Note: Don't render text content as it can conflict with actual loading messages
+export const ProgressCircle: React.FC<any> = ({ size, 'aria-label': ariaLabel, className, ...props }) => (
     <div
         data-testid="spectrum-progresscircle"
         role="progressbar"
         aria-label={ariaLabel}
         data-size={size}
+        className={className}
         {...filterSpectrumProps(props)}
-    >
-        Loading...
-    </div>
+    />
 );
 
 // Avatar mock
