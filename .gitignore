@@ -53,6 +53,8 @@ yarn-error.log*
 
 # RPTC workflow temporary files
 .rptc/prompt.md
+.rptc/plans/
+.rptc/research/
 
 # Analysis artifacts
 report/
