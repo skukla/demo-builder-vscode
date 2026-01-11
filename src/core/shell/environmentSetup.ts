@@ -265,16 +265,7 @@ export class EnvironmentSetup {
             return infraVersion;
         }
 
-        // PRIORITY 2: Project-configured version
-        // TODO: Add project-configured version support when StateManager integration is available
-        // const projectVersion = this.stateManager?.getCurrentProject()?.configuration?.nodeVersion;
-        // if (projectVersion) {
-        //     this.logger.debug(`[Env Setup] Using project-configured Node ${projectVersion}`);
-        //     this.cachedAdobeCLINodeVersion = projectVersion;
-        //     return projectVersion;
-        // }
-
-        // PRIORITY 3: Scan for installed aio-cli (fallback)
+        // PRIORITY 2: Scan for installed aio-cli (fallback)
         const homeDir = os.homedir();
 
         // Try fnm (Fix #7: Support FNM_DIR environment variable)

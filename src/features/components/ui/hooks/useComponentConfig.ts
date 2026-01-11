@@ -90,13 +90,6 @@ export function useComponentConfig({
     updateState,
     setCanProceed,
 }: UseComponentConfigProps): UseComponentConfigReturn {
-    // Debug: Log what we receive from wizard state
-    log.info('useComponentConfig init', {
-        hasStateComponentConfigs: !!state.componentConfigs,
-        stateConfigKeys: state.componentConfigs ? Object.keys(state.componentConfigs) : [],
-        sampleConfig: state.componentConfigs ? JSON.stringify(state.componentConfigs).slice(0, 500) : 'none',
-    });
-
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(state.componentConfigs || {});
     const [hasInitializedFromState, setHasInitializedFromState] = useState(false);
     const [componentsData, setComponentsData] = useState<ComponentsData>({});

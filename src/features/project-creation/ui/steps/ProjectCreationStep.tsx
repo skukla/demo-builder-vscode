@@ -51,24 +51,6 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
     const [meshCheckResult, setMeshCheckResult] = useState<MeshCheckResult | null>(null);
     const [githubAppInstallData, setGitHubAppInstallData] = useState<GitHubAppInstallData | null>(null);
 
-    // Debug: Track component instance for diagnosing retry/remount issues
-    const instanceId = useMemo(() => `PCS-${Date.now().toString(36)}`, []);
-
-    // Debug: Track mount/unmount lifecycle
-    useEffect(() => {
-        console.log(`[ProjectCreationStep:${instanceId}] MOUNTED`, {
-            selectedStack: state.selectedStack,
-            hasEdsConfig: !!state.edsConfig,
-            repoMode: state.edsConfig?.repoMode,
-            timestamp: new Date().toISOString(),
-        });
-        return () => {
-            console.log(`[ProjectCreationStep:${instanceId}] UNMOUNTED`, {
-                timestamp: new Date().toISOString(),
-            });
-        };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
     // Determine if checks are needed
     const needsMeshCheck = state.components?.dependencies?.includes(COMPONENT_IDS.COMMERCE_MESH) ?? false;
     const needsGitHubAppCheck = useMemo(() => {
@@ -83,7 +65,6 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
      */
     const checkGitHubApp = useCallback(async () => {
         if (!needsGitHubAppCheck || !state.edsConfig) {
-            console.log('[GitHub App Check] Skipped:', { needsGitHubAppCheck, hasEdsConfig: !!state.edsConfig });
             return true; // Not needed or no config, proceed
         }
 
@@ -111,18 +92,7 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
             repo = state.edsConfig.repoName;
         }
 
-        console.log('[GitHub App Check] Resolved:', {
-            owner,
-            repo,
-            authenticatedUser,
-            repoMode: state.edsConfig.repoMode,
-            repoName: state.edsConfig.repoName,
-            selectedRepo: state.edsConfig.selectedRepo,
-            existingRepo: state.edsConfig.existingRepo,
-        });
-
         if (!owner || !repo) {
-            console.log('[GitHub App Check] Missing owner or repo, skipping check');
             return true; // Can't check without owner/repo, let it proceed and fail later if needed
         }
 
@@ -133,8 +103,6 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
                 installUrl?: string;
                 error?: string;
             }>('check-github-app', { owner, repo });
-
-            console.log('[GitHub App Check] Result:', result);
 
             // webviewClient.request wraps the response in { success, data }
             const data = result.data as { success: boolean; isInstalled: boolean; installUrl?: string };
@@ -162,14 +130,6 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
      * Run pre-flight checks before starting project creation
      */
     const runPreFlightChecks = useCallback(async () => {
-        console.log(`[Pre-Flight:${instanceId}] ENTER runPreFlightChecks`, {
-            needsMeshCheck,
-            needsGitHubAppCheck,
-            hasEdsConfig: !!state.edsConfig,
-            repoMode: state.edsConfig?.repoMode,
-            timestamp: new Date().toISOString(),
-        });
-
         // Store mesh info from check result (React state updates are async, can't rely on state)
         let detectedMeshInfo: { meshId?: string; meshStatus?: string; endpoint?: string } | undefined;
 
@@ -224,30 +184,25 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
         }
 
         // Then check GitHub app (if needed)
-        console.log('[Pre-Flight] Running GitHub app check...');
         const githubAppOk = await checkGitHubApp();
-        console.log('[Pre-Flight] GitHub app check result:', githubAppOk);
         if (!githubAppOk) {
-            console.log('[Pre-Flight] GitHub app not installed, stopping here');
             return; // Stop here, dialog is showing
         }
 
         // All checks passed, start creation
-        console.log(`[Pre-Flight:${instanceId}] EXIT runPreFlightChecks - all checks passed, proceeding to creation`);
         setPhase('creating');
 
         // Build config with fresh mesh info (React state may be stale)
         const stateWithMeshInfo = detectedMeshInfo ? { ...state, apiMesh: detectedMeshInfo } : state;
         const projectConfig = buildProjectConfig(stateWithMeshInfo, importedSettings, packages);
         vscode.createProject(projectConfig);
-    }, [needsMeshCheck, needsGitHubAppCheck, checkGitHubApp, state, updateState, importedSettings, packages, instanceId]);
+    }, [needsMeshCheck, needsGitHubAppCheck, checkGitHubApp, state, updateState, importedSettings, packages]);
 
     /**
      * Handle detected GitHub app installation
      * Called by the dialog when polling detects the app is now installed
      */
     const handleGitHubAppInstalled = useCallback(() => {
-        console.log('[GitHub App] Installation confirmed, proceeding with creation');
         // App now installed, proceed with creation
         setPhase('creating');
         const projectConfig = buildProjectConfig(state, importedSettings, packages);
@@ -265,7 +220,6 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
 
     // Run pre-flight checks on mount
     useEffect(() => {
-        console.log(`[ProjectCreationStep:${instanceId}] useEffect triggered - starting pre-flight checks`);
         runPreFlightChecks();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

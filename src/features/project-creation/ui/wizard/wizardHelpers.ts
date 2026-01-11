@@ -698,9 +698,6 @@ export function buildProjectConfig(
             resetSiteContent: wizardState.edsConfig.resetSiteContent || false,
         } : undefined,
     };
-    
-    console.log('[buildProjectConfig] RETURNING selectedPackage:', config.selectedPackage);
-    console.log('[buildProjectConfig] RETURNING selectedStack:', config.selectedStack);
-    
+
     return config;
 }
