@@ -45,9 +45,9 @@ describe('StateManager - componentVersions Persistence', () => {
 
             await stateManager.saveProject(project as Project);
 
-            // Find the .demo-builder.json write call
+            // Find the .demo-builder.json.tmp write call (atomic write pattern)
             const manifestCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json')
+                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
 
             expect(manifestCall).toBeDefined();
@@ -88,9 +88,10 @@ describe('StateManager - componentVersions Persistence', () => {
             await stateManager.saveProject(project as Project);
 
             const manifestCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json')
+                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
 
+            expect(manifestCall).toBeDefined();
             const manifestContent = JSON.parse(manifestCall![1] as string);
             expect(manifestContent.componentVersions['component-with-tag'].version).toBe('2.5.3');
             expect(manifestContent.componentVersions['component-with-hash'].version).toBe('abc123de');
@@ -107,9 +108,10 @@ describe('StateManager - componentVersions Persistence', () => {
             await stateManager.saveProject(project as Project);
 
             const manifestCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json')
+                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
 
+            expect(manifestCall).toBeDefined();
             const manifestContent = JSON.parse(manifestCall![1] as string);
             expect(manifestContent.componentVersions).toEqual({});
         });
@@ -124,9 +126,10 @@ describe('StateManager - componentVersions Persistence', () => {
             await stateManager.saveProject(project as Project);
 
             const manifestCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json')
+                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
 
+            expect(manifestCall).toBeDefined();
             const manifestContent = JSON.parse(manifestCall![1] as string);
             // JSON.stringify() omits undefined values, which is correct
             // On load, this will default to {} via || operator
@@ -241,10 +244,11 @@ describe('StateManager - componentVersions Persistence', () => {
             // Save project
             await stateManager.saveProject(originalProject as Project);
 
-            // Capture what was written to .demo-builder.json
+            // Capture what was written to .demo-builder.json.tmp (atomic write pattern)
             const manifestCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json')
+                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
+            expect(manifestCall).toBeDefined();
             const savedManifest = JSON.parse(manifestCall![1] as string);
 
             // Mock loadProjectFromPath to read the saved manifest

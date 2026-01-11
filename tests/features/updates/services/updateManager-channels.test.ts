@@ -38,6 +38,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 // Mock security validation
 jest.mock('@/core/validation', () => ({
     validateGitHubDownloadURL: jest.fn(),
+    sanitizeErrorForLogging: jest.fn((msg: string) => msg),
 }));
 
 // Mock global fetch

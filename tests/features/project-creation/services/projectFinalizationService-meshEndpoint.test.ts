@@ -11,10 +11,12 @@
 
 import { promises as fsPromises } from 'fs';
 import { generateEnvironmentFiles, FinalizationContext } from '@/features/project-creation/services/projectFinalizationService';
+import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import type { Project, EnvVarDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
-import { TransformedComponentDefinition } from '@/types/components';
+import type { HandlerContext } from '@/types/handlers';
+import { TransformedComponentDefinition, ComponentRegistry } from '@/types/components';
 
 // Mock fs promises
 jest.mock('fs', () => ({
@@ -31,6 +33,9 @@ jest.mock('@/features/project-creation/helpers/formatters', () => ({
         word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' '),
 }));
+
+// Re-export ProjectSetupContext from the actual module (it's imported from services, not helpers)
+// Let generateComponentConfigFiles run for real so it generates env files
 
 describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', () => {
     const createMockLogger = (): Logger => ({
@@ -55,6 +60,30 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
         },
     });
 
+    const createMockRegistry = (): ComponentRegistry => ({
+        envVars: createSharedEnvVars(),
+        components: {
+            frontends: [],
+            backends: [],
+            dependencies: [],
+            mesh: [],
+            integrations: [],
+            appBuilder: [],
+        },
+    });
+
+    const createMockHandlerContext = (): Partial<HandlerContext> => ({
+        context: { extensionPath: '/test/extension' } as any,
+        logger: createMockLogger(),
+        stateManager: {
+            getCurrentProject: jest.fn().mockResolvedValue(null),
+            saveProject: jest.fn().mockResolvedValue(undefined),
+        } as any,
+        sharedState: {},
+        sendMessage: jest.fn(),
+        panel: { visible: false, dispose: jest.fn() } as any,
+    });
+
     const createFrontendComponentDefinition = (): TransformedComponentDefinition => ({
         id: 'headless',
         name: 'Headless Frontend',
@@ -65,7 +94,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
         },
     } as TransformedComponentDefinition);
 
-    const createMinimalContext = (overrides: Partial<FinalizationContext> = {}): FinalizationContext => {
+    const createMinimalContext = (projectOverrides: Partial<Project> = {}): FinalizationContext => {
         const componentDefinitions = new Map<string, ComponentDefinitionEntry>();
         componentDefinitions.set('headless', {
             definition: createFrontendComponentDefinition(),
@@ -74,31 +103,37 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             skipInstall: false,
         } as ComponentDefinitionEntry);
 
-        return {
-            project: {
-                name: 'test-project',
-                path: '/test/project',
-                status: 'configuring',
-                created: new Date(),
-                lastModified: new Date(),
-                componentInstances: {
-                    'headless': {
-                        id: 'headless',
-                        name: 'Headless Frontend',
-                        status: 'ready',
-                        path: '/test/project/headless',
-                    },
+        const project: Project = {
+            name: 'test-project',
+            path: '/test/project',
+            status: 'configuring',
+            created: new Date(),
+            lastModified: new Date(),
+            componentInstances: {
+                'headless': {
+                    id: 'headless',
+                    name: 'Headless Frontend',
+                    status: 'ready',
+                    path: '/test/project/headless',
                 },
             },
+            ...projectOverrides,
+        };
+
+        const setupContext = new ProjectSetupContext(
+            createMockHandlerContext() as HandlerContext,
+            createMockRegistry(),
+            project,
+            {},
+        );
+
+        return {
+            setupContext,
             projectPath: '/test/project',
             componentDefinitions,
-            sharedEnvVars: createSharedEnvVars(),
-            config: {},
             progressTracker: jest.fn(),
-            logger: createMockLogger(),
             saveProject: jest.fn().mockResolvedValue(undefined),
             sendMessage: jest.fn().mockResolvedValue(undefined),
-            ...overrides,
         };
     };
 
@@ -112,25 +147,18 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             const correctEndpoint = 'https://correct-endpoint.adobeioruntime.net/api/mesh/graphql';
 
             const context = createMinimalContext({
-                project: {
-                    name: 'test-project',
-                    path: '/test/project',
-                    status: 'configuring',
-                    created: new Date(),
-                    lastModified: new Date(),
-                    componentInstances: {
-                        'commerce-mesh': {
-                            id: 'commerce-mesh',
-                            name: 'Commerce Mesh',
-                            status: 'deployed',
-                            endpoint: correctEndpoint,
-                        },
-                        'headless': {
-                            id: 'headless',
-                            name: 'Headless Frontend',
-                            status: 'ready',
-                            path: '/test/project/headless',
-                        },
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'Commerce Mesh',
+                        status: 'deployed',
+                        endpoint: correctEndpoint,
+                    },
+                    'headless': {
+                        id: 'headless',
+                        name: 'Headless Frontend',
+                        status: 'ready',
+                        path: '/test/project/headless',
                     },
                 },
             });
@@ -158,39 +186,24 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             const staleEndpoint = 'https://stale.adobeioruntime.net/api/mesh/graphql';
 
             const context = createMinimalContext({
-                project: {
-                    name: 'test-project',
-                    path: '/test/project',
-                    status: 'configuring',
-                    created: new Date(),
-                    lastModified: new Date(),
-                    componentInstances: {
-                        'commerce-mesh': {
-                            id: 'commerce-mesh',
-                            name: 'Commerce Mesh',
-                            status: 'deployed',
-                            endpoint: correctEndpoint,
-                        },
-                        'headless': {
-                            id: 'headless',
-                            name: 'Headless Frontend',
-                            status: 'ready',
-                            path: '/test/project/headless',
-                        },
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'Commerce Mesh',
+                        status: 'deployed',
+                        endpoint: correctEndpoint,
                     },
-                    // componentConfigs has a stale/different endpoint
-                    componentConfigs: {
-                        'commerce-mesh': {
-                            MESH_ENDPOINT: staleEndpoint,
-                        },
+                    'headless': {
+                        id: 'headless',
+                        name: 'Headless Frontend',
+                        status: 'ready',
+                        path: '/test/project/headless',
                     },
                 },
-                // Config also has the stale endpoint (simulating old storage)
-                config: {
-                    componentConfigs: {
-                        'commerce-mesh': {
-                            MESH_ENDPOINT: staleEndpoint,
-                        },
+                // componentConfigs has a stale/different endpoint
+                componentConfigs: {
+                    'commerce-mesh': {
+                        MESH_ENDPOINT: staleEndpoint,
                     },
                 },
             });
@@ -215,20 +228,13 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
         it('should handle missing commerce-mesh component gracefully', async () => {
             // Given: Project without commerce-mesh in componentInstances
             const context = createMinimalContext({
-                project: {
-                    name: 'test-project',
-                    path: '/test/project',
-                    status: 'configuring',
-                    created: new Date(),
-                    lastModified: new Date(),
-                    componentInstances: {
-                        // No commerce-mesh component
-                        'headless': {
-                            id: 'headless',
-                            name: 'Headless Frontend',
-                            status: 'ready',
-                            path: '/test/project/headless',
-                        },
+                componentInstances: {
+                    // No commerce-mesh component
+                    'headless': {
+                        id: 'headless',
+                        name: 'Headless Frontend',
+                        status: 'ready',
+                        path: '/test/project/headless',
                     },
                 },
             });
@@ -251,25 +257,18 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
         it('should handle commerce-mesh without endpoint property', async () => {
             // Given: commerce-mesh exists but has no endpoint
             const context = createMinimalContext({
-                project: {
-                    name: 'test-project',
-                    path: '/test/project',
-                    status: 'configuring',
-                    created: new Date(),
-                    lastModified: new Date(),
-                    componentInstances: {
-                        'commerce-mesh': {
-                            id: 'commerce-mesh',
-                            name: 'Commerce Mesh',
-                            status: 'ready',
-                            // No endpoint property - mesh not yet deployed
-                        },
-                        'headless': {
-                            id: 'headless',
-                            name: 'Headless Frontend',
-                            status: 'ready',
-                            path: '/test/project/headless',
-                        },
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'Commerce Mesh',
+                        status: 'ready',
+                        // No endpoint property - mesh not yet deployed
+                    },
+                    'headless': {
+                        id: 'headless',
+                        name: 'Headless Frontend',
+                        status: 'ready',
+                        path: '/test/project/headless',
                     },
                 },
             });
@@ -291,25 +290,18 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
         it('should handle empty endpoint string', async () => {
             // Given: commerce-mesh has empty endpoint string
             const context = createMinimalContext({
-                project: {
-                    name: 'test-project',
-                    path: '/test/project',
-                    status: 'configuring',
-                    created: new Date(),
-                    lastModified: new Date(),
-                    componentInstances: {
-                        'commerce-mesh': {
-                            id: 'commerce-mesh',
-                            name: 'Commerce Mesh',
-                            status: 'ready',
-                            endpoint: '', // Empty string
-                        },
-                        'headless': {
-                            id: 'headless',
-                            name: 'Headless Frontend',
-                            status: 'ready',
-                            path: '/test/project/headless',
-                        },
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'Commerce Mesh',
+                        status: 'ready',
+                        endpoint: '', // Empty string
+                    },
+                    'headless': {
+                        id: 'headless',
+                        name: 'Headless Frontend',
+                        status: 'ready',
+                        path: '/test/project/headless',
                     },
                 },
             });
@@ -331,14 +323,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
         it('should handle undefined componentInstances gracefully', async () => {
             // Given: Project with undefined componentInstances
             const context = createMinimalContext({
-                project: {
-                    name: 'test-project',
-                    path: '/test/project',
-                    status: 'configuring',
-                    created: new Date(),
-                    lastModified: new Date(),
-                    componentInstances: undefined,
-                },
+                componentInstances: undefined,
             });
 
             // Adjust componentDefinitions so we don't try to generate for missing paths
@@ -355,26 +340,31 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             // Given: Project with multiple frontend components that need MESH_ENDPOINT
             const correctEndpoint = 'https://correct.adobeioruntime.net/api/mesh/graphql';
 
-            const componentDefinitions = new Map<string, ComponentDefinitionEntry>();
-
-            // First frontend: headless
-            componentDefinitions.set('headless', {
-                definition: {
-                    id: 'headless',
-                    name: 'Headless Frontend',
-                    type: 'frontend',
-                    configuration: {
-                        requiredEnvVars: ['MESH_ENDPOINT'],
-                        optionalEnvVars: [],
+            const context = createMinimalContext({
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'Commerce Mesh',
+                        status: 'deployed',
+                        endpoint: correctEndpoint,
                     },
-                } as TransformedComponentDefinition,
-                selections: { frontend: 'headless' },
-                skipClone: false,
-                skipInstall: false,
-            } as ComponentDefinitionEntry);
+                    'headless': {
+                        id: 'headless',
+                        name: 'Headless Frontend',
+                        status: 'ready',
+                        path: '/test/project/headless',
+                    },
+                    'nextjs-starter': {
+                        id: 'nextjs-starter',
+                        name: 'Next.js Starter',
+                        status: 'ready',
+                        path: '/test/project/nextjs-starter',
+                    },
+                },
+            });
 
-            // Second frontend: nextjs-starter
-            componentDefinitions.set('nextjs-starter', {
+            // Add additional component definition
+            context.componentDefinitions.set('nextjs-starter', {
                 definition: {
                     id: 'nextjs-starter',
                     name: 'Next.js Starter',
@@ -388,37 +378,6 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                 skipClone: false,
                 skipInstall: false,
             } as ComponentDefinitionEntry);
-
-            const context = createMinimalContext({
-                project: {
-                    name: 'test-project',
-                    path: '/test/project',
-                    status: 'configuring',
-                    created: new Date(),
-                    lastModified: new Date(),
-                    componentInstances: {
-                        'commerce-mesh': {
-                            id: 'commerce-mesh',
-                            name: 'Commerce Mesh',
-                            status: 'deployed',
-                            endpoint: correctEndpoint,
-                        },
-                        'headless': {
-                            id: 'headless',
-                            name: 'Headless Frontend',
-                            status: 'ready',
-                            path: '/test/project/headless',
-                        },
-                        'nextjs-starter': {
-                            id: 'nextjs-starter',
-                            name: 'Next.js Starter',
-                            status: 'ready',
-                            path: '/test/project/nextjs-starter',
-                        },
-                    },
-                },
-                componentDefinitions,
-            });
 
             // When: generateEnvironmentFiles is called
             await generateEnvironmentFiles(context);
@@ -447,9 +406,26 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
     describe('skips commerce-mesh component for .env generation', () => {
         it('should not generate .env for commerce-mesh component (already handled)', async () => {
             // Given: Project with commerce-mesh component
-            const componentDefinitions = new Map<string, ComponentDefinitionEntry>();
+            const context = createMinimalContext({
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'Commerce Mesh',
+                        status: 'deployed',
+                        endpoint: 'https://endpoint.io/graphql',
+                        path: '/test/project/commerce-mesh',
+                    },
+                    'headless': {
+                        id: 'headless',
+                        name: 'Headless Frontend',
+                        status: 'ready',
+                        path: '/test/project/headless',
+                    },
+                },
+            });
 
-            componentDefinitions.set('commerce-mesh', {
+            // Add commerce-mesh component definition
+            context.componentDefinitions.set('commerce-mesh', {
                 definition: {
                     id: 'commerce-mesh',
                     name: 'Commerce Mesh',
@@ -464,39 +440,6 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                 skipClone: false,
                 skipInstall: false,
             } as ComponentDefinitionEntry);
-
-            componentDefinitions.set('headless', {
-                definition: createFrontendComponentDefinition(),
-                selections: { frontend: 'headless' },
-                skipClone: false,
-                skipInstall: false,
-            } as ComponentDefinitionEntry);
-
-            const context = createMinimalContext({
-                project: {
-                    name: 'test-project',
-                    path: '/test/project',
-                    status: 'configuring',
-                    created: new Date(),
-                    lastModified: new Date(),
-                    componentInstances: {
-                        'commerce-mesh': {
-                            id: 'commerce-mesh',
-                            name: 'Commerce Mesh',
-                            status: 'deployed',
-                            endpoint: 'https://endpoint.io/graphql',
-                            path: '/test/project/commerce-mesh',
-                        },
-                        'headless': {
-                            id: 'headless',
-                            name: 'Headless Frontend',
-                            status: 'ready',
-                            path: '/test/project/headless',
-                        },
-                    },
-                },
-                componentDefinitions,
-            });
 
             // When: generateEnvironmentFiles is called
             await generateEnvironmentFiles(context);

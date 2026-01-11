@@ -9,8 +9,8 @@ describe('getNextButtonText', () => {
         expect(getNextButtonText(true, 3, 5)).toBe('Continue');
     });
 
-    it('returns Create Project on second-to-last step', () => {
-        expect(getNextButtonText(false, 3, 5)).toBe('Create Project'); // index 3, total 5
+    it('returns Create on second-to-last step', () => {
+        expect(getNextButtonText(false, 3, 5)).toBe('Create'); // index 3, total 5
     });
 
     it('returns Continue on other steps', () => {

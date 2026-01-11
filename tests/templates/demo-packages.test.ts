@@ -124,12 +124,13 @@ describe('demo-packages.json', () => {
     });
 
     describe('structure validation - storefronts', () => {
-        it('should have 5 storefronts total across all packages', () => {
+        it('should have 3 storefronts total across all packages', () => {
+            // Note: buildright is a placeholder package with no storefronts yet
             let totalStorefronts = 0;
             packagesConfig.packages.forEach(pkg => {
                 totalStorefronts += Object.keys(pkg.storefronts).length;
             });
-            expect(totalStorefronts).toBe(5);
+            expect(totalStorefronts).toBe(3);
         });
 
         it('should have citisignal with 3 storefronts', () => {
@@ -138,21 +139,19 @@ describe('demo-packages.json', () => {
             expect(Object.keys(citisignal!.storefronts).length).toBe(3);
         });
 
-        it('should have buildright with 2 storefronts', () => {
+        it('should have buildright as placeholder with 0 storefronts', () => {
+            // buildright is a placeholder package - storefronts will be added later
             const buildright = packagesConfig.packages.find(p => p.id === 'buildright');
             expect(buildright).toBeDefined();
-            expect(Object.keys(buildright!.storefronts).length).toBe(2);
+            expect(Object.keys(buildright!.storefronts).length).toBe(0);
         });
 
         it('should have storefronts keyed by stack ID', () => {
+            // Only citisignal has storefronts; buildright is a placeholder
             const citisignal = packagesConfig.packages.find(p => p.id === 'citisignal');
             expect(citisignal!.storefronts['headless-paas']).toBeDefined();
             expect(citisignal!.storefronts['eds-paas']).toBeDefined();
             expect(citisignal!.storefronts['eds-accs']).toBeDefined();
-
-            const buildright = packagesConfig.packages.find(p => p.id === 'buildright');
-            expect(buildright!.storefronts['eds-paas']).toBeDefined();
-            expect(buildright!.storefronts['eds-accs']).toBeDefined();
         });
     });
 
@@ -352,10 +351,10 @@ describe('demo-packages.json', () => {
             expect(pkg!.addons!['adobe-commerce-aco']).toBe('required');
         });
 
-        it('should have eds-paas and eds-accs storefronts', () => {
+        it('should be a placeholder with no storefronts yet', () => {
+            // buildright is awaiting storefront configuration
             const pkg = packagesConfig.packages.find(p => p.id === 'buildright');
-            expect(pkg!.storefronts['eds-paas']).toBeDefined();
-            expect(pkg!.storefronts['eds-accs']).toBeDefined();
+            expect(Object.keys(pkg!.storefronts).length).toBe(0);
         });
     });
 

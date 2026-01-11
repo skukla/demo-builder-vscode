@@ -79,6 +79,7 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 }));
 jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
     generateComponentEnvFile: jest.fn().mockResolvedValue(undefined),
+    generateComponentConfigFiles: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/features/project-creation/services', () => ({
@@ -421,14 +422,15 @@ describe('Executor - EDS Service Wiring', () => {
             await executeProjectCreation(mockContext as HandlerContext, edsConfig);
 
             // Find the project with component instances (last save should have them)
+            // Note: COMPONENT_IDS.EDS_STOREFRONT is 'eds-storefront', not 'eds'
             const projectWithInstances = savedProjects.find(p =>
-                p.componentInstances && p.componentInstances['eds']
+                p.componentInstances && p.componentInstances['eds-storefront']
             );
 
             // Verify frontend instance has EDS metadata
             expect(projectWithInstances).toBeDefined();
-            expect(projectWithInstances?.componentInstances?.['eds']).toBeDefined();
-            expect(projectWithInstances?.componentInstances?.['eds']?.metadata).toMatchObject({
+            expect(projectWithInstances?.componentInstances?.['eds-storefront']).toBeDefined();
+            expect(projectWithInstances?.componentInstances?.['eds-storefront']?.metadata).toMatchObject({
                 previewUrl: expect.stringContaining('.aem.page'),
                 liveUrl: expect.stringContaining('.aem.live'),
             });

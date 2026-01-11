@@ -39,6 +39,30 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 // Mock security validation
 jest.mock('@/core/validation', () => ({
     validateGitHubDownloadURL: jest.fn(),
+    sanitizeErrorForLogging: jest.fn((msg: string) => msg),
+}));
+
+// Mock ComponentRepositoryResolver to avoid loading actual components.json
+jest.mock('@/features/updates/services/componentRepositoryResolver', () => ({
+    ComponentRepositoryResolver: jest.fn().mockImplementation(() => ({
+        getRepositoryInfo: jest.fn((componentId: string) => {
+            const knownComponents: Record<string, any> = {
+                'headless': {
+                    id: 'headless',
+                    repository: 'skukla/citisignal-nextjs',
+                    name: 'Headless Commerce',
+                },
+                'commerce-mesh': {
+                    id: 'commerce-mesh',
+                    repository: 'skukla/headless-citisignal-mesh',
+                    name: 'Commerce Mesh',
+                },
+            };
+            return Promise.resolve(knownComponents[componentId] || null);
+        }),
+        getAllRepositories: jest.fn(() => Promise.resolve(new Map())),
+        clearCache: jest.fn(),
+    })),
 }));
 
 // Mock global fetch

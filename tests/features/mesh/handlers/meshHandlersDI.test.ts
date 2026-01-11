@@ -92,6 +92,14 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
                 trace: jest.fn(),
                 debug: jest.fn(),
             } as any,
+            stateManager: {
+                getCurrentProject: jest.fn().mockResolvedValue({
+                    adobe: {
+                        projectId: 'test-project-id',
+                        workspaceId: 'test-workspace-id',
+                    },
+                }),
+            } as any,
             sharedState: {
                 apiServicesConfig: {
                     services: {

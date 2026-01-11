@@ -223,8 +223,8 @@ describe('wizardHelpers', () => {
             expect(getNextButtonText(true, 1, 5)).toBe('Continue');
         });
 
-        it('should return "Create Project" on second-to-last step', () => {
-            expect(getNextButtonText(false, 3, 5)).toBe('Create Project');
+        it('should return "Create" on second-to-last step', () => {
+            expect(getNextButtonText(false, 3, 5)).toBe('Create');
         });
 
         it('should return "Continue" on other steps', () => {
@@ -237,12 +237,12 @@ describe('wizardHelpers', () => {
             expect(getNextButtonText(false, 3, 5, 'edit')).toBe('Save Changes');
         });
 
-        it('should return "Create Project" on second-to-last step when not in edit mode', () => {
-            expect(getNextButtonText(false, 3, 5, 'create')).toBe('Create Project');
+        it('should return "Create" on second-to-last step when not in edit mode', () => {
+            expect(getNextButtonText(false, 3, 5, 'create')).toBe('Create');
         });
 
-        it('should return "Create Project" on second-to-last step in import mode', () => {
-            expect(getNextButtonText(false, 3, 5, 'import')).toBe('Create Project');
+        it('should return "Create" on second-to-last step in import mode', () => {
+            expect(getNextButtonText(false, 3, 5, 'import')).toBe('Create');
         });
     });
 

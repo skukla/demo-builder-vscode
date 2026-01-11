@@ -38,6 +38,30 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 // Mock security validation
 jest.mock('@/core/validation', () => ({
     validateGitHubDownloadURL: jest.fn(),
+    sanitizeErrorForLogging: jest.fn((msg: string) => msg),
+}));
+
+// Mock ComponentRepositoryResolver to avoid loading actual components.json
+jest.mock('@/features/updates/services/componentRepositoryResolver', () => ({
+    ComponentRepositoryResolver: jest.fn().mockImplementation(() => ({
+        getRepositoryInfo: jest.fn((componentId: string) => {
+            const knownComponents: Record<string, any> = {
+                'demo-inspector': {
+                    id: 'demo-inspector',
+                    repository: 'skukla/demo-inspector',
+                    name: 'Demo Inspector',
+                },
+                'commerce-mesh': {
+                    id: 'commerce-mesh',
+                    repository: 'skukla/headless-citisignal-mesh',
+                    name: 'Commerce Mesh',
+                },
+            };
+            return Promise.resolve(knownComponents[componentId] || null);
+        }),
+        getAllRepositories: jest.fn(() => Promise.resolve(new Map())),
+        clearCache: jest.fn(),
+    })),
 }));
 
 // Mock ServiceLocator
@@ -178,7 +202,7 @@ describe('UpdateManager - Submodule Updates', () => {
 
             expect(results.size).toBe(0);
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('no repository mapping')
+                expect.stringContaining('no Git source in components.json')
             );
         });
 

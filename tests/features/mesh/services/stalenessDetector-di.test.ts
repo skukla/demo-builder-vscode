@@ -24,6 +24,9 @@ jest.mock('@/core/di', () => ({
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         NORMAL: 30000, // Standard operations (replaces MESH_DESCRIBE)
+        UI: {
+            MIN_LOADING: 500, // Required by loadingHTML.ts
+        },
     },
 }));
 

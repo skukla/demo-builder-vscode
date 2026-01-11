@@ -52,11 +52,12 @@ describe('stacks.json', () => {
             expect(headless?.backend).toBe('adobe-commerce-paas');
         });
 
-        it('should include commerce-mesh dependency', () => {
+        it('should include headless-commerce-mesh dependency', () => {
             const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;
             const headless = stacks.find(s => s.id === 'headless-paas');
             const deps = headless?.dependencies as string[];
-            expect(deps).toContain('commerce-mesh');
+            // Headless stacks use headless-commerce-mesh (prefixed/namespaced GraphQL mesh)
+            expect(deps).toContain('headless-commerce-mesh');
         });
 
         it('should have features array', () => {
@@ -88,11 +89,12 @@ describe('stacks.json', () => {
             expect(eds?.backend).toBe('adobe-commerce-accs');
         });
 
-        it('should include commerce-mesh dependency for Drop-ins integration', () => {
+        it('should include eds-commerce-mesh dependency for Drop-ins integration', () => {
             const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;
             const eds = stacks.find(s => s.id === 'eds-accs');
             const deps = eds?.dependencies as string[];
-            expect(deps).toContain('commerce-mesh');
+            // EDS stacks use eds-commerce-mesh (passthrough GraphQL mesh for drop-in components)
+            expect(deps).toContain('eds-commerce-mesh');
         });
 
         it('should require GitHub OAuth', () => {
@@ -158,14 +160,11 @@ describe('stacks.json', () => {
             const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;
             const allComponentIds = getAllComponentIds(componentsConfig);
 
+            // All dependencies referenced in stacks.json must exist in components.json
             stacks.forEach(stack => {
                 const deps = stack.dependencies as string[];
                 deps.forEach(dep => {
-                    // demo-inspector is referenced but may not exist in components.json
-                    // Skip validation for optional dependencies that may be added later
-                    if (dep !== 'demo-inspector') {
-                        expect(allComponentIds.has(dep)).toBe(true);
-                    }
+                    expect(allComponentIds.has(dep)).toBe(true);
                 });
             });
         });

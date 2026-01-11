@@ -23,6 +23,7 @@ jest.mock('fs/promises', () => ({
     access: jest.fn(),
     stat: jest.fn(),
     unlink: jest.fn(),
+    rename: jest.fn(), // Required for atomic write pattern
 }));
 
 // Mock os.homedir
@@ -74,6 +75,7 @@ describe('StateManager - Error Handling', () => {
         (fs.readdir as jest.Mock).mockResolvedValue([]);
         (fs.access as jest.Mock).mockResolvedValue(undefined);
         (fs.stat as jest.Mock).mockResolvedValue({ mtime: new Date() });
+        ((fs as any).rename as jest.Mock).mockResolvedValue(undefined); // For atomic writes
 
         // Create StateManager instance
         stateManager = new StateManager(mockContext);

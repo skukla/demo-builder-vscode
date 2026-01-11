@@ -250,8 +250,8 @@ describe('typeGuards - Project Accessors', () => {
             const project = {
                 selectedStack: 'eds-dalive',
                 componentInstances: {
-                    eds: {
-                        id: 'eds',
+                    'eds-storefront': {
+                        id: 'eds-storefront',
                         name: 'Edge Delivery Services',
                         status: 'deployed',
                         metadata: {
@@ -323,8 +323,8 @@ describe('typeGuards - Project Accessors', () => {
             const project = {
                 selectedStack: 'eds-dalive',
                 componentInstances: {
-                    eds: {
-                        id: 'eds',
+                    'eds-storefront': {
+                        id: 'eds-storefront',
                         name: 'Edge Delivery Services',
                         status: 'deployed',
                         metadata: {

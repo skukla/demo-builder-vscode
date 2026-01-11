@@ -15,6 +15,7 @@
  */
 export function createMockContext(version: string = '1.0.0'): any {
     return {
+        extensionPath: '/mock/extension/path',
         extension: {
             packageJSON: {
                 version,

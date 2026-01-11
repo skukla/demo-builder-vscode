@@ -37,7 +37,27 @@ jest.mock('@/core/di', () => ({
 }));
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        NORMAL: 30000, // Standard API calls (replaces API_CALL)
+        QUICK: 5000,
+        NORMAL: 30000,
+        LONG: 180000,
+        VERY_LONG: 300000,
+        EXTENDED: 600000,
+        UI: {
+            ANIMATION: 150,
+            UPDATE_DELAY: 100,
+            TRANSITION: 300,
+            NOTIFICATION: 2000,
+            MIN_LOADING: 1500,
+            FOCUS_FALLBACK: 1000,
+        },
+        POLL: {
+            INITIAL: 100,
+            MAX: 30000,
+        },
+        AUTH: {
+            BROWSER_LAUNCH: 120000,
+        },
+        WEBVIEW_INIT_DELAY: 100,
     },
 }));
 jest.mock('@/types/typeGuards', () => ({

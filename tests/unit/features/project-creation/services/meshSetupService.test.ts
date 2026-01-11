@@ -326,7 +326,7 @@ describe('meshSetupService', () => {
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Configuring API Mesh',
                 75,
-                'Adding existing mesh to project...',
+                'Updating existing mesh configuration...',
             );
         });
 
@@ -346,7 +346,7 @@ describe('meshSetupService', () => {
             await linkExistingMesh(context, meshConfig);
 
             expect(mockSetupContext.logger.info).toHaveBeenCalledWith(
-                '[Project Creation] Phase 3: Linking existing API Mesh...',
+                '[Project Creation] Phase 3: Configuring and deploying API Mesh...',
             );
         });
     });

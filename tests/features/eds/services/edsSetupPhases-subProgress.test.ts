@@ -14,10 +14,11 @@ jest.mock('vscode');
 jest.mock('fs/promises');
 const mockFs = fs as jest.Mocked<typeof fs>;
 
-// Mock path (partial - keep join working)
+// Mock path (partial - keep join and dirname working)
 jest.mock('path', () => ({
     ...jest.requireActual('path'),
     join: jest.fn((...args: string[]) => args.join('/')),
+    dirname: jest.fn((p: string) => p?.split('/').slice(0, -1).join('/') || ''),
 }));
 
 // Mock logging
@@ -63,6 +64,7 @@ import type { AuthenticationService } from '@/features/authentication/services/a
 import type { GitHubRepoOperations } from '@/features/eds/services/githubRepoOperations';
 import type { GitHubTokenService } from '@/features/eds/services/githubTokenService';
 import type { DaLiveOrgOperations } from '@/features/eds/services/daLiveOrgOperations';
+import type { GitHubAppService } from '@/features/eds/services/githubAppService';
 import type { GitHubServicesForPhases, PhaseProgressCallback } from '@/features/eds/services/edsSetupPhases';
 
 describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
@@ -70,6 +72,7 @@ describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
     const defaultConfig: EdsProjectConfig = {
         projectName: 'test-project',
         projectPath: '/test/projects/test-project',
+        componentPath: '/test/projects/test-project/components/eds-storefront',
         repoName: 'test-site',
         daLiveOrg: 'test-org',
         daLiveSite: 'test-site',
@@ -92,6 +95,7 @@ describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
     let mockTokenService: jest.Mocked<Partial<GitHubTokenService>>;
     let mockGitHubServices: GitHubServicesForPhases;
     let mockDaLiveOrgOps: jest.Mocked<Partial<DaLiveOrgOperations>>;
+    let mockGitHubAppService: jest.Mocked<Partial<GitHubAppService>>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -119,6 +123,11 @@ describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
             deleteSite: jest.fn().mockResolvedValue(undefined),
         };
 
+        mockGitHubAppService = {
+            isAppInstalled: jest.fn().mockResolvedValue(true),
+            getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/test-app'),
+        };
+
         // Default fetch to return success
         mockFetch.mockResolvedValue({
             ok: true,
@@ -128,6 +137,15 @@ describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
 
         // Default fs.access to succeed
         mockFs.access.mockResolvedValue(undefined);
+
+        // Default fs.mkdir to succeed
+        mockFs.mkdir.mockResolvedValue(undefined);
+
+        // Default fs.writeFile to succeed (for fstab.yaml generation)
+        mockFs.writeFile.mockResolvedValue(undefined);
+
+        // Default fs.readdir to return a mock directory listing
+        mockFs.readdir.mockResolvedValue(['package.json', 'scripts', 'blocks', '.git'] as any);
 
         // Default polling to succeed immediately
         mockPollUntilCondition.mockResolvedValue(undefined);
@@ -197,20 +215,20 @@ describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
     });
 
     describe('HelixConfigPhase.configure() Sub-Progress', () => {
-        it('should call progress callback with "Sending Helix configuration..." message', async () => {
+        it('should call progress callback with "Generating fstab.yaml configuration..." message', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, mockGitHubAppService as any);
 
             const progressCallback = jest.fn();
 
             await phase.configure(defaultConfig, mockRepo, progressCallback);
 
-            expect(progressCallback).toHaveBeenCalledWith('Sending Helix configuration...');
+            expect(progressCallback).toHaveBeenCalledWith('Generating fstab.yaml configuration...');
         });
 
         it('should call progress callback with "Verifying Helix config..." message', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, mockGitHubAppService as any);
 
             const progressCallback = jest.fn();
 
@@ -221,7 +239,7 @@ describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
 
         it('should call progress messages in correct order for configure', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, mockGitHubAppService as any);
 
             const messages: string[] = [];
             const progressCallback = jest.fn((msg: string) => messages.push(msg));
@@ -229,14 +247,14 @@ describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
             await phase.configure(defaultConfig, mockRepo, progressCallback);
 
             expect(messages).toEqual([
-                'Sending Helix configuration...',
+                'Generating fstab.yaml configuration...',
                 'Verifying Helix config...',
             ]);
         });
 
         it('should work without progress callback (optional parameter)', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, mockGitHubAppService as any);
 
             // Should not throw when no callback provided
             await expect(phase.configure(defaultConfig, mockRepo)).resolves.not.toThrow();
@@ -246,7 +264,7 @@ describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
     describe('HelixConfigPhase.verifyCodeSync() Sub-Progress', () => {
         it('should call progress callback with "Checking code sync status..." message', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, mockGitHubAppService as any);
 
             const progressCallback = jest.fn();
 
@@ -257,7 +275,7 @@ describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
 
         it('should work without progress callback (optional parameter)', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
-            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any);
+            const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, mockGitHubAppService as any);
 
             // Should not throw when no callback provided
             await expect(phase.verifyCodeSync(defaultConfig, mockRepo)).resolves.not.toThrow();
@@ -277,7 +295,7 @@ describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
                 onProgress?.('Verifying clone integrity...');
             });
             const mockConfigure = jest.fn().mockImplementation(async (_config, _repo, onProgress) => {
-                onProgress?.('Sending Helix configuration...');
+                onProgress?.('Generating fstab.yaml configuration...');
                 onProgress?.('Verifying Helix config...');
             });
             const mockVerifyCodeSync = jest.fn().mockImplementation(async (_config, _repo, onProgress) => {
@@ -348,7 +366,7 @@ describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
             // Should include sub-progress messages from phases
             expect(progressMessages).toContain('Cloning repository...');
             expect(progressMessages).toContain('Verifying clone integrity...');
-            expect(progressMessages).toContain('Sending Helix configuration...');
+            expect(progressMessages).toContain('Generating fstab.yaml configuration...');
             expect(progressMessages).toContain('Verifying Helix config...');
             expect(progressMessages).toContain('Checking code sync status...');
         });

@@ -90,13 +90,13 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'setViewModeOverride')).toBe(true);
         });
 
-        it('should have exactly 15 handlers', () => {
+        it('should have exactly 17 handlers', () => {
             // Given: projectsListHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(projectsListHandlers);
 
-            // Then: Exactly 15 handlers
-            expect(types).toHaveLength(15);
+            // Then: Exactly 17 handlers
+            expect(types).toHaveLength(17);
         });
 
         it('should have handlers as functions', () => {

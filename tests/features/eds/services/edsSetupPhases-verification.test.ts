@@ -16,10 +16,11 @@ jest.mock('vscode');
 jest.mock('fs/promises');
 const mockFs = fs as jest.Mocked<typeof fs>;
 
-// Mock path (partial - keep join working)
+// Mock path (partial - keep join and dirname working)
 jest.mock('path', () => ({
     ...jest.requireActual('path'),
     join: jest.fn((...args: string[]) => args.join('/')),
+    dirname: jest.fn((p: string) => p?.split('/').slice(0, -1).join('/') || ''),
 }));
 
 // Mock logging
@@ -82,10 +83,12 @@ describe('EDS Setup Phases - Verification', () => {
     const defaultConfig: EdsProjectConfig = {
         projectName: 'test-project',
         projectPath: '/test/projects/test-project',
+        componentPath: '/test/projects/test-project/components/eds-storefront',
         repoName: 'test-site',
         daLiveOrg: 'test-org',
         daLiveSite: 'test-site',
         githubOwner: 'testuser',
+        accsEndpoint: '',
     };
 
     const mockRepo: GitHubRepo = {
@@ -137,6 +140,12 @@ describe('EDS Setup Phases - Verification', () => {
             json: () => Promise.resolve({}),
         });
 
+        // Default fs mocks for clone operations
+        mockFs.access.mockResolvedValue(undefined);
+        mockFs.mkdir.mockResolvedValue(undefined);
+        mockFs.writeFile.mockResolvedValue(undefined);
+        mockFs.readdir.mockResolvedValue(['package.json', 'scripts', 'blocks', '.git'] as any);
+
         // Default polling to succeed immediately
         mockPollUntilCondition.mockImplementation(async (checkFn) => {
             const result = await checkFn();
@@ -146,81 +155,56 @@ describe('EDS Setup Phases - Verification', () => {
         });
     });
 
-    describe('Priority 1: Helix Config Verification', () => {
-        it('should verify Helix config exists after configuration', async () => {
+    describe('Priority 1: Helix Config Verification (fstab.yaml)', () => {
+        it('should generate fstab.yaml during configuration', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
             const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
-            // Configure should succeed
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-
             await phase.configure(defaultConfig, mockRepo);
 
-            // Verify the config URL was called with POST
-            expect(mockFetch).toHaveBeenCalledWith(
-                expect.stringContaining('admin.hlx.page/config'),
-                expect.objectContaining({ method: 'POST' })
+            // Verify fstab.yaml was written with correct content
+            expect(mockFs.writeFile).toHaveBeenCalledWith(
+                expect.stringContaining('fstab.yaml'),
+                expect.stringContaining('mountpoints'),
+                'utf-8'
             );
         });
 
-        it('should call verifyHelixConfig after configure', async () => {
+        it('should verify fstab.yaml exists after generation', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
             const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
-            // Mock configure success, then verify success
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, status: 200 }) // configure POST
-                .mockResolvedValueOnce({ ok: true, status: 200 }); // verify GET
-
-            // PollingService should be called for verification
-            mockPollUntilCondition.mockImplementation(async (checkFn) => {
-                await checkFn();
-            });
-
             await phase.configure(defaultConfig, mockRepo);
 
-            // Should have used PollingService for verification
-            expect(mockPollUntilCondition).toHaveBeenCalledWith(
-                expect.any(Function),
-                expect.objectContaining({
-                    name: expect.stringContaining('helix-config'),
-                })
+            // Should have used fs.access to verify fstab.yaml exists
+            expect(mockFs.access).toHaveBeenCalledWith(
+                expect.stringContaining('fstab.yaml')
             );
         });
 
-        it('should throw EdsProjectError if Helix config verification fails', async () => {
+        it('should throw EdsProjectError if fstab.yaml generation fails', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
             const { EdsProjectError } = await import('@/features/eds/services/types');
             const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
-            // Configure succeeds but verification fails
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // configure POST
-            mockPollUntilCondition.mockRejectedValueOnce(new Error('Polling timeout'));
+            // writeFile fails
+            mockFs.writeFile.mockRejectedValueOnce(new Error('EACCES: permission denied'));
 
             await expect(phase.configure(defaultConfig, mockRepo)).rejects.toThrow(EdsProjectError);
         });
 
-        it('should verify config at correct URL', async () => {
+        it('should include da.live mountpoint in fstab.yaml', async () => {
             const { HelixConfigPhase } = await import('@/features/eds/services/edsSetupPhases');
             const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
-            mockFetch.mockResolvedValue({ ok: true, status: 200 });
-            mockPollUntilCondition.mockImplementation(async (checkFn) => {
-                await checkFn();
-            });
-
             await phase.configure(defaultConfig, mockRepo);
 
-            // The polling check function should fetch the config URL
-            const pollCall = mockPollUntilCondition.mock.calls[0];
-            const checkFn = pollCall[0];
-            await checkFn();
-
-            // Should have fetched config with GET
-            const getCalls = mockFetch.mock.calls.filter(
-                call => call[1]?.method === 'GET' || !call[1]?.method
+            // Verify fstab.yaml contains the correct da.live mountpoint
+            expect(mockFs.writeFile).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.stringContaining(`content.da.live/${defaultConfig.daLiveOrg}/${defaultConfig.daLiveSite}`),
+                'utf-8'
             );
-            expect(getCalls.length).toBeGreaterThan(0);
         });
     });
 
@@ -291,7 +275,7 @@ describe('EDS Setup Phases - Verification', () => {
     });
 
     describe('Priority 3: Post-Clone Spot Check', () => {
-        it('should verify key files exist after clone', async () => {
+        it('should verify clone by reading directory contents', async () => {
             const { GitHubRepoPhase } = await import('@/features/eds/services/edsSetupPhases');
             const phase = new GitHubRepoPhase(
                 mockGitHubServices,
@@ -299,18 +283,18 @@ describe('EDS Setup Phases - Verification', () => {
                 mockLogger as any
             );
 
-            // Mock fs.access to succeed (file exists)
-            mockFs.access.mockResolvedValue(undefined);
+            // Mock fs.readdir to return some files (clone verification uses readdir)
+            mockFs.readdir.mockResolvedValue(['package.json', 'scripts', 'blocks', '.git'] as any);
 
             await phase.clone(mockRepo, defaultConfig);
 
-            // Should check for key files
-            expect(mockFs.access).toHaveBeenCalledWith(
-                expect.stringContaining('scripts/aem.js')
+            // Should use readdir to verify clone integrity
+            expect(mockFs.readdir).toHaveBeenCalledWith(
+                expect.stringContaining('eds-storefront')
             );
         });
 
-        it('should check for package.json after clone', async () => {
+        it('should succeed when directory has files', async () => {
             const { GitHubRepoPhase } = await import('@/features/eds/services/edsSetupPhases');
             const phase = new GitHubRepoPhase(
                 mockGitHubServices,
@@ -318,16 +302,13 @@ describe('EDS Setup Phases - Verification', () => {
                 mockLogger as any
             );
 
-            mockFs.access.mockResolvedValue(undefined);
+            mockFs.readdir.mockResolvedValue(['package.json', 'scripts'] as any);
 
-            await phase.clone(mockRepo, defaultConfig);
-
-            expect(mockFs.access).toHaveBeenCalledWith(
-                expect.stringContaining('package.json')
-            );
+            // Should not throw when directory has files
+            await expect(phase.clone(mockRepo, defaultConfig)).resolves.not.toThrow();
         });
 
-        it('should throw EdsProjectError if key file missing', async () => {
+        it('should throw EdsProjectError if directory is empty', async () => {
             const { GitHubRepoPhase } = await import('@/features/eds/services/edsSetupPhases');
             const { EdsProjectError } = await import('@/features/eds/services/types');
             const phase = new GitHubRepoPhase(
@@ -336,14 +317,14 @@ describe('EDS Setup Phases - Verification', () => {
                 mockLogger as any
             );
 
-            // Clone succeeds but file check fails
+            // Clone succeeds but directory is empty
             mockRepoOperations.cloneRepository!.mockResolvedValue(undefined);
-            mockFs.access.mockRejectedValue(new Error('ENOENT'));
+            mockFs.readdir.mockResolvedValue([] as any);
 
             await expect(phase.clone(mockRepo, defaultConfig)).rejects.toThrow(EdsProjectError);
         });
 
-        it('should include missing file name in error message', async () => {
+        it('should include file count in error message for empty directory', async () => {
             const { GitHubRepoPhase } = await import('@/features/eds/services/edsSetupPhases');
             const phase = new GitHubRepoPhase(
                 mockGitHubServices,
@@ -352,9 +333,9 @@ describe('EDS Setup Phases - Verification', () => {
             );
 
             mockRepoOperations.cloneRepository!.mockResolvedValue(undefined);
-            mockFs.access.mockRejectedValue(new Error('ENOENT'));
+            mockFs.readdir.mockResolvedValue([] as any);
 
-            await expect(phase.clone(mockRepo, defaultConfig)).rejects.toThrow(/package\.json|aem\.js/);
+            await expect(phase.clone(mockRepo, defaultConfig)).rejects.toThrow(/empty|incomplete|0 files/i);
         });
     });
 

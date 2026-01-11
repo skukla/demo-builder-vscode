@@ -78,10 +78,6 @@ describe('Manifest Error Investigation', () => {
 
             // When: Attempting to save
             await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Invalid project path');
-
-            // Then: Error should be logged with context
-            const errorCalls = mockLogger.getErrorCalls();
-            expect(errorCalls.some((c) => c.message.includes('Invalid project.path detected'))).toBe(true);
         });
 
         it('should reject undefined path', async () => {
@@ -90,10 +86,6 @@ describe('Manifest Error Investigation', () => {
 
             // When: Attempting to save
             await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Invalid project path');
-
-            // Then: Error should be logged
-            const errorCalls = mockLogger.getErrorCalls();
-            expect(errorCalls.some((c) => c.message.includes('Invalid project.path detected'))).toBe(true);
         });
 
         it('should reject whitespace-only path', async () => {
@@ -112,17 +104,16 @@ describe('Manifest Error Investigation', () => {
             await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Invalid project path');
         });
 
-        it('should accept valid path and log it for debugging', async () => {
+        it('should accept valid path', async () => {
             // Given: A project with valid path
             const project = createTestProject({ path: '/valid/path/to/project' });
 
             // When: Saving
             await writer.saveProjectConfig(project, project.path);
 
-            // Then: Should succeed and log path details
-            const debugCalls = mockLogger.getDebugCalls();
-            expect(debugCalls.some((c) => c.message.includes('/valid/path/to/project'))).toBe(true);
-            expect(debugCalls.some((c) => c.message.includes('Manifest updated successfully'))).toBe(true);
+            // Then: Should succeed - writeFile and rename should be called
+            expect(mockFs.writeFile).toHaveBeenCalled();
+            expect(mockFs.rename).toHaveBeenCalled();
         });
     });
 
@@ -144,24 +135,23 @@ describe('Manifest Error Investigation', () => {
             // When: Attempting to save
             await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('ENOENT');
 
-            // Then: Should log that temp file was not found after write
+            // Then: Error should be logged
             const errorCalls = mockLogger.getErrorCalls();
-            expect(errorCalls.some((c) => c.message.includes('Temp file NOT found after write'))).toBe(true);
+            expect(errorCalls.some((c) => c.message.includes('Failed to update project manifest'))).toBe(true);
         });
 
-        it('should log successful temp file verification', async () => {
+        it('should verify temp file exists before rename', async () => {
             // Given: Normal operation where temp file exists
             const project = createTestProject();
 
             // When: Saving
             await writer.saveProjectConfig(project, project.path);
 
-            // Then: Should log verification success
-            const debugCalls = mockLogger.getDebugCalls();
-            expect(debugCalls.some((c) => c.message.includes('Temp file verified'))).toBe(true);
+            // Then: access should be called to verify temp file
+            expect(mockFs.access).toHaveBeenCalled();
         });
 
-        it('should handle ENOENT during rename and log detailed context', async () => {
+        it('should handle ENOENT during rename', async () => {
             // Given: rename fails with ENOENT (the exact error we see in production)
             const project = createTestProject();
             const enoentError = new Error("ENOENT: no such file or directory, rename '/test/path/.demo-builder.json.tmp' -> '/test/path/.demo-builder.json'");
@@ -172,11 +162,9 @@ describe('Manifest Error Investigation', () => {
             // When: Attempting to save
             await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('ENOENT');
 
-            // Then: Should log full context including project name and path
+            // Then: Error should be logged
             const errorCalls = mockLogger.getErrorCalls();
-            expect(errorCalls.some((c) => c.message.includes('Failed to update manifest'))).toBe(true);
-            expect(errorCalls.some((c) => c.message.includes('project.name='))).toBe(true);
-            expect(errorCalls.some((c) => c.message.includes('project.path='))).toBe(true);
+            expect(errorCalls.some((c) => c.message.includes('Failed to update project manifest'))).toBe(true);
         });
     });
 
@@ -191,11 +179,7 @@ describe('Manifest Error Investigation', () => {
             // When: Attempting to save with currentProjectPath undefined
             await writer.saveProjectConfig(project, undefined);
 
-            // Then: Should skip save and log it
-            const debugCalls = mockLogger.getDebugCalls();
-            expect(debugCalls.some((c) => c.message.includes('Skipping save for deleted project'))).toBe(true);
-
-            // writeFile should NOT be called
+            // Then: writeFile should NOT be called (save skipped silently)
             expect(mockFs.writeFile).not.toHaveBeenCalled();
         });
 
@@ -210,9 +194,7 @@ describe('Manifest Error Investigation', () => {
             // When: Attempting to save stale project
             await writer.saveProjectConfig(project, currentProjectPath);
 
-            // Then: Should skip save
-            const debugCalls = mockLogger.getDebugCalls();
-            expect(debugCalls.some((c) => c.message.includes('Skipping save for deleted project'))).toBe(true);
+            // Then: writeFile should NOT be called (save skipped)
             expect(mockFs.writeFile).not.toHaveBeenCalled();
         });
 
@@ -241,8 +223,8 @@ describe('Manifest Error Investigation', () => {
         });
     });
 
-    describe('ISSUE 4: Debug logging for save chain tracing', () => {
-        it('should log entry point with full project details', async () => {
+    describe('ISSUE 4: Save chain behavior', () => {
+        it('should save project with all fields', async () => {
             // Given: A project with all fields
             const project = createTestProject({
                 name: 'debug-test-project',
@@ -252,37 +234,34 @@ describe('Manifest Error Investigation', () => {
             // When: Saving
             await writer.saveProjectConfig(project, '/debug/test/path');
 
-            // Then: Should log entry with name and path
-            const debugCalls = mockLogger.getDebugCalls();
-            expect(debugCalls.some((c) => c.message.includes('saveProjectConfig called'))).toBe(true);
-            expect(debugCalls.some((c) => c.message.includes('debug-test-project'))).toBe(true);
-            expect(debugCalls.some((c) => c.message.includes('/debug/test/path'))).toBe(true);
+            // Then: Should write both manifest and env file
+            expect(mockFs.writeFile).toHaveBeenCalledTimes(2);
         });
 
-        it('should log path type and length for validation debugging', async () => {
+        it('should write manifest to correct path', async () => {
             // Given: A valid project
             const project = createTestProject({ path: '/some/valid/path' });
 
             // When: Saving
             await writer.saveProjectConfig(project, project.path);
 
-            // Then: Should log path type and length
-            const debugCalls = mockLogger.getDebugCalls();
-            expect(debugCalls.some((c) => c.message.includes('type:'))).toBe(true);
-            expect(debugCalls.some((c) => c.message.includes('length:'))).toBe(true);
+            // Then: Should write to temp file first
+            const writeCalls = mockFs.writeFile.mock.calls;
+            expect(writeCalls.some((call) => String(call[0]).endsWith('.tmp'))).toBe(true);
         });
 
-        it('should log manifest and temp paths', async () => {
+        it('should rename temp file to manifest', async () => {
             // Given: A valid project
             const project = createTestProject({ path: '/manifest/paths/test' });
 
             // When: Saving
             await writer.saveProjectConfig(project, project.path);
 
-            // Then: Should log both paths
-            const debugCalls = mockLogger.getDebugCalls();
-            expect(debugCalls.some((c) => c.message.includes('manifestPath:'))).toBe(true);
-            expect(debugCalls.some((c) => c.message.includes('tempPath:'))).toBe(true);
+            // Then: Should rename temp to manifest
+            expect(mockFs.rename).toHaveBeenCalledWith(
+                '/manifest/paths/test/.demo-builder.json.tmp',
+                '/manifest/paths/test/.demo-builder.json'
+            );
         });
     });
 
@@ -306,12 +285,9 @@ describe('Manifest Error Investigation', () => {
                 expect(error).toBe(specificError);
             }
 
-            // And: Context should be logged
+            // And: Error should be logged
             const errorCalls = mockLogger.getErrorCalls();
-            const contextLog = errorCalls.find((c) => c.message.includes('Context:'));
-            expect(contextLog).toBeDefined();
-            expect(contextLog?.message).toContain('error-context-project');
-            expect(contextLog?.message).toContain('/error/context/path');
+            expect(errorCalls.some((c) => c.message.includes('Failed to update project manifest'))).toBe(true);
         });
     });
 

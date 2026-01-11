@@ -72,9 +72,9 @@ describe('StateManager - Project Management', () => {
 
             await stateManager.saveProject(project as Project);
 
-            // Check if any writeFile call includes .demo-builder.json
+            // Check if any writeFile call includes .demo-builder.json.tmp (atomic write pattern)
             const manifestCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json')
+                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
             expect(manifestCall).toBeDefined();
 
@@ -138,7 +138,7 @@ describe('StateManager - Project Management', () => {
             await stateManager.initialize();
 
             (fs.writeFile as jest.Mock).mockImplementation((filepath: string) => {
-                if (filepath.includes('.demo-builder.json')) {
+                if (filepath.includes('.demo-builder.json.tmp')) {
                     return Promise.reject(new Error('Permission denied'));
                 }
                 return Promise.resolve();
@@ -167,9 +167,9 @@ describe('StateManager - Project Management', () => {
             // Capture time after save
             const timeAfter = new Date().toISOString();
 
-            // Verify manifest was written with updated lastModified
+            // Verify manifest was written with updated lastModified (atomic write pattern)
             const manifestCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json')
+                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
 
             expect(manifestCall).toBeDefined();

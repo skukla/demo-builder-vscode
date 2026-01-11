@@ -6,7 +6,7 @@
  *
  * Structure: Option A (Nested Storefronts)
  * - 2 packages (citisignal, buildright)
- * - 5 storefronts total nested within packages, keyed by stack ID
+ * - 3 storefronts total (citisignal has 3, buildright has 0)
  * - No contentSources (derivable from source.url)
  *
  * TDD: Tests written FIRST to define expected behavior.
@@ -170,12 +170,10 @@ describe('demoPackageLoader', () => {
             expect(stacks).toContain('eds-accs');
         });
 
-        it('should return all available stack IDs for buildright', async () => {
+        it('should return empty array for buildright (no storefronts defined)', async () => {
             const stacks = await getAvailableStacksForPackage('buildright');
 
-            expect(stacks).toHaveLength(2);
-            expect(stacks).toContain('eds-paas');
-            expect(stacks).toContain('eds-accs');
+            expect(stacks).toHaveLength(0);
         });
 
         it('should return empty array for unknown package', async () => {
@@ -186,10 +184,10 @@ describe('demoPackageLoader', () => {
     });
 
     describe('getAllStorefronts', () => {
-        it('should return all 5 storefronts with package and stack info', async () => {
+        it('should return all 3 storefronts with package and stack info', async () => {
             const storefronts = await getAllStorefronts();
 
-            expect(storefronts).toHaveLength(5);
+            expect(storefronts).toHaveLength(3);
         });
 
         it('should include package ID and stack ID with each storefront', async () => {
@@ -211,11 +209,11 @@ describe('demoPackageLoader', () => {
             expect(citisignalStorefronts).toHaveLength(3);
         });
 
-        it('should include buildright storefronts', async () => {
+        it('should have no buildright storefronts (empty in demo-packages.json)', async () => {
             const storefronts = await getAllStorefronts();
             const buildrightStorefronts = storefronts.filter(s => s.packageId === 'buildright');
 
-            expect(buildrightStorefronts).toHaveLength(2);
+            expect(buildrightStorefronts).toHaveLength(0);
         });
     });
 });

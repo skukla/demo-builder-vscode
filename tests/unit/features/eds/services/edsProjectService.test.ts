@@ -52,9 +52,19 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     },
 }));
 
+// Mock GitHubAppService - default to true (app installed), tests can override for error scenarios
+const mockGitHubAppService = {
+    isAppInstalled: jest.fn().mockResolvedValue(true),
+    getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync/installations/new'),
+};
+jest.mock('@/features/eds/services/githubAppService', () => ({
+    GitHubAppService: jest.fn().mockImplementation(() => mockGitHubAppService),
+}));
+
 // Import types
 import type { GitHubTokenService } from '@/features/eds/services/githubTokenService';
 import type { GitHubRepoOperations } from '@/features/eds/services/githubRepoOperations';
+import type { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
 import type { DaLiveOrgOperations } from '@/features/eds/services/daLiveOrgOperations';
 import type { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
@@ -62,6 +72,7 @@ import type { ComponentManager } from '@/features/components/services/componentM
 import type { GitHubRepo } from '@/features/eds/services/types';
 import {
     EdsProjectError,
+    GitHubAppNotInstalledError,
     type EdsProjectConfig,
     type EdsProgressCallback,
     type EdsSetupPhase,
@@ -75,6 +86,7 @@ describe('EdsProjectService', () => {
     let service: EdsProjectServiceType;
     let mockGitHubTokenService: jest.Mocked<Partial<GitHubTokenService>>;
     let mockGitHubRepoOps: jest.Mocked<Partial<GitHubRepoOperations>>;
+    let mockGitHubFileOps: jest.Mocked<Partial<GitHubFileOperations>>;
     let mockDaLiveOrgOps: jest.Mocked<Partial<DaLiveOrgOperations>>;
     let mockDaLiveContentOps: jest.Mocked<Partial<DaLiveContentOperations>>;
     let mockAuthService: jest.Mocked<Partial<AuthenticationService>>;
@@ -89,9 +101,13 @@ describe('EdsProjectService', () => {
     const defaultConfig: EdsProjectConfig = {
         projectName: 'Test Project',
         projectPath: '/Users/test/projects/test-project',
+        componentPath: '/Users/test/projects/test-project/components/eds-storefront',
         repoName: 'test-site',
         daLiveOrg: 'test-org',
         daLiveSite: 'test-site',
+        templateOwner: 'demo-system-stores',
+        templateRepo: 'accs-citisignal',
+        backendComponentId: 'accs',
         accsEndpoint: 'https://commerce.example.com/graphql',
         githubOwner: 'testuser',
         isPrivate: false,
@@ -111,6 +127,9 @@ describe('EdsProjectService', () => {
         jest.clearAllMocks();
         jest.useFakeTimers();
 
+        // Reset GitHubAppService mock to default (app installed)
+        mockGitHubAppService.isAppInstalled.mockResolvedValue(true);
+
         // Mock GitHubTokenService
         mockGitHubTokenService = {
             getToken: jest.fn(),
@@ -123,6 +142,13 @@ describe('EdsProjectService', () => {
             cloneRepository: jest.fn(),
             getRepository: jest.fn(),
             deleteRepository: jest.fn(),
+            waitForContent: jest.fn().mockResolvedValue(true),
+        };
+
+        // Mock GitHubFileOperations
+        mockGitHubFileOps = {
+            getFileContent: jest.fn().mockResolvedValue(null),
+            createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
         };
 
         // Mock DaLiveOrgOperations
@@ -158,13 +184,27 @@ describe('EdsProjectService', () => {
         // Mock fs/promises
         (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
         (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+        (fs.rm as jest.Mock).mockResolvedValue(undefined);
+        // Mock fs.readdir for clone verification (needs at least 1 file)
+        (fs.readdir as jest.Mock).mockResolvedValue(['package.json', 'README.md', 'src']);
         // Default: files don't exist (for .env check), but we override for clone verification
         (fs.access as jest.Mock).mockImplementation(async (filePath: string) => {
+            // fstab.yaml exists after helix config generates it
+            if (filePath.includes('fstab.yaml')) {
+                return undefined; // File exists
+            }
             // Clone verification files should pass after clone
             if (filePath.includes('package.json') || filePath.includes('scripts/aem.js')) {
                 return undefined; // File exists
             }
             // .env file doesn't exist (so it gets created)
+            throw new Error('ENOENT');
+        });
+        // Mock fs.readFile for fstab.yaml check and config.json reading
+        (fs.readFile as jest.Mock).mockImplementation(async (filePath: string) => {
+            if (filePath.includes('fstab.yaml')) {
+                return 'mountpoints:\n  /: https://content.da.live/test-org/test-site';
+            }
             throw new Error('ENOENT');
         });
 
@@ -175,6 +215,7 @@ describe('EdsProjectService', () => {
         const githubServices: GitHubServicesForProject = {
             tokenService: mockGitHubTokenService as unknown as GitHubTokenService,
             repoOperations: mockGitHubRepoOps as unknown as GitHubRepoOperations,
+            fileOperations: mockGitHubFileOps as unknown as GitHubFileOperations,
         };
 
         const daLiveServices: DaLiveServicesForProject = {
@@ -415,20 +456,26 @@ describe('EdsProjectService', () => {
             );
         });
 
-        it('should clone repository to project path', async () => {
+        it('should clone repository to component path', async () => {
             // Given: Repo created successfully
-            // Make helix config fail to stop after clone
+            // Make code sync fail (will timeout and throw GitHubAppNotInstalledError)
             mockFetch.mockRejectedValue(new Error('stop here'));
 
-            // When: Running setup
-            await service.setupProject(defaultConfig, mockProgressCallback);
+            // When: Running setup (code sync will timeout after 120s)
+            try {
+                const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+                await jest.advanceTimersByTimeAsync(130000);
+                await resultPromise;
+            } catch {
+                // GitHubAppNotInstalledError is re-thrown - expected
+            }
 
-            // Then: Should clone to project path
+            // Then: Should clone to component path (components/eds-storefront)
             expect(mockGitHubRepoOps.cloneRepository).toHaveBeenCalledWith(
                 mockRepo.cloneUrl,
-                defaultConfig.projectPath,
+                defaultConfig.componentPath,
             );
-        });
+        }, 15000);
 
         it('should handle repository name conflict', async () => {
             // Given: Repository name already exists
@@ -448,83 +495,92 @@ describe('EdsProjectService', () => {
 
     // ==========================================================
     // Helix 5 Configuration Tests (4 tests)
+    // Modern Helix 5 uses fstab.yaml file generation, not admin.hlx.page/config API
     // ==========================================================
     describe('Helix 5 Configuration', () => {
         beforeEach(() => {
             mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
             mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
+            // Mock fs.access to simulate fstab.yaml verification passing
+            (fs.access as jest.Mock).mockImplementation(async (filePath: string) => {
+                if (filePath.includes('fstab.yaml')) {
+                    return undefined; // fstab.yaml exists after generation
+                }
+                if (filePath.includes('package.json') || filePath.includes('scripts/aem.js')) {
+                    return undefined; // Clone verification files exist
+                }
+                throw new Error('ENOENT');
+            });
         });
 
-        it('should configure site via admin.hlx.page API', async () => {
+        it('should generate fstab.yaml configuration file', async () => {
             // Given: GitHub setup complete
             // Make code sync fail to stop after helix config
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config
-                .mockResolvedValue({ ok: false, status: 404 }); // code sync fails
+            mockFetch.mockResolvedValue({ ok: false, status: 404 }); // code sync fails
 
-            // When: Running setup (will timeout at code sync)
-            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+            // When: Running setup (will timeout at code sync and throw GitHubAppNotInstalledError)
+            try {
+                const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+                await jest.advanceTimersByTimeAsync(130000);
+                await resultPromise;
+            } catch {
+                // GitHubAppNotInstalledError is re-thrown - expected
+            }
 
-            // Advance timers to allow code sync to timeout
-            await jest.advanceTimersByTimeAsync(130000);
-            await resultPromise;
-
-            // Then: Should call admin.hlx.page config endpoint
-            expect(mockFetch).toHaveBeenCalledWith(
-                expect.stringContaining('admin.hlx.page/config'),
-                expect.objectContaining({
-                    method: 'POST',
-                }),
+            // Then: Should write fstab.yaml file
+            expect(fs.writeFile).toHaveBeenCalledWith(
+                expect.stringContaining('fstab.yaml'),
+                expect.any(String),
+                expect.any(String),
             );
-        });
+        }, 15000);
 
-        it('should set DA.live mountpoint in configuration', async () => {
+        it('should set DA.live mountpoint in fstab.yaml', async () => {
             // Given: GitHub setup complete
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, status: 200 })
-                .mockResolvedValue({ ok: false, status: 404 });
+            mockFetch.mockResolvedValue({ ok: false, status: 404 });
 
-            // When: Running setup
-            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+            // When: Running setup (will timeout at code sync and throw GitHubAppNotInstalledError)
+            try {
+                const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+                await jest.advanceTimersByTimeAsync(130000);
+                await resultPromise;
+            } catch {
+                // GitHubAppNotInstalledError is re-thrown - expected
+            }
 
-            // Advance timers to allow code sync to timeout
-            await jest.advanceTimersByTimeAsync(130000);
-            await resultPromise;
-
-            // Then: Config should include DA.live mountpoint
-            const configCall = mockFetch.mock.calls.find(
-                (call) => call[0].includes('admin.hlx.page/config'),
+            // Then: fstab.yaml should include DA.live mountpoint
+            const fstabWriteCall = (fs.writeFile as jest.Mock).mock.calls.find(
+                (call) => call[0].includes('fstab.yaml'),
             );
-            expect(configCall).toBeDefined();
-            const body = JSON.parse(configCall![1].body);
-            expect(body.mountpoints['/']).toContain('content.da.live');
-            expect(body.mountpoints['/']).toContain(defaultConfig.daLiveOrg);
-        });
+            expect(fstabWriteCall).toBeDefined();
+            const fstabContent = fstabWriteCall![1];
+            expect(fstabContent).toContain('content.da.live');
+            expect(fstabContent).toContain(defaultConfig.daLiveOrg);
+            expect(fstabContent).toContain(defaultConfig.daLiveSite);
+        }, 15000);
 
-        it('should use IMS token for API authentication', async () => {
-            // Given: Auth service returns IMS token
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, status: 200 })
-                .mockResolvedValue({ ok: false, status: 404 });
+        it('should verify fstab.yaml was created', async () => {
+            // Given: GitHub setup complete
+            mockFetch.mockResolvedValue({ ok: false, status: 404 });
 
-            // When: Running setup
-            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+            // When: Running setup (will timeout at code sync and throw GitHubAppNotInstalledError)
+            try {
+                const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+                await jest.advanceTimersByTimeAsync(130000);
+                await resultPromise;
+            } catch {
+                // GitHubAppNotInstalledError is re-thrown - expected
+            }
 
-            // Advance timers to allow code sync to timeout
-            await jest.advanceTimersByTimeAsync(130000);
-            await resultPromise;
-
-            // Then: API call should include Bearer token
-            const configCall = mockFetch.mock.calls.find(
-                (call) => call[0].includes('admin.hlx.page/config'),
+            // Then: Should verify fstab.yaml exists via fs.access
+            expect(fs.access).toHaveBeenCalledWith(
+                expect.stringContaining('fstab.yaml'),
             );
-            expect(configCall![1].headers.Authorization).toBe('Bearer mock-ims-token');
-        });
+        }, 15000);
 
         it('should poll code bus until sync verified', async () => {
             // Given: First 2 polls return 404, third returns 200
             mockFetch
-                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config
                 .mockResolvedValueOnce({ ok: false, status: 404 }) // code sync poll 1
                 .mockResolvedValueOnce({ ok: false, status: 404 }) // code sync poll 2
                 .mockResolvedValueOnce({ ok: true, status: 200 }); // code sync poll 3 - success!
@@ -564,17 +620,23 @@ describe('EdsProjectService', () => {
         beforeEach(() => {
             mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
             mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
-            // Setup for helix config POST + helix config verification GET
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config POST
-                .mockResolvedValueOnce({ ok: true, status: 200 }); // helix config verification GET
+            // Mock fs.access for fstab.yaml verification (helix config uses file-based approach now)
+            (fs.access as jest.Mock).mockImplementation(async (filePath: string) => {
+                if (filePath.includes('fstab.yaml')) {
+                    return undefined; // fstab.yaml exists after generation
+                }
+                if (filePath.includes('package.json') || filePath.includes('scripts/aem.js')) {
+                    return undefined; // Clone verification files exist
+                }
+                throw new Error('ENOENT');
+            });
         });
 
         it('should use exponential backoff for polling', async () => {
             // Given: Code sync keeps failing
             mockFetch.mockResolvedValue({ ok: false, status: 404 });
 
-            // When: Running setup (will timeout)
+            // When: Running setup (will timeout and throw GitHubAppNotInstalledError)
             const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
 
             // Advance time through polling
@@ -584,33 +646,40 @@ describe('EdsProjectService', () => {
             // Cancel by advancing past timeout
             await jest.advanceTimersByTimeAsync(130000);
 
-            const result = await resultPromise;
+            try {
+                await resultPromise;
+            } catch {
+                // GitHubAppNotInstalledError is re-thrown - expected
+            }
 
             // Then: Multiple polls should have occurred with delays
             const codePolls = mockFetch.mock.calls.filter(
                 (call) => call[0].includes('admin.hlx.page/code'),
             );
             expect(codePolls.length).toBeGreaterThan(1);
-        });
+        }, 15000);
 
         it('should detect GitHub App not installed when code sync fails', async () => {
             // Given: Code sync never succeeds and app not installed
             mockFetch.mockResolvedValue({ ok: false, status: 404 });
+            mockGitHubAppService.isAppInstalled.mockResolvedValue(false);
 
-            // When: Running setup
-            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+            // When: Running setup - attach error handler BEFORE advancing timers
+            // to avoid unhandled rejection during timer advancement
+            let thrownError: Error | undefined;
+            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback)
+                .catch((error: Error) => {
+                    thrownError = error;
+                });
 
-            // Advance past total timeout (125 seconds)
+            // Advance past total timeout (125 seconds) and let promise settle
             await jest.advanceTimersByTimeAsync(130000);
+            await resultPromise;
 
-            const result = await resultPromise;
-
-            // Then: Should fail at code-sync phase with app not installed error
-            expect(result.success).toBe(false);
-            expect(result.phase).toBe('code-sync');
-            // The error message now comes from GitHubAppNotInstalledError
-            expect(result.error).toContain('GitHub App not installed');
-        });
+            // Then: Should throw GitHubAppNotInstalledError (re-thrown for executor to handle)
+            expect(thrownError).toBeInstanceOf(GitHubAppNotInstalledError);
+            expect(thrownError?.message).toContain('GitHub App not installed');
+        }, 15000);
 
         it('should generate preview URL on sync success', async () => {
             // Given: Code sync succeeds on first try
@@ -855,6 +924,20 @@ describe('EdsProjectService', () => {
     // Environment Configuration Tests (4 tests)
     // ==========================================================
     describe('Environment Configuration', () => {
+        // PaaS backend config for testing config.json generation
+        const paasConfig: EdsProjectConfig = {
+            ...defaultConfig,
+            backendComponentId: 'adobe-commerce-paas',
+            meshEndpoint: 'https://edge-test.adobeio-static.net/graphql',
+            backendEnvVars: {
+                ADOBE_CATALOG_API_KEY: 'test-api-key',
+                ADOBE_COMMERCE_ENVIRONMENT_ID: 'test-env-id',
+                ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
+                ADOBE_COMMERCE_WEBSITE_CODE: 'base',
+                ADOBE_COMMERCE_STORE_CODE: 'main_website_store',
+            },
+        };
+
         beforeEach(() => {
             mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
             mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
@@ -866,60 +949,77 @@ describe('EdsProjectService', () => {
                 totalFiles: 0,
             });
             mockComponentManager.installComponent!.mockResolvedValue({ success: true });
+            // Mock default-site.json template read
+            (fs.readFile as jest.Mock).mockImplementation(async (filePath: string) => {
+                if (filePath.includes('fstab.yaml')) {
+                    return 'mountpoints:\n  /: https://content.da.live/test-org/test-site';
+                }
+                if (filePath.includes('default-site.json')) {
+                    return JSON.stringify({
+                        'commerce-endpoint': '{ENDPOINT}',
+                        'store-view-code': '{STORE_VIEW_CODE}',
+                    });
+                }
+                if (filePath.includes('config.json')) {
+                    return JSON.stringify({ 'commerce-endpoint': 'https://edge-test.adobeio-static.net/graphql' });
+                }
+                throw new Error('ENOENT');
+            });
+            // Mock GitHub file operations for config.json push
+            mockGitHubFileOps.getFileContent!.mockResolvedValue(null); // File doesn't exist
+            mockGitHubFileOps.createOrUpdateFile!.mockResolvedValue(undefined);
         });
 
-        it('should generate .env file with ACCS configuration', async () => {
-            // Given: All previous phases complete
+        it('should generate config.json for PaaS backend', async () => {
+            // Given: PaaS backend configuration
 
-            // When: Running setup
-            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+            // When: Running setup with PaaS backend
+            const resultPromise = service.setupProject(paasConfig, mockProgressCallback);
             await jest.runAllTimersAsync();
             await resultPromise;
 
-            // Then: Should write .env file with ACCS endpoint
+            // Then: Should write config.json file
             expect(fs.writeFile).toHaveBeenCalledWith(
-                expect.stringContaining('.env'),
-                expect.stringContaining('ACCS_ENDPOINT'),
+                expect.stringContaining('config.json'),
+                expect.any(String),
                 expect.any(String),
             );
         });
 
-        it('should include DA.live configuration in .env', async () => {
-            // Given: All previous phases complete
+        it('should include commerce configuration in config.json', async () => {
+            // Given: PaaS backend with commerce config
 
             // When: Running setup
-            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+            const resultPromise = service.setupProject(paasConfig, mockProgressCallback);
             await jest.runAllTimersAsync();
             await resultPromise;
 
-            // Then: .env should include DA.live config
+            // Then: config.json should include commerce endpoint
             const writeCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                (call) => call[0].includes('.env'),
+                (call) => call[0].includes('config.json'),
             );
             expect(writeCall).toBeDefined();
-            const envContent = writeCall[1];
-            expect(envContent).toContain('DA_LIVE_ORG');
-            expect(envContent).toContain(defaultConfig.daLiveOrg);
+            const configContent = writeCall[1];
+            expect(configContent).toContain(paasConfig.meshEndpoint);
         });
 
-        it('should not overwrite existing .env if present', async () => {
-            // Given: .env file already exists
-            (fs.access as jest.Mock).mockResolvedValue(undefined); // File exists
+        it('should skip config.json for non-PaaS backends', async () => {
+            // Given: ACCS backend (non-PaaS)
 
-            // When: Running setup
+            // When: Running setup with ACCS backend
             const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
             await jest.runAllTimersAsync();
             await resultPromise;
 
-            // Then: Should not overwrite
+            // Then: Should not write config.json
             expect(fs.writeFile).not.toHaveBeenCalledWith(
-                expect.stringContaining('.env'),
+                expect.stringContaining('config.json'),
                 expect.any(String),
                 expect.any(String),
             );
         });
 
-        it('should validate required env vars are set', async () => {
+        it('should complete setup successfully with valid config', async () => {
             // Given: All previous phases complete
 
             // When: Running setup
@@ -927,19 +1027,10 @@ describe('EdsProjectService', () => {
             await jest.runAllTimersAsync();
             const result = await resultPromise;
 
-            // Then: Should complete successfully with valid config
+            // Then: Should complete successfully
             expect(result.success).toBe(true);
-
-            // And .env should have required vars
-            const writeCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                (call) => call[0].includes('.env'),
-            );
-            if (writeCall) {
-                const envContent = writeCall[1];
-                expect(envContent).toContain('ACCS_ENDPOINT');
-                expect(envContent).toContain('DA_LIVE_ORG');
-                expect(envContent).toContain('DA_LIVE_SITE');
-            }
+            expect(result.previewUrl).toBeDefined();
+            expect(result.liveUrl).toBeDefined();
         });
     });
 
@@ -979,18 +1070,29 @@ describe('EdsProjectService', () => {
         });
 
         it('should handle network timeout gracefully', async () => {
-            // Given: Network timeout on Helix config
+            // Given: Network timeout on code sync polling (helix config is file-based now)
             mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
             mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockRejectedValue(new Error('Network timeout'));
+            // MUST set isAppInstalled to false so GitHubAppNotInstalledError is thrown
+            // (otherwise EdsProjectError is thrown and caught, returning { success: false })
+            mockGitHubAppService.isAppInstalled.mockResolvedValue(false);
 
-            // When: Running setup
-            const result = await service.setupProject(defaultConfig, mockProgressCallback);
+            // When: Running setup - attach error handler BEFORE advancing timers
+            let thrownError: Error | undefined;
+            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback)
+                .catch((error: Error) => {
+                    thrownError = error;
+                });
 
-            // Then: Should fail with network error
-            expect(result.success).toBe(false);
-            expect(result.error).toContain('timeout');
-        });
+            // Advance timers to exceed the 120-second code sync timeout
+            await jest.advanceTimersByTimeAsync(130000);
+            await resultPromise;
+
+            // Then: Should throw GitHubAppNotInstalledError
+            expect(thrownError).toBeInstanceOf(GitHubAppNotInstalledError);
+            expect(thrownError?.message).toContain('GitHub App not installed');
+        }, 15000);
 
         it('should log detailed debugging info on failure', async () => {
             // Given: Setup fails
@@ -1059,24 +1161,36 @@ describe('EdsProjectService', () => {
         });
 
         it('should fail when IMS token is not available', async () => {
-            // Given: Token manager returns null
+            // Given: Token manager returns null AND DA.live content copy fails with auth error
             const mockTokenManager = {
                 getAccessToken: jest.fn().mockResolvedValue(null),
             };
             mockAuthService.getTokenManager!.mockReturnValue(mockTokenManager);
+            // Mock DA.live to fail when IMS token is not available
+            mockDaLiveContentOps.copyCitisignalContent!.mockRejectedValue(
+                new Error('User is not authenticated. Please sign in to access DA.live.'),
+            );
 
             // When: Running setup
-            const result = await service.setupProject(defaultConfig, mockProgressCallback);
+            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+            await jest.runAllTimersAsync();
+            const result = await resultPromise;
 
-            // Then: Should fail at helix-config phase
+            // Then: Should fail at dalive-content phase (helix config is file-based, doesn't need IMS)
+            // DA.live content copy requires IMS token
             expect(result.success).toBe(false);
-            expect(result.phase).toBe('helix-config');
+            expect(result.phase).toBe('dalive-content');
             expect(result.error).toContain('authenticated');
         });
 
-        it('should handle Helix API non-ok response', async () => {
-            // Given: Helix config returns 500 error
-            mockFetch.mockResolvedValue({ ok: false, status: 500 });
+        it('should handle fstab.yaml generation failure', async () => {
+            // Given: fs.writeFile fails for fstab.yaml specifically
+            (fs.writeFile as jest.Mock).mockImplementation(async (filePath: string) => {
+                if (filePath.includes('fstab.yaml')) {
+                    throw new Error('Permission denied');
+                }
+                return undefined;
+            });
 
             // When: Running setup
             const result = await service.setupProject(defaultConfig, mockProgressCallback);
@@ -1084,20 +1198,27 @@ describe('EdsProjectService', () => {
             // Then: Should fail at helix-config phase
             expect(result.success).toBe(false);
             expect(result.phase).toBe('helix-config');
-            expect(result.error).toContain('500');
+            expect(result.error).toContain('Permission denied');
         });
 
-        it('should handle Helix abort error', async () => {
-            // Given: Helix config aborted
-            mockFetch.mockRejectedValue(new Error('The operation was aborted'));
+        it('should handle fstab.yaml verification failure', async () => {
+            // Given: fstab.yaml doesn't exist after write (verification fails)
+            (fs.access as jest.Mock).mockImplementation(async (filePath: string) => {
+                if (filePath.includes('fstab.yaml')) {
+                    throw new Error('ENOENT'); // File doesn't exist
+                }
+                if (filePath.includes('package.json') || filePath.includes('scripts/aem.js')) {
+                    return undefined;
+                }
+                throw new Error('ENOENT');
+            });
 
             // When: Running setup
             const result = await service.setupProject(defaultConfig, mockProgressCallback);
 
-            // Then: Should fail with timeout message
+            // Then: Should fail at helix-config phase
             expect(result.success).toBe(false);
             expect(result.phase).toBe('helix-config');
-            expect(result.error).toContain('timeout');
         });
 
         it('should run without progress callback', async () => {
@@ -1112,61 +1233,98 @@ describe('EdsProjectService', () => {
             expect(result.success).toBe(true);
         });
 
-        it('should handle fs.writeFile error in env generation', async () => {
-            // Given: fs.writeFile fails, but clone verification should pass
-            (fs.access as jest.Mock).mockImplementation(async (filePath: string) => {
-                // Clone verification files exist
-                if (filePath.includes('package.json') || filePath.includes('scripts/aem.js')) {
-                    return undefined;
+        it('should handle config.json write failure in env generation', async () => {
+            // Given: PaaS backend config that requires config.json generation
+            const paasConfig: EdsProjectConfig = {
+                ...defaultConfig,
+                backendComponentId: 'adobe-commerce-paas',
+                meshEndpoint: 'https://edge-test.adobeio-static.net/graphql',
+                backendEnvVars: {
+                    ADOBE_CATALOG_API_KEY: 'test-api-key',
+                    ADOBE_COMMERCE_ENVIRONMENT_ID: 'test-env-id',
+                    ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
+                    ADOBE_COMMERCE_WEBSITE_CODE: 'base',
+                    ADOBE_COMMERCE_STORE_CODE: 'main_website_store',
+                },
+            };
+            // Mock default-site.json template read to succeed
+            (fs.readFile as jest.Mock).mockImplementation(async (filePath: string) => {
+                if (filePath.includes('fstab.yaml')) {
+                    return 'mountpoints:\n  /: https://content.da.live/test-org/test-site';
                 }
-                // .env doesn't exist (triggers creation)
+                if (filePath.includes('default-site.json')) {
+                    return JSON.stringify({
+                        'commerce-endpoint': '{ENDPOINT}',
+                        'store-view-code': '{STORE_VIEW_CODE}',
+                    });
+                }
                 throw new Error('ENOENT');
             });
-            (fs.writeFile as jest.Mock).mockRejectedValue(new Error('Permission denied'));
+            // Mock fs.writeFile to fail for config.json specifically
+            (fs.writeFile as jest.Mock).mockImplementation(async (filePath: string) => {
+                if (filePath.includes('fstab.yaml')) {
+                    return undefined;
+                }
+                if (filePath.includes('config.json')) {
+                    throw new Error('Permission denied');
+                }
+                return undefined;
+            });
 
             // When: Running setup
-            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+            const resultPromise = service.setupProject(paasConfig, mockProgressCallback);
             await jest.runAllTimersAsync();
             const result = await resultPromise;
 
             // Then: Should fail at env-config phase
             expect(result.success).toBe(false);
             expect(result.phase).toBe('env-config');
+            expect(result.error).toContain('Permission denied');
         });
 
         it('should handle network error during code sync polling', async () => {
-            // Given: Helix config succeeds, but code sync has network errors
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config POST
-                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config verification GET
-                .mockRejectedValue(new Error('Network error')); // code sync network error
+            // Given: Helix config is file-based (no API), code sync has network errors
+            // Override beforeEach mock to simulate network errors on fetch
+            mockFetch.mockReset();
+            mockFetch.mockRejectedValue(new Error('Network error'));
+            mockGitHubAppService.isAppInstalled.mockResolvedValue(false);
 
-            // When: Running setup (will keep polling until timeout)
-            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+            // When: Running setup - attach error handler BEFORE advancing timers
+            let thrownError: Error | undefined;
+            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback)
+                .catch((error: Error) => {
+                    thrownError = error;
+                });
+
             await jest.advanceTimersByTimeAsync(130000);
-            const result = await resultPromise;
+            await resultPromise;
 
-            // Then: Should timeout at code-sync phase
-            expect(result.success).toBe(false);
-            expect(result.phase).toBe('code-sync');
-        });
+            // Then: Should throw GitHubAppNotInstalledError
+            expect(thrownError).toBeInstanceOf(GitHubAppNotInstalledError);
+            expect(thrownError?.message).toContain('GitHub App not installed');
+        }, 15000);
 
         it('should handle code sync non-404 error response', async () => {
-            // Given: Code sync returns 500 error
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config POST
-                .mockResolvedValueOnce({ ok: true, status: 200 }) // helix config verification GET
-                .mockResolvedValue({ ok: false, status: 500 }); // code sync error
+            // Given: Code sync returns 500 error (helix config is file-based, no API)
+            // Override beforeEach mock to simulate server error
+            mockFetch.mockReset();
+            mockFetch.mockResolvedValue({ ok: false, status: 500 });
+            mockGitHubAppService.isAppInstalled.mockResolvedValue(false);
 
-            // When: Running setup
-            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback);
+            // When: Running setup - attach error handler BEFORE advancing timers
+            let thrownError: Error | undefined;
+            const resultPromise = service.setupProject(defaultConfig, mockProgressCallback)
+                .catch((error: Error) => {
+                    thrownError = error;
+                });
+
             await jest.advanceTimersByTimeAsync(130000);
-            const result = await resultPromise;
+            await resultPromise;
 
-            // Then: Should timeout at code-sync phase
-            expect(result.success).toBe(false);
-            expect(result.phase).toBe('code-sync');
-        });
+            // Then: Should throw GitHubAppNotInstalledError
+            expect(thrownError).toBeInstanceOf(GitHubAppNotInstalledError);
+            expect(thrownError?.message).toContain('GitHub App not installed');
+        }, 15000);
 
         it('should handle content copy without progress callback', async () => {
             // Given: Config without progress callback

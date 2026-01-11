@@ -33,17 +33,17 @@ describe('ComponentRepositoryResolver', () => {
             expect(repositories.size).toBeGreaterThan(0);
 
             // Verify expected components are present
-            expect(repositories.has('commerce-mesh')).toBe(true);
+            expect(repositories.has('headless-commerce-mesh')).toBe(true);
             expect(repositories.has('integration-service')).toBe(true);
         });
 
         it('should extract repository in owner/repo format', async () => {
             const repositories = await resolver.getAllRepositories();
 
-            const meshRepo = repositories.get('commerce-mesh');
+            const meshRepo = repositories.get('headless-commerce-mesh');
             expect(meshRepo).toBeDefined();
             expect(meshRepo?.repository).toBe('skukla/headless-citisignal-mesh');
-            expect(meshRepo?.name).toBe('Adobe Commerce API Mesh');
+            expect(meshRepo?.name).toBe('Headless Commerce API Mesh');
         });
 
         it('should cache results on subsequent calls', async () => {
@@ -68,12 +68,12 @@ describe('ComponentRepositoryResolver', () => {
 
     describe('getRepositoryInfo', () => {
         it('should return repository info for valid component', async () => {
-            const info = await resolver.getRepositoryInfo('commerce-mesh');
+            const info = await resolver.getRepositoryInfo('headless-commerce-mesh');
 
             expect(info).toEqual({
-                id: 'commerce-mesh',
+                id: 'headless-commerce-mesh',
                 repository: 'skukla/headless-citisignal-mesh',
-                name: 'Adobe Commerce API Mesh',
+                name: 'Headless Commerce API Mesh',
             });
         });
 
@@ -104,7 +104,7 @@ describe('ComponentRepositoryResolver', () => {
 
     describe('Component categories', () => {
         it('should extract from mesh category', async () => {
-            const info = await resolver.getRepositoryInfo('commerce-mesh');
+            const info = await resolver.getRepositoryInfo('headless-commerce-mesh');
             expect(info).toBeDefined();
         });
 

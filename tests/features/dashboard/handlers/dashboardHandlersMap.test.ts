@@ -72,14 +72,14 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'deleteProject')).toBe(true);
         });
 
-        it('should have exactly 15 handlers', () => {
+        it('should have exactly 16 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 15 handlers
-            // 2 init + 1 auth + 2 lifecycle + 8 navigation + 1 mesh + 1 project = 15
-            expect(types).toHaveLength(15);
+            // Then: Exactly 16 handlers
+            // 2 init + 1 auth + 2 lifecycle + 9 navigation + 1 mesh + 1 project = 16
+            expect(types).toHaveLength(16);
         });
 
         it('should have handlers as functions', () => {

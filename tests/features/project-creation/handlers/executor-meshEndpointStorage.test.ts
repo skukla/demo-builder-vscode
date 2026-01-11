@@ -76,6 +76,7 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 // Mock envFileGenerator
 jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
     generateComponentEnvFile: jest.fn().mockResolvedValue(undefined),
+    generateComponentConfigFiles: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock vscode
