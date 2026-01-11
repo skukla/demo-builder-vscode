@@ -124,12 +124,13 @@ describe('ConfigureScreen - Validation', () => {
         });
 
         it('should enable save button when all required fields valid', async () => {
+            // Component IDs must match mockProject.componentSelections
             const validConfig = {
-                venia: {
+                headless: {
                     ADOBE_COMMERCE_URL: 'https://example.com',
                     ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
                 },
-                'commerce-backend': {
+                'adobe-commerce-paas': {
                     ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
                 },
                 'catalog-service': {

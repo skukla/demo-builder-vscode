@@ -12,7 +12,7 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import type { WizardState } from '@/types/webview';
@@ -117,7 +117,7 @@ describe('GitHubSetupStep', () => {
             );
 
             const signInButton = screen.getByRole('button', { name: /sign in with github/i });
-            await userEvent.click(signInButton);
+            fireEvent.click(signInButton);
 
             // Then: Should post OAuth message
             expect(mockPostMessage).toHaveBeenCalledWith('github-oauth');
@@ -253,7 +253,7 @@ describe('GitHubSetupStep', () => {
             );
 
             const retryButton = screen.getByRole('button', { name: /try again/i });
-            await userEvent.click(retryButton);
+            fireEvent.click(retryButton);
 
             // Then: Should initiate OAuth again
             expect(mockPostMessage).toHaveBeenCalledWith('github-oauth');

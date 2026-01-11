@@ -382,7 +382,7 @@ describe('DataSourceConfigStep', () => {
 
             // Click New button
             const newButton = screen.getByRole('button', { name: /New/i });
-            await userEvent.click(newButton);
+            fireEvent.click(newButton);
 
             // Should show create form
             await waitFor(() => {
@@ -419,11 +419,11 @@ describe('DataSourceConfigStep', () => {
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /New/i })).toBeInTheDocument();
             });
-            await userEvent.click(screen.getByRole('button', { name: /New/i }));
+            fireEvent.click(screen.getByRole('button', { name: /New/i }));
 
             // Type site name starting with number - normalizer will remove leading numbers
             const siteInput = screen.getByLabelText(/Site Name/i);
-            await userEvent.type(siteInput, '123-invalid');
+            fireEvent.change(siteInput, { target: { value: '123-invalid' } });
             fireEvent.blur(siteInput);
 
             // With normalizer, "123-invalid" becomes "invalid" (leading numbers removed)
@@ -454,12 +454,11 @@ describe('DataSourceConfigStep', () => {
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /New/i })).toBeInTheDocument();
             });
-            await userEvent.click(screen.getByRole('button', { name: /New/i }));
+            fireEvent.click(screen.getByRole('button', { name: /New/i }));
 
             // Type valid site name
             const siteInput = screen.getByLabelText(/Site Name/i);
-            await userEvent.clear(siteInput);
-            await userEvent.type(siteInput, 'my-new-site');
+            fireEvent.change(siteInput, { target: { value: 'my-new-site' } });
 
             await waitFor(() => {
                 expect(mockSetCanProceed).toHaveBeenLastCalledWith(true);
@@ -494,14 +493,14 @@ describe('DataSourceConfigStep', () => {
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /New/i })).toBeInTheDocument();
             });
-            await userEvent.click(screen.getByRole('button', { name: /New/i }));
+            fireEvent.click(screen.getByRole('button', { name: /New/i }));
 
             await waitFor(() => {
                 expect(screen.getByText(/Create New Site/i)).toBeInTheDocument();
             });
 
             const browseButton = screen.getByRole('button', { name: /Browse/i });
-            await userEvent.click(browseButton);
+            fireEvent.click(browseButton);
 
             // Should be back to list view
             await waitFor(() => {
@@ -542,7 +541,7 @@ describe('DataSourceConfigStep', () => {
 
             // Type in search field
             const searchInput = screen.getByPlaceholderText(/Filter sites/i);
-            await userEvent.type(searchInput, 'demo');
+            fireEvent.change(searchInput, { target: { value: 'demo' } });
 
             // Only demo-store should be visible
             await waitFor(() => {
@@ -582,7 +581,7 @@ describe('DataSourceConfigStep', () => {
 
             // Type non-matching search
             const searchInput = screen.getByPlaceholderText(/Filter sites/i);
-            await userEvent.type(searchInput, 'nonexistent');
+            fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
 
             await waitFor(() => {
                 expect(screen.getByText(/No sites match "nonexistent"/i)).toBeInTheDocument();

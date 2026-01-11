@@ -105,12 +105,12 @@ describe('VerifiedField', () => {
                 </TestWrapper>
             );
 
-            // When: User types in input
+            // When: User types in input (using fireEvent for simplicity with fake timers)
             const input = screen.getByLabelText(/organization/i);
-            await userEvent.type(input, 'my-org');
+            fireEvent.change(input, { target: { value: 'my-org' } });
 
             // Then: onChange should be called
-            expect(mockOnChange).toHaveBeenCalled();
+            expect(mockOnChange).toHaveBeenCalledWith('my-org');
         });
 
         it('should call onBlur when input loses focus', async () => {

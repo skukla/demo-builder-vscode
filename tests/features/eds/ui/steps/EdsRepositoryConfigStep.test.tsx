@@ -191,7 +191,7 @@ describe('EdsRepositoryConfigStep', () => {
 
             // Select existing repo mode
             const existingRadio = screen.getByRole('radio', { name: /use existing repository/i });
-            await userEvent.click(existingRadio);
+            fireEvent.click(existingRadio);
 
             // Then: Should show repo input with owner/repo format hint
             expect(screen.getByPlaceholderText(/owner\/repository/i)).toBeInTheDocument();
@@ -215,10 +215,10 @@ describe('EdsRepositoryConfigStep', () => {
 
             // Select existing repo mode
             const existingRadio = screen.getByRole('radio', { name: /use existing repository/i });
-            await userEvent.click(existingRadio);
+            fireEvent.click(existingRadio);
 
             const repoInput = screen.getByPlaceholderText(/owner\/repository/i);
-            await userEvent.type(repoInput, 'invalid-format');
+            fireEvent.change(repoInput, { target: { value: 'invalid-format' } });
             fireEvent.blur(repoInput);
 
             // Then: Should show format error
@@ -266,7 +266,7 @@ describe('EdsRepositoryConfigStep', () => {
             );
 
             const orgInput = screen.getByLabelText(/organization/i);
-            await userEvent.type(orgInput, 'test-org');
+            fireEvent.change(orgInput, { target: { value: 'test-org' } });
 
             // Then: Input should have the value and updateState should be called
             await waitFor(() => {

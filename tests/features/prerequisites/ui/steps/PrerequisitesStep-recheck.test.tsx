@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -88,10 +88,13 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
 
     it('should disable recheck during checking', async () => {
         let loadedCallback: (data: any) => void = () => {};
+        let completeCallback: () => void = () => {};
 
         mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
             if (type === 'prerequisites-loaded') {
                 loadedCallback = callback;
+            } else if (type === 'prerequisites-complete') {
+                completeCallback = callback as () => void;
             }
             return jest.fn();
         });
@@ -109,14 +112,21 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
             </Provider>
         );
 
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'Runtime', optional: false }
-            ]
+        await act(async () => {
+            loadedCallback({
+                prerequisites: [
+                    { id: 'node', name: 'Node.js', description: 'Runtime', optional: false }
+                ]
+            });
         });
 
         await waitFor(() => {
             expect(screen.getByText('Node.js')).toBeInTheDocument();
+        });
+
+        // Simulate completion of checking
+        await act(async () => {
+            completeCallback();
         });
 
         const recheckButton = screen.getByText('Recheck');

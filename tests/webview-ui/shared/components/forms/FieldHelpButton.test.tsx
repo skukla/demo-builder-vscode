@@ -52,7 +52,7 @@ describe('FieldHelpButton', () => {
             );
 
             // Open the modal by clicking the help button
-            const helpButton = screen.getByRole('button');
+            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
             fireEvent.click(helpButton);
 
             // Wait for modal content to render
@@ -78,7 +78,7 @@ describe('FieldHelpButton', () => {
             );
 
             // Open the modal
-            const helpButton = screen.getByRole('button');
+            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
             fireEvent.click(helpButton);
 
             await waitFor(() => {
@@ -109,7 +109,7 @@ describe('FieldHelpButton', () => {
             );
 
             // Open the modal
-            const helpButton = screen.getByRole('button');
+            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
             fireEvent.click(helpButton);
 
             await waitFor(() => {
@@ -139,7 +139,7 @@ describe('FieldHelpButton', () => {
             );
 
             // Open the modal
-            const helpButton = screen.getByRole('button');
+            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
             fireEvent.click(helpButton);
 
             await waitFor(() => {
@@ -171,7 +171,7 @@ describe('FieldHelpButton', () => {
             );
 
             // Open the modal
-            const helpButton = screen.getByRole('button');
+            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
             fireEvent.click(helpButton);
 
             await waitFor(() => {
@@ -193,7 +193,7 @@ describe('FieldHelpButton', () => {
             );
 
             // Open the modal
-            const helpButton = screen.getByRole('button');
+            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
             fireEvent.click(helpButton);
 
             await waitFor(() => {
@@ -215,7 +215,7 @@ describe('FieldHelpButton', () => {
             );
 
             // Open the modal
-            const helpButton = screen.getByRole('button');
+            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
             fireEvent.click(helpButton);
 
             await waitFor(() => {
@@ -239,7 +239,7 @@ describe('FieldHelpButton', () => {
             );
 
             // Open the modal
-            const helpButton = screen.getByRole('button');
+            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
             fireEvent.click(helpButton);
 
             await waitFor(() => {
@@ -261,7 +261,7 @@ describe('FieldHelpButton', () => {
                 />
             );
 
-            expect(screen.getByRole('button')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Help for Test Field/i })).toBeInTheDocument();
         });
 
         it('opens modal on click and shows help text', async () => {
@@ -272,7 +272,7 @@ describe('FieldHelpButton', () => {
                 />
             );
 
-            const helpButton = screen.getByRole('button');
+            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
             fireEvent.click(helpButton);
 
             await waitFor(() => {
@@ -290,7 +290,7 @@ describe('FieldHelpButton', () => {
                 />
             );
 
-            const helpButton = screen.getByRole('button');
+            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
             fireEvent.click(helpButton);
 
             await waitFor(() => {
