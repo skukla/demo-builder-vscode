@@ -18,7 +18,8 @@ import {
     generateComponentEnvFile,
     deployMeshComponent,
 } from '@/features/project-creation/helpers';
-import type { Project, TransformedComponentDefinition } from '@/types';
+import type { Project, TransformedComponentDefinition, Logger } from '@/types';
+import { getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 
 /** Maximum number of mesh deployment retry attempts */
@@ -83,9 +84,10 @@ export async function deployNewMesh(
         waitForMeshDecision,
     } = context;
     const { project, logger } = setupContext;
-    const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
+    const meshComponent = getMeshComponentInstance(project);
+    const meshComponentId = getMeshComponentId(project);
 
-    if (!meshComponent?.path || !meshDefinition) {
+    if (!meshComponent?.path || !meshDefinition || !meshComponentId) {
         return;
     }
 
@@ -95,7 +97,7 @@ export async function deployNewMesh(
 
     await generateComponentEnvFile(
         meshComponent.path,
-        COMPONENT_IDS.COMMERCE_MESH,
+        meshComponentId,
         meshDefinition,
         setupContext,
     );
@@ -200,7 +202,7 @@ export async function deployNewMesh(
                     meshId: meshId || '',
                     meshStatus: 'deployed',
                 };
-                project.componentInstances![COMPONENT_IDS.COMMERCE_MESH] = meshComponent;
+                project.componentInstances![meshComponentId] = meshComponent;
 
                 // Update mesh phase to success
                 updateMeshPhase({
@@ -281,16 +283,17 @@ export async function linkExistingMesh(
 ): Promise<void> {
     const { setupContext, meshDefinition, progressTracker } = context;
     const { project, logger } = setupContext;
+    const meshComponent = getMeshComponentInstance(project);
+    const meshComponentId = getMeshComponentId(project);
 
     progressTracker('Configuring API Mesh', 75, 'Updating existing mesh configuration...');
     logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh...');
 
     // Generate mesh .env file (needed for deployment)
-    const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
-    if (meshComponent?.path && meshDefinition) {
+    if (meshComponent?.path && meshDefinition && meshComponentId) {
         await generateComponentEnvFile(
             meshComponent.path,
-            COMPONENT_IDS.COMMERCE_MESH,
+            meshComponentId,
             meshDefinition,
             setupContext,
         );
@@ -329,22 +332,22 @@ export async function linkExistingMesh(
     }
 
     // Preserve existing component properties (like path from Phase 1 cloning)
-    const existingMeshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
-
     // Note: endpoint is stored in meshState (authoritative), not componentInstance
-    project.componentInstances![COMPONENT_IDS.COMMERCE_MESH] = {
-        ...existingMeshComponent, // Preserve path if component was cloned
-        id: COMPONENT_IDS.COMMERCE_MESH,
-        name: 'Commerce API Mesh',
-        type: 'dependency',
-        subType: 'mesh',
-        status: 'deployed',
-        lastUpdated: new Date(),
-        metadata: {
-            meshId: meshConfig.meshId,
-            meshStatus: meshConfig.meshStatus,
-        },
-    };
+    if (meshComponentId) {
+        project.componentInstances![meshComponentId] = {
+            ...meshComponent, // Preserve path if component was cloned
+            id: meshComponentId,
+            name: 'Commerce API Mesh',
+            type: 'dependency',
+            subType: 'mesh',
+            status: 'deployed',
+            lastUpdated: new Date(),
+            metadata: {
+                meshId: meshConfig.meshId,
+                meshStatus: meshConfig.meshStatus,
+            },
+        };
+    }
 
     // Update meshState with endpoint as single source of truth
     // See docs/architecture/state-ownership.md

@@ -10,9 +10,8 @@
  * - Extracting mesh endpoint from configurations
  */
 
-import { COMPONENT_IDS } from '@/core/constants';
 import { Project } from '@/types';
-import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
+import { getMeshComponentInstance, hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
 
 /**
  * Mesh status info for UI updates
@@ -89,8 +88,8 @@ export function getMeshEndpoint(project: Project): string | undefined {
         return project.meshState.endpoint;
     }
 
-    // Fallback: componentInstances['commerce-mesh'].endpoint (deprecated, for old projects)
-    const legacyEndpoint = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH]?.endpoint;
+    // Fallback: componentInstances mesh endpoint (deprecated, for old projects)
+    const legacyEndpoint = getMeshComponentInstance(project)?.endpoint;
     if (legacyEndpoint && typeof legacyEndpoint === 'string' && legacyEndpoint.trim() !== '') {
         return legacyEndpoint;
     }

@@ -4,14 +4,13 @@ import * as vscode from 'vscode';
 import { formatAdobeCliError, extractMeshErrorSummary } from '@/features/mesh/utils/errorFormatter';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { BaseCommand } from '@/core/base';
-import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Project } from '@/types/base';
-import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
+import { getMeshComponentInstance, parseJSON } from '@/types/typeGuards';
 
 /**
  * Deploy (or redeploy) API Mesh using the mesh.json from the mesh component
@@ -78,8 +77,8 @@ export class DeployMeshCommand extends BaseCommand {
                 }
             }
 
-            // Find mesh component
-            const meshComponent = this.getMeshComponent(project);
+            // Find mesh component (uses subType detection, supports both EDS and Headless mesh)
+            const meshComponent = getMeshComponentInstance(project);
             if (!meshComponent?.path) {
                 vscode.window.showWarningMessage('This project does not have an API Mesh component.');
                 return;
@@ -291,8 +290,8 @@ export class DeployMeshCommand extends BaseCommand {
                 
                 // Update component state to error
                 const project = await this.stateManager.getCurrentProject();
-                const meshComponent = project?.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
-                if (meshComponent) {
+                const meshComponent = getMeshComponentInstance(project);
+                if (meshComponent && project) {
                     meshComponent.status = 'error';
                     await this.stateManager.saveProject(project);
                 }
@@ -319,30 +318,4 @@ export class DeployMeshCommand extends BaseCommand {
             }
         });
     }
-
-    /**
-     * Get the mesh component from project
-     */
-    private getMeshComponent(project: Project) {
-        if (!project.componentInstances) {
-            return null;
-        }
-
-        // Find the mesh component by ID (commerce-mesh)
-        const meshComponent = project.componentInstances[COMPONENT_IDS.COMMERCE_MESH];
-        if (meshComponent) {
-            return meshComponent;
-        }
-
-        // Fallback: search for any component with 'mesh' in the ID (for backward compatibility)
-        // SOP §4: Using helper instead of inline Object.entries
-        for (const [id, component] of getComponentInstanceEntries(project)) {
-            if (id.includes('mesh')) {
-                return component;
-            }
-        }
-
-        return null;
-    }
-
 }

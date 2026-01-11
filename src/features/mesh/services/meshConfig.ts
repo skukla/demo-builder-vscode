@@ -7,32 +7,41 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { COMPONENT_IDS } from '@/core/constants';
+import { MESH_COMPONENT_IDS } from '@/core/constants';
+
+/**
+ * Mesh component configuration structure
+ */
+interface MeshComponentConfig {
+    configuration?: {
+        nodeVersion?: string | number;
+    };
+}
 
 /**
  * Component configuration structure for type safety
  */
 interface ComponentsData {
-    components?: {
-        'commerce-mesh'?: {
-            configuration?: {
-                nodeVersion?: string | number;
-            };
-        };
-    };
+    mesh?: Record<string, MeshComponentConfig>;
 }
 
 /**
  * Extract mesh component Node version from components data
  *
- * Extracts the deep optional chain: componentsData?.components?.['commerce-mesh']?.configuration?.nodeVersion
- * Returns undefined if any level is missing.
+ * Checks any mesh component in the 'mesh' section since all mesh types
+ * share the same Node version requirement.
  *
  * @param data - Parsed components.json data
  * @returns Node version or undefined
  */
 function getMeshComponentNodeVersion(data: ComponentsData | null): string | number | undefined {
-    return data?.components?.[COMPONENT_IDS.COMMERCE_MESH]?.configuration?.nodeVersion;
+    if (!data?.mesh) return undefined;
+    // Check known mesh component IDs for nodeVersion
+    for (const meshId of MESH_COMPONENT_IDS) {
+        const nodeVersion = data.mesh[meshId]?.configuration?.nodeVersion;
+        if (nodeVersion !== undefined) return nodeVersion;
+    }
+    return undefined;
 }
 
 /**

@@ -8,7 +8,7 @@
 import React from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import { COMPONENT_IDS } from '@/core/constants';
+import { COMPONENT_IDS, hasMeshInDependencies, isMeshComponentId } from '@/core/constants';
 import { cn } from '@/core/ui/utils/classNames';
 import type { ComponentData, ComponentsData } from './ReviewStep';
 
@@ -109,9 +109,9 @@ export function buildComponentInfoList(
         }
     }
 
-    // Middleware (API Mesh)
-    if (components.dependencies?.includes(COMPONENT_IDS.COMMERCE_MESH) && componentsData.dependencies) {
-        const mesh = componentsData.dependencies.find((d) => d.id === COMPONENT_IDS.COMMERCE_MESH);
+    // Middleware (API Mesh) - check if any mesh component is selected
+    if (hasMeshInDependencies(components.dependencies) && componentsData.dependencies) {
+        const mesh = componentsData.dependencies.find((d) => isMeshComponentId(d.id));
         if (mesh) {
             const isDeployed = meshStatus === 'deployed';
             info.push({
@@ -146,7 +146,7 @@ export function buildComponentInfoList(
     // Other dependencies (not mesh, not demo-inspector which is frontend-associated)
     if (components.dependencies && componentsData.dependencies) {
         const otherDeps = components.dependencies
-            .filter((id) => id !== COMPONENT_IDS.COMMERCE_MESH && id !== COMPONENT_IDS.DEMO_INSPECTOR)
+            .filter((id) => !isMeshComponentId(id) && id !== COMPONENT_IDS.DEMO_INSPECTOR)
             .map((id) => componentsData.dependencies?.find((d) => d.id === id))
             .filter(Boolean);
 

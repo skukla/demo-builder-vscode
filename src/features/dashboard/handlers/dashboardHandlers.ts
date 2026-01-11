@@ -18,7 +18,6 @@ import {
     verifyMeshDeployment,
 } from './meshStatusHelpers';
 import { BaseWebviewCommand } from '@/core/base';
-import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -29,7 +28,7 @@ import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
 import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
-import { getProjectFrontendPort } from '@/types/typeGuards';
+import { getMeshComponentInstance, getProjectFrontendPort } from '@/types/typeGuards';
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -72,7 +71,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
+    const meshComponent = getMeshComponentInstance(project);
     const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
     const shouldAsync = meshComponent && shouldAsyncCheckMesh(meshComponent);
 

@@ -2,7 +2,7 @@
  * Helper functions for WizardContainer component (SOP §3, §4 compliance)
  */
 
-import { COMPONENT_IDS } from '@/core/constants';
+import { hasMeshInDependencies } from '@/core/constants';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
 
@@ -567,13 +567,13 @@ export function getNextButtonText(
 }
 
 /**
- * Check if mesh component is selected in wizard state
+ * Check if any mesh component is selected in wizard state
  *
- * Extracts deep optional chaining (SOP §4):
- * `state.components?.dependencies?.includes(COMPONENT_IDS.COMMERCE_MESH) ?? false`
+ * Checks if dependencies include any mesh component ID (EDS or Headless).
+ * Uses hasMeshInDependencies for type-safe mesh detection.
  */
 export function hasMeshComponentSelected(components: ComponentSelection | undefined): boolean {
-    return components?.dependencies?.includes(COMPONENT_IDS.COMMERCE_MESH) ?? false;
+    return hasMeshInDependencies(components?.dependencies);
 }
 
 /**

@@ -22,11 +22,11 @@ import {
 } from '../services';
 import { ProgressTracker } from './shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
-import { COMPONENT_IDS } from '@/core/constants';
+import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
-import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId } from '@/types/typeGuards';
+import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 
 // EDS service imports (lazy-loaded, only instantiated for EDS stacks)
@@ -474,8 +474,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // PHASE 3: MESH CONFIGURATION
     // ========================================================================
 
-    const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
-    const meshDefinition = componentDefinitions.get(COMPONENT_IDS.COMMERCE_MESH)?.definition;
+    const meshComponent = getMeshComponentInstance(project);
+    const meshId = getMeshComponentId(project);
+    const meshDefinition = meshId ? componentDefinitions.get(meshId)?.definition : undefined;
 
     const meshContext = {
         setupContext,
@@ -512,7 +513,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         context.logger.info('[Mesh Setup] Edit mode - reusing existing mesh from project');
         const existingMesh = {
             endpoint: existingProject.meshState.endpoint,
-            meshId: existingProject.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH]?.metadata?.meshId || '',
+            meshId: getMeshComponentInstance(existingProject)?.metadata?.meshId || '',
             meshStatus: 'deployed' as const,
             workspace: typedConfig.adobe?.workspace,
         };
@@ -551,7 +552,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             meshId: typedConfig.apiMesh.meshId || '',
             meshStatus: 'deployed',
         };
-        project.componentInstances![COMPONENT_IDS.COMMERCE_MESH] = meshComponent;
+        if (meshId) {
+            project.componentInstances![meshId] = meshComponent;
+        }
 
         // Store endpoint in meshState as single source of truth
         // See docs/architecture/state-ownership.md
@@ -660,18 +663,19 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     await generateEnvironmentFiles(finalizationContext);
 
-    // Populate componentConfigs[COMPONENT_IDS.COMMERCE_MESH] from the generated .env file
+    // Populate componentConfigs for mesh from the generated .env file
     // This enables Configure UI to save mesh env var changes
-    const meshInstanceForConfig = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
-    if (meshInstanceForConfig?.path) {
+    const meshInstanceForConfig = getMeshComponentInstance(project);
+    const meshIdForConfig = getMeshComponentId(project);
+    if (meshInstanceForConfig?.path && meshIdForConfig) {
         const { readMeshEnvVarsFromFile } = await import('@/features/mesh/services/stalenessDetector');
         const meshEnvVars = await readMeshEnvVarsFromFile(meshInstanceForConfig.path);
         if (meshEnvVars && Object.keys(meshEnvVars).length > 0) {
             if (!project.componentConfigs) {
                 project.componentConfigs = {};
             }
-            project.componentConfigs[COMPONENT_IDS.COMMERCE_MESH] = meshEnvVars;
-            context.logger.debug(`[Project Creation] Populated componentConfigs[COMPONENT_IDS.COMMERCE_MESH] with ${Object.keys(meshEnvVars).length} env vars`);
+            project.componentConfigs[meshIdForConfig] = meshEnvVars;
+            context.logger.debug(`[Project Creation] Populated componentConfigs[${meshIdForConfig}] with ${Object.keys(meshEnvVars).length} env vars`);
         }
     }
 

@@ -12,13 +12,12 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
 import { getFrontendEnvVars } from '@/core/state';
 import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
 import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
-import { parseJSON, hasEntries, getComponentInstancesByType } from '@/types/typeGuards';
+import { getMeshComponentId, getMeshComponentInstance, parseJSON, hasEntries, getComponentInstancesByType } from '@/types/typeGuards';
 
 export type { MeshState, MeshChanges };
 
@@ -391,7 +390,7 @@ async function detectMeshChangesImpl(
     newComponentConfigs: Record<string, unknown>,
     logger: Logger,
 ): Promise<MeshChanges> {
-    const meshInstance = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
+    const meshInstance = getMeshComponentInstance(project);
     if (!meshInstance?.path) {
         return {
             hasChanges: false,
@@ -448,8 +447,9 @@ async function detectMeshChangesImpl(
         }
     }
 
-    // Check env vars changes
-    const newMeshConfig = (newComponentConfigs[COMPONENT_IDS.COMMERCE_MESH] as Record<string, unknown> | undefined) || {};
+    // Check env vars changes - use dynamic mesh ID lookup
+    const meshId = getMeshComponentId(project);
+    const newMeshConfig = meshId ? (newComponentConfigs[meshId] as Record<string, unknown> | undefined) || {} : {};
     const newEnvVars = getMeshEnvVarsImpl(newMeshConfig);
 
     const changedEnvVars: string[] = [];
@@ -512,7 +512,7 @@ export async function detectMeshChanges(
  * @param logger - Logger instance
  */
 async function updateMeshStateImpl(project: Project, endpoint: string | undefined, logger: Logger): Promise<void> {
-    const meshInstance = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
+    const meshInstance = getMeshComponentInstance(project);
     if (!meshInstance?.path) {
         logger.debug('[Mesh State] No mesh component path, skipping state update');
         return;

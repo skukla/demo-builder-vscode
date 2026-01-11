@@ -12,10 +12,10 @@
  * - Easier to test and mock
  */
 
-import { COMPONENT_IDS } from '@/core/constants';
 import type { ComponentRegistry, EnvVarDefinition, TransformedComponentDefinition } from '@/types/components';
 import type { Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
+import { getMeshComponentInstance } from '@/types/typeGuards';
 
 /**
  * Unified context for project setup operations
@@ -80,7 +80,7 @@ export class ProjectSetupContext {
      * componentInstances for backward compatibility.
      */
     getMeshEndpoint(): string | undefined {
-        return this.project.meshState?.endpoint || this.project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH]?.endpoint;
+        return this.project.meshState?.endpoint || getMeshComponentInstance(this.project)?.endpoint;
     }
 
     /**

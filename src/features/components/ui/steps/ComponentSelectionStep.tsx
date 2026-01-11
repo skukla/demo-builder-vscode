@@ -9,7 +9,7 @@ import {
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
 import React, { useRef } from 'react';
 import { useComponentSelection } from '../hooks/useComponentSelection';
-import { COMPONENT_IDS } from '@/core/constants';
+import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { useFocusOnMount } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
@@ -45,9 +45,9 @@ interface ComponentsData {
 }
 
 // Required frontend dependencies (always selected, locked)
-const FRONTEND_DEPENDENCIES: ComponentOption[] = [
-    { id: COMPONENT_IDS.COMMERCE_MESH, name: 'API Mesh' },
-];
+// Note: Mesh dependency is handled dynamically through component registry
+// based on selected stack (eds-commerce-mesh or headless-commerce-mesh)
+const FRONTEND_DEPENDENCIES: ComponentOption[] = [];
 
 // Optional frontend addons (pre-selected by default, user can uncheck)
 const FRONTEND_ADDONS: ComponentOption[] = [

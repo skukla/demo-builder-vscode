@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
-import { COMPONENT_IDS } from '@/core/constants';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project } from '@/types';
-import { getProjectFrontendPort } from '@/types/typeGuards';
+import { getMeshComponentInstance, getMeshEndpointUrl, getProjectFrontendPort } from '@/types/typeGuards';
 
 export class StatusBarManager {
     private statusBarItem: vscode.StatusBarItem;
@@ -130,8 +129,8 @@ export class StatusBarManager {
         }
 
         // Read endpoint from meshState (authoritative) with fallback to componentInstance (legacy)
-        const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
-        const meshEndpoint = project.meshState?.endpoint || meshComponent?.endpoint;
+        const meshComponent = getMeshComponentInstance(project);
+        const meshEndpoint = getMeshEndpointUrl(project);
         if (meshEndpoint) {
             tooltipLines.push(`Mesh: ${meshComponent?.status || 'deployed'}`);
         }

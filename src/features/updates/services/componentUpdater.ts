@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { COMPONENT_IDS } from '@/core/constants';
+import { isMeshComponentId } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project } from '@/types';
@@ -208,7 +208,7 @@ export class ComponentUpdater {
         const requiredFiles: string[] = ['package.json'];
     
         // Add component-specific requirements
-        if (componentId === COMPONENT_IDS.COMMERCE_MESH) {
+        if (isMeshComponentId(componentId)) {
             requiredFiles.push('mesh.json');
         }
     

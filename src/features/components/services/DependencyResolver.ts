@@ -9,7 +9,7 @@
  * Extracted from ComponentRegistryManager.ts for better separation of concerns.
  */
 
-import { COMPONENT_IDS } from '@/core/constants';
+import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
 import {
     ComponentDefinition,
 } from '@/types';
@@ -187,7 +187,7 @@ export class DependencyResolver {
 
         // Dependency-specific configurations
         for (const dep of dependencies) {
-            if (dep.id === COMPONENT_IDS.COMMERCE_MESH && dep.configuration?.providesEndpoint) {
+            if (isMeshComponentId(dep.id) && dep.configuration?.providesEndpoint) {
                 envVars.MESH_ENDPOINT = '${MESH_ENDPOINT}';
             }
 

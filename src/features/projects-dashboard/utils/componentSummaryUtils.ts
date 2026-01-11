@@ -20,7 +20,8 @@ const COMPONENT_DISPLAY_NAMES: Record<string, string> = {
     'eds': 'EDS',
     'headless': 'Headless',
     // Mesh & Dependencies
-    [COMPONENT_IDS.COMMERCE_MESH]: 'API Mesh',
+    [COMPONENT_IDS.EDS_COMMERCE_MESH]: 'API Mesh',
+    [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: 'API Mesh',
     [COMPONENT_IDS.DEMO_INSPECTOR]: 'Inspector',
 };
 

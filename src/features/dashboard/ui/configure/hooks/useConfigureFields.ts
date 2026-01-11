@@ -7,8 +7,8 @@
 
 import { useCallback, Dispatch, SetStateAction } from 'react';
 import type { UniqueField } from '../configureTypes';
-import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
+import { getMeshComponentInstance } from '@/types/typeGuards';
 import { ComponentConfigs } from '@/types/webview';
 
 interface UseConfigureFieldsProps {
@@ -59,7 +59,7 @@ export function useConfigureFields({
                 return project.meshState.endpoint;
             }
             // Fallback: componentInstances (legacy, for old projects)
-            const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
+            const meshComponent = getMeshComponentInstance(project);
             if (meshComponent?.endpoint) {
                 return meshComponent.endpoint;
             }

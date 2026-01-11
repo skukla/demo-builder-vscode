@@ -11,13 +11,13 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
 import { HandlerContext } from '@/types/handlers';
+import { getMeshComponentInstance } from '@/types/typeGuards';
 
 // Import from services for use in this file
 import {
@@ -312,7 +312,7 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
     const { detectFrontendChanges } = await import('@/features/mesh/services/stalenessDetector');
     const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
 
-    const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
+    const meshComponent = getMeshComponentInstance(project);
     let meshStatus: { status: string; message?: string; endpoint?: string } | undefined = undefined;
 
     if (meshComponent) {

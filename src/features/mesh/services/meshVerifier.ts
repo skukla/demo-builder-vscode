@@ -7,14 +7,13 @@
  */
 
 import { getMeshNodeVersion } from './meshConfig';
-import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { MeshVerificationResult } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
 import type { Logger } from '@/types/logger';
-import { parseJSON } from '@/types/typeGuards';
+import { getMeshComponentInstance, parseJSON } from '@/types/typeGuards';
 
 export type { MeshVerificationResult };
 
@@ -163,7 +162,7 @@ async function tryRecoverMeshIdImpl(meshComponent: ComponentInstance, logger: Lo
  * Implementation: Verify that a mesh actually exists in Adobe I/O
  */
 async function verifyMeshDeploymentImpl(project: Project, logger: Logger): Promise<MeshVerificationResult> {
-    const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
+    const meshComponent = getMeshComponentInstance(project);
 
     // No mesh component = no mesh
     if (!meshComponent) {
@@ -277,7 +276,7 @@ function syncMeshStatusImpl(
     project: Project,
     verificationResult: MeshVerificationResult,
 ): void {
-    const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
+    const meshComponent = getMeshComponentInstance(project);
     if (!meshComponent) {
         return;
     }
