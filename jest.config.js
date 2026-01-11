@@ -94,6 +94,7 @@ module.exports = {
       setupFilesAfterEnv: ['<rootDir>/tests/setup/react.ts'],
       moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
       moduleNameMapper: {
+        // Path aliases
         '^@/core/(.*)$': '<rootDir>/src/core/$1',
         '^@/features/(.*)$': '<rootDir>/src/features/$1',
         '^@/shared/(.*)$': '<rootDir>/src/shared/$1',
@@ -101,7 +102,13 @@ module.exports = {
         '^@/types/(.*)$': '<rootDir>/src/types/$1',
         '^@/providers/(.*)$': '<rootDir>/src/providers/$1',
         '^@/utils/(.*)$': '<rootDir>/src/utils/$1',
+        // Style mocks
         '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
+        // Adobe Spectrum mocks - prevents loading ~6MB library
+        '^@adobe/react-spectrum$': '<rootDir>/tests/__mocks__/@adobe/react-spectrum.tsx',
+        '^@spectrum-icons/workflow/(.*)$': '<rootDir>/tests/__mocks__/@spectrum-icons/workflow.tsx',
+        '^@spectrum-icons/(.*)$': '<rootDir>/tests/__mocks__/@spectrum-icons/workflow.tsx',
+        // Other mocks
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
         '^@octokit/core$': '<rootDir>/tests/__mocks__/@octokit/core.ts',
