@@ -78,7 +78,15 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
-        const hasMesh = !!project?.componentInstances?.['commerce-mesh'];
+        // Check if project has mesh: deployed instance, mesh state, or selected dependency
+        const hasMeshInstance = Object.values(project?.componentInstances || {}).some(
+            (instance: any) => instance.subType === 'mesh'
+        );
+        const hasMeshState = !!project?.meshState;
+        const hasMeshDependency = (project?.componentSelections?.dependencies || []).some(
+            (dep: string) => dep.includes('mesh')
+        );
+        const hasMesh = hasMeshInstance || hasMeshState || hasMeshDependency;
 
         // Resolve package/stack names from IDs
         const { packageName, stackName } = await this.resolvePackageStackNames(project ?? null);

@@ -7,6 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { COMPONENT_IDS } from '@/core/constants';
 
 /**
  * Component configuration structure for type safety
@@ -31,7 +32,7 @@ interface ComponentsData {
  * @returns Node version or undefined
  */
 function getMeshComponentNodeVersion(data: ComponentsData | null): string | number | undefined {
-    return data?.components?.['commerce-mesh']?.configuration?.nodeVersion;
+    return data?.components?.[COMPONENT_IDS.COMMERCE_MESH]?.configuration?.nodeVersion;
 }
 
 /**

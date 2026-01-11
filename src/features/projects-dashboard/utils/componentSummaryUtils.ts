@@ -5,6 +5,7 @@
  * for display on project cards and rows.
  */
 
+import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import { getComponentInstanceValues } from '@/types/typeGuards';
 
@@ -19,8 +20,8 @@ const COMPONENT_DISPLAY_NAMES: Record<string, string> = {
     'eds': 'EDS',
     'headless': 'Headless',
     // Mesh & Dependencies
-    'commerce-mesh': 'API Mesh',
-    'demo-inspector': 'Inspector',
+    [COMPONENT_IDS.COMMERCE_MESH]: 'API Mesh',
+    [COMPONENT_IDS.DEMO_INSPECTOR]: 'Inspector',
 };
 
 /**

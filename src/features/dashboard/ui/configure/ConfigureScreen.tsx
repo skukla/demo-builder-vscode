@@ -6,6 +6,7 @@ import {
     View,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { COMPONENT_IDS } from '@/core/constants';
 import { FormField, ConfigSection } from '@/core/ui/components/forms';
 import { TwoColumnLayout, PageHeader, PageFooter } from '@/core/ui/components/layout';
 import { NavigationPanel, NavigationSection } from '@/core/ui/components/navigation';
@@ -524,7 +525,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 return project.meshState.endpoint;
             }
             // Fallback: componentInstances (legacy, for old projects)
-            const meshComponent = project.componentInstances?.['commerce-mesh'];
+            const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
             if (meshComponent?.endpoint) {
                 return meshComponent.endpoint;
             }

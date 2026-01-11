@@ -9,6 +9,7 @@ import {
     Project,
     ComponentInstance,
 } from './index';
+import { COMPONENT_IDS } from '@/core/constants';
 
 /**
  * isRecord - Type guard for Record<string, unknown>
@@ -306,7 +307,7 @@ export function isEdsProject(project: Project | undefined | null): boolean {
 /**
  * Get the live URL for an EDS project
  *
- * The live URL is stored in the 'eds-storefront' component instance metadata.
+ * The live URL is stored in the COMPONENT_IDS.EDS_STOREFRONT component instance metadata.
  *
  * SOP §4: Extracted deep optional chain to named getter
  *
@@ -315,14 +316,14 @@ export function isEdsProject(project: Project | undefined | null): boolean {
  */
 export function getEdsLiveUrl(project: Project | undefined | null): string | undefined {
     if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.['eds-storefront'];
+    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     return edsInstance?.metadata?.liveUrl as string | undefined;
 }
 
 /**
  * Get the preview URL for an EDS project
  *
- * The preview URL is stored in the 'eds-storefront' component instance metadata.
+ * The preview URL is stored in the COMPONENT_IDS.EDS_STOREFRONT component instance metadata.
  *
  * SOP §4: Extracted deep optional chain to named getter
  *
@@ -331,25 +332,114 @@ export function getEdsLiveUrl(project: Project | undefined | null): string | und
  */
 export function getEdsPreviewUrl(project: Project | undefined | null): string | undefined {
     if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.['eds-storefront'];
+    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     return edsInstance?.metadata?.previewUrl as string | undefined;
 }
 
 /**
  * Get the DA.live authoring URL for an EDS project
  *
- * Constructs the URL from DA.live org and site stored in 'eds-storefront' component instance metadata.
+ * Constructs the URL from DA.live org and site stored in COMPONENT_IDS.EDS_STOREFRONT component instance metadata.
  *
  * @param project - The EDS project (can be undefined/null)
  * @returns The DA.live authoring URL (e.g., https://da.live/#/org/site), or undefined if not available
  */
 export function getEdsDaLiveUrl(project: Project | undefined | null): string | undefined {
     if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.['eds-storefront'];
+    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
     const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
-    
+
     if (!daLiveOrg || !daLiveSite) return undefined;
-    
+
     return `https://da.live/#/${daLiveOrg}/${daLiveSite}`;
+}
+
+// =============================================================================
+// Mesh Component Functions
+// =============================================================================
+// SOP §4: Centralized mesh detection using subType (configuration-driven)
+// Used by: mesh deployment, dashboard, project-creation, lifecycle
+// NOTE: Uses subType === 'mesh' (semantic), NOT hardcoded component IDs
+
+/**
+ * Get component instances by subType
+ *
+ * Filters components by their subType property (e.g., 'mesh', 'inspector').
+ * SOP §4: Extracted inline object operation with filter to named helper
+ *
+ * @param project - Project to search
+ * @param subType - Component subType to filter by
+ * @returns Array of matching ComponentInstance
+ */
+export function getComponentInstancesBySubType(
+    project: Project | undefined | null,
+    subType: string | undefined,
+): ComponentInstance[] {
+    if (!project?.componentInstances || subType === undefined) return [];
+    return Object.values(project.componentInstances).filter(c => c.subType === subType);
+}
+
+/**
+ * Get the mesh component instance from a project
+ *
+ * Finds the mesh component using subType === 'mesh' (configuration-driven,
+ * not hardcoded to any specific mesh ID like 'commerce-mesh').
+ *
+ * SOP §4: Extracted mesh lookup to named getter for cross-feature use
+ *
+ * @param project - The project to search (can be undefined/null)
+ * @returns The mesh ComponentInstance, or undefined if not found
+ */
+export function getMeshComponentInstance(
+    project: Project | undefined | null,
+): ComponentInstance | undefined {
+    return getComponentInstancesBySubType(project, 'mesh')[0];
+}
+
+/**
+ * Get the mesh component ID from a project
+ *
+ * Returns the actual mesh component ID (e.g., 'eds-commerce-mesh' or
+ * 'headless-commerce-mesh') based on what's installed in the project.
+ * Uses subType detection, not hardcoded ID mapping.
+ *
+ * @param project - The project to search (can be undefined/null)
+ * @returns The mesh component ID, or undefined if no mesh installed
+ */
+export function getMeshComponentId(
+    project: Project | undefined | null,
+): string | undefined {
+    return getMeshComponentInstance(project)?.id;
+}
+
+/**
+ * Check if a project has a mesh component installed
+ *
+ * @param project - The project to check (can be undefined/null)
+ * @returns true if project has a mesh component
+ */
+export function hasMeshComponent(project: Project | undefined | null): boolean {
+    return getMeshComponentInstance(project) !== undefined;
+}
+
+/**
+ * Get the mesh endpoint from a project
+ *
+ * Returns the mesh endpoint URL from meshState (authoritative) or
+ * falls back to the component instance endpoint (legacy).
+ *
+ * @param project - The project to check (can be undefined/null)
+ * @returns The mesh endpoint URL, or undefined if not available
+ */
+export function getMeshEndpointUrl(
+    project: Project | undefined | null,
+): string | undefined {
+    if (!project) return undefined;
+    // meshState.endpoint is the authoritative source
+    if (project.meshState?.endpoint) {
+        return project.meshState.endpoint;
+    }
+    // Fallback to component instance endpoint (legacy projects)
+    return getMeshComponentInstance(project)?.endpoint;
 }

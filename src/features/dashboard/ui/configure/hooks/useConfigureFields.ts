@@ -7,6 +7,7 @@
 
 import { useCallback, Dispatch, SetStateAction } from 'react';
 import type { UniqueField } from '../configureTypes';
+import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import { ComponentConfigs } from '@/types/webview';
 
@@ -58,7 +59,7 @@ export function useConfigureFields({
                 return project.meshState.endpoint;
             }
             // Fallback: componentInstances (legacy, for old projects)
-            const meshComponent = project.componentInstances?.['commerce-mesh'];
+            const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
             if (meshComponent?.endpoint) {
                 return meshComponent.endpoint;
             }

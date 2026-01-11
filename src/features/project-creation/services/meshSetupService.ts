@@ -8,6 +8,7 @@
  */
 
 import { ProgressTracker } from '../handlers/shared';
+import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
@@ -82,7 +83,7 @@ export async function deployNewMesh(
         waitForMeshDecision,
     } = context;
     const { project, logger } = setupContext;
-    const meshComponent = project.componentInstances?.['commerce-mesh'];
+    const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
 
     if (!meshComponent?.path || !meshDefinition) {
         return;
@@ -94,7 +95,7 @@ export async function deployNewMesh(
 
     await generateComponentEnvFile(
         meshComponent.path,
-        'commerce-mesh',
+        COMPONENT_IDS.COMMERCE_MESH,
         meshDefinition,
         setupContext,
     );
@@ -199,7 +200,7 @@ export async function deployNewMesh(
                     meshId: meshId || '',
                     meshStatus: 'deployed',
                 };
-                project.componentInstances!['commerce-mesh'] = meshComponent;
+                project.componentInstances![COMPONENT_IDS.COMMERCE_MESH] = meshComponent;
 
                 // Update mesh phase to success
                 updateMeshPhase({
@@ -285,11 +286,11 @@ export async function linkExistingMesh(
     logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh...');
 
     // Generate mesh .env file (needed for deployment)
-    const meshComponent = project.componentInstances?.['commerce-mesh'];
+    const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
     if (meshComponent?.path && meshDefinition) {
         await generateComponentEnvFile(
             meshComponent.path,
-            'commerce-mesh',
+            COMPONENT_IDS.COMMERCE_MESH,
             meshDefinition,
             setupContext,
         );
@@ -328,12 +329,12 @@ export async function linkExistingMesh(
     }
 
     // Preserve existing component properties (like path from Phase 1 cloning)
-    const existingMeshComponent = project.componentInstances?.['commerce-mesh'];
+    const existingMeshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
 
     // Note: endpoint is stored in meshState (authoritative), not componentInstance
-    project.componentInstances!['commerce-mesh'] = {
+    project.componentInstances![COMPONENT_IDS.COMMERCE_MESH] = {
         ...existingMeshComponent, // Preserve path if component was cloned
-        id: 'commerce-mesh',
+        id: COMPONENT_IDS.COMMERCE_MESH,
         name: 'Commerce API Mesh',
         type: 'dependency',
         subType: 'mesh',

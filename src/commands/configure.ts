@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
+import { COMPONENT_IDS } from '@/core/constants';
 import { Project } from '@/types';
 import { getComponentInstancesByType } from '@/types/typeGuards';
 
@@ -13,7 +14,7 @@ export class ConfigureCommand extends BaseCommand {
                 return;
             }
 
-            const inspectorComponent = project.componentInstances?.['demo-inspector'];
+            const inspectorComponent = project.componentInstances?.[COMPONENT_IDS.DEMO_INSPECTOR];
             // Find frontend component dynamically by type (not hardcoded ID)
             const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
             
@@ -83,7 +84,7 @@ export class ConfigureCommand extends BaseCommand {
     }
 
     private async toggleInspector(project: Project): Promise<void> {
-        const inspectorComponent = project.componentInstances?.['demo-inspector'];
+        const inspectorComponent = project.componentInstances?.[COMPONENT_IDS.DEMO_INSPECTOR];
         if (!inspectorComponent) {
             await this.showWarning('Inspector component not found in project');
             return;

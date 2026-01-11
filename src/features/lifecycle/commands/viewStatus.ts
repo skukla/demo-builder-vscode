@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
+import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
-import { getComponentInstancesByType } from '@/types/typeGuards';
+import { getComponentInstancesByType, getMeshComponentInstance, getMeshEndpointUrl } from '@/types/typeGuards';
 
 export class ViewStatusCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -33,8 +34,9 @@ export class ViewStatusCommand extends BaseCommand {
 
     private buildStatusReport(project: Project): string {
         const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
-        const meshComponent = getComponentInstancesByType(project, 'mesh')[0];
-        const inspectorComponent = project.componentInstances?.['demo-inspector'];
+        // Use getMeshComponentInstance which finds by subType === 'mesh' (not hardcoded ID)
+        const meshComponent = getMeshComponentInstance(project);
+        const inspectorComponent = project.componentInstances?.[COMPONENT_IDS.DEMO_INSPECTOR];
 
         return [
             `**Project:** ${project.name}`,
@@ -48,7 +50,7 @@ export class ViewStatusCommand extends BaseCommand {
             '',
             '### API Mesh',
             `- **Status:** ${meshComponent?.status || 'Not deployed'}`,
-            `- **Endpoint:** ${project.meshState?.endpoint || meshComponent?.endpoint || 'N/A'}`,
+            `- **Endpoint:** ${getMeshEndpointUrl(project) || 'N/A'}`,
             '',
             '### Commerce',
             `- **Type:** ${project.commerce?.type || 'Not configured'}`,

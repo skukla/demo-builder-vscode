@@ -2,6 +2,7 @@ import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
 import { hasRequiredReviewData } from './reviewPredicates';
 import { buildComponentInfoList, resolveServiceNames } from './reviewStepHelpers';
+import { COMPONENT_IDS } from '@/core/constants';
 import { useCanProceed } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -102,9 +103,9 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
     useCanProceed(state, setCanProceed, hasRequiredReviewData);
 
     // Check if Demo Inspector is enabled (can be in dependencies OR selectedAddons)
-    const hasDemoInspector = 
-        state.components?.dependencies?.includes('demo-inspector') ||
-        state.selectedAddons?.includes('demo-inspector') ||
+    const hasDemoInspector =
+        state.components?.dependencies?.includes(COMPONENT_IDS.DEMO_INSPECTOR) ||
+        state.selectedAddons?.includes(COMPONENT_IDS.DEMO_INSPECTOR) ||
         false;
 
     // Derive component info using extracted helper

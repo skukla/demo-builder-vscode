@@ -67,11 +67,10 @@
         },
         "storefronts": {
           "type": "object",
-          "description": "Storefront configurations keyed by stack ID",
+          "description": "Storefront configurations keyed by stack ID (can be empty for placeholder packages)",
           "additionalProperties": {
             "$ref": "#/definitions/storefront"
-          },
-          "minProperties": 1
+          }
         }
       }
     },

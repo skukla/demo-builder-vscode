@@ -9,7 +9,7 @@
       "icon": "nextjs",
       "frontend": "headless",
       "backend": "adobe-commerce-paas",
-      "dependencies": ["commerce-mesh"],
+      "dependencies": ["headless-commerce-mesh"],
       "optionalAddons": [
         { "id": "demo-inspector", "default": true }
       ],
@@ -22,7 +22,7 @@
       "icon": "nextjs",
       "frontend": "headless",
       "backend": "adobe-commerce-accs",
-      "dependencies": ["commerce-mesh"],
+      "dependencies": ["headless-commerce-mesh"],
       "optionalAddons": [
         { "id": "demo-inspector", "default": true }
       ],
@@ -35,7 +35,7 @@
       "icon": "eds",
       "frontend": "eds",
       "backend": "adobe-commerce-paas",
-      "dependencies": ["commerce-mesh"],
+      "dependencies": ["eds-commerce-mesh"],
       "optionalAddons": [
         { "id": "adobe-commerce-aco" }
       ],
@@ -50,7 +50,7 @@
       "icon": "eds",
       "frontend": "eds",
       "backend": "adobe-commerce-accs",
-      "dependencies": ["commerce-mesh"],
+      "dependencies": ["eds-commerce-mesh"],
       "optionalAddons": [
         { "id": "adobe-commerce-aco" }
       ],

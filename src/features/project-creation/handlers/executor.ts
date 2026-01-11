@@ -22,6 +22,7 @@ import {
 } from '../services';
 import { ProgressTracker } from './shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { COMPONENT_IDS } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
@@ -34,7 +35,7 @@ import type {
     EdsProgressCallback,
     EdsProjectSetupResult,
 } from '@/features/eds/services/types';
-import { GitHubAppNotInstalledError, EDS_COMPONENT_ID } from '@/features/eds/services/types';
+import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { updateConfigJsonWithMesh } from '@/features/eds/services/edsSetupPhases';
 
 // ============================================================================
@@ -248,7 +249,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     let edsResult: EdsProjectSetupResult | undefined;
 
     // EDS frontend is cloned to components/eds-storefront like other frontends
-    const edsComponentPath = path.join(projectPath, 'components', EDS_COMPONENT_ID);
+    const edsComponentPath = path.join(projectPath, 'components', COMPONENT_IDS.EDS_STOREFRONT);
 
     if (isEdsStack && typedConfig.edsConfig) {
         progressTracker('EDS Setup', 16, 'Initializing Edge Delivery Services...');
@@ -371,9 +372,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             context.logger.info(`[Project Creation] EDS setup complete: ${edsResult.repoUrl}`);
 
             // Register EDS frontend as a component instance (like other frontends)
-            // Uses EDS_COMPONENT_ID for consistency, cloned to components/eds-storefront
+            // Uses COMPONENT_IDS.EDS_STOREFRONT for consistency, cloned to components/eds-storefront
             const frontendInstance: import('@/types').ComponentInstance = {
-                id: EDS_COMPONENT_ID,
+                id: COMPONENT_IDS.EDS_STOREFRONT,
                 name: 'EDS Storefront',
                 type: 'frontend',
                 path: edsComponentPath,
@@ -388,9 +389,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     daLiveSite: typedConfig.edsConfig.daLiveSite,
                 },
             };
-            project.componentInstances![EDS_COMPONENT_ID] = frontendInstance;
+            project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT] = frontendInstance;
 
-            context.logger.debug(`[Project Creation] Registered EDS frontend component: ${EDS_COMPONENT_ID} at ${edsComponentPath}`);
+            context.logger.debug(`[Project Creation] Registered EDS frontend component: ${COMPONENT_IDS.EDS_STOREFRONT} at ${edsComponentPath}`);
         }
 
         // Save project state after EDS setup completes (ensures EDS metadata is persisted
@@ -406,7 +407,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     
     // If EDS was set up, register it in componentDefinitions so Phase 4's
     // generateEnvironmentFiles() will handle its .env using standard pattern
-    if (isEdsStack && edsComponentPath && project.componentInstances?.[EDS_COMPONENT_ID]) {
+    if (isEdsStack && edsComponentPath && project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]) {
         const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
         const registryManager = new ComponentRegistryManager(context.context.extensionPath);
         const registry = await registryManager.loadRegistry();
@@ -414,7 +415,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         // Find EDS component definition from registry
         const edsDefinition = registry.components?.frontends?.find(f => f.id === 'eds');
         if (edsDefinition) {
-            componentDefinitions.set(EDS_COMPONENT_ID, {
+            componentDefinitions.set(COMPONENT_IDS.EDS_STOREFRONT, {
                 definition: edsDefinition,
                 installOptions: { skipDependencies: true },
             });
@@ -473,8 +474,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // PHASE 3: MESH CONFIGURATION
     // ========================================================================
 
-    const meshComponent = project.componentInstances?.['commerce-mesh'];
-    const meshDefinition = componentDefinitions.get('commerce-mesh')?.definition;
+    const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
+    const meshDefinition = componentDefinitions.get(COMPONENT_IDS.COMMERCE_MESH)?.definition;
 
     const meshContext = {
         setupContext,
@@ -511,7 +512,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         context.logger.info('[Mesh Setup] Edit mode - reusing existing mesh from project');
         const existingMesh = {
             endpoint: existingProject.meshState.endpoint,
-            meshId: existingProject.componentInstances?.['commerce-mesh']?.metadata?.meshId || '',
+            meshId: existingProject.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH]?.metadata?.meshId || '',
             meshStatus: 'deployed' as const,
             workspace: typedConfig.adobe?.workspace,
         };
@@ -550,7 +551,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             meshId: typedConfig.apiMesh.meshId || '',
             meshStatus: 'deployed',
         };
-        project.componentInstances!['commerce-mesh'] = meshComponent;
+        project.componentInstances![COMPONENT_IDS.COMMERCE_MESH] = meshComponent;
 
         // Store endpoint in meshState as single source of truth
         // See docs/architecture/state-ownership.md
@@ -659,9 +660,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     await generateEnvironmentFiles(finalizationContext);
 
-    // Populate componentConfigs['commerce-mesh'] from the generated .env file
+    // Populate componentConfigs[COMPONENT_IDS.COMMERCE_MESH] from the generated .env file
     // This enables Configure UI to save mesh env var changes
-    const meshInstanceForConfig = project.componentInstances?.['commerce-mesh'];
+    const meshInstanceForConfig = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
     if (meshInstanceForConfig?.path) {
         const { readMeshEnvVarsFromFile } = await import('@/features/mesh/services/stalenessDetector');
         const meshEnvVars = await readMeshEnvVarsFromFile(meshInstanceForConfig.path);
@@ -669,8 +670,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             if (!project.componentConfigs) {
                 project.componentConfigs = {};
             }
-            project.componentConfigs['commerce-mesh'] = meshEnvVars;
-            context.logger.debug(`[Project Creation] Populated componentConfigs['commerce-mesh'] with ${Object.keys(meshEnvVars).length} env vars`);
+            project.componentConfigs[COMPONENT_IDS.COMMERCE_MESH] = meshEnvVars;
+            context.logger.debug(`[Project Creation] Populated componentConfigs[COMPONENT_IDS.COMMERCE_MESH] with ${Object.keys(meshEnvVars).length} env vars`);
         }
     }
 

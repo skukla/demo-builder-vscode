@@ -246,9 +246,6 @@ export type EdsSetupPhase =
     | 'env-config'
     | 'complete';
 
-/** EDS component ID for registration */
-export const EDS_COMPONENT_ID = 'eds-storefront';
-
 /**
  * Configuration for EDS project setup
  */

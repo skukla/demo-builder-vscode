@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { formatAdobeCliError, extractMeshErrorSummary } from '@/features/mesh/utils/errorFormatter';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { BaseCommand } from '@/core/base';
+import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
@@ -290,7 +291,7 @@ export class DeployMeshCommand extends BaseCommand {
                 
                 // Update component state to error
                 const project = await this.stateManager.getCurrentProject();
-                const meshComponent = project?.componentInstances?.['commerce-mesh'];
+                const meshComponent = project?.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
                 if (meshComponent) {
                     meshComponent.status = 'error';
                     await this.stateManager.saveProject(project);
@@ -328,7 +329,7 @@ export class DeployMeshCommand extends BaseCommand {
         }
 
         // Find the mesh component by ID (commerce-mesh)
-        const meshComponent = project.componentInstances['commerce-mesh'];
+        const meshComponent = project.componentInstances[COMPONENT_IDS.COMMERCE_MESH];
         if (meshComponent) {
             return meshComponent;
         }

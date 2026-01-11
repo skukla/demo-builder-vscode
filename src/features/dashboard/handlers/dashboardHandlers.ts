@@ -18,6 +18,7 @@ import {
     verifyMeshDeployment,
 } from './meshStatusHelpers';
 import { BaseWebviewCommand } from '@/core/base';
+import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -71,7 +72,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const meshComponent = project.componentInstances?.['commerce-mesh'];
+    const meshComponent = project.componentInstances?.[COMPONENT_IDS.COMMERCE_MESH];
     const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
     const shouldAsync = meshComponent && shouldAsyncCheckMesh(meshComponent);
 

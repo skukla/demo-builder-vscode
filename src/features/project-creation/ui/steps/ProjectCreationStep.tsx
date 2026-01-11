@@ -3,6 +3,7 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { isProgressActive } from './projectCreationPredicates';
+import { COMPONENT_IDS } from '@/core/constants';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { PageFooter } from '@/core/ui/components/layout/PageFooter';
@@ -69,7 +70,7 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Determine if checks are needed
-    const needsMeshCheck = state.components?.dependencies?.includes('commerce-mesh') ?? false;
+    const needsMeshCheck = state.components?.dependencies?.includes(COMPONENT_IDS.COMMERCE_MESH) ?? false;
     const needsGitHubAppCheck = useMemo(() => {
         const stackId = state.selectedStack;
         if (!stackId) return false;

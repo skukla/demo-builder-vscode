@@ -11,6 +11,7 @@
 import * as vscode from 'vscode';
 import { ProgressTracker } from '../handlers/shared';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
+import { COMPONENT_IDS } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { ProjectSetupContext, generateComponentConfigFiles } from '@/features/project-creation/helpers';
 import type { Project } from '@/types';
@@ -42,7 +43,7 @@ export async function generateEnvironmentFiles(
     // (treats .env and site.json as peers - all just "config files in different formats")
     for (const [compId, { definition }] of componentDefinitions) {
         // Skip mesh - already generated in Phase 3
-        if (compId === 'commerce-mesh') continue;
+        if (compId === COMPONENT_IDS.COMMERCE_MESH) continue;
 
         const componentPath = project.componentInstances?.[compId]?.path;
         if (!componentPath) continue;
