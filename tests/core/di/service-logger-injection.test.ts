@@ -267,8 +267,9 @@ describe('Service Logger Injection', () => {
 
     describe('HelixService', () => {
         it('should accept optional logger in constructor', () => {
-            // Mock auth service - must pass validation
-            const mockAuthService = { getTokenManager: jest.fn() };
+            // Mock auth service - must pass validation and provide token manager
+            const mockTokenManager = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };
+            const mockAuthService = { getTokenManager: jest.fn().mockReturnValue(mockTokenManager) };
 
             const { HelixService } = require('@/features/eds/services/helixService');
 
@@ -279,6 +280,11 @@ describe('Service Logger Injection', () => {
             // Should work with logger (DI pattern)
             const service2 = new HelixService(mockAuthService, mockLogger);
             expect(service2).toBeDefined();
+
+            // Should work with logger and GitHub token service (Helix Admin API auth)
+            const mockGithubTokenService = { getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }) };
+            const service3 = new HelixService(mockAuthService, mockLogger, mockGithubTokenService);
+            expect(service3).toBeDefined();
         });
     });
 

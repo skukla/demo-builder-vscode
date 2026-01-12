@@ -418,7 +418,7 @@ src/features/
 ├── authentication/ui/steps/    # AdobeAuthStep, AdobeProjectStep, AdobeWorkspaceStep
 ├── components/ui/steps/        # ComponentSelectionStep
 ├── prerequisites/ui/steps/     # PrerequisitesStep
-├── mesh/ui/steps/             # ApiMeshStep
+├── mesh/ui/steps/             # MeshDeploymentStep
 └── project-creation/ui/steps/ # WelcomeStep, ReviewStep, ProjectCreationStep
 ```
 
