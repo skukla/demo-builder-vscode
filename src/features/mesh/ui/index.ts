@@ -2,4 +2,4 @@
  * Mesh Feature - UI Exports
  */
 
-export { ApiMeshStep } from './steps/ApiMeshStep';
+export { MeshDeploymentStep } from './steps/MeshDeploymentStep';
