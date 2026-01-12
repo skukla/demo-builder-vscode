@@ -34,12 +34,13 @@ export class GitHubAppService {
     /**
      * Check if the AEM Code Sync GitHub app is installed on a repository.
      *
-     * Uses the Helix admin code endpoint to check if code sync is working.
-     * If the endpoint is accessible, the app is installed.
+     * Uses the Helix admin status endpoint to check if code sync is working.
+     * The HTTP response may be 200, but the internal code.status field indicates
+     * whether the app is actually syncing code (200 = working, 404 = not installed).
      *
      * @param owner - Repository owner (user or organization)
      * @param repo - Repository name
-     * @returns True if app is installed, false otherwise
+     * @returns True if app is installed and working, false otherwise
      */
     async isAppInstalled(owner: string, repo: string): Promise<boolean> {
         this.logger.debug(`[GitHub App] Checking if app is installed on ${owner}/${repo}`);
@@ -51,17 +52,38 @@ export class GitHubAppService {
         }
 
         try {
-            // Check if code sync is working by hitting the Helix admin code endpoint
-            // If code sync is working, the app is installed
-            const codeUrl = `${HELIX_ADMIN_BASE_URL}/code/${owner}/${repo}/main/scripts/aem.js`;
+            // Use the status endpoint to check if code sync is working
+            // The status endpoint returns detailed information including internal code status
+            const statusUrl = `${HELIX_ADMIN_BASE_URL}/status/${owner}/${repo}/main?editUrl=auto`;
 
-            const response = await fetch(codeUrl, {
+            const response = await fetch(statusUrl, {
                 method: 'GET',
+                headers: {
+                    'x-auth-token': token.token,
+                },
                 signal: AbortSignal.timeout(TIMEOUTS.POLL.INTERVAL),
             });
 
-            const isInstalled = response.ok;
-            this.logger.debug(`[GitHub App] App installed on ${owner}/${repo}: ${isInstalled}`);
+            if (!response.ok) {
+                this.logger.debug(`[GitHub App] Status endpoint returned ${response.status}`);
+                return false;
+            }
+
+            // Parse the JSON response to check the internal code status
+            const data = await response.json();
+
+            // The code.status field indicates whether code sync is actually working:
+            // - 200: Code sync is working (app installed and syncing)
+            // - 404: Code not found (app not installed or not syncing)
+            const codeStatus = data?.code?.status;
+            const isInstalled = codeStatus === 200;
+
+            this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}, installed: ${isInstalled}`);
+
+            if (!isInstalled && codeStatus !== undefined) {
+                this.logger.info(`[GitHub App] AEM Code Sync app not installed or not syncing for ${owner}/${repo} (code.status: ${codeStatus})`);
+            }
+
             return isInstalled;
         } catch (error) {
             this.logger.debug(`[GitHub App] Failed to check app installation: ${(error as Error).message}`);
