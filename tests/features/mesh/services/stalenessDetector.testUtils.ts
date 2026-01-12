@@ -95,6 +95,7 @@ export function createMockProjectWithMesh(overrides?: Partial<Project>): Project
             'commerce-mesh': {
                 id: 'commerce-mesh',
                 name: 'API Mesh',
+                subType: 'mesh',
                 path: '/test/mesh',
                 status: 'deployed',
             },

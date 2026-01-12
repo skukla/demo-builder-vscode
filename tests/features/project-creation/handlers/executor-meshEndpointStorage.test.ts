@@ -43,6 +43,7 @@ jest.mock('@/features/components/services/componentManager', () => ({
                     id: componentDef.id,
                     name: componentDef.name,
                     type: componentDef.type,
+                    subType: componentDef.subType, // Pass through subType for mesh detection
                     status: 'installed',
                     path: `/tmp/test-project/components/${componentDef.id}`,
                     lastUpdated: new Date(),

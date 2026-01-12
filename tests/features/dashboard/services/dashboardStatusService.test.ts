@@ -189,7 +189,7 @@ describe('dashboardStatusService', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
-                        type: 'mesh',
+                        subType: 'mesh',
                         path: '/path/to/mesh',
                         status: 'ready',
                         endpoint: 'https://mesh.adobe.io/graphql',
@@ -250,7 +250,7 @@ describe('dashboardStatusService', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
-                        type: 'mesh',
+                        subType: 'mesh',
                         path: '/path/to/mesh',
                         status: 'ready',
                         endpoint: '',
@@ -274,7 +274,7 @@ describe('dashboardStatusService', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
-                        type: 'mesh',
+                        subType: 'mesh',
                         path: '/path/to/mesh',
                         status: 'ready',
                         endpoint: '   ',
@@ -335,7 +335,7 @@ describe('dashboardStatusService', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
-                        type: 'mesh',
+                        subType: 'mesh',
                         path: '/path/to/mesh',
                         status: 'ready',
                         endpoint: 'https://correct-endpoint.adobe.io/graphql',

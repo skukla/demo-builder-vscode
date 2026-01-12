@@ -129,6 +129,7 @@ describe('StalenessDetectorService - DI Pattern', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'ready',
                     },

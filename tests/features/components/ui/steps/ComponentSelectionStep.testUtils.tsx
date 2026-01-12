@@ -41,6 +41,10 @@ export const mockComponentsData = {
             }
         }
     ],
+    dependencies: [
+        { id: 'eds-commerce-mesh', name: 'EDS API Mesh', description: 'API Mesh for EDS', subType: 'mesh' },
+        { id: 'demo-inspector', name: 'Demo Inspector', description: 'Visual inspector overlay' }
+    ],
     // Services registry for mapping IDs to display names
     services: {
         'catalog-service': { id: 'catalog-service', name: 'Catalog Service' },
@@ -63,7 +67,7 @@ export const createStateWithFrontend = () => ({
     components: {
         frontend: 'headless',
         backend: '',
-        dependencies: ['commerce-mesh'],
+        dependencies: ['eds-commerce-mesh'],
         services: [],
         integrations: [],
         appBuilder: []
@@ -95,7 +99,7 @@ export const createStateWithSelections = () => ({
     components: {
         frontend: 'headless',
         backend: 'adobe-commerce-paas',
-        dependencies: ['commerce-mesh'],
+        dependencies: ['eds-commerce-mesh'],
         services: ['catalog-service', 'live-search'],
         integrations: [],
         appBuilder: []
@@ -127,7 +131,7 @@ export const createStateNoBackend = () => ({
     components: {
         frontend: 'headless',
         backend: '',
-        dependencies: ['commerce-mesh'],
+        dependencies: ['eds-commerce-mesh'],
         services: [],
         integrations: [],
         appBuilder: []
@@ -143,7 +147,7 @@ export const createStateWithDefaults = () => ({
     components: {
         frontend: 'headless',
         backend: 'adobe-commerce-paas',
-        dependencies: ['commerce-mesh'],
+        dependencies: ['eds-commerce-mesh'],
         services: ['catalog-service', 'live-search'],
         integrations: ['experience-platform'],
         appBuilder: ['integration-service']

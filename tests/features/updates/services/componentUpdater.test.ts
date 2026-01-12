@@ -234,7 +234,7 @@ describe('ComponentUpdater (Step 1)', () => {
             const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
             ComponentRegistryManager.mockImplementation(() => ({
                 getComponentById: jest.fn().mockResolvedValue({
-                    id: 'commerce-mesh',
+                    id: 'eds-commerce-mesh',
                     name: 'Commerce Mesh',
                     configuration: {
                         buildScript: 'build',
@@ -250,15 +250,15 @@ describe('ComponentUpdater (Step 1)', () => {
             const meshProject = {
                 ...mockProject,
                 componentInstances: {
-                    'commerce-mesh': {
-                        id: 'commerce-mesh',
+                    'eds-commerce-mesh': {
+                        id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
                         port: 3000
                     }
                 }
             } as any;
 
-            await buildUpdater.updateComponent(meshProject, 'commerce-mesh', downloadUrl, newVersion);
+            await buildUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion);
 
             // Verify npm install was called
             expect(mockExecutor.execute).toHaveBeenCalledWith(
@@ -300,7 +300,7 @@ describe('ComponentUpdater (Step 1)', () => {
             const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
             ComponentRegistryManager.mockImplementation(() => ({
                 getComponentById: jest.fn().mockResolvedValue({
-                    id: 'commerce-mesh',
+                    id: 'eds-commerce-mesh',
                     name: 'Commerce Mesh',
                     configuration: {
                         buildScript: 'build',
@@ -316,8 +316,8 @@ describe('ComponentUpdater (Step 1)', () => {
             const meshProject = {
                 ...mockProject,
                 componentInstances: {
-                    'commerce-mesh': {
-                        id: 'commerce-mesh',
+                    'eds-commerce-mesh': {
+                        id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
                         port: 3000
                     }
@@ -330,7 +330,7 @@ describe('ComponentUpdater (Step 1)', () => {
                 .mockResolvedValueOnce({ stdout: '', stderr: 'npm ERR! install failed', code: 1, duration: 100 }); // npm install fails
 
             await expect(
-                buildUpdater.updateComponent(meshProject, 'commerce-mesh', downloadUrl, newVersion)
+                buildUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion)
             ).rejects.toThrow();
 
             expect(mockLogger.error).toHaveBeenCalledWith(
@@ -347,7 +347,7 @@ describe('ComponentUpdater (Step 1)', () => {
             const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
             ComponentRegistryManager.mockImplementation(() => ({
                 getComponentById: jest.fn().mockResolvedValue({
-                    id: 'commerce-mesh',
+                    id: 'eds-commerce-mesh',
                     name: 'Commerce Mesh',
                     configuration: {
                         buildScript: 'build',
@@ -363,8 +363,8 @@ describe('ComponentUpdater (Step 1)', () => {
             const meshProject = {
                 ...mockProject,
                 componentInstances: {
-                    'commerce-mesh': {
-                        id: 'commerce-mesh',
+                    'eds-commerce-mesh': {
+                        id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
                         port: 3000
                     }
@@ -378,7 +378,7 @@ describe('ComponentUpdater (Step 1)', () => {
                 .mockResolvedValueOnce({ stdout: '', stderr: 'Build failed: esbuild error', code: 1, duration: 100 }); // npm run build fails
 
             await expect(
-                buildUpdater.updateComponent(meshProject, 'commerce-mesh', downloadUrl, newVersion)
+                buildUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion)
             ).rejects.toThrow();
 
             expect(mockLogger.error).toHaveBeenCalledWith(
@@ -705,7 +705,7 @@ describe('ComponentUpdater (Step 1)', () => {
             const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
             ComponentRegistryManager.mockImplementation(() => ({
                 getComponentById: jest.fn().mockResolvedValue({
-                    id: 'commerce-mesh',
+                    id: 'eds-commerce-mesh',
                     name: 'Commerce Mesh',
                     configuration: {}
                 })
@@ -714,8 +714,8 @@ describe('ComponentUpdater (Step 1)', () => {
             const meshProject = {
                 ...mockProject,
                 componentInstances: {
-                    'commerce-mesh': {
-                        id: 'commerce-mesh',
+                    'eds-commerce-mesh': {
+                        id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
                         port: 3000
                     }
@@ -725,7 +725,7 @@ describe('ComponentUpdater (Step 1)', () => {
             // Create new updater with fresh mock
             const meshUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
 
-            await meshUpdater.updateComponent(meshProject, 'commerce-mesh', downloadUrl, newVersion);
+            await meshUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion);
 
             expect(fs.access).toHaveBeenCalledWith(
                 expect.stringContaining('mesh.json')

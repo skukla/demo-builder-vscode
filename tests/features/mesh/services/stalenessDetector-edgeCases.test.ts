@@ -130,6 +130,7 @@ describe('StalenessDetector - Edge Cases', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'ready',
                     },
@@ -167,6 +168,7 @@ describe('StalenessDetector - Edge Cases', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                     },

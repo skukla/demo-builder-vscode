@@ -42,8 +42,8 @@ describe('projectFinalizationService', () => {
                     path: '/test/project/components/eds-storefront',
                     version: '1.0.0',
                 },
-                'commerce-mesh': {
-                    path: '/test/project/components/commerce-mesh',
+                'eds-commerce-mesh': {
+                    path: '/test/project/components/eds-commerce-mesh',
                     version: '1.0.0-beta.2',
                 },
             },
@@ -91,9 +91,9 @@ describe('projectFinalizationService', () => {
                 },
             } as TransformedComponentDefinition,
         });
-        mockComponentDefinitions.set('commerce-mesh', {
+        mockComponentDefinitions.set('eds-commerce-mesh', {
             definition: {
-                id: 'commerce-mesh',
+                id: 'eds-commerce-mesh',
                 name: 'API Mesh',
                 type: 'mesh',
                 configuration: {
@@ -120,7 +120,7 @@ describe('projectFinalizationService', () => {
 
             await generateEnvironmentFiles(context);
 
-            // Should be called for eds-storefront but NOT for commerce-mesh
+            // Should be called for eds-storefront but NOT for eds-commerce-mesh
             expect(helpers.generateComponentConfigFiles).toHaveBeenCalledTimes(1);
             expect(helpers.generateComponentConfigFiles).toHaveBeenCalledWith(
                 '/test/project/components/eds-storefront',
@@ -142,9 +142,9 @@ describe('projectFinalizationService', () => {
 
             await generateEnvironmentFiles(context);
 
-            // Verify commerce-mesh was NOT processed
+            // Verify eds-commerce-mesh was NOT processed
             const calls = (helpers.generateComponentConfigFiles as jest.Mock).mock.calls;
-            const meshCalls = calls.filter(call => call[1] === 'commerce-mesh');
+            const meshCalls = calls.filter(call => call[1] === 'eds-commerce-mesh');
             expect(meshCalls).toHaveLength(0);
         });
 
@@ -156,8 +156,8 @@ describe('projectFinalizationService', () => {
                         version: '1.0.0',
                         // path is missing
                     },
-                    'commerce-mesh': {
-                        path: '/test/project/components/commerce-mesh',
+                    'eds-commerce-mesh': {
+                        path: '/test/project/components/eds-commerce-mesh',
                         version: '1.0.0-beta.2',
                     },
                 },
@@ -236,8 +236,8 @@ describe('projectFinalizationService', () => {
                         path: '/test/project/components/nextjs-storefront',
                         version: '1.0.0',
                     },
-                    'commerce-mesh': {
-                        path: '/test/project/components/commerce-mesh',
+                    'eds-commerce-mesh': {
+                        path: '/test/project/components/eds-commerce-mesh',
                         version: '1.0.0-beta.2',
                     },
                 },
@@ -326,7 +326,7 @@ describe('projectFinalizationService', () => {
                 version: '1.0.0',
                 lastUpdated: expect.any(String),
             });
-            expect(mockSetupContext.project.componentVersions?.['commerce-mesh']).toEqual({
+            expect(mockSetupContext.project.componentVersions?.['eds-commerce-mesh']).toEqual({
                 version: '1.0.0-beta.2',
                 lastUpdated: expect.any(String),
             });

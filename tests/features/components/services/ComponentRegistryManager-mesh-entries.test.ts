@@ -40,11 +40,11 @@ describe('ComponentRegistryManager - Mesh Entries', () => {
             expect(edsMesh.source?.url).toBe('https://github.com/skukla/commerce-eds-mesh');
         });
 
-        it('Headless mesh should point to headless-citisignal-mesh repository', () => {
+        it('Headless mesh should point to headless-commerce-mesh repository', () => {
             const headlessMesh = componentsJson.mesh['headless-commerce-mesh'];
 
             expect(headlessMesh).toBeDefined();
-            expect(headlessMesh.source?.url).toBe('https://github.com/skukla/headless-citisignal-mesh');
+            expect(headlessMesh.source?.url).toBe('https://github.com/skukla/headless-commerce-mesh');
         });
 
         it('EDS mesh should have passthrough description mentioning EDS/dropins', () => {

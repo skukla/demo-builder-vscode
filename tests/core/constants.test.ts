@@ -16,10 +16,6 @@ describe('COMPONENT_IDS', () => {
     });
 
     describe('component ID values', () => {
-        it('should have COMMERCE_MESH equal to "commerce-mesh"', () => {
-            expect(COMPONENT_IDS.COMMERCE_MESH).toBe('commerce-mesh');
-        });
-
         it('should have EDS_STOREFRONT equal to "eds-storefront"', () => {
             expect(COMPONENT_IDS.EDS_STOREFRONT).toBe('eds-storefront');
         });
@@ -42,7 +38,6 @@ describe('COMPONENT_IDS', () => {
             // TypeScript enforces this at compile time with "as const"
             // At runtime, we verify by checking the object structure
             expect(Object.keys(COMPONENT_IDS)).toEqual([
-                'COMMERCE_MESH',
                 'EDS_STOREFRONT',
                 'DEMO_INSPECTOR',
                 'EDS_COMMERCE_MESH',
@@ -50,8 +45,8 @@ describe('COMPONENT_IDS', () => {
             ]);
         });
 
-        it('should have exactly 5 component IDs', () => {
-            expect(Object.keys(COMPONENT_IDS).length).toBe(5);
+        it('should have exactly 4 component IDs', () => {
+            expect(Object.keys(COMPONENT_IDS).length).toBe(4);
         });
     });
 
@@ -59,7 +54,6 @@ describe('COMPONENT_IDS', () => {
         it('should allow valid component ID values', () => {
             // Type check: these should compile without errors
             const validIds: ComponentId[] = [
-                'commerce-mesh',
                 'eds-storefront',
                 'demo-inspector',
                 'eds-commerce-mesh',
@@ -74,13 +68,11 @@ describe('COMPONENT_IDS', () => {
 
         it('should provide type-safe access via COMPONENT_IDS keys', () => {
             // Type inference verification: each value should be assignable to ComponentId
-            const commerceMesh: ComponentId = COMPONENT_IDS.COMMERCE_MESH;
             const edsStorefront: ComponentId = COMPONENT_IDS.EDS_STOREFRONT;
             const demoInspector: ComponentId = COMPONENT_IDS.DEMO_INSPECTOR;
             const edsCommerceMesh: ComponentId = COMPONENT_IDS.EDS_COMMERCE_MESH;
             const headlessCommerceMesh: ComponentId = COMPONENT_IDS.HEADLESS_COMMERCE_MESH;
 
-            expect(commerceMesh).toBe('commerce-mesh');
             expect(edsStorefront).toBe('eds-storefront');
             expect(demoInspector).toBe('demo-inspector');
             expect(edsCommerceMesh).toBe('eds-commerce-mesh');

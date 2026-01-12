@@ -24,7 +24,10 @@ describe('ComponentSelectionStep - Dependencies', () => {
     });
 
     describe('Required Dependencies', () => {
-        it('should mark required dependencies as checked and disabled', () => {
+        it('should NOT render mesh dependency as visible checkbox (handled dynamically via stack)', () => {
+            // Mesh dependencies are now handled dynamically through the component registry
+            // based on selected stack (eds-commerce-mesh or headless-commerce-mesh)
+            // They are NOT rendered as visible locked checkboxes
             const stateWithFrontend = createStateWithFrontend();
 
             render(
@@ -43,10 +46,9 @@ describe('ComponentSelectionStep - Dependencies', () => {
                 jest.runAllTimers();
             });
 
-            // Use getByRole with name regex - works better with nested label content
-            const meshCheckbox = screen.getByRole('checkbox', { name: /API Mesh/i });
-            expect(meshCheckbox).toBeChecked();
-            expect(meshCheckbox).toBeDisabled();
+            // Mesh checkbox should NOT be visible - it's handled dynamically
+            const meshCheckbox = screen.queryByRole('checkbox', { name: /mesh/i });
+            expect(meshCheckbox).not.toBeInTheDocument();
         });
 
         it('should auto-select required dependencies when frontend selected', () => {

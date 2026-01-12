@@ -59,7 +59,7 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
 
             const meshDefinition = componentsJson.mesh['headless-commerce-mesh'];
             expect(meshDefinition).toBeDefined();
-            expect(meshDefinition.source.url).toContain('headless-citisignal-mesh');
+            expect(meshDefinition.source.url).toContain('headless-commerce-mesh');
         });
 
         it('EDS stack mesh should have passthrough configuration', () => {
@@ -153,7 +153,7 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
             expect(mesh.source.url).toBe('https://github.com/skukla/commerce-eds-mesh');
         });
 
-        it('Headless project should clone from headless-citisignal-mesh repository', () => {
+        it('Headless project should clone from headless-commerce-mesh repository', () => {
             // Given: Headless-PaaS stack selection
             const stackId = 'headless-paas';
             const stack = componentsJson.stacks[stackId];
@@ -166,7 +166,7 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
 
             const mesh = componentsJson.mesh[meshId];
             expect(mesh.source.type).toBe('git');
-            expect(mesh.source.url).toBe('https://github.com/skukla/headless-citisignal-mesh');
+            expect(mesh.source.url).toBe('https://github.com/skukla/headless-commerce-mesh');
         });
     });
 

@@ -80,6 +80,7 @@ describe('MeshVerifierService - DI Pattern', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         metadata: {
@@ -106,6 +107,7 @@ describe('MeshVerifierService - DI Pattern', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         // No meshId - triggers recovery attempt
@@ -143,6 +145,7 @@ describe('MeshVerifierService - DI Pattern', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         metadata: {
@@ -164,6 +167,7 @@ describe('MeshVerifierService - DI Pattern', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         metadata: {
@@ -201,6 +205,7 @@ describe('MeshVerifierService - DI Pattern', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'ready',
                     },

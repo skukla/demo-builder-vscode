@@ -111,7 +111,7 @@ describe('reviewStepHelpers', () => {
             ],
             backends: mockBackends,
             dependencies: [
-                { id: 'commerce-mesh', name: 'Commerce API Mesh' },
+                { id: 'eds-commerce-mesh', name: 'EDS Commerce API Mesh' },
                 { id: 'demo-inspector', name: 'Demo Inspector' },
                 { id: 'other-dep', name: 'Other Dependency' },
             ],
@@ -195,11 +195,11 @@ describe('reviewStepHelpers', () => {
         });
 
         describe('middleware (API Mesh)', () => {
-            it('should include middleware when commerce-mesh is in dependencies', () => {
-                // Given: State with commerce-mesh dependency
+            it('should include middleware when eds-commerce-mesh is in dependencies', () => {
+                // Given: State with eds-commerce-mesh dependency
                 const state = {
                     components: {
-                        dependencies: ['commerce-mesh'],
+                        dependencies: ['eds-commerce-mesh'],
                     },
                 };
 
@@ -221,7 +221,7 @@ describe('reviewStepHelpers', () => {
                 // Given: State with mesh deployed
                 const state = {
                     components: {
-                        dependencies: ['commerce-mesh'],
+                        dependencies: ['eds-commerce-mesh'],
                     },
                 };
 
@@ -241,8 +241,8 @@ describe('reviewStepHelpers', () => {
                 expect(middlewareItem?.value).toBeDefined();
             });
 
-            it('should NOT include middleware when commerce-mesh is not selected', () => {
-                // Given: State without commerce-mesh
+            it('should NOT include middleware when eds-commerce-mesh is not selected', () => {
+                // Given: State without eds-commerce-mesh
                 const state = {
                     components: {
                         dependencies: ['other-dep'],
@@ -340,7 +340,7 @@ describe('reviewStepHelpers', () => {
                 // Given: State with multiple dependencies
                 const state = {
                     components: {
-                        dependencies: ['commerce-mesh', 'demo-inspector', 'other-dep'],
+                        dependencies: ['eds-commerce-mesh', 'demo-inspector', 'other-dep'],
                     },
                 };
 
@@ -363,7 +363,7 @@ describe('reviewStepHelpers', () => {
                 // Given: State with only mesh and demo-inspector
                 const state = {
                     components: {
-                        dependencies: ['commerce-mesh', 'demo-inspector'],
+                        dependencies: ['eds-commerce-mesh', 'demo-inspector'],
                     },
                 };
 
@@ -530,7 +530,7 @@ describe('reviewStepHelpers', () => {
                     components: {
                         frontend: 'venia',
                         backend: 'adobe-commerce',
-                        dependencies: ['commerce-mesh', 'other-dep'],
+                        dependencies: ['eds-commerce-mesh', 'other-dep'],
                         integrations: ['analytics'],
                         appBuilder: ['custom-app'],
                     },

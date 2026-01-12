@@ -46,6 +46,7 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
                 'commerce-mesh': {
                     id: 'commerce-mesh',
                     name: 'API Mesh',
+                    subType: 'mesh',
                     status: 'deployed', // Deployed status triggers async path
                     path: '/path/to/mesh',
                 },
@@ -126,6 +127,7 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
                 'commerce-mesh': {
                     id: 'commerce-mesh',
                     name: 'API Mesh',
+                    subType: 'mesh',
                     status: 'deployed', // Deployed status triggers async path
                     path: '/path/to/mesh',
                     endpoint: 'https://mesh.example.com/graphql',
@@ -189,6 +191,7 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
                 'commerce-mesh': {
                     id: 'commerce-mesh',
                     name: 'API Mesh',
+                    subType: 'mesh',
                     status: 'deployed',
                     path: '/path/to/mesh',
                     endpoint: 'https://mesh.example.com/graphql',
@@ -262,6 +265,7 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
                 'commerce-mesh': {
                     id: 'commerce-mesh',
                     name: 'API Mesh',
+                    subType: 'mesh',
                     status: 'deployed',
                     path: '/path/to/mesh',
                     endpoint: 'https://mesh.example.com/graphql',

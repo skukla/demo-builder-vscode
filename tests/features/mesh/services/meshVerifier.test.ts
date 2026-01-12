@@ -65,6 +65,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         metadata: {
@@ -93,6 +94,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         metadata: {
@@ -133,6 +135,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                     },
@@ -151,6 +154,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         metadata: {
@@ -177,6 +181,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         metadata: {
@@ -203,6 +208,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         metadata: {
@@ -226,6 +232,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         metadata: {
@@ -254,6 +261,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         metadata: {
@@ -283,6 +291,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'ready',
                         metadata: {
@@ -320,6 +329,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         endpoint: 'https://old.com/graphql', // Pre-existing endpoint
@@ -374,6 +384,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         endpoint: 'https://old.com/graphql',
@@ -398,6 +409,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         endpoint: 'https://old.com/graphql',
@@ -432,6 +444,7 @@ describe('MeshVerifier', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                         endpoint: 'https://example.com/graphql',

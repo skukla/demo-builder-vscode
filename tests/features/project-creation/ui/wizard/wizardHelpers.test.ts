@@ -247,14 +247,21 @@ describe('wizardHelpers', () => {
     });
 
     describe('hasMeshComponentSelected', () => {
-        it('should return true when commerce-mesh is in dependencies', () => {
+        it('should return true when eds-commerce-mesh is in dependencies', () => {
             expect(hasMeshComponentSelected({
                 frontend: 'citisignal',
-                dependencies: ['commerce-mesh'],
+                dependencies: ['eds-commerce-mesh'],
             })).toBe(true);
         });
 
-        it('should return false when commerce-mesh is not in dependencies', () => {
+        it('should return true when headless-commerce-mesh is in dependencies', () => {
+            expect(hasMeshComponentSelected({
+                frontend: 'citisignal',
+                dependencies: ['headless-commerce-mesh'],
+            })).toBe(true);
+        });
+
+        it('should return false when no mesh component is in dependencies', () => {
             expect(hasMeshComponentSelected({
                 frontend: 'citisignal',
                 dependencies: ['other-dep'],

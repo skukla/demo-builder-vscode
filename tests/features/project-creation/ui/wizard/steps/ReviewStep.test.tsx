@@ -19,7 +19,7 @@ describe('ReviewStep', () => {
             { id: 'commerce-paas', name: 'Commerce PaaS', description: 'Commerce backend' }
         ],
         dependencies: [
-            { id: 'commerce-mesh', name: 'API Mesh for Adobe Developer App Builder', description: 'GraphQL mesh' },
+            { id: 'eds-commerce-mesh', name: 'EDS Commerce API Mesh', description: 'GraphQL mesh', subType: 'mesh' },
             { id: 'demo-inspector', name: 'Demo Inspector', description: 'Inspector tool' }
         ],
         integrations: [
@@ -56,7 +56,7 @@ describe('ReviewStep', () => {
         components: {
             frontend: 'headless',
             backend: 'commerce-paas',
-            dependencies: ['commerce-mesh'],
+            dependencies: ['eds-commerce-mesh'],
             integrations: [],
             appBuilder: [],
         },
@@ -147,7 +147,7 @@ describe('ReviewStep', () => {
                 </Provider>
             );
 
-            expect(screen.getByText('API Mesh for Adobe Developer App Builder')).toBeInTheDocument();
+            expect(screen.getByText('EDS Commerce API Mesh')).toBeInTheDocument();
         });
 
         it('should display selected components', () => {
@@ -180,7 +180,7 @@ describe('ReviewStep', () => {
             );
 
             // Should show API Mesh by its full name
-            expect(screen.getByText('API Mesh for Adobe Developer App Builder')).toBeInTheDocument();
+            expect(screen.getByText('EDS Commerce API Mesh')).toBeInTheDocument();
         });
 
         it('should enable Continue button automatically', () => {
@@ -267,7 +267,7 @@ describe('ReviewStep', () => {
                 ...completeState,
                 components: {
                     ...completeState.components!,
-                    dependencies: ['commerce-mesh', 'demo-inspector'],
+                    dependencies: ['eds-commerce-mesh', 'demo-inspector'],
                 },
             };
 
@@ -422,7 +422,7 @@ describe('ReviewStep', () => {
                 ...completeState,
                 components: {
                     ...completeState.components,
-                    dependencies: ['commerce-mesh', 'demo-inspector'],
+                    dependencies: ['eds-commerce-mesh', 'demo-inspector'],
                 },
             };
 
@@ -465,7 +465,7 @@ describe('ReviewStep', () => {
                 ...completeState,
                 components: {
                     ...completeState.components,
-                    dependencies: ['commerce-mesh'], // No demo-inspector
+                    dependencies: ['eds-commerce-mesh'], // No demo-inspector
                 },
                 selectedAddons: [], // No addons
             };

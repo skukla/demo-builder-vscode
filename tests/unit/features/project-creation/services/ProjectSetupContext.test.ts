@@ -226,7 +226,10 @@ describe('ProjectSetupContext', () => {
                 ...mockProject,
                 meshState: undefined,
                 componentInstances: {
-                    'commerce-mesh': {
+                    'eds-commerce-mesh': {
+                        id: 'eds-commerce-mesh',
+                        name: 'EDS Commerce API Mesh',
+                        subType: 'mesh',
                         endpoint: 'https://fallback-mesh.adobe.io/graphql',
                     },
                 },
@@ -269,7 +272,7 @@ describe('ProjectSetupContext', () => {
                     workspace: 'test',
                 },
                 componentInstances: {
-                    'commerce-mesh': {
+                    'eds-commerce-mesh': {
                         endpoint: 'https://fallback-mesh.adobe.io/graphql',
                     },
                 },

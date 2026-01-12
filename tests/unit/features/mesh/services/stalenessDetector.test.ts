@@ -63,6 +63,19 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 jest.mock('@/types/typeGuards', () => ({
     parseJSON: jest.fn(),
     hasEntries: jest.fn((obj) => obj && Object.keys(obj).length > 0),
+    getMeshComponentInstance: jest.fn((project) => {
+        if (!project?.componentInstances) return undefined;
+        return Object.values(project.componentInstances).find(
+            (c: any) => c.subType === 'mesh'
+        );
+    }),
+    getMeshComponentId: jest.fn((project) => {
+        if (!project?.componentInstances) return undefined;
+        const mesh = Object.entries(project.componentInstances).find(
+            ([_, c]: [string, any]) => c.subType === 'mesh'
+        );
+        return mesh ? mesh[0] : undefined;
+    }),
 }));
 
 describe('detectMeshChanges - Timeout Handling', () => {
@@ -80,6 +93,7 @@ describe('detectMeshChanges - Timeout Handling', () => {
                 'commerce-mesh': {
                     id: 'commerce-mesh',
                     name: 'API Mesh',
+                    subType: 'mesh',
                     status: 'deployed',
                     path: '/test/mesh',
                 },

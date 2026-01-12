@@ -123,6 +123,7 @@
     "mesh": {
         "eds-commerce-mesh": {
             "name": "EDS Commerce API Mesh",
+            "subType": "mesh",
             "description": "Passthrough GraphQL mesh for EDS storefronts with dropin components (no prefixes)",
             "icon": {
                 "light": "adobe-file-icon-light.svg",
@@ -156,6 +157,7 @@
         },
         "headless-commerce-mesh": {
             "name": "Headless Commerce API Mesh",
+            "subType": "mesh",
             "description": "Prefixed/namespaced GraphQL mesh for Next.js headless storefronts",
             "icon": {
                 "light": "adobe-file-icon-light.svg",

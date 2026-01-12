@@ -91,6 +91,7 @@ describe('StalenessDetector - State Detection', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                     },
@@ -120,6 +121,7 @@ describe('StalenessDetector - State Detection', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
                     },
@@ -178,6 +180,7 @@ describe('StalenessDetector - State Detection', () => {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'API Mesh',
+                        subType: 'mesh',
                         path: '/test/mesh',
                         status: 'ready',
                     },

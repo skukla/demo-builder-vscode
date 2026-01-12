@@ -56,8 +56,12 @@ describe('meshSetupService', () => {
             created: new Date().toISOString(),
             componentInstances: {
                 'commerce-mesh': {
+                    id: 'commerce-mesh',
+                    name: 'API Mesh',
+                    subType: 'mesh',
                     path: '/test/project/components/commerce-mesh',
                     version: '1.0.0',
+                    status: 'ready',
                 },
             },
         } as Project;

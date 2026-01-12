@@ -168,8 +168,10 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
     });
 
     describe('Frontend Dependencies Still Present', () => {
-        it('should render API Mesh checkbox when frontend selected', () => {
+        it('should NOT render API Mesh checkbox (handled dynamically via stack)', () => {
             // Given: Component rendered with frontend selected
+            // Mesh dependencies are now handled dynamically through the component registry
+            // based on selected stack - NOT rendered as visible checkboxes
             const stateWithFrontend = createStateWithFrontend();
             render(
                 <Provider theme={defaultTheme}>
@@ -182,8 +184,8 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
                 </Provider>
             );
 
-            // Then: API Mesh checkbox should be present
-            expect(screen.getByRole('checkbox', { name: /API Mesh/i })).toBeInTheDocument();
+            // Then: API Mesh checkbox should NOT be present (handled dynamically)
+            expect(screen.queryByRole('checkbox', { name: /mesh/i })).not.toBeInTheDocument();
         });
 
         it('should render Demo Inspector checkbox when frontend selected', () => {

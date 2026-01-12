@@ -151,6 +151,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'Commerce Mesh',
+                        subType: 'mesh',
                         status: 'deployed',
                         endpoint: correctEndpoint,
                     },
@@ -190,6 +191,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'Commerce Mesh',
+                        subType: 'mesh',
                         status: 'deployed',
                         endpoint: correctEndpoint,
                     },
@@ -261,6 +263,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'Commerce Mesh',
+                        subType: 'mesh',
                         status: 'ready',
                         // No endpoint property - mesh not yet deployed
                     },
@@ -294,6 +297,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'Commerce Mesh',
+                        subType: 'mesh',
                         status: 'ready',
                         endpoint: '', // Empty string
                     },
@@ -345,6 +349,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'Commerce Mesh',
+                        subType: 'mesh',
                         status: 'deployed',
                         endpoint: correctEndpoint,
                     },
@@ -403,14 +408,15 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
         });
     });
 
-    describe('skips commerce-mesh component for .env generation', () => {
-        it('should not generate .env for commerce-mesh component (already handled)', async () => {
+    describe('commerce-mesh component .env generation', () => {
+        it('should generate minimal .env for commerce-mesh component (for mesh deployment)', async () => {
             // Given: Project with commerce-mesh component
             const context = createMinimalContext({
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'Commerce Mesh',
+                        subType: 'mesh',
                         status: 'deployed',
                         endpoint: 'https://endpoint.io/graphql',
                         path: '/test/project/commerce-mesh',
@@ -444,7 +450,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             // When: generateEnvironmentFiles is called
             await generateEnvironmentFiles(context);
 
-            // Then: commerce-mesh should be skipped, only headless .env generated
+            // Then: both components should have .env generated
             const writeFileCalls = (fsPromises.writeFile as jest.Mock).mock.calls;
 
             const meshEnvCall = writeFileCalls.find(
@@ -454,7 +460,8 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                 ([filePath]: [string]) => filePath.includes('headless')
             );
 
-            expect(meshEnvCall).toBeUndefined(); // commerce-mesh skipped
+            // Mesh component gets minimal .env (for consistency), but env vars are managed by mesh deployment
+            expect(meshEnvCall).toBeDefined();
             expect(headlessEnvCall).toBeDefined(); // headless .env generated
         });
     });

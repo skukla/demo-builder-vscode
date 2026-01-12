@@ -42,7 +42,7 @@ describe('ComponentRepositoryResolver', () => {
 
             const meshRepo = repositories.get('headless-commerce-mesh');
             expect(meshRepo).toBeDefined();
-            expect(meshRepo?.repository).toBe('skukla/headless-citisignal-mesh');
+            expect(meshRepo?.repository).toBe('skukla/headless-commerce-mesh');
             expect(meshRepo?.name).toBe('Headless Commerce API Mesh');
         });
 
@@ -72,7 +72,7 @@ describe('ComponentRepositoryResolver', () => {
 
             expect(info).toEqual({
                 id: 'headless-commerce-mesh',
-                repository: 'skukla/headless-citisignal-mesh',
+                repository: 'skukla/headless-commerce-mesh',
                 name: 'Headless Commerce API Mesh',
             });
         });
