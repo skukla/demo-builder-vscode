@@ -123,7 +123,7 @@ describe('meshSetupService', () => {
                 endpoint: 'https://mesh.adobe.io/graphql',
             };
 
-            const result = shouldConfigureExistingMesh(meshConfig, undefined, false);
+            const result = shouldConfigureExistingMesh(meshConfig, undefined);
             expect(result).toBe(true);
         });
 
@@ -133,22 +133,12 @@ describe('meshSetupService', () => {
                 endpoint: 'https://mesh.adobe.io/graphql',
             };
 
-            const result = shouldConfigureExistingMesh(meshConfig, 'https://existing.adobe.io/graphql', false);
-            expect(result).toBe(false);
-        });
-
-        it('should return false when mesh step is enabled', () => {
-            const meshConfig: MeshApiConfig = {
-                meshId: 'test-mesh-id',
-                endpoint: 'https://mesh.adobe.io/graphql',
-            };
-
-            const result = shouldConfigureExistingMesh(meshConfig, undefined, true);
+            const result = shouldConfigureExistingMesh(meshConfig, 'https://existing.adobe.io/graphql');
             expect(result).toBe(false);
         });
 
         it('should return false when no existing mesh', () => {
-            const result = shouldConfigureExistingMesh(undefined, undefined, false);
+            const result = shouldConfigureExistingMesh(undefined, undefined);
             expect(result).toBe(false);
         });
     });

@@ -51,18 +51,15 @@ export interface MeshApiConfig {
  *
  * @param meshConfig - Mesh config from wizard (meshId, endpoint from workspace check)
  * @param existingEndpoint - Endpoint already set on component instance (if any)
- * @param meshStepEnabled - Whether mesh wizard step is enabled
  * @returns True if workspace has existing mesh that should be linked
  */
 export function shouldConfigureExistingMesh(
     meshConfig: MeshApiConfig | undefined,
     existingEndpoint: string | undefined,
-    meshStepEnabled: boolean | undefined,
 ): boolean {
     const hasExistingMesh = Boolean(meshConfig?.meshId && meshConfig?.endpoint);
     const notAlreadyConfigured = !existingEndpoint; // Skip if endpoint already set
-    const notHandledByWizardStep = !meshStepEnabled;
-    return hasExistingMesh && notAlreadyConfigured && notHandledByWizardStep;
+    return hasExistingMesh && notAlreadyConfigured;
 }
 
 /**

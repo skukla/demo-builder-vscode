@@ -242,7 +242,6 @@ describe('Executor - Mesh Component Loading', () => {
                     project: { id: 'proj-123', name: 'Test Project' },
                     workspace: { id: 'ws-123', name: 'Stage' },
                 },
-                meshStepEnabled: false, // Mesh should be deployed by executor
             };
 
             await executeProjectCreation(mockContext as HandlerContext, config);

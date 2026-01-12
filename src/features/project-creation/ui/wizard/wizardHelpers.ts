@@ -668,8 +668,6 @@ export function buildProjectConfig(
         // If user selects same workspace as imported settings, we can skip mesh deployment
         importedWorkspaceId: importedSettings?.adobe?.workspaceId,
         importedMeshEndpoint,
-        // Mesh deployment happens during Project Creation (Phase 3), not as separate wizard step
-        meshStepEnabled: false,
         // Package/Stack selections
         selectedPackage: wizardState.selectedPackage,
         selectedStack: wizardState.selectedStack,

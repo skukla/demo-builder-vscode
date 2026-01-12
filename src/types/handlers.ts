@@ -53,7 +53,6 @@ export interface ProjectConfig {
     selectedAddons?: string[];
     importedWorkspaceId?: string;
     importedMeshEndpoint?: string;
-    meshStepEnabled?: boolean;
     frontendSource?: unknown;
     editMode?: boolean;
     editProjectPath?: string;

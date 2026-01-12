@@ -115,7 +115,6 @@ interface ProjectCreationConfig {
         meshStatus?: string;
         workspace?: string;
     };
-    meshStepEnabled?: boolean;
     // For detecting same-workspace imports to skip mesh deployment
     importedWorkspaceId?: string;
     importedMeshEndpoint?: string;
@@ -505,7 +504,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             workspace: typedConfig.adobe?.workspace,
         };
         await linkExistingMesh(meshContext, importedApiMesh);
-    } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint, typedConfig.meshStepEnabled)) {
+    } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint)) {
         // Check for existing mesh (takes precedence - don't deploy if workspace already has mesh)
         await linkExistingMesh(meshContext, typedConfig.apiMesh!);
     } else if (isEditMode && existingProject?.meshState?.endpoint) {
@@ -518,7 +517,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             workspace: typedConfig.adobe?.workspace,
         };
         await linkExistingMesh(meshContext, existingMesh);
-    } else if (meshComponent?.path && meshDefinition && !typedConfig.meshStepEnabled) {
+    } else if (meshComponent?.path && meshDefinition) {
         // No existing mesh in workspace - deploy new one
         // If imported from different workspace, mesh endpoint won't work - must deploy fresh
         if (typedConfig.importedWorkspaceId && typedConfig.importedWorkspaceId !== typedConfig.adobe?.workspace) {
@@ -543,32 +542,6 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         }
 
         await deployNewMesh(meshContext, typedConfig.apiMesh);
-    } else if (meshComponent?.path && typedConfig.meshStepEnabled && typedConfig.apiMesh?.endpoint) {
-        // Mesh was deployed via wizard step - update component instance with wizard data
-        // Note: endpoint is stored in meshState (authoritative), not componentInstance
-        context.logger.debug('[Project Creation] Mesh deployed via wizard step, updating component instance');
-        meshComponent.status = 'deployed';
-        meshComponent.metadata = {
-            meshId: typedConfig.apiMesh.meshId || '',
-            meshStatus: 'deployed',
-        };
-        if (meshId) {
-            project.componentInstances![meshId] = meshComponent;
-        }
-
-        // Store endpoint in meshState as single source of truth
-        // See docs/architecture/state-ownership.md
-        if (!project.meshState) {
-            project.meshState = {
-                envVars: {},
-                sourceHash: null,
-                lastDeployed: new Date().toISOString(),
-                endpoint: typedConfig.apiMesh.endpoint,
-            };
-        } else {
-            project.meshState.endpoint = typedConfig.apiMesh.endpoint;
-            project.meshState.lastDeployed = new Date().toISOString();
-        }
     }
 
     // ========================================================================
@@ -578,20 +551,24 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // CRITICAL: EDS setup runs BEFORE mesh deployment, so config.json was
     // pushed to GitHub with an EMPTY commerce-core-endpoint. Now that mesh
     // deployment is complete, we need to:
-    // 1. Update local config.json with the actual mesh endpoint
+    // 1. Update local config.json with the actual mesh endpoint (inside public.default)
     // 2. Re-push config.json to GitHub for the EDS runtime to access
+
+    // Log condition values for debugging
+    context.logger.debug(`[EDS Post-Mesh] Checking conditions: isEdsStack=${isEdsStack}, edsResult.success=${edsResult?.success}, meshState.endpoint=${project.meshState?.endpoint ? 'set' : 'not set'}`);
 
     if (isEdsStack && edsResult?.success && project.meshState?.endpoint) {
         const isPaasBackend = typedConfig.components?.backend === 'adobe-commerce-paas';
+        context.logger.debug(`[EDS Post-Mesh] isPaasBackend=${isPaasBackend}`);
 
         if (isPaasBackend) {
             progressTracker('Updating EDS Config', 86, 'Updating config.json with mesh endpoint...');
-            context.logger.info('[EDS Post-Mesh] Updating config.json with mesh endpoint');
+            context.logger.info(`[EDS Post-Mesh] Updating config.json with mesh endpoint: ${project.meshState.endpoint}`);
 
             try {
-                // Step 1: Update local config.json with mesh endpoint
+                // Step 1: Update local config.json with mesh endpoint (in public.default)
                 await updateConfigJsonWithMesh(edsComponentPath, project.meshState.endpoint, context.logger);
-                context.logger.debug('[EDS Post-Mesh] Local config.json updated');
+                context.logger.info('[EDS Post-Mesh] Local config.json updated successfully');
 
                 // Step 2: Re-push config.json to GitHub
                 // Re-instantiate GitHub file operations (services were local to EDS setup block)
@@ -603,22 +580,30 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
                 // Get repo info from EDS result
                 const repoUrl = edsResult.repoUrl;
+                context.logger.debug(`[EDS Post-Mesh] EDS repo URL: ${repoUrl}`);
+
                 if (repoUrl) {
                     const repoInfo = parseGitHubUrl(repoUrl);
+                    context.logger.debug(`[EDS Post-Mesh] Parsed repo info: owner=${repoInfo?.owner}, repo=${repoInfo?.repo}`);
+
                     if (repoInfo) {
                         // Read updated config.json
                         const configJsonPath = path.join(edsComponentPath, 'config.json');
                         const fs = await import('fs/promises');
                         const content = await fs.readFile(configJsonPath, 'utf-8');
+                        context.logger.debug(`[EDS Post-Mesh] Read local config.json (${content.length} bytes)`);
 
                         // Get existing file SHA for update (required by GitHub API)
+                        context.logger.debug(`[EDS Post-Mesh] Fetching existing config.json SHA from GitHub...`);
                         const existingFile = await githubFileOperations.getFileContent(
                             repoInfo.owner,
                             repoInfo.repo,
                             'config.json',
                         );
+                        context.logger.debug(`[EDS Post-Mesh] Existing file SHA: ${existingFile?.sha || 'not found'}`);
 
                         // Push updated config.json to GitHub
+                        context.logger.debug(`[EDS Post-Mesh] Pushing updated config.json to GitHub...`);
                         await githubFileOperations.createOrUpdateFile(
                             repoInfo.owner,
                             repoInfo.repo,
@@ -628,7 +613,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                             existingFile?.sha,
                         );
 
-                        context.logger.info('[EDS Post-Mesh] config.json pushed to GitHub with mesh endpoint');
+                        context.logger.info(`[EDS Post-Mesh] ✓ config.json pushed to GitHub (${repoInfo.owner}/${repoInfo.repo})`);
                     } else {
                         context.logger.warn('[EDS Post-Mesh] Could not parse repo URL, skipping GitHub push');
                     }
@@ -640,6 +625,15 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 context.logger.error('[EDS Post-Mesh] Failed to update config.json on GitHub', error as Error);
                 context.logger.warn('[EDS Post-Mesh] The site may show a configuration error until config.json is manually updated');
             }
+        }
+    } else {
+        // Log why we're skipping the post-mesh update
+        if (!isEdsStack) {
+            context.logger.debug('[EDS Post-Mesh] Skipped - not an EDS stack');
+        } else if (!edsResult?.success) {
+            context.logger.debug('[EDS Post-Mesh] Skipped - EDS setup did not succeed');
+        } else if (!project.meshState?.endpoint) {
+            context.logger.warn('[EDS Post-Mesh] Skipped - meshState.endpoint not set (mesh deployment may have failed)');
         }
     }
 
