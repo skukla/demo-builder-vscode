@@ -1,13 +1,22 @@
 /**
  * Unit Tests: HelixService
  *
- * Tests for Helix Admin API operations including unpublishing from live
- * and deleting from preview.
+ * Tests for Helix Admin API operations including preview/publish
+ * and unpublish operations.
  *
- * Coverage: 5 tests
+ * Note: The Helix Admin API uses GitHub-based authentication (x-auth-token header)
+ * to verify the user has write access to the GitHub repository.
+ *
+ * Coverage: 17 tests
+ * - Preview page via POST /preview/{org}/{site}/main/{path}
+ * - Publish page via POST /live/{org}/{site}/main/{path}
+ * - Preview and publish single page
+ * - Bulk preview via POST /preview/{org}/{site}/main/*
+ * - Bulk publish via POST /live/{org}/{site}/main/*
+ * - Bulk preview and publish all content
  * - Unpublish from live via DELETE /live/{org}/{site}/main/*
  * - Delete from preview via DELETE /preview/{org}/{site}/main/*
- * - Require IMS token for authentication
+ * - Require GitHub token for authentication
  * - Handle 404 as success (never published)
  * - Parse repo fullName to extract org and site
  */
@@ -31,8 +40,18 @@ jest.mock('@/core/logging', () => ({
 // Mock timeout config - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        NORMAL: 30000, // Standard API calls (replaces HELIX_API)
+        NORMAL: 30000, // Standard API calls
+        LONG: 180000, // Complex operations
+        VERY_LONG: 300000, // Bulk operations
     },
+}));
+
+// Mock DA.live content operations for publishAllSiteContent tests
+const mockListDirectory = jest.fn();
+jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+    DaLiveContentOperations: jest.fn().mockImplementation(() => ({
+        listDirectory: mockListDirectory,
+    })),
 }));
 
 // Import types
@@ -42,10 +61,17 @@ import type { TokenManager } from '@/features/authentication/services/tokenManag
 // Type for the service we'll import dynamically
 type HelixServiceType = import('@/features/eds/services/helixService').HelixService;
 
+// Mock GitHubTokenService type
+interface MockGitHubTokenService {
+    getToken: jest.Mock;
+    validateToken: jest.Mock;
+}
+
 describe('HelixService', () => {
     let service: HelixServiceType;
     let mockAuthService: jest.Mocked<Partial<AuthenticationService>>;
     let mockTokenManager: jest.Mocked<Partial<TokenManager>>;
+    let mockGitHubTokenService: MockGitHubTokenService;
     let mockFetch: jest.Mock;
 
     // Store original fetch
@@ -53,6 +79,7 @@ describe('HelixService', () => {
 
     beforeEach(async () => {
         jest.clearAllMocks();
+        mockListDirectory.mockReset();
 
         // Mock TokenManager
         mockTokenManager = {
@@ -60,22 +87,29 @@ describe('HelixService', () => {
             isTokenValid: jest.fn(),
         };
 
-        // Mock AuthenticationService
+        // Mock AuthenticationService (used for DA.live operations)
         mockAuthService = {
             getTokenManager: jest.fn().mockReturnValue(mockTokenManager),
             isAuthenticated: jest.fn(),
+        };
+
+        // Mock GitHubTokenService (used for Helix Admin API authentication)
+        mockGitHubTokenService = {
+            getToken: jest.fn().mockResolvedValue({ token: 'valid-github-token', tokenType: 'bearer', scopes: ['repo'] }),
+            validateToken: jest.fn().mockResolvedValue({ valid: true }),
         };
 
         // Mock global fetch
         mockFetch = jest.fn();
         global.fetch = mockFetch;
 
-        // Setup valid token by default
+        // Setup valid IMS token by default (for DA.live operations)
         mockTokenManager.getAccessToken.mockResolvedValue('valid-ims-token');
 
         // Dynamically import to get fresh instance after mocks are set up
         const module = await import('@/features/eds/services/helixService');
-        service = new module.HelixService(mockAuthService as unknown as AuthenticationService);
+        // Pass mockGitHubTokenService as third parameter for Helix Admin API auth
+        service = new module.HelixService(mockAuthService as unknown as AuthenticationService, undefined, mockGitHubTokenService);
     });
 
     afterEach(() => {
@@ -84,9 +118,307 @@ describe('HelixService', () => {
     });
 
     // ==========================================================
+    // Preview/Publish Single Page Tests
+    // ==========================================================
+    describe('Single Page Preview/Publish', () => {
+        it('should preview a page via POST /preview/{org}/{site}/main/{path}', async () => {
+            // Given: Valid authentication
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // When: Previewing a page
+            await service.previewPage('testuser', 'my-site', '/products');
+
+            // Then: Should call POST on /preview endpoint
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://admin.hlx.page/preview/testuser/my-site/main/products',
+                expect.objectContaining({
+                    method: 'POST',
+                    headers: expect.objectContaining({
+                        'x-auth-token': 'valid-github-token',
+                    }),
+                }),
+            );
+        });
+
+        it('should preview homepage with normalized path', async () => {
+            // Given: Valid authentication
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // When: Previewing homepage
+            await service.previewPage('testuser', 'my-site', '/');
+
+            // Then: Should call correct URL
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://admin.hlx.page/preview/testuser/my-site/main/',
+                expect.any(Object),
+            );
+        });
+
+        it('should publish a page via POST /live/{org}/{site}/main/{path}', async () => {
+            // Given: Valid authentication
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // When: Publishing a page
+            await service.publishPage('testuser', 'my-site', '/about');
+
+            // Then: Should call POST on /live endpoint
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://admin.hlx.page/live/testuser/my-site/main/about',
+                expect.objectContaining({
+                    method: 'POST',
+                    headers: expect.objectContaining({
+                        'x-auth-token': 'valid-github-token',
+                    }),
+                }),
+            );
+        });
+
+        it('should preview and publish a page in sequence', async () => {
+            // Given: Valid authentication
+            mockFetch.mockResolvedValue({
+                ok: true,
+                status: 200,
+            });
+
+            // When: Preview and publish
+            await service.previewAndPublishPage('testuser', 'my-site', '/contact');
+
+            // Then: Should call both preview and live endpoints
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            expect(mockFetch).toHaveBeenNthCalledWith(
+                1,
+                expect.stringContaining('/preview/'),
+                expect.any(Object),
+            );
+            expect(mockFetch).toHaveBeenNthCalledWith(
+                2,
+                expect.stringContaining('/live/'),
+                expect.any(Object),
+            );
+        });
+
+        it('should handle 403 access denied on preview', async () => {
+            // Given: Access denied response
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                statusText: 'Forbidden',
+            });
+
+            // When/Then: Should throw access denied error
+            await expect(service.previewPage('testuser', 'my-site', '/')).rejects.toThrow(
+                /access denied|permission/i,
+            );
+        });
+
+        it('should handle 403 access denied on publish', async () => {
+            // Given: Access denied response
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                statusText: 'Forbidden',
+            });
+
+            // When/Then: Should throw access denied error
+            await expect(service.publishPage('testuser', 'my-site', '/')).rejects.toThrow(
+                /access denied|permission/i,
+            );
+        });
+    });
+
+    // ==========================================================
+    // Bulk Preview/Publish Tests
+    // ==========================================================
+    describe('Bulk Preview/Publish', () => {
+        it('should preview all content via POST /preview/{org}/{site}/main with JSON body containing paths', async () => {
+            // Given: Valid authentication
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202, // Bulk operations return 202 Accepted
+            });
+
+            // When: Previewing all content
+            await service.previewAllContent('testuser', 'my-site');
+
+            // Then: Should call POST on /preview endpoint (without /*) with JSON body containing paths: ["/*"]
+            // Note: The /* wildcard goes in the JSON body, NOT the URL path
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://admin.hlx.page/preview/testuser/my-site/main',
+                expect.objectContaining({
+                    method: 'POST',
+                    headers: expect.objectContaining({
+                        'x-auth-token': 'valid-github-token',
+                        'Content-Type': 'application/json',
+                    }),
+                    body: JSON.stringify({
+                        paths: ['/*'],
+                        forceUpdate: true,
+                    }),
+                }),
+            );
+        });
+
+        it('should publish all content via POST /live/{org}/{site}/main with JSON body containing paths', async () => {
+            // Given: Valid authentication
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202, // Bulk operations return 202 Accepted
+            });
+
+            // When: Publishing all content
+            await service.publishAllContent('testuser', 'my-site');
+
+            // Then: Should call POST on /live endpoint (without /*) with JSON body containing paths: ["/*"]
+            // Note: The /* wildcard goes in the JSON body, NOT the URL path
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://admin.hlx.page/live/testuser/my-site/main',
+                expect.objectContaining({
+                    method: 'POST',
+                    headers: expect.objectContaining({
+                        'x-auth-token': 'valid-github-token',
+                        'Content-Type': 'application/json',
+                    }),
+                    body: JSON.stringify({
+                        paths: ['/*'],
+                        forceUpdate: true,
+                    }),
+                }),
+            );
+        });
+
+        it('should list pages from DA.live and publish each individually', async () => {
+            // Given: Valid authentication and DA.live content
+            // DA.live API: files have 'ext' field, folders don't
+            // Paths include org/site prefix: /dalive-org/dalive-site/page.html
+            mockListDirectory
+                .mockResolvedValueOnce([
+                    { name: 'index', ext: 'html', path: '/dalive-org/dalive-site/index.html' },
+                    { name: 'about', ext: 'html', path: '/dalive-org/dalive-site/about.html' },
+                    { name: 'nav', ext: 'html', path: '/dalive-org/dalive-site/nav.html' },
+                    { name: 'metadata', ext: 'json', path: '/dalive-org/dalive-site/metadata.json' }, // Should be excluded (not html)
+                    { name: 'products', path: '/dalive-org/dalive-site/products' }, // folder (no ext)
+                ])
+                .mockResolvedValueOnce([
+                    { name: 'index', ext: 'html', path: '/dalive-org/dalive-site/products/index.html' },
+                ]); // products folder contents
+
+            // Fetch succeeds for all preview/publish calls
+            mockFetch.mockResolvedValue({
+                ok: true,
+                status: 200,
+            });
+
+            // When: Publishing all site content with DA.live org/site
+            await service.publishAllSiteContent('github-owner/github-repo', 'main', 'dalive-org', 'dalive-site');
+
+            // Then: Should list content from DA.live org/site
+            expect(mockListDirectory).toHaveBeenCalledWith('dalive-org', 'dalive-site', '/');
+
+            // Then: Should preview and publish each page individually using GitHub org/site
+            // 4 HTML pages: / (index), /about, /nav, /products (products/index -> /products)
+            // metadata.json excluded (not html)
+            // Each page = 2 calls (preview + publish) = 8 total calls
+            expect(mockFetch).toHaveBeenCalledTimes(8);
+
+            // Verify GitHub org/site used for Helix API calls (not DA.live org/site)
+            const calls = mockFetch.mock.calls;
+            expect(calls.every((c: any[]) => c[0].includes('github-owner/github-repo'))).toBe(true);
+        });
+
+        it('should fall back to GitHub org/site if DA.live org/site not provided', async () => {
+            // Given: Valid authentication and DA.live content
+            // DA.live API: files have 'ext' field
+            mockListDirectory.mockResolvedValueOnce([
+                { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' },
+            ]);
+
+            mockFetch.mockResolvedValue({
+                ok: true,
+                status: 200,
+            });
+
+            // When: Publishing without explicit DA.live org/site
+            await service.publishAllSiteContent('testuser/my-site');
+
+            // Then: Should use GitHub org/site as fallback for DA.live listing
+            expect(mockListDirectory).toHaveBeenCalledWith('testuser', 'my-site', '/');
+        });
+
+        it('should exclude non-HTML files by extension', async () => {
+            // Given: Mix of HTML and non-HTML files
+            // DA.live API: files have 'ext' field
+            mockListDirectory.mockResolvedValueOnce([
+                { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' }, // HTML content
+                { name: 'logo', ext: 'png', path: '/testuser/my-site/logo.png' }, // excluded (not html)
+                { name: 'data', ext: 'json', path: '/testuser/my-site/data.json' }, // excluded (not html)
+                { name: 'about', ext: 'html', path: '/testuser/my-site/about.html' }, // HTML content
+            ]);
+
+            mockFetch.mockResolvedValue({
+                ok: true,
+                status: 200,
+            });
+
+            // When: Publishing
+            await service.publishAllSiteContent('testuser/my-site');
+
+            // Then: Should only publish 2 HTML files (/, /about)
+            // 2 pages × 2 calls = 4 total fetch calls
+            expect(mockFetch).toHaveBeenCalledTimes(4);
+        });
+
+        it('should throw error when no publishable pages found', async () => {
+            // Given: Empty DA.live content
+            mockListDirectory.mockResolvedValueOnce([]);
+
+            // When/Then: Should throw descriptive error
+            await expect(service.publishAllSiteContent('testuser/my-site')).rejects.toThrow(
+                /no publishable pages found/i,
+            );
+        });
+
+        it('should handle 403 access denied on bulk preview', async () => {
+            // Given: Access denied response
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                statusText: 'Forbidden',
+            });
+
+            // When/Then: Should throw access denied error
+            await expect(service.previewAllContent('testuser', 'my-site')).rejects.toThrow(
+                /access denied|permission/i,
+            );
+        });
+
+        it('should handle 403 access denied on bulk publish', async () => {
+            // Given: Access denied response
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                statusText: 'Forbidden',
+            });
+
+            // When/Then: Should throw access denied error
+            await expect(service.publishAllContent('testuser', 'my-site')).rejects.toThrow(
+                /access denied|permission/i,
+            );
+        });
+    });
+
+    // ==========================================================
     // Helix Unpublish Tests (5 tests)
     // ==========================================================
-    describe('Helix Operations', () => {
+    describe('Helix Unpublish Operations', () => {
         it('should unpublish from live via DELETE /live/{org}/{site}/main/*', async () => {
             // Given: Published site
             mockFetch.mockResolvedValueOnce({
@@ -103,7 +435,7 @@ describe('HelixService', () => {
                 expect.objectContaining({
                     method: 'DELETE',
                     headers: expect.objectContaining({
-                        Authorization: 'Bearer valid-ims-token',
+                        'x-auth-token': 'valid-github-token',
                     }),
                 }),
             );
@@ -125,20 +457,20 @@ describe('HelixService', () => {
                 expect.objectContaining({
                     method: 'DELETE',
                     headers: expect.objectContaining({
-                        Authorization: 'Bearer valid-ims-token',
+                        'x-auth-token': 'valid-github-token',
                     }),
                 }),
             );
         });
 
-        it('should require IMS token for authentication', async () => {
-            // Given: No valid token
-            mockTokenManager.getAccessToken.mockResolvedValue(undefined);
+        it('should require GitHub token for authentication', async () => {
+            // Given: No valid GitHub token
+            mockGitHubTokenService.getToken.mockResolvedValue(undefined);
 
             // When: Attempting to unpublish
             // Then: Should throw authentication error
             await expect(service.unpublishFromLive('testuser', 'my-site')).rejects.toThrow(
-                /not authenticated|authentication/i,
+                /not found|authentication|github/i,
             );
         });
 

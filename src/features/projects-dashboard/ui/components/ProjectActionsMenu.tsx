@@ -18,6 +18,8 @@ import Export from '@spectrum-icons/workflow/Export';
 import Globe from '@spectrum-icons/workflow/Globe';
 import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
 import Play from '@spectrum-icons/workflow/Play';
+import PublishCheck from '@spectrum-icons/workflow/PublishCheck';
+import Revert from '@spectrum-icons/workflow/Revert';
 import Stop from '@spectrum-icons/workflow/Stop';
 import React, { useCallback, useMemo } from 'react';
 import type { Project } from '@/types/base';
@@ -27,7 +29,7 @@ import { isEdsProject } from '@/types/typeGuards';
 interface MenuItem {
     key: string;
     label: string;
-    icon: 'play' | 'stop' | 'globe' | 'dalive' | 'edit' | 'export' | 'delete';
+    icon: 'play' | 'stop' | 'globe' | 'dalive' | 'edit' | 'export' | 'delete' | 'publish' | 'reset';
 }
 
 export interface ProjectActionsMenuProps {
@@ -45,6 +47,10 @@ export interface ProjectActionsMenuProps {
     onOpenLiveSite?: (project: Project) => void;
     /** Callback to open DA.live for authoring (for EDS projects) */
     onOpenDaLive?: (project: Project) => void;
+    /** Callback to publish EDS content to CDN (for EDS projects) */
+    onPublishEds?: (project: Project) => void;
+    /** Callback to reset EDS project from template (for EDS projects) */
+    onResetEds?: (project: Project) => void;
     /** Callback to edit project settings */
     onEdit?: (project: Project) => void;
     /** Callback to export project settings */
@@ -69,6 +75,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     onOpenBrowser,
     onOpenLiveSite,
     onOpenDaLive,
+    onPublishEds,
+    onResetEds,
     onEdit,
     onExport,
     onDelete,
@@ -93,6 +101,12 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             case 'openDaLive':
                 onOpenDaLive?.(project);
                 break;
+            case 'publishEds':
+                onPublishEds?.(project);
+                break;
+            case 'resetEds':
+                onResetEds?.(project);
+                break;
             case 'edit':
                 onEdit?.(project);
                 break;
@@ -103,7 +117,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 onDelete?.(project);
                 break;
         }
-    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onEdit, onExport, onDelete]);
+    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onPublishEds, onResetEds, onEdit, onExport, onDelete]);
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
@@ -125,6 +139,14 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             // Edit is always available for EDS (no running state)
             if (onEdit) {
                 items.push({ key: 'edit', label: 'Edit Project', icon: 'edit' });
+            }
+            // Publish EDS content to CDN
+            if (onPublishEds) {
+                items.push({ key: 'publishEds', label: 'Publish to CDN', icon: 'publish' });
+            }
+            // Reset EDS project from template
+            if (onResetEds) {
+                items.push({ key: 'resetEds', label: 'Reset Project', icon: 'reset' });
             }
         } else {
             // Non-EDS projects: Start/Stop based on running state
@@ -153,7 +175,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             items.push({ key: 'delete', label: 'Delete Project', icon: 'delete' });
         }
         return items;
-    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onEdit, onExport, onDelete]);
+    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onPublishEds, onResetEds, onEdit, onExport, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {
@@ -178,6 +200,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                             {item.icon === 'globe' && <Globe size="S" />}
                             {item.icon === 'dalive' && <Edit size="S" />}
                             {item.icon === 'edit' && <Edit size="S" />}
+                            {item.icon === 'publish' && <PublishCheck size="S" />}
+                            {item.icon === 'reset' && <Revert size="S" />}
                             {item.icon === 'export' && <Export size="S" />}
                             {item.icon === 'delete' && <Delete size="S" />}
                             <Text>{item.label}</Text>

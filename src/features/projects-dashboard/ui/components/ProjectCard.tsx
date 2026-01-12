@@ -38,6 +38,10 @@ export interface ProjectCardProps {
     onOpenLiveSite?: (project: Project) => void;
     /** Callback to open DA.live for authoring (for EDS projects) */
     onOpenDaLive?: (project: Project) => void;
+    /** Callback to publish EDS content to CDN (for EDS projects) */
+    onPublishEds?: (project: Project) => void;
+    /** Callback to reset EDS project from template (for EDS projects) */
+    onResetEds?: (project: Project) => void;
     /** Callback to edit project settings */
     onEdit?: (project: Project) => void;
     /** Callback to export project settings */
@@ -60,6 +64,8 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     onOpenBrowser,
     onOpenLiveSite,
     onOpenDaLive,
+    onPublishEds,
+    onResetEds,
     onEdit,
     onExport,
     onDelete,
@@ -108,6 +114,8 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                     onOpenBrowser={onOpenBrowser}
                     onOpenLiveSite={onOpenLiveSite}
                     onOpenDaLive={onOpenDaLive}
+                    onPublishEds={onPublishEds}
+                    onResetEds={onResetEds}
                     onEdit={onEdit}
                     onExport={onExport}
                     onDelete={onDelete}

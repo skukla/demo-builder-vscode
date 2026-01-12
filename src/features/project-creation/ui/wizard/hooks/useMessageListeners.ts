@@ -7,6 +7,8 @@ interface UseMessageListenersProps {
     getCurrentStepIndex: () => number;
     navigateToStep: (step: WizardStep, targetIndex: number, currentIndex: number) => void;
     WIZARD_STEPS: Array<{ id: WizardStep; name: string }>;
+    /** Callback when GitHub App installation is required during creation */
+    onGitHubAppRequired?: (data: { owner: string; repo: string; installUrl: string }) => void;
 }
 
 /**
@@ -22,6 +24,7 @@ export function useMessageListeners({
     getCurrentStepIndex,
     navigateToStep,
     WIZARD_STEPS,
+    onGitHubAppRequired,
 }: UseMessageListenersProps): void {
     // Listen for feedback messages from extension
     // Registered ONCE on mount - checks conditions inside functional update to avoid stale closures
@@ -76,6 +79,43 @@ export function useMessageListeners({
 
         return unsubscribe;
     }, [setState]);
+
+    // Listen for creationFailed messages from extension
+    // Handles special error types like GITHUB_APP_NOT_INSTALLED
+    useEffect(() => {
+        const unsubscribe = vscode.onMessage('creationFailed', (data: unknown) => {
+            const failedData = data as {
+                error?: string;
+                errorType?: string;
+                errorDetails?: {
+                    owner?: string;
+                    repo?: string;
+                    installUrl?: string;
+                };
+            };
+
+            // Handle GitHub App not installed error specially
+            if (failedData.errorType === 'GITHUB_APP_NOT_INSTALLED' && failedData.errorDetails) {
+                const { owner, repo, installUrl } = failedData.errorDetails;
+                if (owner && repo && installUrl && onGitHubAppRequired) {
+                    onGitHubAppRequired({ owner, repo, installUrl });
+                    return; // Don't update state - callback handles the UI transition
+                }
+            }
+
+            // For other errors, update state normally (generic error display)
+            setState(prev => ({
+                ...prev,
+                creationProgress: prev.creationProgress ? {
+                    ...prev.creationProgress,
+                    currentOperation: 'Failed',
+                    error: failedData.error || 'Project creation failed',
+                } : undefined,
+            }));
+        });
+
+        return unsubscribe;
+    }, [setState, onGitHubAppRequired]);
 
     // Listen for navigation requests from sidebar
     useEffect(() => {

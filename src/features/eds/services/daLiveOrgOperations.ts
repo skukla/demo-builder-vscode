@@ -169,8 +169,9 @@ export class DaLiveOrgOperations {
             }
 
             // Parse response to get site list
+            // In DA.live API, folders don't have an 'ext' field, only files do
             const entries: DaLiveEntry[] = await response.json();
-            const sites = entries.filter(entry => entry.type === 'folder');
+            const sites = entries.filter(entry => !entry.ext);
 
             this.logger.debug(`[DA.live] Org ${orgName} has ${sites.length} sites`);
 

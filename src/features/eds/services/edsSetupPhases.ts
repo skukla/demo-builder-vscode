@@ -25,6 +25,7 @@ import type { DaLiveOrgOperations } from './daLiveOrgOperations';
 import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubTokenService } from './githubTokenService';
 import type { GitHubRepoOperations } from './githubRepoOperations';
+import type { GitHubFileOperations } from './githubFileOperations';
 import {
     EdsProjectError,
     GitHubAppNotInstalledError,
@@ -280,6 +281,7 @@ export class HelixConfigPhase {
         private authService: AuthenticationService,
         private logger: Logger,
         private githubAppService: GitHubAppService,
+        private fileOperations?: GitHubFileOperations,
     ) {
         this.pollingService = new PollingService();
     }
@@ -295,11 +297,20 @@ export class HelixConfigPhase {
             // Modern Helix 5 approach: Generate fstab.yaml in the repo
             // This replaces the deprecated admin.hlx.page/config API which requires complex auth
             onProgress?.('Generating fstab.yaml configuration...');
-            await this.generateFstabYaml(config);
+            const fstabContent = await this.generateFstabYaml(config);
 
             this.logger.debug(`[EDS] Helix 5 configured via fstab.yaml`);
 
-            // Priority 1: Verify config file was created
+            // Push fstab.yaml to GitHub - required for Helix to fetch content
+            // Without this, Helix code sync will work but content fetch will fail
+            if (this.fileOperations) {
+                onProgress?.('Pushing fstab.yaml to GitHub...');
+                await this.pushFstabToGitHub(repo, fstabContent);
+            } else {
+                this.logger.warn('[EDS] GitHubFileOperations not provided - fstab.yaml only saved locally');
+            }
+
+            // Priority 1: Verify config file was created locally
             onProgress?.('Verifying Helix config...');
             await this.verifyHelixConfig(config);
         } catch (error) {
@@ -321,10 +332,11 @@ export class HelixConfigPhase {
     /**
      * Generate fstab.yaml file in the repository
      * Modern Helix 5 approach - configuration in repo instead of API
+     * @returns The fstab.yaml content for pushing to GitHub
      */
-    private async generateFstabYaml(config: EdsProjectConfig): Promise<void> {
+    private async generateFstabYaml(config: EdsProjectConfig): Promise<string> {
         const fstabPath = path.join(config.componentPath, 'fstab.yaml');
-        
+
         // fstab.yaml format for Helix 5
         const fstabContent = `mountpoints:
   /: https://content.da.live/${config.daLiveOrg}/${config.daLiveSite}/
@@ -334,8 +346,42 @@ export class HelixConfigPhase {
             await fs.writeFile(fstabPath, fstabContent, 'utf-8');
             this.logger.debug(`[EDS] Generated fstab.yaml at: ${fstabPath}`);
             this.logger.debug(`[EDS] Mountpoint: / → https://content.da.live/${config.daLiveOrg}/${config.daLiveSite}/`);
+            return fstabContent;
         } catch (error) {
             throw new Error(`Failed to write fstab.yaml: ${(error as Error).message}`);
+        }
+    }
+
+    /**
+     * Push fstab.yaml to GitHub repository
+     * This is required for Helix to fetch content from DA.live
+     */
+    private async pushFstabToGitHub(repo: GitHubRepo, content: string): Promise<void> {
+        if (!this.fileOperations) {
+            throw new Error('GitHubFileOperations not available');
+        }
+
+        const [owner, repoName] = repo.fullName.split('/');
+        this.logger.info(`[EDS] Pushing fstab.yaml to GitHub: ${owner}/${repoName}`);
+
+        try {
+            // Check if fstab.yaml already exists (to get SHA for update)
+            const existingFile = await this.fileOperations.getFileContent(owner, repoName, 'fstab.yaml');
+            const sha = existingFile?.sha;
+
+            // Create or update fstab.yaml in the repository
+            await this.fileOperations.createOrUpdateFile(
+                owner,
+                repoName,
+                'fstab.yaml',
+                content,
+                'chore: configure fstab.yaml for DA.live content source',
+                sha,
+            );
+
+            this.logger.info('[EDS] fstab.yaml pushed to GitHub successfully');
+        } catch (error) {
+            throw new Error(`Failed to push fstab.yaml to GitHub: ${(error as Error).message}`);
         }
     }
 
@@ -729,16 +775,29 @@ export async function updateConfigJsonWithMesh(
 
     const configJsonPath = path.join(componentPath, 'config.json');
 
-    // Use shared config file updater
-    await updateConfigFile(
-        configJsonPath,
-        {
-            'commerce-core-endpoint': meshEndpoint,
-            'commerce-endpoint': meshEndpoint,
-        },
-        logger,
-        'EDS runtime configuration (config.json)',
-    );
+    try {
+        // Read existing config
+        const content = await fs.readFile(configJsonPath, 'utf-8');
+        const config = JSON.parse(content) as Record<string, unknown>;
+
+        // Update endpoints in public.default (where EDS runtime expects them)
+        if (config.public && typeof config.public === 'object') {
+            const publicConfig = config.public as Record<string, unknown>;
+            if (publicConfig.default && typeof publicConfig.default === 'object') {
+                const defaultConfig = publicConfig.default as Record<string, unknown>;
+                defaultConfig['commerce-core-endpoint'] = meshEndpoint;
+                defaultConfig['commerce-endpoint'] = meshEndpoint;
+                logger.debug('[EDS] Updated endpoints in public.default');
+            }
+        }
+
+        // Write back
+        await fs.writeFile(configJsonPath, JSON.stringify(config, null, 2), 'utf-8');
+        logger.info('[EDS] config.json updated with mesh endpoint');
+    } catch (error) {
+        logger.error('[EDS] Failed to update config.json', error as Error);
+        throw error;
+    }
 }
 
 /** URL generation helpers */

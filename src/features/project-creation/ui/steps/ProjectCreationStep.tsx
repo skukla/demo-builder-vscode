@@ -238,6 +238,37 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
         }
     }, [progress, phase]);
 
+    // Listen for creationFailed messages with GITHUB_APP_NOT_INSTALLED error
+    // This handles the case where the error occurs during creation (after pre-flight check)
+    useEffect(() => {
+        const unsubscribe = vscode.onMessage('creationFailed', (data: unknown) => {
+            const failedData = data as {
+                errorType?: string;
+                errorDetails?: {
+                    owner?: string;
+                    repo?: string;
+                    installUrl?: string;
+                };
+            };
+
+            // Handle GitHub App not installed error specially
+            if (failedData.errorType === 'GITHUB_APP_NOT_INSTALLED' && failedData.errorDetails) {
+                const { owner, repo, installUrl } = failedData.errorDetails;
+                if (owner && repo && installUrl) {
+                    setGitHubAppInstallData({
+                        owner,
+                        repo,
+                        installUrl,
+                        message: 'GitHub App installation required for code sync',
+                    });
+                    setPhase('github-app-install');
+                }
+            }
+        });
+
+        return unsubscribe;
+    }, []);
+
     const handleCancel = () => {
         setIsCancelling(true);
         vscode.postMessage('cancel-project-creation');

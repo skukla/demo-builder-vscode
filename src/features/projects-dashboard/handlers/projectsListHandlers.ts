@@ -21,6 +21,8 @@ import {
     handleOpenBrowser,
     handleOpenLiveSite,
     handleOpenDaLive,
+    handlePublishEds,
+    handleResetEds,
     handleEditProject,
     handleOpenDocs,
     handleOpenHelp,
@@ -58,6 +60,10 @@ export const projectsListHandlers = defineHandlers({
     'openBrowser': handleOpenBrowser,
     'openLiveSite': handleOpenLiveSite,
     'openDaLive': handleOpenDaLive,
+
+    // EDS action handlers
+    'publishEds': handlePublishEds,
+    'resetEds': handleResetEds,
 
     // Project edit handler
     'editProject': handleEditProject,

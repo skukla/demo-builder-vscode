@@ -121,8 +121,10 @@ export class DaLiveContentOperations {
             const entries = await this.listDirectory(source.org, source.site, source.path);
 
             // Process all entries
+            // In DA.live API, folders don't have an 'ext' field, only files do
             for (const entry of entries) {
-                if (entry.type === 'folder') {
+                const isFolder = !entry.ext;
+                if (isFolder) {
                     // Recursively copy subdirectory
                     const subResult = await this.copyContent(
                         { org: source.org, site: source.site, path: entry.path },

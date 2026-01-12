@@ -47,6 +47,7 @@ import {
     generateLiveUrl,
 } from './edsSetupPhases';
 import { GitHubAppService } from './githubAppService';
+import { HelixService } from './helixService';
 
 // Re-export phase classes for direct use
 export { GitHubRepoPhase, HelixConfigPhase, ContentPhase, EnvConfigPhase } from './edsSetupPhases';
@@ -55,11 +56,12 @@ export { GitHubRepoPhase, HelixConfigPhase, ContentPhase, EnvConfigPhase } from 
 const PROGRESS = {
     GITHUB_REPO: { start: 0, end: 15 },
     GITHUB_CLONE: { start: 15, end: 25 },
-    HELIX_CONFIG: { start: 25, end: 40 },
-    CODE_SYNC: { start: 40, end: 55 },
-    DALIVE_CONTENT: { start: 55, end: 70 },
-    TOOLS_CLONE: { start: 70, end: 85 },
-    ENV_CONFIG: { start: 85, end: 95 },
+    HELIX_CONFIG: { start: 25, end: 35 },
+    CODE_SYNC: { start: 35, end: 45 },
+    DALIVE_CONTENT: { start: 45, end: 60 },
+    CONTENT_PUBLISH: { start: 60, end: 70 },
+    TOOLS_CLONE: { start: 70, end: 80 },
+    ENV_CONFIG: { start: 80, end: 95 },
     COMPLETE: 100,
 } as const;
 
@@ -90,6 +92,7 @@ export class EdsProjectService {
     private contentPhase: ContentPhase;
     private envPhase: EnvConfigPhase;
     private fileOperations: GitHubFileOperations;
+    private helixService: HelixService;
 
     /**
      * Create an EdsProjectService
@@ -116,9 +119,13 @@ export class EdsProjectService {
 
         // Initialize phase handlers
         this.githubPhase = new GitHubRepoPhase(githubServices, daLiveServices.orgOperations, this.logger);
-        this.helixPhase = new HelixConfigPhase(authService, this.logger, githubAppService);
+        this.helixPhase = new HelixConfigPhase(authService, this.logger, githubAppService, this.fileOperations);
         this.contentPhase = new ContentPhase(daLiveServices.contentOperations, componentManager, this.logger);
         this.envPhase = new EnvConfigPhase(this.logger);
+
+        // Initialize Helix service for content publish operations
+        // Helix Admin API uses GitHub authentication, not IMS tokens
+        this.helixService = new HelixService(authService, this.logger, githubServices.tokenService);
     }
 
     /**
@@ -194,6 +201,16 @@ export class EdsProjectService {
                 reportProgress('dalive-content', PROGRESS.DALIVE_CONTENT.end, 'Content copied');
             } else {
                 reportProgress('dalive-content', PROGRESS.DALIVE_CONTENT.end, 'Content copy skipped');
+            }
+
+            // Phase 5.5: Publish all content to CDN (unless content was skipped)
+            // This syncs the DA.live content to the Helix CDN so the site is immediately accessible
+            if (!config.skipContent) {
+                reportProgress('content-publish', PROGRESS.CONTENT_PUBLISH.start, 'Publishing all content to CDN...');
+                await this.helixService.publishAllSiteContent(createdRepo.fullName);
+                reportProgress('content-publish', PROGRESS.CONTENT_PUBLISH.end, 'All content published');
+            } else {
+                reportProgress('content-publish', PROGRESS.CONTENT_PUBLISH.end, 'Content publish skipped');
             }
 
             // Phase 6: Clone ingestion tool (unless skipped)

@@ -128,16 +128,14 @@ export interface GitHubApiError extends Error {
  * DA.live directory entry
  */
 export interface DaLiveEntry {
-    /** Entry name (filename or folder name) */
+    /** Entry name (filename WITHOUT extension) */
     name: string;
-    /** Full path within the site */
+    /** Full path within the site (WITH extension for files) */
     path: string;
-    /** Entry type: 'file' or 'folder' */
-    type: 'file' | 'folder';
-    /** Last modified timestamp (ISO string) */
-    lastModified?: string;
-    /** File size in bytes (only for files) */
-    size?: number;
+    /** File extension (only present for files, not folders) */
+    ext?: string;
+    /** Last modified timestamp in milliseconds (only for files) */
+    lastModified?: number;
 }
 
 /**
@@ -242,6 +240,7 @@ export type EdsSetupPhase =
     | 'helix-config'
     | 'code-sync'
     | 'dalive-content'
+    | 'content-publish'
     | 'tools-clone'
     | 'env-config'
     | 'complete';

@@ -90,13 +90,21 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'setViewModeOverride')).toBe(true);
         });
 
-        it('should have exactly 17 handlers', () => {
+        it('should include EDS action handlers', () => {
+            // Given: projectsListHandlers object
+            // When: Checking for EDS action message types
+            // Then: EDS action handlers present
+            expect(hasHandler(projectsListHandlers, 'publishEds')).toBe(true);
+            expect(hasHandler(projectsListHandlers, 'resetEds')).toBe(true);
+        });
+
+        it('should have exactly 19 handlers', () => {
             // Given: projectsListHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(projectsListHandlers);
 
-            // Then: Exactly 17 handlers
-            expect(types).toHaveLength(17);
+            // Then: Exactly 19 handlers (17 original + 2 EDS action handlers)
+            expect(types).toHaveLength(19);
         });
 
         it('should have handlers as functions', () => {

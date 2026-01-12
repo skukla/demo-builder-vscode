@@ -72,14 +72,22 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'deleteProject')).toBe(true);
         });
 
-        it('should have exactly 16 handlers', () => {
+        it('should include EDS handlers', () => {
+            // Given: dashboardHandlers object
+            // When: Checking for EDS message types
+            // Then: EDS handlers present
+            expect(hasHandler(dashboardHandlers, 'publishEds')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'resetEds')).toBe(true);
+        });
+
+        it('should have exactly 18 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 16 handlers
-            // 2 init + 1 auth + 2 lifecycle + 9 navigation + 1 mesh + 1 project = 16
-            expect(types).toHaveLength(16);
+            // Then: Exactly 18 handlers
+            // 2 init + 1 auth + 2 lifecycle + 9 navigation + 1 mesh + 1 project + 2 EDS = 18
+            expect(types).toHaveLength(18);
         });
 
         it('should have handlers as functions', () => {

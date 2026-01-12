@@ -6,6 +6,7 @@ import { ServiceLocator } from '@/core/di';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { promises as fsPromises } from 'fs';
+import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import {
     createMockContext,
     setupDefaultMocks,
@@ -212,6 +213,86 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
             await handleCreateProject(mockContext, mockConfig);
 
             expect(fsPromises.rm).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('GitHub App not installed error', () => {
+        it('should handle GitHubAppNotInstalledError with specific message', async () => {
+            const gitHubAppError = new GitHubAppNotInstalledError(
+                'test-owner',
+                'test-repo',
+                'https://github.com/apps/aem-code-sync/installations/select_target'
+            );
+            (executor.executeProjectCreation as jest.Mock).mockRejectedValue(gitHubAppError);
+
+            const result = await handleCreateProject(mockContext, mockConfig);
+
+            expect(result.success).toBe(true); // Handler doesn't fail
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'creationProgress',
+                expect.objectContaining({
+                    currentOperation: 'GitHub App Required',
+                    error: expect.stringContaining('AEM Code Sync GitHub App must be installed'),
+                })
+            );
+        });
+
+        it('should send structured error with installation details for UI', async () => {
+            const installUrl = 'https://github.com/apps/aem-code-sync/installations/select_target';
+            const gitHubAppError = new GitHubAppNotInstalledError('test-owner', 'test-repo', installUrl);
+            (executor.executeProjectCreation as jest.Mock).mockRejectedValue(gitHubAppError);
+
+            await handleCreateProject(mockContext, mockConfig);
+
+            // Should NOT auto-open browser - UI handles this
+            expect(vscode.env.openExternal).not.toHaveBeenCalled();
+
+            // Should send structured error for UI to render installation instructions
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'creationFailed',
+                expect.objectContaining({
+                    errorType: 'GITHUB_APP_NOT_INSTALLED',
+                    errorDetails: {
+                        owner: 'test-owner',
+                        repo: 'test-repo',
+                        installUrl: installUrl,
+                    },
+                })
+            );
+        });
+
+        it('should send creationFailed message with repo info', async () => {
+            const gitHubAppError = new GitHubAppNotInstalledError(
+                'my-org',
+                'my-repo',
+                'https://github.com/apps/aem-code-sync/installations/select_target'
+            );
+            (executor.executeProjectCreation as jest.Mock).mockRejectedValue(gitHubAppError);
+
+            await handleCreateProject(mockContext, mockConfig);
+
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'creationFailed',
+                expect.objectContaining({
+                    error: expect.stringContaining('my-org/my-repo'),
+                    isTimeout: false,
+                })
+            );
+        });
+
+        it('should log GitHub App error details', async () => {
+            const installUrl = 'https://github.com/apps/aem-code-sync/installations/select_target';
+            const gitHubAppError = new GitHubAppNotInstalledError('test-owner', 'test-repo', installUrl);
+            (executor.executeProjectCreation as jest.Mock).mockRejectedValue(gitHubAppError);
+
+            await handleCreateProject(mockContext, mockConfig);
+
+            expect(mockContext.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('GitHub App not installed')
+            );
+            expect(mockContext.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining(installUrl)
+            );
         });
     });
 });

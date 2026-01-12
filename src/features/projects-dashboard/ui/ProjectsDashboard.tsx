@@ -55,6 +55,10 @@ export interface ProjectsDashboardProps {
     onOpenLiveSite?: (project: Project) => void;
     /** Callback to open DA.live for authoring (for EDS projects) */
     onOpenDaLive?: (project: Project) => void;
+    /** Callback to publish EDS content to CDN (for EDS projects) */
+    onPublishEds?: (project: Project) => void;
+    /** Callback to reset EDS project from template (for EDS projects) */
+    onResetEds?: (project: Project) => void;
     /** Callback to edit project settings */
     onEditProject?: (project: Project) => void;
     /** Callback to export project settings */
@@ -97,6 +101,8 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     onOpenBrowser,
     onOpenLiveSite,
     onOpenDaLive,
+    onPublishEds,
+    onResetEds,
     onEditProject,
     onExportProject,
     onDeleteProject,
@@ -266,6 +272,8 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         onOpenBrowser={onOpenBrowser}
                         onOpenLiveSite={onOpenLiveSite}
                         onOpenDaLive={onOpenDaLive}
+                        onPublishEds={onPublishEds}
+                        onResetEds={onResetEds}
                         onEditProject={onEditProject}
                         onExportProject={onExportProject}
                         onDeleteProject={onDeleteProject}

@@ -298,4 +298,35 @@ describe('useDashboardActions', () => {
             expect(result.current.handleViewComponents).toBe(initialHandlers.handleViewComponents);
         });
     });
+
+    describe('EDS Actions', () => {
+        it('should send publishEds message when handlePublishEds is called', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handlePublishEds();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('publishEds');
+        });
+
+        it('should send resetEds message when handleResetEds is called', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleResetEds();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('resetEds');
+        });
+
+        it('should return handlePublishEds and handleResetEds handlers', () => {
+            const { result } = renderActionsHook();
+
+            expect(result.current.handlePublishEds).toBeDefined();
+            expect(result.current.handleResetEds).toBeDefined();
+            expect(typeof result.current.handlePublishEds).toBe('function');
+            expect(typeof result.current.handleResetEds).toBe('function');
+        });
+    });
 });

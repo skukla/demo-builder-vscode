@@ -1,7 +1,13 @@
 /**
  * ActionGrid Component
  *
- * Displays the 9-button action grid for the project dashboard.
+ * Displays the action button grid for the project dashboard.
+ * Non-EDS projects: 8 buttons (Start/Stop + Open + Logs + Deploy Mesh + Configure + Components + Dev Console + Delete)
+ * EDS projects: 8 buttons (Open + Author + Logs + Deploy Mesh + Configure + Components + Dev Console + Delete)
+ *
+ * Note: EDS Publish and Reset actions are available via the project card kebab menu,
+ * not on this dashboard detail view.
+ *
  * Extracted from ProjectDashboardScreen for better separation of concerns.
  *
  * @module features/dashboard/ui/components/ActionGrid

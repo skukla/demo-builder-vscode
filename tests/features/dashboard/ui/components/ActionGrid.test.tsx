@@ -64,6 +64,16 @@ jest.mock('@/core/ui/components/layout', () => ({
     GridLayout: ({ children }: any) => <div data-testid="grid-layout">{children}</div>,
 }));
 
+// Mock EDS-specific icons
+jest.mock('@spectrum-icons/workflow/PublishCheck', () => ({
+    __esModule: true,
+    default: () => <span data-testid="publish-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/Revert', () => ({
+    __esModule: true,
+    default: () => <span data-testid="revert-icon" />,
+}));
+
 describe('ActionGrid', () => {
     const defaultProps = {
         isRunning: false,
@@ -308,6 +318,72 @@ describe('ActionGrid', () => {
             const buttons = screen.getAllByRole('button');
             // 8 buttons: Start OR Stop (exclusive) + Open + Logs + Deploy Mesh + Configure + Components + Dev Console + Delete
             expect(buttons).toHaveLength(8);
+        });
+    });
+
+    describe('EDS-Specific Buttons', () => {
+        const edsProps = {
+            ...defaultProps,
+            isEds: true,
+            handleOpenLiveSite: jest.fn(),
+            handleOpenDaLive: jest.fn(),
+            handlePublishEds: jest.fn(),
+            handleResetEds: jest.fn(),
+        };
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+        });
+
+        it('should render Publish button for EDS projects', () => {
+            render(<ActionGrid {...edsProps} />);
+
+            expect(screen.getByText('Publish')).toBeInTheDocument();
+        });
+
+        it('should render Reset button for EDS projects', () => {
+            render(<ActionGrid {...edsProps} />);
+
+            expect(screen.getByText('Reset')).toBeInTheDocument();
+        });
+
+        it('should not render Publish or Reset buttons for non-EDS projects', () => {
+            render(<ActionGrid {...defaultProps} isEds={false} />);
+
+            expect(screen.queryByText('Publish')).not.toBeInTheDocument();
+            expect(screen.queryByText('Reset')).not.toBeInTheDocument();
+        });
+
+        it('should disable Publish button during loading', () => {
+            render(<ActionGrid {...edsProps} isOpeningBrowser={true} />);
+
+            const publishButton = screen.getByText('Publish').closest('button');
+            expect(publishButton).toBeDisabled();
+        });
+
+        it('should disable Reset button during loading', () => {
+            render(<ActionGrid {...edsProps} isOpeningBrowser={true} />);
+
+            const resetButton = screen.getByText('Reset').closest('button');
+            expect(resetButton).toBeDisabled();
+        });
+
+        it('should call handlePublishEds when Publish clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...edsProps} />);
+
+            await user.click(screen.getByText('Publish'));
+
+            expect(edsProps.handlePublishEds).toHaveBeenCalled();
+        });
+
+        it('should call handleResetEds when Reset clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...edsProps} />);
+
+            await user.click(screen.getByText('Reset'));
+
+            expect(edsProps.handleResetEds).toHaveBeenCalled();
         });
     });
 });

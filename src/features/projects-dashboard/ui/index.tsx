@@ -246,6 +246,36 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
+    // Handle publish EDS content to CDN (EDS projects)
+    const handlePublishEds = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.request('publishEds', {
+                projectPath: project.path,
+            });
+        } catch (error) {
+            console.error('Failed to publish EDS content:', error);
+        }
+    }, []);
+
+    // Handle reset EDS project (EDS projects)
+    const handleResetEds = useCallback(async (project: Project) => {
+        try {
+            const response = await webviewClient.request<{
+                success: boolean;
+                cancelled?: boolean;
+            }>('resetEds', {
+                projectPath: project.path,
+            });
+
+            // Refresh projects list if reset was successful
+            if (response?.success) {
+                fetchProjects(true);
+            }
+        } catch (error) {
+            console.error('Failed to reset EDS project:', error);
+        }
+    }, [fetchProjects]);
+
     // Handle edit project
     const handleEditProject = useCallback(async (project: Project) => {
         try {
@@ -278,6 +308,8 @@ const ProjectsDashboardApp: React.FC = () => {
             onOpenBrowser={handleOpenBrowser}
             onOpenLiveSite={handleOpenLiveSite}
             onOpenDaLive={handleOpenDaLive}
+            onPublishEds={handlePublishEds}
+            onResetEds={handleResetEds}
             onEditProject={handleEditProject}
             onExportProject={handleExportProject}
             onDeleteProject={handleDeleteProject}

@@ -16,6 +16,7 @@ import { ServiceLocator } from '@/core/di';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
+import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import { toError } from '@/types/typeGuards';
@@ -223,6 +224,39 @@ export async function handleCreateProject(
         } catch (cleanupError) {
             context.logger.warn('[Project Creation] Failed to cleanup partial project', cleanupError as Error);
             // Don't throw - we still want to report the original error
+        }
+
+        // Handle GitHub App not installed error specifically
+        // Returns structured error for UI to display with installation instructions
+        if (error instanceof GitHubAppNotInstalledError) {
+            context.logger.info(`[Project Creation] GitHub App not installed: ${error.message}`);
+            context.logger.info(`[Project Creation] Install URL: ${error.installUrl}`);
+
+            // Send progress update with GitHub App required state
+            await context.sendMessage('creationProgress', {
+                currentOperation: 'GitHub App Required',
+                progress: 0,
+                message: '',
+                logs: [],
+                error: `The AEM Code Sync GitHub App must be installed to enable Edge Delivery Services.`,
+            });
+
+            // Send structured error with installation details for UI to handle
+            // UI should display instructions and a button to open the install URL
+            await context.sendMessage('creationFailed', {
+                error: `GitHub App Required: The AEM Code Sync app is not installed on ${error.owner}/${error.repo}.`,
+                isTimeout: false,
+                elapsed: `${elapsedMin}m ${elapsedSec}s`,
+                // Additional context for UI to render installation instructions
+                errorType: 'GITHUB_APP_NOT_INSTALLED',
+                errorDetails: {
+                    owner: error.owner,
+                    repo: error.repo,
+                    installUrl: error.installUrl,
+                },
+            });
+
+            return { success: true }; // Handler completed - user needs to take action
         }
 
         // Determine error type using typed errors

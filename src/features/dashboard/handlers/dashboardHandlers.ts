@@ -29,6 +29,13 @@ import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance, getProjectFrontendPort } from '@/types/typeGuards';
+import { COMPONENT_IDS } from '@/core/constants';
+import { HelixService } from '@/features/eds/services/helixService';
+import { CleanupService } from '@/features/eds/services/cleanupService';
+import { EdsProjectService } from '@/features/eds/services/edsProjectService';
+import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import type { EdsMetadata, EdsCleanupOptions } from '@/features/eds/services/types';
+import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -536,6 +543,180 @@ export const handleNavigateBack: MessageHandler = async (context) => {
     }
 };
 
+/**
+ * Handle 'publishEds' message - Publish all EDS content to CDN
+ *
+ * Triggers a full CDN content refresh by calling HelixService.publishAllSiteContent().
+ * This previews all content from DA.live to the preview CDN, then publishes to live CDN.
+ */
+export const handlePublishEds: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+
+    if (!project) {
+        context.logger.error('[Dashboard] publishEds: No current project');
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    // Get EDS metadata from component instance
+    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
+
+    if (!repoFullName) {
+        context.logger.error('[Dashboard] publishEds: Missing EDS metadata (githubRepo)');
+        return { success: false, error: 'EDS metadata missing (githubRepo)', code: ErrorCode.CONFIG_INVALID };
+    }
+
+    try {
+        context.logger.info(`[Dashboard] Publishing all EDS content for ${repoFullName}`);
+
+        // Create HelixService with auth service for DA.live and GitHub token for Helix Admin API
+        const authService = ServiceLocator.getAuthenticationService();
+        const { tokenService: githubTokenService } = getGitHubServices(context);
+        const helixService = new HelixService(authService, undefined, githubTokenService);
+
+        // Publish all content (preview + live)
+        await helixService.publishAllSiteContent(repoFullName);
+
+        context.logger.info('[Dashboard] EDS content published successfully');
+        return { success: true };
+    } catch (error) {
+        const errorMessage = (error as Error).message;
+        context.logger.error('[Dashboard] publishEds failed', error as Error);
+        return { success: false, error: errorMessage };
+    }
+};
+
+/**
+ * Handle 'resetEds' message - Reset EDS project with full cleanup and recreation
+ *
+ * Shows a confirmation dialog, then orchestrates:
+ * 1. Cleanup of existing EDS resources (GitHub, DA.live, Helix)
+ * 2. Recreation of project from template via EdsProjectService
+ */
+export const handleResetEds: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+
+    if (!project) {
+        context.logger.error('[Dashboard] resetEds: No current project');
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    // Get EDS metadata from component instance
+    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
+    const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
+    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+    const liveUrl = edsInstance?.metadata?.liveUrl as string | undefined;
+
+    if (!repoFullName) {
+        context.logger.error('[Dashboard] resetEds: Missing EDS metadata (githubRepo)');
+        return { success: false, error: 'EDS metadata missing (githubRepo)', code: ErrorCode.CONFIG_INVALID };
+    }
+
+    // Show confirmation dialog
+    const confirmButton = 'Reset Project';
+    const confirmation = await vscode.window.showWarningMessage(
+        `Are you sure you want to reset this EDS project? This will delete all external resources (GitHub repository, DA.live content, Helix site) and recreate them from template.`,
+        { modal: true },
+        confirmButton,
+    );
+
+    if (confirmation !== confirmButton) {
+        context.logger.info('[Dashboard] resetEds: User cancelled reset');
+        return { success: false, cancelled: true };
+    }
+
+    try {
+        context.logger.info(`[Dashboard] Resetting EDS project: ${repoFullName}`);
+
+        // Build EDS metadata for cleanup
+        const metadata: EdsMetadata = {
+            githubRepo: repoFullName,
+            daLiveOrg,
+            daLiveSite,
+            helixSiteUrl: liveUrl,
+        };
+
+        // Build cleanup options - full cleanup for reset
+        const cleanupOptions: EdsCleanupOptions = {
+            deleteGitHub: true,
+            deleteDaLive: true,
+            unpublishHelix: true,
+            cleanupBackendData: false, // Preserve backend data on reset
+            archiveInsteadOfDelete: false, // Delete, don't archive
+        };
+
+        // Create CleanupService
+        // TODO: Step 3 will wire up proper service dependencies via ServiceLocator
+        // For now, services are created with placeholder dependencies for testing
+        const cleanupService = new CleanupService(
+            {} as never, // githubRepoOps - to be wired in Step 3
+            {} as never, // daLiveOrgOps - to be wired in Step 3
+            {} as never, // helixService - to be wired in Step 3
+            {} as never, // toolManager - to be wired in Step 3
+        );
+
+        // Step 1: Cleanup existing resources
+        await cleanupService.cleanupEdsResources(metadata, cleanupOptions);
+        context.logger.info('[Dashboard] EDS resources cleaned up successfully');
+
+        // Step 2: Recreate project from template
+        // TODO: Step 3 will wire up proper service dependencies via ServiceLocator
+        const edsProjectService = new EdsProjectService(
+            {} as never, // githubServices - to be wired in Step 3
+            {} as never, // daLiveServices - to be wired in Step 3
+            {} as never, // authService - to be wired in Step 3
+            {} as never, // componentManager - to be wired in Step 3
+        );
+
+        await edsProjectService.setupProject({
+            projectName: project.name,
+            projectPath: project.path,
+            componentPath: `${project.path}/components/eds-storefront`,
+            repoName: repoFullName.split('/')[1] || '',
+            daLiveOrg: daLiveOrg || '',
+            daLiveSite: daLiveSite || '',
+            githubOwner: repoFullName.split('/')[0] || '',
+            backendComponentId: '',
+        });
+
+        context.logger.info('[Dashboard] EDS project reset successfully');
+        return { success: true };
+    } catch (error) {
+        // Handle GitHub App not installed error specifically
+        if (error instanceof GitHubAppNotInstalledError) {
+            context.logger.info(`[Dashboard] GitHub App not installed: ${error.message}`);
+
+            // Show error message with button to install GitHub App
+            const installButton = 'Install GitHub App';
+            const selection = await vscode.window.showErrorMessage(
+                `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${error.owner}/${error.repo}. ` +
+                `Please install the app and try again.`,
+                installButton,
+            );
+
+            if (selection === installButton) {
+                await vscode.env.openExternal(vscode.Uri.parse(error.installUrl));
+            }
+
+            return {
+                success: false,
+                error: error.message,
+                errorType: 'GITHUB_APP_NOT_INSTALLED',
+                errorDetails: {
+                    owner: error.owner,
+                    repo: error.repo,
+                    installUrl: error.installUrl,
+                },
+            };
+        }
+
+        const errorMessage = (error as Error).message;
+        context.logger.error('[Dashboard] resetEds failed', error as Error);
+        return { success: false, error: errorMessage };
+    }
+};
+
 // ============================================================================
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
@@ -576,4 +757,8 @@ export const dashboardHandlers = defineHandlers({
 
     // Project management handlers
     'deleteProject': handleDeleteProject,
+
+    // EDS handlers
+    'publishEds': handlePublishEds,
+    'resetEds': handleResetEds,
 });
