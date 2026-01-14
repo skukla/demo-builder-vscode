@@ -68,6 +68,28 @@ jest.mock('@/features/mesh/services/stalenessDetector');
 // Mock authentication
 jest.mock('@/features/authentication');
 
+// Mock edsHelpers - getGitHubServices
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    getGitHubServices: jest.fn().mockReturnValue({
+        tokenService: {},
+        repoOperations: {},
+        fileOperations: {},
+        oauthService: {},
+    }),
+    clearServiceCache: jest.fn(),
+}));
+
+// Mock core logging (prevents "Logger not initialized" error)
+jest.mock('@/core/logging', () => ({
+    getLogger: jest.fn().mockReturnValue({
+        info: jest.fn(),
+        debug: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+    }),
+    initializeLogger: jest.fn(),
+}));
+
 // Mock validation
 jest.mock('@/core/validation', () => ({
     validateOrgId: jest.fn(),

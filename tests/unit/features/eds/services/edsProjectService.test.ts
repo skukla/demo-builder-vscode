@@ -61,6 +61,15 @@ jest.mock('@/features/eds/services/githubAppService', () => ({
     GitHubAppService: jest.fn().mockImplementation(() => mockGitHubAppService),
 }));
 
+// Mock HelixService for content-publish phase
+const mockHelixService = {
+    publishAllSiteContent: jest.fn().mockResolvedValue(undefined),
+    getStatus: jest.fn().mockResolvedValue({ status: 'ready' }),
+};
+jest.mock('@/features/eds/services/helixService', () => ({
+    HelixService: jest.fn().mockImplementation(() => mockHelixService),
+}));
+
 // Import types
 import type { GitHubTokenService } from '@/features/eds/services/githubTokenService';
 import type { GitHubRepoOperations } from '@/features/eds/services/githubRepoOperations';
@@ -129,6 +138,9 @@ describe('EdsProjectService', () => {
 
         // Reset GitHubAppService mock to default (app installed)
         mockGitHubAppService.isAppInstalled.mockResolvedValue(true);
+
+        // Reset HelixService mock to default (successful publish)
+        mockHelixService.publishAllSiteContent.mockResolvedValue(undefined);
 
         // Mock GitHubTokenService
         mockGitHubTokenService = {
@@ -349,12 +361,14 @@ describe('EdsProjectService', () => {
             await resultPromise;
 
             // Then: Phases should be in correct order
+            // Note: content-publish phase was added to sync DA.live content to CDN
             expect(phaseOrder).toEqual([
                 'github-repo',
                 'github-clone',
                 'helix-config',
                 'code-sync',
                 'dalive-content',
+                'content-publish',
                 'tools-clone',
                 'env-config',
                 'complete',

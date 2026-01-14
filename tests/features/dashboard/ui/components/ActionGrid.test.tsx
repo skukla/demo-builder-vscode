@@ -322,68 +322,54 @@ describe('ActionGrid', () => {
     });
 
     describe('EDS-Specific Buttons', () => {
+        // Note: EDS Publish and Reset actions are available via the project card kebab menu,
+        // not on this dashboard detail view. See ActionGrid.tsx header comment.
         const edsProps = {
             ...defaultProps,
             isEds: true,
             handleOpenLiveSite: jest.fn(),
             handleOpenDaLive: jest.fn(),
-            handlePublishEds: jest.fn(),
-            handleResetEds: jest.fn(),
         };
 
         beforeEach(() => {
             jest.clearAllMocks();
         });
 
-        it('should render Publish button for EDS projects', () => {
+        it('should render Open in Browser button for EDS projects', () => {
             render(<ActionGrid {...edsProps} />);
 
-            expect(screen.getByText('Publish')).toBeInTheDocument();
+            expect(screen.getByText('Open in Browser')).toBeInTheDocument();
         });
 
-        it('should render Reset button for EDS projects', () => {
+        it('should render Author in DA.live button for EDS projects', () => {
             render(<ActionGrid {...edsProps} />);
 
-            expect(screen.getByText('Reset')).toBeInTheDocument();
+            expect(screen.getByText('Author in DA.live')).toBeInTheDocument();
         });
 
-        it('should not render Publish or Reset buttons for non-EDS projects', () => {
-            render(<ActionGrid {...defaultProps} isEds={false} />);
+        it('should not render Start/Stop buttons for EDS projects', () => {
+            render(<ActionGrid {...edsProps} />);
 
-            expect(screen.queryByText('Publish')).not.toBeInTheDocument();
-            expect(screen.queryByText('Reset')).not.toBeInTheDocument();
+            expect(screen.queryByText('Start')).not.toBeInTheDocument();
+            expect(screen.queryByText('Stop')).not.toBeInTheDocument();
         });
 
-        it('should disable Publish button during loading', () => {
-            render(<ActionGrid {...edsProps} isOpeningBrowser={true} />);
-
-            const publishButton = screen.getByText('Publish').closest('button');
-            expect(publishButton).toBeDisabled();
-        });
-
-        it('should disable Reset button during loading', () => {
-            render(<ActionGrid {...edsProps} isOpeningBrowser={true} />);
-
-            const resetButton = screen.getByText('Reset').closest('button');
-            expect(resetButton).toBeDisabled();
-        });
-
-        it('should call handlePublishEds when Publish clicked', async () => {
+        it('should call handleOpenLiveSite when Open in Browser clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...edsProps} />);
 
-            await user.click(screen.getByText('Publish'));
+            await user.click(screen.getByText('Open in Browser'));
 
-            expect(edsProps.handlePublishEds).toHaveBeenCalled();
+            expect(edsProps.handleOpenLiveSite).toHaveBeenCalled();
         });
 
-        it('should call handleResetEds when Reset clicked', async () => {
+        it('should call handleOpenDaLive when Author in DA.live clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...edsProps} />);
 
-            await user.click(screen.getByText('Reset'));
+            await user.click(screen.getByText('Author in DA.live'));
 
-            expect(edsProps.handleResetEds).toHaveBeenCalled();
+            expect(edsProps.handleOpenDaLive).toHaveBeenCalled();
         });
     });
 });

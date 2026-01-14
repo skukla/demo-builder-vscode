@@ -299,34 +299,7 @@ describe('useDashboardActions', () => {
         });
     });
 
-    describe('EDS Actions', () => {
-        it('should send publishEds message when handlePublishEds is called', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handlePublishEds();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('publishEds');
-        });
-
-        it('should send resetEds message when handleResetEds is called', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleResetEds();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('resetEds');
-        });
-
-        it('should return handlePublishEds and handleResetEds handlers', () => {
-            const { result } = renderActionsHook();
-
-            expect(result.current.handlePublishEds).toBeDefined();
-            expect(result.current.handleResetEds).toBeDefined();
-            expect(typeof result.current.handlePublishEds).toBe('function');
-            expect(typeof result.current.handleResetEds).toBe('function');
-        });
-    });
+    // Note: EDS Actions (handlePublishEds, handleResetEds) are backend-only handlers
+    // in dashboardHandlers.ts. They are NOT part of this frontend hook.
+    // UI calls these via message passing from ActionGrid, not through this hook.
 });

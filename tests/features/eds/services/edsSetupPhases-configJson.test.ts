@@ -12,6 +12,17 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as fsPromises from 'fs/promises';
+
+// Mock fs/promises for updateConfigJsonWithMesh (uses direct fs.readFile/writeFile)
+jest.mock('fs/promises', () => ({
+    readFile: jest.fn(),
+    writeFile: jest.fn(),
+    mkdir: jest.fn(),
+    rm: jest.fn(),
+    access: jest.fn(),
+    readdir: jest.fn(),
+}));
 
 // Mock the config file generator to capture what gets written
 jest.mock('@/core/config/configFileGenerator', () => ({
@@ -28,10 +39,22 @@ jest.mock('vscode', () => ({
     },
 }), { virtual: true });
 
+// Mock core logging
+jest.mock('@/core/logging', () => ({
+    getLogger: jest.fn().mockReturnValue({
+        info: jest.fn(),
+        debug: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+    }),
+}));
+
 import { updateConfigFile } from '@/core/config/configFileGenerator';
 import { updateConfigJsonWithMesh } from '@/features/eds/services/edsSetupPhases';
 
 const mockUpdateConfigFile = updateConfigFile as jest.MockedFunction<typeof updateConfigFile>;
+const mockReadFile = fsPromises.readFile as jest.MockedFunction<typeof fsPromises.readFile>;
+const mockWriteFile = fsPromises.writeFile as jest.MockedFunction<typeof fsPromises.writeFile>;
 
 describe('EDS Config.json Generation - Both Endpoints Use Mesh', () => {
     const mockLogger = {
@@ -41,8 +64,21 @@ describe('EDS Config.json Generation - Both Endpoints Use Mesh', () => {
         debug: jest.fn(),
     };
 
+    // Sample config.json content with public.default structure
+    const sampleConfigJson = {
+        public: {
+            default: {
+                'commerce-core-endpoint': '',
+                'commerce-endpoint': '',
+            },
+        },
+    };
+
     beforeEach(() => {
         jest.clearAllMocks();
+        // Reset fs mocks
+        mockReadFile.mockResolvedValue(JSON.stringify(sampleConfigJson));
+        mockWriteFile.mockResolvedValue(undefined);
     });
 
     describe('updateConfigJsonWithMesh', () => {
@@ -52,15 +88,16 @@ describe('EDS Config.json Generation - Both Endpoints Use Mesh', () => {
 
             await updateConfigJsonWithMesh(componentPath, meshEndpoint, mockLogger as any);
 
-            // Verify updateConfigFile was called
-            expect(mockUpdateConfigFile).toHaveBeenCalledTimes(1);
+            // Verify writeFile was called
+            expect(mockWriteFile).toHaveBeenCalledTimes(1);
 
-            // Get the config object passed to updateConfigFile
-            const [, configUpdates] = mockUpdateConfigFile.mock.calls[0];
+            // Get the config object that was written
+            const [, writtenContent] = mockWriteFile.mock.calls[0];
+            const writtenConfig = JSON.parse(writtenContent as string);
 
             // Both endpoints should use mesh URL
-            expect(configUpdates).toHaveProperty('commerce-core-endpoint', meshEndpoint);
-            expect(configUpdates).toHaveProperty('commerce-endpoint', meshEndpoint);
+            expect(writtenConfig.public.default['commerce-core-endpoint']).toBe(meshEndpoint);
+            expect(writtenConfig.public.default['commerce-endpoint']).toBe(meshEndpoint);
         });
 
         it('should NOT use catalog-service.adobe.io URL for commerce-endpoint', async () => {
@@ -69,11 +106,12 @@ describe('EDS Config.json Generation - Both Endpoints Use Mesh', () => {
 
             await updateConfigJsonWithMesh(componentPath, meshEndpoint, mockLogger as any);
 
-            const [, configUpdates] = mockUpdateConfigFile.mock.calls[0];
+            const [, writtenContent] = mockWriteFile.mock.calls[0];
+            const writtenConfig = JSON.parse(writtenContent as string);
 
             // commerce-endpoint should NOT be the catalog service URL
-            expect(configUpdates['commerce-endpoint']).not.toBe('https://catalog-service.adobe.io/graphql');
-            expect(configUpdates['commerce-endpoint']).toBe(meshEndpoint);
+            expect(writtenConfig.public.default['commerce-endpoint']).not.toBe('https://catalog-service.adobe.io/graphql');
+            expect(writtenConfig.public.default['commerce-endpoint']).toBe(meshEndpoint);
         });
     });
 
