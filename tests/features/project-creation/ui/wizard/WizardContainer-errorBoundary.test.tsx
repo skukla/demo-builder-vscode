@@ -74,9 +74,8 @@ jest.mock('@/features/authentication/ui/steps/AdobeWorkspaceStep', () => ({
     AdobeWorkspaceStep: () => <div data-testid="workspace-step">Workspace Step</div>,
 }));
 
-jest.mock('@/features/mesh/ui/steps/ApiMeshStep', () => ({
-    ApiMeshStep: () => <div data-testid="mesh-step">Mesh Step</div>,
-}));
+// Note: ApiMeshStep was removed from the wizard - mesh deployment now uses MeshDeploymentStep
+// which is handled separately (not a wizard step). No mock needed here.
 
 jest.mock('@/features/components/ui/steps/ComponentConfigStep', () => ({
     ComponentConfigStep: () => <div data-testid="config-step">Config Step</div>,

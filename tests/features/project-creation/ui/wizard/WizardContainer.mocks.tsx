@@ -115,9 +115,5 @@ jest.mock('@/features/prerequisites/ui/steps/PrerequisitesStep', () => ({
     },
 }));
 
-jest.mock('@/features/mesh/ui/steps/ApiMeshStep', () => ({
-    ApiMeshStep: ({ setCanProceed }: any) => {
-        React.useEffect(() => setCanProceed(true), [setCanProceed]);
-        return <div data-testid="api-mesh-step">API Mesh Step</div>;
-    },
-}));
+// Note: ApiMeshStep was removed from the wizard - mesh deployment now uses MeshDeploymentStep
+// which is handled separately (not a wizard step). No mock needed here.
