@@ -97,6 +97,7 @@ interface EdsPreflightStepProps {
     updateState: (updates: Partial<WizardState>) => void;
     onBack: () => void;
     onContinue: () => void;
+    setCanProceed: (canProceed: boolean) => void;
 }
 
 /**
@@ -164,6 +165,7 @@ export function EdsPreflightStep({
     updateState,
     onBack,
     onContinue,
+    setCanProceed,
 }: EdsPreflightStepProps): React.ReactElement {
     const [preflightState, setPreflightState] = useState<PreflightState>({
         phase: 'idle',
@@ -175,6 +177,12 @@ export function EdsPreflightStep({
             phase: 'idle',
         },
     });
+
+    // Control footer Continue button based on phase
+    // Only enable when preflight completes successfully
+    useEffect(() => {
+        setCanProceed(preflightState.phase === 'completed');
+    }, [preflightState.phase, setCanProceed]);
 
     /**
      * Handle progress updates from the extension
@@ -424,7 +432,7 @@ export function EdsPreflightStep({
                         </CenteredFeedbackContainer>
                     )}
 
-                    {/* Success state - show completion with continue button */}
+                    {/* Success state - show completion message */}
                     {preflightState.phase === 'completed' && (
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
@@ -436,11 +444,6 @@ export function EdsPreflightStep({
                                     <Text UNSAFE_className="text-sm text-gray-600 text-center">
                                         {preflightState.message}
                                     </Text>
-                                </Flex>
-                                <Flex gap="size-150" marginTop="size-300">
-                                    <Button variant="accent" onPress={onContinue}>
-                                        Continue
-                                    </Button>
                                 </Flex>
                             </Flex>
                         </CenteredFeedbackContainer>
