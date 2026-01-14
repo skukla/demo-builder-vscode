@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
     getEnabledWizardSteps,
     initializeComponentsFromImport,
@@ -351,9 +351,11 @@ export function useWizardState({
     } | null>(null);
 
     // Convenience update function
-    const updateState = (updates: Partial<WizardState>) => {
+    // IMPORTANT: Must be memoized to prevent infinite loops in child components
+    // that depend on updateState in their useEffect dependency arrays
+    const updateState = useCallback((updates: Partial<WizardState>) => {
         setState(prev => ({ ...prev, ...updates }));
-    };
+    }, []);
 
     return {
         state,

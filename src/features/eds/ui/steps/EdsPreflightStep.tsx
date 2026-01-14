@@ -22,7 +22,7 @@
 import { Text, Flex, Button } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -238,6 +238,12 @@ export function EdsPreflightStep({
         });
     }, []);
 
+    // Ref to track latest edsConfig for callbacks (avoids stale closure)
+    const edsConfigRef = useRef(state.edsConfig);
+    useEffect(() => {
+        edsConfigRef.current = state.edsConfig;
+    }, [state.edsConfig]);
+
     /**
      * Handle completion notification from the extension
      * Updates both local state and wizard state to mark preflight as complete
@@ -267,16 +273,17 @@ export function EdsPreflightStep({
 
         // Update wizard state to mark preflight as complete
         // This tells the executor to skip EDS setup phases
+        // Uses ref to get latest edsConfig value (avoids stale closure)
         updateState({
             edsConfig: {
-                ...state.edsConfig,
+                ...edsConfigRef.current,
                 preflightComplete: true,
                 repoUrl: data.githubRepo,
                 previewUrl: data.previewUrl,
                 liveUrl: data.liveUrl,
             },
         });
-    }, [state.edsConfig, updateState]);
+    }, [updateState]);
 
     /**
      * Handle error notification from the extension
@@ -343,7 +350,12 @@ export function EdsPreflightStep({
         }));
     }, [state.projectName, state.edsConfig]);
 
-    // Set up message listeners and start preflight on mount
+    // Track if preflight has been started to prevent duplicate sends
+    const preflightStartedRef = useRef(false);
+    // Store initial config in ref to use in one-time effect
+    const initialConfigRef = useRef({ projectName: state.projectName, edsConfig: state.edsConfig });
+
+    // Set up message listeners (stable callbacks, no re-subscription needed)
     useEffect(() => {
         // Subscribe to progress updates
         const unsubProgress = vscode.onMessage<{
@@ -373,12 +385,6 @@ export function EdsPreflightStep({
             handleGitHubAppRequired
         );
 
-        // Start preflight operations
-        vscode.postMessage('eds-preflight-start', {
-            projectName: state.projectName,
-            edsConfig: state.edsConfig,
-        });
-
         // Cleanup on unmount
         return () => {
             unsubProgress();
@@ -386,14 +392,22 @@ export function EdsPreflightStep({
             unsubError();
             unsubGitHubApp();
         };
-    }, [
-        handleProgress,
-        handleComplete,
-        handleError,
-        handleGitHubAppRequired,
-        state.projectName,
-        state.edsConfig,
-    ]);
+    }, [handleProgress, handleComplete, handleError, handleGitHubAppRequired]);
+
+    // Start preflight ONCE on mount (separate from message listeners)
+    // Uses ref to ensure this only runs once, even if React strict mode double-mounts
+    useEffect(() => {
+        if (preflightStartedRef.current) {
+            return;
+        }
+        preflightStartedRef.current = true;
+
+        // Start preflight operations with initial config
+        vscode.postMessage('eds-preflight-start', {
+            projectName: initialConfigRef.current.projectName,
+            edsConfig: initialConfigRef.current.edsConfig,
+        });
+    }, []);
 
     const isActive = isActivePhase(preflightState.phase);
 
