@@ -47,10 +47,11 @@ export function GitHubAppInstallDialog({
         setHasError(false);
 
         try {
+            // Use lenient mode for post-install verification (user just installed the app)
             const result = await webviewClient.request<{
                 success: boolean;
                 isInstalled: boolean;
-            }>('check-github-app', { owner, repo });
+            }>('check-github-app', { owner, repo, lenient: true });
 
             if (result.data?.success && result.data?.isInstalled) {
                 onInstallDetected();

@@ -2,10 +2,12 @@
  * GitHub App Check Handler
  *
  * Checks if the AEM Code Sync GitHub app is installed on a repository.
- * Used when user clicks "Check Installation" after installing the app.
  *
- * Uses lenient mode since this is a post-install verification - we trust
- * the user completed the installation and just need to confirm it's not 404.
+ * Two modes:
+ * - Strict (default): Requires code.status === 200 (app installed AND syncing)
+ *   Used for initial detection when selecting a repository.
+ * - Lenient: Accepts any status except 404 (for post-install verification)
+ *   Used when user clicks "Check Again" after installing the app.
  */
 
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -14,6 +16,8 @@ import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 interface CheckGitHubAppRequest {
     owner: string;
     repo: string;
+    /** If true, use lenient mode (accept non-404). Default: false (strict mode). */
+    lenient?: boolean;
 }
 
 interface CheckGitHubAppResponse {
@@ -39,9 +43,11 @@ export async function checkGitHubApp(
         const { GitHubAppService } = await import('@/features/eds/services/githubAppService');
         const githubAppService = new GitHubAppService(tokenService);
 
-        // Check if app is installed (lenient mode for post-install verification)
-        // Lenient mode accepts any status except 404, since the user just completed installation
-        const isInstalled = await githubAppService.isAppInstalled(request.owner, request.repo, { lenient: true });
+        // Check if app is installed
+        // - Strict mode (default): Requires code.status === 200
+        // - Lenient mode: Accepts any status except 404 (for post-install verification)
+        const lenient = request.lenient ?? false;
+        const isInstalled = await githubAppService.isAppInstalled(request.owner, request.repo, { lenient });
 
         const response: CheckGitHubAppResponse = {
             success: true,
