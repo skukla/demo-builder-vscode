@@ -41,7 +41,7 @@ const renderInstructionText = (text: string) => {
 
 export function NumberedInstructions({ description, instructions }: NumberedInstructionsProps) {
     return (
-        <Flex direction="column" gap="size-200">
+        <Flex direction="column" gap="size-100">
             {description && <Text>{description}</Text>}
             {instructions.map((instruction, index) => (
                 <Flex
