@@ -38,12 +38,23 @@ export class GitHubAppService {
      * The HTTP response may be 200, but the internal code.status field indicates
      * whether the app is actually syncing code (200 = working, 404 = not installed).
      *
+     * Two modes:
+     * - Strict (default): Requires code.status === 200 (app installed AND syncing)
+     * - Lenient: Accepts any status except 404 (for post-install verification)
+     *
      * @param owner - Repository owner (user or organization)
      * @param repo - Repository name
-     * @returns True if app is installed and working, false otherwise
+     * @param options - Optional configuration
+     * @param options.lenient - If true, accept non-404 status as installed (for post-install check)
+     * @returns True if app is installed (and working in strict mode), false otherwise
      */
-    async isAppInstalled(owner: string, repo: string): Promise<boolean> {
-        this.logger.debug(`[GitHub App] Checking if app is installed on ${owner}/${repo}`);
+    async isAppInstalled(
+        owner: string,
+        repo: string,
+        options?: { lenient?: boolean },
+    ): Promise<boolean> {
+        const lenient = options?.lenient ?? false;
+        this.logger.debug(`[GitHub App] Checking if app is installed on ${owner}/${repo} (lenient: ${lenient})`);
 
         const token = await this.tokenService.getToken();
         if (!token) {
@@ -74,14 +85,39 @@ export class GitHubAppService {
 
             // The code.status field indicates whether code sync is actually working:
             // - 200: Code sync is working (app installed and syncing)
-            // - 404: Code not found (app not installed or not syncing)
+            // - 400: App may be installed but sync initializing or has config issues
+            // - 404: Code not found (app definitely not installed)
+            // - undefined: Unknown state (can't confirm installation)
             const codeStatus = data?.code?.status;
-            const isInstalled = codeStatus === 200;
+
+            this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}`);
+
+            // Handle undefined - unknown state, can't confirm installation
+            if (codeStatus === undefined) {
+                this.logger.info(`[GitHub App] Unable to determine app status for ${owner}/${repo} (no code.status in response)`);
+                return false;
+            }
+
+            // Determine if installed based on mode
+            let isInstalled: boolean;
+            if (lenient) {
+                // Lenient mode: Accept any status except 404
+                // Used after user explicitly installs the app
+                isInstalled = codeStatus !== 404;
+            } else {
+                // Strict mode: Require 200 (app installed AND working)
+                // Used for initial detection during preflight
+                isInstalled = codeStatus === 200;
+            }
 
             this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}, installed: ${isInstalled}`);
 
-            if (!isInstalled && codeStatus !== undefined) {
-                this.logger.info(`[GitHub App] AEM Code Sync app not installed or not syncing for ${owner}/${repo} (code.status: ${codeStatus})`);
+            if (codeStatus === 404) {
+                this.logger.info(`[GitHub App] AEM Code Sync app not installed for ${owner}/${repo} (code.status: 404)`);
+            } else if (codeStatus === 200) {
+                this.logger.info(`[GitHub App] AEM Code Sync app installed and working for ${owner}/${repo}`);
+            } else {
+                this.logger.info(`[GitHub App] AEM Code Sync app status unclear for ${owner}/${repo} (code.status: ${codeStatus})${lenient ? ' - accepting in lenient mode' : ''}`);
             }
 
             return isInstalled;

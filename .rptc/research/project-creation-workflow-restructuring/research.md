@@ -1,9 +1,34 @@
 # Research: Project Creation Workflow Restructuring
 
 **Date:** 2026-01-09
+**Last Updated:** 2026-01-12
 **Topic:** Should GitHub/DA.live operations be separated into a dedicated wizard step before project creation?
 **Scope:** Codebase analysis
-**Status:** Complete
+**Status:** Complete (Implementation recommended, complementary features now available)
+
+---
+
+## Recent Implementation Updates (January 2026)
+
+The following complementary features have been implemented that support this restructuring:
+
+| Feature | Status | Impact on Proposal |
+|---------|--------|-------------------|
+| GitHub App detection via `/status/` endpoint | ✅ Implemented | Better error handling for Helix code sync |
+| `GitHubAppNotInstalledError` structured errors | ✅ Implemented | Clean error recovery in wizard AND dashboard |
+| `GitHubAppInstallDialog` component | ✅ Implemented | Reusable for EDS Preflight Step |
+| Dashboard Publish action | ✅ Implemented | Force-refresh content to CDN |
+| Dashboard Reset action | ✅ Implemented | Recreate repo/content from template |
+
+**Key Technical Learnings:**
+1. **Status endpoint over Code endpoint**: `/status/{owner}/{repo}/main` with `code.status` field is more reliable than checking `/code/...` file presence
+2. **GitHub token auth for Helix**: Use `x-auth-token` header for Helix Admin API
+3. **Structured error types**: `GitHubAppNotInstalledError` enables rich error handling across contexts
+
+These implementations make Option 2 (Combined EDS Preflight Step) **easier to implement** because:
+- GitHub App detection is already built and tested
+- Error recovery UI patterns are established
+- Dashboard Reset proves the "recreate from template" flow works
 
 ---
 
@@ -305,6 +330,40 @@ This eliminates the two-phase push entirely.
 - On retry, skip completed operations
 - Clear error state on retry
 
+### Challenge 4: GitHub App Not Installed ✅ SOLVED
+
+**Issue:** Code sync fails if AEM Code Sync GitHub App not installed on repository
+
+**Status:** ✅ Implemented (January 2026)
+
+**Solution:**
+- `GitHubAppService.isAppInstalled()` checks `/status/{owner}/{repo}/main` endpoint
+- `code.status` field: 200 = installed, 404 = not installed
+- `GitHubAppInstallDialog` component guides users through installation with auto-detection
+- `GitHubAppNotInstalledError` provides structured error handling across wizard and dashboard
+
+### Challenge 5: Content Refresh After Changes ✅ SOLVED
+
+**Issue:** Users need to force-refresh content to CDN after making changes
+
+**Status:** ✅ Implemented (January 2026)
+
+**Solution:**
+- Dashboard "Publish" action calls Helix preview/publish APIs
+- Publishes all content recursively to CDN
+
+### Challenge 6: Start Fresh From Template ✅ SOLVED
+
+**Issue:** Users may want to reset corrupted or experimental projects back to clean state
+
+**Status:** ✅ Implemented (January 2026)
+
+**Solution:**
+- Dashboard "Reset" action deletes and recreates GitHub repo from template
+- Deletes and recopies DA.live content from CitiSignal
+- Re-registers with Helix
+- Uses same code paths as initial setup (proven reliable)
+
 ---
 
 ## Recommendation
@@ -350,6 +409,30 @@ This eliminates the two-phase push entirely.
 4. **Cleanup exists** - `cleanupService.ts` handles orphaned resources
 
 5. **UX improvement** - Users get better visibility and error recovery
+
+6. ✅ **GitHub App detection now implemented** - `GitHubAppService` + `GitHubAppInstallDialog` ready for reuse
+
+7. ✅ **Dashboard Publish/Reset implemented** - Proves the reset-from-template flow works reliably
+
+8. ✅ **Error handling patterns established** - `GitHubAppNotInstalledError` pattern can extend to other EDS errors
+
+---
+
+## Updated Implementation Estimate
+
+With the recent implementations (GitHub App detection, dashboard actions), the effort for Option 2 is **reduced**:
+
+| Task | Original Estimate | Updated Estimate | Notes |
+|------|-------------------|------------------|-------|
+| Create `EdsPreflightStep.tsx` | 1-2 days | 1 day | Can reuse `GitHubAppInstallDialog` |
+| Update `wizard-steps.json` | 0.5 days | 0.5 days | No change |
+| Modify `executor.ts` | 0.5 days | 0.5 days | No change |
+| Progress tracking | 0.5 days | 0.5 days | No change |
+| Cancel/cleanup handling | 0.5 days | 0.25 days | Dashboard Reset proves the pattern |
+| Testing | 1 day | 0.75 days | Less unknowns |
+| **Total** | **3-4 days** | **2-3 days** | **~25% reduction** |
+
+**Recommendation remains Option 2** - Now with lower risk due to proven patterns.
 
 ---
 

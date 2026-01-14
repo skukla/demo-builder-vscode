@@ -1,6 +1,7 @@
 # EDS Component Implementation Roadmap
 
 **Research Date:** December 16, 2025
+**Last Updated:** January 12, 2026
 **Approach:** Option C (Full Integration)
 **Priority:** Build right (solid foundation)
 **Estimated Duration:** ~5 weeks
@@ -11,11 +12,26 @@
 
 Building Option C (Full Integration) with a "build right" approach. This roadmap is organized into phases that build on each other, with each phase delivering working functionality.
 
+**Implementation Status:**
+| Phase | Name | Status |
+|-------|------|--------|
+| Phase 1 | Foundation | ⬜ Not Started |
+| Phase 2 | GitHub Integration | ⬜ Not Started |
+| Phase 3 | DA.live Integration | ⬜ Not Started |
+| Phase 4 | Block Provisioning | ⬜ Not Started |
+| Phase 5 | Orchestration & Polish | ⬜ Not Started |
+| Phase 6 | Code Sync Guidance | ✅ **IMPLEMENTED** (Jan 2026) |
+| Phase 7 | EDS Dashboard Actions | ✅ **IMPLEMENTED** (Jan 2026) |
+
+**Note:** Phases 6 and 7 were implemented early to support initial EDS workflow. Phases 1-5 remain for full automation.
+
 **Capabilities Being Implemented:**
 1. Add new DA.live project for a user
 2. Populate it with documents
 3. Populate it with custom blocks
 4. Associate the new DA.live project to an EDS GitHub project
+5. ✅ Guide users through GitHub App installation (Phase 6)
+6. ✅ Publish and Reset EDS projects from dashboard (Phase 7)
 
 ---
 
@@ -567,69 +583,214 @@ Complete EDS project creation flow with robust error handling.
 
 ---
 
-## Phase 6: Code Sync Guidance (Week 5)
+## Phase 6: Code Sync Guidance (Week 5) ✅ IMPLEMENTED
 
 ### Goal: Guide users through AEM Code Sync authorization
 
-### 6.1 Code Sync Instruction UI
+**Status**: ✅ Implemented (January 2026) with different approach than originally planned.
 
-| Task | File | Description |
-|------|------|-------------|
-| Code Sync step | `src/features/eds/ui/steps/CodeSyncStep.tsx` | Instructions + verification |
+### 6.1 Code Sync UI - IMPLEMENTED
 
-**UI Flow:**
+| Task | File | Description | Status |
+|------|------|-------------|--------|
+| Code Sync dialog | `src/features/eds/ui/components/GitHubAppInstallDialog.tsx` | Installation dialog with polling | ✅ Done |
+| Pre-flight check | `src/features/project-creation/ui/steps/ProjectCreationStep.tsx` | Check before creation starts | ✅ Done |
+| Error recovery | `src/features/project-creation/ui/steps/ProjectCreationStep.tsx` | Handle mid-creation failures | ✅ Done |
+
+**Implementation Notes:**
+- Used a **dialog component** instead of a wizard step for better UX
+- Dialog appears as pre-flight check or on-error recovery
+- Integrated into `ProjectCreationStep` with multiple entry points
+
+**Actual UI Flow:**
 ```
 ┌─────────────────────────────────────────────────┐
 │  📦 Install AEM Code Sync                       │
 │                                                 │
-│  To sync your code to Edge Delivery Services:   │
+│  The AEM Code Sync GitHub App is required to    │
+│  sync your code to Edge Delivery Services.      │
 │                                                 │
-│  1. Click the button below to open GitHub       │
+│  1. Click "Open Installation Page"              │
 │  2. Select "Only select repositories"           │
-│  3. Choose your new repository                  │
+│  3. Choose: owner/repo                          │
 │  4. Click "Install"                             │
-│  5. Return here and click "Verify"              │
+│  5. Return here - we'll detect it automatically │
 │                                                 │
-│  [Open GitHub App Installation]                 │
+│  [Open Installation Page]  [Check Installation] │
 │                                                 │
-│  ─────────────────────────────────────────────  │
-│                                                 │
-│  [Verify Installation]  [Skip for Now]          │
+│  Status: ○ Waiting for installation...          │
 └─────────────────────────────────────────────────┘
 ```
 
-### 6.2 Verification
+### 6.2 Verification - IMPLEMENTED (Different Approach)
 
-| Task | Description |
-|------|-------------|
-| Poll Code Bus | Check `admin.hlx.page/code/{org}/{repo}/main/scripts/aem.js` |
-| Timeout handling | After 2 minutes, show manual verification option |
-| Success display | Show preview URL when verified |
+| Task | Description | Status |
+|------|-------------|--------|
+| Check via Status API | Uses `admin.hlx.page/status/{owner}/{repo}/main` endpoint | ✅ Done |
+| Parse `code.status` field | 200 = App installed, 404 = Not installed | ✅ Done |
+| Polling with detection | 5-second intervals, auto-detect when installed | ✅ Done |
+| Manual check button | "Check Installation" for immediate verification | ✅ Done |
 
-**Verification Logic:**
+**Actual Verification Logic (implemented):**
 ```typescript
-async function verifyCodeSync(owner: string, repo: string): Promise<boolean> {
-  const codeBusUrl = `https://admin.hlx.page/code/${owner}/${repo}/main/scripts/aem.js`;
-  const maxAttempts = 24; // 2 minutes with 5s interval
+// src/features/eds/services/GitHubAppService.ts
+async function isAppInstalled(owner: string, repo: string): Promise<GitHubAppCheckResult> {
+  const statusUrl = `https://admin.hlx.page/status/${owner}/${repo}/main`;
 
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      const response = await fetch(codeBusUrl, { method: 'HEAD' });
-      if (response.ok) {
-        return true;
-      }
-    } catch {
-      // Continue polling
-    }
-    await sleep(5000);
+  const response = await fetch(statusUrl, {
+    headers: { 'x-auth-token': githubToken }
+  });
+
+  if (!response.ok) {
+    return { isInstalled: false, installUrl: buildInstallUrl(owner) };
   }
 
-  return false;
+  const data = await response.json();
+  // code.status = 200 means app is installed and syncing
+  // code.status = 404 means app is not installed
+  const isInstalled = data.code?.status === 200;
+
+  return {
+    isInstalled,
+    installUrl: isInstalled ? undefined : buildInstallUrl(owner)
+  };
 }
 ```
 
+**Key Difference from Original Plan:**
+- Original: Poll `/code/{org}/{repo}/main/scripts/aem.js` with HEAD request
+- Actual: Poll `/status/{owner}/{repo}/main` and check `code.status` field
+- Reason: Status endpoint provides explicit installation status, more reliable than file presence check
+
+### 6.3 Error Handling - IMPLEMENTED
+
+| Component | Error Handling | Status |
+|-----------|---------------|--------|
+| `GitHubAppNotInstalledError` | Custom error class with `owner`, `repo`, `installUrl` | ✅ Done |
+| `checkGitHubAppHandler.ts` | Pre-flight check handler | ✅ Done |
+| `ProjectCreationStep.tsx` | Listens for `creationFailed` message with `GITHUB_APP_NOT_INSTALLED` error type | ✅ Done |
+| `dashboardHandlers.ts` | Shows VS Code error dialog with "Install GitHub App" button | ✅ Done |
+| `projectsListHandlers.ts` | Same dashboard error handling | ✅ Done |
+
+**Error Recovery Flow:**
+```
+1. Pre-flight check before creation
+   ├─ App installed? → Proceed with creation
+   └─ App not installed? → Show GitHubAppInstallDialog
+       ├─ User installs app → Polling detects → Continue creation
+       └─ User cancels → Return to wizard
+
+2. Error during creation (mid-flight)
+   ├─ Extension sends: { type: 'creationFailed', errorType: 'GITHUB_APP_NOT_INSTALLED', errorDetails: {...} }
+   └─ UI catches message → Shows GitHubAppInstallDialog → User installs → Retries
+
+3. Dashboard actions (Publish/Reset)
+   ├─ Operation fails with GitHubAppNotInstalledError
+   └─ VS Code shows native dialog: "Install GitHub App" button → Opens install URL
+```
+
 ### Deliverable
-Users are guided through Code Sync setup with verification.
+✅ Users are guided through Code Sync setup with automatic detection and multiple recovery paths.
+
+---
+
+## Phase 7: EDS Dashboard Actions ✅ IMPLEMENTED
+
+### Goal: Provide Publish and Reset actions for EDS projects in the dashboard
+
+**Status**: ✅ Implemented (January 2026) - Not in original roadmap, added based on user needs.
+
+### 7.1 Publish Action - IMPLEMENTED
+
+| Task | File | Description | Status |
+|------|------|-------------|--------|
+| Publish button | `src/features/dashboard/ui/components/EdsActionsPanel.tsx` | Dashboard Publish button | ✅ Done |
+| Publish handler | `src/features/dashboard/handlers/dashboardHandlers.ts` | `handlePublishEds` function | ✅ Done |
+| Helix Admin API | `src/features/eds/services/HelixService.ts` | Calls preview/publish endpoints | ✅ Done |
+
+**Publish Flow:**
+```
+User clicks "Publish" in dashboard
+    ↓
+handlePublishEds() called
+    ↓
+HelixService.preview(owner, repo, path) - Preview all content
+    ↓
+HelixService.publish(owner, repo, path) - Publish to live CDN
+    ↓
+Success notification shown to user
+```
+
+### 7.2 Reset Action - IMPLEMENTED
+
+| Task | File | Description | Status |
+|------|------|-------------|--------|
+| Reset button | `src/features/dashboard/ui/components/EdsActionsPanel.tsx` | Dashboard Reset button | ✅ Done |
+| Reset handler | `src/features/dashboard/handlers/dashboardHandlers.ts` | `handleResetEds` function | ✅ Done |
+| GitHub repo deletion | `src/features/eds/services/GitHubService.ts` | Delete and recreate repo | ✅ Done |
+| DA.live content reset | `src/features/eds/services/DaLiveService.ts` | Delete and recopy content | ✅ Done |
+| Helix config reset | `src/features/eds/services/HelixService.ts` | Re-register site | ✅ Done |
+
+**Reset Flow:**
+```
+User clicks "Reset" in dashboard
+    ↓
+Confirmation dialog: "This will delete repo and content. Continue?"
+    ↓
+handleResetEds() called
+    ↓
+1. Delete GitHub repo (GitHubService.deleteRepo)
+2. Delete DA.live content (DaLiveService.deleteContent)
+3. Recreate from template (same as initial setup)
+4. Re-register with Helix (HelixService.register)
+    ↓
+Success notification + refresh dashboard
+```
+
+### 7.3 Error Handling - IMPLEMENTED
+
+Both Publish and Reset actions include comprehensive error handling:
+
+| Error Type | Handling | User Experience |
+|------------|----------|-----------------|
+| `GitHubAppNotInstalledError` | VS Code dialog with "Install GitHub App" button | User clicks → Opens install URL |
+| Network errors | Logged + user-friendly message | "Failed to publish: Network error" |
+| Rate limiting | Exponential backoff retry | Automatic retry, user sees progress |
+| Auth failures | Re-authentication prompt | "Please reconnect GitHub account" |
+
+**Error Handling Implementation:**
+```typescript
+// src/features/dashboard/handlers/dashboardHandlers.ts
+async function handleResetEds(context: HandlerContext) {
+  try {
+    // ... reset logic
+  } catch (error) {
+    if (error instanceof GitHubAppNotInstalledError) {
+      const selection = await vscode.window.showErrorMessage(
+        `Cannot reset: GitHub App not installed on ${error.owner}/${error.repo}`,
+        'Install GitHub App'
+      );
+      if (selection === 'Install GitHub App') {
+        await vscode.env.openExternal(vscode.Uri.parse(error.installUrl));
+      }
+      return { success: false, errorType: 'GITHUB_APP_NOT_INSTALLED', errorDetails: {...} };
+    }
+    // ... other error handling
+  }
+}
+```
+
+### 7.4 Files Added/Modified
+
+| File | Type | Purpose |
+|------|------|---------|
+| `src/features/eds/services/types.ts` | New | `GitHubAppNotInstalledError` class |
+| `src/features/eds/services/GitHubAppService.ts` | New | `isAppInstalled()` check via status endpoint |
+| `src/features/dashboard/handlers/dashboardHandlers.ts` | Modified | Added `handlePublishEds`, `handleResetEds` |
+| `src/features/projects-dashboard/handlers/projectsListHandlers.ts` | Modified | Same error handling |
+
+### Deliverable
+✅ EDS projects have Publish (force CDN refresh) and Reset (recreate from template) actions with robust error handling.
 
 ---
 
@@ -647,24 +808,41 @@ src/features/eds/
 │   ├── githubTokenManager.ts          # Token storage
 │   ├── githubApiClient.ts             # Octokit wrapper
 │   ├── githubRepoService.ts           # Repo operations
+│   ├── GitHubAppService.ts            # ✅ GitHub App installation check (Phase 6)
 │   ├── daLiveApiClient.ts             # DA.live Admin API
 │   ├── daLiveContentService.ts        # Content operations
 │   ├── daLiveAuthAdapter.ts           # IMS token adapter
 │   ├── blockProvisioningService.ts    # Block upload
 │   ├── edsSetupOrchestrator.ts        # Main orchestrator
-│   └── edsErrorRecovery.ts            # Error handling
+│   ├── edsErrorRecovery.ts            # Error handling
+│   └── types.ts                       # ✅ GitHubAppNotInstalledError (Phase 6)
 ├── ui/
 │   ├── steps/
 │   │   ├── GitHubAuthStep.tsx         # GitHub OAuth UI
 │   │   ├── RepoConfigStep.tsx         # Repo settings
 │   │   ├── DaLiveConfigStep.tsx       # DA.live settings
-│   │   ├── BlockSelectionStep.tsx     # Block picker
-│   │   └── CodeSyncStep.tsx           # Code Sync guidance
+│   │   └── BlockSelectionStep.tsx     # Block picker
 │   └── components/
-│       └── EdsSetupProgress.tsx       # Progress display
+│       ├── EdsSetupProgress.tsx       # Progress display
+│       └── GitHubAppInstallDialog.tsx # ✅ Code Sync install dialog (Phase 6)
 ├── handlers/
-│   └── edsHandlers.ts                 # Message handlers
+│   ├── edsHandlers.ts                 # Message handlers
+│   └── checkGitHubAppHandler.ts       # ✅ GitHub App check handler (Phase 6)
 └── types.ts                           # TypeScript types
+
+src/features/dashboard/handlers/
+└── dashboardHandlers.ts               # ✅ Added handlePublishEds, handleResetEds (Phase 7)
+
+src/features/projects-dashboard/handlers/
+└── projectsListHandlers.ts            # ✅ GitHubAppNotInstalledError handling (Phase 7)
+
+src/features/project-creation/
+├── ui/steps/
+│   └── ProjectCreationStep.tsx        # ✅ GitHub App pre-flight check + error listener (Phase 6)
+├── ui/wizard/hooks/
+│   └── useMessageListeners.ts         # ✅ Optional onGitHubAppRequired callback (Phase 6)
+└── handlers/
+    └── checkGitHubAppHandler.ts       # ✅ Handler for check-github-app message (Phase 6)
 ```
 
 ### Template Additions
@@ -712,8 +890,13 @@ Phase 4: Block Provisioning ◄─────┘
 Phase 5: Orchestration & Polish
     │
     ▼
-Phase 6: Code Sync Guidance
+Phase 6: Code Sync Guidance ✅ IMPLEMENTED
+    │
+    ▼
+Phase 7: EDS Dashboard Actions ✅ IMPLEMENTED
 ```
+
+**Note:** Phases 6 and 7 were implemented out-of-order to support the initial EDS workflow with manual setup. The remaining phases (1-5) will enable full automation.
 
 ---
 
@@ -792,9 +975,30 @@ Phase 6: Code Sync Guidance
 
 ## Key Takeaways
 
-1. **6 phases, ~5 weeks** for full integration with "build right" approach
+1. **7 phases, ~5 weeks** for full integration with "build right" approach
 2. **Phase 2 (GitHub) is the critical path** - most complex, most dependencies
 3. **Reuse storefront-tools patterns** for OAuth and GitHub operations
 4. **IMS token compatibility should be tested early** (Phase 3 risk)
 5. **Each phase delivers working functionality** - can ship incrementally
-6. **Code Sync authorization is unavoidable user interaction** - make it as smooth as possible
+6. ✅ **Code Sync authorization is unavoidable user interaction** - implemented with smooth dialog and auto-detection (Phase 6)
+7. ✅ **Dashboard actions (Publish/Reset)** provide ongoing management for EDS projects (Phase 7)
+
+### Current State (January 2026)
+
+**What's Working:**
+- GitHub App installation guidance with automatic detection (`GitHubAppInstallDialog`)
+- Pre-flight checks before project creation
+- Error recovery during and after creation
+- Dashboard Publish/Reset actions with comprehensive error handling
+- Helix Admin API integration using status endpoint
+
+**What's Next:**
+- Phases 1-5 for full automation (no manual GitHub repo creation)
+- Automated DA.live content population
+- Block provisioning to GitHub repos
+- End-to-end orchestration
+
+**Technical Learnings from Implementation:**
+1. **Status endpoint over Code endpoint**: `/status/{owner}/{repo}/main` with `code.status` field is more reliable than checking `/code/...` file presence
+2. **GitHub token auth for Helix**: Use `x-auth-token` header (not Authorization bearer) for Helix Admin API
+3. **Structured error types**: `GitHubAppNotInstalledError` with `owner`, `repo`, `installUrl` enables rich error handling across contexts

@@ -1,9 +1,11 @@
 /**
  * GitHub App Check Handler
- * 
- * Checks if the AEM Code Sync GitHub app is installed on a repository
- * before starting EDS project creation. This allows the UI to prompt
- * the user to install the app if needed.
+ *
+ * Checks if the AEM Code Sync GitHub app is installed on a repository.
+ * Used when user clicks "Check Installation" after installing the app.
+ *
+ * Uses lenient mode since this is a post-install verification - we trust
+ * the user completed the installation and just need to confirm it's not 404.
  */
 
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -37,8 +39,9 @@ export async function checkGitHubApp(
         const { GitHubAppService } = await import('@/features/eds/services/githubAppService');
         const githubAppService = new GitHubAppService(tokenService);
 
-        // Check if app is installed
-        const isInstalled = await githubAppService.isAppInstalled(request.owner, request.repo);
+        // Check if app is installed (lenient mode for post-install verification)
+        // Lenient mode accepts any status except 404, since the user just completed installation
+        const isInstalled = await githubAppService.isAppInstalled(request.owner, request.repo, { lenient: true });
 
         const response: CheckGitHubAppResponse = {
             success: true,

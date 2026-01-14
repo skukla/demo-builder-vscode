@@ -102,6 +102,60 @@ describe('GitHub App Service', () => {
             expect(result).toBe(false);
         });
 
+        it('should return false when code.status is 400 in strict mode (default)', async () => {
+            // Given: Valid token, status 400 (may be initializing or config issues)
+            mockTokenService.getToken.mockResolvedValue({ token: 'ghp_xxx', tokenType: 'bearer', scopes: ['repo'] });
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: jest.fn().mockResolvedValue({
+                    code: { status: 400 },
+                }),
+            });
+            const service = new GitHubAppService(mockTokenService);
+
+            // When: Checking in strict mode (default)
+            const result = await service.isAppInstalled('test-owner', 'test-repo');
+
+            // Then: Should return false (strict mode requires 200)
+            expect(result).toBe(false);
+        });
+
+        it('should return true when code.status is 400 in lenient mode', async () => {
+            // Given: Valid token, status 400 (may be initializing or config issues)
+            mockTokenService.getToken.mockResolvedValue({ token: 'ghp_xxx', tokenType: 'bearer', scopes: ['repo'] });
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: jest.fn().mockResolvedValue({
+                    code: { status: 400 },
+                }),
+            });
+            const service = new GitHubAppService(mockTokenService);
+
+            // When: Checking in lenient mode (for post-install verification)
+            const result = await service.isAppInstalled('test-owner', 'test-repo', { lenient: true });
+
+            // Then: Should return true (lenient mode accepts non-404)
+            expect(result).toBe(true);
+        });
+
+        it('should return false when code.status is 404 even in lenient mode', async () => {
+            // Given: Valid token but app not installed (code.status = 404)
+            mockTokenService.getToken.mockResolvedValue({ token: 'ghp_xxx', tokenType: 'bearer', scopes: ['repo'] });
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: jest.fn().mockResolvedValue({
+                    code: { status: 404 },
+                }),
+            });
+            const service = new GitHubAppService(mockTokenService);
+
+            // When: Checking in lenient mode
+            const result = await service.isAppInstalled('test-owner', 'test-repo', { lenient: true });
+
+            // Then: Should still return false (404 = definitely not installed)
+            expect(result).toBe(false);
+        });
+
         it('should return false when HTTP response is not ok', async () => {
             // Given: Valid token but HTTP error
             mockTokenService.getToken.mockResolvedValue({ token: 'ghp_xxx', tokenType: 'bearer', scopes: ['repo'] });
