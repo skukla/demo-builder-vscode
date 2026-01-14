@@ -192,11 +192,11 @@ export class EdsProjectService {
 
             // Phase 5: Populate DA.live content (unless skipped)
             if (!config.skipContent) {
-                reportProgress('dalive-content', PROGRESS.DALIVE_CONTENT.start, 'Copying content to DA.live...');
+                reportProgress('dalive-content', PROGRESS.DALIVE_CONTENT.start, 'Copying demo content');
                 const contentRange = PROGRESS.DALIVE_CONTENT.end - PROGRESS.DALIVE_CONTENT.start;
                 await this.contentPhase.populateDaLiveContent(config, (progress) => {
                     const progressValue = PROGRESS.DALIVE_CONTENT.start + Math.round(progress.percentage * contentRange / 100);
-                    reportProgress('dalive-content', progressValue, `Copying content: ${progress.percentage}%`);
+                    reportProgress('dalive-content', progressValue, 'Copying demo content');
                 });
                 reportProgress('dalive-content', PROGRESS.DALIVE_CONTENT.end, 'Content copied');
             } else {
@@ -207,7 +207,15 @@ export class EdsProjectService {
             // This syncs the DA.live content to the Helix CDN so the site is immediately accessible
             if (!config.skipContent) {
                 reportProgress('content-publish', PROGRESS.CONTENT_PUBLISH.start, 'Publishing all content to CDN...');
-                await this.helixService.publishAllSiteContent(createdRepo.fullName);
+                try {
+                    await this.helixService.publishAllSiteContent(createdRepo.fullName);
+                } catch (error) {
+                    throw new EdsProjectError(
+                        `Failed to publish content: ${(error as Error).message}`,
+                        'content-publish',
+                        error as Error,
+                    );
+                }
                 reportProgress('content-publish', PROGRESS.CONTENT_PUBLISH.end, 'All content published');
             } else {
                 reportProgress('content-publish', PROGRESS.CONTENT_PUBLISH.end, 'Content publish skipped');

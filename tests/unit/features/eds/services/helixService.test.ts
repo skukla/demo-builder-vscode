@@ -5,9 +5,10 @@
  * and unpublish operations.
  *
  * Note: The Helix Admin API uses GitHub-based authentication (x-auth-token header)
- * to verify the user has write access to the GitHub repository.
+ * to verify the user has write access to the GitHub repository. For DA.live content
+ * sources, it also requires x-content-source-authorization header with IMS token.
  *
- * Coverage: 17 tests
+ * Coverage: 24 tests
  * - Preview page via POST /preview/{org}/{site}/main/{path}
  * - Publish page via POST /live/{org}/{site}/main/{path}
  * - Preview and publish single page
@@ -19,6 +20,7 @@
  * - Require GitHub token for authentication
  * - Handle 404 as success (never published)
  * - Parse repo fullName to extract org and site
+ * - Skip pages with 404 errors (no content) during bulk publish
  */
 
 // Mock vscode module
@@ -40,6 +42,7 @@ jest.mock('@/core/logging', () => ({
 // Mock timeout config - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
+        QUICK: 5000, // Fast checks
         NORMAL: 30000, // Standard API calls
         LONG: 180000, // Complex operations
         VERY_LONG: 300000, // Bulk operations
@@ -326,8 +329,8 @@ describe('HelixService', () => {
             // Then: Should preview and publish each page individually using GitHub org/site
             // 4 HTML pages: / (index), /about, /nav, /products (products/index -> /products)
             // metadata.json excluded (not html)
-            // Each page = 2 calls (preview + publish) = 8 total calls
-            expect(mockFetch).toHaveBeenCalledTimes(8);
+            // 1 readiness check (preview homepage) + 4 pages × 2 calls (preview + publish) = 9 total calls
+            expect(mockFetch).toHaveBeenCalledTimes(9);
 
             // Verify GitHub org/site used for Helix API calls (not DA.live org/site)
             const calls = mockFetch.mock.calls;
@@ -372,8 +375,8 @@ describe('HelixService', () => {
             await service.publishAllSiteContent('testuser/my-site');
 
             // Then: Should only publish 2 HTML files (/, /about)
-            // 2 pages × 2 calls = 4 total fetch calls
-            expect(mockFetch).toHaveBeenCalledTimes(4);
+            // 1 readiness check + 2 pages × 2 calls = 5 total fetch calls
+            expect(mockFetch).toHaveBeenCalledTimes(5);
         });
 
         it('should throw error when no publishable pages found', async () => {
@@ -411,6 +414,46 @@ describe('HelixService', () => {
             // When/Then: Should throw access denied error
             await expect(service.publishAllContent('testuser', 'my-site')).rejects.toThrow(
                 /access denied|permission/i,
+            );
+        });
+
+        it('should skip pages with 404 errors (no content) without counting as failures', async () => {
+            // Given: Mix of pages with content and empty placeholder pages
+            mockListDirectory.mockResolvedValueOnce([
+                { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' },
+                { name: 'about', ext: 'html', path: '/testuser/my-site/about.html' },
+                { name: 'confirm', ext: 'html', path: '/testuser/my-site/customer/account/confirm.html' }, // placeholder
+            ]);
+
+            // Readiness check succeeds
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // index.html: preview + publish succeed
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // preview /
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // publish /
+
+            // about.html: preview + publish succeed
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // preview /about
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // publish /about
+
+            // confirm.html: preview returns 404 (no content - placeholder page)
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found' });
+
+            // When: Publishing all content
+            await service.publishAllSiteContent('testuser/my-site');
+
+            // Then: Should complete successfully (404s are skipped, not failures)
+            // 1 readiness check + 2 successful pages × 2 + 1 failed preview = 6 calls
+            expect(mockFetch).toHaveBeenCalledTimes(6);
+
+            // Then: Should log debug message about skipped page
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                expect.stringContaining('Skipping'),
+            );
+
+            // Then: Should log success message (2 published, 1 skipped)
+            expect(mockLogger.info).toHaveBeenCalledWith(
+                expect.stringContaining('Successfully published 2/3'),
             );
         });
     });

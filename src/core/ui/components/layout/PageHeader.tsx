@@ -43,6 +43,8 @@ export interface PageHeaderProps {
     subtitle?: string;
     /** Optional description text displayed below subtitle (typically step description) */
     description?: string;
+    /** Optional dynamic status text displayed below description (for showing current operation) */
+    statusText?: string;
     /** Optional action element (typically a Button) displayed right-aligned */
     action?: React.ReactNode;
     /** Optional back button configuration */
@@ -66,6 +68,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     title,
     subtitle,
     description,
+    statusText,
     action,
     backButton,
     constrainWidth = false,
@@ -94,6 +97,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                 {description && (
                     <Text UNSAFE_className={cn('text-gray-500', 'text-sm')}>
                         {description}
+                    </Text>
+                )}
+                {statusText && (
+                    <Text UNSAFE_className={cn('text-gray-600', 'text-sm', 'font-medium', 'mt-1')}>
+                        {statusText}
                     </Text>
                 )}
             </View>

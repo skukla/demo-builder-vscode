@@ -19,7 +19,7 @@
  * @module features/eds/ui/steps/EdsPreflightStep
  */
 
-import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
+import { Text, Flex, Button } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -96,31 +96,33 @@ interface EdsPreflightStepProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
     onBack: () => void;
-    onContinue: () => void;
+    /** onNext is passed by WizardContainer but not used - footer handles Continue */
+    onNext?: () => void;
     setCanProceed: (canProceed: boolean) => void;
 }
 
 /**
  * Get human-readable description for the current phase
+ * These appear in the PageHeader as status text - keep them concise
  */
 function getPhaseDescription(phase: PreflightPhase): string {
     switch (phase) {
         case 'idle':
-            return 'Preparing EDS setup...';
+            return 'Preparing setup...';
         case 'github-repo':
-            return 'Setting up your GitHub repository with the storefront template.';
+            return 'Creating GitHub repository...';
         case 'helix-config':
-            return 'Configuring Helix 5 for Edge Delivery Services.';
+            return 'Configuring Edge Delivery Services...';
         case 'code-sync':
-            return 'Verifying code synchronization with the Edge Delivery content bus.';
+            return 'Syncing with content bus...';
         case 'github-app':
-            return 'The AEM Code Sync GitHub App needs to be installed to continue.';
+            return 'Waiting for GitHub App installation...';
         case 'dalive-content':
-            return 'Populating your DA.live site with demo content.';
+            return 'Copying demo content...';
         case 'completed':
-            return 'All EDS preflight operations completed successfully.';
+            return 'Storefront setup complete.';
         case 'error':
-            return 'An error occurred during EDS setup.';
+            return 'Setup failed.';
         default:
             return 'Processing...';
     }
@@ -164,12 +166,11 @@ export function EdsPreflightStep({
     state,
     updateState,
     onBack,
-    onContinue,
     setCanProceed,
 }: EdsPreflightStepProps): React.ReactElement {
     const [preflightState, setPreflightState] = useState<PreflightState>({
         phase: 'idle',
-        message: 'Starting EDS setup...',
+        message: 'Starting storefront setup...',
         progress: 0,
         partialState: {
             repoCreated: false,
@@ -183,6 +184,18 @@ export function EdsPreflightStep({
     useEffect(() => {
         setCanProceed(preflightState.phase === 'completed');
     }, [preflightState.phase, setCanProceed]);
+
+    // Update PageHeader status text when phase changes
+    // This provides a dynamic 3rd level heading showing current operation
+    useEffect(() => {
+        const phaseMessage = getPhaseDescription(preflightState.phase);
+        updateState({ stepStatus: phaseMessage });
+
+        // Clear stepStatus when unmounting
+        return () => {
+            updateState({ stepStatus: undefined });
+        };
+    }, [preflightState.phase, updateState]);
 
     /**
      * Handle progress updates from the extension
@@ -227,16 +240,22 @@ export function EdsPreflightStep({
 
     /**
      * Handle completion notification from the extension
+     * Updates both local state and wizard state to mark preflight as complete
      */
     const handleComplete = useCallback((data: {
         message: string;
         githubRepo?: string;
         daLiveSite?: string;
+        repoOwner?: string;
+        repoName?: string;
+        previewUrl?: string;
+        liveUrl?: string;
     }) => {
+        // Update local preflight state
         setPreflightState(prev => ({
             ...prev,
             phase: 'completed',
-            message: data.message || 'EDS setup completed successfully!',
+            message: data.message || 'Storefront setup completed successfully!',
             progress: PROGRESS_RANGES.complete,
             partialState: {
                 ...prev.partialState,
@@ -245,7 +264,19 @@ export function EdsPreflightStep({
                 phase: 'completed',
             },
         }));
-    }, []);
+
+        // Update wizard state to mark preflight as complete
+        // This tells the executor to skip EDS setup phases
+        updateState({
+            edsConfig: {
+                ...state.edsConfig,
+                preflightComplete: true,
+                repoUrl: data.githubRepo,
+                previewUrl: data.previewUrl,
+                liveUrl: data.liveUrl,
+            },
+        });
+    }, [state.edsConfig, updateState]);
 
     /**
      * Handle error notification from the extension
@@ -281,7 +312,7 @@ export function EdsPreflightStep({
     const handleRetry = useCallback(() => {
         setPreflightState({
             phase: 'idle',
-            message: 'Retrying EDS setup...',
+            message: 'Retrying storefront setup...',
             progress: 0,
             partialState: {
                 repoCreated: false,
@@ -370,13 +401,6 @@ export function EdsPreflightStep({
         <div className="flex-column h-full w-full">
             <div className="flex-1 flex w-full">
                 <SingleColumnLayout>
-                    <Heading level={2} marginBottom="size-300">
-                        Setting Up Edge Delivery Services
-                    </Heading>
-                    <Text marginBottom="size-400">
-                        {getPhaseDescription(preflightState.phase)}
-                    </Text>
-
                     {/* Active state - loading indicator with progress */}
                     {isActive && (
                         <CenteredFeedbackContainer>
@@ -386,11 +410,6 @@ export function EdsPreflightStep({
                                 subMessage={preflightState.subMessage}
                                 helperText={getHelperText(preflightState.phase)}
                             />
-                            {preflightState.progress > 0 && (
-                                <Text UNSAFE_className="text-sm text-gray-500 mt-2">
-                                    {preflightState.progress}% complete
-                                </Text>
-                            )}
                         </CenteredFeedbackContainer>
                     )}
 
@@ -414,10 +433,10 @@ export function EdsPreflightStep({
                                 <AlertCircle size="L" UNSAFE_className="text-red-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text UNSAFE_className="text-xl font-medium">
-                                        EDS Setup Failed
+                                        Storefront Setup Failed
                                     </Text>
                                     <Text UNSAFE_className="text-sm text-gray-600 text-center">
-                                        {preflightState.error || preflightState.message || 'An error occurred during EDS setup.'}
+                                        {preflightState.error || preflightState.message || 'An error occurred during setup.'}
                                     </Text>
                                 </Flex>
                                 <Flex gap="size-150" marginTop="size-300">
@@ -437,14 +456,9 @@ export function EdsPreflightStep({
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
                                 <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
-                                <Flex direction="column" gap="size-100" alignItems="center">
-                                    <Text UNSAFE_className="text-xl font-medium">
-                                        EDS Setup Complete
-                                    </Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600 text-center">
-                                        {preflightState.message}
-                                    </Text>
-                                </Flex>
+                                <Text UNSAFE_className="text-xl font-medium">
+                                    Storefront Setup Complete
+                                </Text>
                             </Flex>
                         </CenteredFeedbackContainer>
                     )}

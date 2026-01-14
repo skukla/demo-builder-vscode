@@ -304,6 +304,54 @@ describe('Executor - EDS Setup Integration', () => {
             );
             expect(edsProgressCalls).toHaveLength(0);
         });
+
+        it('should skip EDS phase if preflightComplete is true (preflight ran in wizard)', async () => {
+            jest.resetModules();
+
+            const configWithPreflightComplete = {
+                projectName: 'test-eds-preflight-done',
+                selectedStack: 'eds-paas',
+                edsConfig: {
+                    ...edsConfig,
+                    // Preflight already completed in Storefront Setup step
+                    preflightComplete: true,
+                    repoUrl: 'https://github.com/test-owner/test-repo',
+                    previewUrl: 'https://main--test-repo--test-owner.aem.page',
+                    liveUrl: 'https://main--test-repo--test-owner.aem.live',
+                },
+                components: {
+                    frontend: 'eds',
+                    dependencies: ['commerce-mesh'],
+                },
+                componentConfigs: {},
+                frontendSource: {
+                    type: 'git',
+                    url: 'https://github.com/test/eds',
+                    branch: 'main',
+                },
+            };
+
+            mockContext = createMockContext();
+
+            const { executeProjectCreation } = await import(
+                '@/features/project-creation/handlers/executor'
+            );
+
+            await executeProjectCreation(
+                mockContext as HandlerContext,
+                configWithPreflightComplete
+            );
+
+            // Should skip EDS Setup operations but acknowledge using preflight config
+            const edsProgressCalls = progressCalls.filter(
+                call => call.operation === 'EDS Setup'
+            );
+            // Expect exactly one progress call acknowledging preflight was used
+            expect(edsProgressCalls).toHaveLength(1);
+            expect(edsProgressCalls[0].message).toBe('Using preflight EDS configuration');
+            // Progress should jump directly to 30% (end of EDS phase) since work was skipped
+            expect(edsProgressCalls[0].progress).toBe(30);
+        });
     });
 
     describe('Progress Callback Mapping', () => {

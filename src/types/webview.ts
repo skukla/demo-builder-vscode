@@ -78,6 +78,10 @@ export interface WizardState {
     // Wizard mode - determines flow behavior and UI labels
     wizardMode?: WizardMode;
 
+    // Dynamic step status - displayed as 3rd level heading in PageHeader
+    // Used by steps with multiple phases (e.g., "Verifying GitHub App...")
+    stepStatus?: string;
+
     // Edit mode properties (legacy, use wizardMode instead)
     editMode?: boolean;  // True when editing existing project
     editProjectPath?: string;  // Path to existing project being edited
@@ -387,4 +391,16 @@ export interface EDSConfig {
         isAuthenticating?: boolean;
         error?: string;
     };
+
+    // Preflight completion state (set by EdsPreflightStep)
+    /** Whether preflight operations completed - tells executor to skip EDS setup */
+    preflightComplete?: boolean;
+    /** GitHub repository URL from preflight */
+    repoUrl?: string;
+    /** Preview URL (.aem.page) from preflight */
+    previewUrl?: string;
+    /** Live URL (.aem.live) from preflight */
+    liveUrl?: string;
+    /** Whether to skip content copy (e.g., when using existing content) */
+    skipContent?: boolean;
 }

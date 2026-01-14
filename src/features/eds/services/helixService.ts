@@ -138,7 +138,8 @@ export class HelixService {
         path: string = '/',
         branch: string = DEFAULT_BRANCH,
     ): Promise<void> {
-        const token = await this.getGitHubToken();
+        const githubToken = await this.getGitHubToken();
+        const imsToken = await this.getImsToken();
         // Normalize path - ensure it starts with / and doesn't end with /
         const normalizedPath = path.startsWith('/') ? path : `/${path}`;
         const cleanPath = normalizedPath.endsWith('/') && normalizedPath !== '/'
@@ -151,7 +152,8 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
-                'x-auth-token': token,
+                'x-auth-token': githubToken,
+                'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
             },
             signal: AbortSignal.timeout(TIMEOUTS.LONG),
         });
@@ -189,7 +191,8 @@ export class HelixService {
         path: string = '/',
         branch: string = DEFAULT_BRANCH,
     ): Promise<void> {
-        const token = await this.getGitHubToken();
+        const githubToken = await this.getGitHubToken();
+        const imsToken = await this.getImsToken();
         // Normalize path
         const normalizedPath = path.startsWith('/') ? path : `/${path}`;
         const cleanPath = normalizedPath.endsWith('/') && normalizedPath !== '/'
@@ -202,7 +205,8 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
-                'x-auth-token': token,
+                'x-auth-token': githubToken,
+                'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
             },
             signal: AbortSignal.timeout(TIMEOUTS.LONG),
         });
@@ -260,7 +264,8 @@ export class HelixService {
         site: string,
         branch: string = DEFAULT_BRANCH,
     ): Promise<void> {
-        const token = await this.getGitHubToken();
+        const githubToken = await this.getGitHubToken();
+        const imsToken = await this.getImsToken();
         // Bulk API: POST to /preview/{org}/{site}/{ref} without /* in URL path
         // The /* goes in the paths array in the JSON body
         const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}`;
@@ -272,7 +277,8 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
-                'x-auth-token': token,
+                'x-auth-token': githubToken,
+                'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -318,7 +324,8 @@ export class HelixService {
         site: string,
         branch: string = DEFAULT_BRANCH,
     ): Promise<void> {
-        const token = await this.getGitHubToken();
+        const githubToken = await this.getGitHubToken();
+        const imsToken = await this.getImsToken();
         // Bulk API: POST to /live/{org}/{site}/{ref} without /* in URL path
         // The /* goes in the paths array in the JSON body
         const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}`;
@@ -330,7 +337,8 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
-                'x-auth-token': token,
+                'x-auth-token': githubToken,
+                'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -500,9 +508,13 @@ export class HelixService {
 
         this.logger.info(`[Helix] Found ${pages.length} pages to publish`);
 
+        // Verify Helix is ready to accept publish requests
+        // After fstab.yaml is pushed, there may be a delay before Helix processes it
+        await this.waitForPublishReadiness(githubOrg, githubSite, branch);
+
         // Publish each page individually (single-page API works with IMS token)
         // Use GitHub org/site for Helix API calls (the repo connected to the site)
-        const results: { path: string; success: boolean; error?: string }[] = [];
+        const results: { path: string; success: boolean; skipped?: boolean; error?: string }[] = [];
 
         for (const path of pages) {
             try {
@@ -511,25 +523,119 @@ export class HelixService {
                 results.push({ path, success: true });
             } catch (error) {
                 const errorMessage = (error as Error).message;
-                this.logger.warn(`[Helix] Failed to publish ${path}: ${errorMessage}`);
-                results.push({ path, success: false, error: errorMessage });
+
+                // 404 means no content exists at this path - skip silently
+                // These are typically placeholder pages (e.g., commerce transactional pages)
+                if (errorMessage.includes('404')) {
+                    this.logger.debug(`[Helix] Skipping ${path} - no content found (404)`);
+                    results.push({ path, success: true, skipped: true });
+                } else {
+                    this.logger.warn(`[Helix] Failed to publish ${path}: ${errorMessage}`);
+                    results.push({ path, success: false, error: errorMessage });
+                }
             }
         }
 
         // Report results
-        const successCount = results.filter(r => r.success).length;
+        const publishedCount = results.filter(r => r.success && !r.skipped).length;
+        const skippedCount = results.filter(r => r.skipped).length;
         const failCount = results.filter(r => !r.success).length;
+
+        if (skippedCount > 0) {
+            this.logger.debug(`[Helix] Skipped ${skippedCount} pages with no content`);
+        }
 
         if (failCount > 0) {
             const failedPaths = results.filter(r => !r.success).map(r => r.path).join(', ');
-            this.logger.warn(`[Helix] Published ${successCount}/${results.length} pages. Failed: ${failedPaths}`);
+            this.logger.warn(`[Helix] Published ${publishedCount}/${pages.length} pages. Failed: ${failedPaths}`);
         }
 
-        if (successCount === 0) {
-            throw new Error('Failed to publish any pages. Check your permissions and try again.');
+        if (publishedCount === 0 && failCount > 0) {
+            // Include the first error message to help diagnose the issue
+            const firstError = results.find(r => r.error)?.error || 'Unknown error';
+            throw new Error(`Failed to publish any pages. First error: ${firstError}`);
         }
 
-        this.logger.info(`[Helix] Successfully published ${successCount}/${pages.length} pages`);
+        // Log summary with skipped count if any
+        const skippedSuffix = skippedCount > 0 ? ` (${skippedCount} skipped - no content)` : '';
+        this.logger.info(`[Helix] Successfully published ${publishedCount}/${pages.length} pages${skippedSuffix}`);
+    }
+
+    /**
+     * Wait for Helix to be ready to accept preview/publish requests
+     *
+     * After fstab.yaml is pushed to GitHub, there can be a delay before Helix
+     * processes the configuration and is ready to serve content. This method
+     * attempts to preview the homepage with retries to ensure readiness.
+     *
+     * @param org - Organization/owner name
+     * @param site - Site/repository name
+     * @param branch - Branch name
+     * @param maxAttempts - Maximum number of retry attempts (default: 5)
+     * @param delayMs - Delay between attempts in milliseconds (default: 3000)
+     */
+    private async waitForPublishReadiness(
+        org: string,
+        site: string,
+        branch: string,
+        maxAttempts: number = 5,
+        delayMs: number = 3000,
+    ): Promise<void> {
+        this.logger.info('[Helix] Verifying publish readiness...');
+
+        const githubToken = await this.getGitHubToken();
+        const imsToken = await this.getImsToken();
+        const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}/`;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                // Quick check with short timeout - we're just testing if Helix is ready
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'x-auth-token': githubToken,
+                        'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
+                    },
+                    signal: AbortSignal.timeout(TIMEOUTS.QUICK), // 5 second timeout
+                });
+
+                // Auth errors should fail immediately
+                if (response.status === 401) {
+                    throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access denied. You do not have permission to preview this content.');
+                }
+
+                if (response.ok) {
+                    this.logger.info('[Helix] Publish readiness verified - Helix is ready');
+                    return;
+                }
+
+                // Non-OK response - will retry
+                throw new Error(`Preview returned ${response.status} ${response.statusText}`);
+            } catch (error) {
+                const errorMessage = (error as Error).message;
+
+                // Auth errors should fail immediately, don't retry
+                if (errorMessage.includes('authentication') || errorMessage.includes('Access denied')) {
+                    throw error;
+                }
+
+                if (attempt < maxAttempts) {
+                    this.logger.warn(
+                        `[Helix] Readiness check attempt ${attempt}/${maxAttempts} failed: ${errorMessage}. Retrying in ${delayMs / 1000}s...`
+                    );
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
+                } else {
+                    this.logger.warn(
+                        `[Helix] Readiness check failed after ${maxAttempts} attempts. Proceeding anyway...`
+                    );
+                    // Don't throw - let the bulk publish proceed and report individual failures
+                    // This allows partial success if some pages work
+                }
+            }
+        }
     }
 
     // ==========================================================

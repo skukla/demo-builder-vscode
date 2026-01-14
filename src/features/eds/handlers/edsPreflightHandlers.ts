@@ -660,7 +660,7 @@ async function executePreflightPhases(
                     const progressValue = 50 + Math.round(progress.percentage * 0.45);
                     context.sendMessage('eds-preflight-progress', {
                         phase: 'dalive-content',
-                        message: `Copying content: ${progress.percentage}%`,
+                        message: 'Copying demo content',
                         subMessage: progress.currentFile,
                         progress: progressValue,
                     });
