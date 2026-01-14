@@ -142,7 +142,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             }
             // Publish EDS content to CDN
             if (onPublishEds) {
-                items.push({ key: 'publishEds', label: 'Publish to CDN', icon: 'publish' });
+                items.push({ key: 'publishEds', label: 'Publish Project', icon: 'publish' });
             }
             // Reset EDS project from template
             if (onResetEds) {
