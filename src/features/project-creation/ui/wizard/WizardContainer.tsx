@@ -45,6 +45,7 @@ import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelec
 import { DaLiveSetupStep } from '@/features/eds/ui/steps/DaLiveSetupStep';
 import { DataSourceConfigStep } from '@/features/eds/ui/steps/DataSourceConfigStep';
 import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';
+import { EdsPreflightStep } from '@/features/eds/ui/steps/EdsPreflightStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
@@ -319,6 +320,8 @@ export function WizardContainer({
                 return <DaLiveSetupStep {...props} />;
             case 'eds-data-source':
                 return <DataSourceConfigStep {...props} />;
+            case 'eds-preflight':
+                return <EdsPreflightStep {...props} />;
             case 'settings':
                 return <ComponentConfigStep {...props} />;
             case 'review':

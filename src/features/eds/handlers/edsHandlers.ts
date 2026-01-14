@@ -158,6 +158,11 @@ import {
     handleStoreDaLiveTokenWithOrg,
     handleClearDaLiveAuth,
 } from './edsDaLiveHandlers';
+import {
+    handleStartEdsPreflight,
+    handleCancelEdsPreflight,
+    handleResumeEdsPreflight,
+} from './edsPreflightHandlers';
 
 /**
  * EDS feature handler map
@@ -185,4 +190,9 @@ export const edsHandlers = defineHandlers({
 
     // ACCS handlers
     'validate-accs-credentials': handleValidateAccsCredentials,
+
+    // Preflight handlers
+    'eds-preflight-start': handleStartEdsPreflight,
+    'eds-preflight-cancel': handleCancelEdsPreflight,
+    'eds-preflight-resume': handleResumeEdsPreflight,
 });

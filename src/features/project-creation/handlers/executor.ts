@@ -141,6 +141,11 @@ interface ProjectCreationConfig {
         isPrivate?: boolean;
         skipContent?: boolean;
         skipTools?: boolean;
+        // Preflight completion fields (set by EdsPreflightStep)
+        preflightComplete?: boolean;
+        repoUrl?: string;
+        previewUrl?: string;
+        liveUrl?: string;
     };
 }
 
@@ -250,7 +255,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // EDS frontend is cloned to components/eds-storefront like other frontends
     const edsComponentPath = path.join(projectPath, 'components', COMPONENT_IDS.EDS_STOREFRONT);
 
-    if (isEdsStack && typedConfig.edsConfig) {
+    // Skip EDS Phase 0 if preflight already completed (EdsPreflightStep ran during wizard)
+    if (isEdsStack && typedConfig.edsConfig && !typedConfig.edsConfig.preflightComplete) {
         progressTracker('EDS Setup', 16, 'Initializing Edge Delivery Services...');
 
         // Check if AuthenticationService is available
@@ -398,6 +404,44 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         await context.stateManager.saveProject(project);
 
         progressTracker('EDS Setup', 30, 'EDS initialization complete');
+    }
+
+    // ========================================================================
+    // EDS PREFLIGHT COMPONENT REGISTRATION (when Phase 0 was skipped)
+    // ========================================================================
+    //
+    // If EDS preflight ran in wizard, Phase 0 was skipped but we still need to:
+    // 1. Register EDS component using edsConfig values
+    // 2. Save project state
+
+    if (isEdsStack && typedConfig.edsConfig?.preflightComplete) {
+        context.logger.info('[Project Creation] EDS preflight completed - registering component from config');
+
+        // Register EDS frontend as a component instance using preflight results
+        const frontendInstance: import('@/types').ComponentInstance = {
+            id: COMPONENT_IDS.EDS_STOREFRONT,
+            name: 'EDS Storefront',
+            type: 'frontend',
+            path: edsComponentPath,
+            repoUrl: typedConfig.edsConfig.repoUrl,
+            status: 'ready',
+            lastUpdated: new Date(),
+            metadata: {
+                previewUrl: typedConfig.edsConfig.previewUrl,
+                liveUrl: typedConfig.edsConfig.liveUrl,
+                repoUrl: typedConfig.edsConfig.repoUrl,
+                daLiveOrg: typedConfig.edsConfig.daLiveOrg,
+                daLiveSite: typedConfig.edsConfig.daLiveSite,
+            },
+        };
+        project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT] = frontendInstance;
+
+        context.logger.debug(`[Project Creation] Registered EDS frontend component from preflight: ${COMPONENT_IDS.EDS_STOREFRONT} at ${edsComponentPath}`);
+
+        // Save project state with EDS metadata
+        await context.stateManager.saveProject(project);
+
+        progressTracker('EDS Setup', 30, 'Using preflight EDS configuration');
     }
 
     // ========================================================================
@@ -555,9 +599,11 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // 2. Re-push config.json to GitHub for the EDS runtime to access
 
     // Log condition values for debugging
-    context.logger.debug(`[EDS Post-Mesh] Checking conditions: isEdsStack=${isEdsStack}, edsResult.success=${edsResult?.success}, meshState.endpoint=${project.meshState?.endpoint ? 'set' : 'not set'}`);
+    // Support both inline EDS setup (edsResult) and preflight completion (edsConfig.preflightComplete)
+    const edsSetupComplete = edsResult?.success || typedConfig.edsConfig?.preflightComplete;
+    context.logger.debug(`[EDS Post-Mesh] Checking conditions: isEdsStack=${isEdsStack}, edsSetupComplete=${edsSetupComplete}, meshState.endpoint=${project.meshState?.endpoint ? 'set' : 'not set'}`);
 
-    if (isEdsStack && edsResult?.success && project.meshState?.endpoint) {
+    if (isEdsStack && edsSetupComplete && project.meshState?.endpoint) {
         const isPaasBackend = typedConfig.components?.backend === 'adobe-commerce-paas';
         context.logger.debug(`[EDS Post-Mesh] isPaasBackend=${isPaasBackend}`);
 
@@ -578,8 +624,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
                 const githubFileOperations = new GitHubFileOperations(githubTokenService, context.logger);
 
-                // Get repo info from EDS result
-                const repoUrl = edsResult.repoUrl;
+                // Get repo URL from either edsResult (inline setup) or edsConfig (preflight)
+                const repoUrl = edsResult?.repoUrl || typedConfig.edsConfig?.repoUrl;
                 context.logger.debug(`[EDS Post-Mesh] EDS repo URL: ${repoUrl}`);
 
                 if (repoUrl) {
@@ -630,8 +676,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         // Log why we're skipping the post-mesh update
         if (!isEdsStack) {
             context.logger.debug('[EDS Post-Mesh] Skipped - not an EDS stack');
-        } else if (!edsResult?.success) {
-            context.logger.debug('[EDS Post-Mesh] Skipped - EDS setup did not succeed');
+        } else if (!edsSetupComplete) {
+            context.logger.debug('[EDS Post-Mesh] Skipped - EDS setup did not complete (inline or preflight)');
         } else if (!project.meshState?.endpoint) {
             context.logger.warn('[EDS Post-Mesh] Skipped - meshState.endpoint not set (mesh deployment may have failed)');
         }

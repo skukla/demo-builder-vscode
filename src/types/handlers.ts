@@ -144,6 +144,9 @@ export interface SharedState {
     // Project creation control
     projectCreationAbortController?: AbortController;
 
+    // EDS preflight control
+    edsPreflightAbortController?: AbortController;
+
     // Mesh lifecycle tracking
     meshCreatedForWorkspace?: string;
     meshExistedBeforeSession?: string;

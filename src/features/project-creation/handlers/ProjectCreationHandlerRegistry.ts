@@ -91,6 +91,11 @@ export const projectCreationHandlers = defineHandlers({
     // EDS handlers - ACCS
     'validate-accs-credentials': eds.handleValidateAccsCredentials,
 
+    // EDS handlers - Preflight
+    'eds-preflight-start': eds.handleStartEdsPreflight,
+    'eds-preflight-cancel': eds.handleCancelEdsPreflight,
+    'eds-preflight-resume': eds.handleResumeEdsPreflight,
+
     // Project creation handlers
     'validate': creation.handleValidate,
     'create-project': creation.handleCreateProject,

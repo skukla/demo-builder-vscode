@@ -75,6 +75,15 @@
       "enabled": true
     },
     {
+      "id": "eds-preflight",
+      "name": "EDS Setup",
+      "description": "Create GitHub repository and populate DA.live content for Edge Delivery Services.",
+      "enabled": true,
+      "condition": {
+        "stackRequiresAny": ["requiresGitHub", "requiresDaLive"]
+      }
+    },
+    {
       "id": "review",
       "name": "Final Review",
       "description": "Review your project configuration before creation.",

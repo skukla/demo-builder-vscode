@@ -224,15 +224,17 @@ export function useWizardState({
             };
         });
 
-        // Step 4: Apply stack-based filtering
-        const filteredSteps = filterStepsForStack(stepsWithConditions, selectedStack);
+        // Step 4: Apply stack-based and mode-based filtering
+        const filteredSteps = filterStepsForStack(stepsWithConditions, selectedStack, {
+            isEditMode: !!editProject,
+        });
 
         return filteredSteps.map(step => ({
             id: step.id as WizardStep,
             name: step.name,
             description: step.description,
         }));
-    }, [wizardSteps, stacks, state.selectedStack]);
+    }, [wizardSteps, stacks, state.selectedStack, editProject]);
 
     // Step completion tracking
     // In edit/import mode, mark steps as completed if they have data (satisfied)

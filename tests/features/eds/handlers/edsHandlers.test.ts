@@ -53,13 +53,22 @@ describe('edsHandlers', () => {
             expect(hasHandler(edsHandlers, 'validate-accs-credentials')).toBe(true);
         });
 
-        it('should have exactly 14 handlers', () => {
+        it('should include preflight handlers', () => {
+            // Given: edsHandlers object
+            // When: Checking for preflight message types
+            // Then: Preflight handlers present
+            expect(hasHandler(edsHandlers, 'eds-preflight-start')).toBe(true);
+            expect(hasHandler(edsHandlers, 'eds-preflight-cancel')).toBe(true);
+            expect(hasHandler(edsHandlers, 'eds-preflight-resume')).toBe(true);
+        });
+
+        it('should have exactly 17 handlers', () => {
             // Given: edsHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(edsHandlers);
 
-            // Then: Exactly 14 handlers (5 GitHub + 8 DA.live + 1 ACCS)
-            expect(types).toHaveLength(14);
+            // Then: Exactly 17 handlers (5 GitHub + 8 DA.live + 1 ACCS + 3 Preflight)
+            expect(types).toHaveLength(17);
         });
 
         it('should have handlers as functions', () => {
