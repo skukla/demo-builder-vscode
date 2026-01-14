@@ -150,6 +150,58 @@ describe('Modal', () => {
             expect(screen.getByRole('button', { name: 'Negative' })).toBeInTheDocument();
         });
 
+        it('applies primary CSS class to primary variant', () => {
+            const actionButtons: ActionButton[] = [
+                { label: 'Primary Action', variant: 'primary', onPress: jest.fn() },
+            ];
+
+            renderWithProvider(
+                <Modal {...defaultProps} actionButtons={actionButtons} />
+            );
+
+            const button = screen.getByRole('button', { name: 'Primary Action' });
+            expect(button).toHaveClass('modal-button-primary');
+        });
+
+        it('applies primary CSS class to accent variant (blue styling)', () => {
+            const actionButtons: ActionButton[] = [
+                { label: 'Accent Action', variant: 'accent', onPress: jest.fn() },
+            ];
+
+            renderWithProvider(
+                <Modal {...defaultProps} actionButtons={actionButtons} />
+            );
+
+            const button = screen.getByRole('button', { name: 'Accent Action' });
+            expect(button).toHaveClass('modal-button-primary');
+        });
+
+        it('applies secondary CSS class to secondary variant', () => {
+            const actionButtons: ActionButton[] = [
+                { label: 'Secondary Action', variant: 'secondary', onPress: jest.fn() },
+            ];
+
+            renderWithProvider(
+                <Modal {...defaultProps} actionButtons={actionButtons} />
+            );
+
+            const button = screen.getByRole('button', { name: 'Secondary Action' });
+            expect(button).toHaveClass('modal-button-secondary');
+        });
+
+        it('applies secondary CSS class to negative variant', () => {
+            const actionButtons: ActionButton[] = [
+                { label: 'Negative Action', variant: 'negative', onPress: jest.fn() },
+            ];
+
+            renderWithProvider(
+                <Modal {...defaultProps} actionButtons={actionButtons} />
+            );
+
+            const button = screen.getByRole('button', { name: 'Negative Action' });
+            expect(button).toHaveClass('modal-button-secondary');
+        });
+
         it('renders with no action buttons (empty array)', () => {
             renderWithProvider(
                 <Modal {...defaultProps} actionButtons={[]} />

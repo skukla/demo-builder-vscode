@@ -38,7 +38,13 @@ function FocusableButton({ variant, onPress, children }: FocusableButtonProps) {
     );
 
     // Map variant to CSS class
-    const variantClass = variant === 'primary' ? 'modal-button-primary' : 'modal-button-secondary';
+    const variantClassMap: Record<FocusableButtonProps['variant'], string> = {
+        primary: 'modal-button-primary',
+        accent: 'modal-button-primary',
+        secondary: 'modal-button-secondary',
+        negative: 'modal-button-secondary',
+    };
+    const variantClass = variantClassMap[variant];
 
     return (
         <div
