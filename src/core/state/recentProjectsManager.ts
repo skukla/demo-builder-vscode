@@ -16,6 +16,10 @@ export interface RecentProject {
     name: string;
     organization?: string;
     lastOpened: string;
+    // Metadata backup fields - used to recover data if manifest is corrupted
+    selectedPackage?: string | null;
+    selectedStack?: string | null;
+    selectedAddons?: string[];
 }
 
 const MAX_RECENT_PROJECTS = 10;
@@ -96,12 +100,16 @@ export class RecentProjectsManager {
         // Remove if already exists
         this.recentProjects = this.recentProjects.filter(p => p.path !== project.path);
 
-        // Add to beginning
+        // Add to beginning with metadata backup
         this.recentProjects.unshift({
             path: project.path,
             name: project.name,
             organization: project.organization,
             lastOpened: new Date().toISOString(),
+            // Store metadata for recovery if manifest is corrupted
+            selectedPackage: project.selectedPackage ?? null,
+            selectedStack: project.selectedStack ?? null,
+            selectedAddons: project.selectedAddons ?? [],
         });
 
         // Keep only max recent
@@ -117,5 +125,14 @@ export class RecentProjectsManager {
         await this.load();
         this.recentProjects = this.recentProjects.filter(p => p.path !== projectPath);
         await this.save();
+    }
+
+    /**
+     * Find a recent project by path
+     * Used to recover metadata when manifest is missing fields
+     */
+    async findByPath(projectPath: string): Promise<RecentProject | undefined> {
+        await this.load();
+        return this.recentProjects.find(p => p.path === projectPath);
     }
 }

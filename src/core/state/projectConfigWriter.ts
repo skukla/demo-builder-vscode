@@ -95,6 +95,14 @@ export class ProjectConfigWriter {
         const manifestPath = path.join(project.path, '.demo-builder.json');
         const tempPath = `${manifestPath}.tmp`;
 
+        // Diagnostic: Log when metadata fields are undefined (helps trace data loss)
+        if (project.selectedPackage === undefined || project.selectedStack === undefined) {
+            this.logger.warn(
+                `[ProjectConfigWriter] Saving project "${project.name}" with undefined metadata: ` +
+                `selectedPackage=${project.selectedPackage}, selectedStack=${project.selectedStack}`
+            );
+        }
+
         try {
             const manifest = {
                 name: project.name,
@@ -113,9 +121,11 @@ export class ProjectConfigWriter {
                 componentVersions: project.componentVersions,
                 meshState: project.meshState,
                 components: getComponentIds(project.componentInstances),
-                selectedPackage: project.selectedPackage,
-                selectedStack: project.selectedStack,
-                selectedAddons: project.selectedAddons,
+                // CRITICAL: Use nullish coalescing to ensure fields are always written to JSON
+                // JSON.stringify omits undefined values, causing data loss on reload
+                selectedPackage: project.selectedPackage ?? null,
+                selectedStack: project.selectedStack ?? null,
+                selectedAddons: project.selectedAddons ?? [],
             };
 
             // Atomic write: write to temp file first, then rename

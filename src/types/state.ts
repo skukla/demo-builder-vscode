@@ -144,6 +144,10 @@ export interface RecentProject {
     name: string;
     organization?: string;
     lastOpened: string;
+    // Metadata backup fields - used to recover data if manifest is corrupted
+    selectedPackage?: string | null;
+    selectedStack?: string | null;
+    selectedAddons?: string[];
 }
 
 /**

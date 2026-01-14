@@ -286,6 +286,26 @@ export class StateManager {
                 }
             }
 
+            // FALLBACK: If metadata still undefined, check recent projects for backup
+            // This handles cases where manifest was corrupted and project is not current
+            if (project.selectedPackage === undefined || project.selectedStack === undefined) {
+                const recentProject = await this.recentProjectsManager.findByPath(projectPath);
+                if (recentProject) {
+                    if (project.selectedPackage === undefined && recentProject.selectedPackage) {
+                        project.selectedPackage = recentProject.selectedPackage;
+                        this.logger.debug(`[StateManager] Recovered selectedPackage from recent projects: ${recentProject.selectedPackage}`);
+                    }
+                    if (project.selectedStack === undefined && recentProject.selectedStack) {
+                        project.selectedStack = recentProject.selectedStack;
+                        this.logger.debug(`[StateManager] Recovered selectedStack from recent projects: ${recentProject.selectedStack}`);
+                    }
+                    if (project.selectedAddons === undefined && recentProject.selectedAddons) {
+                        project.selectedAddons = recentProject.selectedAddons;
+                        this.logger.debug(`[StateManager] Recovered selectedAddons from recent projects`);
+                    }
+                }
+            }
+
             if (persistAfterLoad) {
                 // Set as current project and persist to disk
                 await this.saveProject(project);
