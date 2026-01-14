@@ -531,12 +531,17 @@ async function executePreflightPhases(
             progress: 25,
         });
 
+        // Check if fstab.yaml already exists (to get SHA for update)
+        const existingFstab = await githubFileOps.getFileContent(repoOwner, repoName, 'fstab.yaml');
+        const fstabSha = existingFstab?.sha;
+
         await githubFileOps.createOrUpdateFile(
             repoOwner,
             repoName,
             'fstab.yaml',
             fstabContent,
             'chore: configure fstab.yaml for DA.live content source',
+            fstabSha,
         );
 
         logger.info('[EDS Preflight] fstab.yaml pushed to GitHub');
