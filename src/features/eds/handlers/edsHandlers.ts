@@ -159,10 +159,10 @@ import {
     handleClearDaLiveAuth,
 } from './edsDaLiveHandlers';
 import {
-    handleStartEdsPreflight,
-    handleCancelEdsPreflight,
-    handleResumeEdsPreflight,
-} from './edsPreflightHandlers';
+    handleStartStorefrontSetup,
+    handleCancelStorefrontSetup,
+    handleResumeStorefrontSetup,
+} from './storefrontSetupHandlers';
 
 /**
  * EDS feature handler map
@@ -191,8 +191,8 @@ export const edsHandlers = defineHandlers({
     // ACCS handlers
     'validate-accs-credentials': handleValidateAccsCredentials,
 
-    // Preflight handlers
-    'eds-preflight-start': handleStartEdsPreflight,
-    'eds-preflight-cancel': handleCancelEdsPreflight,
-    'eds-preflight-resume': handleResumeEdsPreflight,
+    // Storefront setup handlers (renamed from eds-preflight-*)
+    'storefront-setup-start': handleStartStorefrontSetup,
+    'storefront-setup-cancel': handleCancelStorefrontSetup,
+    'storefront-setup-resume': handleResumeStorefrontSetup,
 });

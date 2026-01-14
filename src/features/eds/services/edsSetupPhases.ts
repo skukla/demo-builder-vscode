@@ -17,7 +17,7 @@ import * as path from 'path';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
 import { PollingService } from '@/core/shell/pollingService';
-import { generateConfigFile, updateConfigFile } from '@/core/config/configFileGenerator';
+import { generateConfigFile } from '@/core/config/configFileGenerator';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import type { Logger } from '@/types/logger';
@@ -57,7 +57,6 @@ const INGESTION_TOOL_DEF = {
     },
 };
 
-const HELIX_CONFIG_URL = 'https://admin.hlx.page/config';
 const HELIX_CODE_URL = 'https://admin.hlx.page/code';
 const MAX_CODE_SYNC_ATTEMPTS = 25;
 const DEFAULT_BRANCH = 'main';
@@ -571,7 +570,64 @@ interface StoreConfig {
 }
 
 /**
+ * Fetch store configuration IDs from Commerce GraphQL endpoint
+ * Used for dynamic ID lookup instead of hardcoded defaults
+ *
+ * @param graphqlEndpoint - Full GraphQL URL (e.g., https://commerce.example.com/graphql)
+ * @param logger - Logger instance for debug output
+ * @returns StoreConfig if successful, null on any error (graceful fallback)
+ */
+async function fetchStoreConfig(
+    graphqlEndpoint: string,
+    logger: Logger,
+): Promise<StoreConfig | null> {
+    try {
+        // SECURITY: Validate URL before making external request (SSRF prevention)
+        validateURL(graphqlEndpoint);
+
+        const response = await fetch(graphqlEndpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                query: '{ storeConfig { id website_id root_category_id } }',
+            }),
+            signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
+        });
+
+        if (!response.ok) {
+            logger.debug(`[EDS] storeConfig fetch failed: ${response.status}`);
+            return null;
+        }
+
+        const json = await response.json();
+        const config = json?.data?.storeConfig;
+
+        if (config?.id == null || config?.website_id == null || config?.root_category_id == null) {
+            logger.debug('[EDS] storeConfig response missing required fields');
+            return null;
+        }
+
+        return {
+            storeViewId: String(config.id),
+            websiteId: String(config.website_id),
+            rootCategoryId: String(config.root_category_id),
+        };
+    } catch (error) {
+        logger.debug(`[EDS] storeConfig fetch error: ${(error as Error).message}`);
+        return null;
+    }
+}
+
+/**
  * Environment Configuration Phase
+ *
+ * NOTE: This class is DEPRECATED and maintained only for test compatibility.
+ * The functionality has been moved to the standalone function `generateConfigJsonPostMesh`
+ * which is called post-mesh deployment for better timing.
+ *
+ * New code should use `generateConfigJsonPostMesh` directly.
  */
 export class EnvConfigPhase {
     constructor(private logger: Logger) {}
@@ -582,48 +638,12 @@ export class EnvConfigPhase {
      *
      * @param graphqlEndpoint - Full GraphQL URL (e.g., https://commerce.example.com/graphql)
      * @returns StoreConfig if successful, null on any error
+     *
+     * @deprecated Use fetchStoreConfig standalone function instead
      */
     private async fetchStoreConfig(graphqlEndpoint: string): Promise<StoreConfig | null> {
-        try {
-            // SECURITY: Validate URL before making external request (SSRF prevention)
-            // Defense-in-depth: meshEndpoint is system-generated but could be tampered with
-            validateURL(graphqlEndpoint);
-
-            const response = await fetch(graphqlEndpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    query: '{ storeConfig { id website_id root_category_id } }',
-                }),
-                signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
-            });
-
-            if (!response.ok) {
-                this.logger.debug(`[EDS] storeConfig fetch failed: ${response.status}`);
-                return null;
-            }
-
-            const json = await response.json();
-            const config = json?.data?.storeConfig;
-
-            // Validate all required fields exist (allowing 0 as valid value)
-            // Uses == null to check for both undefined and null
-            if (config?.id == null || config?.website_id == null || config?.root_category_id == null) {
-                this.logger.debug('[EDS] storeConfig response missing required fields');
-                return null;
-            }
-
-            return {
-                storeViewId: String(config.id),
-                websiteId: String(config.website_id),
-                rootCategoryId: String(config.root_category_id),
-            };
-        } catch (error) {
-            this.logger.debug(`[EDS] storeConfig fetch error: ${(error as Error).message}`);
-            return null;
-        }
+        // Delegate to standalone function to eliminate code duplication
+        return fetchStoreConfig(graphqlEndpoint, this.logger);
     }
 
     /**
@@ -796,6 +816,130 @@ export async function updateConfigJsonWithMesh(
         logger.info('[EDS] config.json updated with mesh endpoint');
     } catch (error) {
         logger.error('[EDS] Failed to update config.json', error as Error);
+        throw error;
+    }
+}
+
+/**
+ * Configuration for generating config.json after mesh deployment
+ * This interface defines all data needed to generate config.json with mesh endpoint
+ */
+export interface ConfigJsonPostMeshParams {
+    /** Path to EDS component directory */
+    componentPath: string;
+    /** Mesh endpoint URL (required - this is the whole point of post-mesh generation) */
+    meshEndpoint: string;
+    /** GitHub repository owner */
+    githubOwner: string;
+    /** GitHub repository name */
+    repoName: string;
+    /** DA.live organization name */
+    daLiveOrg: string;
+    /** DA.live site name */
+    daLiveSite: string;
+    /** Backend environment variables (for store codes) */
+    backendEnvVars?: Record<string, string>;
+    /** Logger instance */
+    logger: Logger;
+}
+
+/**
+ * Generate config.json AFTER mesh deployment (Phase 5 optimization)
+ *
+ * This function generates config.json from scratch with the mesh endpoint already set.
+ * Unlike the old flow (generate empty → deploy mesh → update), this:
+ * - Generates config.json ONCE with complete data
+ * - Eliminates the staleness window
+ * - Reduces GitHub pushes from 2 to 1
+ *
+ * @param params - Configuration parameters for config.json generation
+ * @throws Error if generation fails
+ */
+export async function generateConfigJsonPostMesh(params: ConfigJsonPostMeshParams): Promise<void> {
+    const { componentPath, meshEndpoint, githubOwner, repoName, daLiveOrg, daLiveSite, backendEnvVars, logger } = params;
+
+    logger.info('[EDS] Generating config.json with mesh endpoint (post-mesh)');
+
+    const configJsonPath = path.join(componentPath, 'config.json');
+    const templatePath = path.join(componentPath, 'default-site.json');
+
+    // Extract backend env vars
+    const backendEnv = backendEnvVars || {};
+    const commerceApiKey = String(backendEnv.ADOBE_CATALOG_API_KEY || '');
+    const commerceEnvironmentId = String(backendEnv.ADOBE_COMMERCE_ENVIRONMENT_ID || '');
+    const storeViewCode = String(backendEnv.ADOBE_COMMERCE_STORE_VIEW_CODE || '');
+    const websiteCode = String(backendEnv.ADOBE_COMMERCE_WEBSITE_CODE || '');
+    const storeCode = String(backendEnv.ADOBE_COMMERCE_STORE_CODE || '');
+
+    // Build URLs
+    const contentSource = `https://content.da.live/${daLiveOrg}/${daLiveSite}`;
+    const liveDomain = `main--${repoName}--${githubOwner}.aem.live`;
+
+    // Commerce store IDs - fetch dynamically or use defaults
+    const storeId = '1';
+    let storeViewId = '1';
+    let websiteId = '1';
+    let rootCategoryId = '2';
+
+    // Fetch dynamic store IDs from Commerce (mesh endpoint is always available here)
+    const storeConfig = await fetchStoreConfig(meshEndpoint, logger);
+    if (storeConfig) {
+        storeViewId = storeConfig.storeViewId;
+        websiteId = storeConfig.websiteId;
+        rootCategoryId = storeConfig.rootCategoryId;
+        logger.info('[EDS] Using dynamic store IDs from Commerce storeConfig');
+    } else {
+        logger.info('[EDS] Using default store IDs (storeConfig fetch failed)');
+    }
+
+    // Admin email placeholder
+    const adminEmail = '';
+
+    try {
+        await generateConfigFile({
+            filePath: configJsonPath,
+            templatePath,
+            defaultConfig: {
+                'commerce-core-endpoint': meshEndpoint,
+                'commerce-endpoint': meshEndpoint,
+                'store-view-code': storeViewCode,
+                'website-code': websiteCode,
+                'store-code': storeCode,
+            },
+            placeholders: {
+                // Commerce endpoints - mesh endpoint is now ALWAYS available
+                '{ENDPOINT}': meshEndpoint,
+                '{CS_ENDPOINT}': meshEndpoint,
+                // Commerce credentials
+                '{COMMERCE_API_KEY}': commerceApiKey,
+                '{COMMERCE_ENVIRONMENT_ID}': commerceEnvironmentId,
+                // Commerce store codes
+                '{STORE_VIEW_CODE}': storeViewCode,
+                '{WEBSITE_CODE}': websiteCode,
+                '{STORE_CODE}': storeCode,
+                // Commerce store IDs (numeric)
+                '{STORE_ID}': storeId,
+                '{STORE_VIEW_ID}': storeViewId,
+                '{WEBSITE_ID}': websiteId,
+                // Commerce catalog
+                '{YOUR_ROOT_CATEGORY_ID}': rootCategoryId,
+                // GitHub/Helix identifiers
+                '{ORG}': githubOwner,
+                '{REPO}': repoName,
+                '{SITE}': repoName,
+                // Content and domain
+                '{CONTENT_SOURCE}': contentSource,
+                '{DOMAIN}': liveDomain,
+                // Access control
+                '{ADMIN_USER_EMAIL}': adminEmail,
+            },
+            logger,
+            description: 'EDS runtime configuration (config.json)',
+        });
+
+        logger.info('[EDS] Generated config.json with mesh endpoint');
+    } catch (error) {
+        logger.error('[EDS] Failed to generate config.json', error as Error);
         throw error;
     }
 }

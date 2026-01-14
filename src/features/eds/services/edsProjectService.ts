@@ -1,6 +1,3 @@
-import * as fs from 'fs/promises';
-import * as path from 'path';
-
 /**
  * EDS Project Service
  *
@@ -11,13 +8,14 @@ import * as path from 'path';
  * 4. Code Bus synchronization verification
  * 5. DA.live content population from CitiSignal
  * 6. Commerce demo ingestion tool cloning
- * 7. Environment file (.env) generation
  *
  * This service composes specialized phase classes:
  * - GitHubRepoPhase: Repository operations
  * - HelixConfigPhase: Helix configuration and code sync
  * - ContentPhase: DA.live content and tool installation
- * - EnvConfigPhase: Environment file generation
+ *
+ * Note: config.json generation is handled post-mesh in executor.ts via
+ * generateConfigJsonPostMesh() from edsSetupPhases.ts
  */
 
 import { getLogger } from '@/core/logging';
@@ -26,12 +24,12 @@ import type { ComponentManager } from '@/features/components/services/componentM
 import type { Logger } from '@/types/logger';
 import type { DaLiveOrgOperations } from './daLiveOrgOperations';
 import type { DaLiveContentOperations } from './daLiveContentOperations';
-import { GitHubAppNotInstalledError } from './types';
 import type { GitHubTokenService } from './githubTokenService';
 import type { GitHubRepoOperations } from './githubRepoOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import {
     EdsProjectError,
+    GitHubAppNotInstalledError,
     type EdsProjectConfig,
     type EdsProjectSetupResult,
     type EdsProgressCallback,
@@ -42,7 +40,6 @@ import {
     GitHubRepoPhase,
     HelixConfigPhase,
     ContentPhase,
-    EnvConfigPhase,
     generatePreviewUrl,
     generateLiveUrl,
 } from './edsSetupPhases';
@@ -50,7 +47,7 @@ import { GitHubAppService } from './githubAppService';
 import { HelixService } from './helixService';
 
 // Re-export phase classes for direct use
-export { GitHubRepoPhase, HelixConfigPhase, ContentPhase, EnvConfigPhase } from './edsSetupPhases';
+export { GitHubRepoPhase, HelixConfigPhase, ContentPhase } from './edsSetupPhases';
 
 /** Progress percentages for each phase (cumulative) */
 const PROGRESS = {
@@ -59,9 +56,9 @@ const PROGRESS = {
     HELIX_CONFIG: { start: 25, end: 35 },
     CODE_SYNC: { start: 35, end: 45 },
     DALIVE_CONTENT: { start: 45, end: 60 },
-    CONTENT_PUBLISH: { start: 60, end: 70 },
-    TOOLS_CLONE: { start: 70, end: 80 },
-    ENV_CONFIG: { start: 80, end: 95 },
+    CONTENT_PUBLISH: { start: 60, end: 75 },
+    TOOLS_CLONE: { start: 75, end: 95 },
+    // Note: env-config phase removed - config.json generation moved to post-mesh in executor
     COMPLETE: 100,
 } as const;
 
@@ -90,7 +87,6 @@ export class EdsProjectService {
     private githubPhase: GitHubRepoPhase;
     private helixPhase: HelixConfigPhase;
     private contentPhase: ContentPhase;
-    private envPhase: EnvConfigPhase;
     private fileOperations: GitHubFileOperations;
     private helixService: HelixService;
 
@@ -121,7 +117,6 @@ export class EdsProjectService {
         this.githubPhase = new GitHubRepoPhase(githubServices, daLiveServices.orgOperations, this.logger);
         this.helixPhase = new HelixConfigPhase(authService, this.logger, githubAppService, this.fileOperations);
         this.contentPhase = new ContentPhase(daLiveServices.contentOperations, componentManager, this.logger);
-        this.envPhase = new EnvConfigPhase(this.logger);
 
         // Initialize Helix service for content publish operations
         // Helix Admin API uses GitHub authentication, not IMS tokens
@@ -230,21 +225,9 @@ export class EdsProjectService {
                 reportProgress('tools-clone', PROGRESS.TOOLS_CLONE.end, 'Tool clone skipped');
             }
 
-            // Phase 7: Generate EDS-specific configuration
-            reportProgress('env-config', PROGRESS.ENV_CONFIG.start, 'Generating EDS configuration...');
-
-            // Generate config.json for PaaS projects (required for EDS runtime)
-            // NOTE: Standard .env generation happens in Phase 4 via generateComponentEnvFile()
-            await this.envPhase.generateConfigJson(config);
-
-            // Push config.json to GitHub for EDS runtime to access
-            // The EDS runtime serves config.json from the repository, not from local filesystem
-            const isPaasBackend = config.backendComponentId === 'adobe-commerce-paas';
-            if (isPaasBackend) {
-                await this.pushConfigJsonToGitHub(config, createdRepo);
-            }
-
-            reportProgress('env-config', PROGRESS.ENV_CONFIG.end, 'EDS configuration complete');
+            // NOTE: config.json generation moved to post-mesh in executor.ts (Phase 5 optimization)
+            // This eliminates the staleness window where config.json had empty mesh endpoint.
+            // config.json is now generated AFTER mesh deployment with the actual endpoint.
 
             // Complete
             reportProgress('complete', PROGRESS.COMPLETE, 'Setup complete!');
@@ -280,51 +263,6 @@ export class EdsProjectService {
                 phase,
                 repoUrl,
             };
-        }
-    }
-
-    /**
-     * Push config.json to GitHub repository
-     *
-     * The EDS runtime serves config.json from the GitHub repository, not from local filesystem.
-     * After generating config.json locally, we need to push it to GitHub for the site to work.
-     */
-    private async pushConfigJsonToGitHub(
-        config: EdsProjectConfig,
-        repo: GitHubRepo,
-    ): Promise<void> {
-        const configJsonPath = path.join(config.componentPath, 'config.json');
-
-        try {
-            // Read the locally generated config.json
-            const content = await fs.readFile(configJsonPath, 'utf-8');
-
-            // Extract owner and repo name from full name
-            const [owner, repoName] = repo.fullName.split('/');
-
-            this.logger.info(`[EDS] Pushing config.json to GitHub: ${owner}/${repoName}`);
-
-            // Check if config.json already exists in the repo (to get SHA for update)
-            const existingFile = await this.fileOperations.getFileContent(owner, repoName, 'config.json');
-            const sha = existingFile?.sha;
-
-            // Create or update config.json in the repository
-            await this.fileOperations.createOrUpdateFile(
-                owner,
-                repoName,
-                'config.json',
-                content,
-                'chore: configure config.json for commerce integration',
-                sha,
-            );
-
-            this.logger.info('[EDS] config.json pushed to GitHub successfully');
-        } catch (error) {
-            throw new EdsProjectError(
-                `Failed to push config.json to GitHub: ${(error as Error).message}`,
-                'env-config',
-                error as Error,
-            );
         }
     }
 

@@ -26,12 +26,12 @@ export {
     clearServiceCache,
 } from './edsHandlers';
 
-// Export preflight handlers
+// Export storefront setup handlers (renamed from preflight)
 export {
-    handleStartEdsPreflight,
-    handleCancelEdsPreflight,
-    handleResumeEdsPreflight,
-} from './edsPreflightHandlers';
+    handleStartStorefrontSetup,
+    handleCancelStorefrontSetup,
+    handleResumeStorefrontSetup,
+} from './storefrontSetupHandlers';
 
 // Note: edsHelpers are internal implementation details
 // They should not be exported from the public API

@@ -549,18 +549,28 @@ export function findFirstIncompleteStep(
 /**
  * Determine next button text based on wizard state
  *
- * - Edit mode: "Save Changes" (modifying in place)
- * - All other modes: "Create" (creating new project)
+ * Project creation has two phases:
+ * 1. storefront-setup: Publishes the storefront (GitHub repo, DA.live content, Helix config)
+ * 2. project-creation: Deploys the mesh and other project components
+ *
+ * The "Create" button only appears on the Final Review step, which precedes
+ * project-creation. The storefront-setup step shows "Continue" because it's
+ * an intermediate creation step, not the final one.
+ *
+ * - Edit mode on review: "Save Changes"
+ * - Create/import mode on review: "Create"
+ * - All other steps: "Continue"
  */
 export function getNextButtonText(
     isConfirmingSelection: boolean,
     currentStepIndex: number,
     totalSteps: number,
     wizardMode?: WizardMode,
+    currentStepId?: string,
 ): string {
     if (isConfirmingSelection) return 'Continue';
-    if (currentStepIndex === totalSteps - 2) {
-        // Only edit mode uses "Save Changes" - import/copy still create new projects
+    // Only show "Create"/"Save Changes" on Final Review step
+    if (currentStepIndex === totalSteps - 2 && currentStepId === 'review') {
         return wizardMode === 'edit' ? 'Save Changes' : 'Create';
     }
     return 'Continue';

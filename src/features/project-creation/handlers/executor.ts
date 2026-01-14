@@ -22,7 +22,7 @@ import {
 } from '../services';
 import { ProgressTracker } from './shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
-import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
+import { COMPONENT_IDS } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
@@ -35,8 +35,7 @@ import type {
     EdsProgressCallback,
     EdsProjectSetupResult,
 } from '@/features/eds/services/types';
-import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
-import { updateConfigJsonWithMesh } from '@/features/eds/services/edsSetupPhases';
+import { generateConfigJsonPostMesh } from '@/features/eds/services/edsSetupPhases';
 
 // ============================================================================
 // Helper Functions
@@ -141,7 +140,7 @@ interface ProjectCreationConfig {
         isPrivate?: boolean;
         skipContent?: boolean;
         skipTools?: boolean;
-        // Preflight completion fields (set by EdsPreflightStep)
+        // Preflight completion fields (set by StorefrontSetupStep)
         preflightComplete?: boolean;
         repoUrl?: string;
         previewUrl?: string;
@@ -255,7 +254,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // EDS frontend is cloned to components/eds-storefront like other frontends
     const edsComponentPath = path.join(projectPath, 'components', COMPONENT_IDS.EDS_STOREFRONT);
 
-    // Skip EDS Phase 0 if preflight already completed (EdsPreflightStep ran during wizard)
+    // Skip EDS Phase 0 if preflight already completed (StorefrontSetupStep ran during wizard)
     if (isEdsStack && typedConfig.edsConfig && !typedConfig.edsConfig.preflightComplete) {
         progressTracker('EDS Setup', 16, 'Initializing Edge Delivery Services...');
 
@@ -589,14 +588,13 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     }
 
     // ========================================================================
-    // EDS POST-MESH: Update config.json with mesh endpoint and push to GitHub
+    // EDS POST-MESH: Generate config.json with mesh endpoint and push to GitHub
     // ========================================================================
     //
-    // CRITICAL: EDS setup runs BEFORE mesh deployment, so config.json was
-    // pushed to GitHub with an EMPTY commerce-core-endpoint. Now that mesh
-    // deployment is complete, we need to:
-    // 1. Update local config.json with the actual mesh endpoint (inside public.default)
-    // 2. Re-push config.json to GitHub for the EDS runtime to access
+    // Phase 5 optimization: Generate config.json AFTER mesh deployment
+    // This eliminates the staleness window where config.json had empty endpoint.
+    // Old flow: generate empty → deploy mesh → update → re-push (2 pushes)
+    // New flow: deploy mesh → generate with endpoint → push ONCE
 
     // Log condition values for debugging
     // Support both inline EDS setup (edsResult) and preflight completion (edsConfig.preflightComplete)
@@ -608,39 +606,59 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         context.logger.debug(`[EDS Post-Mesh] isPaasBackend=${isPaasBackend}`);
 
         if (isPaasBackend) {
-            progressTracker('Updating EDS Config', 86, 'Updating config.json with mesh endpoint...');
-            context.logger.info(`[EDS Post-Mesh] Updating config.json with mesh endpoint: ${project.meshState.endpoint}`);
+            progressTracker('Generating EDS Config', 86, 'Generating config.json with mesh endpoint...');
+            context.logger.info(`[EDS Post-Mesh] Generating config.json with mesh endpoint: ${project.meshState.endpoint}`);
 
             try {
-                // Step 1: Update local config.json with mesh endpoint (in public.default)
-                await updateConfigJsonWithMesh(edsComponentPath, project.meshState.endpoint, context.logger);
-                context.logger.info('[EDS Post-Mesh] Local config.json updated successfully');
-
-                // Step 2: Re-push config.json to GitHub
-                // Re-instantiate GitHub file operations (services were local to EDS setup block)
-                const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
-                const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
-
-                const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
-                const githubFileOperations = new GitHubFileOperations(githubTokenService, context.logger);
-
-                // Get repo URL from either edsResult (inline setup) or edsConfig (preflight)
+                // Get repo URL and parse it first (need owner/repo for config generation)
                 const repoUrl = edsResult?.repoUrl || typedConfig.edsConfig?.repoUrl;
                 context.logger.debug(`[EDS Post-Mesh] EDS repo URL: ${repoUrl}`);
 
-                if (repoUrl) {
+                if (!repoUrl) {
+                    context.logger.warn('[EDS Post-Mesh] No repo URL available, skipping config.json generation');
+                } else {
                     const repoInfo = parseGitHubUrl(repoUrl);
                     context.logger.debug(`[EDS Post-Mesh] Parsed repo info: owner=${repoInfo?.owner}, repo=${repoInfo?.repo}`);
 
-                    if (repoInfo) {
-                        // Read updated config.json
+                    if (!repoInfo) {
+                        context.logger.warn('[EDS Post-Mesh] Could not parse repo URL, skipping config.json generation');
+                    } else {
+                        // Get backend env vars for store codes
+                        const backendComponentId = typedConfig.components?.backend || '';
+                        const backendEnvVars = typedConfig.componentConfigs?.[backendComponentId] as Record<string, string> | undefined;
+
+                        // Get DA.live config from either edsConfig (preflight) or edsResult metadata
+                        const daLiveOrg = typedConfig.edsConfig?.daLiveOrg || '';
+                        const daLiveSite = typedConfig.edsConfig?.daLiveSite || '';
+
+                        // Step 1: Generate config.json locally with mesh endpoint
+                        await generateConfigJsonPostMesh({
+                            componentPath: edsComponentPath,
+                            meshEndpoint: project.meshState.endpoint,
+                            githubOwner: repoInfo.owner,
+                            repoName: repoInfo.repo,
+                            daLiveOrg,
+                            daLiveSite,
+                            backendEnvVars,
+                            logger: context.logger,
+                        });
+                        context.logger.info('[EDS Post-Mesh] Local config.json generated successfully');
+
+                        // Step 2: Push config.json to GitHub (ONCE - no staleness window)
+                        const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
+                        const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
+
+                        const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
+                        const githubFileOperations = new GitHubFileOperations(githubTokenService, context.logger);
+
+                        // Read generated config.json
                         const configJsonPath = path.join(edsComponentPath, 'config.json');
                         const fs = await import('fs/promises');
                         const content = await fs.readFile(configJsonPath, 'utf-8');
                         context.logger.debug(`[EDS Post-Mesh] Read local config.json (${content.length} bytes)`);
 
-                        // Get existing file SHA for update (required by GitHub API)
-                        context.logger.debug(`[EDS Post-Mesh] Fetching existing config.json SHA from GitHub...`);
+                        // Check if config.json already exists on GitHub (from template)
+                        context.logger.debug(`[EDS Post-Mesh] Checking for existing config.json on GitHub...`);
                         const existingFile = await githubFileOperations.getFileContent(
                             repoInfo.owner,
                             repoInfo.repo,
@@ -648,32 +666,33 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                         );
                         context.logger.debug(`[EDS Post-Mesh] Existing file SHA: ${existingFile?.sha || 'not found'}`);
 
-                        // Push updated config.json to GitHub
-                        context.logger.debug(`[EDS Post-Mesh] Pushing updated config.json to GitHub...`);
+                        // Push config.json to GitHub
+                        context.logger.debug(`[EDS Post-Mesh] Pushing config.json to GitHub...`);
                         await githubFileOperations.createOrUpdateFile(
                             repoInfo.owner,
                             repoInfo.repo,
                             'config.json',
                             content,
-                            'chore: update config.json with mesh endpoint',
+                            'chore: add config.json with mesh endpoint',
                             existingFile?.sha,
                         );
 
                         context.logger.info(`[EDS Post-Mesh] ✓ config.json pushed to GitHub (${repoInfo.owner}/${repoInfo.repo})`);
-                    } else {
-                        context.logger.warn('[EDS Post-Mesh] Could not parse repo URL, skipping GitHub push');
                     }
-                } else {
-                    context.logger.warn('[EDS Post-Mesh] No repo URL available, skipping GitHub push');
                 }
             } catch (error) {
-                // Log error but don't fail project creation - mesh and local files are correct
-                context.logger.error('[EDS Post-Mesh] Failed to update config.json on GitHub', error as Error);
-                context.logger.warn('[EDS Post-Mesh] The site may show a configuration error until config.json is manually updated');
+                // Phase 6: Make config.json push failure fatal
+                // User must know Commerce features won't work
+                context.logger.error('[EDS Post-Mesh] Failed to generate/push config.json on GitHub', error as Error);
+                throw new Error(
+                    `Commerce configuration failed: Could not push config.json to GitHub. ` +
+                    `The storefront is live but Commerce features will not work. ` +
+                    `Error: ${(error as Error).message}`,
+                );
             }
         }
     } else {
-        // Log why we're skipping the post-mesh update
+        // Log why we're skipping the post-mesh generation
         if (!isEdsStack) {
             context.logger.debug('[EDS Post-Mesh] Skipped - not an EDS stack');
         } else if (!edsSetupComplete) {

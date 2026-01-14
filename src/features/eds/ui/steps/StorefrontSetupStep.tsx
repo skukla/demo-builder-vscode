@@ -1,10 +1,12 @@
 /**
- * EdsPreflightStep - Wizard step for EDS preflight operations
+ * StorefrontSetupStep - Wizard step for storefront setup operations
  *
  * Combines GitHub repo creation, DA.live content population, and Helix configuration
- * into a single preflight step that runs BEFORE project creation. This solves the
+ * into a single setup step that runs BEFORE project creation. This solves the
  * config.json timing problem by ensuring all EDS setup is complete before the
  * project files are pushed.
+ *
+ * Renamed from EdsPreflightStep to better reflect the step's purpose.
  *
  * Phases:
  * - idle: Initial state before operations start
@@ -16,7 +18,7 @@
  * - completed: All operations successful
  * - error: Operation failed
  *
- * @module features/eds/ui/steps/EdsPreflightStep
+ * @module features/eds/ui/steps/StorefrontSetupStep
  */
 
 import { Text, Flex, Button } from '@adobe/react-spectrum';
@@ -31,7 +33,7 @@ import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
 import type { WizardState } from '@/types/webview';
 
 /**
- * Progress ranges for each preflight phase
+ * Progress ranges for each setup phase
  */
 const PROGRESS_RANGES = {
     'github-repo': { start: 0, end: 15 },
@@ -42,9 +44,9 @@ const PROGRESS_RANGES = {
 } as const;
 
 /**
- * Preflight phase states
+ * Setup phase states
  */
-type PreflightPhase =
+type StorefrontSetupPhase =
     | 'idle'
     | 'github-repo'
     | 'helix-config'
@@ -67,7 +69,7 @@ interface GitHubAppData {
 /**
  * Partial state tracking for cleanup on cancel
  */
-interface PreflightPartialState {
+interface StorefrontSetupPartialState {
     repoCreated: boolean;
     repoUrl?: string;
     repoOwner?: string;
@@ -77,22 +79,22 @@ interface PreflightPartialState {
 }
 
 /**
- * Internal state for preflight progress tracking
+ * Internal state for setup progress tracking
  */
-interface PreflightState {
-    phase: PreflightPhase;
+interface StorefrontSetupState {
+    phase: StorefrontSetupPhase;
     message: string;
     subMessage?: string;
     progress: number;
     error?: string;
     githubAppData?: GitHubAppData;
-    partialState: PreflightPartialState;
+    partialState: StorefrontSetupPartialState;
 }
 
 /**
- * Props for the EdsPreflightStep component
+ * Props for the StorefrontSetupStep component
  */
-interface EdsPreflightStepProps {
+interface StorefrontSetupStepProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
     onBack: () => void;
@@ -105,7 +107,7 @@ interface EdsPreflightStepProps {
  * Get human-readable description for the current phase
  * These appear in the PageHeader as status text - keep them concise
  */
-function getPhaseDescription(phase: PreflightPhase): string {
+function getPhaseDescription(phase: StorefrontSetupPhase): string {
     switch (phase) {
         case 'idle':
             return 'Preparing setup...';
@@ -131,7 +133,7 @@ function getPhaseDescription(phase: PreflightPhase): string {
 /**
  * Get helper text for loading display based on phase
  */
-function getHelperText(phase: PreflightPhase): string | undefined {
+function getHelperText(phase: StorefrontSetupPhase): string | undefined {
     switch (phase) {
         case 'github-repo':
             return 'This may take up to 30 seconds';
@@ -149,26 +151,26 @@ function getHelperText(phase: PreflightPhase): string | undefined {
 /**
  * Check if a phase is actively processing
  */
-function isActivePhase(phase: PreflightPhase): boolean {
+function isActivePhase(phase: StorefrontSetupPhase): boolean {
     return ['idle', 'github-repo', 'helix-config', 'code-sync', 'dalive-content'].includes(phase);
 }
 
 /**
- * EdsPreflightStep Component
+ * StorefrontSetupStep Component
  *
- * Orchestrates the preflight operations for EDS project setup:
+ * Orchestrates the setup operations for EDS project:
  * 1. GitHub repository creation/setup
  * 2. Helix 5 configuration
  * 3. Code bus synchronization verification
  * 4. DA.live content population
  */
-export function EdsPreflightStep({
+export function StorefrontSetupStep({
     state,
     updateState,
     onBack,
     setCanProceed,
-}: EdsPreflightStepProps): React.ReactElement {
-    const [preflightState, setPreflightState] = useState<PreflightState>({
+}: StorefrontSetupStepProps): React.ReactElement {
+    const [setupState, setSetupState] = useState<StorefrontSetupState>({
         phase: 'idle',
         message: 'Starting storefront setup...',
         progress: 0,
@@ -180,28 +182,28 @@ export function EdsPreflightStep({
     });
 
     // Control footer Continue button based on phase
-    // Only enable when preflight completes successfully
+    // Only enable when setup completes successfully
     useEffect(() => {
-        setCanProceed(preflightState.phase === 'completed');
-    }, [preflightState.phase, setCanProceed]);
+        setCanProceed(setupState.phase === 'completed');
+    }, [setupState.phase, setCanProceed]);
 
     // Update PageHeader status text when phase changes
     // This provides a dynamic 3rd level heading showing current operation
     useEffect(() => {
-        const phaseMessage = getPhaseDescription(preflightState.phase);
+        const phaseMessage = getPhaseDescription(setupState.phase);
         updateState({ stepStatus: phaseMessage });
 
         // Clear stepStatus when unmounting
         return () => {
             updateState({ stepStatus: undefined });
         };
-    }, [preflightState.phase, updateState]);
+    }, [setupState.phase, updateState]);
 
     /**
      * Handle progress updates from the extension
      */
     const handleProgress = useCallback((data: {
-        phase: PreflightPhase;
+        phase: StorefrontSetupPhase;
         message: string;
         subMessage?: string;
         progress: number;
@@ -209,7 +211,7 @@ export function EdsPreflightStep({
         repoOwner?: string;
         repoName?: string;
     }) => {
-        setPreflightState(prev => {
+        setSetupState(prev => {
             // Update partial state based on phase transitions
             const newPartialState = { ...prev.partialState, phase: data.phase };
 
@@ -246,7 +248,7 @@ export function EdsPreflightStep({
 
     /**
      * Handle completion notification from the extension
-     * Updates both local state and wizard state to mark preflight as complete
+     * Updates both local state and wizard state to mark setup as complete
      */
     const handleComplete = useCallback((data: {
         message: string;
@@ -257,8 +259,8 @@ export function EdsPreflightStep({
         previewUrl?: string;
         liveUrl?: string;
     }) => {
-        // Update local preflight state
-        setPreflightState(prev => ({
+        // Update local setup state
+        setSetupState(prev => ({
             ...prev,
             phase: 'completed',
             message: data.message || 'Storefront setup completed successfully!',
@@ -291,9 +293,9 @@ export function EdsPreflightStep({
     const handleError = useCallback((data: {
         message: string;
         error: string;
-        phase?: PreflightPhase;
+        phase?: StorefrontSetupPhase;
     }) => {
-        setPreflightState(prev => ({
+        setSetupState(prev => ({
             ...prev,
             phase: 'error',
             message: data.message || 'An error occurred',
@@ -305,7 +307,7 @@ export function EdsPreflightStep({
      * Handle GitHub App installation required notification
      */
     const handleGitHubAppRequired = useCallback((data: GitHubAppData) => {
-        setPreflightState(prev => ({
+        setSetupState(prev => ({
             ...prev,
             phase: 'github-app',
             message: 'GitHub App installation required',
@@ -317,7 +319,7 @@ export function EdsPreflightStep({
      * Handle retry button click
      */
     const handleRetry = useCallback(() => {
-        setPreflightState({
+        setSetupState({
             phase: 'idle',
             message: 'Retrying storefront setup...',
             progress: 0,
@@ -327,7 +329,7 @@ export function EdsPreflightStep({
                 phase: 'idle',
             },
         });
-        vscode.postMessage('eds-preflight-start', {
+        vscode.postMessage('storefront-setup-start', {
             projectName: state.projectName,
             edsConfig: state.edsConfig,
         });
@@ -337,12 +339,12 @@ export function EdsPreflightStep({
      * Handle GitHub App installation detected
      */
     const handleInstallDetected = useCallback(() => {
-        // Resume preflight operations after app installation
-        vscode.postMessage('eds-preflight-resume', {
+        // Resume setup operations after app installation
+        vscode.postMessage('storefront-setup-resume', {
             projectName: state.projectName,
             edsConfig: state.edsConfig,
         });
-        setPreflightState(prev => ({
+        setSetupState(prev => ({
             ...prev,
             phase: 'code-sync',
             message: 'Verifying code synchronization...',
@@ -350,8 +352,8 @@ export function EdsPreflightStep({
         }));
     }, [state.projectName, state.edsConfig]);
 
-    // Track if preflight has been started to prevent duplicate sends
-    const preflightStartedRef = useRef(false);
+    // Track if setup has been started to prevent duplicate sends
+    const setupStartedRef = useRef(false);
     // Store initial config in ref to use in one-time effect
     const initialConfigRef = useRef({ projectName: state.projectName, edsConfig: state.edsConfig });
 
@@ -359,29 +361,29 @@ export function EdsPreflightStep({
     useEffect(() => {
         // Subscribe to progress updates
         const unsubProgress = vscode.onMessage<{
-            phase: PreflightPhase;
+            phase: StorefrontSetupPhase;
             message: string;
             subMessage?: string;
             progress: number;
-        }>('eds-preflight-progress', handleProgress);
+        }>('storefront-setup-progress', handleProgress);
 
         // Subscribe to completion notifications
         const unsubComplete = vscode.onMessage<{
             message: string;
             githubRepo?: string;
             daLiveSite?: string;
-        }>('eds-preflight-complete', handleComplete);
+        }>('storefront-setup-complete', handleComplete);
 
         // Subscribe to error notifications
         const unsubError = vscode.onMessage<{
             message: string;
             error: string;
-            phase?: PreflightPhase;
-        }>('eds-preflight-error', handleError);
+            phase?: StorefrontSetupPhase;
+        }>('storefront-setup-error', handleError);
 
         // Subscribe to GitHub App required notifications
         const unsubGitHubApp = vscode.onMessage<GitHubAppData>(
-            'eds-preflight-github-app-required',
+            'storefront-setup-github-app-required',
             handleGitHubAppRequired
         );
 
@@ -394,22 +396,22 @@ export function EdsPreflightStep({
         };
     }, [handleProgress, handleComplete, handleError, handleGitHubAppRequired]);
 
-    // Start preflight ONCE on mount (separate from message listeners)
+    // Start setup ONCE on mount (separate from message listeners)
     // Uses ref to ensure this only runs once, even if React strict mode double-mounts
     useEffect(() => {
-        if (preflightStartedRef.current) {
+        if (setupStartedRef.current) {
             return;
         }
-        preflightStartedRef.current = true;
+        setupStartedRef.current = true;
 
-        // Start preflight operations with initial config
-        vscode.postMessage('eds-preflight-start', {
+        // Start setup operations with initial config
+        vscode.postMessage('storefront-setup-start', {
             projectName: initialConfigRef.current.projectName,
             edsConfig: initialConfigRef.current.edsConfig,
         });
     }, []);
 
-    const isActive = isActivePhase(preflightState.phase);
+    const isActive = isActivePhase(setupState.phase);
 
     return (
         <div className="flex-column h-full w-full">
@@ -420,28 +422,28 @@ export function EdsPreflightStep({
                         <CenteredFeedbackContainer>
                             <LoadingDisplay
                                 size="L"
-                                message={preflightState.message}
-                                subMessage={preflightState.subMessage}
-                                helperText={getHelperText(preflightState.phase)}
+                                message={setupState.message}
+                                subMessage={setupState.subMessage}
+                                helperText={getHelperText(setupState.phase)}
                             />
                         </CenteredFeedbackContainer>
                     )}
 
                     {/* GitHub App installation required state */}
-                    {preflightState.phase === 'github-app' && preflightState.githubAppData && (
+                    {setupState.phase === 'github-app' && setupState.githubAppData && (
                         <CenteredFeedbackContainer>
                             <GitHubAppInstallDialog
-                                owner={preflightState.githubAppData.owner}
-                                repo={preflightState.githubAppData.repo}
-                                installUrl={preflightState.githubAppData.installUrl}
-                                message={preflightState.githubAppData.message}
+                                owner={setupState.githubAppData.owner}
+                                repo={setupState.githubAppData.repo}
+                                installUrl={setupState.githubAppData.installUrl}
+                                message={setupState.githubAppData.message}
                                 onInstallDetected={handleInstallDetected}
                             />
                         </CenteredFeedbackContainer>
                     )}
 
                     {/* Error state - show error message with recovery options */}
-                    {preflightState.phase === 'error' && (
+                    {setupState.phase === 'error' && (
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
                                 <AlertCircle size="L" UNSAFE_className="text-red-600" />
@@ -450,7 +452,7 @@ export function EdsPreflightStep({
                                         Storefront Setup Failed
                                     </Text>
                                     <Text UNSAFE_className="text-sm text-gray-600 text-center">
-                                        {preflightState.error || preflightState.message || 'An error occurred during setup.'}
+                                        {setupState.error || setupState.message || 'An error occurred during setup.'}
                                     </Text>
                                 </Flex>
                                 <Flex gap="size-150" marginTop="size-300">
@@ -466,13 +468,18 @@ export function EdsPreflightStep({
                     )}
 
                     {/* Success state - show completion message */}
-                    {preflightState.phase === 'completed' && (
+                    {setupState.phase === 'completed' && (
                         <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
                                 <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
-                                <Text UNSAFE_className="text-xl font-medium">
-                                    Storefront Setup Complete
-                                </Text>
+                                <Flex direction="column" gap="size-100" alignItems="center">
+                                    <Text UNSAFE_className="text-xl font-medium">
+                                        Storefront Setup Complete
+                                    </Text>
+                                    <Text UNSAFE_className="text-sm text-gray-600">
+                                        Click Continue to proceed with project creation.
+                                    </Text>
+                                </Flex>
                             </Flex>
                         </CenteredFeedbackContainer>
                     )}

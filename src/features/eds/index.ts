@@ -34,6 +34,22 @@ export {
     formatHelixError,
 } from './services/errorFormatters';
 
+// Code Sync Errors
+export {
+    CodeSyncError,
+    CodeSyncTimeoutError,
+    CodeSyncPermissionError,
+    CodeSyncNotFoundError,
+    CodeSyncVerificationError,
+} from './services/codeSyncErrors';
+
+export type {
+    TimeoutErrorContext,
+    PermissionErrorContext,
+    NotFoundErrorContext,
+    VerificationErrorContext,
+} from './services/codeSyncErrors';
+
 // Note: UI Components (steps, hooks) are NOT exported here.
 // They are imported directly by WizardContainer.tsx in the webpack bundle
 // to avoid mixing React/Node.js compilation contexts.

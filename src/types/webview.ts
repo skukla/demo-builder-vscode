@@ -20,6 +20,7 @@ export type WizardStep =
     | 'eds-repository-config'  // EDS: Repository and DA.live configuration (conditional: requiresGitHub stack)
     | 'eds-dalive'  // EDS: DA.live authentication (conditional: requiresDaLive stack) - legacy, use eds-connect-services
     | 'eds-data-source'  // EDS: ACCS data source configuration (conditional: requiresDaLive stack)
+    | 'storefront-setup'  // EDS: Storefront setup (GitHub repo, DA.live content, Helix config)
     | 'settings'  // Component-specific settings collection
     | 'commerce-config'  // Kept for compatibility
     | 'review'
@@ -392,7 +393,7 @@ export interface EDSConfig {
         error?: string;
     };
 
-    // Preflight completion state (set by EdsPreflightStep)
+    // Preflight completion state (set by StorefrontSetupStep)
     /** Whether preflight operations completed - tells executor to skip EDS setup */
     preflightComplete?: boolean;
     /** GitHub repository URL from preflight */

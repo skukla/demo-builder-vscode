@@ -1,11 +1,13 @@
 /**
- * EDS Preflight Handlers
+ * Storefront Setup Handlers
  *
- * Message handlers for EDS preflight wizard step operations.
+ * Message handlers for storefront setup wizard step operations.
  * Manages GitHub repo creation, DA.live content population, and Helix configuration
- * during the preflight step, including cancel/cleanup handling.
+ * during the storefront-setup step, including cancel/cleanup handling.
  *
- * @module features/eds/handlers/edsPreflightHandlers
+ * Renamed from edsPreflightHandlers.ts to better reflect the step's purpose.
+ *
+ * @module features/eds/handlers/storefrontSetupHandlers
  */
 
 import * as vscode from 'vscode';
@@ -34,10 +36,10 @@ import {
 // ==========================================================
 
 /**
- * Partial state tracking for preflight operations
+ * Partial state tracking for storefront setup operations
  * Tracks which resources have been created for cleanup on cancel
  */
-export interface PreflightPartialState {
+export interface StorefrontSetupPartialState {
     repoCreated: boolean;
     repoUrl?: string;
     repoOwner?: string;
@@ -47,9 +49,9 @@ export interface PreflightPartialState {
 }
 
 /**
- * Payload for eds-preflight-start message
+ * Payload for storefront-setup-start message
  */
-interface EdsPreflightStartPayload {
+interface StorefrontSetupStartPayload {
     projectName: string;
     edsConfig: {
         repoName: string;
@@ -81,10 +83,10 @@ interface EdsPreflightStartPayload {
 }
 
 /**
- * Payload for eds-preflight-cancel message
+ * Payload for storefront-setup-cancel message
  */
-interface EdsPreflightCancelPayload {
-    partialState?: PreflightPartialState;
+interface StorefrontSetupCancelPayload {
+    partialState?: StorefrontSetupPartialState;
     edsConfig?: {
         daLiveOrg?: string;
         daLiveSite?: string;
@@ -96,7 +98,7 @@ interface EdsPreflightCancelPayload {
 // ==========================================================
 
 /**
- * Handle cancel request for EDS preflight operations
+ * Handle cancel request for storefront setup operations
  *
  * This handler:
  * 1. Shows confirmation dialog if resources exist
@@ -108,14 +110,14 @@ interface EdsPreflightCancelPayload {
  * @param payload - Cancel payload with partial state info
  * @returns Success if cancel handled properly
  */
-export async function handleCancelEdsPreflight(
+export async function handleCancelStorefrontSetup(
     context: HandlerContext,
-    payload?: EdsPreflightCancelPayload,
+    payload?: StorefrontSetupCancelPayload,
 ): Promise<HandlerResponse> {
     const partialState = payload?.partialState;
     const edsConfig = payload?.edsConfig;
 
-    context.logger.info('[EDS Preflight] Cancel requested');
+    context.logger.info('[Storefront Setup] Cancel requested');
 
     // Check if any resources were created
     const hasCreatedResources = partialState?.repoCreated || partialState?.contentCopied;
@@ -129,52 +131,52 @@ export async function handleCancelEdsPreflight(
         );
 
         if (confirm !== 'Yes, Cancel') {
-            context.logger.debug('[EDS Preflight] Cancel aborted by user');
-            await context.sendMessage('eds-preflight-cancel-aborted', {});
+            context.logger.debug('[Storefront Setup] Cancel aborted by user');
+            await context.sendMessage('storefront-setup-cancel-aborted', {});
             return { success: true };
         }
     }
 
     // Abort any running operations
-    const abortController = context.sharedState.edsPreflightAbortController as AbortController | undefined;
+    const abortController = context.sharedState.storefrontSetupAbortController as AbortController | undefined;
     if (abortController) {
-        context.logger.debug('[EDS Preflight] Aborting running operations');
+        context.logger.debug('[Storefront Setup] Aborting running operations');
         abortController.abort();
-        context.sharedState.edsPreflightAbortController = undefined;
+        context.sharedState.storefrontSetupAbortController = undefined;
     }
 
     // Clean up created resources
     if (hasCreatedResources) {
         try {
-            await context.sendMessage('eds-preflight-progress', {
+            await context.sendMessage('storefront-setup-progress', {
                 phase: 'cancelling',
                 message: 'Cleaning up resources...',
                 progress: 0,
             });
 
-            const cleanupResult = await cleanupPreflightResources(
+            const cleanupResult = await cleanupStorefrontSetupResources(
                 context,
                 partialState!,
                 edsConfig,
             );
 
             if (cleanupResult.success) {
-                context.logger.info('[EDS Preflight] Cleanup completed successfully');
+                context.logger.info('[Storefront Setup] Cleanup completed successfully');
             } else {
-                context.logger.warn('[EDS Preflight] Cleanup completed with errors:', cleanupResult.error);
+                context.logger.warn('[Storefront Setup] Cleanup completed with errors:', cleanupResult.error);
             }
         } catch (error) {
             // Log error but don't fail - cleanup is best effort
-            context.logger.error('[EDS Preflight] Cleanup failed', error as Error);
+            context.logger.error('[Storefront Setup] Cleanup failed', error as Error);
         }
     }
 
-    await context.sendMessage('eds-preflight-cancelled', {});
+    await context.sendMessage('storefront-setup-cancelled', {});
     return { success: true };
 }
 
 /**
- * Handle start request for EDS preflight operations
+ * Handle start request for storefront setup operations
  *
  * Executes the EDS setup phases that need to happen BEFORE project creation:
  * 1. GitHub repository creation (from template)
@@ -186,15 +188,15 @@ export async function handleCancelEdsPreflight(
  *
  * @param context - Handler context
  * @param payload - Start payload with project and EDS config
- * @returns Success with preflight results
+ * @returns Success with setup results
  */
-export async function handleStartEdsPreflight(
+export async function handleStartStorefrontSetup(
     context: HandlerContext,
-    payload?: EdsPreflightStartPayload,
+    payload?: StorefrontSetupStartPayload,
 ): Promise<HandlerResponse> {
     if (!payload?.projectName || !payload?.edsConfig) {
-        context.logger.error('[EDS Preflight] Missing required parameters');
-        await context.sendMessage('eds-preflight-error', {
+        context.logger.error('[Storefront Setup] Missing required parameters');
+        await context.sendMessage('storefront-setup-error', {
             message: 'Missing required parameters',
             error: 'Project name and EDS config are required',
         });
@@ -202,30 +204,30 @@ export async function handleStartEdsPreflight(
     }
 
     const { projectName, edsConfig } = payload;
-    context.logger.info(`[EDS Preflight] Starting for project: ${projectName}`);
+    context.logger.info(`[Storefront Setup] Starting for project: ${projectName}`);
 
     // Create AbortController for cancel support
     const abortController = new AbortController();
-    context.sharedState.edsPreflightAbortController = abortController;
+    context.sharedState.storefrontSetupAbortController = abortController;
 
     // Check if AuthenticationService is available
     if (!context.authManager) {
-        context.logger.error('[EDS Preflight] AuthenticationService not available');
-        await context.sendMessage('eds-preflight-error', {
+        context.logger.error('[Storefront Setup] AuthenticationService not available');
+        await context.sendMessage('storefront-setup-error', {
             message: 'Authentication required',
-            error: 'Please authenticate with Adobe before starting EDS setup',
+            error: 'Please authenticate with Adobe before starting storefront setup',
         });
         return { success: false, error: 'AuthenticationService not available' };
     }
 
     try {
-        // Execute preflight phases
-        const result = await executePreflightPhases(context, projectName, edsConfig, abortController.signal);
+        // Execute storefront setup phases
+        const result = await executeStorefrontSetupPhases(context, projectName, edsConfig, abortController.signal);
 
         if (result.success) {
-            context.logger.info(`[EDS Preflight] Complete: ${result.repoUrl}`);
-            await context.sendMessage('eds-preflight-complete', {
-                message: 'EDS setup completed successfully!',
+            context.logger.info(`[Storefront Setup] Complete: ${result.repoUrl}`);
+            await context.sendMessage('storefront-setup-complete', {
+                message: 'Storefront setup completed successfully!',
                 githubRepo: result.repoUrl,
                 daLiveSite: `https://da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
                 repoOwner: result.repoOwner,
@@ -239,14 +241,14 @@ export async function handleStartEdsPreflight(
         }
     } catch (error) {
         const errorMessage = (error as Error).message;
-        context.logger.error(`[EDS Preflight] Failed: ${errorMessage}`);
-        await context.sendMessage('eds-preflight-error', {
-            message: 'EDS setup failed',
+        context.logger.error(`[Storefront Setup] Failed: ${errorMessage}`);
+        await context.sendMessage('storefront-setup-error', {
+            message: 'Storefront setup failed',
             error: errorMessage,
         });
         return { success: false, error: errorMessage };
     } finally {
-        context.sharedState.edsPreflightAbortController = undefined;
+        context.sharedState.storefrontSetupAbortController = undefined;
     }
 }
 
@@ -257,14 +259,14 @@ export async function handleStartEdsPreflight(
  * @param payload - Resume payload
  * @returns Success
  */
-export async function handleResumeEdsPreflight(
+export async function handleResumeStorefrontSetup(
     context: HandlerContext,
-    payload?: EdsPreflightStartPayload,
+    payload?: StorefrontSetupStartPayload,
 ): Promise<HandlerResponse> {
-    context.logger.info('[EDS Preflight] Resume requested after GitHub App installation');
+    context.logger.info('[Storefront Setup] Resume requested after GitHub App installation');
 
     // Continue from code-sync phase
-    await context.sendMessage('eds-preflight-progress', {
+    await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
         message: 'Verifying code synchronization...',
         progress: 40,
@@ -278,19 +280,19 @@ export async function handleResumeEdsPreflight(
 // ==========================================================
 
 /**
- * Clean up resources created during preflight
+ * Clean up resources created during storefront setup
  *
  * @param context - Handler context
  * @param partialState - Tracking state of created resources
  * @param edsConfig - EDS configuration for DA.live info
  * @returns Cleanup result
  */
-async function cleanupPreflightResources(
+async function cleanupStorefrontSetupResources(
     context: HandlerContext,
-    partialState: PreflightPartialState,
+    partialState: StorefrontSetupPartialState,
     edsConfig?: { daLiveOrg?: string; daLiveSite?: string },
 ): Promise<{ success: boolean; error?: string }> {
-    context.logger.debug('[EDS Preflight] Starting resource cleanup');
+    context.logger.debug('[Storefront Setup] Starting resource cleanup');
 
     try {
         // Build metadata from partial state
@@ -307,7 +309,7 @@ async function cleanupPreflightResources(
         const options: EdsCleanupOptions = {
             deleteGitHub: partialState.repoCreated,
             deleteDaLive: partialState.contentCopied,
-            archiveInsteadOfDelete: false, // Full delete for preflight
+            archiveInsteadOfDelete: false, // Full delete for setup
         };
 
         // Create cleanup service with required dependencies
@@ -334,9 +336,9 @@ async function cleanupPreflightResources(
 }
 
 /**
- * Result of preflight phase execution
+ * Result of storefront setup phase execution
  */
-interface PreflightResult {
+interface StorefrontSetupResult {
     success: boolean;
     error?: string;
     repoUrl?: string;
@@ -347,7 +349,7 @@ interface PreflightResult {
 }
 
 /**
- * Execute all EDS preflight phases
+ * Execute all storefront setup phases
  *
  * This runs the remote setup operations:
  * 1. Create GitHub repository from template
@@ -359,14 +361,14 @@ interface PreflightResult {
  * @param projectName - Project name
  * @param edsConfig - EDS configuration from wizard
  * @param signal - Abort signal for cancellation
- * @returns Preflight result with repo details
+ * @returns Setup result with repo details
  */
-async function executePreflightPhases(
+async function executeStorefrontSetupPhases(
     context: HandlerContext,
     projectName: string,
-    edsConfig: EdsPreflightStartPayload['edsConfig'],
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
     signal: AbortSignal,
-): Promise<PreflightResult> {
+): Promise<StorefrontSetupResult> {
     const logger = context.logger;
 
     // Create service dependencies
@@ -392,13 +394,13 @@ async function executePreflightPhases(
     // The UI stores it at githubAuth.user.login when authenticated via Connect Services
     const githubOwner = edsConfig.githubOwner || edsConfig.githubAuth?.user?.login;
     if (!githubOwner) {
-        logger.error('[EDS Preflight] GitHub owner not found. edsConfig:', JSON.stringify(edsConfig, null, 2));
+        logger.error('[Storefront Setup] GitHub owner not found. edsConfig:', JSON.stringify(edsConfig, null, 2));
         return {
             success: false,
             error: 'GitHub owner not configured. Please complete GitHub authentication.',
         };
     }
-    logger.info(`[EDS Preflight] Using GitHub owner: ${githubOwner}`);
+    logger.info(`[Storefront Setup] Using GitHub owner: ${githubOwner}`);
 
     // Get template info from stack (hardcoded for now, should come from stack config)
     const templateOwner = 'hlxsites';
@@ -432,9 +434,9 @@ async function executePreflightPhases(
                 repoUrl = `https://github.com/${edsConfig.existingRepo}`;
             }
 
-            logger.info(`[EDS Preflight] Using existing repository: ${repoOwner}/${repoName}`);
+            logger.info(`[Storefront Setup] Using existing repository: ${repoOwner}/${repoName}`);
 
-            await context.sendMessage('eds-preflight-progress', {
+            await context.sendMessage('storefront-setup-progress', {
                 phase: 'github-repo',
                 message: `Using existing repository: ${repoOwner}/${repoName}`,
                 progress: 5,
@@ -445,8 +447,8 @@ async function executePreflightPhases(
 
             // If resetToTemplate is set, we need to reset the repo contents
             if (edsConfig.resetToTemplate) {
-                logger.info('[EDS Preflight] Resetting repository to template...');
-                await context.sendMessage('eds-preflight-progress', {
+                logger.info('[Storefront Setup] Resetting repository to template...');
+                await context.sendMessage('storefront-setup-progress', {
                     phase: 'github-repo',
                     message: 'Resetting repository to template...',
                     progress: 10,
@@ -455,7 +457,7 @@ async function executePreflightPhases(
                 // For now, just proceed with existing content
             }
 
-            await context.sendMessage('eds-preflight-progress', {
+            await context.sendMessage('storefront-setup-progress', {
                 phase: 'github-repo',
                 message: 'Repository ready',
                 progress: 15,
@@ -465,13 +467,13 @@ async function executePreflightPhases(
             });
         } else {
             // Create new repository from template
-            await context.sendMessage('eds-preflight-progress', {
+            await context.sendMessage('storefront-setup-progress', {
                 phase: 'github-repo',
                 message: 'Creating GitHub repository from template...',
                 progress: 5,
             });
 
-            logger.info(`[EDS Preflight] Creating repository: ${repoName}`);
+            logger.info(`[Storefront Setup] Creating repository: ${repoName}`);
 
             const repo = await githubRepoOps.createFromTemplate(
                 templateOwner,
@@ -486,10 +488,10 @@ async function executePreflightPhases(
             repoOwner = owner;
             repoName = name;
 
-            logger.info(`[EDS Preflight] Repository created: ${repoUrl}`);
+            logger.info(`[Storefront Setup] Repository created: ${repoUrl}`);
 
             // Wait for template content to be populated
-            await context.sendMessage('eds-preflight-progress', {
+            await context.sendMessage('storefront-setup-progress', {
                 phase: 'github-repo',
                 message: 'Waiting for repository content...',
                 progress: 10,
@@ -500,7 +502,7 @@ async function executePreflightPhases(
 
             await githubRepoOps.waitForContent(repoOwner, repoName, signal);
 
-            await context.sendMessage('eds-preflight-progress', {
+            await context.sendMessage('storefront-setup-progress', {
                 phase: 'github-repo',
                 message: 'Repository ready',
                 progress: 15,
@@ -513,7 +515,7 @@ async function executePreflightPhases(
         // ============================================
         // Phase 2: Helix Configuration
         // ============================================
-        await context.sendMessage('eds-preflight-progress', {
+        await context.sendMessage('storefront-setup-progress', {
             phase: 'helix-config',
             message: 'Configuring Edge Delivery Services...',
             progress: 20,
@@ -525,7 +527,7 @@ async function executePreflightPhases(
 `;
 
         // Push fstab.yaml to GitHub
-        await context.sendMessage('eds-preflight-progress', {
+        await context.sendMessage('storefront-setup-progress', {
             phase: 'helix-config',
             message: 'Pushing fstab.yaml configuration...',
             progress: 25,
@@ -544,9 +546,9 @@ async function executePreflightPhases(
             fstabSha,
         );
 
-        logger.info('[EDS Preflight] fstab.yaml pushed to GitHub');
+        logger.info('[Storefront Setup] fstab.yaml pushed to GitHub');
 
-        await context.sendMessage('eds-preflight-progress', {
+        await context.sendMessage('storefront-setup-progress', {
             phase: 'helix-config',
             message: 'Helix configured',
             progress: 35,
@@ -555,7 +557,7 @@ async function executePreflightPhases(
         // ============================================
         // Phase 3: Code Sync Verification
         // ============================================
-        await context.sendMessage('eds-preflight-progress', {
+        await context.sendMessage('storefront-setup-progress', {
             phase: 'code-sync',
             message: 'Verifying code synchronization...',
             progress: 40,
@@ -596,10 +598,10 @@ async function executePreflightPhases(
 
                 if (!isInstalled) {
                     const installUrl = githubAppService.getInstallUrl(repoOwner, repoName);
-                    logger.info(`[EDS Preflight] GitHub App not installed. Install URL: ${installUrl}`);
+                    logger.info(`[Storefront Setup] GitHub App not installed. Install URL: ${installUrl}`);
 
                     // Notify UI to show GitHub App install dialog
-                    await context.sendMessage('eds-preflight-github-app-required', {
+                    await context.sendMessage('storefront-setup-github-app-required', {
                         owner: repoOwner,
                         repo: repoName,
                         installUrl,
@@ -619,7 +621,7 @@ async function executePreflightPhases(
                 throw new Error('Code sync verification timed out');
             }
 
-            logger.info('[EDS Preflight] Code sync verified');
+            logger.info('[Storefront Setup] Code sync verified');
         } catch (error) {
             if ((error as Error).message === 'GitHub App installation required') {
                 throw error;
@@ -627,7 +629,7 @@ async function executePreflightPhases(
             throw new Error(`Code sync failed: ${(error as Error).message}`);
         }
 
-        await context.sendMessage('eds-preflight-progress', {
+        await context.sendMessage('storefront-setup-progress', {
             phase: 'code-sync',
             message: 'Code synchronized',
             progress: 45,
@@ -638,27 +640,28 @@ async function executePreflightPhases(
         // ============================================
         if (edsConfig.skipContent) {
             // Skip content copy when using existing content
-            logger.info('[EDS Preflight] Skipping DA.live content copy (skipContent=true)');
-            await context.sendMessage('eds-preflight-progress', {
+            logger.info('[Storefront Setup] Skipping DA.live content copy (skipContent=true)');
+            await context.sendMessage('storefront-setup-progress', {
                 phase: 'dalive-content',
                 message: 'Using existing DA.live content',
-                progress: 95,
+                progress: 60,
             });
         } else {
-            await context.sendMessage('eds-preflight-progress', {
+            await context.sendMessage('storefront-setup-progress', {
                 phase: 'dalive-content',
                 message: 'Populating DA.live content...',
                 progress: 50,
             });
 
-            logger.info(`[EDS Preflight] Copying content to ${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`);
+            logger.info(`[Storefront Setup] Copying content to ${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`);
 
             const contentResult = await daLiveContentOps.copyCitisignalContent(
                 edsConfig.daLiveOrg,
                 edsConfig.daLiveSite,
                 (progress) => {
-                    const progressValue = 50 + Math.round(progress.percentage * 0.45);
-                    context.sendMessage('eds-preflight-progress', {
+                    // Scale progress from 50% to 60% during content copy
+                    const progressValue = 50 + Math.round(progress.percentage * 0.10);
+                    context.sendMessage('storefront-setup-progress', {
                         phase: 'dalive-content',
                         message: 'Copying demo content',
                         subMessage: progress.currentFile,
@@ -671,12 +674,51 @@ async function executePreflightPhases(
                 throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
             }
 
-            logger.info(`[EDS Preflight] DA.live content populated: ${contentResult.totalFiles} files`);
+            logger.info(`[Storefront Setup] DA.live content populated: ${contentResult.totalFiles} files`);
 
-            await context.sendMessage('eds-preflight-progress', {
+            await context.sendMessage('storefront-setup-progress', {
                 phase: 'dalive-content',
                 message: 'Content populated',
-                progress: 95,
+                progress: 60,
+            });
+        }
+
+        // ============================================
+        // Phase 5: Publish Content to CDN
+        // ============================================
+        // This makes the site LIVE and viewable
+        if (!edsConfig.skipContent) {
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'content-publish',
+                message: 'Publishing content to CDN...',
+                progress: 65,
+            });
+
+            logger.info(`[Storefront Setup] Publishing content to CDN for ${repoOwner}/${repoName}`);
+
+            // Create HelixService for publish operation
+            // HelixService uses GitHub token for admin API auth
+            const helixService = new HelixService(context.authManager!, logger, githubTokenService);
+
+            try {
+                await helixService.publishAllSiteContent(`${repoOwner}/${repoName}`);
+                logger.info('[Storefront Setup] Content published to CDN successfully');
+            } catch (error) {
+                throw new Error(`Failed to publish content to CDN: ${(error as Error).message}`);
+            }
+
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'content-publish',
+                message: 'Site is live!',
+                progress: 90,
+            });
+        } else {
+            // Skip publish when content was skipped
+            logger.info('[Storefront Setup] Skipping content publish (skipContent=true)');
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'content-publish',
+                message: 'Content publish skipped',
+                progress: 90,
             });
         }
 
@@ -692,7 +734,7 @@ async function executePreflightPhases(
             liveUrl: generateLiveUrl(repoOwner, repoName),
         };
     } catch (error) {
-        logger.error(`[EDS Preflight] Failed: ${(error as Error).message}`);
+        logger.error(`[Storefront Setup] Failed: ${(error as Error).message}`);
         return {
             success: false,
             error: (error as Error).message,
@@ -742,3 +784,10 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
         context.logger,
     );
 }
+
+// ==========================================================
+// Backward Compatibility Exports
+// ==========================================================
+
+// Export type aliases for backward compatibility during migration
+export type PreflightPartialState = StorefrontSetupPartialState;

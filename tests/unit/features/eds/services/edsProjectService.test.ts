@@ -362,6 +362,7 @@ describe('EdsProjectService', () => {
 
             // Then: Phases should be in correct order
             // Note: content-publish phase was added to sync DA.live content to CDN
+            // Note: env-config phase removed - config.json now generated post-mesh in executor
             expect(phaseOrder).toEqual([
                 'github-repo',
                 'github-clone',
@@ -370,7 +371,6 @@ describe('EdsProjectService', () => {
                 'dalive-content',
                 'content-publish',
                 'tools-clone',
-                'env-config',
                 'complete',
             ]);
         });
@@ -984,37 +984,36 @@ describe('EdsProjectService', () => {
             mockGitHubFileOps.createOrUpdateFile!.mockResolvedValue(undefined);
         });
 
-        it('should generate config.json for PaaS backend', async () => {
+        it('should NOT generate config.json during EDS setup (deferred to post-mesh)', async () => {
             // Given: PaaS backend configuration
+            // Phase 5 optimization: config.json is now generated AFTER mesh deployment
+            // in executor.ts, not during EDS setup
 
             // When: Running setup with PaaS backend
             const resultPromise = service.setupProject(paasConfig, mockProgressCallback);
             await jest.runAllTimersAsync();
             await resultPromise;
 
-            // Then: Should write config.json file
-            expect(fs.writeFile).toHaveBeenCalledWith(
+            // Then: Should NOT write config.json (it's generated post-mesh in executor)
+            expect(fs.writeFile).not.toHaveBeenCalledWith(
                 expect.stringContaining('config.json'),
                 expect.any(String),
                 expect.any(String),
             );
         });
 
-        it('should include commerce configuration in config.json', async () => {
+        it('should complete EDS setup without config.json for PaaS backend', async () => {
             // Given: PaaS backend with commerce config
+            // config.json generation moved to post-mesh phase
 
             // When: Running setup
             const resultPromise = service.setupProject(paasConfig, mockProgressCallback);
             await jest.runAllTimersAsync();
-            await resultPromise;
+            const result = await resultPromise;
 
-            // Then: config.json should include commerce endpoint
-            const writeCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                (call) => call[0].includes('config.json'),
-            );
-            expect(writeCall).toBeDefined();
-            const configContent = writeCall[1];
-            expect(configContent).toContain(paasConfig.meshEndpoint);
+            // Then: Setup should succeed without generating config.json
+            expect(result.success).toBe(true);
+            // config.json will be generated in executor's EDS Post-Mesh section
         });
 
         it('should skip config.json for non-PaaS backends', async () => {
@@ -1025,7 +1024,7 @@ describe('EdsProjectService', () => {
             await jest.runAllTimersAsync();
             await resultPromise;
 
-            // Then: Should not write config.json
+            // Then: Should not write config.json (neither during setup nor post-mesh for non-PaaS)
             expect(fs.writeFile).not.toHaveBeenCalledWith(
                 expect.stringContaining('config.json'),
                 expect.any(String),
@@ -1247,8 +1246,10 @@ describe('EdsProjectService', () => {
             expect(result.success).toBe(true);
         });
 
-        it('should handle config.json write failure in env generation', async () => {
-            // Given: PaaS backend config that requires config.json generation
+        it('should succeed even if config.json would fail (deferred to post-mesh)', async () => {
+            // Given: PaaS backend config
+            // Phase 5 optimization: config.json generation moved to post-mesh in executor
+            // EDS setup should succeed even if config.json write would fail
             const paasConfig: EdsProjectConfig = {
                 ...defaultConfig,
                 backendComponentId: 'adobe-commerce-paas',
@@ -1261,20 +1262,8 @@ describe('EdsProjectService', () => {
                     ADOBE_COMMERCE_STORE_CODE: 'main_website_store',
                 },
             };
-            // Mock default-site.json template read to succeed
-            (fs.readFile as jest.Mock).mockImplementation(async (filePath: string) => {
-                if (filePath.includes('fstab.yaml')) {
-                    return 'mountpoints:\n  /: https://content.da.live/test-org/test-site';
-                }
-                if (filePath.includes('default-site.json')) {
-                    return JSON.stringify({
-                        'commerce-endpoint': '{ENDPOINT}',
-                        'store-view-code': '{STORE_VIEW_CODE}',
-                    });
-                }
-                throw new Error('ENOENT');
-            });
             // Mock fs.writeFile to fail for config.json specifically
+            // This should NOT cause EDS setup to fail since config.json is generated post-mesh
             (fs.writeFile as jest.Mock).mockImplementation(async (filePath: string) => {
                 if (filePath.includes('fstab.yaml')) {
                     return undefined;
@@ -1290,10 +1279,8 @@ describe('EdsProjectService', () => {
             await jest.runAllTimersAsync();
             const result = await resultPromise;
 
-            // Then: Should fail at env-config phase
-            expect(result.success).toBe(false);
-            expect(result.phase).toBe('env-config');
-            expect(result.error).toContain('Permission denied');
+            // Then: Should succeed (config.json not generated during EDS setup)
+            expect(result.success).toBe(true);
         });
 
         it('should handle network error during code sync polling', async () => {

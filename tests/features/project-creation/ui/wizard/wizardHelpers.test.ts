@@ -223,8 +223,12 @@ describe('wizardHelpers', () => {
             expect(getNextButtonText(true, 1, 5)).toBe('Continue');
         });
 
-        it('should return "Create" on second-to-last step', () => {
-            expect(getNextButtonText(false, 3, 5)).toBe('Create');
+        it('should return "Create" on review step (second-to-last)', () => {
+            expect(getNextButtonText(false, 3, 5, undefined, 'review')).toBe('Create');
+        });
+
+        it('should return "Continue" on second-to-last step if not review (e.g., storefront-setup)', () => {
+            expect(getNextButtonText(false, 3, 5, undefined, 'storefront-setup')).toBe('Continue');
         });
 
         it('should return "Continue" on other steps', () => {
@@ -233,16 +237,16 @@ describe('wizardHelpers', () => {
             expect(getNextButtonText(false, 2, 5)).toBe('Continue');
         });
 
-        it('should return "Save Changes" on second-to-last step in edit mode', () => {
-            expect(getNextButtonText(false, 3, 5, 'edit')).toBe('Save Changes');
+        it('should return "Save Changes" on review step in edit mode', () => {
+            expect(getNextButtonText(false, 3, 5, 'edit', 'review')).toBe('Save Changes');
         });
 
-        it('should return "Create" on second-to-last step when not in edit mode', () => {
-            expect(getNextButtonText(false, 3, 5, 'create')).toBe('Create');
+        it('should return "Create" on review step when not in edit mode', () => {
+            expect(getNextButtonText(false, 3, 5, 'create', 'review')).toBe('Create');
         });
 
-        it('should return "Create" on second-to-last step in import mode', () => {
-            expect(getNextButtonText(false, 3, 5, 'import')).toBe('Create');
+        it('should return "Create" on review step in import mode', () => {
+            expect(getNextButtonText(false, 3, 5, 'import', 'review')).toBe('Create');
         });
     });
 

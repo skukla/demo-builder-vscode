@@ -3,11 +3,11 @@
  *
  * Tests for the GitHub repository selection step with searchable list.
  *
- * Coverage: 10 tests
+ * Coverage: 11 tests
  * - Create New Mode (3 tests)
  * - Existing Repository Mode (3 tests)
  * - Reset to Template (2 tests)
- * - Navigation State (2 tests)
+ * - Navigation State (3 tests) - includes GitHub App verification
  */
 
 import React from 'react';
@@ -20,11 +20,13 @@ import '@testing-library/jest-dom';
 // Mock webviewClient
 const mockPostMessage = jest.fn();
 const mockOnMessage = jest.fn(() => jest.fn()); // Return unsubscribe function
+const mockRequest = jest.fn();
 
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {
         postMessage: mockPostMessage,
         onMessage: mockOnMessage,
+        request: mockRequest,
         ready: jest.fn().mockResolvedValue(undefined),
     },
 }));
@@ -76,6 +78,8 @@ describe('GitHubRepoSelectionStep', () => {
         jest.clearAllMocks();
         mockUpdateState = jest.fn();
         mockSetCanProceed = jest.fn();
+        // Default to undefined for GitHub App check (not called until explicitly mocked)
+        mockRequest.mockReset();
     });
 
     describe('Create New Mode', () => {
@@ -216,8 +220,9 @@ describe('GitHubRepoSelectionStep', () => {
                 </TestWrapper>
             );
 
-            // Then: Should show selected repo in summary
-            expect(screen.getByText(/testuser\/my-repo/)).toBeInTheDocument();
+            // Then: Should show selected repo in summary (multiple elements contain repo name, verify at least one exists)
+            const repoNameElements = screen.getAllByText(/testuser\/my-repo/);
+            expect(repoNameElements.length).toBeGreaterThan(0);
         });
     });
 
@@ -279,8 +284,10 @@ describe('GitHubRepoSelectionStep', () => {
     });
 
     describe('Navigation State', () => {
-        it('should enable Continue when new repo name is valid', async () => {
-            // Given: New mode with valid repo name
+        it('should enable Continue when new repo name is valid and GitHub App verified', async () => {
+            // Given: New mode with valid repo name and GitHub App installed
+            // Mock returns { data: { success, isInstalled } } - webviewClient.request response shape
+            mockRequest.mockResolvedValue({ data: { success: true, isInstalled: true } });
             const state = createDefaultState({
                 repoMode: 'new',
                 repoName: 'my-valid-repo',
@@ -298,14 +305,15 @@ describe('GitHubRepoSelectionStep', () => {
                 </TestWrapper>
             );
 
-            // Then: Should enable Continue
+            // Then: Should enable Continue after GitHub App check completes
             await waitFor(() => {
                 expect(mockSetCanProceed).toHaveBeenCalledWith(true);
             });
         });
 
-        it('should enable Continue when existing repo is selected', async () => {
-            // Given: Existing mode with repo selected
+        it('should enable Continue when existing repo is selected and GitHub App verified', async () => {
+            // Given: Existing mode with repo selected and GitHub App installed
+            mockRequest.mockResolvedValue({ data: { success: true, isInstalled: true } });
             const state = createDefaultState({
                 repoMode: 'existing',
                 selectedRepo: {
@@ -327,9 +335,39 @@ describe('GitHubRepoSelectionStep', () => {
                 </TestWrapper>
             );
 
-            // Then: Should enable Continue
+            // Then: Should enable Continue after GitHub App check completes
             await waitFor(() => {
                 expect(mockSetCanProceed).toHaveBeenCalledWith(true);
+            });
+        });
+
+        it('should NOT enable Continue when GitHub App is not installed', async () => {
+            // Given: Existing mode with repo selected but GitHub App not installed
+            mockRequest.mockResolvedValue({ data: { success: true, isInstalled: false } });
+            const state = createDefaultState({
+                repoMode: 'existing',
+                selectedRepo: {
+                    id: 'repo-1',
+                    name: 'my-repo',
+                    fullName: 'testuser/my-repo',
+                },
+            });
+
+            // When: Component renders
+            const { GitHubRepoSelectionStep } = await import('@/features/eds/ui/steps/GitHubRepoSelectionStep');
+            render(
+                <TestWrapper>
+                    <GitHubRepoSelectionStep
+                        state={state}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                    />
+                </TestWrapper>
+            );
+
+            // Then: Should NOT enable Continue - setCanProceed should be called with false
+            await waitFor(() => {
+                expect(mockSetCanProceed).toHaveBeenCalledWith(false);
             });
         });
     });

@@ -9,8 +9,12 @@ describe('getNextButtonText', () => {
         expect(getNextButtonText(true, 3, 5)).toBe('Continue');
     });
 
-    it('returns Create on second-to-last step', () => {
-        expect(getNextButtonText(false, 3, 5)).toBe('Create'); // index 3, total 5
+    it('returns Create on review step (second-to-last)', () => {
+        expect(getNextButtonText(false, 3, 5, undefined, 'review')).toBe('Create'); // index 3, total 5
+    });
+
+    it('returns Continue on non-review second-to-last step (e.g., storefront-setup)', () => {
+        expect(getNextButtonText(false, 3, 5, undefined, 'storefront-setup')).toBe('Continue');
     });
 
     it('returns Continue on other steps', () => {

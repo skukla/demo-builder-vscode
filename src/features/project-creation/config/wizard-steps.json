@@ -81,9 +81,9 @@
       "enabled": true
     },
     {
-      "id": "eds-preflight",
-      "name": "Storefront Setup",
-      "description": "Configure your Edge Delivery storefront infrastructure.",
+      "id": "storefront-setup",
+      "name": "Publish Storefront",
+      "description": "Publish your Edge Delivery storefront to the web.",
       "enabled": true,
       "condition": {
         "stackRequiresAny": ["requiresGitHub", "requiresDaLive"]
@@ -91,7 +91,8 @@
     },
     {
       "id": "project-creation",
-      "name": "Project Setup",
+      "name": "Deploy Project",
+      "description": "Deploy your demo project and install components.",
       "enabled": true
     }
   ]
