@@ -159,6 +159,8 @@ export interface RawComponentDefinition {
     requiresDeployment?: boolean;
     /** Git submodules contained within this component */
     submodules?: Record<string, SubmoduleConfig>;
+    /** Runtime metadata populated during project creation (e.g., EDS URLs) */
+    metadata?: Record<string, unknown>;
 }
 
 /**

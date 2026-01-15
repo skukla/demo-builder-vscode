@@ -85,7 +85,7 @@ describe('stacks.json', () => {
         it('should use EDS frontend and ACCS backend', () => {
             const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;
             const eds = stacks.find(s => s.id === 'eds-accs');
-            expect(eds?.frontend).toBe('eds');
+            expect(eds?.frontend).toBe('eds-storefront');
             expect(eds?.backend).toBe('adobe-commerce-accs');
         });
 

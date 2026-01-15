@@ -10,8 +10,8 @@
     },
 
     "frontends": {
-        "eds": {
-            "name": "Edge Delivery Services",
+        "eds-storefront": {
+            "name": "EDS Storefront",
             "description": "EDS storefront with Commerce Drop-in components",
             "icon": {
                 "light": "eds-file-icon-light.svg",
@@ -48,7 +48,19 @@
                             "ADOBE_COMMERCE_STORE_CODE": "store-code"
                         }
                     }
-                }
+                },
+                "skipNpmInstall": true
+            },
+            "metadata": {
+                "previewUrl": null,
+                "liveUrl": null,
+                "repoUrl": null,
+                "githubRepo": null,
+                "daLiveOrg": null,
+                "daLiveSite": null,
+                "templateOwner": null,
+                "templateRepo": null,
+                "contentSource": null
             },
             "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
             "dependencies": {
@@ -240,7 +252,7 @@
         "eds-paas": {
             "name": "EDS + Commerce PaaS",
             "description": "Edge Delivery Services with Adobe Commerce PaaS backend",
-            "frontend": "eds",
+            "frontend": "eds-storefront",
             "backend": "adobe-commerce-paas",
             "requiredComponents": ["eds-commerce-mesh"],
             "optionalComponents": ["demo-inspector", "integration-service"]
@@ -248,7 +260,7 @@
         "eds-accs": {
             "name": "EDS + Commerce Cloud Service",
             "description": "Edge Delivery Services with Adobe Commerce Cloud Service backend",
-            "frontend": "eds",
+            "frontend": "eds-storefront",
             "backend": "adobe-commerce-accs",
             "requiredComponents": [],
             "optionalComponents": ["demo-inspector"]

@@ -33,7 +33,7 @@
       "name": "Edge Delivery + PaaS",
       "description": "EDS storefront with Commerce Drop-ins and PaaS",
       "icon": "eds",
-      "frontend": "eds",
+      "frontend": "eds-storefront",
       "backend": "adobe-commerce-paas",
       "dependencies": ["eds-commerce-mesh"],
       "optionalAddons": [
@@ -48,7 +48,7 @@
       "name": "Edge Delivery + ACCS",
       "description": "EDS storefront with Commerce Drop-ins and ACCS",
       "icon": "eds",
-      "frontend": "eds",
+      "frontend": "eds-storefront",
       "backend": "adobe-commerce-accs",
       "dependencies": ["eds-commerce-mesh"],
       "optionalAddons": [

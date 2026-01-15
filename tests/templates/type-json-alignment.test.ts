@@ -92,6 +92,7 @@ const COMPONENT_DEFINITION_FIELDS = new Set([
     'endpoint',
     'requiresDeployment',
     'submodules',
+    'metadata',           // Runtime metadata (e.g., EDS URLs populated at creation)
     // Additional fields found in specific sections:
     'addonFor',           // addons section
     'category',           // tools section
@@ -134,6 +135,7 @@ const COMPONENT_CONFIGURATION_FIELDS = new Set([
     'position',
     'startOpen',
     'scripts',            // tools configuration
+    'skipNpmInstall',     // Skip npm install (e.g., EDS is static site)
 ]);
 
 /**
