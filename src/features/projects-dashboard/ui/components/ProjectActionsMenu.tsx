@@ -138,15 +138,15 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             }
             // Edit is always available for EDS (no running state)
             if (onEdit) {
-                items.push({ key: 'edit', label: 'Edit Project', icon: 'edit' });
+                items.push({ key: 'edit', label: 'Edit', icon: 'edit' });
             }
             // Publish EDS content to CDN
             if (onPublishEds) {
-                items.push({ key: 'publishEds', label: 'Publish Project', icon: 'publish' });
+                items.push({ key: 'publishEds', label: 'Publish', icon: 'publish' });
             }
             // Reset EDS project from template
             if (onResetEds) {
-                items.push({ key: 'resetEds', label: 'Reset Project', icon: 'reset' });
+                items.push({ key: 'resetEds', label: 'Reset', icon: 'reset' });
             }
         } else {
             // Non-EDS projects: Start/Stop based on running state
@@ -163,16 +163,16 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
 
             // Edit (only when NOT running - must stop demo first)
             if (!isRunning && onEdit) {
-                items.push({ key: 'edit', label: 'Edit Project', icon: 'edit' });
+                items.push({ key: 'edit', label: 'Edit', icon: 'edit' });
             }
         }
 
         // Export and Delete always available for all project types
         if (onExport) {
-            items.push({ key: 'export', label: 'Export Project', icon: 'export' });
+            items.push({ key: 'export', label: 'Export', icon: 'export' });
         }
         if (onDelete) {
-            items.push({ key: 'delete', label: 'Delete Project', icon: 'delete' });
+            items.push({ key: 'delete', label: 'Delete', icon: 'delete' });
         }
         return items;
     }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onPublishEds, onResetEds, onEdit, onExport, onDelete]);
