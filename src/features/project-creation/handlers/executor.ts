@@ -23,63 +23,19 @@ import {
 import { ProgressTracker } from './shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { COMPONENT_IDS } from '@/core/constants';
+import { parseGitHubUrl } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
 import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 
-// EDS service imports (lazy-loaded, only instantiated for EDS stacks)
-import type {
-    EdsProjectConfig,
-    EdsProgressCallback,
-    EdsProjectSetupResult,
-} from '@/features/eds/services/types';
+// EDS config.json generation (called after mesh deployment)
 import { generateConfigJsonPostMesh } from '@/features/eds/services/edsSetupPhases';
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-/**
- * Parse GitHub URL to extract owner and repo name
- * Handles formats: https://github.com/owner/repo or https://github.com/owner/repo.git
- */
-function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
-    try {
-        const urlObj = new URL(url);
-        if (urlObj.hostname !== 'github.com') {
-            return null;
-        }
-        const parts = urlObj.pathname.split('/').filter(Boolean);
-        if (parts.length >= 2) {
-            return {
-                owner: parts[0],
-                repo: parts[1].replace(/\.git$/, ''),
-            };
-        }
-        return null;
-    } catch {
-        return null;
-    }
-}
-
-/**
- * Map EDS setup phase to user-friendly operation name
- */
-function getEdsOperationName(phase: string): string {
-    const phaseMap: Record<string, string> = {
-        'github-repo': 'Creating Repository',
-        'github-clone': 'Cloning Repository',
-        'helix-config': 'Configuring Helix',
-        'code-sync': 'Verifying Code Sync',
-        'dalive-content': 'Copying Content',
-        'tools-clone': 'Installing Tools',
-        'env-config': 'Configuring Environment',
-        'complete': 'EDS Setup Complete',
-    };
-    return phaseMap[phase] || 'EDS Setup';
-}
 
 /**
  * Frontend source from template (same shape as TemplateSource)
@@ -140,6 +96,15 @@ interface ProjectCreationConfig {
         isPrivate?: boolean;
         skipContent?: boolean;
         skipTools?: boolean;
+        // Template source repo (from frontendSource) for GitHub reset operations
+        templateOwner?: string;
+        templateRepo?: string;
+        // DA.live content source (explicit config, not derived from GitHub)
+        contentSource?: {
+            org: string;
+            site: string;
+            indexPath?: string;
+        };
         // Preflight completion fields (set by StorefrontSetupStep)
         preflightComplete?: boolean;
         repoUrl?: string;
@@ -245,178 +210,23 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     context.logger.debug('[Project Creation] Deferring project state save until after installation');
 
     // ========================================================================
-    // EDS SETUP (if EDS stack selected)
-    // ========================================================================
-
-    const isEdsStack = isEdsStackId(typedConfig.selectedStack);
-    let edsResult: EdsProjectSetupResult | undefined;
-
-    // EDS frontend is cloned to components/eds-storefront like other frontends
-    const edsComponentPath = path.join(projectPath, 'components', COMPONENT_IDS.EDS_STOREFRONT);
-
-    // Skip EDS Phase 0 if preflight already completed (StorefrontSetupStep ran during wizard)
-    if (isEdsStack && typedConfig.edsConfig && !typedConfig.edsConfig.preflightComplete) {
-        progressTracker('EDS Setup', 16, 'Initializing Edge Delivery Services...');
-
-        // Check if AuthenticationService is available
-        if (!context.authManager) {
-            context.logger.warn('[Project Creation] AuthenticationService not available - skipping EDS setup');
-        } else {
-            // Build EdsProjectConfig from wizard config
-            // Get backend component ID from component selections (set by stack)
-            const backendComponentId = typedConfig.components?.backend || '';
-            const meshEndpoint = typedConfig.apiMesh?.endpoint;
-
-            // Parse template owner/repo from frontendSource URL (configuration-driven, not hardcoded)
-            const templateInfo = typedConfig.frontendSource?.url
-                ? parseGitHubUrl(typedConfig.frontendSource.url)
-                : null;
-
-            if (templateInfo) {
-                context.logger.debug(`[EDS Setup] Template: ${templateInfo.owner}/${templateInfo.repo} (from frontendSource)`);
-            } else {
-                context.logger.warn(`[EDS Setup] No template info in frontendSource - will use fallback`);
-            }
-
-            context.logger.debug(`[EDS Setup] Backend component: ${backendComponentId}, Mesh endpoint: ${meshEndpoint || 'N/A'}`);
-
-            const edsProjectConfig: EdsProjectConfig = {
-                projectName: typedConfig.projectName,
-                projectPath,
-                componentPath: edsComponentPath,
-                repoName: typedConfig.edsConfig.repoName,
-                daLiveOrg: typedConfig.edsConfig.daLiveOrg,
-                daLiveSite: typedConfig.edsConfig.daLiveSite,
-                templateOwner: templateInfo?.owner,
-                templateRepo: templateInfo?.repo,
-                backendComponentId,
-                backendEnvVars: typedConfig.componentConfigs?.[backendComponentId],
-                accsEndpoint: typedConfig.edsConfig.accsEndpoint,
-                meshEndpoint,
-                githubOwner: typedConfig.edsConfig.githubOwner || '',
-                isPrivate: typedConfig.edsConfig.isPrivate,
-                skipContent: typedConfig.edsConfig.skipContent,
-                skipTools: typedConfig.edsConfig.skipTools,
-                repoMode: typedConfig.edsConfig.repoMode,
-                existingRepo: typedConfig.edsConfig.existingRepo,
-                resetToTemplate: typedConfig.edsConfig.resetToTemplate,
-                abortSignal: context.sharedState.projectCreationAbortController?.signal,
-            };
-
-            // Map EdsProgressCallback to executor progressTracker
-            // EDS progress (0-100) maps to executor progress (16-30)
-            // Show each phase as a distinct operation for better visibility
-            const edsProgressCallback: EdsProgressCallback = (phase, progress, message) => {
-                const mappedProgress = 16 + Math.round(progress * 0.14);
-                
-                // Map phase to user-friendly operation name
-                const operationName = getEdsOperationName(phase);
-                progressTracker(operationName, mappedProgress, message);
-            };
-
-            // Lazy-load EDS services (only for EDS stacks)
-            const { EdsProjectService } = await import('@/features/eds/services/edsProjectService');
-            const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
-            const { GitHubRepoOperations } = await import('@/features/eds/services/githubRepoOperations');
-            const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
-            const { DaLiveOrgOperations } = await import('@/features/eds/services/daLiveOrgOperations');
-            const { DaLiveContentOperations } = await import('@/features/eds/services/daLiveContentOperations');
-            const { ComponentManager } = await import('@/features/components/services/componentManager');
-
-            // Create TokenProvider adapter from AuthenticationService
-            // TokenManager returns undefined, TokenProvider expects null - adapt the type
-            const tokenProvider = {
-                getAccessToken: async () => {
-                    const token = await context.authManager!.getTokenManager().getAccessToken();
-                    return token ?? null;
-                },
-            };
-
-            // GitHub services
-            const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
-            const githubRepoOperations = new GitHubRepoOperations(githubTokenService, context.logger);
-            const githubFileOperations = new GitHubFileOperations(githubTokenService, context.logger);
-            const githubServices = {
-                tokenService: githubTokenService,
-                repoOperations: githubRepoOperations,
-                fileOperations: githubFileOperations,
-            };
-
-            // DA.live services
-            const daLiveOrgOperations = new DaLiveOrgOperations(tokenProvider, context.logger);
-            const daLiveContentOperations = new DaLiveContentOperations(tokenProvider, context.logger);
-            const daLiveServices = {
-                orgOperations: daLiveOrgOperations,
-                contentOperations: daLiveContentOperations,
-            };
-
-            // ComponentManager for tool cloning
-            const componentManager = new ComponentManager(context.logger);
-
-            // Create EdsProjectService and run setup
-            const edsProjectService = new EdsProjectService(
-                githubServices,
-                daLiveServices,
-                context.authManager,
-                componentManager,
-                context.logger,
-            );
-
-            context.logger.info(`[Project Creation] Running EDS setup for: ${typedConfig.projectName}`);
-
-            // Run EDS setup - pre-flight check in UI ensures GitHub app is installed
-            edsResult = await edsProjectService.setupProject(edsProjectConfig, edsProgressCallback);
-
-            if (!edsResult.success) {
-                const errorMsg = `EDS setup failed at phase '${edsResult.phase}': ${edsResult.error}`;
-                context.logger.error(`[Project Creation] ${errorMsg}`);
-                throw new Error(errorMsg);
-            }
-
-            context.logger.info(`[Project Creation] EDS setup complete: ${edsResult.repoUrl}`);
-
-            // Register EDS frontend as a component instance (like other frontends)
-            // Uses COMPONENT_IDS.EDS_STOREFRONT for consistency, cloned to components/eds-storefront
-            const frontendInstance: import('@/types').ComponentInstance = {
-                id: COMPONENT_IDS.EDS_STOREFRONT,
-                name: 'EDS Storefront',
-                type: 'frontend',
-                path: edsComponentPath,
-                repoUrl: edsResult?.repoUrl,
-                status: 'ready',
-                lastUpdated: new Date(),
-                metadata: {
-                    previewUrl: edsResult.previewUrl,
-                    liveUrl: edsResult.liveUrl,
-                    repoUrl: edsResult.repoUrl,
-                    daLiveOrg: typedConfig.edsConfig.daLiveOrg,
-                    daLiveSite: typedConfig.edsConfig.daLiveSite,
-                },
-            };
-            project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT] = frontendInstance;
-
-            context.logger.debug(`[Project Creation] Registered EDS frontend component: ${COMPONENT_IDS.EDS_STOREFRONT} at ${edsComponentPath}`);
-        }
-
-        // Save project state after EDS setup completes (ensures EDS metadata is persisted
-        // even if later steps fail)
-        await context.stateManager.saveProject(project);
-
-        progressTracker('EDS Setup', 30, 'EDS initialization complete');
-    }
-
-    // ========================================================================
-    // EDS PREFLIGHT COMPONENT REGISTRATION (when Phase 0 was skipped)
+    // EDS COMPONENT REGISTRATION (if EDS stack selected)
     // ========================================================================
     //
-    // If EDS preflight ran in wizard, Phase 0 was skipped but we still need to:
-    // 1. Register EDS component using edsConfig values
-    // 2. Save project state
+    // For EDS stacks, the StorefrontSetupStep (wizard) handles all remote setup:
+    // - GitHub repo creation/selection
+    // - DA.live content copy
+    // - Content publish to CDN
+    //
+    // The executor just registers the component using the wizard's results.
 
-    if (isEdsStack && typedConfig.edsConfig?.preflightComplete) {
-        context.logger.info('[Project Creation] EDS preflight completed - registering component from config');
+    const isEdsStack = isEdsStackId(typedConfig.selectedStack);
+    const edsComponentPath = path.join(projectPath, 'components', COMPONENT_IDS.EDS_STOREFRONT);
 
-        // Register EDS frontend as a component instance using preflight results
+    if (isEdsStack && typedConfig.edsConfig) {
+        context.logger.info('[Project Creation] Registering EDS component from wizard config');
+
+        // Register EDS frontend as a component instance using wizard results
         const frontendInstance: import('@/types').ComponentInstance = {
             id: COMPONENT_IDS.EDS_STOREFRONT,
             name: 'EDS Storefront',
@@ -429,18 +239,27 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 previewUrl: typedConfig.edsConfig.previewUrl,
                 liveUrl: typedConfig.edsConfig.liveUrl,
                 repoUrl: typedConfig.edsConfig.repoUrl,
+                // GitHub repo in "owner/repo" format for dashboard operations
+                githubRepo: typedConfig.edsConfig.githubOwner && typedConfig.edsConfig.repoName
+                    ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
+                    : undefined,
                 daLiveOrg: typedConfig.edsConfig.daLiveOrg,
                 daLiveSite: typedConfig.edsConfig.daLiveSite,
+                // Template repo for GitHub reset operations (from frontendSource)
+                templateOwner: typedConfig.edsConfig.templateOwner,
+                templateRepo: typedConfig.edsConfig.templateRepo,
+                // DA.live content source (explicit config, not derived from GitHub)
+                contentSource: typedConfig.edsConfig.contentSource,
             },
         };
         project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT] = frontendInstance;
 
-        context.logger.debug(`[Project Creation] Registered EDS frontend component from preflight: ${COMPONENT_IDS.EDS_STOREFRONT} at ${edsComponentPath}`);
+        context.logger.debug(`[Project Creation] Registered EDS frontend: ${COMPONENT_IDS.EDS_STOREFRONT} at ${edsComponentPath}`);
 
         // Save project state with EDS metadata
         await context.stateManager.saveProject(project);
 
-        progressTracker('EDS Setup', 30, 'Using preflight EDS configuration');
+        progressTracker('EDS Setup', 30, 'EDS configuration loaded');
     }
 
     // ========================================================================
@@ -596,9 +415,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // Old flow: generate empty → deploy mesh → update → re-push (2 pushes)
     // New flow: deploy mesh → generate with endpoint → push ONCE
 
-    // Log condition values for debugging
-    // Support both inline EDS setup (edsResult) and preflight completion (edsConfig.preflightComplete)
-    const edsSetupComplete = edsResult?.success || typedConfig.edsConfig?.preflightComplete;
+    // Check if EDS setup completed (wizard always sets edsConfig for EDS stacks)
+    const edsSetupComplete = !!typedConfig.edsConfig;
     context.logger.debug(`[EDS Post-Mesh] Checking conditions: isEdsStack=${isEdsStack}, edsSetupComplete=${edsSetupComplete}, meshState.endpoint=${project.meshState?.endpoint ? 'set' : 'not set'}`);
 
     if (isEdsStack && edsSetupComplete && project.meshState?.endpoint) {
@@ -610,8 +428,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             context.logger.info(`[EDS Post-Mesh] Generating config.json with mesh endpoint: ${project.meshState.endpoint}`);
 
             try {
-                // Get repo URL and parse it first (need owner/repo for config generation)
-                const repoUrl = edsResult?.repoUrl || typedConfig.edsConfig?.repoUrl;
+                // Get repo URL and parse it (need owner/repo for config generation)
+                const repoUrl = typedConfig.edsConfig?.repoUrl;
                 context.logger.debug(`[EDS Post-Mesh] EDS repo URL: ${repoUrl}`);
 
                 if (!repoUrl) {
@@ -627,7 +445,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                         const backendComponentId = typedConfig.components?.backend || '';
                         const backendEnvVars = typedConfig.componentConfigs?.[backendComponentId] as Record<string, string> | undefined;
 
-                        // Get DA.live config from either edsConfig (preflight) or edsResult metadata
+                        // Get DA.live config from wizard's edsConfig
                         const daLiveOrg = typedConfig.edsConfig?.daLiveOrg || '';
                         const daLiveSite = typedConfig.edsConfig?.daLiveSite || '';
 
@@ -696,7 +514,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         if (!isEdsStack) {
             context.logger.debug('[EDS Post-Mesh] Skipped - not an EDS stack');
         } else if (!edsSetupComplete) {
-            context.logger.debug('[EDS Post-Mesh] Skipped - EDS setup did not complete (inline or preflight)');
+            context.logger.debug('[EDS Post-Mesh] Skipped - EDS config not set');
         } else if (!project.meshState?.endpoint) {
             context.logger.warn('[EDS Post-Mesh] Skipped - meshState.endpoint not set (mesh deployment may have failed)');
         }
@@ -812,9 +630,9 @@ async function loadComponentDefinitions(
     const filteredDependencies = (typedConfig.components?.dependencies || [])
         .filter((id: string) => !frontendSubmoduleIds.has(id));
 
-    // Build component list - skip frontend for EDS stacks (EdsProjectService handles repo cloning)
+    // Build component list - skip frontend for EDS stacks (wizard handles repo setup)
     const allComponents = [
-        // Only include frontend if NOT EDS stack (EDS handles repo cloning internally via setupProject)
+        // Only include frontend if NOT EDS stack (wizard clones EDS repo during Publish Storefront step)
         ...(!isEdsStack && typedConfig.components?.frontend
             ? [{ id: typedConfig.components.frontend, type: 'frontend' }]
             : []),

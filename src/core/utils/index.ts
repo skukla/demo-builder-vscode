@@ -34,3 +34,6 @@ export { ExecutionLock } from './executionLock';
 
 export { showWebviewQuickPick, showWebviewQuickPickMany } from './quickPickUtils';
 export type { WebviewQuickPickOptions } from './quickPickUtils';
+
+export { parseGitHubUrl } from './githubUrlParser';
+export type { GitHubRepoInfo } from './githubUrlParser';
