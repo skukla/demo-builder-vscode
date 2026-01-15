@@ -41,6 +41,9 @@ describe('SOP: Inline Styles', () => {
 
         // Grid layouts (CSS Grid properties for complex layouts)
         'ReviewStep.tsx': 'CSS Grid layout for two-column review summary',
+
+        // Modal/dialog layout stability
+        'GitHubRepoSelectionStep.tsx': 'Fixed height container prevents modal resize during status recheck',
     };
 
     /**

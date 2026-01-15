@@ -709,7 +709,7 @@ async function executeStorefrontSetupPhases(
                     const progressValue = 50 + Math.round(progress.percentage * 0.10);
                     context.sendMessage('storefront-setup-progress', {
                         phase: 'content-copy',
-                        message: 'Copying demo content',
+                        message: `Copying content (${progress.processed}/${progress.total})`,
                         subMessage: progress.currentFile,
                         progress: progressValue,
                     });

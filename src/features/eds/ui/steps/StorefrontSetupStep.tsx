@@ -130,7 +130,7 @@ function getPhaseDescription(phase: StorefrontSetupPhase): string {
         case 'cancelling':
             return 'Cancelling setup...';
         case 'completed':
-            return 'Storefront setup complete.';
+            return 'Storefront published.';
         case 'error':
             return 'Setup failed.';
         default:
@@ -153,7 +153,7 @@ function getHelperText(phase: StorefrontSetupPhase): string | undefined {
         case 'content-copy':
             return 'This may take 1-2 minutes';
         case 'content-publish':
-            return 'This may take a moment';
+            return 'This may take 2-3 minutes';
         default:
             return undefined;
     }
@@ -262,7 +262,7 @@ export function StorefrontSetupStep({
         setSetupState(prev => ({
             ...prev,
             phase: 'completed',
-            message: data.message || 'Storefront setup completed successfully!',
+            message: data.message || 'Storefront published successfully!',
             progress: PROGRESS_RANGES.complete,
             partialState: {
                 ...prev.partialState,
@@ -472,7 +472,7 @@ export function StorefrontSetupStep({
                                 <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text UNSAFE_className="text-xl font-medium">
-                                        Storefront Setup Complete
+                                        Storefront Published
                                     </Text>
                                     <Text UNSAFE_className="text-sm text-gray-600">
                                         Click Continue to proceed with project creation.

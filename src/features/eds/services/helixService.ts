@@ -535,7 +535,7 @@ export class HelixService {
         // Report: Found pages, now verifying
         onProgress?.({
             phase: HelixService.PublishPhases.VERIFYING,
-            message: `Found ${pages.length} pages. Verifying CDN connection...`,
+            message: 'Verifying CDN connection...',
             total: pages.length,
         });
 
