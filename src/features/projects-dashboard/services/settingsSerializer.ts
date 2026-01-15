@@ -5,7 +5,7 @@
  * Used for import/export functionality to share settings between projects.
  */
 
-import { SETTINGS_FILE_VERSION, type SettingsFile } from '@/features/projects-dashboard/types/settingsFile';
+import { SETTINGS_FILE_VERSION, type SettingsFile, type SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
 import type { Project } from '@/types/base';
 
 /**
@@ -99,6 +99,21 @@ export function extractSettingsFromProject(
     project: Project,
     includeSecrets = true,
 ): SettingsFile {
+    // Extract EDS config from eds-storefront component metadata (if present)
+    let edsConfig: SettingsEdsConfig | undefined;
+    const edsStorefront = project.componentInstances?.['eds-storefront'];
+    if (edsStorefront?.metadata) {
+        const metadata = edsStorefront.metadata as Record<string, unknown>;
+        edsConfig = {
+            templateOwner: metadata.templateOwner as string | undefined,
+            templateRepo: metadata.templateRepo as string | undefined,
+            contentSource: metadata.contentSource as SettingsEdsConfig['contentSource'],
+            daLiveOrg: metadata.daLiveOrg as string | undefined,
+            daLiveSite: metadata.daLiveSite as string | undefined,
+            repoName: metadata.githubRepo?.toString().split('/')[1], // Extract repo name from "owner/repo"
+        };
+    }
+
     return {
         version: SETTINGS_FILE_VERSION,
         exportedAt: new Date().toISOString(),
@@ -125,6 +140,8 @@ export function extractSettingsFromProject(
         selectedPackage: project.selectedPackage,
         selectedStack: project.selectedStack,
         selectedAddons: project.selectedAddons,
+        // EDS configuration (for Edge Delivery Services stacks)
+        edsConfig,
     };
 }
 

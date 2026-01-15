@@ -947,5 +947,107 @@ describe('wizardHelpers', () => {
             expect(config.edsConfig?.daLiveSite).toBe('mysite');
             expect(config.edsConfig?.githubOwner).toBe('testuser');
         });
+
+        it('should include StorefrontSetupStep results when set', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+                edsConfig: {
+                    repoName: 'my-repo',
+                    repoMode: 'new',
+                    daLiveOrg: 'myorg',
+                    daLiveSite: 'mysite',
+                    githubAuth: {
+                        isAuthenticated: true,
+                        user: { login: 'testuser', name: 'Test User', avatarUrl: '' },
+                    },
+                    // Results from StorefrontSetupStep
+                    repoUrl: 'https://github.com/testuser/my-repo',
+                    previewUrl: 'https://main--my-repo--testuser.aem.page',
+                    liveUrl: 'https://main--my-repo--testuser.aem.live',
+                },
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.edsConfig).toBeDefined();
+            // StorefrontSetupStep results should be passed through to executor
+            expect(config.edsConfig?.repoUrl).toBe('https://github.com/testuser/my-repo');
+            expect(config.edsConfig?.previewUrl).toBe('https://main--my-repo--testuser.aem.page');
+            expect(config.edsConfig?.liveUrl).toBe('https://main--my-repo--testuser.aem.live');
+        });
+
+        it('should use explicit templateOwner/templateRepo and contentSource from storefront config', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+                edsConfig: {
+                    repoName: 'my-repo',
+                    repoMode: 'new',
+                    daLiveOrg: 'myorg',
+                    daLiveSite: 'mysite',
+                },
+            };
+
+            const packages = [
+                {
+                    id: 'citisignal',
+                    name: 'CitiSignal',
+                    storefronts: {
+                        'eds-paas': {
+                            name: 'CitiSignal EDS',
+                            source: {
+                                type: 'git' as const,
+                                url: 'https://github.com/demo-system-stores/accs-citisignal',
+                                branch: 'main',
+                            },
+                            // Template config is explicit - not derived from source URL
+                            templateOwner: 'demo-system-stores',
+                            templateRepo: 'accs-citisignal',
+                            contentSource: {
+                                org: 'content-org',
+                                site: 'content-site',
+                            },
+                        },
+                    },
+                },
+            ];
+
+            const config = buildProjectConfig(state, null, packages);
+
+            // Template should be from explicit config (for GitHub reset)
+            expect(config.edsConfig?.templateOwner).toBe('demo-system-stores');
+            expect(config.edsConfig?.templateRepo).toBe('accs-citisignal');
+            // Content source should be from explicit config (for DA.live content)
+            expect(config.edsConfig?.contentSource).toEqual({
+                org: 'content-org',
+                site: 'content-site',
+            });
+        });
+
+        it('should handle missing frontendSource and contentSource gracefully', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+                edsConfig: {
+                    repoName: 'my-repo',
+                    repoMode: 'new',
+                    daLiveOrg: 'myorg',
+                    daLiveSite: 'mysite',
+                },
+            };
+
+            // No packages provided - no frontendSource or contentSource available
+            const config = buildProjectConfig(state, null, []);
+
+            // Should be undefined when no source config
+            expect(config.edsConfig?.templateOwner).toBeUndefined();
+            expect(config.edsConfig?.templateRepo).toBeUndefined();
+            expect(config.edsConfig?.contentSource).toBeUndefined();
+        });
     });
 });

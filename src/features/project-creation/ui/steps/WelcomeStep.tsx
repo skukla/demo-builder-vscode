@@ -134,6 +134,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     // Handler for stack/architecture selection
     // Derives components from the selected stack and updates wizard state
     // When stack CHANGES (not initial selection), notifies wizard to filter dependent state
+    // Also populates edsConfig with template/content source for EDS stacks
     const handleStackSelect = useCallback(
         (stackId: string) => {
             const stack = stacks?.find(s => s.id === stackId);
@@ -148,12 +149,34 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 onArchitectureChange(state.selectedStack, stackId);
             }
 
+            // Get storefront config from the selected package for this stack
+            // This provides templateOwner/templateRepo/contentSource for EDS setup
+            const pkg = packages?.find(p => p.id === state.selectedPackage);
+            const storefront = pkg?.storefronts?.[stackId];
+
+            // Build edsConfig update with template/content source info
+            // These values are needed by StorefrontSetupStep for GitHub reset and DA.live copy
+            // All values are explicit configuration - no URL parsing
+            const edsConfigUpdate = storefront ? {
+                ...state.edsConfig,
+                accsHost: state.edsConfig?.accsHost || '',
+                storeViewCode: state.edsConfig?.storeViewCode || '',
+                customerGroup: state.edsConfig?.customerGroup || '',
+                repoName: state.edsConfig?.repoName || '',
+                daLiveOrg: state.edsConfig?.daLiveOrg || '',
+                daLiveSite: state.edsConfig?.daLiveSite || '',
+                templateOwner: storefront.templateOwner,
+                templateRepo: storefront.templateRepo,
+                contentSource: storefront.contentSource,
+            } : state.edsConfig;
+
             updateState({
                 selectedStack: stackId,
                 components: deriveComponentsFromStack(stack),
+                edsConfig: edsConfigUpdate,
             });
         },
-        [updateState, stacks, state.selectedStack, onArchitectureChange],
+        [updateState, stacks, state.selectedStack, onArchitectureChange, packages, state.selectedPackage, state.edsConfig],
     );
 
     // Handler for addon selection changes

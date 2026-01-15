@@ -136,6 +136,18 @@ function computeInitialState(
             selectedPackage: editSettings.selectedPackage,
             selectedStack: editSettings.selectedStack,
             selectedAddons: editSettings.selectedAddons,
+            // EDS configuration from source project (for EDS stacks)
+            edsConfig: editSettings.edsConfig ? {
+                accsHost: '',
+                storeViewCode: '',
+                customerGroup: '',
+                repoName: editSettings.edsConfig.repoName || '',
+                daLiveOrg: editSettings.edsConfig.daLiveOrg || '',
+                daLiveSite: editSettings.edsConfig.daLiveSite || '',
+                templateOwner: editSettings.edsConfig.templateOwner,
+                templateRepo: editSettings.edsConfig.templateRepo,
+                contentSource: editSettings.edsConfig.contentSource,
+            } : undefined,
         };
     }
 
@@ -175,6 +187,18 @@ function computeInitialState(
         selectedPackage: importedSettings?.selectedPackage,
         selectedStack: importedSettings?.selectedStack,
         selectedAddons: importedSettings?.selectedAddons,
+        // EDS configuration from imported settings (for EDS stacks)
+        edsConfig: importedSettings?.edsConfig ? {
+            accsHost: '',
+            storeViewCode: '',
+            customerGroup: '',
+            repoName: importedSettings.edsConfig.repoName || '',
+            daLiveOrg: importedSettings.edsConfig.daLiveOrg || '',
+            daLiveSite: importedSettings.edsConfig.daLiveSite || '',
+            templateOwner: importedSettings.edsConfig.templateOwner,
+            templateRepo: importedSettings.edsConfig.templateRepo,
+            contentSource: importedSettings.edsConfig.contentSource,
+        } : undefined,
     };
 }
 

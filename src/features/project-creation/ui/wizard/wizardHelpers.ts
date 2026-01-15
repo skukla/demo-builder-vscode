@@ -3,8 +3,9 @@
  */
 
 import { hasMeshInDependencies } from '@/core/constants';
-import type { DemoPackage, GitSource } from '@/types/demoPackages';
+import type { DemoPackage, GitSource, DaLiveContentSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
+import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
 
 /**
  * Step configuration for wizard navigation
@@ -258,6 +259,8 @@ export interface ImportedSettings {
     selectedStack?: string;
     /** Selected optional addons (e.g., ['demo-inspector']) */
     selectedAddons?: string[];
+    /** EDS configuration (for Edge Delivery Services stacks) */
+    edsConfig?: SettingsEdsConfig;
 }
 
 /**
@@ -643,14 +646,29 @@ export function buildProjectConfig(
         }
     }
 
-    // Resolve frontend source from selected package/storefront
+    // Resolve frontend source, template config, and content source from selected package/storefront
     // Packages contain storefronts keyed by stack ID (e.g., 'headless-paas', 'eds-paas')
+    // All values are explicit configuration - no URL parsing
     let frontendSource: GitSource | undefined;
+    let contentSource: DaLiveContentSource | undefined;
+    let templateOwner: string | undefined;
+    let templateRepo: string | undefined;
     if (packages && wizardState.selectedStack && wizardState.selectedPackage) {
         const pkg = packages.find(p => p.id === wizardState.selectedPackage);
         const storefront = pkg?.storefronts?.[wizardState.selectedStack];
         if (storefront?.source) {
             frontendSource = storefront.source;
+        }
+        // Template owner/repo are explicit in config (not derived from source URL)
+        if (storefront?.templateOwner) {
+            templateOwner = storefront.templateOwner;
+        }
+        if (storefront?.templateRepo) {
+            templateRepo = storefront.templateRepo;
+        }
+        // DA.live content source is explicit in config (not derived from GitHub URL)
+        if (storefront?.contentSource) {
+            contentSource = storefront.contentSource;
         }
     }
 
@@ -704,8 +722,17 @@ export function buildProjectConfig(
             skipTools: !wizardState.selectedAddons?.includes('adobe-commerce-aco'),
             // Whether to reset existing site content (replaces all content with demo data)
             resetSiteContent: wizardState.edsConfig.resetSiteContent || false,
+            // Template source repo for GitHub reset operations (explicit config, not derived from URL)
+            // Prefer values already in edsConfig (set in WelcomeStep), fallback to storefront config
+            templateOwner: wizardState.edsConfig.templateOwner || templateOwner,
+            templateRepo: wizardState.edsConfig.templateRepo || templateRepo,
+            // DA.live content source (explicit config, not derived from GitHub URL)
+            // Prefer values already in edsConfig (set in WelcomeStep), fallback to storefront config
+            contentSource: wizardState.edsConfig.contentSource || contentSource,
+            // Results from StorefrontSetupStep (wizard handles all remote setup)
+            repoUrl: wizardState.edsConfig.repoUrl,
+            previewUrl: wizardState.edsConfig.previewUrl,
+            liveUrl: wizardState.edsConfig.liveUrl,
         } : undefined,
     };
-
-    return config;
 }

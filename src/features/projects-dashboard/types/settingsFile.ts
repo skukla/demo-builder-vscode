@@ -51,6 +51,29 @@ export interface SettingsSource {
 }
 
 /**
+ * EDS (Edge Delivery Services) configuration
+ * Extracted from project's eds-storefront component metadata
+ */
+export interface SettingsEdsConfig {
+    /** GitHub owner of the template repository (for reset-to-template operations) */
+    templateOwner?: string;
+    /** GitHub repository name of the template (for reset-to-template operations) */
+    templateRepo?: string;
+    /** DA.live content source configuration (explicit, not derived from GitHub URL) */
+    contentSource?: {
+        org: string;
+        site: string;
+        indexPath?: string;
+    };
+    /** DA.live organization name (user's org) */
+    daLiveOrg?: string;
+    /** DA.live site name (user's site) */
+    daLiveSite?: string;
+    /** GitHub repository name (user's repo) */
+    repoName?: string;
+}
+
+/**
  * Complete settings file structure
  */
 export interface SettingsFile {
@@ -74,6 +97,8 @@ export interface SettingsFile {
     selectedStack?: string;
     /** Optional addons selected during project creation (e.g., ['demo-inspector']) */
     selectedAddons?: string[];
+    /** EDS configuration (for Edge Delivery Services stacks) */
+    edsConfig?: SettingsEdsConfig;
 }
 
 /** Current schema version */

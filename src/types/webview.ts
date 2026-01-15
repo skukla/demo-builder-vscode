@@ -79,10 +79,6 @@ export interface WizardState {
     // Wizard mode - determines flow behavior and UI labels
     wizardMode?: WizardMode;
 
-    // Dynamic step status - displayed as 3rd level heading in PageHeader
-    // Used by steps with multiple phases (e.g., "Verifying GitHub App...")
-    stepStatus?: string;
-
     // Edit mode properties (legacy, use wizardMode instead)
     editMode?: boolean;  // True when editing existing project
     editProjectPath?: string;  // Path to existing project being edited
@@ -391,6 +387,18 @@ export interface EDSConfig {
         isAuthenticated: boolean;
         isAuthenticating?: boolean;
         error?: string;
+    };
+
+    // Template source configuration (from package storefront)
+    /** Template repository owner (e.g., 'demo-system-stores') - for GitHub reset operations */
+    templateOwner?: string;
+    /** Template repository name (e.g., 'accs-citisignal') - for GitHub reset operations */
+    templateRepo?: string;
+    /** DA.live content source configuration (explicit, not derived from GitHub URL) */
+    contentSource?: {
+        org: string;
+        site: string;
+        indexPath?: string;
     };
 
     // Preflight completion state (set by StorefrontSetupStep)
