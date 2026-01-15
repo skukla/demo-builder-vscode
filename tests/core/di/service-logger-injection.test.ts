@@ -238,7 +238,7 @@ describe('Service Logger Injection', () => {
         it('should accept optional logger in constructor', () => {
             // Mock dependencies - must pass validation
             const mockGithubService = { createFromTemplate: jest.fn() };
-            const mockDaLiveService = { copyCitisignalContent: jest.fn() };
+            const mockDaLiveService = { copyContentFromSource: jest.fn() };
             const mockAuthService = { getTokenManager: jest.fn() };
             const mockComponentManager = { installComponent: jest.fn() };
 

@@ -116,6 +116,10 @@ describe('EdsProjectService', () => {
         daLiveSite: 'test-site',
         templateOwner: 'demo-system-stores',
         templateRepo: 'accs-citisignal',
+        contentSource: {
+            org: 'demo-system-stores',
+            site: 'accs-citisignal',
+        },
         backendComponentId: 'accs',
         accsEndpoint: 'https://commerce.example.com/graphql',
         githubOwner: 'testuser',
@@ -171,7 +175,7 @@ describe('EdsProjectService', () => {
 
         // Mock DaLiveContentOperations
         mockDaLiveContentOps = {
-            copyCitisignalContent: jest.fn(),
+            copyContentFromSource: jest.fn(),
             listDirectory: jest.fn(),
         };
 
@@ -334,7 +338,7 @@ describe('EdsProjectService', () => {
                 status: 200,
                 json: async () => ({}),
             });
-            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyContentFromSource!.mockResolvedValue({
                 success: true,
                 copiedFiles: ['/index.html'],
                 failedFiles: [],
@@ -600,7 +604,7 @@ describe('EdsProjectService', () => {
                 .mockResolvedValueOnce({ ok: true, status: 200 }); // code sync poll 3 - success!
 
             // Setup remaining mocks
-            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyContentFromSource!.mockResolvedValue({
                 success: true,
                 copiedFiles: [],
                 failedFiles: [],
@@ -698,7 +702,7 @@ describe('EdsProjectService', () => {
         it('should generate preview URL on sync success', async () => {
             // Given: Code sync succeeds on first try
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
-            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyContentFromSource!.mockResolvedValue({
                 success: true,
                 copiedFiles: [],
                 failedFiles: [],
@@ -721,7 +725,7 @@ describe('EdsProjectService', () => {
                 .mockResolvedValueOnce({ ok: false, status: 404 }) // code sync poll 1
                 .mockResolvedValue({ ok: true, status: 200 }); // code sync poll 2 + rest
 
-            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyContentFromSource!.mockResolvedValue({
                 success: true,
                 copiedFiles: [],
                 failedFiles: [],
@@ -753,7 +757,7 @@ describe('EdsProjectService', () => {
 
         it('should copy CitiSignal content to DA.live', async () => {
             // Given: Code sync complete
-            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyContentFromSource!.mockResolvedValue({
                 success: true,
                 copiedFiles: ['/index.html', '/about.html'],
                 failedFiles: [],
@@ -766,8 +770,13 @@ describe('EdsProjectService', () => {
             await jest.runAllTimersAsync();
             await resultPromise;
 
-            // Then: Should copy content to destination org/site
-            expect(mockDaLiveContentOps.copyCitisignalContent).toHaveBeenCalledWith(
+            // Then: Should copy content to destination org/site with source config
+            expect(mockDaLiveContentOps.copyContentFromSource).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    org: 'demo-system-stores',
+                    site: 'accs-citisignal',
+                    indexUrl: expect.stringContaining('full-index.json'),
+                }), // source from template
                 defaultConfig.daLiveOrg,
                 defaultConfig.daLiveSite,
                 expect.any(Function), // progress callback
@@ -776,8 +785,8 @@ describe('EdsProjectService', () => {
 
         it('should report content copy progress', async () => {
             // Given: Content copy with progress reporting
-            mockDaLiveContentOps.copyCitisignalContent!.mockImplementation(
-                async (_org, _site, progressCallback) => {
+            mockDaLiveContentOps.copyContentFromSource!.mockImplementation(
+                async (_source, _org, _site, progressCallback) => {
                     if (progressCallback) {
                         progressCallback({ processed: 1, total: 2, percentage: 50 });
                         progressCallback({ processed: 2, total: 2, percentage: 100 });
@@ -802,7 +811,7 @@ describe('EdsProjectService', () => {
 
         it('should handle partial content copy failure', async () => {
             // Given: Some files fail to copy
-            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyContentFromSource!.mockResolvedValue({
                 success: false,
                 copiedFiles: ['/index.html'],
                 failedFiles: [{ path: '/about.html', error: 'Copy failed' }],
@@ -834,7 +843,7 @@ describe('EdsProjectService', () => {
             await resultPromise;
 
             // Then: Should not copy content
-            expect(mockDaLiveContentOps.copyCitisignalContent).not.toHaveBeenCalled();
+            expect(mockDaLiveContentOps.copyContentFromSource).not.toHaveBeenCalled();
         });
     });
 
@@ -846,7 +855,7 @@ describe('EdsProjectService', () => {
             mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
             mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
-            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyContentFromSource!.mockResolvedValue({
                 success: true,
                 copiedFiles: [],
                 failedFiles: [],
@@ -956,7 +965,7 @@ describe('EdsProjectService', () => {
             mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
             mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
-            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyContentFromSource!.mockResolvedValue({
                 success: true,
                 copiedFiles: [],
                 failedFiles: [],
@@ -1132,7 +1141,7 @@ describe('EdsProjectService', () => {
             mockGitHubRepoOps.createFromTemplate!.mockResolvedValue(mockRepo);
             mockGitHubRepoOps.cloneRepository!.mockResolvedValue(undefined);
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
-            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyContentFromSource!.mockResolvedValue({
                 success: true,
                 copiedFiles: [],
                 failedFiles: [],
@@ -1180,7 +1189,7 @@ describe('EdsProjectService', () => {
             };
             mockAuthService.getTokenManager!.mockReturnValue(mockTokenManager);
             // Mock DA.live to fail when IMS token is not available
-            mockDaLiveContentOps.copyCitisignalContent!.mockRejectedValue(
+            mockDaLiveContentOps.copyContentFromSource!.mockRejectedValue(
                 new Error('User is not authenticated. Please sign in to access DA.live.'),
             );
 
@@ -1329,7 +1338,7 @@ describe('EdsProjectService', () => {
 
         it('should handle content copy without progress callback', async () => {
             // Given: Config without progress callback
-            mockDaLiveContentOps.copyCitisignalContent!.mockResolvedValue({
+            mockDaLiveContentOps.copyContentFromSource!.mockResolvedValue({
                 success: true,
                 copiedFiles: ['/index.html'],
                 failedFiles: [],
@@ -1343,7 +1352,7 @@ describe('EdsProjectService', () => {
 
             // Then: Should complete successfully
             expect(result.success).toBe(true);
-            expect(mockDaLiveContentOps.copyCitisignalContent).toHaveBeenCalled();
+            expect(mockDaLiveContentOps.copyContentFromSource).toHaveBeenCalled();
         });
     });
 });

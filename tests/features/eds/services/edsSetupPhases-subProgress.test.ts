@@ -333,7 +333,7 @@ describe('EDS Setup Phases - Sub-Progress Callbacks', () => {
             };
 
             const mockDaLiveContentOps = {
-                copyCitisignalContent: jest.fn().mockResolvedValue({
+                copyContentFromSource: jest.fn().mockResolvedValue({
                     success: true,
                     copiedFiles: [],
                     failedFiles: [],
