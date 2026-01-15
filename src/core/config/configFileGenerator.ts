@@ -10,6 +10,7 @@
  */
 
 import * as fs from 'fs/promises';
+import * as path from 'path';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -94,8 +95,9 @@ export async function generateConfigFile(options: ConfigFileOptions): Promise<vo
         }
     }
     
-    // Step 5: Write file
+    // Step 5: Ensure directory exists and write file
     try {
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
         await fs.writeFile(filePath, JSON.stringify(finalConfig, null, 2), 'utf-8');
         logger.debug(`[Config Generator] Generated ${fileDesc}`);
         
@@ -161,8 +163,9 @@ export async function updateConfigFile(
         
         // Merge updates
         const updatedConfig = { ...existingConfig, ...updates };
-        
-        // Write back
+
+        // Ensure directory exists and write back
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
         await fs.writeFile(filePath, JSON.stringify(updatedConfig, null, 2), 'utf-8');
         logger.debug(`[Config Generator] Updated ${fileDesc}`);
         
