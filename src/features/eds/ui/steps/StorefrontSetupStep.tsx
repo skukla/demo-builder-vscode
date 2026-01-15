@@ -14,7 +14,8 @@
  * - helix-config: Configuring Helix 5 fstab.yaml
  * - code-sync: Verifying code bus synchronization
  * - github-app: Waiting for GitHub App installation
- * - dalive-content: Populating DA.live content
+ * - content-copy: Copying demo content to DA.live
+ * - content-publish: Publishing content to CDN
  * - completed: All operations successful
  * - error: Operation failed
  *
@@ -39,7 +40,8 @@ const PROGRESS_RANGES = {
     'github-repo': { start: 0, end: 15 },
     'helix-config': { start: 15, end: 35 },
     'code-sync': { start: 35, end: 45 },
-    'dalive-content': { start: 45, end: 95 },
+    'content-copy': { start: 45, end: 65 },
+    'content-publish': { start: 65, end: 95 },
     'complete': 100,
 } as const;
 
@@ -52,7 +54,9 @@ type StorefrontSetupPhase =
     | 'helix-config'
     | 'code-sync'
     | 'github-app'
-    | 'dalive-content'
+    | 'content-copy'
+    | 'content-publish'
+    | 'cancelling'
     | 'completed'
     | 'error';
 
@@ -119,8 +123,12 @@ function getPhaseDescription(phase: StorefrontSetupPhase): string {
             return 'Syncing with content bus...';
         case 'github-app':
             return 'Waiting for GitHub App installation...';
-        case 'dalive-content':
+        case 'content-copy':
             return 'Copying demo content...';
+        case 'content-publish':
+            return 'Publishing content...';
+        case 'cancelling':
+            return 'Cancelling setup...';
         case 'completed':
             return 'Storefront setup complete.';
         case 'error':
@@ -132,17 +140,20 @@ function getPhaseDescription(phase: StorefrontSetupPhase): string {
 
 /**
  * Get helper text for loading display based on phase
+ * These provide time estimates or additional context, not action descriptions
  */
 function getHelperText(phase: StorefrontSetupPhase): string | undefined {
     switch (phase) {
         case 'github-repo':
             return 'This may take up to 30 seconds';
         case 'helix-config':
-            return 'Configuring fstab.yaml';
+            return 'This usually takes a few seconds';
         case 'code-sync':
-            return 'Waiting for code bus sync';
-        case 'dalive-content':
+            return 'Verifying Edge Delivery Services connection';
+        case 'content-copy':
             return 'This may take 1-2 minutes';
+        case 'content-publish':
+            return 'This may take a moment';
         default:
             return undefined;
     }
@@ -152,7 +163,7 @@ function getHelperText(phase: StorefrontSetupPhase): string | undefined {
  * Check if a phase is actively processing
  */
 function isActivePhase(phase: StorefrontSetupPhase): boolean {
-    return ['idle', 'github-repo', 'helix-config', 'code-sync', 'dalive-content'].includes(phase);
+    return ['idle', 'github-repo', 'helix-config', 'code-sync', 'content-copy', 'content-publish', 'cancelling'].includes(phase);
 }
 
 /**
@@ -187,18 +198,6 @@ export function StorefrontSetupStep({
         setCanProceed(setupState.phase === 'completed');
     }, [setupState.phase, setCanProceed]);
 
-    // Update PageHeader status text when phase changes
-    // This provides a dynamic 3rd level heading showing current operation
-    useEffect(() => {
-        const phaseMessage = getPhaseDescription(setupState.phase);
-        updateState({ stepStatus: phaseMessage });
-
-        // Clear stepStatus when unmounting
-        return () => {
-            updateState({ stepStatus: undefined });
-        };
-    }, [setupState.phase, updateState]);
-
     /**
      * Handle progress updates from the extension
      */
@@ -223,9 +222,9 @@ export function StorefrontSetupStep({
                 newPartialState.repoName = data.repoName;
             }
 
-            // Mark content as copied when completing dalive-content phase
+            // Mark content as copied when completing content-copy phase
             if (data.phase === 'completed' ||
-                (prev.partialState.phase === 'dalive-content' && data.phase !== 'dalive-content')) {
+                (prev.partialState.phase === 'content-copy' && data.phase !== 'content-copy')) {
                 newPartialState.contentCopied = true;
             }
 
@@ -273,13 +272,11 @@ export function StorefrontSetupStep({
             },
         }));
 
-        // Update wizard state to mark preflight as complete
-        // This tells the executor to skip EDS setup phases
+        // Update wizard state with setup results
         // Uses ref to get latest edsConfig value (avoids stale closure)
         updateState({
             edsConfig: {
                 ...edsConfigRef.current,
-                preflightComplete: true,
                 repoUrl: data.githubRepo,
                 previewUrl: data.previewUrl,
                 liveUrl: data.liveUrl,
@@ -425,6 +422,7 @@ export function StorefrontSetupStep({
                                 message={setupState.message}
                                 subMessage={setupState.subMessage}
                                 helperText={getHelperText(setupState.phase)}
+                                progress={setupState.progress}
                             />
                         </CenteredFeedbackContainer>
                     )}

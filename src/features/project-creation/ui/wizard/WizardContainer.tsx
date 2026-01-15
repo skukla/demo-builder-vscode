@@ -363,7 +363,6 @@ export function WizardContainer({
                         title={getWizardTitle(state.wizardMode)}
                         subtitle={currentStepName}
                         description={currentStepDescription}
-                        statusText={state.stepStatus}
                     />
 
                     {/* Step Content */}
