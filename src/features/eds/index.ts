@@ -18,7 +18,7 @@ export { GitHubOAuthService } from './services/githubOAuthService';
 
 // DA.live Services (extracted modules - explicit dependencies, locality of behavior)
 export { DaLiveOrgOperations, type TokenProvider } from './services/daLiveOrgOperations';
-export { DaLiveContentOperations } from './services/daLiveContentOperations';
+export { DaLiveContentOperations, type DaLiveContentSource } from './services/daLiveContentOperations';
 export { DaLiveAuthService } from './services/daLiveAuthService';
 
 // Project Orchestration Services

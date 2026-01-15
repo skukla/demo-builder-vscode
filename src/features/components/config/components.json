@@ -202,8 +202,14 @@
                 "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us"
             },
             "contentSource": {
+                "github": {
+                    "owner": "demo-system-stores",
+                    "repo": "accs-citisignal",
+                    "branch": "main"
+                },
                 "daLive": {
-                    "template": "citisignal"
+                    "org": "demo-system-stores",
+                    "site": "accs-citisignal"
                 }
             }
         },
@@ -217,8 +223,14 @@
                 "ADOBE_COMMERCE_STORE_VIEW_CODE": "buildright_us"
             },
             "contentSource": {
+                "github": {
+                    "owner": "skukla",
+                    "repo": "buildright-eds",
+                    "branch": "main"
+                },
                 "daLive": {
-                    "template": "buildright"
+                    "org": "demo-system-stores",
+                    "site": "buildright"
                 }
             }
         }

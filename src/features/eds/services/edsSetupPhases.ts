@@ -503,7 +503,21 @@ export class ContentPhase {
                 }
             }
 
-            const result = await this.daLiveContentOps.copyCitisignalContent(
+            // Validate content source (explicit config, not derived from GitHub)
+            if (!config.contentSource) {
+                throw new Error('Content source configuration required for content copy');
+            }
+
+            // Build full content source with index URL
+            const indexPath = config.contentSource.indexPath || '/full-index.json';
+            const contentSource = {
+                org: config.contentSource.org,
+                site: config.contentSource.site,
+                indexUrl: `https://main--${config.contentSource.site}--${config.contentSource.org}.aem.live${indexPath}`,
+            };
+
+            const result = await this.daLiveContentOps.copyContentFromSource(
+                contentSource,
                 config.daLiveOrg,
                 config.daLiveSite,
                 progressCallback ? (progress) => {
