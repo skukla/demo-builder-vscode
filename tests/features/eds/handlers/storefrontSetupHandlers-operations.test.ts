@@ -19,7 +19,7 @@ describe('Storefront Setup Operations', () => {
          * 1. github-repo (0-15%)
          * 2. helix-config (15-35%)
          * 3. code-sync (35-45%)
-         * 4. dalive-content (45-60%)
+         * 4. content-copy (45-60%)
          * 5. content-publish (60-90%) ← NEW: moved from edsProjectService
          * 6. complete (100%)
          *
@@ -32,15 +32,15 @@ describe('Storefront Setup Operations', () => {
             'github-repo',
             'helix-config',
             'code-sync',
-            'dalive-content',
+            'content-copy',
             'content-publish',  // NEW: makes site LIVE
         ] as const;
 
-        it('should include content-publish phase after dalive-content', () => {
+        it('should include content-publish phase after content-copy', () => {
             const contentPublishIndex = STOREFRONT_SETUP_PHASES.indexOf('content-publish');
-            const daLiveContentIndex = STOREFRONT_SETUP_PHASES.indexOf('dalive-content');
+            const contentCopyIndex = STOREFRONT_SETUP_PHASES.indexOf('content-copy');
 
-            expect(contentPublishIndex).toBeGreaterThan(daLiveContentIndex);
+            expect(contentPublishIndex).toBeGreaterThan(contentCopyIndex);
             expect(contentPublishIndex).toBe(4); // 5th phase (0-indexed)
         });
 
@@ -61,7 +61,7 @@ describe('Storefront Setup Operations', () => {
          * - github-repo: 0-15%
          * - helix-config: 15-35%
          * - code-sync: 35-45%
-         * - dalive-content: 45-60%
+         * - content-copy: 45-60%
          * - content-publish: 60-90%
          * - complete: 100%
          */
@@ -70,7 +70,7 @@ describe('Storefront Setup Operations', () => {
             'github-repo': { start: 0, end: 15 },
             'helix-config': { start: 15, end: 35 },
             'code-sync': { start: 35, end: 45 },
-            'dalive-content': { start: 45, end: 60 },
+            'content-copy': { start: 45, end: 60 },
             'content-publish': { start: 60, end: 90 },
             'complete': { start: 100, end: 100 },
         } as const;
@@ -81,15 +81,15 @@ describe('Storefront Setup Operations', () => {
             expect(contentPublish.end).toBe(90);
         });
 
-        it('should have dalive-content end at 60%', () => {
-            const daLiveContent = PROGRESS_RANGES['dalive-content'];
-            expect(daLiveContent.end).toBe(60);
+        it('should have content-copy end at 60%', () => {
+            const contentCopy = PROGRESS_RANGES['content-copy'];
+            expect(contentCopy.end).toBe(60);
         });
 
-        it('should have no gaps between dalive-content and content-publish', () => {
-            const daLiveContent = PROGRESS_RANGES['dalive-content'];
+        it('should have no gaps between content-copy and content-publish', () => {
+            const contentCopy = PROGRESS_RANGES['content-copy'];
             const contentPublish = PROGRESS_RANGES['content-publish'];
-            expect(daLiveContent.end).toBe(contentPublish.start);
+            expect(contentCopy.end).toBe(contentPublish.start);
         });
     });
 
@@ -101,14 +101,14 @@ describe('Storefront Setup Operations', () => {
 
         it('should publish content to CDN after content copy', () => {
             // The expected operation order:
-            // 1. Copy DA.live content (dalive-content phase)
+            // 1. Copy DA.live content (content-copy phase)
             // 2. Publish all content to CDN (content-publish phase) ← this makes site LIVE
             const phaseOrder = [
-                { phase: 'dalive-content', description: 'Copy content to DA.live' },
+                { phase: 'content-copy', description: 'Copy demo content' },
                 { phase: 'content-publish', description: 'Publish content to CDN' },
             ];
 
-            expect(phaseOrder[0].phase).toBe('dalive-content');
+            expect(phaseOrder[0].phase).toBe('content-copy');
             expect(phaseOrder[1].phase).toBe('content-publish');
         });
 

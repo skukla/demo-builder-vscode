@@ -63,6 +63,15 @@ interface StorefrontSetupStartPayload {
         isPrivate?: boolean;
         resetToTemplate?: boolean;
         skipContent?: boolean;
+        // Template repository info (from stack/brand config) for GitHub reset operations
+        templateOwner?: string;
+        templateRepo?: string;
+        // DA.live content source (explicit config, not derived from GitHub URL)
+        contentSource?: {
+            org: string;
+            site: string;
+            indexPath?: string;
+        };
         // Selected existing repository (from searchable list)
         selectedRepo?: {
             name: string;
@@ -402,9 +411,27 @@ async function executeStorefrontSetupPhases(
     }
     logger.info(`[Storefront Setup] Using GitHub owner: ${githubOwner}`);
 
-    // Get template info from stack (hardcoded for now, should come from stack config)
-    const templateOwner = 'hlxsites';
-    const templateRepo = 'citisignal';
+    // Get template info from edsConfig (set during wizard flow)
+    const templateOwner = edsConfig.templateOwner;
+    const templateRepo = edsConfig.templateRepo;
+
+    if (!templateOwner || !templateRepo) {
+        logger.error('[Storefront Setup] Template not configured. edsConfig:', JSON.stringify(edsConfig, null, 2));
+        return {
+            success: false,
+            error: 'GitHub template not configured. Please check your stack configuration.',
+        };
+    }
+
+    // Validate content source if content copy is needed
+    const contentSource = edsConfig.contentSource;
+    if (!edsConfig.skipContent && !contentSource) {
+        logger.error('[Storefront Setup] Content source not configured. edsConfig:', JSON.stringify(edsConfig, null, 2));
+        return {
+            success: false,
+            error: 'DA.live content source not configured. Please check your stack configuration.',
+        };
+    }
 
     let repoUrl: string | undefined;
     let repoOwner: string = githubOwner;
@@ -445,16 +472,26 @@ async function executeStorefrontSetupPhases(
                 repoName,
             });
 
-            // If resetToTemplate is set, we need to reset the repo contents
+            // If resetToTemplate is set, reset the repo to match template
+            // Uses Git Tree API for atomic reset (~4 API calls vs 4000+ for file-by-file)
             if (edsConfig.resetToTemplate) {
                 logger.info('[Storefront Setup] Resetting repository to template...');
                 await context.sendMessage('storefront-setup-progress', {
                     phase: 'github-repo',
                     message: 'Resetting repository to template...',
-                    progress: 10,
+                    progress: 6,
                 });
-                // TODO: Implement reset to template functionality
-                // For now, just proceed with existing content
+
+                await githubRepoOps.resetToTemplate(
+                    repoOwner,
+                    repoName,
+                    templateOwner,
+                    templateRepo,
+                    'main',
+                    'chore: reset to template',
+                );
+
+                logger.info('[Storefront Setup] Repository reset to template');
             }
 
             await context.sendMessage('storefront-setup-progress', {
@@ -642,27 +679,36 @@ async function executeStorefrontSetupPhases(
             // Skip content copy when using existing content
             logger.info('[Storefront Setup] Skipping DA.live content copy (skipContent=true)');
             await context.sendMessage('storefront-setup-progress', {
-                phase: 'dalive-content',
+                phase: 'content-copy',
                 message: 'Using existing DA.live content',
                 progress: 60,
             });
         } else {
             await context.sendMessage('storefront-setup-progress', {
-                phase: 'dalive-content',
+                phase: 'content-copy',
                 message: 'Populating DA.live content...',
                 progress: 50,
             });
 
-            logger.info(`[Storefront Setup] Copying content to ${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`);
+            logger.info(`[Storefront Setup] Copying content from ${contentSource!.org}/${contentSource!.site} to ${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`);
 
-            const contentResult = await daLiveContentOps.copyCitisignalContent(
+            // Build full content source with index URL from explicit config
+            const indexPath = contentSource!.indexPath || '/full-index.json';
+            const fullContentSource = {
+                org: contentSource!.org,
+                site: contentSource!.site,
+                indexUrl: `https://main--${contentSource!.site}--${contentSource!.org}.aem.live${indexPath}`,
+            };
+
+            const contentResult = await daLiveContentOps.copyContentFromSource(
+                fullContentSource,
                 edsConfig.daLiveOrg,
                 edsConfig.daLiveSite,
                 (progress) => {
                     // Scale progress from 50% to 60% during content copy
                     const progressValue = 50 + Math.round(progress.percentage * 0.10);
                     context.sendMessage('storefront-setup-progress', {
-                        phase: 'dalive-content',
+                        phase: 'content-copy',
                         message: 'Copying demo content',
                         subMessage: progress.currentFile,
                         progress: progressValue,
@@ -677,7 +723,7 @@ async function executeStorefrontSetupPhases(
             logger.info(`[Storefront Setup] DA.live content populated: ${contentResult.totalFiles} files`);
 
             await context.sendMessage('storefront-setup-progress', {
-                phase: 'dalive-content',
+                phase: 'content-copy',
                 message: 'Content populated',
                 progress: 60,
             });
@@ -701,7 +747,36 @@ async function executeStorefrontSetupPhases(
             const helixService = new HelixService(context.authManager!, logger, githubTokenService);
 
             try {
-                await helixService.publishAllSiteContent(`${repoOwner}/${repoName}`);
+                // Progress callback to report publish status to UI
+                // Scale from 65% (start) to 90% (end) of overall progress
+                const onPublishProgress = (info: {
+                    phase: string;
+                    message: string;
+                    current?: number;
+                    total?: number;
+                    currentPath?: string;
+                }) => {
+                    // Calculate progress within the 65-90% range
+                    let progressValue = 65;
+                    if (info.total && info.current) {
+                        progressValue = 65 + Math.round((info.current / info.total) * 25);
+                    }
+
+                    context.sendMessage('storefront-setup-progress', {
+                        phase: 'content-publish',
+                        message: info.message,
+                        subMessage: info.currentPath,
+                        progress: progressValue,
+                    });
+                };
+
+                await helixService.publishAllSiteContent(
+                    `${repoOwner}/${repoName}`,
+                    'main',
+                    undefined,
+                    undefined,
+                    onPublishProgress,
+                );
                 logger.info('[Storefront Setup] Content published to CDN successfully');
             } catch (error) {
                 throw new Error(`Failed to publish content to CDN: ${(error as Error).message}`);

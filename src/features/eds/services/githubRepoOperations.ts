@@ -457,6 +457,79 @@ export class GitHubRepoOperations {
     }
 
     /**
+     * Reset repository to match a template repository
+     *
+     * Uses Git Data API to atomically replace the repo's tree with the template's tree.
+     * This is much faster than copying files one-by-one (~4 API calls vs 4000+).
+     *
+     * @param owner - User's repository owner
+     * @param repo - User's repository name
+     * @param templateOwner - Template repository owner
+     * @param templateRepo - Template repository name
+     * @param branch - Branch to reset (default: 'main')
+     * @param commitMessage - Commit message for the reset
+     * @returns Commit SHA of the reset commit
+     */
+    async resetToTemplate(
+        owner: string,
+        repo: string,
+        templateOwner: string,
+        templateRepo: string,
+        branch = 'main',
+        commitMessage = 'chore: reset to template',
+    ): Promise<{ commitSha: string }> {
+        const octokit = await this.ensureAuthenticated();
+
+        this.logger.info(`[GitHub] Resetting ${owner}/${repo} to template ${templateOwner}/${templateRepo}`);
+
+        // Step 1: Get template repo's tree SHA from HEAD commit
+        this.logger.debug(`[GitHub] Getting template tree SHA...`);
+        const templateBranch = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
+            owner: templateOwner,
+            repo: templateRepo,
+            branch,
+        });
+        const templateTreeSha = templateBranch.data.commit.commit.tree.sha;
+        this.logger.debug(`[GitHub] Template tree SHA: ${templateTreeSha}`);
+
+        // Step 2: Get user repo's current HEAD commit SHA (to use as parent)
+        this.logger.debug(`[GitHub] Getting user repo HEAD...`);
+        const userBranch = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
+            owner,
+            repo,
+            branch,
+        });
+        const userHeadSha = userBranch.data.commit.sha;
+        this.logger.debug(`[GitHub] User HEAD SHA: ${userHeadSha}`);
+
+        // Step 3: Create a new commit with template's tree and user's HEAD as parent
+        this.logger.debug(`[GitHub] Creating reset commit...`);
+        const newCommit = await octokit.request('POST /repos/{owner}/{repo}/git/commits', {
+            owner,
+            repo,
+            message: commitMessage,
+            tree: templateTreeSha,
+            parents: [userHeadSha],
+        });
+        const newCommitSha = newCommit.data.sha;
+        this.logger.debug(`[GitHub] New commit SHA: ${newCommitSha}`);
+
+        // Step 4: Update branch to point to new commit
+        this.logger.debug(`[GitHub] Updating branch ref...`);
+        await octokit.request('PATCH /repos/{owner}/{repo}/git/refs/heads/{branch}', {
+            owner,
+            repo,
+            branch,
+            sha: newCommitSha,
+            force: true, // Required since we're changing the tree
+        });
+
+        this.logger.info(`[GitHub] Reset complete - ${owner}/${repo} now matches template`);
+
+        return { commitSha: newCommitSha };
+    }
+
+    /**
      * Invalidate cached Octokit instance (call after token changes)
      */
     invalidateOctokit(): void {
