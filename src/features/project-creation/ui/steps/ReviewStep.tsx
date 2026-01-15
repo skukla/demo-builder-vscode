@@ -47,10 +47,10 @@ function LabelValue({ label, value, icon, subItems }: {
 }) {
     return (
         <Flex gap="size-200" alignItems="start">
-            <Text 
+            <Text
                 UNSAFE_className="review-label"
-                UNSAFE_style={{ 
-                    minWidth: '180px',
+                UNSAFE_style={{
+                    width: '120px',
                     flexShrink: 0,
                 }}
             >

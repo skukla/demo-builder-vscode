@@ -10,6 +10,8 @@ export interface LoadingDisplayProps {
     subMessage?: string;
     /** Optional static helper text (e.g., time expectations) - stays visible */
     helperText?: string;
+    /** Optional progress percentage (0-100). When provided, shows determinate progress circle */
+    progress?: number;
     /** Additional CSS class for the container */
     className?: string;
 }
@@ -23,17 +25,19 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
     message,
     subMessage,
     helperText,
+    progress,
     className,
 }) => {
     // Center display for large size, left-align for smaller sizes
     const shouldCenter = size === 'L';
+    const hasDeterminateProgress = progress !== undefined && progress >= 0;
 
     // Text size and color classes based on progress circle size
     const textSizeMap = { L: 'text-lg', M: 'text-base', S: '' };
     const mainTextClass = `${textSizeMap[size]} font-medium`.trim();
     const subTextClass = 'text-sm text-gray-600';
     const helperTextClass = 'text-xs text-gray-500 italic';
-    
+
     // Container props based on centering
     const containerProps = shouldCenter ? {
         alignItems: 'center' as const,
@@ -42,7 +46,7 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
     } : {
         alignItems: 'center' as const,
     };
-    
+
     // For small size with no sub-message, use horizontal layout
     if (size === 'S' && !subMessage) {
         return (
@@ -56,7 +60,7 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
             </Flex>
         );
     }
-    
+
     // For larger sizes or when sub-message exists, use vertical layout
     return (
         <div role="status" aria-live="polite" aria-atomic="true">
@@ -68,7 +72,8 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
         >
             <ProgressCircle
                 size={size}
-                isIndeterminate={true}
+                value={hasDeterminateProgress ? progress : undefined}
+                isIndeterminate={!hasDeterminateProgress}
                 aria-label={message}
             />
             <Flex direction="column" gap="size-50" alignItems={shouldCenter ? 'center' : 'start'}>

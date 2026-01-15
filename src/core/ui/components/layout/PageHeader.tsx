@@ -95,14 +95,18 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                     </Heading>
                 )}
                 {description && (
-                    <Text UNSAFE_className={cn('text-gray-500', 'text-sm')}>
-                        {description}
-                    </Text>
+                    <div>
+                        <Text UNSAFE_className={cn('text-gray-500', 'text-sm')}>
+                            {description}
+                        </Text>
+                    </div>
                 )}
                 {statusText && (
-                    <Text UNSAFE_className={cn('text-gray-600', 'text-sm', 'font-medium', 'mt-1')}>
-                        {statusText}
-                    </Text>
+                    <div className="mt-1">
+                        <Text UNSAFE_className={cn('text-gray-600', 'text-sm', 'font-medium')}>
+                            {statusText}
+                        </Text>
+                    </div>
                 )}
             </View>
             {action}
