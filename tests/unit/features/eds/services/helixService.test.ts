@@ -8,19 +8,20 @@
  * to verify the user has write access to the GitHub repository. For DA.live content
  * sources, it also requires x-content-source-authorization header with IMS token.
  *
- * Coverage: 24 tests
+ * Coverage: 25 tests
  * - Preview page via POST /preview/{org}/{site}/main/{path}
  * - Publish page via POST /live/{org}/{site}/main/{path}
  * - Preview and publish single page
- * - Bulk preview via POST /preview/{org}/{site}/main/*
- * - Bulk publish via POST /live/{org}/{site}/main/*
- * - Bulk preview and publish all content
+ * - Bulk preview via POST /preview/{org}/{site}/main with JSON body containing paths
+ * - Bulk publish via POST /live/{org}/{site}/main with JSON body containing paths
+ * - Job polling for bulk operations (GET /jobs/{topic}/{jobName})
+ * - Bulk publish all site content with job completion tracking
+ * - Fallback to page-by-page when bulk API returns 404
  * - Unpublish from live via DELETE /live/{org}/{site}/main/*
  * - Delete from preview via DELETE /preview/{org}/{site}/main/*
  * - Require GitHub token for authentication
  * - Handle 404 as success (never published)
  * - Parse repo fullName to extract org and site
- * - Skip pages with 404 errors (no content) during bulk publish
  */
 
 // Mock vscode module
@@ -298,7 +299,7 @@ describe('HelixService', () => {
             );
         });
 
-        it('should list pages from DA.live and publish each individually', async () => {
+        it('should list pages from DA.live and use bulk API for preview/publish', async () => {
             // Given: Valid authentication and DA.live content
             // DA.live API: files have 'ext' field, folders don't
             // Paths include org/site prefix: /dalive-org/dalive-site/page.html
@@ -314,10 +315,35 @@ describe('HelixService', () => {
                     { name: 'index', ext: 'html', path: '/dalive-org/dalive-site/products/index.html' },
                 ]); // products folder contents
 
-            // Fetch succeeds for all preview/publish calls
-            mockFetch.mockResolvedValue({
+            // Readiness check succeeds
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // Bulk preview returns 202 with job info
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () => Promise.resolve({ job: { name: 'preview-job-1', topic: 'preview', state: 'created' } }),
+            });
+
+            // Job polling for preview returns 'stopped' (completed)
+            mockFetch.mockResolvedValueOnce({
                 ok: true,
                 status: 200,
+                json: () => Promise.resolve({ state: 'stopped', progress: { processed: 4, total: 4 } }),
+            });
+
+            // Bulk publish returns 202 with job info
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () => Promise.resolve({ job: { name: 'publish-job-1', topic: 'live', state: 'created' } }),
+            });
+
+            // Job polling for publish returns 'stopped' (completed)
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({ state: 'stopped', progress: { processed: 4, total: 4 } }),
             });
 
             // When: Publishing all site content with DA.live org/site
@@ -326,15 +352,23 @@ describe('HelixService', () => {
             // Then: Should list content from DA.live org/site
             expect(mockListDirectory).toHaveBeenCalledWith('dalive-org', 'dalive-site', '/');
 
-            // Then: Should preview and publish each page individually using GitHub org/site
-            // 4 HTML pages: / (index), /about, /nav, /products (products/index -> /products)
-            // metadata.json excluded (not html)
-            // 1 readiness check (preview homepage) + 4 pages × 2 calls (preview + publish) = 9 total calls
-            expect(mockFetch).toHaveBeenCalledTimes(9);
+            // Then: Should use bulk API (not per-page)
+            // 1 readiness check + 1 bulk preview + 1 job poll + 1 bulk publish + 1 job poll = 5 calls
+            expect(mockFetch).toHaveBeenCalledTimes(5);
 
             // Verify GitHub org/site used for Helix API calls (not DA.live org/site)
             const calls = mockFetch.mock.calls;
             expect(calls.every((c: any[]) => c[0].includes('github-owner/github-repo'))).toBe(true);
+
+            // Verify bulk preview call has correct JSON body
+            const bulkPreviewCall = calls[1];
+            expect(bulkPreviewCall[0]).toContain('/preview/github-owner/github-repo/main');
+            expect(JSON.parse(bulkPreviewCall[1].body)).toEqual({ paths: ['/*'], forceUpdate: true });
+
+            // Verify bulk publish call has correct JSON body
+            const bulkPublishCall = calls[3];
+            expect(bulkPublishCall[0]).toContain('/live/github-owner/github-repo/main');
+            expect(JSON.parse(bulkPublishCall[1].body)).toEqual({ paths: ['/*'], forceUpdate: true });
         });
 
         it('should fall back to GitHub org/site if DA.live org/site not provided', async () => {
@@ -344,9 +378,35 @@ describe('HelixService', () => {
                 { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' },
             ]);
 
-            mockFetch.mockResolvedValue({
+            // Readiness check succeeds
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // Bulk preview returns 202 with job info
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () => Promise.resolve({ job: { name: 'preview-job-1', topic: 'preview', state: 'created' } }),
+            });
+
+            // Job polling for preview returns 'stopped' (completed)
+            mockFetch.mockResolvedValueOnce({
                 ok: true,
                 status: 200,
+                json: () => Promise.resolve({ state: 'stopped', progress: { processed: 1, total: 1 } }),
+            });
+
+            // Bulk publish returns 202 with job info
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () => Promise.resolve({ job: { name: 'publish-job-1', topic: 'live', state: 'created' } }),
+            });
+
+            // Job polling for publish returns 'stopped' (completed)
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({ state: 'stopped', progress: { processed: 1, total: 1 } }),
             });
 
             // When: Publishing without explicit DA.live org/site
@@ -356,7 +416,7 @@ describe('HelixService', () => {
             expect(mockListDirectory).toHaveBeenCalledWith('testuser', 'my-site', '/');
         });
 
-        it('should exclude non-HTML files by extension', async () => {
+        it('should exclude non-HTML files from page count but use bulk API', async () => {
             // Given: Mix of HTML and non-HTML files
             // DA.live API: files have 'ext' field
             mockListDirectory.mockResolvedValueOnce([
@@ -366,16 +426,43 @@ describe('HelixService', () => {
                 { name: 'about', ext: 'html', path: '/testuser/my-site/about.html' }, // HTML content
             ]);
 
-            mockFetch.mockResolvedValue({
+            // Readiness check succeeds
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // Bulk preview returns 202 with job info
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () => Promise.resolve({ job: { name: 'preview-job-1', topic: 'preview', state: 'created' } }),
+            });
+
+            // Job polling for preview returns 'stopped' (completed)
+            mockFetch.mockResolvedValueOnce({
                 ok: true,
                 status: 200,
+                json: () => Promise.resolve({ state: 'stopped', progress: { processed: 2, total: 2 } }),
+            });
+
+            // Bulk publish returns 202 with job info
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () => Promise.resolve({ job: { name: 'publish-job-1', topic: 'live', state: 'created' } }),
+            });
+
+            // Job polling for publish returns 'stopped' (completed)
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({ state: 'stopped', progress: { processed: 2, total: 2 } }),
             });
 
             // When: Publishing
             await service.publishAllSiteContent('testuser/my-site');
 
-            // Then: Should only publish 2 HTML files (/, /about)
-            // 1 readiness check + 2 pages × 2 calls = 5 total fetch calls
+            // Then: Should use bulk API (not per-page)
+            // 1 readiness check + 1 bulk preview + 1 job poll + 1 bulk publish + 1 job poll = 5 calls
+            // Note: Non-HTML files are filtered during listing, bulk API publishes all discovered HTML
             expect(mockFetch).toHaveBeenCalledTimes(5);
         });
 
@@ -417,43 +504,105 @@ describe('HelixService', () => {
             );
         });
 
-        it('should skip pages with 404 errors (no content) without counting as failures', async () => {
-            // Given: Mix of pages with content and empty placeholder pages
+        it('should complete successfully using bulk API (per-page errors handled by Helix)', async () => {
+            // Given: Mix of pages with content (Helix backend handles errors internally for bulk)
             mockListDirectory.mockResolvedValueOnce([
                 { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' },
                 { name: 'about', ext: 'html', path: '/testuser/my-site/about.html' },
-                { name: 'confirm', ext: 'html', path: '/testuser/my-site/customer/account/confirm.html' }, // placeholder
+                { name: 'confirm', ext: 'html', path: '/testuser/my-site/customer/account/confirm.html' }, // may 404
             ]);
 
             // Readiness check succeeds
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
 
-            // index.html: preview + publish succeed
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // preview /
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // publish /
+            // Bulk preview returns 202 with job info
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () => Promise.resolve({ job: { name: 'preview-job-1', topic: 'preview', state: 'created' } }),
+            });
 
-            // about.html: preview + publish succeed
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // preview /about
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // publish /about
+            // Job polling for preview returns 'stopped' (completed - some pages may have failed but job succeeded)
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    state: 'stopped',
+                    progress: { processed: 3, total: 3 },
+                    // Helix may include per-resource errors in data.resources
+                }),
+            });
 
-            // confirm.html: preview returns 404 (no content - placeholder page)
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found' });
+            // Bulk publish returns 202 with job info
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () => Promise.resolve({ job: { name: 'publish-job-1', topic: 'live', state: 'created' } }),
+            });
+
+            // Job polling for publish returns 'stopped' (completed)
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    state: 'stopped',
+                    progress: { processed: 3, total: 3 },
+                }),
+            });
 
             // When: Publishing all content
             await service.publishAllSiteContent('testuser/my-site');
 
-            // Then: Should complete successfully (404s are skipped, not failures)
-            // 1 readiness check + 2 successful pages × 2 + 1 failed preview = 6 calls
+            // Then: Should use bulk API
+            // 1 readiness check + 1 bulk preview + 1 job poll + 1 bulk publish + 1 job poll = 5 calls
+            expect(mockFetch).toHaveBeenCalledTimes(5);
+
+            // Then: Should log success message for bulk operation
+            expect(mockLogger.info).toHaveBeenCalledWith(
+                expect.stringContaining('Successfully published 3 pages using bulk API'),
+            );
+        });
+
+        it('should fall back to page-by-page when bulk API returns 404', async () => {
+            // Given: DA.live content
+            mockListDirectory.mockResolvedValueOnce([
+                { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' },
+                { name: 'about', ext: 'html', path: '/testuser/my-site/about.html' },
+            ]);
+
+            // Readiness check succeeds
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // Bulk preview returns 404 (site not configured for bulk)
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 404,
+                statusText: 'Not Found',
+            });
+
+            // Fallback: page-by-page preview + publish for each page
+            // page 1: preview + publish
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // preview /
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // publish /
+            // page 2: preview + publish
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // preview /about
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // publish /about
+
+            // When: Publishing all site content
+            await service.publishAllSiteContent('testuser/my-site');
+
+            // Then: Should fall back to page-by-page
+            // 1 readiness + 1 failed bulk + 2 pages × 2 calls = 6 total
             expect(mockFetch).toHaveBeenCalledTimes(6);
 
-            // Then: Should log debug message about skipped page
-            expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Skipping'),
+            // Then: Should log fallback message
+            expect(mockLogger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('Bulk API not available, falling back to page-by-page'),
             );
 
-            // Then: Should log success message (2 published, 1 skipped)
+            // Then: Should log success with page count
             expect(mockLogger.info).toHaveBeenCalledWith(
-                expect.stringContaining('Successfully published 2/3'),
+                expect.stringContaining('Successfully published 2/2'),
             );
         });
     });

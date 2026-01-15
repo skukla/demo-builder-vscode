@@ -47,6 +47,51 @@ export interface UnpublishResult {
 }
 
 /**
+ * Response from bulk preview/publish operations (202 Accepted)
+ * @see https://www.aem.live/docs/admin.html
+ */
+interface BulkJobResponse {
+    /** Job information for async operations */
+    job?: {
+        /** Job name for status tracking */
+        name: string;
+        /** Topic (preview or live) */
+        topic: string;
+        /** Current job state */
+        state: 'created' | 'running' | 'stopped';
+    };
+    /** Message ID for the bulk operation */
+    messageId?: string;
+}
+
+/**
+ * Response from job status endpoint
+ */
+interface JobStatusResponse {
+    /** Current job state */
+    state: 'created' | 'running' | 'stopped';
+    /** Progress information */
+    progress?: {
+        /** Number of items processed */
+        processed: number;
+        /** Total number of items */
+        total: number;
+    };
+    /** Error information if job failed */
+    error?: string;
+    /** Result data when job completes */
+    data?: {
+        resources?: Array<{
+            path: string;
+            status: number;
+        }>;
+    };
+}
+
+/** Progress callback for bulk operations */
+type BulkProgressCallback = (processed: number, total: number) => void;
+
+/**
  * Helix Service for admin operations
  */
 export class HelixService {
@@ -114,6 +159,102 @@ export class HelixService {
         }
 
         return tokenData.token;
+    }
+
+    // ==========================================================
+    // Bulk Job Polling
+    // ==========================================================
+
+    /** Maximum time to wait for a bulk job to complete (5 minutes) */
+    private static readonly JOB_TIMEOUT_MS = 5 * 60 * 1000;
+
+    /** Polling interval for job status checks (2 seconds) */
+    private static readonly JOB_POLL_INTERVAL_MS = 2000;
+
+    /**
+     * Poll for bulk job completion
+     *
+     * Bulk operations (preview/publish) return 202 with job info.
+     * This method polls the job status endpoint until the job completes.
+     *
+     * @param org - Organization/owner name
+     * @param site - Site/repository name
+     * @param branch - Branch name
+     * @param jobName - Job name from 202 response
+     * @param topic - Job topic (preview or live)
+     * @param onProgress - Optional callback for progress updates
+     * @throws Error if job fails or times out
+     */
+    private async pollJobCompletion(
+        org: string,
+        site: string,
+        branch: string,
+        jobName: string,
+        topic: string,
+        onProgress?: BulkProgressCallback,
+    ): Promise<void> {
+        const githubToken = await this.getGitHubToken();
+        const url = `${HELIX_ADMIN_URL}/${topic}/${org}/${site}/${branch}/jobs/${topic}/${jobName}`;
+        const startTime = Date.now();
+
+        this.logger.debug(`[Helix] Polling job status: ${url}`);
+
+        while (true) {
+            // Check timeout
+            if (Date.now() - startTime > HelixService.JOB_TIMEOUT_MS) {
+                throw new Error(`Bulk ${topic} job timed out after ${HelixService.JOB_TIMEOUT_MS / 1000} seconds`);
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'x-auth-token': githubToken,
+                    },
+                    signal: AbortSignal.timeout(TIMEOUTS.QUICK),
+                });
+
+                if (!response.ok) {
+                    // Job endpoint may not exist immediately, retry
+                    if (response.status === 404) {
+                        this.logger.debug(`[Helix] Job not found yet, retrying...`);
+                        await new Promise(resolve => setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS));
+                        continue;
+                    }
+                    throw new Error(`Job status check failed: ${response.status} ${response.statusText}`);
+                }
+
+                const status: JobStatusResponse = await response.json();
+
+                // Report progress if available
+                if (status.progress && onProgress) {
+                    onProgress(status.progress.processed, status.progress.total);
+                }
+
+                // Check job state
+                if (status.state === 'stopped') {
+                    // Job completed
+                    if (status.error) {
+                        throw new Error(`Bulk ${topic} job failed: ${status.error}`);
+                    }
+                    this.logger.debug(`[Helix] Bulk ${topic} job completed successfully`);
+                    return;
+                }
+
+                // Job still running, wait and poll again
+                this.logger.debug(`[Helix] Job state: ${status.state}, progress: ${status.progress?.processed ?? '?'}/${status.progress?.total ?? '?'}`);
+                await new Promise(resolve => setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS));
+            } catch (error) {
+                const errorMessage = (error as Error).message;
+                // Timeout errors should be retried
+                if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
+                    this.logger.debug(`[Helix] Job status request timed out, retrying...`);
+                    await new Promise(resolve => setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS));
+                    continue;
+                }
+                throw error;
+            }
+        }
     }
 
     // ==========================================================
@@ -247,7 +388,8 @@ export class HelixService {
 
     /**
      * Preview all content (bulk operation)
-     * Uses the bulk API endpoint to sync all content from DA.live to preview CDN
+     * Uses the bulk API endpoint to sync all content from DA.live to preview CDN.
+     * Polls for job completion before returning.
      *
      * The bulk API requires:
      * - Content-Type: application/json header
@@ -257,12 +399,14 @@ export class HelixService {
      * @param org - Organization/owner name
      * @param site - Site/repository name
      * @param branch - Branch name (default: main)
+     * @param onProgress - Optional callback for progress updates (processed, total)
      * @see https://www.aem.live/docs/admin.html
      */
     async previewAllContent(
         org: string,
         site: string,
         branch: string = DEFAULT_BRANCH,
+        onProgress?: BulkProgressCallback,
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
         const imsToken = await this.getImsToken();
@@ -270,7 +414,7 @@ export class HelixService {
         // The /* goes in the paths array in the JSON body
         const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}`;
 
-        this.logger.debug(`[Helix] Previewing all content: ${url}`);
+        this.logger.debug(`[Helix] Previewing all content (bulk): ${url}`);
 
         // Bulk API requires JSON body with paths array
         // Using "/*" to recursively preview all content
@@ -297,8 +441,36 @@ export class HelixService {
         }
 
         // 202 = Bulk preview scheduled (async job created)
-        if (response.status === 202 || response.ok) {
-            this.logger.debug('[Helix] Bulk preview scheduled successfully');
+        if (response.status === 202) {
+            this.logger.debug('[Helix] Bulk preview job created, polling for completion...');
+
+            // Parse job info from response
+            let jobInfo: BulkJobResponse | undefined;
+            try {
+                jobInfo = await response.json();
+            } catch {
+                this.logger.warn('[Helix] Could not parse job info from 202 response');
+            }
+
+            // If we have job info, poll for completion
+            if (jobInfo?.job?.name) {
+                await this.pollJobCompletion(
+                    org,
+                    site,
+                    branch,
+                    jobInfo.job.name,
+                    'preview',
+                    onProgress,
+                );
+            } else {
+                // No job info, wait a reasonable time for the operation
+                this.logger.warn('[Helix] No job info in response, assuming operation completed');
+            }
+            return;
+        }
+
+        if (response.ok) {
+            this.logger.debug('[Helix] Bulk preview completed synchronously');
             return;
         }
 
@@ -307,7 +479,8 @@ export class HelixService {
 
     /**
      * Publish all content to live (bulk operation)
-     * Uses the bulk API endpoint to sync all content from preview to live CDN
+     * Uses the bulk API endpoint to sync all content from preview to live CDN.
+     * Polls for job completion before returning.
      *
      * The bulk API requires:
      * - Content-Type: application/json header
@@ -317,12 +490,14 @@ export class HelixService {
      * @param org - Organization/owner name
      * @param site - Site/repository name
      * @param branch - Branch name (default: main)
+     * @param onProgress - Optional callback for progress updates (processed, total)
      * @see https://www.aem.live/docs/admin.html
      */
     async publishAllContent(
         org: string,
         site: string,
         branch: string = DEFAULT_BRANCH,
+        onProgress?: BulkProgressCallback,
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
         const imsToken = await this.getImsToken();
@@ -330,7 +505,7 @@ export class HelixService {
         // The /* goes in the paths array in the JSON body
         const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}`;
 
-        this.logger.debug(`[Helix] Publishing all content: ${url}`);
+        this.logger.debug(`[Helix] Publishing all content (bulk): ${url}`);
 
         // Bulk API requires JSON body with paths array
         // Using "/*" to recursively publish all content
@@ -357,8 +532,36 @@ export class HelixService {
         }
 
         // 202 = Bulk publish scheduled (async job created)
-        if (response.status === 202 || response.ok) {
-            this.logger.debug('[Helix] Bulk publish scheduled successfully');
+        if (response.status === 202) {
+            this.logger.debug('[Helix] Bulk publish job created, polling for completion...');
+
+            // Parse job info from response
+            let jobInfo: BulkJobResponse | undefined;
+            try {
+                jobInfo = await response.json();
+            } catch {
+                this.logger.warn('[Helix] Could not parse job info from 202 response');
+            }
+
+            // If we have job info, poll for completion
+            if (jobInfo?.job?.name) {
+                await this.pollJobCompletion(
+                    org,
+                    site,
+                    branch,
+                    jobInfo.job.name,
+                    'live',
+                    onProgress,
+                );
+            } else {
+                // No job info, assume operation completed
+                this.logger.warn('[Helix] No job info in response, assuming operation completed');
+            }
+            return;
+        }
+
+        if (response.ok) {
+            this.logger.debug('[Helix] Bulk publish completed synchronously');
             return;
         }
 
@@ -485,8 +688,8 @@ export class HelixService {
     } as const;
 
     /**
-     * Preview and publish all content in one operation
-     * Lists all pages from DA.live and publishes each one individually.
+     * Preview and publish all content in one operation.
+     * Attempts bulk APIs first for performance, falls back to page-by-page if bulk fails.
      *
      * @param repoFullName - Full repository name (owner/repo) for Helix API
      * @param branch - Branch name (default: main)
@@ -513,16 +716,16 @@ export class HelixService {
         const contentOrg = daLiveOrg || githubOrg;
         const contentSite = daLiveSite || githubSite;
 
-        this.logger.info(`[Helix] Listing all pages from DA.live: ${contentOrg}/${contentSite}`);
-        this.logger.info(`[Helix] Publishing to GitHub repo: ${repoFullName}`);
+        this.logger.info(`[Helix] Publishing all content from DA.live: ${contentOrg}/${contentSite}`);
+        this.logger.info(`[Helix] Target GitHub repo: ${repoFullName}`);
 
-        // Report: Discovering content
+        // Report: Discovering content (still needed to get page count for progress)
         onProgress?.({
             phase: HelixService.PublishPhases.DISCOVERING,
             message: 'Discovering content to publish...',
         });
 
-        // List all publishable pages from DA.live (using DA.live org/site)
+        // List all publishable pages from DA.live to get count for progress reporting
         const pages = await this.listAllPages(contentOrg, contentSite);
 
         if (pages.length === 0) {
@@ -540,72 +743,154 @@ export class HelixService {
         });
 
         // Verify Helix is ready to accept publish requests
-        // After fstab.yaml is pushed, there may be a delay before Helix processes it
         await this.waitForPublishReadiness(githubOrg, githubSite, branch);
 
-        // Publish each page individually (single-page API works with IMS token)
-        // Use GitHub org/site for Helix API calls (the repo connected to the site)
-        const results: { path: string; success: boolean; skipped?: boolean; error?: string }[] = [];
+        // Try bulk APIs first for better performance
+        // If bulk fails (404 = site not configured), fall back to page-by-page
+        try {
+            await this.publishAllSiteContentBulk(githubOrg, githubSite, branch, pages, onProgress);
+        } catch (error) {
+            const errorMessage = (error as Error).message;
+
+            // 404 means bulk endpoint not available for this site - fall back to page-by-page
+            if (errorMessage.includes('404')) {
+                this.logger.warn('[Helix] Bulk API not available, falling back to page-by-page publishing');
+                await this.publishAllSiteContentPageByPage(githubOrg, githubSite, branch, pages, onProgress);
+            } else {
+                // Other errors should propagate
+                throw error;
+            }
+        }
+    }
+
+    /**
+     * Publish all content using bulk APIs (fast path)
+     */
+    private async publishAllSiteContentBulk(
+        githubOrg: string,
+        githubSite: string,
+        branch: string,
+        pages: string[],
+        onProgress?: (info: {
+            phase: typeof HelixService.PublishPhases[keyof typeof HelixService.PublishPhases];
+            message: string;
+            current?: number;
+            total?: number;
+            currentPath?: string;
+        }) => void,
+    ): Promise<void> {
+        // Phase 1: Bulk preview (sync from DA.live to preview CDN)
+        onProgress?.({
+            phase: HelixService.PublishPhases.PUBLISHING,
+            message: 'Previewing all content (bulk)...',
+            current: 0,
+            total: pages.length,
+        });
+
+        await this.previewAllContent(
+            githubOrg,
+            githubSite,
+            branch,
+            (processed, total) => {
+                onProgress?.({
+                    phase: HelixService.PublishPhases.PUBLISHING,
+                    message: `Previewing content (${processed}/${total})`,
+                    current: Math.floor(processed / 2), // First half of progress
+                    total: pages.length,
+                });
+            },
+        );
+
+        this.logger.info('[Helix] Bulk preview completed');
+
+        // Phase 2: Bulk publish (sync from preview to live CDN)
+        onProgress?.({
+            phase: HelixService.PublishPhases.PUBLISHING,
+            message: 'Publishing to live CDN (bulk)...',
+            current: Math.floor(pages.length / 2),
+            total: pages.length,
+        });
+
+        await this.publishAllContent(
+            githubOrg,
+            githubSite,
+            branch,
+            (processed, total) => {
+                onProgress?.({
+                    phase: HelixService.PublishPhases.PUBLISHING,
+                    message: `Publishing to CDN (${processed}/${total})`,
+                    current: Math.floor(pages.length / 2) + Math.floor(processed / 2), // Second half
+                    total: pages.length,
+                });
+            },
+        );
+
+        this.logger.info(`[Helix] Successfully published ${pages.length} pages using bulk API`);
+
+        // Report completion
+        onProgress?.({
+            phase: HelixService.PublishPhases.COMPLETE,
+            message: `Published ${pages.length} pages to CDN`,
+            current: pages.length,
+            total: pages.length,
+        });
+    }
+
+    /**
+     * Publish all content page-by-page (fallback for sites where bulk API isn't available)
+     */
+    private async publishAllSiteContentPageByPage(
+        githubOrg: string,
+        githubSite: string,
+        branch: string,
+        pages: string[],
+        onProgress?: (info: {
+            phase: typeof HelixService.PublishPhases[keyof typeof HelixService.PublishPhases];
+            message: string;
+            current?: number;
+            total?: number;
+            currentPath?: string;
+        }) => void,
+    ): Promise<void> {
+        let publishedCount = 0;
+        let skippedCount = 0;
 
         for (let i = 0; i < pages.length; i++) {
             const path = pages[i];
 
-            // Report progress for each page
             onProgress?.({
                 phase: HelixService.PublishPhases.PUBLISHING,
-                message: `Publishing page ${i + 1} of ${pages.length}`,
-                current: i + 1,
+                message: `Publishing pages (${i + 1}/${pages.length})`,
+                current: i,
                 total: pages.length,
                 currentPath: path,
             });
 
             try {
-                this.logger.debug(`[Helix] Publishing ${path}`);
                 await this.previewAndPublishPage(githubOrg, githubSite, path, branch);
-                results.push({ path, success: true });
+                publishedCount++;
+                this.logger.debug(`[Helix] Published: ${path}`);
             } catch (error) {
                 const errorMessage = (error as Error).message;
 
-                // 404 means no content exists at this path - skip silently
-                // These are typically placeholder pages (e.g., commerce transactional pages)
+                // 404 means the page has no content (placeholder) - skip it
                 if (errorMessage.includes('404')) {
-                    this.logger.debug(`[Helix] Skipping ${path} - no content found (404)`);
-                    results.push({ path, success: true, skipped: true });
-                } else {
-                    this.logger.warn(`[Helix] Failed to publish ${path}: ${errorMessage}`);
-                    results.push({ path, success: false, error: errorMessage });
+                    skippedCount++;
+                    this.logger.debug(`[Helix] Skipping ${path} - no content (404)`);
+                    continue;
                 }
+
+                // Other errors should propagate
+                throw error;
             }
         }
 
-        // Report results
-        const publishedCount = results.filter(r => r.success && !r.skipped).length;
-        const skippedCount = results.filter(r => r.skipped).length;
-        const failCount = results.filter(r => !r.success).length;
-
-        if (skippedCount > 0) {
-            this.logger.debug(`[Helix] Skipped ${skippedCount} pages with no content`);
-        }
-
-        if (failCount > 0) {
-            const failedPaths = results.filter(r => !r.success).map(r => r.path).join(', ');
-            this.logger.warn(`[Helix] Published ${publishedCount}/${pages.length} pages. Failed: ${failedPaths}`);
-        }
-
-        if (publishedCount === 0 && failCount > 0) {
-            // Include the first error message to help diagnose the issue
-            const firstError = results.find(r => r.error)?.error || 'Unknown error';
-            throw new Error(`Failed to publish any pages. First error: ${firstError}`);
-        }
-
-        // Log summary with skipped count if any
-        const skippedSuffix = skippedCount > 0 ? ` (${skippedCount} skipped - no content)` : '';
-        this.logger.info(`[Helix] Successfully published ${publishedCount}/${pages.length} pages${skippedSuffix}`);
+        this.logger.info(`[Helix] Successfully published ${publishedCount}/${pages.length} pages (${skippedCount} skipped)`);
 
         // Report completion
         onProgress?.({
             phase: HelixService.PublishPhases.COMPLETE,
-            message: `Published ${publishedCount} pages to CDN`,
+            message: `Published ${publishedCount} pages to CDN${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`,
             current: pages.length,
             total: pages.length,
         });
