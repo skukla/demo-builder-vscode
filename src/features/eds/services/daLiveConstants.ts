@@ -8,13 +8,6 @@
 /** DA.live Admin API base URL */
 export const DA_LIVE_BASE_URL = 'https://admin.da.live';
 
-/** CitiSignal source configuration */
-export const CITISIGNAL_SOURCE = {
-    org: 'demo-system-stores',
-    site: 'accs-citisignal',
-    indexUrl: 'https://main--accs-citisignal--demo-system-stores.aem.live/full-index.json',
-};
-
 /** Maximum retry attempts for transient errors */
 export const MAX_RETRY_ATTEMPTS = 3;
 

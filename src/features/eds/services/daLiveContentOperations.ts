@@ -23,12 +23,23 @@ import {
 } from './types';
 import {
     DA_LIVE_BASE_URL,
-    CITISIGNAL_SOURCE,
     MAX_RETRY_ATTEMPTS,
     RETRYABLE_STATUS_CODES,
     getRetryDelay,
     normalizePath,
 } from './daLiveConstants';
+
+/**
+ * Content source configuration for copying content between DA.live sites
+ */
+export interface DaLiveContentSource {
+    /** Source organization name */
+    org: string;
+    /** Source site name */
+    site: string;
+    /** URL to fetch content index (full-index.json) */
+    indexUrl: string;
+}
 
 /**
  * Token provider interface for dependency injection
@@ -298,24 +309,26 @@ export class DaLiveContentOperations {
     }
 
     /**
-     * Copy CitiSignal content to destination
+     * Copy content from source site to destination site
+     * @param source - Source content configuration (org, site, indexUrl)
      * @param destOrg - Destination organization
      * @param destSite - Destination site
      * @param progressCallback - Optional progress callback
      * @returns Copy result
      */
-    async copyCitisignalContent(
+    async copyContentFromSource(
+        source: DaLiveContentSource,
         destOrg: string,
         destSite: string,
         progressCallback?: DaLiveProgressCallback,
     ): Promise<DaLiveCopyResult> {
         const token = await this.getImsToken();
 
-        // Fetch content index
-        const indexResponse = await fetch(CITISIGNAL_SOURCE.indexUrl);
+        // Fetch content index from source
+        const indexResponse = await fetch(source.indexUrl);
         if (!indexResponse.ok) {
             throw new DaLiveError(
-                'Failed to fetch CitiSignal content index',
+                `Failed to fetch content index from ${source.org}/${source.site}`,
                 'INDEX_FETCH_ERROR',
                 indexResponse.status,
             );
@@ -345,7 +358,7 @@ export class DaLiveContentOperations {
             // Copy the file
             const success = await this.copySingleFile(
                 token,
-                { org: CITISIGNAL_SOURCE.org, site: CITISIGNAL_SOURCE.site },
+                { org: source.org, site: source.site },
                 sourcePath,
                 { org: destOrg, site: destSite },
                 sourcePath,

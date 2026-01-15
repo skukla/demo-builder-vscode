@@ -4,7 +4,6 @@
 
 import {
     DA_LIVE_BASE_URL,
-    CITISIGNAL_SOURCE,
     MAX_RETRY_ATTEMPTS,
     RETRY_DELAY_BASE,
     RETRYABLE_STATUS_CODES,
@@ -16,20 +15,6 @@ describe('daLiveConstants', () => {
     describe('DA_LIVE_BASE_URL', () => {
         it('should be the admin DA.live URL', () => {
             expect(DA_LIVE_BASE_URL).toBe('https://admin.da.live');
-        });
-    });
-
-    describe('CITISIGNAL_SOURCE', () => {
-        it('should have org configured', () => {
-            expect(CITISIGNAL_SOURCE.org).toBe('demo-system-stores');
-        });
-
-        it('should have site configured', () => {
-            expect(CITISIGNAL_SOURCE.site).toBe('accs-citisignal');
-        });
-
-        it('should have indexUrl configured', () => {
-            expect(CITISIGNAL_SOURCE.indexUrl).toContain('full-index.json');
         });
     });
 
