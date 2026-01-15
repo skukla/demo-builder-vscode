@@ -7,7 +7,7 @@
  * Structure:
  * - packages[] contain nested storefronts keyed by stack ID
  * - Each package has configDefaults (brand data)
- * - No contentSources (EDS URLs derivable from source.url)
+ * - EDS storefronts have explicit contentSource for DA.live content
  *
  * TDD: Tests written FIRST to define expected type structure.
  */
@@ -245,7 +245,7 @@ describe('DemoPackage type (nested storefronts structure)', () => {
         expect(pkg.storefronts['eds-paas']).toBeDefined();
     });
 
-    it('should NOT have contentSources (derivable from source URL)', () => {
+    it('should NOT have package-level contentSources (content source is per-storefront)', () => {
         // Given: Package structure
         const pkg: DemoPackage = {
             id: 'test-package',
@@ -262,12 +262,19 @@ describe('DemoPackage type (nested storefronts structure)', () => {
                         branch: 'main',
                         gitOptions: { shallow: true, recursive: false },
                     },
+                    // contentSource is optional per-storefront, not at package level
+                    contentSource: {
+                        org: 'test-org',
+                        site: 'test-site',
+                    },
                 },
             },
         };
 
-        // Then: contentSources should not be in the type
+        // Then: package-level contentSources should not exist
         expect((pkg as Record<string, unknown>).contentSources).toBeUndefined();
+        // But storefront-level contentSource should be accessible
+        expect(pkg.storefronts['eds-paas'].contentSource).toBeDefined();
     });
 
     it('should have storefronts keyed by stack ID', () => {

@@ -111,6 +111,41 @@
             "$ref": "#/definitions/submodule"
           },
           "description": "Git submodules to include in the project"
+        },
+        "contentSource": {
+          "$ref": "#/definitions/daLiveContentSource",
+          "description": "DA.live content source for EDS storefronts (required for EDS stacks)"
+        },
+        "templateOwner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub owner of the template repository (for reset-to-template operations)"
+        },
+        "templateRepo": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub repository name of the template (for reset-to-template operations)"
+        }
+      }
+    },
+    "daLiveContentSource": {
+      "type": "object",
+      "required": ["org", "site"],
+      "properties": {
+        "org": {
+          "type": "string",
+          "minLength": 1,
+          "description": "DA.live organization name"
+        },
+        "site": {
+          "type": "string",
+          "minLength": 1,
+          "description": "DA.live site name"
+        },
+        "indexPath": {
+          "type": "string",
+          "default": "/full-index.json",
+          "description": "Path to the content index file (defaults to /full-index.json)"
         }
       }
     },

@@ -53,6 +53,12 @@
               "shallow": true,
               "recursive": false
             }
+          },
+          "templateOwner": "demo-system-stores",
+          "templateRepo": "accs-citisignal",
+          "contentSource": {
+            "org": "demo-system-stores",
+            "site": "accs-citisignal"
           }
         },
         "eds-accs": {
@@ -69,6 +75,12 @@
               "shallow": true,
               "recursive": false
             }
+          },
+          "templateOwner": "demo-system-stores",
+          "templateRepo": "accs-citisignal",
+          "contentSource": {
+            "org": "demo-system-stores",
+            "site": "accs-citisignal"
           }
         }
       }

@@ -7,7 +7,7 @@
  * Structure: Option A (Nested Storefronts)
  * - 2 packages (citisignal, buildright)
  * - 3 storefronts total (citisignal has 3, buildright has 0)
- * - No contentSources (derivable from source.url)
+ * - EDS storefronts have explicit contentSource for DA.live content
  *
  * TDD: Tests written FIRST to define expected behavior.
  */
@@ -53,12 +53,26 @@ describe('demoPackageLoader', () => {
             });
         });
 
-        it('should NOT include contentSources (derivable from source URL)', async () => {
+        it('should NOT include package-level contentSources (content source is per-storefront)', async () => {
             const packages = await loadDemoPackages();
 
             packages.forEach(pkg => {
+                // Package-level contentSources should not exist
                 expect((pkg as Record<string, unknown>).contentSources).toBeUndefined();
             });
+        });
+
+        it('should include contentSource for EDS storefronts', async () => {
+            const packages = await loadDemoPackages();
+            const citisignal = packages.find(p => p.id === 'citisignal');
+
+            expect(citisignal).toBeDefined();
+
+            // EDS storefronts should have contentSource
+            const edsPaas = citisignal!.storefronts['eds-paas'];
+            expect(edsPaas.contentSource).toBeDefined();
+            expect(edsPaas.contentSource?.org).toBeDefined();
+            expect(edsPaas.contentSource?.site).toBeDefined();
         });
 
         it('should have storefronts keyed by stack ID', async () => {

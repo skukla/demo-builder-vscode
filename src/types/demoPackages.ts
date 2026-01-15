@@ -6,7 +6,7 @@
  * Structure:
  * - packages[] contain nested storefronts keyed by stack ID
  * - Each package has configDefaults (embedded brand data)
- * - No contentSources (EDS URLs derivable from source.url)
+ * - EDS storefronts have explicit contentSource for DA.live content
  */
 
 /**
@@ -44,6 +44,21 @@ export interface Submodule {
 }
 
 /**
+ * DaLiveContentSource - DA.live content source configuration
+ *
+ * Used by EDS storefronts to specify the source of demo content.
+ * This is explicit configuration, NOT derived from the GitHub template URL.
+ */
+export interface DaLiveContentSource {
+    /** DA.live organization name */
+    org: string;
+    /** DA.live site name */
+    site: string;
+    /** Optional custom path to content index (defaults to /full-index.json) */
+    indexPath?: string;
+}
+
+/**
  * Storefront - A storefront variant within a package
  *
  * Storefronts are keyed by stack ID (e.g., 'headless-paas', 'eds-paas')
@@ -64,6 +79,12 @@ export interface Storefront {
     source: GitSource;
     /** Submodule definitions to include */
     submodules?: Record<string, Submodule>;
+    /** DA.live content source for EDS storefronts (required for EDS stacks) */
+    contentSource?: DaLiveContentSource;
+    /** GitHub owner of the template repository (for reset-to-template operations) */
+    templateOwner?: string;
+    /** GitHub repository name of the template (for reset-to-template operations) */
+    templateRepo?: string;
 }
 
 /**
@@ -80,9 +101,6 @@ export type Addons = Record<string, 'required' | 'optional'>;
  * Packages group storefronts by brand/vertical. Each package contains
  * embedded configDefaults (brand data) and nested storefronts keyed
  * by stack ID.
- *
- * Note: contentSources is not included as EDS URLs are derivable from
- * the storefront's source.url (GitHub repository).
  */
 export interface DemoPackage {
     /** Unique identifier (e.g., 'citisignal', 'buildright') */

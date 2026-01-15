@@ -9,13 +9,14 @@
  * Structure: Option A (Nested Storefronts)
  * - packages[] contain nested storefronts keyed by stack ID
  * - Each package has configDefaults (brand data)
- * - contentSources removed (EDS URLs derivable from source.url)
+ * - EDS storefronts have explicit contentSource for DA.live content
  *
  * Key validations:
  * - Structure validation (2 packages, 5 storefronts total)
  * - Embedded brand data (configDefaults)
  * - Nested storefronts structure
  * - Git source validation (valid URLs, type enum)
+ * - EDS contentSource validation (explicit config, not derived)
  * - Schema validation (rejects invalid packages)
  */
 
@@ -171,9 +172,26 @@ describe('demo-packages.json', () => {
             });
         });
 
-        it('should NOT have contentSources (derivable from source URL)', () => {
+        it('should NOT have package-level contentSources (content source is per-storefront)', () => {
             packagesConfig.packages.forEach(pkg => {
+                // Package-level contentSources removed - content source is now defined per-storefront
                 expect((pkg as Record<string, unknown>).contentSources).toBeUndefined();
+            });
+        });
+    });
+
+    describe('EDS storefronts - contentSource', () => {
+        it('should have contentSource for EDS storefronts', () => {
+            packagesConfig.packages.forEach(pkg => {
+                Object.entries(pkg.storefronts).forEach(([stackId, storefront]) => {
+                    // EDS storefronts should have explicit contentSource config
+                    if (stackId.startsWith('eds-')) {
+                        expect((storefront as Record<string, unknown>).contentSource).toBeDefined();
+                        const contentSource = (storefront as Record<string, unknown>).contentSource as { org: string; site: string };
+                        expect(contentSource.org).toBeDefined();
+                        expect(contentSource.site).toBeDefined();
+                    }
+                });
             });
         });
     });
