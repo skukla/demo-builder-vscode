@@ -256,32 +256,26 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
         context.logger.debug(`[Project Creation] Registered EDS frontend: ${COMPONENT_IDS.EDS_STOREFRONT} at ${edsComponentPath}`);
 
+        // Clone the EDS repo locally (created by preflight, now needs local copy)
+        // This is needed for config.json generation and local development
+        if (typedConfig.edsConfig.repoUrl) {
+            progressTracker('EDS Setup', 25, 'Cloning storefront repository...');
+            context.logger.info(`[Project Creation] Cloning EDS repo to: ${edsComponentPath}`);
+
+            const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
+            const { GitHubRepoOperations } = await import('@/features/eds/services/githubRepoOperations');
+
+            const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
+            const githubRepoOps = new GitHubRepoOperations(githubTokenService, context.logger);
+
+            await githubRepoOps.cloneRepository(typedConfig.edsConfig.repoUrl, edsComponentPath);
+            context.logger.info(`[Project Creation] EDS repo cloned successfully`);
+        }
+
         // Save project state with EDS metadata
         await context.stateManager.saveProject(project);
 
         progressTracker('EDS Setup', 30, 'EDS configuration loaded');
-    }
-
-    // ========================================================================
-    // REGISTER EDS IN COMPONENT DEFINITIONS (for Phase 4 env generation)
-    // ========================================================================
-    
-    // If EDS was set up, register it in componentDefinitions so Phase 4's
-    // generateEnvironmentFiles() will handle its .env using standard pattern
-    if (isEdsStack && edsComponentPath && project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]) {
-        const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
-        const registryManager = new ComponentRegistryManager(context.context.extensionPath);
-        const registry = await registryManager.loadRegistry();
-        
-        // Find EDS component definition from registry
-        const edsDefinition = registry.components?.frontends?.find(f => f.id === 'eds');
-        if (edsDefinition) {
-            componentDefinitions.set(COMPONENT_IDS.EDS_STOREFRONT, {
-                definition: edsDefinition,
-                installOptions: { skipDependencies: true },
-            });
-            context.logger.debug(`[Project Creation] Registered EDS in componentDefinitions for Phase 4`);
-        }
     }
 
     // ========================================================================
