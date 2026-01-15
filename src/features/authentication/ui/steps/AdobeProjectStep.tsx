@@ -99,7 +99,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                     selectedId={state.adobeProject?.id}
                     onSelect={selectItem}
                     labels={{
-                        heading: state.adobeOrg?.name ? `Projects in ${state.adobeOrg.name}` : 'Select Adobe Project',
+                        heading: '',
                         loadingMessage: 'Loading your Adobe projects...',
                         loadingSubMessage: state.adobeOrg?.name ? `Fetching from organization: ${state.adobeOrg.name}` : 'Fetching projects...',
                         errorTitle: 'Error Loading Projects',

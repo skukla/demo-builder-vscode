@@ -77,7 +77,6 @@ describe('AdobeProjectStep - Project Selection', () => {
                 </Provider>
             );
 
-            expect(screen.getByText(/Projects in Test Organization/)).toBeInTheDocument();
             expect(screen.getByText('Test Project 1')).toBeInTheDocument();
         });
 
