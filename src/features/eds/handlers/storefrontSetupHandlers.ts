@@ -594,7 +594,7 @@ async function executeStorefrontSetupPhases(
 
             if (!syncVerified) {
                 // Code sync failed - check if GitHub App is installed
-                const isInstalled = await githubAppService.isAppInstalled(repoOwner, repoName);
+                const { isInstalled } = await githubAppService.isAppInstalled(repoOwner, repoName);
 
                 if (!isInstalled) {
                     const installUrl = githubAppService.getInstallUrl(repoOwner, repoName);

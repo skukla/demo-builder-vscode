@@ -445,7 +445,7 @@ export class HelixConfigPhase {
             // Code sync failed - check if GitHub app is installed
             this.logger.debug('[EDS] Code sync failed, checking app installation');
 
-            const isInstalled = await this.githubAppService.isAppInstalled(
+            const { isInstalled } = await this.githubAppService.isAppInstalled(
                 config.githubOwner,
                 config.repoName,
             );

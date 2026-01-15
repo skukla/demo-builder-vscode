@@ -4,7 +4,7 @@
  * Checks if the AEM Code Sync GitHub app is installed on a repository.
  *
  * Two modes:
- * - Strict (default): Requires code.status === 200 (app installed AND syncing)
+ * - Strict (default): Accepts code.status 200 or 400 (app installed, possibly initializing)
  *   Used for initial detection when selecting a repository.
  * - Lenient: Accepts any status except 404 (for post-install verification)
  *   Used when user clicks "Check Again" after installing the app.
@@ -23,6 +23,8 @@ interface CheckGitHubAppRequest {
 interface CheckGitHubAppResponse {
     success: boolean;
     isInstalled: boolean;
+    /** The actual code.status from the Helix admin endpoint (200, 400, 404, etc.) */
+    codeStatus?: number;
     installUrl?: string;
     error?: string;
 }
@@ -47,18 +49,19 @@ export async function checkGitHubApp(
         // - Strict mode (default): Requires code.status === 200
         // - Lenient mode: Accepts any status except 404 (for post-install verification)
         const lenient = request.lenient ?? false;
-        const isInstalled = await githubAppService.isAppInstalled(request.owner, request.repo, { lenient });
+        const result = await githubAppService.isAppInstalled(request.owner, request.repo, { lenient });
 
         const response: CheckGitHubAppResponse = {
             success: true,
-            isInstalled,
+            isInstalled: result.isInstalled,
+            codeStatus: result.codeStatus,
         };
 
-        if (!isInstalled) {
+        if (!result.isInstalled) {
             response.installUrl = githubAppService.getInstallUrl(request.owner, request.repo);
         }
 
-        context.logger.debug(`[GitHub App Check] ${request.owner}/${request.repo}: installed=${isInstalled}`);
+        context.logger.debug(`[GitHub App Check] ${request.owner}/${request.repo}: installed=${result.isInstalled}, codeStatus=${result.codeStatus}`);
 
         return { success: true, data: response };
     } catch (error) {

@@ -57,6 +57,8 @@ import '../styles/eds-steps.css';
 interface GitHubAppStatus {
     isChecking: boolean;
     isInstalled: boolean | null;  // null = not checked yet
+    /** The actual code.status from the Helix admin endpoint (200, 400, 404, etc.) */
+    codeStatus?: number;
     error?: string;
     installUrl?: string;
 }
@@ -100,10 +102,11 @@ function GitHubConfigurationSummary({
     };
 
     // Get GitHub App status indicator
-    const getGitHubAppStatusIndicator = (): 'completed' | 'empty' | 'pending' => {
+    const getGitHubAppStatusIndicator = (): 'completed' | 'empty' | 'pending' | 'error' => {
         if (githubAppStatus.isChecking) return 'pending';
         if (githubAppStatus.isInstalled === true) return 'completed';
-        return 'empty';
+        if (githubAppStatus.isInstalled === false) return 'error'; // Shows value, not emptyText
+        return 'empty'; // Only for null (not checked yet)
     };
 
     return (
@@ -303,39 +306,41 @@ export function GitHubRepoSelectionStep({
 
     /**
      * Check GitHub App installation for a repository
+     * @param lenient - If true, accepts non-404 as installed (for post-install verification)
+     *                  If false (default), requires 200 status (strict verification)
      */
-    const checkGitHubApp = useCallback(async (owner: string, repo: string, options?: { lenient?: boolean }) => {
+    const checkGitHubApp = useCallback(async (owner: string, repo: string, lenient = false) => {
         const repoKey = `${owner}/${repo}`;
 
-        // Skip if already checking or same repo (unless lenient mode, which is a recheck)
-        if (githubAppStatus.isChecking || (lastCheckedRepo.current === repoKey && !options?.lenient)) {
+        // Skip if same repo already checked with same mode
+        // Allow recheck if switching from strict to lenient (user clicked "Check Again")
+        if (lastCheckedRepo.current === repoKey && !lenient) {
             return;
         }
 
         lastCheckedRepo.current = repoKey;
-        setGitHubAppStatus({
-            isChecking: true,
-            isInstalled: null,
-        });
 
         try {
             const result = await webviewClient.request<{
                 success: boolean;
                 isInstalled: boolean;
+                codeStatus?: number;
                 installUrl?: string;
                 error?: string;
-            }>('check-github-app', { owner, repo, lenient: options?.lenient ?? false });
+            }>('check-github-app', { owner, repo, lenient });
 
             if (result.data?.success) {
                 setGitHubAppStatus({
                     isChecking: false,
                     isInstalled: result.data.isInstalled,
+                    codeStatus: result.data.codeStatus,
                     installUrl: result.data.installUrl,
                 });
             } else {
                 setGitHubAppStatus({
                     isChecking: false,
                     isInstalled: false,
+                    codeStatus: result.data?.codeStatus,
                     error: result.data?.error || 'Failed to check GitHub App status',
                 });
             }
@@ -349,23 +354,24 @@ export function GitHubRepoSelectionStep({
         } finally {
             setIsRechecking(false);
         }
-    }, [githubAppStatus.isChecking]);
+    }, []);
 
     /**
      * Handle "Check Again" button click from within the modal
      * Uses lenient mode since user just completed installation
      */
     const handleCheckAgain = useCallback(() => {
-        // Reset last checked repo to force a new check
-        lastCheckedRepo.current = null;
-
         const owner = githubUser?.login;
         const repo = repoMode === 'new' ? repoName : selectedRepo?.name;
 
         if (owner && repo) {
             setIsRechecking(true);
-            // Use lenient mode for post-install verification (accepts non-404 as installed)
-            checkGitHubApp(owner, repo, { lenient: true });
+            setGitHubAppStatus({
+                isChecking: true,
+                isInstalled: null,
+            });
+            // Use lenient mode - accepts non-404 since user just installed the app
+            checkGitHubApp(owner, repo, true);
         }
     }, [githubUser?.login, repoMode, repoName, selectedRepo?.name, checkGitHubApp]);
 
@@ -395,7 +401,12 @@ export function GitHubRepoSelectionStep({
         }
 
         if (isValid && repo) {
-            setIsModalDismissed(false); // Reset dismiss state when repo changes
+            // Reset state immediately when repo changes to prevent stale state flash
+            setIsModalDismissed(false);
+            setGitHubAppStatus({
+                isChecking: true,
+                isInstalled: null,
+            });
             checkGitHubApp(owner, repo);
         } else {
             // Reset status when repo is cleared
@@ -488,9 +499,6 @@ export function GitHubRepoSelectionStep({
                         selectedId={selectedRepo?.id}
                         onSelect={selectItem}
                         labels={{
-                            heading: githubUser?.login
-                                ? `Repositories for ${githubUser.login}`
-                                : 'Select Repository',
                             loadingMessage: 'Loading your repositories...',
                             loadingSubMessage: 'Fetching repositories with write access',
                             errorTitle: 'Error Loading Repositories',
