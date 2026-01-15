@@ -52,9 +52,9 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     },
 }));
 
-// Mock GitHubAppService - default to true (app installed), tests can override for error scenarios
+// Mock GitHubAppService - default to installed (app installed), tests can override for error scenarios
 const mockGitHubAppService = {
-    isAppInstalled: jest.fn().mockResolvedValue(true),
+    isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true, codeStatus: 200 }),
     getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync/installations/new'),
 };
 jest.mock('@/features/eds/services/githubAppService', () => ({
@@ -141,7 +141,7 @@ describe('EdsProjectService', () => {
         jest.useFakeTimers();
 
         // Reset GitHubAppService mock to default (app installed)
-        mockGitHubAppService.isAppInstalled.mockResolvedValue(true);
+        mockGitHubAppService.isAppInstalled.mockResolvedValue({ isInstalled: true, codeStatus: 200 });
 
         // Reset HelixService mock to default (successful publish)
         mockHelixService.publishAllSiteContent.mockResolvedValue(undefined);

@@ -42,8 +42,8 @@ jest.mock('@/core/shell/pollingService', () => ({
     })),
 }));
 
-// Mock GitHubAppService
-const mockIsAppInstalled = jest.fn().mockResolvedValue(false);
+// Mock GitHubAppService - returns object { isInstalled, codeStatus }
+const mockIsAppInstalled = jest.fn().mockResolvedValue({ isInstalled: false });
 const mockGetInstallUrl = jest.fn().mockReturnValue('https://admin.hlx.page/github/install/owner/repo');
 jest.mock('@/features/eds/services/githubAppService', () => ({
     GitHubAppService: jest.fn().mockImplementation(() => ({
@@ -346,7 +346,7 @@ describe('EDS Setup Phases - Verification', () => {
             const phase = new HelixConfigPhase(mockAuthService as any, mockLogger as any, { isAppInstalled: mockIsAppInstalled, getInstallUrl: mockGetInstallUrl } as any);
 
             mockPollUntilCondition.mockRejectedValue(new Error('Network error'));
-            mockIsAppInstalled.mockResolvedValue(false); // App not installed
+            mockIsAppInstalled.mockResolvedValue({ isInstalled: false }); // App not installed
 
             try {
                 await phase.verifyCodeSync(defaultConfig, mockRepo);
@@ -364,7 +364,7 @@ describe('EDS Setup Phases - Verification', () => {
 
             const originalError = new Error('Network error');
             mockPollUntilCondition.mockRejectedValue(originalError);
-            mockIsAppInstalled.mockResolvedValue(true); // App is installed, so it's a real error
+            mockIsAppInstalled.mockResolvedValue({ isInstalled: true, codeStatus: 200 }); // App is installed, so it's a real error
 
             try {
                 await phase.verifyCodeSync(defaultConfig, mockRepo);

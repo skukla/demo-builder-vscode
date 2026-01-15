@@ -52,8 +52,8 @@ describe('GitHub App Service', () => {
             // When: Checking if app is installed
             const result = await service.isAppInstalled('owner', 'repo');
 
-            // Then: Should return false
-            expect(result).toBe(false);
+            // Then: Should return isInstalled: false
+            expect(result).toEqual({ isInstalled: false });
             expect(mockFetch).not.toHaveBeenCalled();
         });
 
@@ -71,8 +71,8 @@ describe('GitHub App Service', () => {
             // When: Checking if app is installed
             const result = await service.isAppInstalled('test-owner', 'test-repo');
 
-            // Then: Should return true
-            expect(result).toBe(true);
+            // Then: Should return isInstalled: true with codeStatus
+            expect(result).toEqual({ isInstalled: true, codeStatus: 200 });
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://admin.hlx.page/status/test-owner/test-repo/main?editUrl=auto',
                 expect.objectContaining({
@@ -98,8 +98,8 @@ describe('GitHub App Service', () => {
             // When: Checking if app is installed
             const result = await service.isAppInstalled('test-owner', 'test-repo');
 
-            // Then: Should return false (app not syncing)
-            expect(result).toBe(false);
+            // Then: Should return isInstalled: false with codeStatus
+            expect(result).toEqual({ isInstalled: false, codeStatus: 404 });
         });
 
         it('should return false when code.status is 400 in strict mode (default)', async () => {
@@ -116,8 +116,9 @@ describe('GitHub App Service', () => {
             // When: Checking in strict mode (default)
             const result = await service.isAppInstalled('test-owner', 'test-repo');
 
-            // Then: Should return false (strict mode requires 200)
-            expect(result).toBe(false);
+            // Then: Should return isInstalled: true (app is installed, just has config issues)
+            // Status 400 typically means app is installed but fstab.yaml has issues
+            expect(result).toEqual({ isInstalled: true, codeStatus: 400 });
         });
 
         it('should return true when code.status is 400 in lenient mode', async () => {
@@ -134,8 +135,8 @@ describe('GitHub App Service', () => {
             // When: Checking in lenient mode (for post-install verification)
             const result = await service.isAppInstalled('test-owner', 'test-repo', { lenient: true });
 
-            // Then: Should return true (lenient mode accepts non-404)
-            expect(result).toBe(true);
+            // Then: Should return isInstalled: true with codeStatus
+            expect(result).toEqual({ isInstalled: true, codeStatus: 400 });
         });
 
         it('should return false when code.status is 404 even in lenient mode', async () => {
@@ -152,8 +153,8 @@ describe('GitHub App Service', () => {
             // When: Checking in lenient mode
             const result = await service.isAppInstalled('test-owner', 'test-repo', { lenient: true });
 
-            // Then: Should still return false (404 = definitely not installed)
-            expect(result).toBe(false);
+            // Then: Should return isInstalled: false (404 = definitely not installed)
+            expect(result).toEqual({ isInstalled: false, codeStatus: 404 });
         });
 
         it('should return false when HTTP response is not ok', async () => {
@@ -168,8 +169,8 @@ describe('GitHub App Service', () => {
             // When: Checking if app is installed
             const result = await service.isAppInstalled('test-owner', 'test-repo');
 
-            // Then: Should return false
-            expect(result).toBe(false);
+            // Then: Should return isInstalled: false
+            expect(result).toEqual({ isInstalled: false });
         });
 
         it('should return false when fetch throws error', async () => {
@@ -181,8 +182,8 @@ describe('GitHub App Service', () => {
             // When: Checking if app is installed
             const result = await service.isAppInstalled('test-owner', 'test-repo');
 
-            // Then: Should return false
-            expect(result).toBe(false);
+            // Then: Should return isInstalled: false
+            expect(result).toEqual({ isInstalled: false });
         });
 
         it('should return false when code.status is undefined', async () => {
@@ -200,8 +201,8 @@ describe('GitHub App Service', () => {
             // When: Checking if app is installed
             const result = await service.isAppInstalled('test-owner', 'test-repo');
 
-            // Then: Should return false (no code status = not syncing)
-            expect(result).toBe(false);
+            // Then: Should return isInstalled: false (no code status = not syncing)
+            expect(result).toEqual({ isInstalled: false });
         });
     });
 
