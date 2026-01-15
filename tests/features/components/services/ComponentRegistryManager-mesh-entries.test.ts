@@ -96,8 +96,8 @@ describe('ComponentRegistryManager - Mesh Entries', () => {
             expect(headless.dependencies?.required).not.toContain('commerce-mesh');
         });
 
-        it('eds frontend should not require mesh in its dependencies', () => {
-            const eds = componentsJson.frontends?.eds;
+        it('eds-storefront frontend should not require mesh in its dependencies', () => {
+            const eds = componentsJson.frontends?.['eds-storefront'];
 
             expect(eds).toBeDefined();
             // EDS mesh requirement comes from stack, not frontend dependency

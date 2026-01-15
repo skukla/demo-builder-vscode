@@ -87,7 +87,7 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
     describe('EDS Config.json Mesh Endpoints', () => {
         it('EDS frontend should map both commerce endpoints from mesh', () => {
             // Given: EDS frontend configuration
-            const edsFrontend = componentsJson.frontends.eds;
+            const edsFrontend = componentsJson.frontends['eds-storefront'];
 
             // When: Checking config file field mappings
             const configMappings = edsFrontend.configuration?.configFiles?.['config.json']?.fieldRenames;
