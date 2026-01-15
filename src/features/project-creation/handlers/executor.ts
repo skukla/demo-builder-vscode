@@ -210,73 +210,14 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     context.logger.debug('[Project Creation] Deferring project state save until after installation');
 
     // ========================================================================
-    // EDS COMPONENT REGISTRATION (if EDS stack selected)
+    // STACK TYPE DETECTION
     // ========================================================================
-    //
-    // For EDS stacks, the StorefrontSetupStep (wizard) handles all remote setup:
-    // - GitHub repo creation/selection
-    // - DA.live content copy
-    // - Content publish to CDN
-    //
-    // The executor just registers the component using the wizard's results.
+    // Detect EDS stacks for special metadata handling later.
+    // EDS components are cloned via the standard flow, but need additional
+    // metadata populated from runtime config (from preflight step).
 
     const isEdsStack = isEdsStackId(typedConfig.selectedStack);
     const edsComponentPath = path.join(projectPath, 'components', COMPONENT_IDS.EDS_STOREFRONT);
-
-    if (isEdsStack && typedConfig.edsConfig) {
-        context.logger.info('[Project Creation] Registering EDS component from wizard config');
-
-        // Register EDS frontend as a component instance using wizard results
-        const frontendInstance: import('@/types').ComponentInstance = {
-            id: COMPONENT_IDS.EDS_STOREFRONT,
-            name: 'EDS Storefront',
-            type: 'frontend',
-            path: edsComponentPath,
-            repoUrl: typedConfig.edsConfig.repoUrl,
-            status: 'ready',
-            lastUpdated: new Date(),
-            metadata: {
-                previewUrl: typedConfig.edsConfig.previewUrl,
-                liveUrl: typedConfig.edsConfig.liveUrl,
-                repoUrl: typedConfig.edsConfig.repoUrl,
-                // GitHub repo in "owner/repo" format for dashboard operations
-                githubRepo: typedConfig.edsConfig.githubOwner && typedConfig.edsConfig.repoName
-                    ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
-                    : undefined,
-                daLiveOrg: typedConfig.edsConfig.daLiveOrg,
-                daLiveSite: typedConfig.edsConfig.daLiveSite,
-                // Template repo for GitHub reset operations (from frontendSource)
-                templateOwner: typedConfig.edsConfig.templateOwner,
-                templateRepo: typedConfig.edsConfig.templateRepo,
-                // DA.live content source (explicit config, not derived from GitHub)
-                contentSource: typedConfig.edsConfig.contentSource,
-            },
-        };
-        project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT] = frontendInstance;
-
-        context.logger.debug(`[Project Creation] Registered EDS frontend: ${COMPONENT_IDS.EDS_STOREFRONT} at ${edsComponentPath}`);
-
-        // Clone the EDS repo locally (created by preflight, now needs local copy)
-        // This is needed for config.json generation and local development
-        if (typedConfig.edsConfig.repoUrl) {
-            progressTracker('EDS Setup', 25, 'Cloning storefront repository...');
-            context.logger.info(`[Project Creation] Cloning EDS repo to: ${edsComponentPath}`);
-
-            const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
-            const { GitHubRepoOperations } = await import('@/features/eds/services/githubRepoOperations');
-
-            const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
-            const githubRepoOps = new GitHubRepoOperations(githubTokenService, context.logger);
-
-            await githubRepoOps.cloneRepository(typedConfig.edsConfig.repoUrl, edsComponentPath);
-            context.logger.info(`[Project Creation] EDS repo cloned successfully`);
-        }
-
-        // Save project state with EDS metadata
-        await context.stateManager.saveProject(project);
-
-        progressTracker('EDS Setup', 30, 'EDS configuration loaded');
-    }
 
     // ========================================================================
     // LOAD COMPONENT DEFINITIONS
@@ -324,6 +265,35 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     await cloneAllComponents(installationContext);
     await installAllComponents(installationContext);
+
+    // ========================================================================
+    // EDS METADATA POPULATION (if EDS stack)
+    // ========================================================================
+    // After standard cloning, populate EDS-specific metadata from runtime config.
+    // The component was cloned by cloneAllComponents, but needs additional metadata
+    // that only exists at runtime (from preflight step).
+    if (isEdsStack && typedConfig.edsConfig) {
+        const { COMPONENT_IDS } = await import('@/core/constants');
+        const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+        if (edsInstance) {
+            edsInstance.metadata = {
+                ...edsInstance.metadata,
+                previewUrl: typedConfig.edsConfig.previewUrl,
+                liveUrl: typedConfig.edsConfig.liveUrl,
+                repoUrl: typedConfig.edsConfig.repoUrl,
+                githubRepo: typedConfig.edsConfig.githubOwner && typedConfig.edsConfig.repoName
+                    ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
+                    : undefined,
+                daLiveOrg: typedConfig.edsConfig.daLiveOrg,
+                daLiveSite: typedConfig.edsConfig.daLiveSite,
+                templateOwner: typedConfig.edsConfig.templateOwner,
+                templateRepo: typedConfig.edsConfig.templateRepo,
+                contentSource: typedConfig.edsConfig.contentSource,
+            };
+            await context.stateManager.saveProject(project);
+            context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}`);
+        }
+    }
 
     // ========================================================================
     // PHASE 3: MESH CONFIGURATION
@@ -624,10 +594,9 @@ async function loadComponentDefinitions(
     const filteredDependencies = (typedConfig.components?.dependencies || [])
         .filter((id: string) => !frontendSubmoduleIds.has(id));
 
-    // Build component list - skip frontend for EDS stacks (wizard handles repo setup)
+    // Build component list - all frontends included (EDS uses edsConfig.repoUrl as source)
     const allComponents = [
-        // Only include frontend if NOT EDS stack (wizard clones EDS repo during Publish Storefront step)
-        ...(!isEdsStack && typedConfig.components?.frontend
+        ...(typedConfig.components?.frontend
             ? [{ id: typedConfig.components.frontend, type: 'frontend' }]
             : []),
         ...filteredDependencies.map((id: string) => ({ id, type: 'dependency' })),
@@ -662,20 +631,34 @@ async function loadComponentDefinitions(
             continue;
         }
 
-        // For frontend components, use frontendSource from config (template is source of truth)
-        // This allows abstract component types in components.json without hardcoded repos
-        if (comp.type === 'frontend' && typedConfig.frontendSource) {
-            // Override component source with template source
-            componentDef = {
-                ...componentDef,
-                source: {
-                    type: typedConfig.frontendSource.type as 'git' | 'npm' | 'local',
-                    url: typedConfig.frontendSource.url,
-                    branch: typedConfig.frontendSource.branch,
-                    gitOptions: typedConfig.frontendSource.gitOptions,
-                },
-            };
-            context.logger.debug(`[Project Creation] Using template source for ${componentDef.name}: ${typedConfig.frontendSource.url}`);
+        // For frontend components, determine source based on stack type:
+        // - EDS stacks: use edsConfig.repoUrl (user's repo created from template during preflight)
+        // - Other stacks: use frontendSource from config (template is source of truth)
+        if (comp.type === 'frontend') {
+            if (isEdsStack && typedConfig.edsConfig?.repoUrl) {
+                // EDS frontend: source is the user's GitHub repo created during preflight
+                componentDef = {
+                    ...componentDef,
+                    source: {
+                        type: 'git' as const,
+                        url: typedConfig.edsConfig.repoUrl,
+                        branch: 'main',
+                    },
+                };
+                context.logger.debug(`[Project Creation] Using EDS repo source for ${componentDef.name}: ${typedConfig.edsConfig.repoUrl}`);
+            } else if (typedConfig.frontendSource) {
+                // Non-EDS frontend: source from template config
+                componentDef = {
+                    ...componentDef,
+                    source: {
+                        type: typedConfig.frontendSource.type as 'git' | 'npm' | 'local',
+                        url: typedConfig.frontendSource.url,
+                        branch: typedConfig.frontendSource.branch,
+                        gitOptions: typedConfig.frontendSource.gitOptions,
+                    },
+                };
+                context.logger.debug(`[Project Creation] Using template source for ${componentDef.name}: ${typedConfig.frontendSource.url}`);
+            }
         }
 
         // Validate that installable components have a source defined
