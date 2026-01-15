@@ -174,15 +174,8 @@ export class ProjectFileLoader {
                     version: instanceVersion || 'unknown',
                     lastUpdated: new Date().toISOString(),
                 };
-                
-                if (instanceVersion) {
-                    this.logger.debug(`[ProjectFileLoader] Component version detected: ${componentId} (${instanceVersion})`);
-                } else {
-                    this.logger.debug(`[ProjectFileLoader] Component found with unknown version: ${componentId}`);
-                }
             } else if (instanceVersion && instanceVersion !== mergedComponentVersions[componentId].version) {
                 // Component version was updated (e.g., during project edit) - prefer the fresh instance version
-                this.logger.debug(`[ProjectFileLoader] Updating component version: ${componentId} (${mergedComponentVersions[componentId].version} → ${instanceVersion})`);
                 mergedComponentVersions[componentId] = {
                     version: instanceVersion,
                     lastUpdated: new Date().toISOString(),
