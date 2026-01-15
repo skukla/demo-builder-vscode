@@ -94,6 +94,20 @@ export interface GitHubFileResult {
 }
 
 /**
+ * Entry in a GitHub repository tree (file or directory)
+ */
+export interface GitHubTreeEntry {
+    /** File/directory path relative to repo root */
+    path: string;
+    /** Entry type: 'blob' for files, 'tree' for directories */
+    type: 'blob' | 'tree';
+    /** SHA of the blob/tree */
+    sha: string;
+    /** File size in bytes (only for blobs) */
+    size?: number;
+}
+
+/**
  * OAuth callback parameters
  */
 export interface OAuthCallbackParams {
@@ -261,10 +275,16 @@ export interface EdsProjectConfig {
     daLiveOrg: string;
     /** DA.live site name */
     daLiveSite: string;
-    /** Template repository owner (GitHub username or org) */
+    /** Template repository owner (GitHub username or org) - for GitHub reset operations */
     templateOwner?: string;
-    /** Template repository name */
+    /** Template repository name - for GitHub reset operations */
     templateRepo?: string;
+    /** DA.live content source (explicit config, not derived from GitHub) */
+    contentSource?: {
+        org: string;
+        site: string;
+        indexPath?: string;
+    };
     /** Selected backend component ID (from stack definition) */
     backendComponentId: string;
     /** Backend environment variables (from componentConfigs) */

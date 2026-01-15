@@ -16,6 +16,7 @@ import type {
     GitHubFileContent,
     GitHubFileResult,
     GitHubApiError,
+    GitHubTreeEntry,
 } from './types';
 import type { GitHubTokenService } from './githubTokenService';
 
@@ -130,6 +131,88 @@ export class GitHubFileOperations {
             sha: response.data.content?.sha ?? '',
             commitSha: response.data.commit?.sha ?? '',
         };
+    }
+
+    /**
+     * List all files in a repository recursively
+     * Uses the Git Trees API for efficient recursive listing
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param branch - Branch to list (default: 'main')
+     * @returns Array of file entries (excludes directories)
+     */
+    async listRepoFiles(
+        owner: string,
+        repo: string,
+        branch = 'main',
+    ): Promise<GitHubTreeEntry[]> {
+        const octokit = await this.ensureAuthenticated();
+
+        try {
+            // First get the branch's latest commit SHA
+            const branchResponse = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
+                owner,
+                repo,
+                branch,
+            });
+
+            const treeSha = branchResponse.data.commit.commit.tree.sha;
+
+            // Get the tree recursively
+            const treeResponse = await octokit.request('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', {
+                owner,
+                repo,
+                tree_sha: treeSha,
+                recursive: '1',
+            });
+
+            // Filter to only blobs (files), not trees (directories)
+            return treeResponse.data.tree
+                .filter((entry: { type: string }) => entry.type === 'blob')
+                .map((entry: { path: string; type: string; sha: string; size?: number }) => ({
+                    path: entry.path,
+                    type: entry.type as 'blob' | 'tree',
+                    sha: entry.sha,
+                    size: entry.size,
+                }));
+        } catch (error) {
+            const apiError = error as GitHubApiError;
+
+            if (apiError.status === 404) {
+                // Branch or repo doesn't exist
+                return [];
+            }
+
+            throw error;
+        }
+    }
+
+    /**
+     * Delete a file from the repository
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param path - File path
+     * @param message - Commit message
+     * @param sha - SHA of the file to delete (required)
+     */
+    async deleteFile(
+        owner: string,
+        repo: string,
+        path: string,
+        message: string,
+        sha: string,
+    ): Promise<void> {
+        const octokit = await this.ensureAuthenticated();
+
+        await octokit.request('DELETE /repos/{owner}/{repo}/contents/{path}', {
+            owner,
+            repo,
+            path,
+            message,
+            sha,
+        });
+
+        this.logger.debug(`[GitHub] Deleted file: ${path}`);
     }
 
     /**
