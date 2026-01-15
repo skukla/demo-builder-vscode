@@ -475,6 +475,16 @@ export class HelixService {
     }
 
     /**
+     * Progress callback for publish operations
+     */
+    public static readonly PublishPhases = {
+        DISCOVERING: 'discovering',
+        VERIFYING: 'verifying',
+        PUBLISHING: 'publishing',
+        COMPLETE: 'complete',
+    } as const;
+
+    /**
      * Preview and publish all content in one operation
      * Lists all pages from DA.live and publishes each one individually.
      *
@@ -482,12 +492,20 @@ export class HelixService {
      * @param branch - Branch name (default: main)
      * @param daLiveOrg - DA.live organization (for listing content, may differ from GitHub owner)
      * @param daLiveSite - DA.live site name (for listing content, may differ from GitHub repo)
+     * @param onProgress - Optional callback for progress updates
      */
     async publishAllSiteContent(
         repoFullName: string,
         branch: string = DEFAULT_BRANCH,
         daLiveOrg?: string,
         daLiveSite?: string,
+        onProgress?: (info: {
+            phase: typeof HelixService.PublishPhases[keyof typeof HelixService.PublishPhases];
+            message: string;
+            current?: number;
+            total?: number;
+            currentPath?: string;
+        }) => void,
     ): Promise<void> {
         const [githubOrg, githubSite] = this.parseRepoFullName(repoFullName);
 
@@ -497,6 +515,12 @@ export class HelixService {
 
         this.logger.info(`[Helix] Listing all pages from DA.live: ${contentOrg}/${contentSite}`);
         this.logger.info(`[Helix] Publishing to GitHub repo: ${repoFullName}`);
+
+        // Report: Discovering content
+        onProgress?.({
+            phase: HelixService.PublishPhases.DISCOVERING,
+            message: 'Discovering content to publish...',
+        });
 
         // List all publishable pages from DA.live (using DA.live org/site)
         const pages = await this.listAllPages(contentOrg, contentSite);
@@ -508,6 +532,13 @@ export class HelixService {
 
         this.logger.info(`[Helix] Found ${pages.length} pages to publish`);
 
+        // Report: Found pages, now verifying
+        onProgress?.({
+            phase: HelixService.PublishPhases.VERIFYING,
+            message: `Found ${pages.length} pages. Verifying CDN connection...`,
+            total: pages.length,
+        });
+
         // Verify Helix is ready to accept publish requests
         // After fstab.yaml is pushed, there may be a delay before Helix processes it
         await this.waitForPublishReadiness(githubOrg, githubSite, branch);
@@ -516,7 +547,18 @@ export class HelixService {
         // Use GitHub org/site for Helix API calls (the repo connected to the site)
         const results: { path: string; success: boolean; skipped?: boolean; error?: string }[] = [];
 
-        for (const path of pages) {
+        for (let i = 0; i < pages.length; i++) {
+            const path = pages[i];
+
+            // Report progress for each page
+            onProgress?.({
+                phase: HelixService.PublishPhases.PUBLISHING,
+                message: `Publishing page ${i + 1} of ${pages.length}`,
+                current: i + 1,
+                total: pages.length,
+                currentPath: path,
+            });
+
             try {
                 this.logger.debug(`[Helix] Publishing ${path}`);
                 await this.previewAndPublishPage(githubOrg, githubSite, path, branch);
@@ -559,6 +601,14 @@ export class HelixService {
         // Log summary with skipped count if any
         const skippedSuffix = skippedCount > 0 ? ` (${skippedCount} skipped - no content)` : '';
         this.logger.info(`[Helix] Successfully published ${publishedCount}/${pages.length} pages${skippedSuffix}`);
+
+        // Report completion
+        onProgress?.({
+            phase: HelixService.PublishPhases.COMPLETE,
+            message: `Published ${publishedCount} pages to CDN`,
+            current: pages.length,
+            total: pages.length,
+        });
     }
 
     /**
