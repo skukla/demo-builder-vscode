@@ -628,7 +628,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 // ============================================
                 // Step 1: List files in both repos
                 // ============================================
-                progress.report({ message: 'Analyzing repositories...', increment: 5 });
+                progress.report({ message: 'Step 1/7: Analyzing repositories...' });
                 context.logger.info(`[ProjectsList] Listing files in template and user repos`);
 
                 const [templateFiles, userFiles] = await Promise.all([
@@ -640,20 +640,23 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 const userFileMap = new Map(userFiles.map(f => [f.path, f]));
 
                 context.logger.info(`[ProjectsList] Template has ${templateFiles.length} files, user repo has ${userFiles.length} files`);
+                progress.report({ message: `Step 1/7: Found ${templateFiles.length} template files, ${userFiles.length} existing files` });
 
                 // ============================================
                 // Step 2: Delete files not in template
                 // ============================================
-                progress.report({ message: 'Removing extra files...', increment: 10 });
-
                 // Files to delete: in user repo but not in template (except fstab.yaml which we configure)
                 const filesToDelete = userFiles.filter(f =>
                     !templateFilePaths.has(f.path) && f.path !== 'fstab.yaml'
                 );
 
                 if (filesToDelete.length > 0) {
+                    progress.report({ message: `Step 2/7: Removing ${filesToDelete.length} extra files...` });
                     context.logger.info(`[ProjectsList] Deleting ${filesToDelete.length} extra files`);
+                    let deletedCount = 0;
                     for (const file of filesToDelete) {
+                        deletedCount++;
+                        progress.report({ message: `Step 2/7: Removing extra files (${deletedCount}/${filesToDelete.length})` });
                         // Fetch current SHA before delete (tree changes after each commit)
                         const currentFile = await githubFileOps.getFileContent(repoOwner, repoName, file.path);
                         if (currentFile) {
@@ -666,19 +669,27 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                             );
                         }
                     }
+                } else {
+                    progress.report({ message: 'Step 2/7: No extra files to remove' });
                 }
 
                 // ============================================
                 // Step 3: Copy/update template files
                 // ============================================
-                progress.report({ message: 'Copying template files...', increment: 25 });
-                context.logger.info(`[ProjectsList] Copying ${templateFiles.length} files from template`);
+                // Filter out fstab.yaml (configured separately) and files that haven't changed
+                const filesToCopy = templateFiles.filter(f => {
+                    if (f.path === 'fstab.yaml') return false;
+                    const existingFile = userFileMap.get(f.path);
+                    return !existingFile || existingFile.sha !== f.sha;
+                });
 
-                for (const templateFile of templateFiles) {
-                    // Skip fstab.yaml - we configure it separately
-                    if (templateFile.path === 'fstab.yaml') {
-                        continue;
-                    }
+                progress.report({ message: `Step 3/7: Copying ${filesToCopy.length} template files...` });
+                context.logger.info(`[ProjectsList] Copying ${filesToCopy.length} files from template (${templateFiles.length - filesToCopy.length - 1} unchanged)`);
+
+                let copiedCount = 0;
+                for (const templateFile of filesToCopy) {
+                    copiedCount++;
+                    progress.report({ message: `Step 3/7: Copying template files (${copiedCount}/${filesToCopy.length})` });
 
                     // Get template file content
                     const templateContent = await githubFileOps.getFileContent(
@@ -696,11 +707,6 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     const existingFile = userFileMap.get(templateFile.path);
                     const existingSha = existingFile?.sha;
 
-                    // Skip if file content is identical (same SHA)
-                    if (existingSha === templateFile.sha) {
-                        continue;
-                    }
-
                     await githubFileOps.createOrUpdateFile(
                         repoOwner,
                         repoName,
@@ -716,7 +722,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 // ============================================
                 // Step 4: Configure fstab.yaml
                 // ============================================
-                progress.report({ message: 'Configuring Edge Delivery Services...', increment: 10 });
+                progress.report({ message: 'Step 4/7: Configuring content source (fstab.yaml)...' });
 
                 const fstabContent = `mountpoints:
   /: https://content.da.live/${daLiveOrg}/${daLiveSite}/
@@ -740,7 +746,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 // ============================================
                 // Step 5: Wait for code sync
                 // ============================================
-                progress.report({ message: 'Verifying code synchronization...', increment: 10 });
+                progress.report({ message: 'Step 5/7: Waiting for code sync...' });
 
                 const codeUrl = `https://admin.hlx.page/code/${repoOwner}/${repoName}/main/scripts/aem.js`;
                 let syncVerified = false;
@@ -748,6 +754,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 const pollInterval = 2000;
 
                 for (let attempt = 0; attempt < maxAttempts && !syncVerified; attempt++) {
+                    progress.report({ message: `Step 5/7: Verifying code sync (attempt ${attempt + 1}/${maxAttempts})` });
                     try {
                         const response = await fetch(codeUrl, {
                             method: 'GET',
@@ -767,14 +774,16 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
 
                 if (!syncVerified) {
                     context.logger.warn('[ProjectsList] Code sync verification timed out, continuing anyway');
+                    progress.report({ message: 'Step 5/7: Code sync timed out, continuing...' });
                 } else {
                     context.logger.info('[ProjectsList] Code sync verified');
+                    progress.report({ message: 'Step 5/7: Code sync verified' });
                 }
 
                 // ============================================
                 // Step 6: Copy demo content to DA.live
                 // ============================================
-                progress.report({ message: 'Copying demo content...', increment: 20 });
+                progress.report({ message: 'Step 6/7: Copying demo content to DA.live...' });
                 context.logger.info(`[ProjectsList] Copying content from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
 
                 // Build full content source with index URL from explicit config
@@ -795,12 +804,13 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
                 }
 
+                progress.report({ message: `Step 6/7: Copied ${contentResult.totalFiles} content files` });
                 context.logger.info(`[ProjectsList] DA.live content populated: ${contentResult.totalFiles} files`);
 
                 // ============================================
                 // Step 7: Publish all content to CDN
                 // ============================================
-                progress.report({ message: 'Publishing content to CDN...', increment: 10 });
+                progress.report({ message: 'Step 7/7: Publishing content to CDN...' });
                 context.logger.info(`[ProjectsList] Publishing content to CDN for ${repoOwner}/${repoName}`);
 
                 const helixService = new HelixService(authService, context.logger, githubTokenService);
@@ -813,7 +823,12 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     total?: number;
                     currentPath?: string;
                 }) => {
-                    progress.report({ message: info.message, increment: info.total ? (10 / info.total) : 0 });
+                    // Format: "Step 7/7: Publishing (15/42 pages)"
+                    if (info.current !== undefined && info.total !== undefined) {
+                        progress.report({ message: `Step 7/7: Publishing to CDN (${info.current}/${info.total} pages)` });
+                    } else {
+                        progress.report({ message: `Step 7/7: ${info.message}` });
+                    }
                 };
 
                 await helixService.publishAllSiteContent(`${repoOwner}/${repoName}`, 'main', undefined, undefined, onPublishProgress);
