@@ -3,6 +3,7 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { isProgressActive } from './projectCreationPredicates';
+import { getStackById } from '../hooks/useSelectedStack';
 import { hasMeshInDependencies } from '@/core/constants';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
@@ -51,8 +52,14 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
     const [meshCheckResult, setMeshCheckResult] = useState<MeshCheckResult | null>(null);
     const [githubAppInstallData, setGitHubAppInstallData] = useState<GitHubAppInstallData | null>(null);
 
-    // Determine if checks are needed
-    const needsMeshCheck = hasMeshInDependencies(state.components?.dependencies);
+    // Get stack directly from config - source of truth for components
+    const stack = useMemo(
+        () => state.selectedStack ? getStackById(state.selectedStack) : undefined,
+        [state.selectedStack]
+    );
+
+    // Determine if checks are needed - use stack dependencies directly
+    const needsMeshCheck = hasMeshInDependencies(stack?.dependencies);
     const needsGitHubAppCheck = useMemo(() => {
         const stackId = state.selectedStack;
         if (!stackId) return false;
@@ -139,14 +146,15 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
             setMeshCheckResult(null);
 
             try {
+                // Use stack components directly - no derivation from state needed
                 const result = await webviewClient.request<MeshCheckResult>('check-api-mesh', {
                     workspaceId: state.adobeWorkspace?.id,
                     projectId: state.adobeProject?.id,
-                    selectedComponents: [
-                        state.components?.frontend,
-                        state.components?.backend,
-                        ...(state.components?.dependencies || []),
-                    ].filter(Boolean),
+                    selectedComponents: stack ? [
+                        stack.frontend,
+                        stack.backend,
+                        ...stack.dependencies,
+                    ].filter(Boolean) : [],
                 });
 
                 if (!result.success || !result.apiEnabled) {
@@ -194,6 +202,12 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
 
         // Build config with fresh mesh info (React state may be stale)
         const stateWithMeshInfo = detectedMeshInfo ? { ...state, apiMesh: detectedMeshInfo } : state;
+        // eslint-disable-next-line no-console
+        console.log('[ProjectCreationStep] Before buildProjectConfig - state.edsConfig:', {
+            hasEdsConfig: !!stateWithMeshInfo.edsConfig,
+            repoUrl: stateWithMeshInfo.edsConfig?.repoUrl,
+            selectedStack: stateWithMeshInfo.selectedStack,
+        });
         const projectConfig = buildProjectConfig(stateWithMeshInfo, importedSettings, packages);
         vscode.createProject(projectConfig);
     }, [needsMeshCheck, needsGitHubAppCheck, checkGitHubApp, state, updateState, importedSettings, packages]);

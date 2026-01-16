@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { PrerequisiteCheck, UnifiedProgress, ComponentSelection } from '@/types/webview';
+import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
 
 export interface PrerequisitesLoadedData {
     prerequisites: Array<{
@@ -102,10 +102,13 @@ interface UsePrerequisiteStateReturn {
  * - Status updates during checks
  * - Installation complete events
  * - Check stopped events
+ *
+ * @param scrollToTop - Function to scroll to top of container
+ * @param selectedStack - The selected stack ID from wizard state (source of truth for components)
  */
 export function usePrerequisiteState(
     scrollToTop: () => void,
-    componentSelection?: ComponentSelection,
+    selectedStack?: string,
 ): UsePrerequisiteStateReturn {
     const [checks, setChecks] = useState<PrerequisiteCheck[]>(INITIAL_LOADING_STATE);
     const [isChecking, setIsChecking] = useState(false);
@@ -122,12 +125,13 @@ export function usePrerequisiteState(
         checkInProgressRef.current = true;
         setIsChecking(true);
 
+        // Send selectedStack - backend will look up components from stack config
         webviewClient.postMessage('check-prerequisites', {
             isRecheck: isRecheck ?? false,
-            componentSelection,
+            selectedStack,
         });
         scrollToTop();
-    }, [scrollToTop, componentSelection]);
+    }, [scrollToTop, selectedStack]);
 
     // Install prerequisite function
     const installPrerequisite = useCallback((index: number) => {

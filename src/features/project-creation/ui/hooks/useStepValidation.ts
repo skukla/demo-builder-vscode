@@ -32,12 +32,8 @@ export interface StepValidation {
 const STEP_VALIDATORS: Record<string, (state: WizardState) => boolean> = {
     'adobe-auth': (state) => state.adobeAuth?.isAuthenticated === true,
     'project-name': (state) => Boolean(state.projectName?.trim()),
-    'component-selection': (state) => {
-        const components = state.components;
-        if (!components) return false;
-        // Check if at least one stack or frontend is selected
-        return Boolean(components.frontend || components.backend);
-    },
+    // Check for stack selection - stack is the source of truth for components
+    'component-selection': (state) => Boolean(state.selectedStack),
     'adobe-project': (state) => Boolean(state.adobeProject),
     'adobe-workspace': (state) => Boolean(state.adobeWorkspace),
 };

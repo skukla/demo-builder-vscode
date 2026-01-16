@@ -2,6 +2,7 @@ import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
 import { hasRequiredReviewData } from './reviewPredicates';
 import { buildComponentInfoList, resolveServiceNames } from './reviewStepHelpers';
+import { getStackById } from '../hooks/useSelectedStack';
 import { COMPONENT_IDS } from '@/core/constants';
 import { useCanProceed } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
@@ -102,31 +103,44 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
     // Use custom validator for review step requirements
     useCanProceed(state, setCanProceed, hasRequiredReviewData);
 
-    // Check if Demo Inspector is enabled (can be in dependencies OR selectedAddons)
+    // Get stack directly from config - source of truth for components
+    const stack = useMemo(
+        () => state.selectedStack ? getStackById(state.selectedStack) : undefined,
+        [state.selectedStack]
+    );
+
+    // Check if Demo Inspector is enabled (can be in stack dependencies OR selectedAddons)
     const hasDemoInspector =
-        state.components?.dependencies?.includes(COMPONENT_IDS.DEMO_INSPECTOR) ||
+        stack?.dependencies?.includes(COMPONENT_IDS.DEMO_INSPECTOR) ||
         state.selectedAddons?.includes(COMPONENT_IDS.DEMO_INSPECTOR) ||
         false;
 
-    // Derive component info using extracted helper
+    // Derive component info using extracted helper - use stack directly
     const backendServiceNames = useMemo(
         () => resolveServiceNames(
-            state.components?.backend,
+            stack?.backend,
             componentsData?.backends,
             componentsData?.services
         ),
-        [state.components?.backend, componentsData?.backends, componentsData?.services]
+        [stack?.backend, componentsData?.backends, componentsData?.services]
     );
+
+    // Build component selection from stack for helper function
+    const componentSelection = useMemo(() => stack ? {
+        frontend: stack.frontend,
+        backend: stack.backend,
+        dependencies: stack.dependencies,
+    } : undefined, [stack]);
 
     const componentInfo = useMemo(
         () => buildComponentInfoList(
-            state.components,
+            componentSelection,
             state.apiMesh?.meshStatus,
             componentsData,
             hasDemoInspector,
             backendServiceNames
         ),
-        [state.components, state.apiMesh?.meshStatus, componentsData, hasDemoInspector, backendServiceNames]
+        [componentSelection, state.apiMesh?.meshStatus, componentsData, hasDemoInspector, backendServiceNames]
     );
 
     // Adobe context info - prefer title (human-readable) over name (often ID-like)

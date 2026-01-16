@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { toServiceGroupWithSortedFields, ServiceGroupDef } from '@/features/components/services/serviceGroupTransforms';
+import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
 import { ComponentEnvVar, ComponentConfigs, WizardState } from '@/types/webview';
 import { url, pattern } from '@/core/validation/Validator';
 
@@ -137,8 +138,13 @@ export function useComponentConfig({
     }, []);
 
     // Build selected components with dependencies
+    // Read directly from stack config - this is the source of truth
     const selectedComponents = useMemo(() => {
         const components: Array<{ id: string; data: ComponentData; type: string }> = [];
+
+        // Get stack directly from config - no derivation needed
+        const stack = state.selectedStack ? getStackById(state.selectedStack) : undefined;
+        if (!stack) return components;
 
         const findComponent = (componentId: string): ComponentData | undefined => {
             return componentsData.frontends?.find(c => c.id === componentId) ||
@@ -165,7 +171,8 @@ export function useComponentConfig({
             comp.dependencies?.optional?.forEach(depId => {
                 const dep = findComponent(depId);
                 if (dep && !components.some(c => c.id === depId)) {
-                    const isSelected = state.components?.dependencies?.includes(depId);
+                    // Check if optional dep is in stack dependencies
+                    const isSelected = stack.dependencies?.includes(depId);
                     if (isSelected) {
                         const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
                                            (dep.configuration?.optionalEnvVars?.length || 0) > 0;
@@ -177,17 +184,20 @@ export function useComponentConfig({
             });
         };
 
-        if (state.components?.frontend) {
-            const frontend = componentsData.frontends?.find(f => f.id === state.components?.frontend);
+        // Use stack.frontend directly
+        if (stack.frontend) {
+            const frontend = componentsData.frontends?.find(f => f.id === stack.frontend);
             if (frontend) addComponentWithDeps(frontend, 'Frontend');
         }
 
-        if (state.components?.backend) {
-            const backend = componentsData.backends?.find(b => b.id === state.components?.backend);
+        // Use stack.backend directly
+        if (stack.backend) {
+            const backend = componentsData.backends?.find(b => b.id === stack.backend);
             if (backend) addComponentWithDeps(backend, 'Backend');
         }
 
-        state.components?.dependencies?.forEach(depId => {
+        // Use stack.dependencies directly
+        stack.dependencies?.forEach(depId => {
             if (!components.some(c => c.id === depId)) {
                 const dep = componentsData.dependencies?.find(d => d.id === depId);
                 if (dep) {
@@ -200,18 +210,8 @@ export function useComponentConfig({
             }
         });
 
-        state.components?.integrations?.forEach(sysId => {
-            const sys = componentsData.integrations?.find(s => s.id === sysId);
-            if (sys) components.push({ id: sys.id, data: sys, type: 'External System' });
-        });
-
-        state.components?.appBuilder?.forEach(appId => {
-            const app = componentsData.appBuilder?.find(a => a.id === appId);
-            if (app) addComponentWithDeps(app, 'App Builder');
-        });
-
         return components;
-    }, [state.components, componentsData]);
+    }, [state.selectedStack, componentsData]);
 
     // Build service groups from selected components
     const serviceGroups = useMemo(() => {
@@ -246,8 +246,10 @@ export function useComponentConfig({
 
             // Add backend-specific service env vars using inline resolution
             // (This logic mirrors resolveComponentEnvVars but uses browser-loaded componentsData)
-            if (data.configuration?.requiredServices && state.components?.backend) {
-                const backendId = state.components.backend;
+            // Get backend from stack directly - no derivation needed
+            const stack = state.selectedStack ? getStackById(state.selectedStack) : undefined;
+            if (data.configuration?.requiredServices && stack?.backend) {
+                const backendId = stack.backend;
                 data.configuration.requiredServices.forEach(serviceId => {
                     const serviceDef = componentsData.services?.[serviceId];
                     if (serviceDef?.backendSpecific && serviceDef.requiredEnvVarsByBackend) {
@@ -278,7 +280,7 @@ export function useComponentConfig({
                 const bOrder = SERVICE_GROUP_DEFS.find(d => d.id === b.id)?.order || 99;
                 return aOrder - bOrder;
             });
-    }, [selectedComponents, componentsData.envVars, componentsData.services, state.components]);
+    }, [selectedComponents, componentsData.envVars, componentsData.services, state.selectedStack]);
 
     // Initialize defaults (field defaults + brand-specific defaults)
     useEffect(() => {

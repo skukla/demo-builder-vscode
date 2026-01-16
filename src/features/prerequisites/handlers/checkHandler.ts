@@ -15,6 +15,18 @@ import type { PrerequisiteCheckState } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 
+// Import stack config for direct lookup
+import stacksConfig from '@/features/project-creation/config/stacks.json';
+import type { Stack } from '@/types/stacks';
+
+/**
+ * Look up a stack by ID from the stacks configuration
+ * This is the source of truth for frontend/backend/dependencies
+ */
+function getStackById(stackId: string): Stack | undefined {
+    return (stacksConfig.stacks as Stack[]).find(s => s.id === stackId);
+}
+
 /**
  * Summary of a prerequisite check result for UI display
  */
@@ -55,10 +67,13 @@ function toPrerequisiteSummary(
  *
  * Loads prerequisites from config, checks each one, handles multi-version Node.js,
  * and sends status updates to the UI.
+ *
+ * Now receives selectedStack instead of componentSelection - looks up stack
+ * directly from stacks.json (source of truth).
  */
 export async function handleCheckPrerequisites(
     context: HandlerContext,
-    payload?: { componentSelection?: import('../../../types/components').ComponentSelection; isRecheck?: boolean },
+    payload?: { selectedStack?: string; isRecheck?: boolean },
 ): Promise<SimpleResult> {
     try {
         context.stepLogger?.log('prerequisites', 'Starting prerequisites check', 'info');
@@ -69,9 +84,20 @@ export async function handleCheckPrerequisites(
             context.logger.debug('[Prerequisites] Cache cleared for recheck');
         }
 
-        // Store the component selection for later use
-        if (payload?.componentSelection) {
-            context.sharedState.currentComponentSelection = payload.componentSelection;
+        // Look up stack from config and build component selection
+        // This is the source of truth - no derivation from UI state needed
+        if (payload?.selectedStack) {
+            const stack = getStackById(payload.selectedStack);
+            if (stack) {
+                context.sharedState.currentComponentSelection = {
+                    frontend: stack.frontend,
+                    backend: stack.backend,
+                    dependencies: stack.dependencies,
+                    integrations: [],
+                    appBuilder: [],
+                };
+                context.logger.debug(`[Prerequisites] Built component selection from stack: ${payload.selectedStack}`);
+            }
         }
 
         // Load config and get prerequisites

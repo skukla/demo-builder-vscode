@@ -1,7 +1,6 @@
 import { TextField, Text } from '@adobe/react-spectrum';
 import React, { useEffect, useCallback } from 'react';
 import { BrandGallery } from '../components/BrandGallery';
-import { deriveComponentsFromStack } from '../helpers/stackHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { cn } from '@/core/ui/utils/classNames';
@@ -170,9 +169,10 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 contentSource: storefront.contentSource,
             } : state.edsConfig;
 
+            // Only set selectedStack - stack config is the source of truth for components
+            // No need to derive and store components separately
             updateState({
                 selectedStack: stackId,
-                components: deriveComponentsFromStack(stack),
                 edsConfig: edsConfigUpdate,
             });
         },
@@ -201,6 +201,54 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
 
         setCanProceed(isProjectNameValid && isPackageStackValid);
     }, [state.projectName, state.selectedPackage, state.selectedStack, setCanProceed, validateProjectName, hasPackages, hasStacks]);
+
+    // Edit/Import mode: Populate EDS template config from package if missing
+    // This handles cases where:
+    // 1. Editing an existing project that was created before metadata was saved properly
+    // 2. Importing settings that don't have template info
+    // The template info (templateOwner, templateRepo, contentSource) comes from the
+    // static package config and doesn't need to be stored per-project.
+    useEffect(() => {
+        // Skip if not an EDS stack
+        if (!state.selectedStack?.startsWith('eds-')) return;
+
+        // Skip if already have template info
+        if (state.edsConfig?.templateOwner && state.edsConfig?.templateRepo) return;
+
+        // Skip if no package selected or packages not loaded yet
+        // Note: packages starts as [] and loads async, so check length
+        if (!state.selectedPackage || !packages || packages.length === 0) return;
+
+        // Look up template info from package config
+        const pkg = packages.find(p => p.id === state.selectedPackage);
+        const storefront = pkg?.storefronts?.[state.selectedStack];
+
+        // Skip if package doesn't have storefront config for this stack
+        if (!storefront?.templateOwner || !storefront?.templateRepo) return;
+
+        // eslint-disable-next-line no-console
+        console.log('[WelcomeStep] Populating EDS template config from package:', {
+            templateOwner: storefront.templateOwner,
+            templateRepo: storefront.templateRepo,
+            hasContentSource: !!storefront.contentSource,
+        });
+
+        // Populate the missing template info
+        updateState({
+            edsConfig: {
+                ...state.edsConfig,
+                accsHost: state.edsConfig?.accsHost || '',
+                storeViewCode: state.edsConfig?.storeViewCode || '',
+                customerGroup: state.edsConfig?.customerGroup || '',
+                repoName: state.edsConfig?.repoName || '',
+                daLiveOrg: state.edsConfig?.daLiveOrg || '',
+                daLiveSite: state.edsConfig?.daLiveSite || '',
+                templateOwner: storefront.templateOwner,
+                templateRepo: storefront.templateRepo,
+                contentSource: storefront.contentSource,
+            },
+        });
+    }, [state.selectedStack, state.selectedPackage, state.edsConfig?.templateOwner, state.edsConfig?.templateRepo, packages, updateState, state.edsConfig]);
 
     // Project Name Input - shared between both layouts
     const projectNameField = (
