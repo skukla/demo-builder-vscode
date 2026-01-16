@@ -791,8 +791,8 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 context.logger.info('[ProjectsList] Content published to CDN successfully');
                 context.logger.info('[ProjectsList] EDS project reset successfully');
 
-                // Show success message
-                vscode.window.showInformationMessage(`"${project.name}" reset successfully!`);
+                // Show auto-dismissing success message (5 seconds)
+                vscode.window.setStatusBarMessage(`$(check) "${project.name}" reset successfully!`, 5000);
 
                 return { success: true };
             } catch (error) {

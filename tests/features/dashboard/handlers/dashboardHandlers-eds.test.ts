@@ -26,6 +26,7 @@ jest.mock('vscode', () => ({
         showWarningMessage: jest.fn(),
         showErrorMessage: jest.fn(),
         showInformationMessage: jest.fn(),
+        setStatusBarMessage: jest.fn(),
         withProgress: jest.fn(),
     },
     ColorThemeKind: { Dark: 2, Light: 1 },
@@ -359,8 +360,8 @@ describe('handleResetEds', () => {
         // Then: Should return success
         expect(result.success).toBe(true);
 
-        // And: Should show success message
-        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('EDS project reset successfully!');
+        // And: Should show auto-dismissing success message in status bar
+        expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith('$(check) "test-eds-project" reset successfully!', 5000);
     });
 
     it('should return error when bulk reset fails', async () => {
