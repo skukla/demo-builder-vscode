@@ -86,6 +86,14 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
     })),
 }));
 
+// Mock DaLiveAuthService - default to authenticated
+// This allows existing EDS tests to pass without being blocked by auth pre-check
+jest.mock('@/features/eds/services/daLiveAuthService', () => ({
+    DaLiveAuthService: jest.fn().mockImplementation(() => ({
+        isAuthenticated: jest.fn().mockResolvedValue(true),
+    })),
+}));
+
 // Mock core logging (prevents "Logger not initialized" error)
 jest.mock('@/core/logging', () => ({
     getLogger: jest.fn().mockReturnValue({

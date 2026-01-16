@@ -29,8 +29,9 @@ import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance, getProjectFrontendPort } from '@/types/typeGuards';
 import { COMPONENT_IDS } from '@/core/constants';
+import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { HelixService } from '@/features/eds/services/helixService';
-import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 
 /**
@@ -596,6 +597,43 @@ export const handleResetEds: MessageHandler = async (context) => {
         return { success: false, error: 'Content source configuration missing. Cannot reset without knowing where demo content comes from.', code: ErrorCode.CONFIG_INVALID };
     }
 
+    // Pre-check DA.live authentication
+    // Token must be valid to copy demo content during reset
+    const daLiveAuthService = new DaLiveAuthService(context.context);
+    const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
+
+    if (!isDaLiveAuthenticated) {
+        context.logger.info('[Dashboard] resetEds: DA.live token expired or missing');
+
+        // Show notification with Sign In action (follows GitHubAppNotInstalledError pattern)
+        const signInButton = 'Sign In';
+        const selection = await vscode.window.showWarningMessage(
+            'Your DA.live session has expired. Please sign in to continue.',
+            signInButton,
+        );
+
+        if (selection === signInButton) {
+            // User clicked "Sign In" - invoke QuickPick auth flow
+            const authResult = await showDaLiveAuthQuickPick(context);
+            if (authResult.cancelled || !authResult.success) {
+                return {
+                    success: false,
+                    error: authResult.error || 'DA.live authentication required',
+                    errorType: 'DALIVE_AUTH_REQUIRED',
+                    cancelled: authResult.cancelled,
+                };
+            }
+            // Token is now valid - continue to confirmation dialog below
+        } else {
+            // User dismissed notification - abort operation
+            return {
+                success: false,
+                error: 'DA.live authentication required',
+                errorType: 'DALIVE_AUTH_REQUIRED',
+            };
+        }
+    }
+
     // Show confirmation dialog
     const confirmButton = 'Reset Project';
     const confirmation = await vscode.window.showWarningMessage(
@@ -640,7 +678,7 @@ export const handleResetEds: MessageHandler = async (context) => {
                 // Step 1: Reset repo to template (bulk operation)
                 // ============================================
                 // Uses Git Tree API for efficiency: 4 API calls instead of 2*N for N files
-                progress.report({ message: 'Step 1/4: Resetting repository to template...' });
+                progress.report({ message: 'Step 1/4: Preparing repository reset...' });
                 context.logger.info(`[Dashboard] Resetting repo using bulk tree operations`);
 
                 // Build fstab.yaml content for the override
@@ -716,10 +754,16 @@ export const handleResetEds: MessageHandler = async (context) => {
                     indexUrl: `https://main--${contentSourceConfig.site}--${contentSourceConfig.org}.aem.live${indexPath}`,
                 };
 
+                // Progress callback to show per-file progress
+                const onContentProgress = (info: { processed: number; total: number; currentFile?: string }) => {
+                    progress.report({ message: `Step 3/4: Copying content (${info.processed}/${info.total})` });
+                };
+
                 const contentResult = await daLiveContentOps.copyContentFromSource(
                     contentSource,
                     daLiveOrg,
                     daLiveSite,
+                    onContentProgress,
                 );
 
                 if (!contentResult.success) {

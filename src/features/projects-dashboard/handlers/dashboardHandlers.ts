@@ -22,6 +22,8 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { executeCommandForProject } from '@/core/handlers';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { validateProjectPath } from '@/core/validation';
+import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -581,6 +583,43 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: errorMsg };
     }
 
+    // Pre-check DA.live authentication
+    // Token must be valid to copy demo content during reset
+    const daLiveAuthService = new DaLiveAuthService(context.context);
+    const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
+
+    if (!isDaLiveAuthenticated) {
+        context.logger.info('[ProjectsList] resetEds: DA.live token expired or missing');
+
+        // Show notification with Sign In action (follows GitHubAppNotInstalledError pattern)
+        const signInButton = 'Sign In';
+        const selection = await vscode.window.showWarningMessage(
+            'Your DA.live session has expired. Please sign in to continue.',
+            signInButton,
+        );
+
+        if (selection === signInButton) {
+            // User clicked "Sign In" - invoke QuickPick auth flow
+            const authResult = await showDaLiveAuthQuickPick(context);
+            if (authResult.cancelled || !authResult.success) {
+                return {
+                    success: false,
+                    error: authResult.error || 'DA.live authentication required',
+                    errorType: 'DALIVE_AUTH_REQUIRED',
+                    cancelled: authResult.cancelled,
+                };
+            }
+            // Token is now valid - continue to confirmation dialog below
+        } else {
+            // User dismissed notification - abort operation
+            return {
+                success: false,
+                error: 'DA.live authentication required',
+                errorType: 'DALIVE_AUTH_REQUIRED',
+            };
+        }
+    }
+
     // Show confirmation dialog
     const confirmButton = 'Reset Project';
     const confirmation = await vscode.window.showWarningMessage(
@@ -628,7 +667,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 // Step 1: Reset repo to template (bulk operation)
                 // ============================================
                 // Uses Git Tree API for efficiency: 4 API calls instead of 2*N for N files
-                progress.report({ message: 'Step 1/4: Resetting repository to template...' });
+                progress.report({ message: 'Step 1/4: Preparing repository reset...' });
                 context.logger.info(`[ProjectsList] Resetting repo using bulk tree operations`);
 
                 // Build fstab.yaml content for the override
@@ -704,10 +743,16 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     indexUrl: `https://main--${contentSourceConfig.site}--${contentSourceConfig.org}.aem.live${indexPath}`,
                 };
 
+                // Progress callback to show per-file progress
+                const onContentProgress = (info: { processed: number; total: number; currentFile?: string }) => {
+                    progress.report({ message: `Step 3/4: Copying content (${info.processed}/${info.total})` });
+                };
+
                 const contentResult = await daLiveContentOps.copyContentFromSource(
                     contentSource,
                     daLiveOrg,
                     daLiveSite,
+                    onContentProgress,
                 );
 
                 if (!contentResult.success) {

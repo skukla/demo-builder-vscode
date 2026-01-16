@@ -7,10 +7,12 @@
  * - Service instance cache management (getGitHubServices, getDaLiveServices, getDaLiveAuthService)
  * - clearServiceCache for cleanup
  * - validateDaLiveToken for JWT validation
+ * - showDaLiveAuthQuickPick for dashboard re-authentication
  *
  * @module features/eds/handlers/edsHelpers
  */
 
+import * as vscode from 'vscode';
 import type { HandlerContext } from '@/types/handlers';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
@@ -235,4 +237,145 @@ export function validateDaLiveToken(token: string): DaLiveTokenValidationResult 
     return {
         valid: true,
     };
+}
+
+// ==========================================================
+// DA.live QuickPick Authentication
+// ==========================================================
+
+/**
+ * Result of QuickPick authentication flow
+ */
+export interface QuickPickAuthResult {
+    success: boolean;
+    cancelled?: boolean;
+    email?: string;
+    error?: string;
+}
+
+/**
+ * QuickPick item with ID for selection handling
+ */
+interface DaLiveQuickPickItem extends vscode.QuickPickItem {
+    id: 'open' | 'paste';
+}
+
+/**
+ * Show QuickPick-based DA.live authentication flow
+ *
+ * Mirrors the wizard DA.live auth experience:
+ * 1. User can open DA.live to get token via bookmarklet
+ * 2. User can paste token from clipboard
+ * 3. Token is validated and stored
+ *
+ * Used by both project dashboard and projects list for EDS reset operations.
+ *
+ * @param context - Handler context with extension context for token storage
+ * @returns Promise with auth result (success/cancelled/error)
+ */
+export async function showDaLiveAuthQuickPick(
+    context: HandlerContext,
+): Promise<QuickPickAuthResult> {
+    return new Promise((resolve) => {
+        const quickPick = vscode.window.createQuickPick<DaLiveQuickPickItem>();
+
+        // Configure QuickPick - use wizard language
+        quickPick.title = 'Sign in to DA.live';
+        quickPick.placeholder = 'Select an action to authenticate with DA.live';
+        quickPick.items = [
+            {
+                id: 'open',
+                label: '$(link-external) Open DA.live',
+                description: 'Open DA.live in browser to copy token',
+            },
+            {
+                id: 'paste',
+                label: '$(clippy) Paste from Clipboard',
+                description: 'Paste token copied from DA.live',
+            },
+        ];
+
+        let isResolved = false;
+
+        // Handle item selection
+        quickPick.onDidAccept(async () => {
+            const selected = quickPick.selectedItems[0];
+            if (!selected) return;
+
+            if (selected.id === 'open') {
+                // Open DA.live in browser - don't close QuickPick
+                await vscode.env.openExternal(vscode.Uri.parse('https://da.live'));
+                // Keep QuickPick open so user can paste after copying token
+                return;
+            }
+
+            if (selected.id === 'paste') {
+                // Show busy state - wizard language
+                quickPick.busy = true;
+                quickPick.placeholder = 'Verifying...';
+
+                try {
+                    // Read token from clipboard
+                    const token = await vscode.env.clipboard.readText();
+
+                    if (!token || token.trim() === '') {
+                        quickPick.busy = false;
+                        quickPick.placeholder = 'Select an action to authenticate with DA.live';
+                        await vscode.window.showErrorMessage(
+                            'No token found on clipboard. Copy token from DA.live first.',
+                        );
+                        return;
+                    }
+
+                    // Validate token
+                    const validation = validateDaLiveToken(token.trim());
+
+                    if (!validation.valid) {
+                        quickPick.busy = false;
+                        quickPick.placeholder = 'Select an action to authenticate with DA.live';
+                        await vscode.window.showErrorMessage(validation.error!);
+                        // Keep QuickPick open for retry
+                        return;
+                    }
+
+                    // Store valid token
+                    const authService = getDaLiveAuthService(context);
+                    await authService.storeToken(token.trim());
+
+                    // Success - wizard language
+                    await vscode.window.showInformationMessage('Connected to DA.live');
+
+                    isResolved = true;
+                    quickPick.hide();
+                    quickPick.dispose();
+
+                    resolve({
+                        success: true,
+                        email: validation.email,
+                    });
+                } catch (error) {
+                    quickPick.busy = false;
+                    quickPick.placeholder = 'Select an action to authenticate with DA.live';
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    context.logger.error(`[DA.live Auth] QuickPick error: ${errorMessage}`);
+                    await vscode.window.showErrorMessage(`Authentication failed: ${errorMessage}`);
+                }
+            }
+        });
+
+        // Handle dismissal (Escape key or click outside)
+        quickPick.onDidHide(() => {
+            if (!isResolved) {
+                context.logger.info('[DA.live Auth] User cancelled QuickPick authentication');
+                quickPick.dispose();
+                resolve({
+                    success: false,
+                    cancelled: true,
+                });
+            }
+        });
+
+        // Show the QuickPick
+        quickPick.show();
+    });
 }

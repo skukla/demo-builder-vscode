@@ -2,9 +2,12 @@
  * DA.live Auth Service Security Tests
  *
  * Security-focused tests for the DaLiveAuthService, verifying:
- * - XSS prevention in error page HTML
- * - CSRF protection via state parameter validation
+ * - Token storage security
  * - Token validation
+ *
+ * Note: XSS and CSRF tests were removed when the PKCE OAuth flow was removed.
+ * The PKCE flow required a localhost callback server with HTML pages, which is
+ * no longer used. Tokens are now obtained via bookmarklet/QuickPick flow.
  */
 
 // Mock vscode before imports
@@ -63,90 +66,6 @@ describe('DaLiveAuthService Security Tests', () => {
         service.dispose();
     });
 
-    describe('XSS Prevention', () => {
-        // Access private method for testing via type assertion
-        const getErrorPage = (svc: DaLiveAuthService, error: string): string => {
-            return (svc as unknown as { getErrorPage(error: string): string }).getErrorPage(error);
-        };
-
-        const XSS_PAYLOADS = [
-            '<script>alert("xss")</script>',
-            '<img src=x onerror=alert("xss")>',
-            '"><script>alert(1)</script>',
-            "';alert(String.fromCharCode(88,83,83))//",
-            '<svg onload=alert(1)>',
-            '"><img src=x onerror=alert(1)//',
-            '<body onload=alert(1)>',
-            '<iframe src="javascript:alert(1)">',
-        ];
-
-        it.each(XSS_PAYLOADS)('should escape XSS payload: %s', (payload) => {
-            const html = getErrorPage(service, payload);
-
-            // Extract just the error message portion from the HTML
-            const errorMatch = html.match(/<p class="error">([^<]*(?:&[^;]+;[^<]*)*)<\/p>/);
-            const errorContent = errorMatch ? errorMatch[1] : '';
-
-            // Verify dangerous HTML elements are escaped (< becomes &lt;)
-            // This prevents browser from interpreting them as executable HTML
-            expect(errorContent).not.toMatch(/<[a-z]/i); // No unescaped opening tags
-
-            // Verify the payload's special characters are escaped
-            if (payload.includes('<')) {
-                expect(errorContent).toContain('&lt;');
-            }
-            if (payload.includes('>')) {
-                expect(errorContent).toContain('&gt;');
-            }
-            if (payload.includes('"')) {
-                expect(errorContent).toContain('&quot;');
-            }
-
-            // Key security check: the escaped content should not be executable
-            // because all HTML delimiters are escaped
-            expect(errorContent).not.toMatch(/^</); // No literal < at start
-        });
-
-        it('should escape HTML special characters', () => {
-            const maliciousError = '<script>alert("xss")</script> & "quotes" \'single\'';
-            const html = getErrorPage(service, maliciousError);
-
-            expect(html).toContain('&lt;script&gt;');
-            expect(html).toContain('&amp;');
-            expect(html).toContain('&quot;');
-            expect(html).toContain('&#039;');
-        });
-
-        it('should preserve safe error messages', () => {
-            const safeError = 'Authentication failed: invalid credentials';
-            const html = getErrorPage(service, safeError);
-
-            expect(html).toContain(safeError);
-            expect(html).toContain('Authentication Failed');
-        });
-    });
-
-    describe('CSRF Protection', () => {
-        it('should generate cryptographically random state parameter', () => {
-            const generateState = (svc: DaLiveAuthService): string => {
-                // Access internal method for testing
-                const crypto = require('crypto');
-                const array = crypto.randomBytes(32);
-                return array.toString('hex');
-            };
-
-            const state1 = generateState(service);
-            const state2 = generateState(service);
-
-            // States should be unique
-            expect(state1).not.toBe(state2);
-
-            // State should be hex string of sufficient length (32 bytes = 64 hex chars)
-            expect(state1.length).toBe(64);
-            expect(/^[a-f0-9]+$/i.test(state1)).toBe(true);
-        });
-    });
-
     describe('Token Security', () => {
         it('should not log access tokens in debug messages', () => {
             // This is a documentation test - actual token logging checks
@@ -159,7 +78,7 @@ describe('DaLiveAuthService Security Tests', () => {
             expect(tokenPattern.test(fullToken)).toBe(true);
         });
 
-        it('should store tokens only in SecretStorage', () => {
+        it('should store tokens only in globalState with specific keys', () => {
             // Verify tokens are stored via globalState with specific keys
             // not exposed in logs or other locations
             const stateKeys = [
@@ -171,6 +90,123 @@ describe('DaLiveAuthService Security Tests', () => {
             stateKeys.forEach(key => {
                 expect(typeof key).toBe('string');
             });
+        });
+    });
+
+    describe('storeToken Security', () => {
+        // Valid JWT with created_at and expires_in for testing
+        const createTestToken = (payload: object): string => {
+            const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64');
+            const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString('base64');
+            const signature = 'test-signature';
+            return `${header}.${payloadBase64}.${signature}`;
+        };
+
+        it('should store access token in globalState', async () => {
+            const token = createTestToken({ sub: 'user123' });
+
+            await service.storeToken(token);
+
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.accessToken',
+                token,
+            );
+        });
+
+        it('should extract and store expiration from token payload', async () => {
+            const createdAt = Date.now() - 60000; // 1 minute ago
+            const expiresIn = 3600000; // 1 hour
+            const token = createTestToken({
+                created_at: String(createdAt),
+                expires_in: String(expiresIn),
+            });
+
+            await service.storeToken(token);
+
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.tokenExpiration',
+                createdAt + expiresIn,
+            );
+        });
+
+        it('should extract and store email from token payload', async () => {
+            const token = createTestToken({
+                email: 'user@example.com',
+            });
+
+            await service.storeToken(token);
+
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.userEmail',
+                'user@example.com',
+            );
+        });
+
+        it('should use preferred_username as email fallback', async () => {
+            const token = createTestToken({
+                preferred_username: 'fallback@example.com',
+            });
+
+            await service.storeToken(token);
+
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.userEmail',
+                'fallback@example.com',
+            );
+        });
+
+        it('should prefer email over preferred_username', async () => {
+            const token = createTestToken({
+                email: 'primary@example.com',
+                preferred_username: 'fallback@example.com',
+            });
+
+            await service.storeToken(token);
+
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.userEmail',
+                'primary@example.com',
+            );
+        });
+
+        it('should handle invalid JSON in token payload gracefully', async () => {
+            // Create a malformed token that can't be parsed
+            const token = 'eyJhbGciOiJIUzI1NiJ9.!!!invalid-base64!!!.signature';
+
+            // Should not throw - just log a warning
+            await expect(service.storeToken(token)).resolves.toBeUndefined();
+
+            // Should still store the access token
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.accessToken',
+                token,
+            );
+        });
+    });
+
+    describe('logout Security', () => {
+        it('should clear all sensitive data on logout', async () => {
+            // Given: Token data in storage
+            globalStateStore.set('daLive.accessToken', 'sensitive-token');
+            globalStateStore.set('daLive.tokenExpiration', Date.now() + 3600000);
+            globalStateStore.set('daLive.userEmail', 'user@example.com');
+
+            // When: Logout is called
+            await service.logout();
+
+            // Then: All sensitive data should be cleared
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.accessToken',
+                undefined,
+            );
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.tokenExpiration',
+                undefined,
+            );
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.userEmail',
+                undefined,
+            );
         });
     });
 });
