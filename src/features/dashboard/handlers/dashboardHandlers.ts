@@ -540,70 +540,6 @@ export const handleNavigateBack: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'publishEds' message - Publish all EDS content to CDN
- *
- * Triggers a full CDN content refresh by calling HelixService.publishAllSiteContent().
- * This previews all content from DA.live to the preview CDN, then publishes to live CDN.
- */
-export const handlePublishEds: MessageHandler = async (context) => {
-    const project = await context.stateManager.getCurrentProject();
-
-    if (!project) {
-        context.logger.error('[Dashboard] publishEds: No current project');
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-
-    // Get EDS metadata from component instance
-    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
-
-    if (!repoFullName) {
-        context.logger.error('[Dashboard] publishEds: Missing EDS metadata (githubRepo)');
-        return { success: false, error: 'EDS metadata missing (githubRepo)', code: ErrorCode.CONFIG_INVALID };
-    }
-
-    // Show progress notification
-    return vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Publishing EDS Content',
-            cancellable: false,
-        },
-        async (progress) => {
-            try {
-                context.logger.info(`[Dashboard] Publishing all EDS content for ${repoFullName}`);
-
-                // Create HelixService with auth service for DA.live and GitHub token for Helix Admin API
-                const authService = ServiceLocator.getAuthenticationService();
-                const { tokenService: githubTokenService } = getGitHubServices(context);
-                const helixService = new HelixService(authService, context.logger, githubTokenService);
-
-                // Progress callback to update notification
-                const onPublishProgress = (info: {
-                    phase: string;
-                    message: string;
-                    current?: number;
-                    total?: number;
-                    currentPath?: string;
-                }) => {
-                    progress.report({ message: info.message });
-                };
-
-                // Publish all content (preview + live)
-                await helixService.publishAllSiteContent(repoFullName, 'main', undefined, undefined, onPublishProgress);
-
-                context.logger.info('[Dashboard] EDS content published successfully');
-                return { success: true };
-            } catch (error) {
-                const errorMessage = (error as Error).message;
-                context.logger.error('[Dashboard] publishEds failed', error as Error);
-                return { success: false, error: errorMessage };
-            }
-        },
-    );
-};
-
-/**
  * Handle 'resetEds' message - Reset EDS project to template state
  *
  * Resets the repository contents to match the template without deleting the repo.
@@ -982,6 +918,5 @@ export const dashboardHandlers = defineHandlers({
     'deleteProject': handleDeleteProject,
 
     // EDS handlers
-    'publishEds': handlePublishEds,
     'resetEds': handleResetEds,
 });

@@ -2,7 +2,6 @@
  * Dashboard Handlers - EDS Actions Tests
  *
  * Tests for EDS (Edge Delivery Services) action handlers:
- * - handlePublishEds: Publish all content to CDN via HelixService
  * - handleResetEds: Reset EDS project (reset repo contents to template, recopy content)
  */
 
@@ -113,7 +112,7 @@ global.fetch = jest.fn();
 // =============================================================================
 
 import * as vscode from 'vscode';
-import { handlePublishEds, handleResetEds } from '@/features/dashboard/handlers/dashboardHandlers';
+import { handleResetEds } from '@/features/dashboard/handlers/dashboardHandlers';
 import { ServiceLocator } from '@/core/di';
 import { HelixService } from '@/features/eds/services/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
@@ -193,134 +192,6 @@ function createMockContext(project: Project | undefined): HandlerContext {
 
 // =============================================================================
 // Tests
-// =============================================================================
-
-describe('handlePublishEds', () => {
-    let mockHelixService: jest.Mocked<HelixService>;
-    let mockAuthService: { getTokenManager: jest.Mock };
-
-    beforeEach(() => {
-        jest.clearAllMocks();
-
-        // Setup mock HelixService
-        mockHelixService = {
-            publishAllSiteContent: jest.fn().mockResolvedValue(undefined),
-        } as unknown as jest.Mocked<HelixService>;
-
-        // Setup mock AuthenticationService
-        mockAuthService = {
-            getTokenManager: jest.fn().mockReturnValue({
-                getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-            }),
-        };
-
-        // Wire up ServiceLocator
-        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthService);
-
-        // Make HelixService constructor return our mock
-        (HelixService as jest.Mock).mockImplementation(() => mockHelixService);
-
-        // Setup withProgress mock to execute the callback
-        (vscode.window.withProgress as jest.Mock).mockImplementation(async (_options, callback) => {
-            const progressReporter = { report: jest.fn() };
-            return callback(progressReporter);
-        });
-    });
-
-    it('should return success when publish completes', async () => {
-        // Given: An EDS project with valid metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // When: handlePublishEds is called
-        const result = await handlePublishEds(context);
-
-        // Then: Should return success
-        expect(result.success).toBe(true);
-
-        // And: HelixService.publishAllSiteContent should be called with all parameters
-        expect(mockHelixService.publishAllSiteContent).toHaveBeenCalledWith(
-            'test-org/test-repo',
-            'main',
-            undefined,
-            undefined,
-            expect.any(Function),
-        );
-
-        // And: Should log the operation
-        expect(context.logger.info).toHaveBeenCalled();
-    });
-
-    it('should return error when EDS metadata is missing', async () => {
-        // Given: An EDS project without githubRepo metadata
-        const project = createMockEdsProject({
-            componentInstances: {
-                'eds-storefront': {
-                    id: 'eds-storefront',
-                    name: 'EDS Storefront',
-                    type: 'frontend',
-                    status: 'ready',
-                    metadata: {
-                        // No githubRepo - missing EDS metadata
-                        daLiveOrg: 'test-org',
-                        daLiveSite: 'test-site',
-                    },
-                },
-            },
-        });
-        const context = createMockContext(project);
-
-        // When: handlePublishEds is called
-        const result = await handlePublishEds(context);
-
-        // Then: Should return error with appropriate code
-        expect(result.success).toBe(false);
-        expect(result.code).toBe(ErrorCode.CONFIG_INVALID);
-        expect(result.error).toContain('metadata');
-
-        // And: HelixService should NOT be called
-        expect(mockHelixService.publishAllSiteContent).not.toHaveBeenCalled();
-    });
-
-    it('should return error when HelixService throws', async () => {
-        // Given: An EDS project with valid metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: HelixService throws an error
-        const publishError = new Error('Access denied. You do not have permission to publish this content.');
-        mockHelixService.publishAllSiteContent.mockRejectedValue(publishError);
-
-        // When: handlePublishEds is called
-        const result = await handlePublishEds(context);
-
-        // Then: Should return error
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('Access denied');
-
-        // And: Should log the error
-        expect(context.logger.error).toHaveBeenCalled();
-    });
-
-    it('should return error when project not found', async () => {
-        // Given: No current project
-        const context = createMockContext(undefined);
-
-        // When: handlePublishEds is called
-        const result = await handlePublishEds(context);
-
-        // Then: Should return error with PROJECT_NOT_FOUND code
-        expect(result.success).toBe(false);
-        expect(result.code).toBe(ErrorCode.PROJECT_NOT_FOUND);
-        expect(result.error).toContain('project');
-
-        // And: HelixService should NOT be called
-        expect(mockHelixService.publishAllSiteContent).not.toHaveBeenCalled();
-    });
-});
-
-// =============================================================================
-// handleResetEds Tests
 // =============================================================================
 
 describe('handleResetEds', () => {

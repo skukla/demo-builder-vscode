@@ -299,7 +299,7 @@ describe('useDashboardActions', () => {
         });
     });
 
-    // Note: EDS Actions (handlePublishEds, handleResetEds) are backend-only handlers
-    // in dashboardHandlers.ts. They are NOT part of this frontend hook.
+    // Note: EDS Actions (handleResetEds) are backend-only handlers in dashboardHandlers.ts.
+    // They are NOT part of this frontend hook.
     // UI calls these via message passing from ActionGrid, not through this hook.
 });

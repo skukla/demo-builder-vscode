@@ -501,41 +501,25 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
 };
 
 // ============================================================================
-// EDS Actions Handlers (Publish/Reset)
+// EDS Actions Handler (Reset)
 // ============================================================================
 
 /**
- * Extract owner/repo from GitHub URL or return as-is if already in owner/repo format
- * e.g., "https://github.com/owner/repo" -> "owner/repo"
- */
-function extractRepoFullName(repoUrl: string | undefined): string | undefined {
-    if (!repoUrl) return undefined;
-
-    // If already in owner/repo format, return as-is
-    if (!repoUrl.includes('://') && repoUrl.includes('/')) {
-        return repoUrl;
-    }
-
-    // Parse URL to extract owner/repo
-    try {
-        const url = new URL(repoUrl);
-        const pathParts = url.pathname.split('/').filter(Boolean);
-        if (pathParts.length >= 2) {
-            return `${pathParts[0]}/${pathParts[1]}`;
-        }
-    } catch {
-        // Not a valid URL, return undefined
-    }
-
-    return undefined;
-}
-
-/**
- * Publish all EDS pages to CDN
+ * Reset EDS project to template state
  *
- * Lists all pages from DA.live and publishes each to preview and live CDN.
+ * Resets the repository contents to match the template without deleting the repo.
+ * This preserves the repo URL, settings, webhooks, and GitHub App installation.
+ *
+ * Steps:
+ * 1. Lists files in template and user repos
+ * 2. Deletes user files not in template
+ * 3. Copies/updates template files to user repo
+ * 4. Configures fstab.yaml for DA.live
+ * 5. Waits for code sync
+ * 6. Copies demo content to DA.live
+ * 7. Publishes all content to CDN
  */
-export const handlePublishEds: MessageHandler<{ projectPath: string }> = async (
+export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
     payload?: { projectPath: string },
 ): Promise<HandlerResponse> => {
@@ -556,72 +540,325 @@ export const handlePublishEds: MessageHandler<{ projectPath: string }> = async (
 
     // Get EDS metadata from component instance
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    // Support both repoUrl (full URL) and githubRepo (owner/repo format) for Helix API
-    const repoUrl = edsInstance?.metadata?.repoUrl as string | undefined;
-    const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
-    const repoFullName = extractRepoFullName(repoUrl) || githubRepo;
-    // DA.live org/site for listing content (may differ from GitHub owner)
+    const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
     const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
     const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+    const templateOwner = edsInstance?.metadata?.templateOwner as string | undefined;
+    const templateRepo = edsInstance?.metadata?.templateRepo as string | undefined;
+    const contentSourceConfig = edsInstance?.metadata?.contentSource as { org: string; site: string; indexPath?: string } | undefined;
 
     if (!repoFullName) {
         const errorMsg = 'EDS metadata missing - no GitHub repository configured';
-        context.logger.error(`[ProjectsList] publishEds: ${errorMsg}`);
-        vscode.window.showErrorMessage(`Cannot publish: ${errorMsg}`);
+        context.logger.error(`[ProjectsList] resetEds: ${errorMsg}`);
+        vscode.window.showErrorMessage(`Cannot reset: ${errorMsg}`);
+        return { success: false, error: errorMsg };
+    }
+
+    const [repoOwner, repoName] = repoFullName.split('/');
+    if (!repoOwner || !repoName) {
+        const errorMsg = 'Invalid repository format';
+        context.logger.error(`[ProjectsList] resetEds: ${errorMsg}`);
         return { success: false, error: errorMsg };
     }
 
     if (!daLiveOrg || !daLiveSite) {
-        const errorMsg = 'EDS metadata missing - no DA.live org/site configured';
-        context.logger.error(`[ProjectsList] publishEds: ${errorMsg}`);
-        vscode.window.showErrorMessage(`Cannot publish: ${errorMsg}`);
+        const errorMsg = 'DA.live configuration missing';
+        context.logger.error(`[ProjectsList] resetEds: ${errorMsg}`);
+        vscode.window.showErrorMessage(`Cannot reset: ${errorMsg}`);
         return { success: false, error: errorMsg };
     }
 
-    try {
-        context.logger.info(`[ProjectsList] Publishing all EDS pages for ${daLiveOrg}/${daLiveSite} -> ${repoFullName}`);
-
-        // Create HelixService with auth service for DA.live and GitHub token service for Helix Admin API
-        const { ServiceLocator } = await import('@/core/di/serviceLocator');
-        const { HelixService } = await import('@/features/eds/services/helixService');
-        const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-        const authService = ServiceLocator.getAuthenticationService();
-        const { tokenService: githubTokenService } = getGitHubServices(context);
-        const helixService = new HelixService(authService, undefined, githubTokenService);
-
-        // Publish all pages: list from DA.live, publish to Helix (GitHub repo)
-        await helixService.publishAllSiteContent(repoFullName, 'main', daLiveOrg, daLiveSite);
-
-        context.logger.info('[ProjectsList] EDS pages published successfully');
-        vscode.window.showInformationMessage(`Published all pages for "${project.name}" to CDN`);
-        return { success: true };
-    } catch (error) {
-        const errorMessage = (error as Error).message;
-        context.logger.error('[ProjectsList] publishEds failed', error as Error);
-        vscode.window.showErrorMessage(`Failed to publish pages: ${errorMessage}`);
-        return { success: false, error: errorMessage };
-    }
-};
-
-/**
- * Reset EDS project - redirects to dashboard for full functionality
- *
- * The reset feature requires authenticated services that are available
- * in the project dashboard context. This handler directs users there.
- */
-export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
-    context: HandlerContext,
-    payload?: { projectPath: string },
-): Promise<HandlerResponse> => {
-    if (!payload?.projectPath) {
-        return { success: false, error: 'Project path is required' };
+    if (!templateOwner || !templateRepo) {
+        const errorMsg = 'Template configuration missing. Cannot reset without knowing the template repository.';
+        context.logger.error(`[ProjectsList] resetEds: ${errorMsg}`);
+        vscode.window.showErrorMessage(`Cannot reset: ${errorMsg}`);
+        return { success: false, error: errorMsg };
     }
 
-    // Direct users to the dashboard where reset is properly wired up
-    context.logger.info('[ProjectsList] Reset EDS requested - directing to dashboard');
-    vscode.window.showInformationMessage(
-        'To reset an EDS project, select it first and use the Reset option from the project dashboard.',
+    if (!contentSourceConfig) {
+        const errorMsg = 'Content source configuration missing. Cannot reset without knowing where demo content comes from.';
+        context.logger.error(`[ProjectsList] resetEds: ${errorMsg}`);
+        vscode.window.showErrorMessage(`Cannot reset: ${errorMsg}`);
+        return { success: false, error: errorMsg };
+    }
+
+    // Show confirmation dialog
+    const confirmButton = 'Reset Project';
+    const confirmation = await vscode.window.showWarningMessage(
+        `Are you sure you want to reset "${project.name}"? This will reset all code to the template state and re-copy demo content.`,
+        { modal: true },
+        confirmButton,
     );
 
-    return { success: false, error: 'Use project dashboard for reset functionality' };
+    if (confirmation !== confirmButton) {
+        context.logger.info('[ProjectsList] resetEds: User cancelled reset');
+        return { success: false, cancelled: true };
+    }
+
+    // Show progress notification
+    return vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Resetting EDS Project',
+            cancellable: false,
+        },
+        async (progress) => {
+            try {
+                context.logger.info(`[ProjectsList] Resetting EDS project: ${repoFullName}`);
+
+                // Create service dependencies
+                const { ServiceLocator } = await import('@/core/di/serviceLocator');
+                const { HelixService } = await import('@/features/eds/services/helixService');
+                const { DaLiveContentOperations } = await import('@/features/eds/services/daLiveContentOperations');
+                const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
+
+                const { tokenService: githubTokenService, fileOperations: githubFileOps } = getGitHubServices(context);
+                const authService = ServiceLocator.getAuthenticationService();
+
+                // Create TokenProvider adapter for DA.live operations
+                const tokenProvider = {
+                    getAccessToken: async () => {
+                        const token = await authService.getTokenManager().getAccessToken();
+                        return token ?? null;
+                    },
+                };
+
+                const daLiveContentOps = new DaLiveContentOperations(tokenProvider, context.logger);
+
+                // ============================================
+                // Step 1: List files in both repos
+                // ============================================
+                progress.report({ message: 'Analyzing repositories...', increment: 5 });
+                context.logger.info(`[ProjectsList] Listing files in template and user repos`);
+
+                const [templateFiles, userFiles] = await Promise.all([
+                    githubFileOps.listRepoFiles(templateOwner, templateRepo, 'main'),
+                    githubFileOps.listRepoFiles(repoOwner, repoName, 'main'),
+                ]);
+
+                const templateFilePaths = new Set(templateFiles.map(f => f.path));
+                const userFileMap = new Map(userFiles.map(f => [f.path, f]));
+
+                context.logger.info(`[ProjectsList] Template has ${templateFiles.length} files, user repo has ${userFiles.length} files`);
+
+                // ============================================
+                // Step 2: Delete files not in template
+                // ============================================
+                progress.report({ message: 'Removing extra files...', increment: 10 });
+
+                // Files to delete: in user repo but not in template (except fstab.yaml which we configure)
+                const filesToDelete = userFiles.filter(f =>
+                    !templateFilePaths.has(f.path) && f.path !== 'fstab.yaml'
+                );
+
+                if (filesToDelete.length > 0) {
+                    context.logger.info(`[ProjectsList] Deleting ${filesToDelete.length} extra files`);
+                    for (const file of filesToDelete) {
+                        // Fetch current SHA before delete (tree changes after each commit)
+                        const currentFile = await githubFileOps.getFileContent(repoOwner, repoName, file.path);
+                        if (currentFile) {
+                            await githubFileOps.deleteFile(
+                                repoOwner,
+                                repoName,
+                                file.path,
+                                `chore: remove ${file.path} (reset to template)`,
+                                currentFile.sha,
+                            );
+                        }
+                    }
+                }
+
+                // ============================================
+                // Step 3: Copy/update template files
+                // ============================================
+                progress.report({ message: 'Copying template files...', increment: 25 });
+                context.logger.info(`[ProjectsList] Copying ${templateFiles.length} files from template`);
+
+                for (const templateFile of templateFiles) {
+                    // Skip fstab.yaml - we configure it separately
+                    if (templateFile.path === 'fstab.yaml') {
+                        continue;
+                    }
+
+                    // Get template file content
+                    const templateContent = await githubFileOps.getFileContent(
+                        templateOwner,
+                        templateRepo,
+                        templateFile.path,
+                    );
+
+                    if (!templateContent) {
+                        context.logger.warn(`[ProjectsList] Could not read template file: ${templateFile.path}`);
+                        continue;
+                    }
+
+                    // Check if file exists in user repo (for update vs create)
+                    const existingFile = userFileMap.get(templateFile.path);
+                    const existingSha = existingFile?.sha;
+
+                    // Skip if file content is identical (same SHA)
+                    if (existingSha === templateFile.sha) {
+                        continue;
+                    }
+
+                    await githubFileOps.createOrUpdateFile(
+                        repoOwner,
+                        repoName,
+                        templateFile.path,
+                        templateContent.content,
+                        `chore: reset ${templateFile.path} to template`,
+                        existingSha,
+                    );
+                }
+
+                context.logger.info('[ProjectsList] Template files copied');
+
+                // ============================================
+                // Step 4: Configure fstab.yaml
+                // ============================================
+                progress.report({ message: 'Configuring Edge Delivery Services...', increment: 10 });
+
+                const fstabContent = `mountpoints:
+  /: https://content.da.live/${daLiveOrg}/${daLiveSite}/
+`;
+
+                // Check if fstab.yaml already exists (to get SHA for update)
+                const existingFstab = await githubFileOps.getFileContent(repoOwner, repoName, 'fstab.yaml');
+                const fstabSha = existingFstab?.sha;
+
+                await githubFileOps.createOrUpdateFile(
+                    repoOwner,
+                    repoName,
+                    'fstab.yaml',
+                    fstabContent,
+                    'chore: configure fstab.yaml for DA.live content source',
+                    fstabSha,
+                );
+
+                context.logger.info('[ProjectsList] fstab.yaml configured');
+
+                // ============================================
+                // Step 5: Wait for code sync
+                // ============================================
+                progress.report({ message: 'Verifying code synchronization...', increment: 10 });
+
+                const codeUrl = `https://admin.hlx.page/code/${repoOwner}/${repoName}/main/scripts/aem.js`;
+                let syncVerified = false;
+                const maxAttempts = 25;
+                const pollInterval = 2000;
+
+                for (let attempt = 0; attempt < maxAttempts && !syncVerified; attempt++) {
+                    try {
+                        const response = await fetch(codeUrl, {
+                            method: 'GET',
+                            signal: AbortSignal.timeout(5000),
+                        });
+                        if (response.ok) {
+                            syncVerified = true;
+                        }
+                    } catch {
+                        // Continue polling
+                    }
+
+                    if (!syncVerified && attempt < maxAttempts - 1) {
+                        await new Promise(resolve => setTimeout(resolve, pollInterval));
+                    }
+                }
+
+                if (!syncVerified) {
+                    context.logger.warn('[ProjectsList] Code sync verification timed out, continuing anyway');
+                } else {
+                    context.logger.info('[ProjectsList] Code sync verified');
+                }
+
+                // ============================================
+                // Step 6: Copy demo content to DA.live
+                // ============================================
+                progress.report({ message: 'Copying demo content...', increment: 20 });
+                context.logger.info(`[ProjectsList] Copying content from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
+
+                // Build full content source with index URL from explicit config
+                const indexPath = contentSourceConfig.indexPath || '/full-index.json';
+                const contentSource = {
+                    org: contentSourceConfig.org,
+                    site: contentSourceConfig.site,
+                    indexUrl: `https://main--${contentSourceConfig.site}--${contentSourceConfig.org}.aem.live${indexPath}`,
+                };
+
+                const contentResult = await daLiveContentOps.copyContentFromSource(
+                    contentSource,
+                    daLiveOrg,
+                    daLiveSite,
+                );
+
+                if (!contentResult.success) {
+                    throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
+                }
+
+                context.logger.info(`[ProjectsList] DA.live content populated: ${contentResult.totalFiles} files`);
+
+                // ============================================
+                // Step 7: Publish all content to CDN
+                // ============================================
+                progress.report({ message: 'Publishing content to CDN...', increment: 10 });
+                context.logger.info(`[ProjectsList] Publishing content to CDN for ${repoOwner}/${repoName}`);
+
+                const helixService = new HelixService(authService, context.logger, githubTokenService);
+
+                // Progress callback to update notification with publish details
+                const onPublishProgress = (info: {
+                    phase: string;
+                    message: string;
+                    current?: number;
+                    total?: number;
+                    currentPath?: string;
+                }) => {
+                    progress.report({ message: info.message, increment: info.total ? (10 / info.total) : 0 });
+                };
+
+                await helixService.publishAllSiteContent(`${repoOwner}/${repoName}`, 'main', undefined, undefined, onPublishProgress);
+
+                context.logger.info('[ProjectsList] Content published to CDN successfully');
+                context.logger.info('[ProjectsList] EDS project reset successfully');
+
+                // Show success message
+                vscode.window.showInformationMessage(`"${project.name}" reset successfully!`);
+
+                return { success: true };
+            } catch (error) {
+                // Handle GitHub App not installed error specifically
+                if (error instanceof GitHubAppNotInstalledError) {
+                    context.logger.info(`[ProjectsList] GitHub App not installed: ${error.message}`);
+
+                    // Show error message with button to install GitHub App
+                    const installButton = 'Install GitHub App';
+                    const selection = await vscode.window.showErrorMessage(
+                        `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${error.owner}/${error.repo}. ` +
+                        `Please install the app and try again.`,
+                        installButton,
+                    );
+
+                    if (selection === installButton) {
+                        await vscode.env.openExternal(vscode.Uri.parse(error.installUrl));
+                    }
+
+                    return {
+                        success: false,
+                        error: error.message,
+                        errorType: 'GITHUB_APP_NOT_INSTALLED',
+                        errorDetails: {
+                            owner: error.owner,
+                            repo: error.repo,
+                            installUrl: error.installUrl,
+                        },
+                    };
+                }
+
+                const errorMessage = (error as Error).message;
+                context.logger.error('[ProjectsList] resetEds failed', error as Error);
+                vscode.window.showErrorMessage(`Failed to reset EDS project: ${errorMessage}`);
+                return { success: false, error: errorMessage };
+            }
+        },
+    );
 };

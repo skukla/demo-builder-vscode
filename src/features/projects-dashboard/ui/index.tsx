@@ -246,17 +246,6 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
-    // Handle publish EDS content to CDN (EDS projects)
-    const handlePublishEds = useCallback(async (project: Project) => {
-        try {
-            await webviewClient.request('publishEds', {
-                projectPath: project.path,
-            });
-        } catch (error) {
-            console.error('Failed to publish EDS content:', error);
-        }
-    }, []);
-
     // Handle reset EDS project (EDS projects)
     const handleResetEds = useCallback(async (project: Project) => {
         try {
@@ -308,7 +297,6 @@ const ProjectsDashboardApp: React.FC = () => {
             onOpenBrowser={handleOpenBrowser}
             onOpenLiveSite={handleOpenLiveSite}
             onOpenDaLive={handleOpenDaLive}
-            onPublishEds={handlePublishEds}
             onResetEds={handleResetEds}
             onEditProject={handleEditProject}
             onExportProject={handleExportProject}
