@@ -604,9 +604,10 @@ export const handlePublishEds: MessageHandler<{ projectPath: string }> = async (
 };
 
 /**
- * Reset EDS project with full cleanup and recreation
+ * Reset EDS project - redirects to dashboard for full functionality
  *
- * Shows a confirmation dialog, then orchestrates cleanup and recreation.
+ * The reset feature requires authenticated services that are available
+ * in the project dashboard context. This handler directs users there.
  */
 export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
@@ -616,141 +617,11 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project path is required' };
     }
 
-    try {
-        validateProjectPath(payload.projectPath);
-    } catch {
-        return { success: false, error: 'Invalid project path' };
-    }
-
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
-    if (!project) {
-        return { success: false, error: 'Project not found' };
-    }
-
-    // Get EDS metadata from component instance
-    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    // Support both repoUrl (full URL) and githubRepo (owner/repo format)
-    const repoUrl = edsInstance?.metadata?.repoUrl as string | undefined;
-    const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
-    const repoFullName = extractRepoFullName(repoUrl) || githubRepo;
-    const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
-    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
-    const liveUrl = edsInstance?.metadata?.liveUrl as string | undefined;
-
-    if (!repoFullName) {
-        const errorMsg = 'EDS metadata missing - no GitHub repository configured';
-        context.logger.error(`[ProjectsList] resetEds: ${errorMsg}`);
-        vscode.window.showErrorMessage(`Cannot reset: ${errorMsg}`);
-        return { success: false, error: errorMsg };
-    }
-
-    // Show confirmation dialog
-    const confirmButton = 'Reset Project';
-    const confirmation = await vscode.window.showWarningMessage(
-        `Are you sure you want to reset "${project.name}"? This will delete and recreate the GitHub repository and DA.live content.`,
-        { modal: true },
-        confirmButton,
+    // Direct users to the dashboard where reset is properly wired up
+    context.logger.info('[ProjectsList] Reset EDS requested - directing to dashboard');
+    vscode.window.showInformationMessage(
+        'To reset an EDS project, select it first and use the Reset option from the project dashboard.',
     );
 
-    if (confirmation !== confirmButton) {
-        context.logger.info('[ProjectsList] resetEds: User cancelled reset');
-        return { success: false, cancelled: true };
-    }
-
-    try {
-        context.logger.info(`[ProjectsList] Resetting EDS project: ${repoFullName}`);
-
-        // Import services and types
-        const { CleanupService } = await import('@/features/eds/services/cleanupService');
-        const { EdsProjectService } = await import('@/features/eds/services/edsProjectService');
-        type EdsMetadata = import('@/features/eds/services/types').EdsMetadata;
-        type EdsCleanupOptions = import('@/features/eds/services/types').EdsCleanupOptions;
-
-        // Build EDS metadata for cleanup
-        const metadata: EdsMetadata = {
-            githubRepo: repoFullName,
-            daLiveOrg,
-            daLiveSite,
-            helixSiteUrl: liveUrl,
-        };
-
-        // Build cleanup options - full cleanup for reset
-        const cleanupOptions: EdsCleanupOptions = {
-            deleteGitHub: true,
-            deleteDaLive: true,
-            unpublishHelix: true,
-            cleanupBackendData: false, // Preserve backend data on reset
-            archiveInsteadOfDelete: false, // Delete, don't archive
-        };
-
-        // Create CleanupService
-        // TODO: Wire up proper service dependencies via ServiceLocator
-        const cleanupService = new CleanupService(
-            {} as never, // githubRepoOps
-            {} as never, // daLiveOrgOps
-            {} as never, // helixService
-            {} as never, // toolManager
-        );
-
-        // Step 1: Cleanup existing resources
-        await cleanupService.cleanupEdsResources(metadata, cleanupOptions);
-        context.logger.info('[ProjectsList] EDS resources cleaned up successfully');
-
-        // Step 2: Recreate project from template
-        // TODO: Wire up proper service dependencies via ServiceLocator
-        const edsProjectService = new EdsProjectService(
-            {} as never, // githubServices
-            {} as never, // daLiveServices
-            {} as never, // authService
-            {} as never, // componentManager
-        );
-
-        await edsProjectService.setupProject({
-            projectName: project.name,
-            projectPath: project.path,
-            componentPath: `${project.path}/components/eds-storefront`,
-            repoName: repoFullName.split('/')[1] || '',
-            daLiveOrg: daLiveOrg || '',
-            daLiveSite: daLiveSite || '',
-            githubOwner: repoFullName.split('/')[0] || '',
-            backendComponentId: '',
-        });
-
-        context.logger.info('[ProjectsList] EDS project reset successfully');
-        vscode.window.showInformationMessage(`Reset EDS project: ${project.name}`);
-        return { success: true };
-    } catch (error) {
-        // Handle GitHub App not installed error with actionable button
-        if (error instanceof GitHubAppNotInstalledError) {
-            context.logger.info(`[ProjectsList] GitHub App not installed: ${error.message}`);
-            context.logger.info(`[ProjectsList] Install URL: ${error.installUrl}`);
-
-            const installButton = 'Install GitHub App';
-            const selection = await vscode.window.showErrorMessage(
-                `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${error.owner}/${error.repo}. ` +
-                `Please install the app and try again.`,
-                installButton,
-            );
-
-            if (selection === installButton) {
-                await vscode.env.openExternal(vscode.Uri.parse(error.installUrl));
-            }
-
-            return {
-                success: false,
-                error: error.message,
-                errorType: 'GITHUB_APP_NOT_INSTALLED',
-                errorDetails: {
-                    owner: error.owner,
-                    repo: error.repo,
-                    installUrl: error.installUrl,
-                },
-            };
-        }
-
-        const errorMessage = (error as Error).message;
-        context.logger.error('[ProjectsList] resetEds failed', error as Error);
-        vscode.window.showErrorMessage(`Failed to reset EDS project: ${errorMessage}`);
-        return { success: false, error: errorMessage };
-    }
+    return { success: false, error: 'Use project dashboard for reset functionality' };
 };
