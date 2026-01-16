@@ -240,4 +240,221 @@ export class GitHubFileOperations {
     invalidateOctokit(): void {
         this.octokit = null;
     }
+
+    // =========================================================================
+    // BULK TREE OPERATIONS - For efficient repo-wide operations like Reset
+    // =========================================================================
+
+    /**
+     * Get the tree SHA for a branch
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param branch - Branch name (default: 'main')
+     * @returns Object with tree SHA and commit SHA
+     */
+    async getBranchInfo(
+        owner: string,
+        repo: string,
+        branch = 'main',
+    ): Promise<{ treeSha: string; commitSha: string }> {
+        const octokit = await this.ensureAuthenticated();
+
+        const branchResponse = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
+            owner,
+            repo,
+            branch,
+        });
+
+        return {
+            treeSha: branchResponse.data.commit.commit.tree.sha,
+            commitSha: branchResponse.data.commit.sha,
+        };
+    }
+
+    /**
+     * Create a new tree in the repository
+     *
+     * This is the key method for bulk operations. It allows creating a tree
+     * that references existing blob SHAs (from any repo) plus new content.
+     *
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param treeEntries - Array of tree entries to create
+     * @returns The SHA of the created tree
+     */
+    async createTree(
+        owner: string,
+        repo: string,
+        treeEntries: Array<{
+            path: string;
+            mode: '100644' | '100755' | '040000' | '160000' | '120000';
+            type: 'blob' | 'tree' | 'commit';
+            sha?: string;      // Use existing blob SHA
+            content?: string;  // Or provide content for new blob
+        }>,
+    ): Promise<string> {
+        const octokit = await this.ensureAuthenticated();
+
+        const response = await octokit.request('POST /repos/{owner}/{repo}/git/trees', {
+            owner,
+            repo,
+            tree: treeEntries,
+        });
+
+        return response.data.sha;
+    }
+
+    /**
+     * Create a commit pointing to a tree
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param message - Commit message
+     * @param treeSha - SHA of the tree to commit
+     * @param parentSha - SHA of the parent commit
+     * @returns The SHA of the created commit
+     */
+    async createCommit(
+        owner: string,
+        repo: string,
+        message: string,
+        treeSha: string,
+        parentSha: string,
+    ): Promise<string> {
+        const octokit = await this.ensureAuthenticated();
+
+        const response = await octokit.request('POST /repos/{owner}/{repo}/git/commits', {
+            owner,
+            repo,
+            message,
+            tree: treeSha,
+            parents: [parentSha],
+        });
+
+        return response.data.sha;
+    }
+
+    /**
+     * Update a branch reference to point to a new commit
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param branch - Branch name
+     * @param sha - SHA of the commit to point to
+     * @param force - Force update even if not fast-forward (default: true for reset)
+     */
+    async updateBranchRef(
+        owner: string,
+        repo: string,
+        branch: string,
+        sha: string,
+        force = true,
+    ): Promise<void> {
+        const octokit = await this.ensureAuthenticated();
+
+        await octokit.request('PATCH /repos/{owner}/{repo}/git/refs/heads/{branch}', {
+            owner,
+            repo,
+            branch,
+            sha,
+            force,
+        });
+    }
+
+    /**
+     * Reset a repository to match a template using bulk tree operations
+     *
+     * This is MUCH faster than file-by-file copying because it:
+     * 1. Gets template tree (1 API call)
+     * 2. Creates new tree referencing template blobs (1 API call)
+     * 3. Creates commit (1 API call)
+     * 4. Updates branch (1 API call)
+     *
+     * Total: 4 API calls instead of 2*N for N files
+     *
+     * @param templateOwner - Template repo owner
+     * @param templateRepo - Template repo name
+     * @param targetOwner - Target repo owner
+     * @param targetRepo - Target repo name
+     * @param fileOverrides - Map of path -> content for files to override (e.g., fstab.yaml)
+     * @param branch - Branch to reset (default: 'main')
+     * @returns Object with commit SHA and file counts
+     */
+    async resetRepoToTemplate(
+        templateOwner: string,
+        templateRepo: string,
+        targetOwner: string,
+        targetRepo: string,
+        fileOverrides: Map<string, string>,
+        branch = 'main',
+    ): Promise<{ commitSha: string; fileCount: number }> {
+        this.logger.info(`[GitHub] Resetting ${targetOwner}/${targetRepo} to template ${templateOwner}/${templateRepo}`);
+
+        // Step 1: Get template tree (all files with blob SHAs)
+        const templateFiles = await this.listRepoFiles(templateOwner, templateRepo, branch);
+        this.logger.info(`[GitHub] Template has ${templateFiles.length} files`);
+
+        // Step 2: Get target branch info (need current commit as parent)
+        const targetBranchInfo = await this.getBranchInfo(targetOwner, targetRepo, branch);
+        this.logger.info(`[GitHub] Target branch commit: ${targetBranchInfo.commitSha.substring(0, 7)}`);
+
+        // Step 3: Build tree entries
+        // - Use template blob SHAs directly (GitHub knows these blobs)
+        // - Override specific files with custom content
+        const treeEntries = templateFiles.map(file => {
+            const override = fileOverrides.get(file.path);
+            if (override !== undefined) {
+                // Custom content for this file
+                return {
+                    path: file.path,
+                    mode: '100644' as const,
+                    type: 'blob' as const,
+                    content: override,
+                };
+            } else {
+                // Reference template's blob SHA directly
+                return {
+                    path: file.path,
+                    mode: '100644' as const,
+                    type: 'blob' as const,
+                    sha: file.sha,
+                };
+            }
+        });
+
+        // Add any override files that don't exist in template
+        for (const [path, content] of fileOverrides) {
+            if (!templateFiles.some(f => f.path === path)) {
+                treeEntries.push({
+                    path,
+                    mode: '100644' as const,
+                    type: 'blob' as const,
+                    content,
+                });
+            }
+        }
+
+        this.logger.info(`[GitHub] Creating tree with ${treeEntries.length} entries`);
+
+        // Step 4: Create new tree
+        const newTreeSha = await this.createTree(targetOwner, targetRepo, treeEntries);
+        this.logger.info(`[GitHub] Created tree: ${newTreeSha.substring(0, 7)}`);
+
+        // Step 5: Create commit
+        const commitSha = await this.createCommit(
+            targetOwner,
+            targetRepo,
+            'chore: reset repository to template',
+            newTreeSha,
+            targetBranchInfo.commitSha,
+        );
+        this.logger.info(`[GitHub] Created commit: ${commitSha.substring(0, 7)}`);
+
+        // Step 6: Update branch to point to new commit
+        await this.updateBranchRef(targetOwner, targetRepo, branch, commitSha);
+        this.logger.info(`[GitHub] Updated branch ${branch} to ${commitSha.substring(0, 7)}`);
+
+        return {
+            commitSha,
+            fileCount: treeEntries.length,
+        };
+    }
 }

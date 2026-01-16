@@ -66,6 +66,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
             deleteFile: jest.fn(),
             getFileContent: jest.fn(),
             createOrUpdateFile: jest.fn(),
+            resetRepoToTemplate: jest.fn(), // Bulk tree operation
         },
         oauthService: {},
     }),
@@ -202,21 +203,8 @@ describe('handleResetEds', () => {
         deleteFile: jest.Mock;
         getFileContent: jest.Mock;
         createOrUpdateFile: jest.Mock;
+        resetRepoToTemplate: jest.Mock;
     };
-
-    // Sample file data for tests
-    const templateFiles = [
-        { path: 'scripts/aem.js', type: 'blob' as const, sha: 'sha-aem-js', size: 1000 },
-        { path: 'styles/styles.css', type: 'blob' as const, sha: 'sha-styles-css', size: 500 },
-        { path: 'blocks/header/header.js', type: 'blob' as const, sha: 'sha-header-js', size: 200 },
-    ];
-
-    const userFilesWithExtraFile = [
-        { path: 'scripts/aem.js', type: 'blob' as const, sha: 'sha-aem-js', size: 1000 }, // Same as template
-        { path: 'styles/styles.css', type: 'blob' as const, sha: 'sha-styles-css-old', size: 500 }, // Different SHA
-        { path: 'custom/my-file.js', type: 'blob' as const, sha: 'sha-custom', size: 300 }, // Extra file to delete
-        { path: 'fstab.yaml', type: 'blob' as const, sha: 'sha-fstab', size: 100 }, // Should be preserved/updated
-    ];
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -248,26 +236,9 @@ describe('handleResetEds', () => {
         mockFileOps.deleteFile.mockReset().mockResolvedValue(undefined);
         mockFileOps.getFileContent.mockReset();
         mockFileOps.createOrUpdateFile.mockReset().mockResolvedValue(undefined);
-
-        // Default: return sample files for listing
-        mockFileOps.listRepoFiles.mockImplementation(async (owner: string, _repo: string) => {
-            if (owner === 'hlxsites') {
-                return templateFiles;
-            }
-            return userFilesWithExtraFile;
-        });
-
-        // Default: return mock content for template files and user repo files
-        mockFileOps.getFileContent.mockImplementation(async (owner: string, _repo: string, path: string) => {
-            if (owner === 'hlxsites') {
-                return { content: `content of ${path}`, sha: `sha-${path}`, path, encoding: 'utf-8' };
-            }
-            // For user repo files - look up in userFilesWithExtraFile
-            const userFile = userFilesWithExtraFile.find(f => f.path === path);
-            if (userFile) {
-                return { content: `content of ${path}`, sha: userFile.sha, path, encoding: 'utf-8' };
-            }
-            return null;
+        mockFileOps.resetRepoToTemplate.mockReset().mockResolvedValue({
+            commitSha: 'abc1234567890',
+            fileCount: 100,
         });
 
         // Mock fetch for code sync verification
@@ -315,100 +286,55 @@ describe('handleResetEds', () => {
         expect(result.cancelled).toBe(true);
 
         // And: No GitHub operations should be called
+        expect(mockFileOps.resetRepoToTemplate).not.toHaveBeenCalled();
+    });
+
+    it('should call bulk resetRepoToTemplate with correct parameters', async () => {
+        // Given: Valid EDS project with metadata
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // And: User confirms the reset
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
+
+        // When: handleResetEds is called
+        await handleResetEds(context);
+
+        // Then: Should call bulk reset with template and target repos
+        expect(mockFileOps.resetRepoToTemplate).toHaveBeenCalledWith(
+            'hlxsites',       // templateOwner
+            'citisignal',     // templateRepo
+            'test-org',       // targetOwner
+            'test-repo',      // targetRepo
+            expect.any(Map),  // fileOverrides (contains fstab.yaml)
+            'main',           // branch
+        );
+
+        // And: fileOverrides should contain fstab.yaml with DA.live path
+        const fileOverrides = mockFileOps.resetRepoToTemplate.mock.calls[0][4] as Map<string, string>;
+        expect(fileOverrides.has('fstab.yaml')).toBe(true);
+        expect(fileOverrides.get('fstab.yaml')).toContain('https://content.da.live/test-org/test-site/');
+    });
+
+    it('should use bulk operation instead of file-by-file copying', async () => {
+        // Given: Valid EDS project with metadata
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // And: User confirms the reset
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
+
+        // When: handleResetEds is called
+        await handleResetEds(context);
+
+        // Then: Bulk operation should be used (not individual file operations)
+        expect(mockFileOps.resetRepoToTemplate).toHaveBeenCalledTimes(1);
+
+        // And: Individual file operations should NOT be used for the reset
+        // (only for content copying which is handled separately by DA.live)
         expect(mockFileOps.listRepoFiles).not.toHaveBeenCalled();
-    });
-
-    it('should list files from both template and user repos', async () => {
-        // Given: Valid EDS project with metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User confirms the reset
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // When: handleResetEds is called
-        await handleResetEds(context);
-
-        // Then: Should list files from template repo
-        expect(mockFileOps.listRepoFiles).toHaveBeenCalledWith('hlxsites', 'citisignal', 'main');
-
-        // And: Should list files from user repo
-        expect(mockFileOps.listRepoFiles).toHaveBeenCalledWith('test-org', 'test-repo', 'main');
-    });
-
-    it('should delete extra files not in template (except fstab.yaml)', async () => {
-        // Given: Valid EDS project with metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User confirms the reset
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // When: handleResetEds is called
-        await handleResetEds(context);
-
-        // Then: Should delete extra file (custom/my-file.js)
-        expect(mockFileOps.deleteFile).toHaveBeenCalledWith(
-            'test-org',
-            'test-repo',
-            'custom/my-file.js',
-            expect.stringContaining('remove'),
-            'sha-custom',
-        );
-
-        // And: Should NOT delete fstab.yaml (preserved for configuration)
-        const deleteFileCalls = mockFileOps.deleteFile.mock.calls;
-        const deletedPaths = deleteFileCalls.map((call: string[]) => call[2]);
-        expect(deletedPaths).not.toContain('fstab.yaml');
-    });
-
-    it('should copy template files with different SHA', async () => {
-        // Given: Valid EDS project with metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User confirms the reset
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // When: handleResetEds is called
-        await handleResetEds(context);
-
-        // Then: Should copy file with different SHA (styles/styles.css)
-        expect(mockFileOps.createOrUpdateFile).toHaveBeenCalledWith(
-            'test-org',
-            'test-repo',
-            'styles/styles.css',
-            expect.any(String),
-            expect.stringContaining('reset'),
-            'sha-styles-css-old', // Existing SHA for update
-        );
-
-        // And: Should copy new file from template (blocks/header/header.js - not in user repo)
-        expect(mockFileOps.createOrUpdateFile).toHaveBeenCalledWith(
-            'test-org',
-            'test-repo',
-            'blocks/header/header.js',
-            expect.any(String),
-            expect.stringContaining('reset'),
-            undefined, // No existing SHA - new file
-        );
-    });
-
-    it('should skip files with identical SHA (no unnecessary updates)', async () => {
-        // Given: Valid EDS project with metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User confirms the reset
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // When: handleResetEds is called
-        await handleResetEds(context);
-
-        // Then: Should NOT copy file with identical SHA (scripts/aem.js has same SHA in both)
-        const createOrUpdateCalls = mockFileOps.createOrUpdateFile.mock.calls;
-        const updatedPaths = createOrUpdateCalls.map((call: string[]) => call[2]);
-        expect(updatedPaths).not.toContain('scripts/aem.js');
+        expect(mockFileOps.deleteFile).not.toHaveBeenCalled();
+        expect(mockFileOps.createOrUpdateFile).not.toHaveBeenCalled();
     });
 
     it('should return success when reset completes', async () => {
@@ -429,7 +355,7 @@ describe('handleResetEds', () => {
         expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('EDS project reset successfully!');
     });
 
-    it('should return error when file listing fails', async () => {
+    it('should return error when bulk reset fails', async () => {
         // Given: Valid EDS project with metadata
         const project = createMockEdsProject();
         const context = createMockContext(project);
@@ -437,9 +363,9 @@ describe('handleResetEds', () => {
         // And: User confirms the reset
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
 
-        // And: GitHub file listing fails
-        const listError = new Error('Failed to list files: permission denied');
-        mockFileOps.listRepoFiles.mockRejectedValue(listError);
+        // And: Bulk reset fails
+        const resetError = new Error('Failed to reset repo: permission denied');
+        mockFileOps.resetRepoToTemplate.mockRejectedValue(resetError);
 
         // When: handleResetEds is called
         const result = await handleResetEds(context);
@@ -452,7 +378,7 @@ describe('handleResetEds', () => {
         expect(vscode.window.showErrorMessage).toHaveBeenCalled();
     });
 
-    it('should configure fstab.yaml for DA.live', async () => {
+    it('should include fstab.yaml override in bulk reset', async () => {
         // Given: Valid EDS project with metadata
         const project = createMockEdsProject();
         const context = createMockContext(project);
@@ -463,15 +389,13 @@ describe('handleResetEds', () => {
         // When: handleResetEds is called
         await handleResetEds(context);
 
-        // Then: Should configure fstab.yaml with DA.live path
-        expect(mockFileOps.createOrUpdateFile).toHaveBeenCalledWith(
-            'test-org',
-            'test-repo',
-            'fstab.yaml',
-            expect.stringContaining('https://content.da.live/test-org/test-site/'),
-            expect.stringContaining('fstab.yaml'),
-            'sha-fstab', // Existing SHA from mock
-        );
+        // Then: Bulk reset should be called with fstab.yaml in file overrides
+        expect(mockFileOps.resetRepoToTemplate).toHaveBeenCalled();
+        const fileOverrides = mockFileOps.resetRepoToTemplate.mock.calls[0][4] as Map<string, string>;
+
+        // And: fstab.yaml should have DA.live content source path
+        expect(fileOverrides.get('fstab.yaml')).toContain('https://content.da.live/test-org/test-site/');
+        expect(fileOverrides.get('fstab.yaml')).toContain('mountpoints:');
     });
 
     it('should return error when project has no EDS metadata', async () => {
@@ -504,7 +428,7 @@ describe('handleResetEds', () => {
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
 
         // And: No GitHub operations should be called
-        expect(mockFileOps.listRepoFiles).not.toHaveBeenCalled();
+        expect(mockFileOps.resetRepoToTemplate).not.toHaveBeenCalled();
     });
 
     it('should return error when DA.live config is missing', async () => {
