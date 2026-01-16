@@ -634,23 +634,15 @@ describe('wizardHelpers', () => {
         });
 
         describe('component-selection step', () => {
-            it('should return true when frontend is selected', () => {
+            it('should return true when stack is selected', () => {
                 const state = {
                     ...createEmptyState(),
-                    components: { frontend: 'headless' },
+                    selectedStack: 'headless',
                 };
                 expect(isStepSatisfied('component-selection', state)).toBe(true);
             });
 
-            it('should return true when backend is selected', () => {
-                const state = {
-                    ...createEmptyState(),
-                    components: { backend: 'commerce-paas' },
-                };
-                expect(isStepSatisfied('component-selection', state)).toBe(true);
-            });
-
-            it('should return false when no components selected', () => {
+            it('should return false when no stack selected', () => {
                 expect(isStepSatisfied('component-selection', createEmptyState())).toBe(false);
             });
         });
@@ -789,7 +781,7 @@ describe('wizardHelpers', () => {
                 adobeOrg: { id: 'org', code: 'ORG', name: 'Org' },
                 adobeProject: { id: 'proj', name: 'Proj', title: 'Project' },
                 adobeWorkspace: { id: 'ws', name: 'WS', title: 'Workspace' },
-                components: { frontend: 'headless' },
+                selectedStack: 'headless',
                 componentConfigs: { 'headless': { port: 3000 } },
             };
             const steps = createMockSteps();
@@ -963,18 +955,15 @@ describe('wizardHelpers', () => {
                     },
                     // Results from StorefrontSetupStep
                     repoUrl: 'https://github.com/testuser/my-repo',
-                    previewUrl: 'https://main--my-repo--testuser.aem.page',
-                    liveUrl: 'https://main--my-repo--testuser.aem.live',
                 },
             };
 
             const config = buildProjectConfig(state);
 
             expect(config.edsConfig).toBeDefined();
-            // StorefrontSetupStep results should be passed through to executor
+            // StorefrontSetupStep repoUrl should be passed through to executor
+            // Note: previewUrl/liveUrl are derived from githubRepo by typeGuards, not passed here
             expect(config.edsConfig?.repoUrl).toBe('https://github.com/testuser/my-repo');
-            expect(config.edsConfig?.previewUrl).toBe('https://main--my-repo--testuser.aem.page');
-            expect(config.edsConfig?.liveUrl).toBe('https://main--my-repo--testuser.aem.live');
         });
 
         it('should use explicit templateOwner/templateRepo and contentSource from storefront config', () => {

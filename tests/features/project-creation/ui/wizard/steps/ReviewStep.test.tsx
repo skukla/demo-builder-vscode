@@ -11,15 +11,17 @@ describe('ReviewStep', () => {
     const mockOnNext = jest.fn();
     const mockOnBack = jest.fn();
 
+    // Mock component data - IDs must match those used in stacks.json
+    // headless-paas stack uses: frontend='headless', backend='adobe-commerce-paas', dependencies=['headless-commerce-mesh']
     const mockComponentsData = {
         frontends: [
             { id: 'headless', name: 'CitiSignal Next.js', description: 'Next.js frontend' }
         ],
         backends: [
-            { id: 'commerce-paas', name: 'Commerce PaaS', description: 'Commerce backend' }
+            { id: 'adobe-commerce-paas', name: 'Commerce PaaS', description: 'Commerce backend' }
         ],
         dependencies: [
-            { id: 'eds-commerce-mesh', name: 'EDS Commerce API Mesh', description: 'GraphQL mesh', subType: 'mesh' },
+            { id: 'headless-commerce-mesh', name: 'Headless Commerce API Mesh', description: 'GraphQL mesh', subType: 'mesh' },
             { id: 'demo-inspector', name: 'Demo Inspector', description: 'Inspector tool' }
         ],
         integrations: [
@@ -32,10 +34,13 @@ describe('ReviewStep', () => {
         ]
     };
 
+    // Complete state for headless-paas stack
+    // The ReviewStep derives components from selectedStack via getStackById()
     const completeState: Partial<WizardState> = {
         currentStep: 'review',
         projectName: 'my-demo-project',
         projectTemplate: 'citisignal',
+        selectedStack: 'headless-paas', // Source of truth for components
         adobeAuth: {
             isAuthenticated: true,
             isChecking: false,
@@ -52,13 +57,6 @@ describe('ReviewStep', () => {
         adobeWorkspace: {
             id: 'ws789',
             name: 'Test Workspace',
-        },
-        components: {
-            frontend: 'headless',
-            backend: 'commerce-paas',
-            dependencies: ['eds-commerce-mesh'],
-            integrations: [],
-            appBuilder: [],
         },
         apiMesh: {
             isChecking: false,
@@ -105,7 +103,8 @@ describe('ReviewStep', () => {
             expect(screen.getByText('my-demo-project')).toBeInTheDocument();
         });
 
-        it('should display frontend component', () => {
+        it('should display frontend component from stack', () => {
+            // headless-paas stack has frontend: 'headless' → "CitiSignal Next.js"
             render(
                 <Provider theme={defaultTheme}>
                     <ReviewStep
@@ -120,7 +119,8 @@ describe('ReviewStep', () => {
             expect(screen.getByText('CitiSignal Next.js')).toBeInTheDocument();
         });
 
-        it('should display backend component', () => {
+        it('should display backend component from stack', () => {
+            // headless-paas stack has backend: 'adobe-commerce-paas' → "Commerce PaaS"
             render(
                 <Provider theme={defaultTheme}>
                     <ReviewStep
@@ -135,7 +135,8 @@ describe('ReviewStep', () => {
             expect(screen.getByText('Commerce PaaS')).toBeInTheDocument();
         });
 
-        it('should display API Mesh dependency', () => {
+        it('should display API Mesh dependency from stack', () => {
+            // headless-paas stack has dependencies: ['headless-commerce-mesh']
             render(
                 <Provider theme={defaultTheme}>
                     <ReviewStep
@@ -147,10 +148,10 @@ describe('ReviewStep', () => {
                 </Provider>
             );
 
-            expect(screen.getByText('EDS Commerce API Mesh')).toBeInTheDocument();
+            expect(screen.getByText('Headless Commerce API Mesh')).toBeInTheDocument();
         });
 
-        it('should display selected components', () => {
+        it('should display all stack components', () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ReviewStep
@@ -162,25 +163,9 @@ describe('ReviewStep', () => {
                 </Provider>
             );
 
-            // Should show frontend and backend components by their display names
+            // Should show frontend and backend components derived from selectedStack
             expect(screen.getByText('CitiSignal Next.js')).toBeInTheDocument();
             expect(screen.getByText('Commerce PaaS')).toBeInTheDocument();
-        });
-
-        it('should display API Mesh dependency', () => {
-            render(
-                <Provider theme={defaultTheme}>
-                    <ReviewStep
-                        state={completeState as WizardState}
-                        updateState={mockUpdateState}
-                        setCanProceed={mockSetCanProceed}
-                        componentsData={mockComponentsData}
-                    />
-                </Provider>
-            );
-
-            // Should show API Mesh by its full name
-            expect(screen.getByText('EDS Commerce API Mesh')).toBeInTheDocument();
         });
 
         it('should enable Continue button automatically', () => {
@@ -240,16 +225,16 @@ describe('ReviewStep', () => {
             expect(screen.getByText('my-demo-project')).toBeInTheDocument();
         });
 
-        it('should handle empty components', () => {
-            const stateWithoutComponents = {
+        it('should handle missing selectedStack', () => {
+            const stateWithoutStack = {
                 ...completeState,
-                components: undefined,
+                selectedStack: undefined,
             };
 
             render(
                 <Provider theme={defaultTheme}>
                     <ReviewStep
-                        state={stateWithoutComponents as WizardState}
+                        state={stateWithoutStack as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                     />
@@ -261,20 +246,13 @@ describe('ReviewStep', () => {
         });
     });
 
-    describe('Edge Cases - Comprehensive Component List', () => {
-        it('should display dependencies when selected (demo-inspector is excluded as it is a submodule)', () => {
-            const stateWithMultipleDeps = {
-                ...completeState,
-                components: {
-                    ...completeState.components!,
-                    dependencies: ['eds-commerce-mesh', 'demo-inspector'],
-                },
-            };
-
+    describe('Edge Cases - Stack-Derived Components', () => {
+        it('should display Middleware section for stack with mesh dependency', () => {
+            // headless-paas stack has headless-commerce-mesh in dependencies
             render(
                 <Provider theme={defaultTheme}>
                     <ReviewStep
-                        state={stateWithMultipleDeps as WizardState}
+                        state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
@@ -282,23 +260,15 @@ describe('ReviewStep', () => {
                 </Provider>
             );
 
-            // Mesh is shown as "Middleware" row, demo-inspector is filtered out (it's a frontend submodule)
+            // Mesh is shown as "Middleware" row
             expect(screen.getByText('Middleware')).toBeInTheDocument();
         });
 
-        it('should display integrations as comma-separated list', () => {
-            const stateWithIntegrations = {
-                ...completeState,
-                components: {
-                    ...completeState.components!,
-                    integrations: ['aem', 'experience-platform'],
-                },
-            };
-
+        it('should show deployed status for mesh when meshStatus is deployed', () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ReviewStep
-                        state={stateWithIntegrations as WizardState}
+                        state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}
@@ -306,32 +276,40 @@ describe('ReviewStep', () => {
                 </Provider>
             );
 
-            // Integrations should be displayed as comma-separated list
-            expect(screen.getByText('Adobe Experience Manager, Adobe Experience Platform')).toBeInTheDocument();
+            // Should show "Deployed" indicator for deployed mesh
+            expect(screen.getByText('Deployed')).toBeInTheDocument();
         });
 
-        it('should display App Builder apps as comma-separated list', () => {
-            const stateWithApps = {
+        it('should handle different stacks with different dependencies', () => {
+            // eds-paas stack uses eds-commerce-mesh instead of headless-commerce-mesh
+            const edsComponentsData = {
+                ...mockComponentsData,
+                frontends: [{ id: 'eds-storefront', name: 'Edge Delivery Storefront', description: 'EDS frontend' }],
+                dependencies: [
+                    { id: 'eds-commerce-mesh', name: 'EDS Commerce API Mesh', description: 'GraphQL mesh', subType: 'mesh' },
+                    { id: 'demo-inspector', name: 'Demo Inspector', description: 'Inspector tool' }
+                ],
+            };
+
+            const edsState = {
                 ...completeState,
-                components: {
-                    ...completeState.components!,
-                    appBuilder: ['custom-app-1', 'custom-app-2'],
-                },
+                selectedStack: 'eds-paas',
             };
 
             render(
                 <Provider theme={defaultTheme}>
                     <ReviewStep
-                        state={stateWithApps as WizardState}
+                        state={edsState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
-                        componentsData={mockComponentsData}
+                        componentsData={edsComponentsData}
                     />
                 </Provider>
             );
 
-            // App Builder apps should be displayed as comma-separated list
-            expect(screen.getByText('Custom App 1, Custom App 2')).toBeInTheDocument();
+            // Should show EDS frontend and mesh
+            expect(screen.getByText('Edge Delivery Storefront')).toBeInTheDocument();
+            expect(screen.getByText('EDS Commerce API Mesh')).toBeInTheDocument();
         });
     });
 
@@ -417,30 +395,8 @@ describe('ReviewStep', () => {
     });
 
     describe('Demo Inspector display', () => {
-        it('should show Demo Inspector when in dependencies', () => {
-            const stateWithDemoInspectorInDeps: Partial<WizardState> = {
-                ...completeState,
-                components: {
-                    ...completeState.components,
-                    dependencies: ['eds-commerce-mesh', 'demo-inspector'],
-                },
-            };
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <ReviewStep
-                        state={stateWithDemoInspectorInDeps as WizardState}
-                        updateState={mockUpdateState}
-                        setCanProceed={mockSetCanProceed}
-                        componentsData={mockComponentsData}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText('Demo Inspector')).toBeInTheDocument();
-        });
-
         it('should show Demo Inspector when in selectedAddons', () => {
+            // Demo Inspector is enabled via selectedAddons (stack optionalAddons can default it)
             const stateWithDemoInspectorInAddons: Partial<WizardState> = {
                 ...completeState,
                 selectedAddons: ['demo-inspector'],
@@ -460,14 +416,11 @@ describe('ReviewStep', () => {
             expect(screen.getByText('Demo Inspector')).toBeInTheDocument();
         });
 
-        it('should not show Demo Inspector when not selected', () => {
+        it('should not show Demo Inspector when not in selectedAddons', () => {
+            // Demo Inspector requires explicit selection via selectedAddons
             const stateWithoutDemoInspector: Partial<WizardState> = {
                 ...completeState,
-                components: {
-                    ...completeState.components,
-                    dependencies: ['eds-commerce-mesh'], // No demo-inspector
-                },
-                selectedAddons: [], // No addons
+                selectedAddons: [], // No addons selected
             };
 
             render(

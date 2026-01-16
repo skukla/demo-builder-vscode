@@ -61,6 +61,7 @@ jest.mock('@/features/components/services/componentManager', () => ({
 }));
 
 // Mock ComponentRegistryManager with mesh in CORRECT location (mesh section, not dependencies)
+// Note: The headless-paas stack uses headless-commerce-mesh as its mesh component
 jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         loadRegistry: jest.fn().mockResolvedValue({ envVars: {} }),
@@ -70,18 +71,29 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
             type: 'frontend',
             source: { type: 'git', url: 'https://github.com/test/headless' },
         }]),
-        // IMPORTANT: commerce-mesh is NOT in dependencies (this is the bug scenario)
-        getDependencies: jest.fn().mockResolvedValue([{
-            id: 'demo-inspector',
-            name: 'Demo Inspector',
-            type: 'dependency',
-            source: { type: 'git', url: 'https://github.com/test/demo-inspector' },
-        }]),
+        // headless-commerce-mesh is in dependencies section for stack-based resolution
+        getDependencies: jest.fn().mockResolvedValue([
+            {
+                id: 'demo-inspector',
+                name: 'Demo Inspector',
+                type: 'dependency',
+                source: { type: 'git', url: 'https://github.com/test/demo-inspector' },
+            },
+            {
+                id: 'headless-commerce-mesh',
+                name: 'Headless Commerce API Mesh',
+                type: 'mesh',
+                source: { type: 'git', url: 'https://github.com/skukla/headless-citisignal-mesh' },
+                configuration: {
+                    nodeVersion: '20',
+                    requiresDeployment: true,
+                },
+            },
+        ]),
         getAppBuilder: jest.fn().mockResolvedValue([]),
-        // commerce-mesh IS in mesh section (correct location per components.json)
         getMesh: jest.fn().mockResolvedValue([{
-            id: 'commerce-mesh',
-            name: 'Adobe Commerce API Mesh',
+            id: 'headless-commerce-mesh',
+            name: 'Headless Commerce API Mesh',
             type: 'mesh',
             source: { type: 'git', url: 'https://github.com/skukla/headless-citisignal-mesh' },
             configuration: {
@@ -93,12 +105,20 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
         // This is used as fallback when type-specific lookup doesn't find the component
         getComponentById: jest.fn().mockImplementation((id: string) => {
             getComponentByIdCalls.push(id);
-            if (id === 'commerce-mesh') {
+            if (id === 'headless-commerce-mesh') {
                 return {
-                    id: 'commerce-mesh',
-                    name: 'Adobe Commerce API Mesh',
+                    id: 'headless-commerce-mesh',
+                    name: 'Headless Commerce API Mesh',
                     type: 'mesh',
                     source: { type: 'git', url: 'https://github.com/skukla/headless-citisignal-mesh' },
+                };
+            }
+            if (id === 'headless') {
+                return {
+                    id: 'headless',
+                    name: 'CitiSignal Next.js',
+                    type: 'frontend',
+                    source: { type: 'git', url: 'https://github.com/test/headless' },
                 };
             }
             return undefined;
@@ -177,15 +197,14 @@ describe('Executor - Mesh Component Loading', () => {
     });
 
     describe('loadComponentDefinitions mesh handling', () => {
-        it('should find mesh components via getComponentById fallback', async () => {
+        it('should find mesh components via stack configuration', async () => {
+            // Note: The executor now uses selectedStack to derive components from stacks.json
+            // The headless-paas stack includes headless-commerce-mesh as a dependency
             const config = {
                 projectName: 'test-project',
                 projectPath: '/tmp/test-project',
-                components: {
-                    frontend: 'headless',
-                    backend: 'adobe-commerce-paas',
-                    dependencies: ['commerce-mesh', 'demo-inspector'],
-                },
+                selectedStack: 'headless-paas',
+                selectedAddons: ['demo-inspector'],
                 adobeConfig: {
                     organization: { id: 'org-123', name: 'Test Org' },
                     project: { id: 'proj-123', name: 'Test Project' },
@@ -195,20 +214,18 @@ describe('Executor - Mesh Component Loading', () => {
 
             await executeProjectCreation(mockContext as HandlerContext, config);
 
-            // FIX: commerce-mesh is not in dependencies section, so type-specific lookup fails.
-            // The fallback to getComponentById() should find it in the mesh section.
-            expect(getComponentByIdCalls).toContain('commerce-mesh');
+            // Stack-based mesh component should be resolved without warnings
+            // (Component is found in dependencies array, no fallback to getComponentById needed)
+            expect(mockContext.logger?.warn).not.toHaveBeenCalledWith(
+                expect.stringContaining('headless-commerce-mesh not found')
+            );
         });
 
-        it('should NOT log warning for commerce-mesh when mesh section is properly loaded', async () => {
+        it('should NOT log warning for mesh when stack includes mesh component', async () => {
             const config = {
                 projectName: 'test-project',
                 projectPath: '/tmp/test-project',
-                components: {
-                    frontend: 'headless',
-                    backend: 'adobe-commerce-paas',
-                    dependencies: ['commerce-mesh'],
-                },
+                selectedStack: 'headless-paas',
                 adobeConfig: {
                     organization: { id: 'org-123', name: 'Test Org' },
                     project: { id: 'proj-123', name: 'Test Project' },
@@ -218,25 +235,20 @@ describe('Executor - Mesh Component Loading', () => {
 
             await executeProjectCreation(mockContext as HandlerContext, config);
 
-            // BUG: This currently logs warning because commerce-mesh not found in registry
-            // When mesh section is properly loaded, this warning should NOT appear
+            // Stack-based mesh component should be found without warnings
             expect(mockContext.logger?.warn).not.toHaveBeenCalledWith(
-                expect.stringContaining('commerce-mesh not found in registry')
+                expect.stringContaining('headless-commerce-mesh not found in registry')
             );
         });
 
         it('should include mesh definition in componentDefinitions map', async () => {
             // This test validates that Phase 3 can access meshDefinition
-            // The bug is that meshDefinition is undefined, causing Phase 3 to skip
+            // The stack-based config includes mesh in dependencies
 
             const config = {
                 projectName: 'test-project',
                 projectPath: '/tmp/test-project',
-                components: {
-                    frontend: 'headless',
-                    backend: 'adobe-commerce-paas',
-                    dependencies: ['commerce-mesh'],
-                },
+                selectedStack: 'headless-paas',
                 adobeConfig: {
                     organization: { id: 'org-123', name: 'Test Org' },
                     project: { id: 'proj-123', name: 'Test Project' },
@@ -246,11 +258,10 @@ describe('Executor - Mesh Component Loading', () => {
 
             await executeProjectCreation(mockContext as HandlerContext, config);
 
-            // When mesh is properly loaded, Phase 3 should execute
+            // When mesh is properly loaded from stack, Phase 3 should execute
             // This means meshSetupService should be called
-            // For now, we verify no "not found" warning
             expect(mockContext.logger?.warn).not.toHaveBeenCalledWith(
-                expect.stringContaining('Component commerce-mesh not found')
+                expect.stringContaining('Component headless-commerce-mesh not found')
             );
         });
     });

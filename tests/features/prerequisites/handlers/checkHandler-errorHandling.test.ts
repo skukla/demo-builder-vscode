@@ -245,9 +245,8 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
             );
         });
 
-        it('should store component selection in sharedState', async () => {
-            const componentSelection = createComponentSelection('commerce-paas');
-
+        it('should store component selection in sharedState from selectedStack', async () => {
+            // Handler now derives componentSelection from selectedStack via stacks.json
             const context = createMockContext();
             (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
             (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
@@ -257,9 +256,17 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
 
-            await handleCheckPrerequisites(context, { componentSelection });
+            // Pass selectedStack - handler will look up stack from stacks.json
+            await handleCheckPrerequisites(context, { selectedStack: 'headless-paas' });
 
-            expect(context.sharedState.currentComponentSelection).toEqual(componentSelection);
+            // Handler derives componentSelection from the headless-paas stack
+            expect(context.sharedState.currentComponentSelection).toEqual({
+                frontend: 'headless',
+                backend: 'adobe-commerce-paas',
+                dependencies: ['headless-commerce-mesh'],
+                integrations: [],
+                appBuilder: [],
+            });
         });
 
         it('should handle 100ms delay for UI updates', async () => {

@@ -234,36 +234,7 @@ describe('Service Logger Injection', () => {
         });
     });
 
-    describe('EdsProjectService', () => {
-        it('should accept optional logger in constructor', () => {
-            // Mock dependencies - must pass validation
-            const mockGithubService = { createFromTemplate: jest.fn() };
-            const mockDaLiveService = { copyContentFromSource: jest.fn() };
-            const mockAuthService = { getTokenManager: jest.fn() };
-            const mockComponentManager = { installComponent: jest.fn() };
-
-            const { EdsProjectService } = require('@/features/eds/services/edsProjectService');
-
-            // Should work without logger (backward compatible)
-            const service1 = new EdsProjectService(
-                mockGithubService,
-                mockDaLiveService,
-                mockAuthService,
-                mockComponentManager,
-            );
-            expect(service1).toBeDefined();
-
-            // Should work with logger (DI pattern)
-            const service2 = new EdsProjectService(
-                mockGithubService,
-                mockDaLiveService,
-                mockAuthService,
-                mockComponentManager,
-                mockLogger,
-            );
-            expect(service2).toBeDefined();
-        });
-    });
+    // Note: EdsProjectService tests removed - class was refactored into edsSetupPhases.ts
 
     describe('HelixService', () => {
         it('should accept optional logger in constructor', () => {

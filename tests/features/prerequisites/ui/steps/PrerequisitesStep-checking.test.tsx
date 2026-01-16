@@ -7,7 +7,7 @@ import {
     mockPostMessage,
     mockOnMessage,
     baseState,
-    baseStateWithComponents,
+    baseStateWithSelectedStack,
     createMockFunctions,
     renderPrerequisitesStep,
     setupMessageCallbacks,
@@ -66,7 +66,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
         expect(screen.getByText('Checking required tools. Missing tools can be installed automatically.')).toBeInTheDocument();
     });
 
-    it('should trigger check on mount without componentSelection when no components selected', () => {
+    it('should trigger check on mount without selectedStack when no stack selected', () => {
         render(
             <Provider theme={defaultTheme}>
                 <PrerequisitesStep
@@ -82,15 +82,15 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
 
         expect(mockPostMessage).toHaveBeenCalledWith('check-prerequisites', {
             isRecheck: false,
-            componentSelection: undefined,
+            selectedStack: undefined,
         });
     });
 
-    it('should pass componentSelection when components are in state (edit project flow)', () => {
+    it('should pass selectedStack when stack is in state (after stack selection)', () => {
         render(
             <Provider theme={defaultTheme}>
                 <PrerequisitesStep
-                    state={baseStateWithComponents as WizardState}
+                    state={baseStateWithSelectedStack as WizardState}
                     updateState={mockUpdateState}
                     onNext={mockOnNext}
                     onBack={mockOnBack}
@@ -100,12 +100,10 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
             </Provider>
         );
 
+        // Handler derives componentSelection from selectedStack via stacks.json
         expect(mockPostMessage).toHaveBeenCalledWith('check-prerequisites', {
             isRecheck: false,
-            componentSelection: {
-                frontend: 'headless',
-                backend: 'commerce-paas',
-            },
+            selectedStack: 'headless-paas',
         });
     });
 

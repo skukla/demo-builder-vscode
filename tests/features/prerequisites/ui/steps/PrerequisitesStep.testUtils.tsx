@@ -21,13 +21,11 @@ export const baseState: Partial<WizardState> = {
     currentStep: 'prerequisites',
 };
 
-// State with components (edit project or after component selection)
-export const baseStateWithComponents: Partial<WizardState> = {
+// State with selectedStack (after stack selection)
+// The handler derives componentSelection from the stack via stacks.json
+export const baseStateWithSelectedStack: Partial<WizardState> = {
     currentStep: 'prerequisites',
-    components: {
-        frontend: 'headless',
-        backend: 'commerce-paas',
-    },
+    selectedStack: 'headless-paas', // Stack config defines frontend/backend/dependencies
 };
 
 // Mock functions used across tests

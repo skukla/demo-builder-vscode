@@ -6,7 +6,6 @@
  */
 
 import {
-    deriveComponentsFromStack,
     getStackComponentIds,
     filterComponentConfigsForStackChange,
 } from '@/features/project-creation/ui/helpers/stackHelpers';
@@ -41,92 +40,8 @@ const edgeDeliveryStack: Stack = {
 // See: .rptc/plans/demo-packages-simplification/
 
 describe('stackHelpers', () => {
-    describe('deriveComponentsFromStack', () => {
-        it('should derive components from headless stack', () => {
-            // Given: A headless stack with frontend, backend, and dependencies
-            const stack = headlessStack;
-
-            // When: Deriving components from the stack
-            const result = deriveComponentsFromStack(stack);
-
-            // Then: Should have correct frontend
-            expect(result.frontend).toBe('headless');
-
-            // And: Should have correct backend
-            expect(result.backend).toBe('adobe-commerce-paas');
-
-            // And: Should include commerce-mesh in dependencies
-            expect(result.dependencies).toContain('commerce-mesh');
-            expect(result.dependencies).toContain('demo-inspector');
-        });
-
-        it('should derive components from edge-delivery stack', () => {
-            // Given: An edge delivery stack with frontend, backend, and dependencies
-            const stack = edgeDeliveryStack;
-
-            // When: Deriving components from the stack
-            const result = deriveComponentsFromStack(stack);
-
-            // Then: Should have correct frontend
-            expect(result.frontend).toBe('eds-storefront');
-
-            // And: Should have correct backend
-            expect(result.backend).toBe('adobe-commerce-accs');
-
-            // And: Should NOT include commerce-mesh (EDS doesn't use it)
-            expect(result.dependencies).not.toContain('commerce-mesh');
-
-            // And: Should include demo-inspector
-            expect(result.dependencies).toContain('demo-inspector');
-        });
-
-        it('should initialize empty arrays for integrations and appBuilder', () => {
-            // Given: A stack
-            const stack = headlessStack;
-
-            // When: Deriving components from the stack
-            const result = deriveComponentsFromStack(stack);
-
-            // Then: Should have empty integrations array
-            expect(result.integrations).toEqual([]);
-
-            // And: Should have empty appBuilder array
-            expect(result.appBuilder).toEqual([]);
-        });
-
-        it('should handle stack with empty dependencies', () => {
-            // Given: A stack with no dependencies
-            const stackWithNoDeps: Stack = {
-                id: 'minimal',
-                name: 'Minimal',
-                description: 'Minimal stack',
-                frontend: 'minimal-frontend',
-                backend: 'minimal-backend',
-                dependencies: [],
-            };
-
-            // When: Deriving components from the stack
-            const result = deriveComponentsFromStack(stackWithNoDeps);
-
-            // Then: Should have empty dependencies array
-            expect(result.dependencies).toEqual([]);
-        });
-
-        it('should return a ComponentSelection structure', () => {
-            // Given: Any stack
-            const stack = headlessStack;
-
-            // When: Deriving components from the stack
-            const result = deriveComponentsFromStack(stack);
-
-            // Then: Result should have all ComponentSelection properties
-            expect(result).toHaveProperty('frontend');
-            expect(result).toHaveProperty('backend');
-            expect(result).toHaveProperty('dependencies');
-            expect(result).toHaveProperty('integrations');
-            expect(result).toHaveProperty('appBuilder');
-        });
-    });
+    // Note: deriveComponentsFromStack tests removed - function was never implemented
+    // The wizard now uses stack selection directly, not component derivation
 
     // Note: getContentSourceForBrand tests removed - function removed with brands.json
     // See: .rptc/plans/demo-packages-simplification/

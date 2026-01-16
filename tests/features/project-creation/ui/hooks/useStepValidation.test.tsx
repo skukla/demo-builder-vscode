@@ -96,9 +96,9 @@ describe('useStepValidation', () => {
     });
 
     describe('component-selection Step Validation', () => {
-        it('should return valid when components are selected', () => {
+        it('should return valid when stack is selected', () => {
             const state = createMockState({
-                components: { frontend: 'headless', backend: 'commerce-backend' }
+                selectedStack: 'headless',
             } as Partial<WizardState>);
 
             const { result } = renderHook(() =>
@@ -111,23 +111,8 @@ describe('useStepValidation', () => {
             });
         });
 
-        it('should return valid when only frontend is selected', () => {
-            const state = createMockState({
-                components: { frontend: 'headless' }
-            } as Partial<WizardState>);
-
-            const { result } = renderHook(() =>
-                useStepValidation('component-selection', state)
-            );
-
-            expect(result.current).toEqual({
-                isValid: true,
-                canProceed: true,
-            });
-        });
-
-        it('should return invalid when no components selected', () => {
-            const state = createMockState({ components: undefined });
+        it('should return invalid when no stack selected', () => {
+            const state = createMockState({ selectedStack: undefined });
 
             const { result } = renderHook(() =>
                 useStepValidation('component-selection', state)
@@ -139,10 +124,10 @@ describe('useStepValidation', () => {
             });
         });
 
-        it('should return invalid when components object is empty', () => {
+        it('should return invalid when selectedStack is empty string', () => {
             const state = createMockState({
-                components: {} as any
-            });
+                selectedStack: '',
+            } as Partial<WizardState>);
 
             const { result } = renderHook(() =>
                 useStepValidation('component-selection', state)
