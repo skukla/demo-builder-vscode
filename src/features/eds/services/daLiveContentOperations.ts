@@ -219,8 +219,8 @@ export class DaLiveContentOperations {
                 
                 // Ensure proper extension for HTML content
                 if (contentType.includes('text/html') && !daPath.endsWith('.html')) {
-                    // If path ends with '/', add 'index.html'
-                    if (daPath.endsWith('/')) {
+                    // Handle root path (empty string after normalization) and paths ending with '/'
+                    if (daPath === '' || daPath.endsWith('/')) {
                         daPath = `${daPath}index.html`;
                     } else {
                         daPath = `${daPath}.html`;
