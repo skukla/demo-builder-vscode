@@ -84,6 +84,12 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
             copiedFiles: ['file1', 'file2'],
             failedFiles: [],
         }),
+        copyMediaFromSource: jest.fn().mockResolvedValue({
+            success: true,
+            totalFiles: 3,
+            copiedFiles: ['/media/hero.png', '/media/logo.svg'],
+            failedFiles: [],
+        }),
     })),
 }));
 
@@ -490,6 +496,30 @@ describe('handleResetEds', () => {
             undefined,
             undefined,
             expect.any(Function),
+        );
+    });
+
+    it('should copy media files after content copy', async () => {
+        // Given: Valid EDS project with metadata
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // And: User confirms the reset
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
+
+        // When: handleResetEds is called
+        await handleResetEds(context);
+
+        // Then: Should call copyMediaFromSource with correct parameters
+        // Need to get the mock instance to verify the call
+        const { DaLiveContentOperations } = require('@/features/eds/services/daLiveContentOperations');
+        const mockInstance = DaLiveContentOperations.mock.results[0]?.value;
+
+        expect(mockInstance.copyMediaFromSource).toHaveBeenCalledWith(
+            { org: 'demo-system-stores', site: 'accs-citisignal' }, // contentSource
+            'test-org', // daLiveOrg
+            'test-site', // daLiveSite
+            expect.any(Function), // progressCallback
         );
     });
 });

@@ -701,12 +701,12 @@ export const handleResetEds: MessageHandler = async (context) => {
                 );
 
                 context.logger.info(`[Dashboard] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
-                progress.report({ message: `Step 1/4: Reset ${resetResult.fileCount} files` });
+                progress.report({ message: `Step 1/5: Reset ${resetResult.fileCount} files` });
 
                 // ============================================
                 // Step 2: Wait for code sync
                 // ============================================
-                progress.report({ message: 'Step 2/4: Waiting for code sync...' });
+                progress.report({ message: 'Step 2/5: Waiting for code sync...' });
 
                 const codeUrl = `https://admin.hlx.page/code/${repoOwner}/${repoName}/main/scripts/aem.js`;
                 let syncVerified = false;
@@ -714,7 +714,7 @@ export const handleResetEds: MessageHandler = async (context) => {
                 const pollInterval = 2000;
 
                 for (let attempt = 0; attempt < maxAttempts && !syncVerified; attempt++) {
-                    progress.report({ message: `Step 2/4: Verifying code sync (attempt ${attempt + 1}/${maxAttempts})` });
+                    progress.report({ message: `Step 2/5: Verifying code sync (attempt ${attempt + 1}/${maxAttempts})` });
                     try {
                         const response = await fetch(codeUrl, {
                             method: 'GET',
@@ -734,16 +734,16 @@ export const handleResetEds: MessageHandler = async (context) => {
 
                 if (!syncVerified) {
                     context.logger.warn('[Dashboard] Code sync verification timed out, continuing anyway');
-                    progress.report({ message: 'Step 2/4: Code sync timed out, continuing...' });
+                    progress.report({ message: 'Step 2/5: Code sync timed out, continuing...' });
                 } else {
                     context.logger.info('[Dashboard] Code sync verified');
-                    progress.report({ message: 'Step 2/4: Code sync verified' });
+                    progress.report({ message: 'Step 2/5: Code sync verified' });
                 }
 
                 // ============================================
                 // Step 3: Copy demo content to DA.live
                 // ============================================
-                progress.report({ message: 'Step 3/4: Copying demo content to DA.live...' });
+                progress.report({ message: 'Step 3/5: Copying demo content to DA.live...' });
                 context.logger.info(`[Dashboard] Copying content from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
 
                 // Build full content source with index URL from explicit config
@@ -756,7 +756,7 @@ export const handleResetEds: MessageHandler = async (context) => {
 
                 // Progress callback to show per-file progress
                 const onContentProgress = (info: { processed: number; total: number; currentFile?: string }) => {
-                    progress.report({ message: `Step 3/4: Copying content (${info.processed}/${info.total})` });
+                    progress.report({ message: `Step 3/5: Copying content (${info.processed}/${info.total})` });
                 };
 
                 const contentResult = await daLiveContentOps.copyContentFromSource(
@@ -770,13 +770,43 @@ export const handleResetEds: MessageHandler = async (context) => {
                     throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
                 }
 
-                progress.report({ message: `Step 3/4: Copied ${contentResult.totalFiles} content files` });
+                progress.report({ message: `Step 3/5: Copied ${contentResult.totalFiles} content files` });
                 context.logger.info(`[Dashboard] DA.live content populated: ${contentResult.totalFiles} files`);
 
                 // ============================================
-                // Step 4: Publish all content to CDN
+                // Step 4: Copy media files from source
                 // ============================================
-                progress.report({ message: 'Step 4/4: Publishing content to CDN...' });
+                progress.report({ message: 'Step 4/5: Copying media files...' });
+                context.logger.info(`[Dashboard] Copying media from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
+
+                // Progress callback for media copy
+                const onMediaProgress = (info: { processed: number; total: number; currentFile?: string }) => {
+                    progress.report({ message: `Step 4/5: Copying media (${info.processed}/${info.total})` });
+                };
+
+                const mediaResult = await daLiveContentOps.copyMediaFromSource(
+                    { org: contentSourceConfig.org, site: contentSourceConfig.site },
+                    daLiveOrg,
+                    daLiveSite,
+                    onMediaProgress,
+                );
+
+                // Log media copy result (don't fail on media copy errors - images are optional)
+                if (mediaResult.totalFiles > 0) {
+                    progress.report({ message: `Step 4/5: Copied ${mediaResult.copiedFiles.length} media files` });
+                    context.logger.info(`[Dashboard] DA.live media copied: ${mediaResult.copiedFiles.length} files`);
+                    if (mediaResult.failedFiles.length > 0) {
+                        context.logger.warn(`[Dashboard] Some media files failed to copy: ${mediaResult.failedFiles.length} files`);
+                    }
+                } else {
+                    progress.report({ message: 'Step 4/5: No media files to copy' });
+                    context.logger.info('[Dashboard] No media files found in source');
+                }
+
+                // ============================================
+                // Step 5: Publish all content to CDN
+                // ============================================
+                progress.report({ message: 'Step 5/5: Publishing content to CDN...' });
                 context.logger.info(`[Dashboard] Publishing content to CDN for ${repoOwner}/${repoName}`);
 
                 const helixService = new HelixService(authService, context.logger, githubTokenService);
@@ -789,11 +819,11 @@ export const handleResetEds: MessageHandler = async (context) => {
                     total?: number;
                     currentPath?: string;
                 }) => {
-                    // Format: "Step 4/4: Publishing (15/42 pages)"
+                    // Format: "Step 5/5: Publishing (15/42 pages)"
                     if (info.current !== undefined && info.total !== undefined) {
-                        progress.report({ message: `Step 4/4: Publishing to CDN (${info.current}/${info.total} pages)` });
+                        progress.report({ message: `Step 5/5: Publishing to CDN (${info.current}/${info.total} pages)` });
                     } else {
-                        progress.report({ message: `Step 4/4: ${info.message}` });
+                        progress.report({ message: `Step 5/5: ${info.message}` });
                     }
                 };
 

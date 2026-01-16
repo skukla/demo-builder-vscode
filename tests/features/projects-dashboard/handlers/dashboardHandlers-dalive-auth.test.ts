@@ -67,8 +67,13 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => ({
     })),
 }));
 
-// Mock ServiceLocator
+// Mock ServiceLocator (both import paths used in the code)
 jest.mock('@/core/di', () => ({
+    ServiceLocator: {
+        getAuthenticationService: jest.fn(),
+    },
+}));
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
     },
@@ -117,6 +122,12 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
             copiedFiles: ['file1', 'file2'],
             failedFiles: [],
         }),
+        copyMediaFromSource: jest.fn().mockResolvedValue({
+            success: true,
+            totalFiles: 3,
+            copiedFiles: ['/media/hero.png', '/media/logo.svg'],
+            failedFiles: [],
+        }),
     })),
 }));
 
@@ -150,6 +161,7 @@ global.fetch = jest.fn();
 import * as vscode from 'vscode';
 import { handleResetEds } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { ServiceLocator } from '@/core/di';
+import { ServiceLocator as ServiceLocatorDirect } from '@/core/di/serviceLocator';
 import { HelixService } from '@/features/eds/services/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 
@@ -254,8 +266,9 @@ describe('handleResetEds DA.live auth pre-check', () => {
             }),
         };
 
-        // Wire up ServiceLocator
+        // Wire up ServiceLocator (both import paths)
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthService);
+        (ServiceLocatorDirect.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthService);
 
         // Make HelixService constructor return our mock
         (HelixService as jest.Mock).mockImplementation(() => mockHelixService);
@@ -464,6 +477,44 @@ describe('handleResetEds DA.live auth pre-check', () => {
         // Then: Should log the expired token message
         expect(context.logger.info).toHaveBeenCalledWith(
             expect.stringContaining('DA.live token expired'),
+        );
+    });
+
+    // =========================================================================
+    // Test 8: Should copy media files after content copy
+    // =========================================================================
+    it('should copy media files after content copy', async () => {
+        // Given: Valid DA.live token
+        mockIsAuthenticated.mockResolvedValue(true);
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // Get the mocked class to access instances later
+        const { DaLiveContentOperations } = require('@/features/eds/services/daLiveContentOperations');
+
+        // Clear any previous instances
+        (DaLiveContentOperations as jest.Mock).mockClear();
+
+        // And: User confirms the reset (modal confirmation dialog)
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
+
+        // When: handleResetEds is called
+        const result = await handleResetEds(context, { projectPath: project.path });
+
+        // Then: Should have succeeded
+        expect(result.success).toBe(true);
+
+        // And: Should have created a DaLiveContentOperations instance
+        expect(DaLiveContentOperations).toHaveBeenCalled();
+
+        // And: Should call copyMediaFromSource with correct parameters on that instance
+        const instance = (DaLiveContentOperations as jest.Mock).mock.results[0]?.value;
+        expect(instance).toBeDefined();
+        expect(instance.copyMediaFromSource).toHaveBeenCalledWith(
+            { org: 'demo-system-stores', site: 'accs-citisignal' }, // contentSource
+            'test-org', // daLiveOrg
+            'test-site', // daLiveSite
+            expect.any(Function), // progressCallback
         );
     });
 });

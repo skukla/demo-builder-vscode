@@ -388,6 +388,122 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Copy media files from source site to destination site
+     * Recursively copies all files from /media/ folder
+     *
+     * @param source - Source site configuration (org, site)
+     * @param destOrg - Destination organization
+     * @param destSite - Destination site
+     * @param progressCallback - Optional progress callback
+     * @returns Copy result with success status and file lists
+     */
+    async copyMediaFromSource(
+        source: { org: string; site: string },
+        destOrg: string,
+        destSite: string,
+        progressCallback?: DaLiveProgressCallback,
+    ): Promise<DaLiveCopyResult> {
+        const token = await this.getImsToken();
+
+        // Collect all media files recursively
+        const mediaFiles = await this.collectMediaFiles(source.org, source.site, '/media');
+
+        // Handle case where /media/ folder doesn't exist (empty array returned)
+        if (mediaFiles.length === 0) {
+            this.logger.debug('[DA.live] No media files found in source /media/ folder');
+            return {
+                success: true,
+                copiedFiles: [],
+                failedFiles: [],
+                totalFiles: 0,
+            };
+        }
+
+        this.logger.info(`[DA.live] Found ${mediaFiles.length} media files to copy`);
+
+        const copiedFiles: string[] = [];
+        const failedFiles: { path: string; error: string }[] = [];
+        const totalFiles = mediaFiles.length;
+
+        // Copy each media file
+        for (let i = 0; i < mediaFiles.length; i++) {
+            const entry = mediaFiles[i];
+            const sourcePath = entry.path.replace(`/${source.org}/${source.site}`, '');
+
+            // Report progress
+            if (progressCallback) {
+                progressCallback({
+                    currentFile: sourcePath,
+                    processed: i,
+                    total: totalFiles,
+                    percentage: Math.round((i / totalFiles) * 100),
+                });
+            }
+
+            // Copy the file
+            const success = await this.copySingleFile(
+                token,
+                { org: source.org, site: source.site },
+                sourcePath,
+                { org: destOrg, site: destSite },
+                sourcePath,
+            );
+
+            if (success) {
+                copiedFiles.push(sourcePath);
+            } else {
+                failedFiles.push({ path: sourcePath, error: 'Copy failed' });
+            }
+        }
+
+        // Final progress update
+        if (progressCallback) {
+            progressCallback({
+                processed: totalFiles,
+                total: totalFiles,
+                percentage: 100,
+            });
+        }
+
+        return {
+            success: failedFiles.length === 0,
+            copiedFiles,
+            failedFiles,
+            totalFiles,
+        };
+    }
+
+    /**
+     * Recursively collect all media file entries from a folder
+     * @param org - Organization name
+     * @param site - Site name
+     * @param path - Starting path (e.g., '/media')
+     * @returns Array of file entries (folders are traversed, not returned)
+     */
+    private async collectMediaFiles(org: string, site: string, path: string): Promise<DaLiveEntry[]> {
+        const files: DaLiveEntry[] = [];
+
+        // listDirectory returns empty array for 404 (graceful handling)
+        const entries = await this.listDirectory(org, site, path);
+
+        for (const entry of entries) {
+            const isFolder = !entry.ext;
+
+            if (isFolder) {
+                // Recursively collect from subfolder
+                const relativePath = entry.path.replace(`/${org}/${site}`, '');
+                const subFiles = await this.collectMediaFiles(org, site, relativePath);
+                files.push(...subFiles);
+            } else {
+                // It's a file - add to collection
+                files.push(entry);
+            }
+        }
+
+        return files;
+    }
+
+    /**
      * Fetch with retry logic and timeout
      */
     private async fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
