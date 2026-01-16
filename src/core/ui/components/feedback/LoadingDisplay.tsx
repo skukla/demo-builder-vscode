@@ -80,11 +80,10 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
                 <Text UNSAFE_className={mainTextClass}>
                     {message}
                 </Text>
-                {subMessage && (
-                    <Text UNSAFE_className={subTextClass}>
-                        {subMessage}
-                    </Text>
-                )}
+                {/* Always render sub-message row to prevent layout shift */}
+                <Text UNSAFE_className={subTextClass} minHeight="size-200">
+                    {subMessage || '\u00A0'}
+                </Text>
                 {helperText && (
                     <Text UNSAFE_className={helperTextClass} marginTop="size-100">
                         {helperText}
