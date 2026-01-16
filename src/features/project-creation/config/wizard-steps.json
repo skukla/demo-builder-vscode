@@ -92,7 +92,7 @@
     {
       "id": "project-creation",
       "name": "Deploy Project",
-      "description": "Deploy your demo project and install components.",
+      "description": "Install components and deploy your demo project.",
       "enabled": true
     }
   ]
