@@ -308,6 +308,7 @@ export function isEdsProject(project: Project | undefined | null): boolean {
  * Get the live URL for an EDS project
  *
  * The live URL is stored in the COMPONENT_IDS.EDS_STOREFRONT component instance metadata.
+ * Falls back to generating from githubRepo if liveUrl is not stored (for existing projects).
  *
  * SOP §4: Extracted deep optional chain to named getter
  *
@@ -317,13 +318,26 @@ export function isEdsProject(project: Project | undefined | null): boolean {
 export function getEdsLiveUrl(project: Project | undefined | null): string | undefined {
     if (!isEdsProject(project)) return undefined;
     const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    return edsInstance?.metadata?.liveUrl as string | undefined;
+
+    // Return stored URL if available
+    const storedUrl = edsInstance?.metadata?.liveUrl as string | undefined;
+    if (storedUrl) return storedUrl;
+
+    // Fallback: Generate from githubRepo (format: "owner/repo")
+    const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
+    if (githubRepo && githubRepo.includes('/')) {
+        const [owner, repo] = githubRepo.split('/');
+        return `https://main--${repo}--${owner}.aem.live`;
+    }
+
+    return undefined;
 }
 
 /**
  * Get the preview URL for an EDS project
  *
  * The preview URL is stored in the COMPONENT_IDS.EDS_STOREFRONT component instance metadata.
+ * Falls back to generating from githubRepo if previewUrl is not stored (for existing projects).
  *
  * SOP §4: Extracted deep optional chain to named getter
  *
@@ -333,7 +347,19 @@ export function getEdsLiveUrl(project: Project | undefined | null): string | und
 export function getEdsPreviewUrl(project: Project | undefined | null): string | undefined {
     if (!isEdsProject(project)) return undefined;
     const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    return edsInstance?.metadata?.previewUrl as string | undefined;
+
+    // Return stored URL if available
+    const storedUrl = edsInstance?.metadata?.previewUrl as string | undefined;
+    if (storedUrl) return storedUrl;
+
+    // Fallback: Generate from githubRepo (format: "owner/repo")
+    const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
+    if (githubRepo && githubRepo.includes('/')) {
+        const [owner, repo] = githubRepo.split('/');
+        return `https://main--${repo}--${owner}.aem.page`;
+    }
+
+    return undefined;
 }
 
 /**

@@ -27,8 +27,6 @@ import {
     GitHubRepoPhase,
     HelixConfigPhase,
     ContentPhase,
-    generatePreviewUrl,
-    generateLiveUrl,
 } from '../services/edsSetupPhases';
 
 // ==========================================================
@@ -241,8 +239,7 @@ export async function handleStartStorefrontSetup(
                 daLiveSite: `https://da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
                 repoOwner: result.repoOwner,
                 repoName: result.repoName,
-                previewUrl: result.previewUrl,
-                liveUrl: result.liveUrl,
+                // Note: previewUrl/liveUrl not sent - derived from githubRepo by typeGuards
             });
             return { success: true, data: result };
         } else {
@@ -353,8 +350,7 @@ interface StorefrontSetupResult {
     repoUrl?: string;
     repoOwner?: string;
     repoName?: string;
-    previewUrl?: string;
-    liveUrl?: string;
+    // Note: previewUrl/liveUrl not included - derived from githubRepo by typeGuards
 }
 
 /**
@@ -805,8 +801,6 @@ async function executeStorefrontSetupPhases(
             repoUrl,
             repoOwner,
             repoName,
-            previewUrl: generatePreviewUrl(repoOwner, repoName),
-            liveUrl: generateLiveUrl(repoOwner, repoName),
         };
     } catch (error) {
         logger.error(`[Storefront Setup] Failed: ${(error as Error).message}`);

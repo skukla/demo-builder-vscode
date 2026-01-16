@@ -33,6 +33,18 @@ import type { MeshPhaseState } from '@/types/webview';
 // EDS config.json generation (called after mesh deployment)
 import { generateConfigJsonPostMesh } from '@/features/eds/services/edsSetupPhases';
 
+// Stacks configuration - source of truth for frontend/backend/dependencies
+import stacksConfig from '../config/stacks.json';
+import type { Stack } from '@/types/stacks';
+
+/**
+ * Look up a stack by ID from the stacks configuration
+ * This is the source of truth for frontend/backend/dependencies - no derivation needed
+ */
+function getStackById(stackId: string): Stack | undefined {
+    return (stacksConfig.stacks as Stack[]).find(s => s.id === stackId);
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -108,8 +120,7 @@ interface ProjectCreationConfig {
         // Preflight completion fields (set by StorefrontSetupStep)
         preflightComplete?: boolean;
         repoUrl?: string;
-        previewUrl?: string;
-        liveUrl?: string;
+        // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards
     };
 }
 
@@ -118,6 +129,9 @@ interface ProjectCreationConfig {
  */
 export async function executeProjectCreation(context: HandlerContext, config: Record<string, unknown>): Promise<void> {
     const typedConfig = config as unknown as ProjectCreationConfig;
+
+    // Debug: trace incoming config values for selectedPackage/selectedStack
+    context.logger.debug(`[Project Creation] Received config: selectedPackage=${typedConfig.selectedPackage}, selectedStack=${typedConfig.selectedStack}`);
 
     // Track current mesh phase for progress messages
     let currentMeshPhase: MeshPhaseState | undefined;
@@ -272,18 +286,31 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // After standard cloning, populate EDS-specific metadata from runtime config.
     // The component was cloned by cloneAllComponents, but needs additional metadata
     // that only exists at runtime (from preflight step).
+
+    // Debug: List all component instances after cloning
+    const instanceKeys = Object.keys(project.componentInstances || {});
+    context.logger.debug(`[Project Creation] Component instances after clone: [${instanceKeys.join(', ')}]`);
+    context.logger.debug(`[Project Creation] EDS metadata check: isEdsStack=${isEdsStack}, hasEdsConfig=${!!typedConfig.edsConfig}`);
+    if (typedConfig.edsConfig) {
+        context.logger.debug(`[Project Creation] EDS config values: repoUrl=${typedConfig.edsConfig.repoUrl}, githubOwner=${typedConfig.edsConfig.githubOwner}, repoName=${typedConfig.edsConfig.repoName}, daLiveOrg=${typedConfig.edsConfig.daLiveOrg}, daLiveSite=${typedConfig.edsConfig.daLiveSite}`);
+    }
     if (isEdsStack && typedConfig.edsConfig) {
         const { COMPONENT_IDS } = await import('@/core/constants');
+        context.logger.debug(`[Project Creation] Looking for EDS instance with key: ${COMPONENT_IDS.EDS_STOREFRONT}`);
         const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
         if (edsInstance) {
+            // Derive githubRepo from repoUrl or explicit owner/name
+            const repoInfo = typedConfig.edsConfig.repoUrl ? parseGitHubUrl(typedConfig.edsConfig.repoUrl) : null;
+            const githubRepo = repoInfo
+                ? `${repoInfo.owner}/${repoInfo.repo}`
+                : (typedConfig.edsConfig.githubOwner && typedConfig.edsConfig.repoName
+                    ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
+                    : undefined);
+
             edsInstance.metadata = {
                 ...edsInstance.metadata,
-                previewUrl: typedConfig.edsConfig.previewUrl,
-                liveUrl: typedConfig.edsConfig.liveUrl,
                 repoUrl: typedConfig.edsConfig.repoUrl,
-                githubRepo: typedConfig.edsConfig.githubOwner && typedConfig.edsConfig.repoName
-                    ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
-                    : undefined,
+                githubRepo, // Source data for URL derivation (typeGuards derive previewUrl/liveUrl from this)
                 daLiveOrg: typedConfig.edsConfig.daLiveOrg,
                 daLiveSite: typedConfig.edsConfig.daLiveSite,
                 templateOwner: typedConfig.edsConfig.templateOwner,
@@ -291,7 +318,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 contentSource: typedConfig.edsConfig.contentSource,
             };
             await context.stateManager.saveProject(project);
-            context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}`);
+            context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}, daLiveOrg=${edsInstance.metadata?.daLiveOrg}`);
+        } else {
+            context.logger.warn(`[Project Creation] EDS instance NOT found for key "${COMPONENT_IDS.EDS_STOREFRONT}" - metadata NOT populated`);
         }
     }
 
@@ -580,27 +609,41 @@ async function loadComponentDefinitions(
     context: HandlerContext,
     isEdsStack: boolean = false,
 ): Promise<Map<string, ComponentDefinitionEntry>> {
+    // Get components directly from stack configuration - this is the source of truth
+    const stack = typedConfig.selectedStack ? getStackById(typedConfig.selectedStack) : undefined;
+
+    if (!stack) {
+        context.logger.error(`[Project Creation] Stack "${typedConfig.selectedStack}" not found in stacks.json`);
+        throw new Error(`Stack "${typedConfig.selectedStack}" not found. Please check stacks.json configuration.`);
+    }
+
+    const frontend = stack.frontend;
+    const dependencies = stack.dependencies || [];
+    const appBuilder = typedConfig.selectedAddons?.filter(addon =>
+        // App builder addons are those not in optionalAddons (which are submodules/integrations)
+        !stack.optionalAddons?.some(opt => opt.id === addon)
+    ) || [];
+
+    context.logger.info(`[Project Creation] Stack "${stack.id}" components: frontend=${frontend}, dependencies=[${dependencies.join(', ')}]`);
+
     // Get frontend's submodule IDs to skip them in the dependency loop
     const frontendSubmoduleIds = new Set<string>();
-    if (typedConfig.components?.frontend) {
+    if (frontend) {
         const frontends = await registryManager.getFrontends();
-        const frontendDef = frontends.find((f: { id: string }) => f.id === typedConfig.components?.frontend);
+        const frontendDef = frontends.find((f: { id: string }) => f.id === frontend);
         if (frontendDef?.submodules) {
             Object.keys(frontendDef.submodules).forEach(id => frontendSubmoduleIds.add(id));
         }
     }
 
     // Filter out submodule IDs from dependencies
-    const filteredDependencies = (typedConfig.components?.dependencies || [])
-        .filter((id: string) => !frontendSubmoduleIds.has(id));
+    const filteredDependencies = dependencies.filter((id: string) => !frontendSubmoduleIds.has(id));
 
-    // Build component list - all frontends included (EDS uses edsConfig.repoUrl as source)
+    // Build component list from stack configuration
     const allComponents = [
-        ...(typedConfig.components?.frontend
-            ? [{ id: typedConfig.components.frontend, type: 'frontend' }]
-            : []),
+        ...(frontend ? [{ id: frontend, type: 'frontend' }] : []),
         ...filteredDependencies.map((id: string) => ({ id, type: 'dependency' })),
-        ...(typedConfig.components?.appBuilder || []).map((id: string) => ({ id, type: 'app-builder' })),
+        ...appBuilder.map((id: string) => ({ id, type: 'app-builder' })),
     ];
 
     const componentDefinitions: Map<string, ComponentDefinitionEntry> = new Map();
@@ -675,12 +718,12 @@ async function loadComponentDefinitions(
         }
 
         // Determine submodules for frontend components
-        // Submodules can be selected via dependencies (required) or addons (optional)
+        // Submodules come from stack dependencies and selected addons
         const installOptions: { selectedSubmodules?: string[]; skipDependencies?: boolean } = { skipDependencies: true };
-        if (comp.type === 'frontend' && componentDef.submodules) {
-            const dependencies = typedConfig.components?.dependencies || [];
-            const addons = typedConfig.selectedAddons || [];
-            const allSelected = [...dependencies, ...addons];
+        if (comp.type === 'frontend' && componentDef.submodules && stack) {
+            const stackDependencies = stack.dependencies || [];
+            const selectedAddons = typedConfig.selectedAddons || [];
+            const allSelected = [...stackDependencies, ...selectedAddons];
             const selectedSubmodules = allSelected.filter(
                 (depId: string) => componentDef?.submodules?.[depId] !== undefined,
             );

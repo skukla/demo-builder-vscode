@@ -406,10 +406,8 @@ export interface EDSConfig {
     preflightComplete?: boolean;
     /** GitHub repository URL from preflight */
     repoUrl?: string;
-    /** Preview URL (.aem.page) from preflight */
-    previewUrl?: string;
-    /** Live URL (.aem.live) from preflight */
-    liveUrl?: string;
+    // Note: previewUrl and liveUrl are NOT stored - they are derived from githubRepo
+    // by getEdsPreviewUrl() and getEdsLiveUrl() in typeGuards.ts
     /** Whether to skip content copy (e.g., when using existing content) */
     skipContent?: boolean;
 }

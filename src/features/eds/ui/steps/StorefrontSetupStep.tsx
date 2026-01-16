@@ -252,11 +252,6 @@ export function StorefrontSetupStep({
     const handleComplete = useCallback((data: {
         message: string;
         githubRepo?: string;
-        daLiveSite?: string;
-        repoOwner?: string;
-        repoName?: string;
-        previewUrl?: string;
-        liveUrl?: string;
     }) => {
         // Update local setup state
         setSetupState(prev => ({
@@ -272,14 +267,17 @@ export function StorefrontSetupStep({
             },
         }));
 
-        // Update wizard state with setup results
-        // Uses ref to get latest edsConfig value (avoids stale closure)
+        // Update wizard state with repo URL
+        // Note: previewUrl/liveUrl are derived from githubRepo by typeGuards, not stored
+        // eslint-disable-next-line no-console
+        console.log('[StorefrontSetupStep] handleComplete - updating state with repoUrl:', {
+            githubRepo: data.githubRepo,
+            currentEdsConfig: edsConfigRef.current,
+        });
         updateState({
             edsConfig: {
                 ...edsConfigRef.current,
                 repoUrl: data.githubRepo,
-                previewUrl: data.previewUrl,
-                liveUrl: data.liveUrl,
             },
         });
     }, [updateState]);
@@ -368,7 +366,6 @@ export function StorefrontSetupStep({
         const unsubComplete = vscode.onMessage<{
             message: string;
             githubRepo?: string;
-            daLiveSite?: string;
         }>('storefront-setup-complete', handleComplete);
 
         // Subscribe to error notifications

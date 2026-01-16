@@ -320,18 +320,17 @@ describe('Executor - EDS Standard Flow', () => {
 
             await executeProjectCreation(mockContext as HandlerContext, edsConfig);
 
-            // Find the project save that has metadata populated
+            // Find the project save that has metadata populated (githubRepo is the source for URL derivation)
             const projectWithMetadata = savedProjects.find(p =>
-                p.componentInstances?.['eds-storefront']?.metadata?.liveUrl
+                p.componentInstances?.['eds-storefront']?.metadata?.githubRepo
             );
 
             expect(projectWithMetadata).toBeDefined();
             const edsInstance = projectWithMetadata?.componentInstances?.['eds-storefront'];
+            // Note: previewUrl/liveUrl are NOT stored - they're derived from githubRepo by typeGuards
             expect(edsInstance?.metadata).toMatchObject({
-                previewUrl: 'https://main--test-repo--testuser.aem.page',
-                liveUrl: 'https://main--test-repo--testuser.aem.live',
                 repoUrl: 'https://github.com/testuser/test-repo',
-                githubRepo: 'testuser/test-repo',
+                githubRepo: 'testuser/test-repo', // Source data for URL derivation
                 daLiveOrg: 'test-org',
                 daLiveSite: 'test-site',
                 templateOwner: 'adobe',

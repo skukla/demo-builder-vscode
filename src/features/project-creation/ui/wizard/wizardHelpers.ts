@@ -3,6 +3,7 @@
  */
 
 import { hasMeshInDependencies } from '@/core/constants';
+import { getStackById } from '../hooks/useSelectedStack';
 import type { DemoPackage, GitSource, DaLiveContentSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
 import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
@@ -471,9 +472,9 @@ export function isStepSatisfied(stepId: WizardStep, state: WizardState): boolean
     }
 
     switch (stepId) {
-        // Component selection
+        // Component selection - check for stack selection (source of truth)
         case 'component-selection':
-            return Boolean(state.components?.frontend || state.components?.backend);
+            return Boolean(state.selectedStack);
 
         // Adobe I/O context (after auth is validated, these can be satisfied)
         case 'adobe-org':
@@ -672,6 +673,9 @@ export function buildProjectConfig(
         }
     }
 
+    // Get components directly from stack config - source of truth
+    const stack = wizardState.selectedStack ? getStackById(wizardState.selectedStack) : undefined;
+
     return {
         projectName: wizardState.projectName,
         adobe: {
@@ -683,13 +687,14 @@ export function buildProjectConfig(
             workspaceName: wizardState.adobeWorkspace?.name,
             workspaceTitle: wizardState.adobeWorkspace?.title,
         },
-        components: {
-            frontend: wizardState.components?.frontend,
-            backend: wizardState.components?.backend,
-            dependencies: wizardState.components?.dependencies || [],
-            integrations: wizardState.components?.integrations || [],
-            appBuilder: wizardState.components?.appBuilder || [],
-        },
+        // Read components from stack config - no derivation needed
+        components: stack ? {
+            frontend: stack.frontend,
+            backend: stack.backend,
+            dependencies: stack.dependencies || [],
+            integrations: [],
+            appBuilder: [],
+        } : undefined,
         apiMesh: wizardState.apiMesh,
         componentConfigs: wizardState.componentConfigs,
         // Track imported workspace for mesh reuse detection
@@ -707,6 +712,16 @@ export function buildProjectConfig(
         editMode: wizardState.editMode,
         editProjectPath: wizardState.editProjectPath,
         // EDS configuration (for Edge Delivery Services stacks)
+        // Debug: trace EDS config values at project creation time
+        // eslint-disable-next-line no-console
+        ...(console.log('[buildProjectConfig] Package/Stack/EDS config:', {
+            selectedPackage: wizardState.selectedPackage,
+            selectedStack: wizardState.selectedStack,
+            hasEdsConfig: !!wizardState.edsConfig,
+            repoUrl: wizardState.edsConfig?.repoUrl,
+            daLiveOrg: wizardState.edsConfig?.daLiveOrg,
+            daLiveSite: wizardState.edsConfig?.daLiveSite,
+        }), {}),
         edsConfig: wizardState.edsConfig ? {
             repoName: wizardState.edsConfig.repoName || '',
             repoMode: wizardState.edsConfig.repoMode || 'new',
@@ -731,8 +746,7 @@ export function buildProjectConfig(
             contentSource: wizardState.edsConfig.contentSource || contentSource,
             // Results from StorefrontSetupStep (wizard handles all remote setup)
             repoUrl: wizardState.edsConfig.repoUrl,
-            previewUrl: wizardState.edsConfig.previewUrl,
-            liveUrl: wizardState.edsConfig.liveUrl,
+            // Note: previewUrl/liveUrl not passed - derived from githubRepo by typeGuards
         } : undefined,
     };
 }
