@@ -803,8 +803,11 @@ export const handleResetEds: MessageHandler = async (context) => {
 
                 context.logger.info('[Dashboard] EDS project reset successfully');
 
-                // Show auto-dismissing success message (5 seconds)
-                vscode.window.setStatusBarMessage(`$(check) "${project.name}" reset successfully!`, 5000);
+                // Show auto-dismissing success notification (2 seconds)
+                void vscode.window.withProgress(
+                    { location: vscode.ProgressLocation.Notification, title: `✓ "${project.name}" reset successfully!` },
+                    async () => new Promise(resolve => setTimeout(resolve, 2000)),
+                );
 
                 return { success: true };
             } catch (error) {

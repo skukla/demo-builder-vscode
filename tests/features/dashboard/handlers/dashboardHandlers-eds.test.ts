@@ -360,8 +360,11 @@ describe('handleResetEds', () => {
         // Then: Should return success
         expect(result.success).toBe(true);
 
-        // And: Should show auto-dismissing success message in status bar
-        expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith('$(check) "test-eds-project" reset successfully!', 5000);
+        // And: Should show auto-dismissing success notification
+        expect(vscode.window.withProgress).toHaveBeenCalledWith(
+            { location: vscode.ProgressLocation.Notification, title: '✓ "test-eds-project" reset successfully!' },
+            expect.any(Function),
+        );
     });
 
     it('should return error when bulk reset fails', async () => {
