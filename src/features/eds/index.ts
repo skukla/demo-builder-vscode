@@ -22,7 +22,6 @@ export { DaLiveContentOperations, type DaLiveContentSource } from './services/da
 export { DaLiveAuthService } from './services/daLiveAuthService';
 
 // Project Orchestration Services
-export { EdsProjectService, type GitHubServicesForProject, type DaLiveServicesForProject } from './services/edsProjectService';
 export { ToolManager } from './services/toolManager';
 export { HelixService, type UnpublishResult } from './services/helixService';
 export { CleanupService } from './services/cleanupService';
