@@ -677,7 +677,7 @@
     },
 
     "selectionGroups": {
-        "frontends": ["headless"],
+        "frontends": ["headless", "eds-storefront"],
         "backends": ["adobe-commerce-paas", "adobe-commerce-accs"],
         "stacks": ["headless-paas"],
         "brands": ["citisignal", "buildright"],
