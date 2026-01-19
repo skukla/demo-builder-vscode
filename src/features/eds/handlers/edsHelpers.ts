@@ -240,11 +240,11 @@ export function validateDaLiveToken(token: string): DaLiveTokenValidationResult 
 }
 
 // ==========================================================
-// DA.live QuickPick Authentication
+// DA.live Multi-Step Input Authentication
 // ==========================================================
 
 /**
- * Result of QuickPick authentication flow
+ * Result of multi-step authentication flow
  */
 export interface QuickPickAuthResult {
     success: boolean;
@@ -254,19 +254,13 @@ export interface QuickPickAuthResult {
 }
 
 /**
- * QuickPick item with ID for selection handling
- */
-interface DaLiveQuickPickItem extends vscode.QuickPickItem {
-    id: 'open' | 'paste';
-}
-
-/**
- * Show QuickPick-based DA.live authentication flow
+ * Show multi-step input DA.live authentication flow
  *
- * Mirrors the wizard DA.live auth experience:
- * 1. User can open DA.live to get token via bookmarklet
- * 2. User can paste token from clipboard
- * 3. Token is validated and stored
+ * Mirrors the wizard DA.live auth form with two input fields:
+ * 1. Organization name input (with stored default)
+ * 2. Token input (password-masked)
+ * 3. Validates token format and verifies org access
+ * 4. Stores token and org on success
  *
  * Used by both project dashboard and projects list for EDS reset operations.
  *
@@ -276,106 +270,154 @@ interface DaLiveQuickPickItem extends vscode.QuickPickItem {
 export async function showDaLiveAuthQuickPick(
     context: HandlerContext,
 ): Promise<QuickPickAuthResult> {
-    return new Promise((resolve) => {
-        const quickPick = vscode.window.createQuickPick<DaLiveQuickPickItem>();
+    context.logger.info('[DA.live Auth] Starting multi-step authentication flow');
 
-        // Configure QuickPick - use wizard language
-        quickPick.title = 'Sign in to DA.live';
-        quickPick.placeholder = 'Select an action to authenticate with DA.live';
-        quickPick.items = [
-            {
-                id: 'open',
-                label: '$(link-external) Open DA.live',
-                description: 'Open DA.live in browser to copy token',
-            },
-            {
-                id: 'paste',
-                label: '$(clippy) Paste from Clipboard',
-                description: 'Paste token copied from DA.live',
-            },
-        ];
+    // Get stored org name as default value for returning users
+    const storedOrgName = context.context.globalState.get<string>('daLive.orgName') || '';
 
-        let isResolved = false;
-
-        // Handle item selection
-        quickPick.onDidAccept(async () => {
-            const selected = quickPick.selectedItems[0];
-            if (!selected) return;
-
-            if (selected.id === 'open') {
-                // Open DA.live in browser - don't close QuickPick
-                await vscode.env.openExternal(vscode.Uri.parse('https://da.live'));
-                // Keep QuickPick open so user can paste after copying token
-                return;
+    // Step 1: Ask for organization name
+    const orgName = await vscode.window.showInputBox({
+        title: 'Sign in to DA.live (Step 1/2)',
+        prompt: 'Enter your DA.live organization name',
+        placeHolder: 'e.g., my-organization',
+        value: storedOrgName,
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+            if (!value?.trim()) {
+                return 'Organization name is required';
             }
-
-            if (selected.id === 'paste') {
-                // Show busy state - wizard language
-                quickPick.busy = true;
-                quickPick.placeholder = 'Verifying...';
-
-                try {
-                    // Read token from clipboard
-                    const token = await vscode.env.clipboard.readText();
-
-                    if (!token || token.trim() === '') {
-                        quickPick.busy = false;
-                        quickPick.placeholder = 'Select an action to authenticate with DA.live';
-                        await vscode.window.showErrorMessage(
-                            'No token found on clipboard. Copy token from DA.live first.',
-                        );
-                        return;
-                    }
-
-                    // Validate token
-                    const validation = validateDaLiveToken(token.trim());
-
-                    if (!validation.valid) {
-                        quickPick.busy = false;
-                        quickPick.placeholder = 'Select an action to authenticate with DA.live';
-                        await vscode.window.showErrorMessage(validation.error!);
-                        // Keep QuickPick open for retry
-                        return;
-                    }
-
-                    // Store valid token
-                    const authService = getDaLiveAuthService(context);
-                    await authService.storeToken(token.trim());
-
-                    // Success - wizard language
-                    await vscode.window.showInformationMessage('Connected to DA.live');
-
-                    isResolved = true;
-                    quickPick.hide();
-                    quickPick.dispose();
-
-                    resolve({
-                        success: true,
-                        email: validation.email,
-                    });
-                } catch (error) {
-                    quickPick.busy = false;
-                    quickPick.placeholder = 'Select an action to authenticate with DA.live';
-                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                    context.logger.error(`[DA.live Auth] QuickPick error: ${errorMessage}`);
-                    await vscode.window.showErrorMessage(`Authentication failed: ${errorMessage}`);
-                }
+            // Basic validation: no spaces, reasonable characters
+            if (!/^[a-zA-Z0-9_-]+$/.test(value.trim())) {
+                return 'Organization name can only contain letters, numbers, hyphens, and underscores';
             }
-        });
-
-        // Handle dismissal (Escape key or click outside)
-        quickPick.onDidHide(() => {
-            if (!isResolved) {
-                context.logger.info('[DA.live Auth] User cancelled QuickPick authentication');
-                quickPick.dispose();
-                resolve({
-                    success: false,
-                    cancelled: true,
-                });
-            }
-        });
-
-        // Show the QuickPick
-        quickPick.show();
+            return null;
+        },
     });
+
+    // User cancelled
+    if (orgName === undefined) {
+        context.logger.info('[DA.live Auth] User cancelled at organization step');
+        return { success: false, cancelled: true };
+    }
+
+    // Step 2a: Show info message with option to open DA.live
+    const openDaLiveChoice = await vscode.window.showInformationMessage(
+        'You\'ll need a token from DA.live. Click "Open DA.live" to get one, or continue if you already have it.',
+        { modal: false },
+        'Open DA.live',
+        'I have my token',
+    );
+
+    // User dismissed the message (clicked X or pressed Escape)
+    if (openDaLiveChoice === undefined) {
+        context.logger.info('[DA.live Auth] User cancelled at token prompt');
+        return { success: false, cancelled: true };
+    }
+
+    // Open DA.live if requested
+    if (openDaLiveChoice === 'Open DA.live') {
+        context.logger.debug('[DA.live Auth] Opening DA.live in browser');
+        await vscode.env.openExternal(vscode.Uri.parse('https://da.live'));
+    }
+
+    // Step 2b: Ask for token (password-masked)
+    const token = await vscode.window.showInputBox({
+        title: 'Sign in to DA.live (Step 2/2)',
+        prompt: 'Paste your DA.live token (use the bookmarklet on da.live to copy it)',
+        placeHolder: 'Paste token here',
+        password: true,
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+            if (!value?.trim()) {
+                return 'Token is required';
+            }
+            if (!value.trim().startsWith('eyJ')) {
+                return 'Invalid token format. Token should start with "eyJ"';
+            }
+            return null;
+        },
+    });
+
+    // User cancelled
+    if (token === undefined) {
+        context.logger.info('[DA.live Auth] User cancelled at token step');
+        return { success: false, cancelled: true };
+    }
+
+    // Show progress while validating
+    return vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Verifying DA.live credentials...',
+            cancellable: false,
+        },
+        async () => {
+            try {
+                const trimmedToken = token.trim();
+                const trimmedOrg = orgName.trim();
+
+                // Validate token format
+                const validation = validateDaLiveToken(trimmedToken);
+                if (!validation.valid) {
+                    context.logger.warn(`[DA.live Auth] Token validation failed: ${validation.error}`);
+                    await vscode.window.showErrorMessage(validation.error!);
+                    return { success: false, error: validation.error };
+                }
+
+                // Verify org access with the token
+                context.logger.debug(`[DA.live Auth] Verifying org access: ${trimmedOrg}`);
+                const orgResponse = await fetch(`https://admin.da.live/list/${trimmedOrg}/`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${trimmedToken}`,
+                    },
+                });
+
+                if (orgResponse.status === 403) {
+                    const error = `Access denied to organization "${trimmedOrg}". Please check the name or your permissions.`;
+                    context.logger.warn(`[DA.live Auth] Org access denied: ${trimmedOrg}`);
+                    await vscode.window.showErrorMessage(error);
+                    return { success: false, error };
+                }
+
+                if (orgResponse.status === 404) {
+                    const error = `Organization "${trimmedOrg}" not found. Please check the name.`;
+                    context.logger.warn(`[DA.live Auth] Org not found: ${trimmedOrg}`);
+                    await vscode.window.showErrorMessage(error);
+                    return { success: false, error };
+                }
+
+                if (!orgResponse.ok) {
+                    const error = `Failed to verify organization: ${orgResponse.status}`;
+                    context.logger.error(`[DA.live Auth] Org verification failed: ${orgResponse.status}`);
+                    await vscode.window.showErrorMessage(error);
+                    return { success: false, error };
+                }
+
+                // Success! Store the token and org
+                const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
+                await context.context.globalState.update('daLive.accessToken', trimmedToken);
+                await context.context.globalState.update('daLive.tokenExpiration', tokenExpiry);
+                await context.context.globalState.update('daLive.orgName', trimmedOrg);
+                if (validation.email) {
+                    await context.context.globalState.update('daLive.userEmail', validation.email);
+                }
+                await context.context.globalState.update('daLive.setupComplete', true);
+
+                context.logger.info(`[DA.live Auth] Successfully authenticated to org: ${trimmedOrg}`);
+                // Don't await - let the progress dismiss immediately and show success message briefly
+                vscode.window.showInformationMessage(`Connected to DA.live (${trimmedOrg})`);
+
+                return {
+                    success: true,
+                    email: validation.email,
+                };
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                context.logger.error(`[DA.live Auth] Authentication error: ${errorMessage}`);
+                await vscode.window.showErrorMessage(`Authentication failed: ${errorMessage}`);
+                return { success: false, error: errorMessage };
+            }
+        },
+    );
 }

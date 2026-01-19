@@ -1,12 +1,12 @@
 /**
- * EDS Helpers - DA.live QuickPick Authentication Tests
+ * EDS Helpers - DA.live Multi-Step Input Authentication Tests
  *
  * Tests for showDaLiveAuthQuickPick function in edsHelpers:
- * - QuickPick initialization with correct title and items
- * - "Open DA.live" opens browser without closing QuickPick
- * - "Paste from Clipboard" validates and stores token
- * - Error handling for invalid/expired tokens
- * - User cancellation handling
+ * - Step 1: Organization input with validation
+ * - Step 2: Token input (password-masked) with validation
+ * - Token format validation and org access verification
+ * - Token and org storage on success
+ * - User cancellation at each step
  */
 
 import type { HandlerContext } from '@/types/handlers';
@@ -18,38 +18,54 @@ jest.setTimeout(5000);
 // Mock Setup - All mocks must be defined before imports
 // =============================================================================
 
-// Mock QuickPick instance for controlling test scenarios
-const mockQuickPick = {
-    title: '',
-    items: [] as Array<{ label: string; id: string; description?: string }>,
-    placeholder: '',
-    busy: false,
-    show: jest.fn(),
-    hide: jest.fn(),
-    dispose: jest.fn(),
-    onDidAccept: jest.fn(),
-    onDidHide: jest.fn(),
-    selectedItems: [] as Array<{ label: string; id: string }>,
-};
+// Track showInputBox calls (Step 1: org, Step 2b: token)
+let showInputBoxCalls: Array<{
+    title?: string;
+    prompt?: string;
+    placeHolder?: string;
+    value?: string;
+    password?: boolean;
+}> = [];
+let showInputBoxResponses: Array<string | undefined> = [];
+let showInputBoxIndex = 0;
+
+// Track showInformationMessage calls (Step 2a: open DA.live prompt)
+let showInfoMessageResponse: string | undefined;
+
+// Mock fetch for org verification
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
 
 // Mock vscode
-jest.mock('vscode', () => ({
-    window: {
-        createQuickPick: jest.fn(() => mockQuickPick),
-        showInformationMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        showWarningMessage: jest.fn(),
-    },
-    env: {
-        clipboard: {
-            readText: jest.fn(),
+jest.mock('vscode', () => {
+    return {
+        window: {
+            showInputBox: jest.fn().mockImplementation((options) => {
+                showInputBoxCalls.push(options);
+                const response = showInputBoxResponses[showInputBoxIndex];
+                showInputBoxIndex++;
+                return Promise.resolve(response);
+            }),
+            showInformationMessage: jest.fn().mockImplementation(() => {
+                return Promise.resolve(showInfoMessageResponse);
+            }),
+            showErrorMessage: jest.fn(),
+            showWarningMessage: jest.fn(),
+            withProgress: jest.fn().mockImplementation((_options, callback) => {
+                return callback();
+            }),
         },
-        openExternal: jest.fn(),
-    },
-    Uri: {
-        parse: jest.fn((url: string) => ({ toString: () => url })),
-    },
-}), { virtual: true });
+        env: {
+            openExternal: jest.fn(),
+        },
+        Uri: {
+            parse: jest.fn((url: string) => ({ toString: () => url })),
+        },
+        ProgressLocation: {
+            Notification: 15,
+        },
+    };
+}, { virtual: true });
 
 // Mock core logging (prevents "Logger not initialized" error)
 jest.mock('@/core/logging', () => ({
@@ -127,23 +143,19 @@ function createMockContext(): HandlerContext {
 }
 
 /**
- * Reset the mock QuickPick to initial state
+ * Reset input box tracking state
  */
-function resetMockQuickPick(): void {
-    mockQuickPick.title = '';
-    mockQuickPick.items = [];
-    mockQuickPick.placeholder = '';
-    mockQuickPick.busy = false;
-    mockQuickPick.show.mockClear();
-    mockQuickPick.hide.mockClear();
-    mockQuickPick.dispose.mockClear();
-    mockQuickPick.onDidAccept.mockClear();
-    mockQuickPick.onDidHide.mockClear();
-    mockQuickPick.selectedItems = [];
+function resetInputBoxState(): void {
+    showInputBoxCalls = [];
+    showInputBoxResponses = [];
+    showInputBoxIndex = 0;
+    showInfoMessageResponse = undefined;
+    (vscode.window.showInputBox as jest.Mock).mockClear();
+    (vscode.window.showInformationMessage as jest.Mock).mockClear();
 }
 
 // =============================================================================
-// Tests - DA.live QuickPick Authentication Flow
+// Tests - DA.live Multi-Step Input Authentication Flow
 // =============================================================================
 
 describe('showDaLiveAuthQuickPick', () => {
@@ -151,270 +163,256 @@ describe('showDaLiveAuthQuickPick', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        resetMockQuickPick();
+        resetInputBoxState();
         mockContext = createMockContext();
         mockStoreToken.mockClear().mockResolvedValue(undefined);
+        mockFetch.mockReset();
     });
 
     // =========================================================================
-    // QuickPick Initialization Tests
+    // Input Flow Tests
     // =========================================================================
-    describe('QuickPick initialization', () => {
-        it('should show QuickPick with title "Sign in to DA.live"', async () => {
-            // Given: A valid context
-            // Setup: Simulate user dismissal to complete the promise
-            mockQuickPick.onDidHide.mockImplementation((cb: () => void) => {
-                setTimeout(cb, 0);
-            });
-
-            const promise = showDaLiveAuthQuickPick(mockContext);
-            await promise;
-
-            // Then: QuickPick should be created with correct title
-            expect(vscode.window.createQuickPick).toHaveBeenCalled();
-            expect(mockQuickPick.title).toBe('Sign in to DA.live');
-        });
-
-        it('should include "Open DA.live" and "Paste from Clipboard" items', async () => {
-            // Given: A valid context
-            mockQuickPick.onDidHide.mockImplementation((cb: () => void) => {
-                setTimeout(cb, 0);
-            });
+    describe('Multi-step input flow', () => {
+        it('should show organization input as Step 1/2', async () => {
+            // Given: User will cancel at org step
+            showInputBoxResponses = [undefined]; // Cancel at org step
 
             // When: showDaLiveAuthQuickPick is called
-            const promise = showDaLiveAuthQuickPick(mockContext);
-            await promise;
+            await showDaLiveAuthQuickPick(mockContext);
 
-            // Then: QuickPick should have both items with correct labels
-            expect(mockQuickPick.items).toEqual(
-                expect.arrayContaining([
-                    expect.objectContaining({ label: '$(link-external) Open DA.live' }),
-                    expect.objectContaining({ label: '$(clippy) Paste from Clipboard' }),
-                ]),
-            );
+            // Then: First input should be for organization
+            expect(showInputBoxCalls[0]).toMatchObject({
+                title: 'Sign in to DA.live (Step 1/2)',
+                prompt: 'Enter your DA.live organization name',
+            });
         });
 
-        it('should call show() to display QuickPick', async () => {
-            // Given: A valid context
-            mockQuickPick.onDidHide.mockImplementation((cb: () => void) => {
-                setTimeout(cb, 0);
-            });
+        it('should show info message with Open DA.live option after org input', async () => {
+            // Given: User provides org, then dismisses info message
+            showInputBoxResponses = ['my-org'];
+            showInfoMessageResponse = undefined; // User dismisses
 
             // When: showDaLiveAuthQuickPick is called
-            const promise = showDaLiveAuthQuickPick(mockContext);
-            await promise;
+            await showDaLiveAuthQuickPick(mockContext);
 
-            // Then: show() should be called
-            expect(mockQuickPick.show).toHaveBeenCalled();
-        });
-    });
-
-    // =========================================================================
-    // "Open DA.live" Selection Tests
-    // =========================================================================
-    describe('"Open DA.live" selection', () => {
-        it('should open https://da.live in external browser', async () => {
-            // Given: User selects "Open DA.live"
-            let acceptCallback: () => void;
-            mockQuickPick.onDidAccept.mockImplementation((cb: () => void) => {
-                acceptCallback = cb;
-            });
-            mockQuickPick.onDidHide.mockImplementation(() => {
-                // Don't call hide immediately - let accept complete first
-            });
-
-            const promise = showDaLiveAuthQuickPick(mockContext);
-
-            // When: User selects "Open DA.live"
-            mockQuickPick.selectedItems = [{ label: '$(link-external) Open DA.live', id: 'open' }];
-            acceptCallback!();
-
-            // Let async operations complete
-            await new Promise(resolve => setTimeout(resolve, 10));
-
-            // Then: Should open https://da.live in external browser
-            expect(vscode.env.openExternal).toHaveBeenCalledWith(
-                expect.objectContaining({ toString: expect.any(Function) }),
-            );
-        });
-
-        it('should NOT close QuickPick after opening DA.live (allow paste afterwards)', async () => {
-            // Given: User selects "Open DA.live"
-            let acceptCallback: () => void;
-            mockQuickPick.onDidAccept.mockImplementation((cb: () => void) => {
-                acceptCallback = cb;
-            });
-
-            showDaLiveAuthQuickPick(mockContext);
-
-            // When: User selects "Open DA.live"
-            mockQuickPick.selectedItems = [{ label: '$(link-external) Open DA.live', id: 'open' }];
-            acceptCallback!();
-
-            await new Promise(resolve => setTimeout(resolve, 10));
-
-            // Then: QuickPick should remain open
-            expect(mockQuickPick.hide).not.toHaveBeenCalled();
-            expect(mockQuickPick.dispose).not.toHaveBeenCalled();
-        });
-    });
-
-    // =========================================================================
-    // "Paste from Clipboard" Selection Tests
-    // =========================================================================
-    describe('"Paste from Clipboard" selection', () => {
-        it('should read token from clipboard', async () => {
-            // Given: Valid token on clipboard
-            (vscode.env.clipboard.readText as jest.Mock).mockResolvedValue('eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiOTk5OTk5OTk5OTk5OSIsImV4cGlyZXNfaW4iOiIzNjAwMDAwIiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIn0.sig');
-
-            let acceptCallback: () => void;
-            let hideCallback: () => void;
-            mockQuickPick.onDidAccept.mockImplementation((cb: () => void) => {
-                acceptCallback = cb;
-            });
-            mockQuickPick.onDidHide.mockImplementation((cb: () => void) => {
-                hideCallback = cb;
-            });
-
-            const promise = showDaLiveAuthQuickPick(mockContext);
-
-            // When: User selects "Paste from Clipboard"
-            mockQuickPick.selectedItems = [{ label: '$(clippy) Paste from Clipboard', id: 'paste' }];
-            acceptCallback!();
-
-            await new Promise(resolve => setTimeout(resolve, 50));
-            hideCallback!();
-
-            await promise;
-
-            // Then: Clipboard should be read
-            expect(vscode.env.clipboard.readText).toHaveBeenCalled();
-        });
-
-        it('should show "Verifying..." busy state during validation', async () => {
-            // Given: Valid token on clipboard
-            (vscode.env.clipboard.readText as jest.Mock).mockResolvedValue('eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiOTk5OTk5OTk5OTk5OSIsImV4cGlyZXNfaW4iOiIzNjAwMDAwIiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIn0.sig');
-
-            let acceptCallback: () => void;
-            mockQuickPick.onDidAccept.mockImplementation((cb: () => void) => {
-                acceptCallback = cb;
-            });
-
-            showDaLiveAuthQuickPick(mockContext);
-
-            // When: User selects "Paste from Clipboard"
-            mockQuickPick.selectedItems = [{ label: '$(clippy) Paste from Clipboard', id: 'paste' }];
-
-            // Check busy state is set during validation
-            acceptCallback!();
-
-            // Then: Busy should be set to true during validation
-            expect(mockQuickPick.busy).toBe(true);
-        });
-
-        it('should store token and show "Connected to DA.live" on valid token', async () => {
-            // Given: Valid token on clipboard
-            const validToken = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiOTk5OTk5OTk5OTk5OSIsImV4cGlyZXNfaW4iOiIzNjAwMDAwIiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIn0.sig';
-            (vscode.env.clipboard.readText as jest.Mock).mockResolvedValue(validToken);
-
-            let acceptCallback: () => void;
-            let hideCallback: () => void;
-            mockQuickPick.onDidAccept.mockImplementation((cb: () => void) => {
-                acceptCallback = cb;
-            });
-            mockQuickPick.onDidHide.mockImplementation((cb: () => void) => {
-                hideCallback = cb;
-            });
-
-            const promise = showDaLiveAuthQuickPick(mockContext);
-
-            // When: User selects "Paste from Clipboard"
-            mockQuickPick.selectedItems = [{ label: '$(clippy) Paste from Clipboard', id: 'paste' }];
-            acceptCallback!();
-
-            await new Promise(resolve => setTimeout(resolve, 50));
-            hideCallback!();
-
-            const result = await promise;
-
-            // Then: Token should be stored and success message shown
-            expect(mockStoreToken).toHaveBeenCalledWith(validToken);
+            // Then: Info message should be shown with DA.live options
             expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-                'Connected to DA.live',
-            );
-            expect(result.success).toBe(true);
-        });
-
-        it('should show error message on invalid token format', async () => {
-            // Given: Invalid token on clipboard (not JWT format)
-            (vscode.env.clipboard.readText as jest.Mock).mockResolvedValue('not-a-jwt');
-
-            let acceptCallback: () => void;
-            mockQuickPick.onDidAccept.mockImplementation((cb: () => void) => {
-                acceptCallback = cb;
-            });
-
-            showDaLiveAuthQuickPick(mockContext);
-
-            // When: User selects "Paste from Clipboard"
-            mockQuickPick.selectedItems = [{ label: '$(clippy) Paste from Clipboard', id: 'paste' }];
-            acceptCallback!();
-
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            // Then: Error message should be shown
-            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-                'Invalid token format. Please copy the complete token.',
-            );
-            // QuickPick should remain open for retry
-            expect(mockQuickPick.dispose).not.toHaveBeenCalled();
-        });
-
-        it('should show error message on expired token', async () => {
-            // Given: Expired token on clipboard (created_at in past, short expires_in)
-            const expiredToken = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiMTAwMDAwMDAwMDAwMCIsImV4cGlyZXNfaW4iOiIxMDAwIiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIn0.sig';
-            (vscode.env.clipboard.readText as jest.Mock).mockResolvedValue(expiredToken);
-
-            let acceptCallback: () => void;
-            mockQuickPick.onDidAccept.mockImplementation((cb: () => void) => {
-                acceptCallback = cb;
-            });
-
-            showDaLiveAuthQuickPick(mockContext);
-
-            // When: User selects "Paste from Clipboard"
-            mockQuickPick.selectedItems = [{ label: '$(clippy) Paste from Clipboard', id: 'paste' }];
-            acceptCallback!();
-
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            // Then: Error message should be shown
-            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-                'Token has expired. Please get a fresh token from DA.live.',
+                expect.stringContaining('token from DA.live'),
+                expect.anything(),
+                'Open DA.live',
+                'I have my token',
             );
         });
 
-        it('should handle empty clipboard gracefully', async () => {
-            // Given: Empty clipboard
-            (vscode.env.clipboard.readText as jest.Mock).mockResolvedValue('');
+        it('should show token input as Step 2/2 with password masking', async () => {
+            // Given: User provides org, clicks "I have my token", then cancels at token step
+            showInputBoxResponses = ['my-org', undefined];
+            showInfoMessageResponse = 'I have my token';
 
-            let acceptCallback: () => void;
-            mockQuickPick.onDidAccept.mockImplementation((cb: () => void) => {
-                acceptCallback = cb;
+            // When: showDaLiveAuthQuickPick is called
+            await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Token input should have Step 2/2 title and password masking
+            expect(showInputBoxCalls[1]).toMatchObject({
+                title: 'Sign in to DA.live (Step 2/2)',
+                password: true,
             });
+        });
 
-            showDaLiveAuthQuickPick(mockContext);
+        it('should pre-fill organization with stored value for returning users', async () => {
+            // Given: User has a stored org name
+            (mockContext.context.globalState.get as jest.Mock).mockReturnValue('stored-org');
+            showInputBoxResponses = [undefined]; // Cancel to see the value
 
-            // When: User selects "Paste from Clipboard"
-            mockQuickPick.selectedItems = [{ label: '$(clippy) Paste from Clipboard', id: 'paste' }];
-            acceptCallback!();
+            // When: showDaLiveAuthQuickPick is called
+            await showDaLiveAuthQuickPick(mockContext);
 
-            await new Promise(resolve => setTimeout(resolve, 50));
+            // Then: Org input should have stored value pre-filled
+            expect(showInputBoxCalls[0].value).toBe('stored-org');
+        });
 
-            // Then: Error message should mention clipboard
-            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-                expect.stringContaining('clipboard'),
+        it('should open DA.live when user clicks Open DA.live button', async () => {
+            // Given: User provides org and clicks "Open DA.live", then cancels at token step
+            showInputBoxResponses = ['my-org', undefined];
+            showInfoMessageResponse = 'Open DA.live';
+
+            // When: showDaLiveAuthQuickPick is called
+            await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Should open DA.live in browser
+            expect(vscode.env.openExternal).toHaveBeenCalled();
+        });
+    });
+
+    // =========================================================================
+    // Successful Authentication Tests
+    // =========================================================================
+    describe('successful authentication', () => {
+        const validToken = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiOTk5OTk5OTk5OTk5OSIsImV4cGlyZXNfaW4iOiIzNjAwMDAwIiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIn0.sig';
+
+        it('should verify org access with token', async () => {
+            // Given: Valid inputs and successful org verification
+            showInputBoxResponses = ['my-org', validToken];
+            showInfoMessageResponse = 'I have my token';
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // When: showDaLiveAuthQuickPick is called
+            await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Should call DA.live API to verify org access
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://admin.da.live/list/my-org/',
+                expect.objectContaining({
+                    method: 'GET',
+                    headers: { Authorization: `Bearer ${validToken}` },
+                }),
             );
+        });
+
+        it('should store token, org, and email on success', async () => {
+            // Given: Valid inputs and successful org verification
+            showInputBoxResponses = ['my-org', validToken];
+            showInfoMessageResponse = 'I have my token';
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // When: showDaLiveAuthQuickPick is called
+            await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Should store all credentials
+            expect(mockContext.context.globalState.update).toHaveBeenCalledWith(
+                'daLive.accessToken',
+                validToken,
+            );
+            expect(mockContext.context.globalState.update).toHaveBeenCalledWith(
+                'daLive.orgName',
+                'my-org',
+            );
+            expect(mockContext.context.globalState.update).toHaveBeenCalledWith(
+                'daLive.userEmail',
+                'user@example.com',
+            );
+        });
+
+        it('should return success with email on valid auth', async () => {
+            // Given: Valid inputs and successful org verification
+            showInputBoxResponses = ['my-org', validToken];
+            showInfoMessageResponse = 'I have my token';
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // When: showDaLiveAuthQuickPick is called
+            const result = await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Should return success
+            expect(result).toEqual({
+                success: true,
+                email: 'user@example.com',
+            });
+        });
+
+        it('should show success message with org name', async () => {
+            // Given: Valid inputs and successful org verification
+            showInputBoxResponses = ['my-org', validToken];
+            showInfoMessageResponse = 'I have my token';
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // When: showDaLiveAuthQuickPick is called
+            await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Should show success message (second call, first is the DA.live prompt)
+            expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
+                'Connected to DA.live (my-org)',
+            );
+        });
+    });
+
+    // =========================================================================
+    // Org Verification Error Tests
+    // =========================================================================
+    describe('org verification errors', () => {
+        const validToken = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiOTk5OTk5OTk5OTk5OSIsImV4cGlyZXNfaW4iOiIzNjAwMDAwIn0.sig';
+
+        it('should show error when access denied to org (403)', async () => {
+            // Given: Valid token but access denied
+            showInputBoxResponses = ['forbidden-org', validToken];
+            showInfoMessageResponse = 'I have my token';
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403 });
+
+            // When: showDaLiveAuthQuickPick is called
+            const result = await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Should show access denied error
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('Access denied'),
+            );
+            expect(result.success).toBe(false);
+        });
+
+        it('should show error when org not found (404)', async () => {
+            // Given: Valid token but org doesn't exist
+            showInputBoxResponses = ['nonexistent-org', validToken];
+            showInfoMessageResponse = 'I have my token';
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+            // When: showDaLiveAuthQuickPick is called
+            const result = await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Should show not found error
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('not found'),
+            );
+            expect(result.success).toBe(false);
+        });
+    });
+
+    // =========================================================================
+    // Token Validation Error Tests
+    // =========================================================================
+    describe('token validation errors', () => {
+        it('should show error on invalid token format', async () => {
+            // Given: Invalid token format
+            showInputBoxResponses = ['my-org', 'not-a-jwt-token'];
+            showInfoMessageResponse = 'I have my token';
+
+            // When: showDaLiveAuthQuickPick is called
+            const result = await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Should show format error
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('Invalid token format'),
+            );
+            expect(result.success).toBe(false);
+        });
+
+        it('should show error on expired token', async () => {
+            // Given: Expired token
+            const expiredToken = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiMTAwMDAwMDAwMDAwMCIsImV4cGlyZXNfaW4iOiIxMDAwIn0.sig';
+            showInputBoxResponses = ['my-org', expiredToken];
+            showInfoMessageResponse = 'I have my token';
+
+            // When: showDaLiveAuthQuickPick is called
+            const result = await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Should show expired error
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('expired'),
+            );
+            expect(result.success).toBe(false);
+        });
+
+        it('should show error on wrong client_id', async () => {
+            // Given: Token from wrong service
+            const wrongClientToken = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJ3cm9uZy1jbGllbnQiLCJjcmVhdGVkX2F0IjoiOTk5OTk5OTk5OTk5OSIsImV4cGlyZXNfaW4iOiIzNjAwMDAwIn0.sig';
+            showInputBoxResponses = ['my-org', wrongClientToken];
+            showInfoMessageResponse = 'I have my token';
+
+            // When: showDaLiveAuthQuickPick is called
+            const result = await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Should show wrong service error
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('not from DA.live'),
+            );
+            expect(result.success).toBe(false);
         });
     });
 
@@ -422,57 +420,65 @@ describe('showDaLiveAuthQuickPick', () => {
     // User Cancellation Tests
     // =========================================================================
     describe('user cancellation', () => {
-        it('should return cancelled: true when user dismisses QuickPick', async () => {
-            // Given: QuickPick is shown
-            let hideCallback: () => void;
-            mockQuickPick.onDidHide.mockImplementation((cb: () => void) => {
-                hideCallback = cb;
-            });
+        it('should return cancelled when user cancels at org step', async () => {
+            // Given: User cancels org input
+            showInputBoxResponses = [undefined];
 
-            const promise = showDaLiveAuthQuickPick(mockContext);
-
-            // When: User presses Escape
-            hideCallback!();
-
-            const result = await promise;
+            // When: showDaLiveAuthQuickPick is called
+            const result = await showDaLiveAuthQuickPick(mockContext);
 
             // Then: Should return cancelled
             expect(result).toEqual({ success: false, cancelled: true });
         });
 
-        it('should dispose QuickPick on cancellation', async () => {
-            // Given: QuickPick is shown
-            let hideCallback: () => void;
-            mockQuickPick.onDidHide.mockImplementation((cb: () => void) => {
-                hideCallback = cb;
-            });
+        it('should return cancelled when user dismisses info message', async () => {
+            // Given: User provides org but dismisses info message
+            showInputBoxResponses = ['my-org'];
+            showInfoMessageResponse = undefined; // User dismissed
 
-            const promise = showDaLiveAuthQuickPick(mockContext);
+            // When: showDaLiveAuthQuickPick is called
+            const result = await showDaLiveAuthQuickPick(mockContext);
 
-            // When: User presses Escape
-            hideCallback!();
-            await promise;
-
-            // Then: QuickPick should be disposed
-            expect(mockQuickPick.dispose).toHaveBeenCalled();
+            // Then: Should return cancelled
+            expect(result).toEqual({ success: false, cancelled: true });
         });
 
-        it('should log cancellation event', async () => {
-            // Given: QuickPick is shown
-            let hideCallback: () => void;
-            mockQuickPick.onDidHide.mockImplementation((cb: () => void) => {
-                hideCallback = cb;
-            });
+        it('should return cancelled when user cancels at token step', async () => {
+            // Given: User provides org, clicks continue, but cancels token input
+            showInputBoxResponses = ['my-org', undefined];
+            showInfoMessageResponse = 'I have my token';
 
-            const promise = showDaLiveAuthQuickPick(mockContext);
+            // When: showDaLiveAuthQuickPick is called
+            const result = await showDaLiveAuthQuickPick(mockContext);
 
-            // When: User presses Escape
-            hideCallback!();
-            await promise;
+            // Then: Should return cancelled
+            expect(result).toEqual({ success: false, cancelled: true });
+        });
 
-            // Then: Cancellation should be logged
+        it('should log cancellation at org step', async () => {
+            // Given: User cancels at org step
+            showInputBoxResponses = [undefined];
+
+            // When: showDaLiveAuthQuickPick is called
+            await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Should log cancellation
             expect(mockContext.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('cancelled'),
+                expect.stringContaining('cancelled at organization step'),
+            );
+        });
+
+        it('should log cancellation at token step', async () => {
+            // Given: User cancels at token step
+            showInputBoxResponses = ['my-org', undefined];
+            showInfoMessageResponse = 'I have my token';
+
+            // When: showDaLiveAuthQuickPick is called
+            await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Should log cancellation
+            expect(mockContext.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('cancelled at token step'),
             );
         });
     });
