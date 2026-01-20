@@ -10,6 +10,8 @@
  * Extracted from DaLiveService for better modularity and testability.
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import {
@@ -39,6 +41,8 @@ export interface DaLiveContentSource {
     site: string;
     /** URL to fetch content index (full-index.json) */
     indexUrl: string;
+    /** Optional URL to fetch media index (media-index.json) */
+    mediaIndexUrl?: string;
 }
 
 /**
@@ -184,9 +188,71 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Transform plain HTML content for DA.live source upload
+     *
+     * Converts relative media URLs to absolute URLs pointing to the source CDN.
+     * This follows BYOM (Bring Your Own Markup) best practices:
+     * - Image URLs must be accessible by Edge Delivery Services
+     * - During preview, Admin API downloads images from these URLs
+     * - Images are then stored in Media Bus with hash-based URLs
+     *
+     * Also preserves empty structural divs that are important for EDS blocks:
+     * - Header block expects 3 sections (brand, sections, tools)
+     * - Empty divs are placeholders for dynamic content (search, cart, wishlist)
+     * - DA.live/Helix may strip empty elements, so we add placeholders
+     *
+     * @param html - Plain HTML content from aem.live .plain.html endpoint
+     * @param sourceBaseUrl - Base URL for the source CDN (e.g., "https://main--site--org.aem.live")
+     * @returns Document HTML formatted for DA.live with absolute image URLs
+     */
+    private transformHtmlForDaLive(html: string, sourceBaseUrl: string): string {
+        let transformed = html;
+
+        // Convert relative media URLs to absolute URLs pointing to source CDN
+        // Pattern: ./media_<hash>.<ext> or /media_<hash>.<ext>
+        // The Admin API will download these during preview and store in Media Bus
+
+        // Handle ./media_xxx URLs (most common in .plain.html)
+        transformed = transformed.replace(
+            /(['"])\.\/media_([a-f0-9]+\.[a-z0-9]+)(\?[^'"]*)?(['"])/gi,
+            (_match, openQuote, mediaPath, queryParams, closeQuote) => {
+                // Preserve query params as they may contain optimization hints
+                const fullPath = queryParams ? `media_${mediaPath}${queryParams}` : `media_${mediaPath}`;
+                return `${openQuote}${sourceBaseUrl}/${fullPath}${closeQuote}`;
+            },
+        );
+
+        // Handle /media_xxx URLs (absolute paths without domain)
+        transformed = transformed.replace(
+            /(['"])\/media_([a-f0-9]+\.[a-z0-9]+)(\?[^'"]*)?(['"])/gi,
+            (_match, openQuote, mediaPath, queryParams, closeQuote) => {
+                const fullPath = queryParams ? `media_${mediaPath}${queryParams}` : `media_${mediaPath}`;
+                return `${openQuote}${sourceBaseUrl}/${fullPath}${closeQuote}`;
+            },
+        );
+
+        // Preserve empty structural divs by adding a zero-width space
+        // DA.live/Helix strips completely empty elements AND HTML comments during processing
+        // These empty divs are important for EDS blocks (e.g., header expects 3 sections)
+        // Pattern: <div></div> or <div> </div> (with only whitespace)
+        // Using &#8203; (zero-width space) which is invisible but prevents stripping
+        transformed = transformed.replace(
+            /<div>(\s*)<\/div>/gi,
+            '<div>\u200B</div>',
+        );
+
+        // Wrap in expected document structure
+        // DA.live expects: <body><header></header><main>{content}</main><footer></footer></body>
+        return `<body><header></header><main>${transformed}</main><footer></footer></body>`;
+    }
+
+    /**
      * Copy a single file with retry logic
      * Uses the /source endpoint (like storefront-tools) which creates content directly,
      * rather than /copy which requires the destination site to already exist.
+     *
+     * For HTML content, fetches .plain.html to get just the main content without
+     * the full page wrapper, then transforms and wraps it in document structure.
      */
     private async copySingleFile(
         token: string,
@@ -195,9 +261,29 @@ export class DaLiveContentOperations {
         destination: { org: string; site: string },
         destPath: string,
     ): Promise<boolean> {
-        // Fetch content from source
-        const sourceUrl = `https://main--${source.site}--${source.org}.aem.live${sourcePath}`;
-        
+        const sourceBaseUrl = `https://main--${source.site}--${source.org}.aem.live`;
+
+        // For HTML content, fetch .plain.html which returns just the main content
+        // This is closer to what DA.live expects than the full rendered page
+        const isHtmlPath = !sourcePath.match(/\.[a-z0-9]+$/i) || sourcePath.endsWith('.html');
+
+        // Build the correct .plain.html URL
+        // - /nav → /nav.plain.html
+        // - / → /index.plain.html
+        // - /citisignal-fr/ → /citisignal-fr/index.plain.html
+        let sourceUrl: string;
+        if (isHtmlPath) {
+            if (sourcePath === '/' || sourcePath.endsWith('/')) {
+                // Directory paths need index.plain.html
+                sourceUrl = `${sourceBaseUrl}${sourcePath}index.plain.html`;
+            } else {
+                // Regular paths just append .plain.html
+                sourceUrl = `${sourceBaseUrl}${sourcePath}.plain.html`;
+            }
+        } else {
+            sourceUrl = `${sourceBaseUrl}${sourcePath}`;
+        }
+
         for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try {
                 // Step 1: Fetch content from source
@@ -211,14 +297,14 @@ export class DaLiveContentOperations {
                 }
 
                 const contentType = sourceResponse.headers.get('content-type') || '';
-                const content = await sourceResponse.blob();
 
                 // Step 2: Determine file extension and DA.live path
                 // DA.live uses /source endpoint and requires proper file extensions
                 let daPath = normalizePath(destPath);
-                
+
                 // Ensure proper extension for HTML content
-                if (contentType.includes('text/html') && !daPath.endsWith('.html')) {
+                const isHtml = contentType.includes('text/html') || isHtmlPath;
+                if (isHtml && !daPath.endsWith('.html')) {
                     // Handle root path (empty string after normalization) and paths ending with '/'
                     if (daPath === '' || daPath.endsWith('/')) {
                         daPath = `${daPath}index.html`;
@@ -227,11 +313,27 @@ export class DaLiveContentOperations {
                     }
                 }
 
-                // Step 3: POST content directly to /source endpoint (creates the content)
+                // Step 3: Process content - transform HTML for DA.live compatibility
+                // Transform HTML for DA.live using "Anchor Escape Pattern":
+                // - Fetch .plain.html (just main content, no page wrapper)
+                // - Convert <picture>/<img> to anchors with "//External Image//" marker
+                // - Anchor href points to source CDN (media already exists there)
+                // - Wrap in expected document structure
+                // Client-side JS in the project will convert anchors back to images
+                let contentBlob: Blob;
+                if (isHtml) {
+                    const htmlText = await sourceResponse.text();
+                    const transformedHtml = this.transformHtmlForDaLive(htmlText, sourceBaseUrl);
+                    contentBlob = new Blob([transformedHtml], { type: 'text/html' });
+                } else {
+                    contentBlob = await sourceResponse.blob();
+                }
+
+                // Step 4: POST content directly to /source endpoint (creates the content)
                 const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${daPath}`;
 
                 const formData = new FormData();
-                formData.append('data', content);
+                formData.append('data', contentBlob);
 
                 const response = await fetch(destUrl, {
                     method: 'POST',
@@ -255,7 +357,7 @@ export class DaLiveContentOperations {
                 } catch {
                     // Ignore if response body can't be read
                 }
-                
+
                 this.logger.warn(`[DA.live] Copy failed for ${destPath}: ${response.status}${errorDetail}`);
                 return false;
             } catch (error) {
@@ -309,6 +411,30 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Get content paths from a content source index
+     *
+     * Fetches the content index (e.g., full-index.json) from the source site
+     * and returns the list of content paths. This is useful for operations
+     * that need to know what content exists before copying it.
+     *
+     * @param source - Source content configuration (org, site, indexUrl)
+     * @returns Array of content paths from the index
+     */
+    async getContentPathsFromIndex(source: DaLiveContentSource): Promise<string[]> {
+        const indexResponse = await fetch(source.indexUrl);
+        if (!indexResponse.ok) {
+            throw new DaLiveError(
+                `Failed to fetch content index from ${source.org}/${source.site}`,
+                'INDEX_FETCH_ERROR',
+                indexResponse.status,
+            );
+        }
+
+        const indexData = await indexResponse.json();
+        return indexData.data?.map((item: { path: string }) => item.path) || [];
+    }
+
+    /**
      * Copy content from source site to destination site
      * @param source - Source content configuration (org, site, indexUrl)
      * @param destOrg - Destination organization
@@ -324,18 +450,8 @@ export class DaLiveContentOperations {
     ): Promise<DaLiveCopyResult> {
         const token = await this.getImsToken();
 
-        // Fetch content index from source
-        const indexResponse = await fetch(source.indexUrl);
-        if (!indexResponse.ok) {
-            throw new DaLiveError(
-                `Failed to fetch content index from ${source.org}/${source.site}`,
-                'INDEX_FETCH_ERROR',
-                indexResponse.status,
-            );
-        }
-
-        const indexData = await indexResponse.json();
-        const contentPaths: string[] = indexData.data?.map((item: { path: string }) => item.path) || [];
+        // Get content paths from index
+        const contentPaths = await this.getContentPathsFromIndex(source);
 
         const copiedFiles: string[] = [];
         const failedFiles: { path: string; error: string }[] = [];
@@ -394,23 +510,53 @@ export class DaLiveContentOperations {
      * @param source - Source site configuration (org, site)
      * @param destOrg - Destination organization
      * @param destSite - Destination site
+     * @param contentPaths - Content paths that were copied (to scan for media references)
      * @param progressCallback - Optional progress callback
      * @returns Copy result with success status and file lists
      */
-    async copyMediaFromSource(
+    async copyMediaFromContent(
         source: { org: string; site: string },
         destOrg: string,
         destSite: string,
+        contentPaths: string[],
         progressCallback?: DaLiveProgressCallback,
     ): Promise<DaLiveCopyResult> {
         const token = await this.getImsToken();
+        const baseUrl = `https://main--${source.site}--${source.org}.aem.live`;
 
-        // Collect all media files recursively
-        const mediaFiles = await this.collectMediaFiles(source.org, source.site, '/media');
+        // Collect unique media references from all content pages
+        const mediaSet = new Set<string>();
 
-        // Handle case where /media/ folder doesn't exist (empty array returned)
-        if (mediaFiles.length === 0) {
-            this.logger.debug('[DA.live] No media files found in source /media/ folder');
+        this.logger.info(`[DA.live] Scanning ${contentPaths.length} content pages for media references`);
+
+        for (const contentPath of contentPaths) {
+            try {
+                const response = await fetch(`${baseUrl}${contentPath}`, {
+                    signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+                });
+
+                if (response.ok) {
+                    const html = await response.text();
+                    // Match Helix media pattern: media_<hash>.<ext>
+                    // These appear as ./media_xxx or /media_xxx in the HTML
+                    const mediaMatches = html.match(/(?:\.\/|\/)(media_[a-f0-9]+\.[a-z0-9]+)/gi);
+                    if (mediaMatches) {
+                        for (const match of mediaMatches) {
+                            // Normalize to /media_xxx format
+                            const mediaPath = '/' + match.replace(/^\.?\//, '');
+                            mediaSet.add(mediaPath);
+                        }
+                    }
+                }
+            } catch {
+                // Skip errors, continue scanning other pages
+            }
+        }
+
+        const mediaPaths = Array.from(mediaSet);
+
+        if (mediaPaths.length === 0) {
+            this.logger.debug('[DA.live] No media references found in content');
             return {
                 success: true,
                 copiedFiles: [],
@@ -419,21 +565,20 @@ export class DaLiveContentOperations {
             };
         }
 
-        this.logger.info(`[DA.live] Found ${mediaFiles.length} media files to copy`);
+        this.logger.info(`[DA.live] Found ${mediaPaths.length} unique media files to copy`);
 
         const copiedFiles: string[] = [];
         const failedFiles: { path: string; error: string }[] = [];
-        const totalFiles = mediaFiles.length;
+        const totalFiles = mediaPaths.length;
 
         // Copy each media file
-        for (let i = 0; i < mediaFiles.length; i++) {
-            const entry = mediaFiles[i];
-            const sourcePath = entry.path.replace(`/${source.org}/${source.site}`, '');
+        for (let i = 0; i < mediaPaths.length; i++) {
+            const mediaPath = mediaPaths[i];
 
             // Report progress
             if (progressCallback) {
                 progressCallback({
-                    currentFile: sourcePath,
+                    currentFile: mediaPath,
                     processed: i,
                     total: totalFiles,
                     percentage: Math.round((i / totalFiles) * 100),
@@ -444,15 +589,15 @@ export class DaLiveContentOperations {
             const success = await this.copySingleFile(
                 token,
                 { org: source.org, site: source.site },
-                sourcePath,
+                mediaPath,
                 { org: destOrg, site: destSite },
-                sourcePath,
+                mediaPath,
             );
 
             if (success) {
-                copiedFiles.push(sourcePath);
+                copiedFiles.push(mediaPath);
             } else {
-                failedFiles.push({ path: sourcePath, error: 'Copy failed' });
+                failedFiles.push({ path: mediaPath, error: 'Copy failed' });
             }
         }
 
@@ -501,6 +646,214 @@ export class DaLiveContentOperations {
         }
 
         return files;
+    }
+
+    /**
+     * Copy media files from local project directory to DA.live
+     * Reads from local filesystem instead of calling DA.live API on source org.
+     *
+     * @param localProjectPath - Local project directory path
+     * @param destOrg - Destination DA.live organization
+     * @param destSite - Destination DA.live site
+     * @param progressCallback - Optional progress callback
+     * @returns Copy result with success status and file lists
+     */
+    async copyMediaFromLocalPath(
+        localProjectPath: string,
+        destOrg: string,
+        destSite: string,
+        progressCallback?: DaLiveProgressCallback,
+    ): Promise<DaLiveCopyResult> {
+        const token = await this.getImsToken();
+        const mediaDir = path.join(localProjectPath, 'media');
+
+        // Check if media directory exists
+        if (!fs.existsSync(mediaDir)) {
+            this.logger.debug('[DA.live] No local media directory found, skipping media copy');
+            return {
+                success: true,
+                copiedFiles: [],
+                failedFiles: [],
+                totalFiles: 0,
+            };
+        }
+
+        // Collect all media files recursively from local filesystem
+        const mediaFiles = this.collectLocalMediaFiles(mediaDir, mediaDir);
+
+        if (mediaFiles.length === 0) {
+            this.logger.debug('[DA.live] No media files found in local /media/ folder');
+            return {
+                success: true,
+                copiedFiles: [],
+                failedFiles: [],
+                totalFiles: 0,
+            };
+        }
+
+        this.logger.info(`[DA.live] Found ${mediaFiles.length} local media files to upload`);
+
+        const copiedFiles: string[] = [];
+        const failedFiles: { path: string; error: string }[] = [];
+        const totalFiles = mediaFiles.length;
+
+        // Upload each media file
+        for (let i = 0; i < mediaFiles.length; i++) {
+            const { localPath, relativePath } = mediaFiles[i];
+
+            // Report progress
+            if (progressCallback) {
+                progressCallback({
+                    currentFile: relativePath,
+                    processed: i,
+                    total: totalFiles,
+                    percentage: Math.round((i / totalFiles) * 100),
+                });
+            }
+
+            // Upload the file
+            const success = await this.uploadLocalFile(
+                token,
+                localPath,
+                destOrg,
+                destSite,
+                `/media${relativePath}`,
+            );
+
+            if (success) {
+                copiedFiles.push(`/media${relativePath}`);
+            } else {
+                failedFiles.push({ path: `/media${relativePath}`, error: 'Upload failed' });
+            }
+        }
+
+        // Final progress update
+        if (progressCallback) {
+            progressCallback({
+                processed: totalFiles,
+                total: totalFiles,
+                percentage: 100,
+            });
+        }
+
+        return {
+            success: failedFiles.length === 0,
+            copiedFiles,
+            failedFiles,
+            totalFiles,
+        };
+    }
+
+    /**
+     * Recursively collect all files from a local directory
+     * @param baseDir - Base directory for relative path calculation
+     * @param currentDir - Current directory being scanned
+     * @returns Array of { localPath, relativePath } for each file
+     */
+    private collectLocalMediaFiles(
+        baseDir: string,
+        currentDir: string,
+    ): Array<{ localPath: string; relativePath: string }> {
+        const files: Array<{ localPath: string; relativePath: string }> = [];
+
+        if (!fs.existsSync(currentDir)) {
+            return files;
+        }
+
+        const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+
+        for (const entry of entries) {
+            const fullPath = path.join(currentDir, entry.name);
+
+            if (entry.isDirectory()) {
+                // Recursively collect from subdirectory
+                files.push(...this.collectLocalMediaFiles(baseDir, fullPath));
+            } else if (entry.isFile()) {
+                // Calculate relative path from media directory
+                const relativePath = fullPath.substring(baseDir.length).replace(/\\/g, '/');
+                files.push({ localPath: fullPath, relativePath });
+            }
+        }
+
+        return files;
+    }
+
+    /**
+     * Upload a local file to DA.live
+     */
+    private async uploadLocalFile(
+        token: string,
+        localPath: string,
+        destOrg: string,
+        destSite: string,
+        destPath: string,
+    ): Promise<boolean> {
+        for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+            try {
+                // Read local file
+                const content = fs.readFileSync(localPath);
+                const ext = path.extname(localPath).toLowerCase();
+
+                // Determine content type based on extension
+                const contentType = this.getContentType(ext);
+
+                // Normalize destination path
+                const daPath = normalizePath(destPath);
+                const destUrl = `${DA_LIVE_BASE_URL}/source/${destOrg}/${destSite}/${daPath}`;
+
+                const formData = new FormData();
+                formData.append('data', new Blob([content], { type: contentType }));
+
+                const response = await fetch(destUrl, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: formData,
+                    signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+                });
+
+                if (response.ok) return true;
+
+                if (RETRYABLE_STATUS_CODES.includes(response.status) && attempt < MAX_RETRY_ATTEMPTS) {
+                    await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
+                    continue;
+                }
+
+                this.logger.warn(`[DA.live] Upload failed for ${destPath}: ${response.status}`);
+                return false;
+            } catch (error) {
+                if (attempt < MAX_RETRY_ATTEMPTS) {
+                    await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
+                    continue;
+                }
+                this.logger.error(`[DA.live] Upload error for ${destPath}`, error as Error);
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get content type based on file extension
+     */
+    private getContentType(ext: string): string {
+        const contentTypes: Record<string, string> = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.webp': 'image/webp',
+            '.svg': 'image/svg+xml',
+            '.ico': 'image/x-icon',
+            '.mp4': 'video/mp4',
+            '.webm': 'video/webm',
+            '.pdf': 'application/pdf',
+            '.json': 'application/json',
+            '.xml': 'application/xml',
+            '.txt': 'text/plain',
+            '.css': 'text/css',
+            '.js': 'application/javascript',
+        };
+        return contentTypes[ext] || 'application/octet-stream';
     }
 
     /**
