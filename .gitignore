@@ -63,3 +63,4 @@ jscpd-output/
 .claude/settings.local.json  # Local overrides
 .claude/.env*           # Secrets
 .jest-cache/
+.playwright-mcp/
