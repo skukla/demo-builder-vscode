@@ -71,11 +71,17 @@ interface MockGitHubTokenService {
     validateToken: jest.Mock;
 }
 
+// Mock DA.live token provider type
+interface MockDaLiveTokenProvider {
+    getAccessToken: jest.Mock<Promise<string | null>>;
+}
+
 describe('HelixService', () => {
     let service: HelixServiceType;
     let mockAuthService: jest.Mocked<Partial<AuthenticationService>>;
     let mockTokenManager: jest.Mocked<Partial<TokenManager>>;
     let mockGitHubTokenService: MockGitHubTokenService;
+    let mockDaLiveTokenProvider: MockDaLiveTokenProvider;
     let mockFetch: jest.Mock;
 
     // Store original fetch
@@ -91,7 +97,7 @@ describe('HelixService', () => {
             isTokenValid: jest.fn(),
         };
 
-        // Mock AuthenticationService (used for DA.live operations)
+        // Mock AuthenticationService (used for DA.live operations - legacy fallback)
         mockAuthService = {
             getTokenManager: jest.fn().mockReturnValue(mockTokenManager),
             isAuthenticated: jest.fn(),
@@ -103,17 +109,28 @@ describe('HelixService', () => {
             validateToken: jest.fn().mockResolvedValue({ valid: true }),
         };
 
+        // Mock DA.live token provider (preferred for x-content-source-authorization)
+        mockDaLiveTokenProvider = {
+            getAccessToken: jest.fn().mockResolvedValue('valid-dalive-ims-token'),
+        };
+
         // Mock global fetch
         mockFetch = jest.fn();
         global.fetch = mockFetch;
 
-        // Setup valid IMS token by default (for DA.live operations)
-        mockTokenManager.getAccessToken.mockResolvedValue('valid-ims-token');
+        // Setup valid IMS token by default (for legacy fallback)
+        mockTokenManager.getAccessToken.mockResolvedValue('valid-adobe-ims-token');
 
         // Dynamically import to get fresh instance after mocks are set up
         const module = await import('@/features/eds/services/helixService');
         // Pass mockGitHubTokenService as third parameter for Helix Admin API auth
-        service = new module.HelixService(mockAuthService as unknown as AuthenticationService, undefined, mockGitHubTokenService);
+        // Pass mockDaLiveTokenProvider as fourth parameter for DA.live content source auth
+        service = new module.HelixService(
+            mockAuthService as unknown as AuthenticationService,
+            undefined,
+            mockGitHubTokenService,
+            mockDaLiveTokenProvider,
+        );
     });
 
     afterEach(() => {
@@ -772,6 +789,112 @@ describe('HelixService', () => {
             // Then: Should throw access denied error
             await expect(service.unpublishFromLive('testuser', 'my-site')).rejects.toThrow(
                 /access denied|permission|forbidden/i,
+            );
+        });
+    });
+
+    // ==========================================================
+    // DA.live Token Provider Tests
+    // ==========================================================
+    describe('DA.live Token Provider', () => {
+        it('should use DA.live token provider for x-content-source-authorization when provided', async () => {
+            // Given: Valid authentication
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // When: Previewing a page (which uses x-content-source-authorization)
+            await service.previewPage('testuser', 'my-site', '/products');
+
+            // Then: Should use DA.live token (not Adobe IMS token)
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        'x-content-source-authorization': 'Bearer valid-dalive-ims-token',
+                    }),
+                }),
+            );
+
+            // Then: Should NOT use Adobe IMS token from auth service
+            expect(mockFetch).not.toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        'x-content-source-authorization': 'Bearer valid-adobe-ims-token',
+                    }),
+                }),
+            );
+        });
+
+        it('should throw error when DA.live token provider not configured', async () => {
+            // Given: Service created without DA.live token provider
+            const module = await import('@/features/eds/services/helixService');
+            const serviceWithoutDaLiveProvider = new module.HelixService(
+                mockAuthService as unknown as AuthenticationService,
+                undefined,
+                mockGitHubTokenService,
+                // No DA.live token provider - this should cause operations to fail
+            );
+
+            // When: Attempting to preview a page
+            // Then: Should throw clear error about missing DA.live token provider
+            await expect(serviceWithoutDaLiveProvider.previewPage('testuser', 'my-site', '/products')).rejects.toThrow(
+                /DA\.live token provider not configured/i,
+            );
+        });
+
+        it('should throw error when DA.live token provider returns null', async () => {
+            // Given: DA.live token provider returns null (expired session)
+            mockDaLiveTokenProvider.getAccessToken.mockResolvedValue(null);
+
+            // When: Attempting to preview a page
+            // Then: Should throw with DA.live session expired error
+            await expect(service.previewPage('testuser', 'my-site', '/')).rejects.toThrow(
+                /DA\.live session expired/i,
+            );
+        });
+
+        it('should use DA.live token for bulk preview operations', async () => {
+            // Given: Valid authentication
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+            });
+
+            // When: Previewing all content (bulk operation)
+            await service.previewAllContent('testuser', 'my-site');
+
+            // Then: Should use DA.live token
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        'x-content-source-authorization': 'Bearer valid-dalive-ims-token',
+                    }),
+                }),
+            );
+        });
+
+        it('should use DA.live token for bulk publish operations', async () => {
+            // Given: Valid authentication
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+            });
+
+            // When: Publishing all content (bulk operation)
+            await service.publishAllContent('testuser', 'my-site');
+
+            // Then: Should use DA.live token
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        'x-content-source-authorization': 'Bearer valid-dalive-ims-token',
+                    }),
+                }),
             );
         });
     });

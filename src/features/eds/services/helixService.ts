@@ -92,6 +92,13 @@ interface JobStatusResponse {
 type BulkProgressCallback = (processed: number, total: number) => void;
 
 /**
+ * Token provider interface for DA.live authentication
+ */
+export interface DaLiveTokenProvider {
+    getAccessToken: () => Promise<string | null>;
+}
+
+/**
  * Helix Service for admin operations
  */
 export class HelixService {
@@ -99,29 +106,50 @@ export class HelixService {
     private authService: AuthenticationService;
     private githubTokenService?: GitHubTokenService;
     private daLiveOps: DaLiveContentOperations;
+    private daLiveTokenProvider?: DaLiveTokenProvider;
 
     /**
      * Create a HelixService
-     * @param authService - Authentication service for IMS token access (used for DA.live)
+     * @param authService - Authentication service (kept for backward compatibility, not used for DA.live)
      * @param logger - Optional logger for dependency injection (defaults to getLogger())
      * @param githubTokenService - Optional GitHub token service for Helix Admin API authentication
+     * @param daLiveTokenProvider - DA.live token provider for content source authorization.
+     *        REQUIRED for operations that use x-content-source-authorization header.
+     *        IMPORTANT: This MUST be a DA.live IMS token, NOT the Adobe Console IMS token.
+     *        These are separate authentication systems. Using the wrong token causes
+     *        silent failures where images become `about:error`.
      */
-    constructor(authService: AuthenticationService, logger?: Logger, githubTokenService?: GitHubTokenService) {
+    constructor(
+        authService: AuthenticationService,
+        logger?: Logger,
+        githubTokenService?: GitHubTokenService,
+        daLiveTokenProvider?: DaLiveTokenProvider,
+    ) {
         if (!authService) {
             throw new Error('AuthenticationService is required');
         }
         this.authService = authService;
         this.logger = logger ?? getLogger();
         this.githubTokenService = githubTokenService;
+        this.daLiveTokenProvider = daLiveTokenProvider;
 
-        // Wrap the token manager as a TokenProvider for DaLiveContentOperations
-        const tokenProvider = {
-            getAccessToken: async () => {
-                const token = await authService.getTokenManager().getAccessToken();
-                return token ?? null;  // Convert undefined to null for TokenProvider interface
-            },
-        };
-        this.daLiveOps = new DaLiveContentOperations(tokenProvider, this.logger);
+        // DaLiveContentOperations needs DA.live token - will throw if not provided when used
+        if (daLiveTokenProvider) {
+            this.daLiveOps = new DaLiveContentOperations(daLiveTokenProvider, this.logger);
+        } else {
+            // Create a placeholder that will throw clear error if used without token provider
+            this.daLiveOps = new DaLiveContentOperations(
+                {
+                    getAccessToken: async () => {
+                        throw new Error(
+                            'DA.live token provider not configured. ' +
+                            'HelixService requires a DA.live token provider for content operations.',
+                        );
+                    },
+                },
+                this.logger,
+            );
+        }
     }
 
     // ==========================================================
@@ -129,17 +157,29 @@ export class HelixService {
     // ==========================================================
 
     /**
-     * Get IMS token from AuthenticationService (used for DA.live operations)
-     * @throws Error if not authenticated
+     * Get DA.live IMS token for content source authorization
+     *
+     * IMPORTANT: DA.live uses a SEPARATE IMS authentication from Adobe Console.
+     * The x-content-source-authorization header MUST use the DA.live IMS token,
+     * NOT the Adobe Console IMS token - they are different authentication systems.
+     *
+     * Using the wrong token (Adobe IMS instead of DA.live IMS) causes the Admin API
+     * to fail silently when downloading images, resulting in `about:error` in img src.
+     *
+     * @throws Error if DA.live token provider not configured or token expired
      */
-    private async getImsToken(): Promise<string> {
-        const tokenManager = this.authService.getTokenManager();
-        const token = await tokenManager.getAccessToken();
-
-        if (!token) {
-            throw new Error('Not authenticated. Please log in to Adobe.');
+    private async getDaLiveToken(): Promise<string> {
+        if (!this.daLiveTokenProvider) {
+            throw new Error(
+                'DA.live token provider not configured. ' +
+                'HelixService requires a DA.live token provider for content source operations.',
+            );
         }
 
+        const token = await this.daLiveTokenProvider.getAccessToken();
+        if (!token) {
+            throw new Error('DA.live session expired. Please sign in to DA.live.');
+        }
         return token;
     }
 
@@ -280,7 +320,7 @@ export class HelixService {
         branch: string = DEFAULT_BRANCH,
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
-        const imsToken = await this.getImsToken();
+        const imsToken = await this.getDaLiveToken();
         // Normalize path - ensure it starts with / and doesn't end with /
         const normalizedPath = path.startsWith('/') ? path : `/${path}`;
         const cleanPath = normalizedPath.endsWith('/') && normalizedPath !== '/'
@@ -333,7 +373,7 @@ export class HelixService {
         branch: string = DEFAULT_BRANCH,
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
-        const imsToken = await this.getImsToken();
+        const imsToken = await this.getDaLiveToken();
         // Normalize path
         const normalizedPath = path.startsWith('/') ? path : `/${path}`;
         const cleanPath = normalizedPath.endsWith('/') && normalizedPath !== '/'
@@ -409,7 +449,7 @@ export class HelixService {
         onProgress?: BulkProgressCallback,
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
-        const imsToken = await this.getImsToken();
+        const imsToken = await this.getDaLiveToken();
         // Bulk API: POST to /preview/{org}/{site}/{ref} without /* in URL path
         // The /* goes in the paths array in the JSON body
         const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}`;
@@ -500,7 +540,7 @@ export class HelixService {
         onProgress?: BulkProgressCallback,
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
-        const imsToken = await this.getImsToken();
+        const imsToken = await this.getDaLiveToken();
         // Bulk API: POST to /live/{org}/{site}/{ref} without /* in URL path
         // The /* goes in the paths array in the JSON body
         const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}`;
@@ -919,7 +959,7 @@ export class HelixService {
         this.logger.info('[Helix] Verifying publish readiness...');
 
         const githubToken = await this.getGitHubToken();
-        const imsToken = await this.getImsToken();
+        const imsToken = await this.getDaLiveToken();
         const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}/`;
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
