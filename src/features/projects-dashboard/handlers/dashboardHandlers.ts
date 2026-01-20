@@ -547,6 +547,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
     const templateOwner = edsInstance?.metadata?.templateOwner as string | undefined;
     const templateRepo = edsInstance?.metadata?.templateRepo as string | undefined;
     const contentSourceConfig = edsInstance?.metadata?.contentSource as { org: string; site: string; indexPath?: string } | undefined;
+    const patches = edsInstance?.metadata?.patches as string[] | undefined;
 
     if (!repoFullName) {
         const errorMsg = 'EDS metadata missing - no GitHub repository configured';
@@ -633,6 +634,49 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         return { success: false, cancelled: true };
     }
 
+    // Check if AEM Code Sync app is installed
+    // This is required for Helix to sync code changes from GitHub
+    const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
+    const { tokenService: preCheckTokenService } = getGitHubServices(context);
+    const { GitHubAppService } = await import('@/features/eds/services/githubAppService');
+    const appService = new GitHubAppService(preCheckTokenService, context.logger);
+    const appCheck = await appService.isAppInstalled(repoOwner, repoName);
+
+    if (!appCheck.isInstalled) {
+        context.logger.warn(`[ProjectsList] AEM Code Sync app not installed on ${repoFullName}`);
+
+        const installButton = 'Install App';
+        const continueButton = 'Continue Anyway';
+        const appWarning = await vscode.window.showWarningMessage(
+            'The AEM Code Sync GitHub App is not installed on this repository. ' +
+            'Without it, code changes will not sync to the CDN and the site may not work correctly.',
+            installButton,
+            continueButton,
+        );
+
+        if (appWarning === installButton) {
+            // Open the GitHub app installation page
+            const installUrl = appService.getInstallUrl(repoOwner, repoName);
+            await vscode.env.openExternal(vscode.Uri.parse(installUrl));
+
+            // Wait for user to install and continue
+            const afterInstall = await vscode.window.showInformationMessage(
+                'After installing the app, click Continue to proceed with the reset.',
+                'Continue',
+                'Cancel',
+            );
+
+            if (afterInstall !== 'Continue') {
+                context.logger.info('[ProjectsList] resetEds: User cancelled after app installation prompt');
+                return { success: false, cancelled: true };
+            }
+        } else if (appWarning !== continueButton) {
+            // User dismissed the dialog
+            context.logger.info('[ProjectsList] resetEds: User cancelled at app check');
+            return { success: false, cancelled: true };
+        }
+    }
+
     // Show progress notification
     return vscode.window.withProgress(
         {
@@ -654,10 +698,10 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 const authService = ServiceLocator.getAuthenticationService();
 
                 // Create TokenProvider adapter for DA.live operations
+                // IMPORTANT: Use DA.live token (not Adobe IMS token) for content operations
                 const tokenProvider = {
                     getAccessToken: async () => {
-                        const token = await authService.getTokenManager().getAccessToken();
-                        return token ?? null;
+                        return await daLiveAuthService.getAccessToken();
                     },
                 };
 
@@ -667,7 +711,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 // Step 1: Reset repo to template (bulk operation)
                 // ============================================
                 // Uses Git Tree API for efficiency: 4 API calls instead of 2*N for N files
-                progress.report({ message: 'Step 1/4: Preparing repository reset...' });
+                progress.report({ message: 'Step 1/5: Resetting repository to template...' });
                 context.logger.info(`[ProjectsList] Resetting repo using bulk tree operations`);
 
                 // Build fstab.yaml content for the override
@@ -679,7 +723,51 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 const fileOverrides = new Map<string, string>();
                 fileOverrides.set('fstab.yaml', fstabContent);
 
-                // Perform bulk reset (replaces old steps 1-4)
+                // Apply template patches from centralized registry
+                // Patches to apply are specified in the project's EDS metadata (from demo-packages.json)
+                const { applyTemplatePatches } = await import('@/features/eds/services/templatePatchRegistry');
+                const patchResults = await applyTemplatePatches(
+                    templateOwner,
+                    templateRepo,
+                    patches || [],
+                    fileOverrides,
+                    context.logger,
+                );
+
+                // Log patch results
+                for (const result of patchResults) {
+                    if (!result.applied) {
+                        context.logger.warn(`[ProjectsList] Patch '${result.patchId}' not applied: ${result.reason}`);
+                    }
+                }
+
+                // Generate config.json with Commerce configuration
+                // This ensures the storefront has proper Commerce backend settings after reset
+                const { generateConfigJson, extractConfigParams } = await import('@/features/eds/services/configGenerator');
+                const configParams = {
+                    githubOwner: repoOwner,
+                    repoName,
+                    daLiveOrg,
+                    daLiveSite,
+                    ...extractConfigParams(project),
+                };
+
+                const configResult = await generateConfigJson(
+                    templateOwner,
+                    templateRepo,
+                    configParams,
+                    context.logger,
+                );
+
+                if (configResult.success && configResult.content) {
+                    fileOverrides.set('config.json', configResult.content);
+                    context.logger.info('[ProjectsList] Generated config.json for reset');
+                } else {
+                    context.logger.warn(`[ProjectsList] Failed to generate config.json: ${configResult.error}`);
+                    // Continue without config.json - site will show configuration error but can be manually fixed
+                }
+
+                // Perform bulk reset
                 const resetResult = await githubFileOps.resetRepoToTemplate(
                     templateOwner,
                     templateRepo,
@@ -690,12 +778,12 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 );
 
                 context.logger.info(`[ProjectsList] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
-                progress.report({ message: `Step 1/5: Reset ${resetResult.fileCount} files` });
+                progress.report({ message: `Step 1/4: Reset ${resetResult.fileCount} files` });
 
                 // ============================================
                 // Step 2: Wait for code sync
                 // ============================================
-                progress.report({ message: 'Step 2/5: Waiting for code sync...' });
+                progress.report({ message: 'Step 2/4: Waiting for code sync...' });
 
                 const codeUrl = `https://admin.hlx.page/code/${repoOwner}/${repoName}/main/scripts/aem.js`;
                 let syncVerified = false;
@@ -703,7 +791,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 const pollInterval = 2000;
 
                 for (let attempt = 0; attempt < maxAttempts && !syncVerified; attempt++) {
-                    progress.report({ message: `Step 2/5: Verifying code sync (attempt ${attempt + 1}/${maxAttempts})` });
+                    progress.report({ message: `Step 2/4: Verifying code sync (attempt ${attempt + 1}/${maxAttempts})` });
                     try {
                         const response = await fetch(codeUrl, {
                             method: 'GET',
@@ -723,17 +811,11 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
 
                 if (!syncVerified) {
                     context.logger.warn('[ProjectsList] Code sync verification timed out, continuing anyway');
-                    progress.report({ message: 'Step 2/5: Code sync timed out, continuing...' });
+                    progress.report({ message: 'Step 2/4: Code sync timed out, continuing...' });
                 } else {
                     context.logger.info('[ProjectsList] Code sync verified');
-                    progress.report({ message: 'Step 2/5: Code sync verified' });
+                    progress.report({ message: 'Step 2/4: Code sync verified' });
                 }
-
-                // ============================================
-                // Step 3: Copy demo content to DA.live
-                // ============================================
-                progress.report({ message: 'Step 3/5: Copying demo content to DA.live...' });
-                context.logger.info(`[ProjectsList] Copying content from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
 
                 // Build full content source with index URL from explicit config
                 const indexPath = contentSourceConfig.indexPath || '/full-index.json';
@@ -743,9 +825,18 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     indexUrl: `https://main--${contentSourceConfig.site}--${contentSourceConfig.org}.aem.live${indexPath}`,
                 };
 
+                // ============================================
+                // Step 3: Copy demo content to DA.live
+                // ============================================
+                // Content HTML is uploaded with absolute image URLs pointing to source CDN.
+                // The Admin API will download images during preview and store in Media Bus.
+                progress.report({ message: 'Step 3/4: Copying demo content to DA.live...' });
+
+                context.logger.info(`[ProjectsList] Copying content from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
+
                 // Progress callback to show per-file progress
                 const onContentProgress = (info: { processed: number; total: number; currentFile?: string }) => {
-                    progress.report({ message: `Step 3/5: Copying content (${info.processed}/${info.total})` });
+                    progress.report({ message: `Step 3/4: Copying content (${info.processed}/${info.total})` });
                 };
 
                 const contentResult = await daLiveContentOps.copyContentFromSource(
@@ -759,46 +850,18 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
                 }
 
-                progress.report({ message: `Step 3/5: Copied ${contentResult.totalFiles} content files` });
+                progress.report({ message: `Step 3/4: Copied ${contentResult.totalFiles} content files` });
                 context.logger.info(`[ProjectsList] DA.live content populated: ${contentResult.totalFiles} files`);
 
                 // ============================================
-                // Step 4: Copy media files from source
+                // Step 4: Publish all content to CDN
                 // ============================================
-                progress.report({ message: 'Step 4/5: Copying media files...' });
-                context.logger.info(`[ProjectsList] Copying media from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
-
-                // Progress callback for media copy
-                const onMediaProgress = (info: { processed: number; total: number; currentFile?: string }) => {
-                    progress.report({ message: `Step 4/5: Copying media (${info.processed}/${info.total})` });
-                };
-
-                const mediaResult = await daLiveContentOps.copyMediaFromSource(
-                    { org: contentSourceConfig.org, site: contentSourceConfig.site },
-                    daLiveOrg,
-                    daLiveSite,
-                    onMediaProgress,
-                );
-
-                // Log media copy result (don't fail on media copy errors - images are optional)
-                if (mediaResult.totalFiles > 0) {
-                    progress.report({ message: `Step 4/5: Copied ${mediaResult.copiedFiles.length} media files` });
-                    context.logger.info(`[ProjectsList] DA.live media copied: ${mediaResult.copiedFiles.length} files`);
-                    if (mediaResult.failedFiles.length > 0) {
-                        context.logger.warn(`[ProjectsList] Some media files failed to copy: ${mediaResult.failedFiles.length} files`);
-                    }
-                } else {
-                    progress.report({ message: 'Step 4/5: No media files to copy' });
-                    context.logger.info('[ProjectsList] No media files found in source');
-                }
-
-                // ============================================
-                // Step 5: Publish all content to CDN
-                // ============================================
-                progress.report({ message: 'Step 5/5: Publishing content to CDN...' });
+                progress.report({ message: 'Step 4/4: Publishing content to CDN...' });
                 context.logger.info(`[ProjectsList] Publishing content to CDN for ${repoOwner}/${repoName}`);
 
-                const helixService = new HelixService(authService, context.logger, githubTokenService);
+                // IMPORTANT: Pass DA.live token provider to HelixService for x-content-source-authorization
+                // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
+                const helixService = new HelixService(authService, context.logger, githubTokenService, tokenProvider);
 
                 // Progress callback to update notification with publish details
                 const onPublishProgress = (info: {
@@ -808,11 +871,11 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     total?: number;
                     currentPath?: string;
                 }) => {
-                    // Format: "Step 5/5: Publishing (15/42 pages)"
+                    // Format: "Step 4/4: Publishing (15/42 pages)"
                     if (info.current !== undefined && info.total !== undefined) {
-                        progress.report({ message: `Step 5/5: Publishing to CDN (${info.current}/${info.total} pages)` });
+                        progress.report({ message: `Step 4/4: Publishing to CDN (${info.current}/${info.total} pages)` });
                     } else {
-                        progress.report({ message: `Step 5/5: ${info.message}` });
+                        progress.report({ message: `Step 4/4: ${info.message}` });
                     }
                 };
 

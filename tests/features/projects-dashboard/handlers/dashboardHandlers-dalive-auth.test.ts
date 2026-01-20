@@ -114,18 +114,13 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 // Mock DaLiveContentOperations (dynamically imported)
+// Note: copyMediaFromContent is no longer called - Admin API downloads images during preview
 jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
         copyContentFromSource: jest.fn().mockResolvedValue({
             success: true,
             totalFiles: 10,
             copiedFiles: ['file1', 'file2'],
-            failedFiles: [],
-        }),
-        copyMediaFromSource: jest.fn().mockResolvedValue({
-            success: true,
-            totalFiles: 3,
-            copiedFiles: ['/media/hero.png', '/media/logo.svg'],
             failedFiles: [],
         }),
     })),
@@ -149,6 +144,30 @@ jest.mock('@/core/validation', () => ({
     validateWorkspaceId: jest.fn(),
     validateURL: jest.fn(),
     validateProjectPath: jest.fn(), // Allow all paths in tests
+}));
+
+// Mock GitHubAppService (dynamically imported for Code Sync verification)
+jest.mock('@/features/eds/services/githubAppService', () => ({
+    GitHubAppService: jest.fn().mockImplementation(() => ({
+        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
+        getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync/installations/new'),
+    })),
+}));
+
+// Mock templatePatchRegistry (dynamically imported for template patches)
+jest.mock('@/features/eds/services/templatePatchRegistry', () => ({
+    applyTemplatePatches: jest.fn().mockResolvedValue([
+        { patchId: 'header-nav-tools-defensive', applied: true },
+    ]),
+}));
+
+// Mock configGenerator (dynamically imported for config.json generation)
+jest.mock('@/features/eds/services/configGenerator', () => ({
+    generateConfigJson: jest.fn().mockResolvedValue({
+        success: true,
+        content: '{"host":"example.com"}',
+    }),
+    extractConfigParams: jest.fn().mockReturnValue({}),
 }));
 
 // Mock global fetch for code sync verification
@@ -481,9 +500,9 @@ describe('handleResetEds DA.live auth pre-check', () => {
     });
 
     // =========================================================================
-    // Test 8: Should copy media files after content copy
+    // Test 8: Should copy content with absolute media URLs for Admin API image handling
     // =========================================================================
-    it('should copy media files after content copy', async () => {
+    it('should copy content with absolute media URLs for Admin API image handling', async () => {
         // Given: Valid DA.live token
         mockIsAuthenticated.mockResolvedValue(true);
         const project = createMockEdsProject();
@@ -507,11 +526,18 @@ describe('handleResetEds DA.live auth pre-check', () => {
         // And: Should have created a DaLiveContentOperations instance
         expect(DaLiveContentOperations).toHaveBeenCalled();
 
-        // And: Should call copyMediaFromSource with correct parameters on that instance
         const instance = (DaLiveContentOperations as jest.Mock).mock.results[0]?.value;
         expect(instance).toBeDefined();
-        expect(instance.copyMediaFromSource).toHaveBeenCalledWith(
-            { org: 'demo-system-stores', site: 'accs-citisignal' }, // contentSource
+
+        // Content is copied with source info (absolute URLs handled internally)
+        // The transformHtmlForDaLive method converts relative media URLs to absolute URLs
+        // pointing to the source CDN, allowing Admin API to download images during preview
+        expect(instance.copyContentFromSource).toHaveBeenCalledWith(
+            expect.objectContaining({
+                org: 'demo-system-stores',
+                site: 'accs-citisignal',
+                indexUrl: expect.stringContaining('full-index.json'),
+            }),
             'test-org', // daLiveOrg
             'test-site', // daLiveSite
             expect.any(Function), // progressCallback
