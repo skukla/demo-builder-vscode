@@ -133,8 +133,9 @@ function GitHubConfigurationSummary({
                 emptyText={repoMode === 'new' ? 'Enter repository name' : 'Not selected'}
             />
 
-            {/* GitHub App Status - only show when repo is selected/entered */}
-            {isRepoComplete && (
+            {/* GitHub App Status - only show for existing repos */}
+            {/* New repos skip this - app will be installed after repo creation */}
+            {repoMode === 'existing' && isRepoComplete && (
                 <>
                     <Divider size="S" />
                     <StatusSection
@@ -384,32 +385,23 @@ export function GitHubRepoSelectionStep({
         }
     }, [githubAppStatus.installUrl]);
 
-    // Check GitHub App when repo is selected/entered
+    // Check GitHub App when EXISTING repo is selected
+    // Skip check for NEW repos - the repo doesn't exist yet, so app can't be installed
     useEffect(() => {
         const owner = githubUser?.login;
         if (!owner) return;
 
-        let repo: string | undefined;
-        let isValid = false;
-
-        if (repoMode === 'new' && repoName.trim() !== '' && isValidRepositoryName(repoName)) {
-            repo = repoName;
-            isValid = true;
-        } else if (repoMode === 'existing' && selectedRepo) {
-            repo = selectedRepo.name;
-            isValid = true;
-        }
-
-        if (isValid && repo) {
+        // Only check for existing repos - new repos don't exist yet
+        if (repoMode === 'existing' && selectedRepo) {
             // Reset state immediately when repo changes to prevent stale state flash
             setIsModalDismissed(false);
             setGitHubAppStatus({
                 isChecking: true,
                 isInstalled: null,
             });
-            checkGitHubApp(owner, repo);
+            checkGitHubApp(owner, selectedRepo.name);
         } else {
-            // Reset status when repo is cleared
+            // Reset status for new repos or when no repo selected
             setGitHubAppStatus({
                 isChecking: false,
                 isInstalled: null,
@@ -417,19 +409,22 @@ export function GitHubRepoSelectionStep({
             setIsModalDismissed(false);
             lastCheckedRepo.current = null;
         }
-    }, [githubUser?.login, repoMode, repoName, selectedRepo, checkGitHubApp]);
+    }, [githubUser?.login, repoMode, selectedRepo, checkGitHubApp]);
 
-    // Update canProceed based on selection AND GitHub App status
+    // Update canProceed based on selection AND GitHub App status (existing repos only)
     useEffect(() => {
         const isNewValid = repoMode === 'new' && repoName.trim() !== '' && isValidRepositoryName(repoName);
         const isExistingValid = repoMode === 'existing' && !!selectedRepo;
-        const repoSelected = isNewValid || isExistingValid;
 
-        // Block Continue until GitHub App is verified
-        const appVerified = githubAppStatus.isInstalled === true;
-        const isCheckingApp = githubAppStatus.isChecking;
-
-        setCanProceed(repoSelected && appVerified && !isCheckingApp);
+        if (repoMode === 'new') {
+            // New repos: just need valid name (app will be installed after repo creation)
+            setCanProceed(isNewValid);
+        } else {
+            // Existing repos: require app verification
+            const appVerified = githubAppStatus.isInstalled === true;
+            const isCheckingApp = githubAppStatus.isChecking;
+            setCanProceed(isExistingValid && appVerified && !isCheckingApp);
+        }
     }, [repoMode, repoName, selectedRepo, githubAppStatus, setCanProceed]);
 
     // Left column: Repository selection
@@ -551,12 +546,11 @@ export function GitHubRepoSelectionStep({
                 </>
             )}
 
-            {/* GitHub App Status Section - shows when repo is selected/entered */}
+            {/* GitHub App Status Section - only shows for EXISTING repos */}
+            {/* New repos skip this check - app will be installed after repo creation */}
             {(() => {
-                const repoSelected = (repoMode === 'new' && repoName.trim() !== '' && isValidRepositoryName(repoName))
-                    || (repoMode === 'existing' && !!selectedRepo);
-
-                if (!repoSelected) return null;
+                // Only show for existing repos with a selection
+                if (repoMode !== 'existing' || !selectedRepo) return null;
 
                 // Success state: no banner needed - status shown in Configuration Summary panel
                 if (githubAppStatus.isInstalled === true) {
@@ -566,7 +560,7 @@ export function GitHubRepoSelectionStep({
                 // Show modal when not installed OR when rechecking (unless dismissed)
                 if ((githubAppStatus.isInstalled === false || isRechecking) && !isModalDismissed) {
                     const owner = githubUser?.login || '';
-                    const repo = repoMode === 'new' ? repoName : selectedRepo?.name || '';
+                    const repo = selectedRepo?.name || '';
 
                     const handleDismiss = () => {
                         setIsModalDismissed(true);
@@ -638,8 +632,8 @@ export function GitHubRepoSelectionStep({
         />
     );
 
-    // Show overlay during initial GitHub App check (not during recheck from modal)
-    const isInitialChecking = githubAppStatus.isChecking && !isRechecking;
+    // Show overlay during initial GitHub App check (only for existing repos, not during recheck)
+    const isInitialChecking = repoMode === 'existing' && githubAppStatus.isChecking && !isRechecking;
 
     return (
         <div className="h-full w-full relative">
