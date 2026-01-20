@@ -59,7 +59,8 @@
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
-          }
+          },
+          "patches": ["header-nav-tools-defensive"]
         },
         "eds-accs": {
           "name": "CitiSignal EDS + ACCS",
@@ -81,7 +82,8 @@
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
-          }
+          },
+          "patches": ["header-nav-tools-defensive"]
         }
       }
     },

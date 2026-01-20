@@ -167,6 +167,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 templateOwner: storefront.templateOwner,
                 templateRepo: storefront.templateRepo,
                 contentSource: storefront.contentSource,
+                patches: storefront.patches,
             } : state.edsConfig;
 
             // Only set selectedStack - stack config is the source of truth for components

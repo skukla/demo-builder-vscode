@@ -71,6 +71,8 @@ export interface SettingsEdsConfig {
     daLiveSite?: string;
     /** GitHub repository name (user's repo) */
     repoName?: string;
+    /** Array of patch IDs to apply during reset (from demo-packages.json) */
+    patches?: string[];
 }
 
 /**

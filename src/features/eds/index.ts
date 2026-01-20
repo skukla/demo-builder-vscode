@@ -26,6 +26,22 @@ export { ToolManager } from './services/toolManager';
 export { HelixService, type UnpublishResult } from './services/helixService';
 export { CleanupService } from './services/cleanupService';
 
+// Template Patch Registry
+export {
+    applyTemplatePatches,
+    getPatchById,
+    getEnabledPatches,
+    TEMPLATE_PATCHES,
+} from './services/templatePatchRegistry';
+export type { TemplatePatch, PatchResult } from './services/templatePatchRegistry';
+
+// Config Generator (for EDS Reset)
+export {
+    generateConfigJson,
+    extractConfigParams,
+} from './services/configGenerator';
+export type { ConfigGeneratorParams, ConfigGeneratorResult } from './services/configGenerator';
+
 // Error Formatters
 export {
     formatGitHubError,

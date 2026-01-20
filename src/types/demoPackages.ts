@@ -85,6 +85,8 @@ export interface Storefront {
     templateOwner?: string;
     /** GitHub repository name of the template (for reset-to-template operations) */
     templateRepo?: string;
+    /** Patch IDs to apply during reset (defined in templatePatchRegistry) */
+    patches?: string[];
 }
 
 /**

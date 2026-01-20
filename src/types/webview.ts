@@ -400,6 +400,8 @@ export interface EDSConfig {
         site: string;
         indexPath?: string;
     };
+    /** Patch IDs to apply during reset (from demo-packages.json storefronts) */
+    patches?: string[];
 
     // Preflight completion state (set by StorefrontSetupStep)
     /** Whether preflight operations completed - tells executor to skip EDS setup */

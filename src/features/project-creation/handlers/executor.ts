@@ -121,6 +121,8 @@ interface ProjectCreationConfig {
         preflightComplete?: boolean;
         repoUrl?: string;
         // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards
+        // Patch IDs to apply during reset (from demo-packages.json)
+        patches?: string[];
     };
 }
 
@@ -316,6 +318,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 templateOwner: typedConfig.edsConfig.templateOwner,
                 templateRepo: typedConfig.edsConfig.templateRepo,
                 contentSource: typedConfig.edsConfig.contentSource,
+                patches: typedConfig.edsConfig.patches, // Patch IDs to apply during reset
             };
             await context.stateManager.saveProject(project);
             context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}, daLiveOrg=${edsInstance.metadata?.daLiveOrg}`);
