@@ -21,6 +21,7 @@ import { GitHubTokenService } from '../services/githubTokenService';
 import { GitHubAppService } from '../services/githubAppService';
 import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
 import { DaLiveContentOperations } from '../services/daLiveContentOperations';
+import { DaLiveAuthService } from '../services/daLiveAuthService';
 import { HelixService } from '../services/helixService';
 import { ToolManager } from '../services/toolManager';
 import {
@@ -740,7 +741,15 @@ async function executeStorefrontSetupPhases(
 
             // Create HelixService for publish operation
             // HelixService uses GitHub token for admin API auth
-            const helixService = new HelixService(context.authManager!, logger, githubTokenService);
+            // IMPORTANT: Also need DA.live token provider for x-content-source-authorization
+            // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
+            const daLiveAuthService = new DaLiveAuthService(context.context);
+            const daLiveTokenProvider = {
+                getAccessToken: async () => {
+                    return await daLiveAuthService.getAccessToken();
+                },
+            };
+            const helixService = new HelixService(context.authManager!, logger, githubTokenService, daLiveTokenProvider);
 
             try {
                 // Progress callback to report publish status to UI
@@ -841,7 +850,16 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     if (!context.authManager) {
         throw new Error('AuthenticationService required for cleanup');
     }
-    const helixService = new HelixService(context.authManager, context.logger, githubTokenService);
+
+    // IMPORTANT: HelixService also needs DA.live token provider for x-content-source-authorization
+    // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
+    const daLiveAuthService = new DaLiveAuthService(context.context);
+    const daLiveTokenProvider = {
+        getAccessToken: async () => {
+            return await daLiveAuthService.getAccessToken();
+        },
+    };
+    const helixService = new HelixService(context.authManager, context.logger, githubTokenService, daLiveTokenProvider);
 
     const toolManager = new ToolManager(context.logger);
 

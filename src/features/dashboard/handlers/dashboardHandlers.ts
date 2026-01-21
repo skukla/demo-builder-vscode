@@ -751,7 +751,7 @@ export const handleResetEds: MessageHandler = async (context) => {
                     }
                 }
 
-                // Generate config.json with Commerce configuration
+                // Generate demo-config.json with Commerce configuration
                 // This ensures the storefront has proper Commerce backend settings after reset
                 const { generateConfigJson, extractConfigParams } = await import('@/features/eds/services/configGenerator');
                 const configParams = {
@@ -770,11 +770,11 @@ export const handleResetEds: MessageHandler = async (context) => {
                 );
 
                 if (configResult.success && configResult.content) {
-                    fileOverrides.set('config.json', configResult.content);
-                    context.logger.info('[Dashboard] Generated config.json for reset');
+                    fileOverrides.set('demo-config.json', configResult.content);
+                    context.logger.info('[Dashboard] Generated demo-config.json for reset');
                 } else {
-                    context.logger.warn(`[Dashboard] Failed to generate config.json: ${configResult.error}`);
-                    // Continue without config.json - site will show configuration error but can be manually fixed
+                    context.logger.warn(`[Dashboard] Failed to generate demo-config.json: ${configResult.error}`);
+                    // Continue without demo-config.json - site will show configuration error but can be manually fixed
                 }
 
                 // Perform bulk reset
