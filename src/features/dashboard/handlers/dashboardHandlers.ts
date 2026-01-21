@@ -142,8 +142,8 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                     const meshChanges = await detectMeshChanges(project, project.componentConfigs);
 
                     if (meshChanges.shouldSaveProject) {
-                        context.logger.debug('[Dashboard] Populated meshState.envVars from deployed config, saving project');
-                        await context.stateManager.saveProject(project);
+                        context.logger.debug('[Dashboard] Populated meshState.envVars from deployed config, marking dirty');
+                        context.stateManager.markDirty('meshState');
                         // Note: Don't set meshStatus here - let the logic below handle it
                         // based on whether there are actual changes to display
                     }

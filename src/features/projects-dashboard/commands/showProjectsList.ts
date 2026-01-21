@@ -181,11 +181,15 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
         }
 
         try {
-            // Load all projects
+            // Load all projects (read-only, do not persist after load)
             const projectList = await this.stateManager.getAllProjects();
             const projects = [];
             for (const item of projectList) {
-                const project = await this.stateManager.loadProjectFromPath(item.path);
+                const project = await this.stateManager.loadProjectFromPath(
+                    item.path,
+                    undefined,
+                    { persistAfterLoad: false },
+                );
                 if (project) {
                     projects.push(project);
                 }

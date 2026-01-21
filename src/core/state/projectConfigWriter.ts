@@ -85,6 +85,10 @@ export class ProjectConfigWriter {
      * Write the .demo-builder.json manifest file using atomic write pattern.
      * Writes to temp file first, then renames (atomic on POSIX filesystems).
      * This prevents JSON corruption from interrupted or concurrent writes.
+     *
+     * SURGICAL MERGE: Reads existing manifest first and merges in-memory changes.
+     * This preserves fields that exist on disk but not in memory (e.g., selectedPackage
+     * added manually or from a newer extension version).
      */
     private async writeManifest(project: Project): Promise<void> {
         // GUARD: Validate project.path before proceeding
@@ -95,16 +99,18 @@ export class ProjectConfigWriter {
         const manifestPath = path.join(project.path, '.demo-builder.json');
         const tempPath = `${manifestPath}.tmp`;
 
-        // Diagnostic: Log when metadata fields are undefined (helps trace data loss)
-        if (project.selectedPackage === undefined || project.selectedStack === undefined) {
-            this.logger.warn(
-                `[ProjectConfigWriter] Saving project "${project.name}" with undefined metadata: ` +
-                `selectedPackage=${project.selectedPackage}, selectedStack=${project.selectedStack}`
-            );
-        }
-
         try {
-            const manifest = {
+            // SURGICAL MERGE: Read existing manifest to preserve fields not in memory
+            let existingManifest: Record<string, unknown> = {};
+            try {
+                const existingData = await fs.readFile(manifestPath, 'utf-8');
+                existingManifest = JSON.parse(existingData);
+            } catch {
+                // No existing manifest or invalid JSON - start fresh
+            }
+
+            // Build the new manifest from in-memory project
+            const newManifest: Record<string, unknown> = {
                 name: project.name,
                 version: '1.0.0',
                 // Type-safe Date handling: Handle both Date objects and ISO strings from persistence
@@ -121,15 +127,23 @@ export class ProjectConfigWriter {
                 componentVersions: project.componentVersions,
                 meshState: project.meshState,
                 components: getComponentIds(project.componentInstances),
-                // CRITICAL: Use nullish coalescing to ensure fields are always written to JSON
-                // JSON.stringify omits undefined values, causing data loss on reload
-                selectedPackage: project.selectedPackage ?? null,
-                selectedStack: project.selectedStack ?? null,
-                selectedAddons: project.selectedAddons ?? [],
             };
 
+            // For optional fields, prefer in-memory value if set, otherwise preserve disk value
+            // This ensures we don't lose data that exists on disk but not in memory
+            newManifest.selectedPackage = project.selectedPackage ?? existingManifest.selectedPackage;
+            newManifest.selectedStack = project.selectedStack ?? existingManifest.selectedStack;
+            newManifest.selectedAddons = project.selectedAddons?.length
+                ? project.selectedAddons
+                : existingManifest.selectedAddons;
+
+            // Clean up undefined values (don't write them to JSON)
+            if (newManifest.selectedPackage === undefined) delete newManifest.selectedPackage;
+            if (newManifest.selectedStack === undefined) delete newManifest.selectedStack;
+            if (!newManifest.selectedAddons) delete newManifest.selectedAddons;
+
             // Atomic write: write to temp file first, then rename
-            await fs.writeFile(tempPath, JSON.stringify(manifest, null, 2));
+            await fs.writeFile(tempPath, JSON.stringify(newManifest, null, 2));
 
             // Verify temp file exists before rename
             await fs.access(tempPath);

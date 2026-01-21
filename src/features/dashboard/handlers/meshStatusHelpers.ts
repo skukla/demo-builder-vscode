@@ -257,7 +257,7 @@ export async function checkMeshStatusAsync(
             const meshChanges = await detectMeshChanges(project, project.componentConfigs);
 
             if (meshChanges.shouldSaveProject) {
-                await context.stateManager.saveProject(project);
+                context.stateManager.markDirty('meshState');
             }
 
             if (hasMeshDeploymentRecord(project)) {
@@ -371,7 +371,7 @@ export async function verifyMeshDeployment(context: HandlerContext, project: Pro
         }
 
         await syncMeshStatus(project, verificationResult);
-        await context.stateManager.saveProject(project);
+        context.stateManager.markDirty('meshState');
 
         // Note: Do NOT call handleRequestStatus() here - it would create an infinite loop
         // since handleRequestStatus() triggers verifyMeshDeployment() in the background.
@@ -390,6 +390,6 @@ export async function verifyMeshDeployment(context: HandlerContext, project: Pro
         }
     } else {
         await syncMeshStatus(project, verificationResult);
-        await context.stateManager.saveProject(project);
+        context.stateManager.markDirty('meshState');
     }
 }

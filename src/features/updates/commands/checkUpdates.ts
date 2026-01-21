@@ -57,12 +57,17 @@ export class CheckUpdatesCommand extends BaseCommand {
                         const extensionUpdate = await updateManager.checkExtensionUpdate();
 
                         // Load ALL projects and check for component updates across all of them
+                        // (read-only, do not persist after load)
                         progress.report({ message: 'Checking all projects...' });
                         const projectMetadata = await this.stateManager.getAllProjects();
                         const allProjects: Project[] = [];
 
                         for (const meta of projectMetadata) {
-                            const project = await this.stateManager.loadProjectFromPath(meta.path);
+                            const project = await this.stateManager.loadProjectFromPath(
+                                meta.path,
+                                undefined,
+                                { persistAfterLoad: false },
+                            );
                             if (project) {
                                 allProjects.push(project);
                             }

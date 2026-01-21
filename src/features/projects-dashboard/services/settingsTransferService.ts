@@ -112,12 +112,16 @@ export async function copySettingsFromProject(
     try {
         context.logger.info('Opening project picker for settings copy');
 
-        // Get all projects
+        // Get all projects (read-only, do not persist after load)
         const projectList = await context.stateManager.getAllProjects();
         const projects: Project[] = [];
 
         for (const item of projectList) {
-            const project = await context.stateManager.loadProjectFromPath(item.path);
+            const project = await context.stateManager.loadProjectFromPath(
+                item.path,
+                undefined,
+                { persistAfterLoad: false },
+            );
             if (project) {
                 projects.push(project);
             }

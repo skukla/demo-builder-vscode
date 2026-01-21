@@ -182,7 +182,21 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
                 lastUpdated: new Date().toISOString()
             };
 
-            (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockState));
+            // Create a manifest that matches the cached project
+            const mockManifest = {
+                name: 'Stale Cached Project',
+                version: '1.0.0',
+                created: '2024-01-01T00:00:00.000Z',
+                lastModified: '2024-01-02T00:00:00.000Z',
+                componentInstances: {},
+                componentVersions: {}
+            };
+
+            // Mock readFile to return appropriate data for each file
+            // First call: state file, Second call: manifest during loadState() refresh
+            (fs.readFile as jest.Mock)
+                .mockResolvedValueOnce(JSON.stringify(mockState))
+                .mockResolvedValueOnce(JSON.stringify(mockManifest));
             await stateManager.initialize();
 
             // Mock loadProjectFromPath to fail (file deleted, permission denied, etc.)
@@ -261,7 +275,23 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
                 lastUpdated: new Date().toISOString()
             };
 
-            (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockState));
+            // Manifest WITH the package/stack/addons (matching the cached project during init)
+            const initManifest = {
+                name: 'Test Project',
+                version: '1.0.0',
+                created: '2025-11-20T00:00:00.000Z',
+                lastModified: '2025-11-20T00:00:00.000Z',
+                componentInstances: {},
+                componentVersions: {},
+                selectedPackage: 'luma',
+                selectedStack: 'headless-paas',
+                selectedAddons: ['demo-inspector'],
+            };
+
+            // Mock readFile: first call = state file, second call = manifest during init
+            (fs.readFile as jest.Mock)
+                .mockResolvedValueOnce(JSON.stringify(mockState))
+                .mockResolvedValueOnce(JSON.stringify(initManifest));
             await stateManager.initialize();
 
             // Mock fresh manifest WITHOUT selectedPackage (simulating incomplete disk data)
@@ -304,7 +334,20 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
                 lastUpdated: new Date().toISOString()
             };
 
-            (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockState));
+            // During init, manifest matches cached project
+            const initManifest = {
+                name: 'Test Project',
+                version: '1.0.0',
+                created: '2025-11-20T00:00:00.000Z',
+                lastModified: '2025-11-20T00:00:00.000Z',
+                componentInstances: {},
+                componentVersions: {},
+                selectedPackage: 'old-package',
+            };
+
+            (fs.readFile as jest.Mock)
+                .mockResolvedValueOnce(JSON.stringify(mockState))
+                .mockResolvedValueOnce(JSON.stringify(initManifest));
             await stateManager.initialize();
 
             // Mock fresh manifest WITH selectedPackage (disk is authoritative)
@@ -344,7 +387,21 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
                 lastUpdated: new Date().toISOString()
             };
 
-            (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockState));
+            // During init, manifest has the package/stack
+            const initManifest = {
+                name: 'Test Project',
+                version: '1.0.0',
+                created: '2025-11-20T00:00:00.000Z',
+                lastModified: '2025-11-20T00:00:00.000Z',
+                componentInstances: {},
+                componentVersions: {},
+                selectedPackage: 'luma',
+                selectedStack: 'headless-paas',
+            };
+
+            (fs.readFile as jest.Mock)
+                .mockResolvedValueOnce(JSON.stringify(mockState))
+                .mockResolvedValueOnce(JSON.stringify(initManifest));
             await stateManager.initialize();
 
             // Mock manifest without selectedPackage (simulating async mesh status polling)

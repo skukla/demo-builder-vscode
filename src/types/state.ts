@@ -131,6 +131,30 @@ export interface StateManager {
     onProjectChanged: vscode.Event<Project | undefined>;
 
     /**
+     * Mark a project field as dirty (changed but not yet saved)
+     * Background operations should use this instead of saveProject()
+     * @param field - The field that changed
+     */
+    markDirty(field: keyof Project): void;
+
+    /**
+     * Check if project has unsaved changes
+     * @returns true if any fields are marked dirty
+     */
+    isDirty(): boolean;
+
+    /**
+     * Get the set of dirty fields
+     * @returns Set of field names that have been marked dirty
+     */
+    getDirtyFields(): ReadonlySet<keyof Project>;
+
+    /**
+     * Clear dirty state (called after save)
+     */
+    clearDirty(): void;
+
+    /**
      * Dispose resources
      */
     dispose(): void;

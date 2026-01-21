@@ -41,10 +41,14 @@ export const handleGetProjects: MessageHandler = async (
         // Get list of project paths
         const projectList = await context.stateManager.getAllProjects();
 
-        // Load full project data for each
+        // Load full project data for each (read-only, don't persist)
         const projects: Project[] = [];
         for (const item of projectList) {
-            const project = await context.stateManager.loadProjectFromPath(item.path);
+            const project = await context.stateManager.loadProjectFromPath(
+                item.path,
+                undefined,
+                { persistAfterLoad: false },
+            );
             if (project) {
                 projects.push(project);
             }
@@ -287,7 +291,11 @@ export const handleExportProject: MessageHandler<{ projectPath: string }> = asyn
         };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
+    const project = await context.stateManager.loadProjectFromPath(
+        payload.projectPath,
+        undefined,
+        { persistAfterLoad: false },
+    );
     if (!project) {
         return {
             success: false,
@@ -328,7 +336,11 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
             };
         }
 
-        const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
+        const project = await context.stateManager.loadProjectFromPath(
+            payload.projectPath,
+            undefined,
+            { persistAfterLoad: false },
+        );
         if (!project) {
             return {
                 success: false,
@@ -376,7 +388,11 @@ export const handleEditProject: MessageHandler<{ projectPath: string }> = async 
             };
         }
 
-        const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
+        const project = await context.stateManager.loadProjectFromPath(
+            payload.projectPath,
+            undefined,
+            { persistAfterLoad: false },
+        );
         if (!project) {
             return {
                 success: false,
@@ -459,7 +475,11 @@ export const handleOpenLiveSite: MessageHandler<{ projectPath: string }> = async
         return { success: false, error: 'Project path is required' };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
+    const project = await context.stateManager.loadProjectFromPath(
+        payload.projectPath,
+        undefined,
+        { persistAfterLoad: false },
+    );
     if (!project) {
         return { success: false, error: 'Project not found' };
     }
@@ -486,7 +506,11 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project path is required' };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
+    const project = await context.stateManager.loadProjectFromPath(
+        payload.projectPath,
+        undefined,
+        { persistAfterLoad: false },
+    );
     if (!project) {
         return { success: false, error: 'Project not found' };
     }
@@ -534,7 +558,11 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Invalid project path' };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
+    const project = await context.stateManager.loadProjectFromPath(
+        payload.projectPath,
+        undefined,
+        { persistAfterLoad: false },
+    );
     if (!project) {
         return { success: false, error: 'Project not found' };
     }

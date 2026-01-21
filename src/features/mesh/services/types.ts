@@ -68,7 +68,7 @@ export interface MeshChanges {
     sourceFilesChanged: boolean;
     changedEnvVars: string[];
     unknownDeployedState?: boolean;  // True if meshState.envVars was empty and couldn't fetch deployed config
-    shouldSaveProject?: boolean;  // True if we populated meshState.envVars and caller should save
+    shouldSaveProject?: boolean;  // True if meshState.envVars was populated from deployed config (caller should call markDirty)
 }
 
 /**

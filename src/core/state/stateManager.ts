@@ -40,6 +40,11 @@ export class StateManager {
     private recentProjectsManager: RecentProjectsManager;
     private projectDirectoryScanner: ProjectDirectoryScanner;
 
+    // Dirty tracking - tracks fields modified by background operations
+    // Background ops call markDirty() instead of saveProject()
+    // Only explicit user actions should call saveProject()
+    private dirtyFields: Set<keyof Project> = new Set();
+
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
         this.stateFile = path.join(os.homedir(), '.demo-builder', 'state.json');
@@ -84,6 +89,24 @@ export class StateManager {
             if (validProject?.path) {
                 try {
                     await fs.access(validProject.path);
+
+                    // CRITICAL: Reload project from manifest to ensure fresh data
+                    // The state file may contain stale project data (e.g., missing selectedPackage)
+                    // The project's .demo-builder.json manifest is the source of truth
+                    const freshProject = await this.projectFileLoader.loadProject(
+                        validProject.path,
+                        () => vscode.window.terminals,
+                    );
+
+                    if (freshProject) {
+                        this.logger.debug(
+                            `[StateManager] Refreshed project from manifest: ` +
+                            `selectedPackage=${freshProject.selectedPackage}, selectedStack=${freshProject.selectedStack}`
+                        );
+                        validProject = freshProject;
+                    } else {
+                        this.logger.warn(`[StateManager] Failed to reload project from manifest, using cached state`);
+                    }
                 } catch {
                     // Project path doesn't exist, clear it
                     this.logger.warn(`Project path ${validProject.path} does not exist, clearing project`);
@@ -176,6 +199,9 @@ export class StateManager {
             // Save project-specific config via delegated service
             await this.projectConfigWriter.saveProjectConfig(project, this.state.currentProject?.path);
 
+            // Clear dirty state after successful save
+            this.dirtyFields.clear();
+
             // Update context variable for view switching
             await vscode.commands.executeCommand('setContext', 'demoBuilder.projectLoaded', true);
 
@@ -184,9 +210,49 @@ export class StateManager {
         });
     }
 
+    // =========================================================================
+    // Dirty Tracking
+    // Background operations should call markDirty() instead of saveProject().
+    // Only explicit user actions trigger actual saves.
+    // =========================================================================
+
+    /**
+     * Mark a project field as dirty (changed but not yet saved).
+     * Background operations should use this instead of saveProject().
+     * @param field - The field that changed (e.g., 'meshState')
+     */
+    public markDirty(field: keyof Project): void {
+        this.dirtyFields.add(field);
+        this.logger.debug(`[StateManager] Marked field dirty: ${field}`);
+    }
+
+    /**
+     * Check if project has unsaved changes
+     * @returns true if any fields are marked dirty
+     */
+    public isDirty(): boolean {
+        return this.dirtyFields.size > 0;
+    }
+
+    /**
+     * Get the set of dirty fields
+     * @returns ReadonlySet of field names that have been marked dirty
+     */
+    public getDirtyFields(): ReadonlySet<keyof Project> {
+        return this.dirtyFields;
+    }
+
+    /**
+     * Clear dirty state (called automatically after saveProject)
+     */
+    public clearDirty(): void {
+        this.dirtyFields.clear();
+    }
+
     public async clearProject(): Promise<void> {
         this.state.currentProject = undefined;
         this.state.processes.clear();
+        this.dirtyFields.clear();
         await this.saveState();
 
         await vscode.commands.executeCommand('setContext', 'demoBuilder.projectLoaded', false);
@@ -200,6 +266,7 @@ export class StateManager {
             processes: new Map(),
             lastUpdated: new Date(),
         };
+        this.dirtyFields.clear();
 
         await this.context.workspaceState.update('demoBuilder.state', undefined);
 
