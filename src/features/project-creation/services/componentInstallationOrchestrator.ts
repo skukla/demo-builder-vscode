@@ -9,6 +9,7 @@
 import { ProgressTracker } from '../handlers/shared';
 import type { Project, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
+import { ComponentManager } from '@/features/components/services/componentManager';
 
 export interface ComponentDefinitionEntry {
     definition: TransformedComponentDefinition;
@@ -25,6 +26,11 @@ export interface InstallationContext {
     progressTracker: ProgressTracker;
     logger: Logger;
     saveProject: () => Promise<void>;
+    /**
+     * Optional override for components directory.
+     * Used in edit mode to install to a temp directory before atomic swap.
+     */
+    componentsDir?: string;
 }
 
 /**
@@ -35,21 +41,39 @@ export interface InstallationContext {
 export async function cloneAllComponents(
     context: InstallationContext,
 ): Promise<void> {
-    const { project, componentDefinitions, progressTracker, logger, saveProject } = context;
+    const { project, componentDefinitions, progressTracker, logger, saveProject, componentsDir } = context;
 
     progressTracker('Downloading Components', 25, 'Cloning repositories...');
     logger.debug('[Project Creation] Phase 1: Downloading components...');
 
-    const { ComponentManager } = await import('@/features/components/services/componentManager');
+    const path = await import('path');
+    const fs = await import('fs/promises');
+
+    // Determine target directory: use override if provided (edit mode), otherwise default
+    const targetComponentsDir = componentsDir || path.join(project.path, 'components');
+
+    // Ensure target directory exists
+    await fs.mkdir(targetComponentsDir, { recursive: true });
+
+    if (componentsDir) {
+        logger.debug(`[Project Creation] Using custom components directory: ${componentsDir}`);
+    }
+
     const componentManager = new ComponentManager(logger);
 
     // Clone all components in parallel
+    // If using custom componentsDir, create a project context that points to the parent
+    // so components are installed to the correct location
+    const projectContext = componentsDir
+        ? { ...project, path: path.dirname(componentsDir) }
+        : project;
+
     const clonePromises = Array.from(componentDefinitions.entries()).map(
         async ([compId, { definition, installOptions }]) => {
             logger.debug(`[Project Creation] Cloning: ${definition.name}`);
 
             // Clone without npm install (skipDependencies: true)
-            const result = await componentManager.installComponent(project, definition, installOptions);
+            const result = await componentManager.installComponent(projectContext, definition, installOptions);
 
             if (!result.success || !result.component) {
                 throw new Error(`Failed to clone ${definition.name}: ${result.error}`);
@@ -83,7 +107,6 @@ export async function installAllComponents(
     progressTracker('Installing Components', 40, 'Installing npm packages...');
     logger.debug('[Project Creation] Phase 2: Installing components...');
 
-    const { ComponentManager } = await import('@/features/components/services/componentManager');
     const componentManager = new ComponentManager(logger);
 
     // Run npm install for all components in parallel

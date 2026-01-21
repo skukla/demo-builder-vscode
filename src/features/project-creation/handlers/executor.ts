@@ -253,18 +253,25 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const componentDefinitions = await loadComponentDefinitions(typedConfig, registryManager, context, isEdsStack);
 
     // ========================================================================
-    // EDIT MODE: CLEAN SLATE FOR COMPONENTS
+    // EDIT MODE: PREPARE ATOMIC COMPONENT SWAP
     // ========================================================================
+    // In edit mode, install components to a temp directory first.
+    // Only swap to production after ALL components install successfully.
+    // This preserves the original components if installation fails.
+
+    let tempComponentsDir: string | undefined;
 
     if (isEditMode) {
-        // Delete existing components directory - will be recreated during installation
-        const existingComponentsDir = path.join(projectPath, 'components');
-        const componentsExist = await fs.access(existingComponentsDir).then(() => true).catch(() => false);
-        if (componentsExist) {
-            context.logger.info('[Project Edit] Removing existing components directory');
-            progressTracker('Cleaning Up', 18, 'Removing existing components...');
-            await fs.rm(existingComponentsDir, { recursive: true, force: true });
+        tempComponentsDir = path.join(projectPath, 'components.tmp');
+
+        // Clean up any stale temp directory from previous failed attempts
+        const tempDirExists = await fs.access(tempComponentsDir).then(() => true).catch(() => false);
+        if (tempDirExists) {
+            context.logger.info('[Project Edit] Cleaning up stale temporary components directory');
+            await fs.rm(tempComponentsDir, { recursive: true, force: true });
         }
+
+        context.logger.info('[Project Edit] Will install components to temporary directory for atomic swap');
     }
 
     // ========================================================================
@@ -277,10 +284,58 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         progressTracker,
         logger: context.logger,
         saveProject: () => context.stateManager.saveProject(project),
+        // In edit mode, install to temp directory for atomic swap
+        componentsDir: tempComponentsDir,
     };
 
     await cloneAllComponents(installationContext);
     await installAllComponents(installationContext);
+
+    // ========================================================================
+    // EDIT MODE: ATOMIC COMPONENT SWAP
+    // ========================================================================
+    // After all components installed successfully in temp directory,
+    // atomically swap with production directory.
+
+    if (isEditMode && tempComponentsDir) {
+        progressTracker('Applying Changes', 71, 'Swapping components...');
+        context.logger.info('[Project Edit] Swapping temporary components with production');
+
+        try {
+            await swapComponentsDirectory(projectPath, context.logger);
+
+            // Validate that components were installed before updating paths
+            if (!project.componentInstances || Object.keys(project.componentInstances).length === 0) {
+                context.logger.error('[Project Edit] No component instances found after swap');
+                throw new Error('Component swap completed but no components found in project state');
+            }
+
+            // Update component instance paths from .tmp to production
+            // (paths were set during clone to point to components.tmp)
+            // Use proper path reconstruction to avoid substring matching issues
+            const tempComponentsPath = path.join(projectPath, 'components.tmp');
+            const productionComponentsPath = path.join(projectPath, 'components');
+
+            for (const [compId, instance] of Object.entries(project.componentInstances)) {
+                if (instance.path && instance.path.startsWith(tempComponentsPath)) {
+                    const relativePath = path.relative(tempComponentsPath, instance.path);
+                    const oldPath = instance.path;
+                    instance.path = path.join(productionComponentsPath, relativePath);
+                    context.logger.debug(`[Project Edit] Updated path for ${compId}: ${oldPath} → ${instance.path}`);
+                }
+            }
+
+            // Save updated paths
+            await context.stateManager.saveProject(project);
+            context.logger.info('[Project Edit] Component swap completed successfully');
+        } catch (error) {
+            context.logger.error('[Project Edit] Failed to swap components', error as Error);
+            throw new Error(
+                `Failed to apply component changes: ${(error as Error).message}. ` +
+                `The project's original components have been preserved.`,
+            );
+        }
+    }
 
     // ========================================================================
     // EDS METADATA POPULATION (if EDS stack)
@@ -744,4 +799,92 @@ async function loadComponentDefinitions(
     }
 
     return componentDefinitions;
+}
+
+/**
+ * Atomically swap temporary components directory with production directory.
+ * Uses rename which is atomic on POSIX filesystems (macOS/Linux).
+ *
+ * Sequence:
+ * 1. Rename components → components.backup
+ * 2. Rename components.tmp → components
+ * 3. Delete components.backup
+ *
+ * On failure: Attempt to restore from backup
+ */
+async function swapComponentsDirectory(
+    projectPath: string,
+    logger: import('@/types/logger').Logger,
+): Promise<void> {
+    const fs = await import('fs/promises');
+    const pathModule = await import('path');
+
+    const componentsDir = pathModule.join(projectPath, 'components');
+    const tempDir = pathModule.join(projectPath, 'components.tmp');
+    const backupDir = pathModule.join(projectPath, 'components.backup');
+
+    logger.debug('[Project Edit] Starting atomic component swap');
+
+    // Pre-flight: Clean up stale backup directory from previous failed attempts
+    const staleBackupExists = await fs.access(backupDir).then(() => true).catch(() => false);
+    if (staleBackupExists) {
+        logger.warn('[Project Edit] Found stale backup directory from previous attempt, removing');
+        await fs.rm(backupDir, { recursive: true, force: true });
+    }
+
+    try {
+        // Step 1: Backup existing components (if they exist)
+        const componentsExist = await fs.access(componentsDir).then(() => true).catch(() => false);
+        if (componentsExist) {
+            logger.debug('[Project Edit] Backing up existing components');
+            await fs.rename(componentsDir, backupDir);
+        }
+
+        // Step 2: Promote temp to production (atomic rename)
+        logger.debug('[Project Edit] Promoting temporary components to production');
+        await fs.rename(tempDir, componentsDir);
+
+        // Step 3: Remove backup on success
+        if (componentsExist) {
+            logger.debug('[Project Edit] Removing backup components');
+            await fs.rm(backupDir, { recursive: true, force: true });
+        }
+
+        logger.debug('[Project Edit] Component swap completed successfully');
+    } catch (error) {
+        // Rollback: If rename failed and backup exists, restore it
+        logger.error('[Project Edit] Component swap failed, attempting rollback', error as Error);
+
+        const backupExists = await fs.access(backupDir).then(() => true).catch(() => false);
+        const componentsExists = await fs.access(componentsDir).then(() => true).catch(() => false);
+
+        // If backup exists and components doesn't, restore backup
+        if (backupExists && !componentsExists) {
+            try {
+                await fs.rename(backupDir, componentsDir);
+                logger.info('[Project Edit] Restored components from backup');
+            } catch (restoreError) {
+                logger.error('[Project Edit] Failed to restore backup', restoreError as Error);
+                throw new Error(
+                    `Component swap failed and rollback failed. ` +
+                    `Original components may be at: ${backupDir}. ` +
+                    `Error: ${(error as Error).message}`,
+                );
+            }
+        }
+
+        // Clean up temp dir if it still exists
+        const tempExists = await fs.access(tempDir).then(() => true).catch(() => false);
+        if (tempExists) {
+            try {
+                await fs.rm(tempDir, { recursive: true, force: true });
+                logger.debug('[Project Edit] Cleaned up temporary directory');
+            } catch (cleanupError) {
+                logger.warn('[Project Edit] Failed to clean up temporary directory', cleanupError as Error);
+                // Non-fatal - continue with the original error
+            }
+        }
+
+        throw error;
+    }
 }
