@@ -7,8 +7,6 @@
 
 import { SETTINGS_FILE_VERSION, type SettingsFile, type SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
 import type { Project } from '@/types/base';
-import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
-import type { DemoPackagesConfig } from '@/types/demoPackages';
 
 /**
  * Result of parsing a settings file
@@ -88,40 +86,6 @@ export function isNewerVersion(settings: SettingsFile): boolean {
 }
 
 /**
- * Infer selectedPackage from template metadata for legacy projects.
- *
- * Legacy projects (created before selectedPackage tracking) don't have
- * selectedPackage in their manifest. This function looks up the package
- * by matching templateOwner/templateRepo from the EDS component metadata.
- *
- * @param templateOwner - GitHub owner of the template repo
- * @param templateRepo - GitHub repo name of the template
- * @param selectedStack - The selected stack ID (e.g., 'eds-paas')
- * @returns Package ID if found, undefined otherwise
- */
-export function inferPackageFromTemplate(
-    templateOwner: string | undefined,
-    templateRepo: string | undefined,
-    selectedStack: string | undefined,
-): string | undefined {
-    if (!templateOwner || !templateRepo || !selectedStack) {
-        return undefined;
-    }
-
-    const config = demoPackagesConfig as DemoPackagesConfig;
-
-    // Search through all packages for a storefront that matches
-    for (const pkg of config.packages) {
-        const storefront = pkg.storefronts?.[selectedStack];
-        if (storefront?.templateOwner === templateOwner && storefront?.templateRepo === templateRepo) {
-            return pkg.id;
-        }
-    }
-
-    return undefined;
-}
-
-/**
  * Extract settings from an existing project
  *
  * Creates a SettingsFile from a project's current state.
@@ -151,17 +115,6 @@ export function extractSettingsFromProject(
         };
     }
 
-    // Backward compatibility: Infer selectedPackage from template metadata for legacy projects
-    // Projects created before selectedPackage tracking don't have this field in their manifest
-    let selectedPackage = project.selectedPackage;
-    if (!selectedPackage && edsConfig?.templateOwner && edsConfig?.templateRepo) {
-        selectedPackage = inferPackageFromTemplate(
-            edsConfig.templateOwner,
-            edsConfig.templateRepo,
-            project.selectedStack,
-        );
-    }
-
     return {
         version: SETTINGS_FILE_VERSION,
         exportedAt: new Date().toISOString(),
@@ -185,7 +138,7 @@ export function extractSettingsFromProject(
               }
             : undefined,
         // Package/Stack/Addons selections for import/copy retention
-        selectedPackage,
+        selectedPackage: project.selectedPackage,
         selectedStack: project.selectedStack,
         selectedAddons: project.selectedAddons,
         // EDS configuration (for Edge Delivery Services stacks)

@@ -5,7 +5,6 @@ import {
     extractSettingsFromProject,
     createExportSettings,
     getSuggestedFilename,
-    inferPackageFromTemplate,
 } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Project } from '@/types/base';
 import { SETTINGS_FILE_VERSION } from '@/features/projects-dashboard/types/settingsFile';
@@ -261,77 +260,8 @@ describe('settingsSerializer', () => {
         });
     });
 
-    describe('inferPackageFromTemplate', () => {
-        it('should return package ID when template matches', () => {
-            // citisignal package has eds-paas storefront with demo-system-stores/accs-citisignal
-            const result = inferPackageFromTemplate(
-                'demo-system-stores',
-                'accs-citisignal',
-                'eds-paas',
-            );
-
-            expect(result).toBe('citisignal');
-        });
-
-        it('should return undefined when no template owner', () => {
-            const result = inferPackageFromTemplate(undefined, 'accs-citisignal', 'eds-paas');
-
-            expect(result).toBeUndefined();
-        });
-
-        it('should return undefined when no template repo', () => {
-            const result = inferPackageFromTemplate('demo-system-stores', undefined, 'eds-paas');
-
-            expect(result).toBeUndefined();
-        });
-
-        it('should return undefined when no stack', () => {
-            const result = inferPackageFromTemplate('demo-system-stores', 'accs-citisignal', undefined);
-
-            expect(result).toBeUndefined();
-        });
-
-        it('should return undefined when no matching package found', () => {
-            const result = inferPackageFromTemplate('unknown-owner', 'unknown-repo', 'eds-paas');
-
-            expect(result).toBeUndefined();
-        });
-    });
-
-    describe('extractSettingsFromProject - backward compatibility', () => {
-        it('should infer selectedPackage from EDS metadata when not set', () => {
-            const project: Project = {
-                name: 'legacy-project',
-                created: new Date(),
-                lastModified: new Date(),
-                path: '/path/to/project',
-                status: 'ready',
-                componentSelections: { frontend: 'eds-storefront' },
-                componentConfigs: {},
-                // No selectedPackage - simulates legacy project
-                selectedStack: 'eds-paas',
-                componentInstances: {
-                    'eds-storefront': {
-                        id: 'eds-storefront',
-                        name: 'EDS Storefront',
-                        type: 'frontend',
-                        status: 'ready',
-                        lastUpdated: new Date(),
-                        metadata: {
-                            templateOwner: 'demo-system-stores',
-                            templateRepo: 'accs-citisignal',
-                        },
-                    },
-                },
-            };
-
-            const result = extractSettingsFromProject(project);
-
-            expect(result.selectedPackage).toBe('citisignal');
-            expect(result.selectedStack).toBe('eds-paas');
-        });
-
-        it('should keep existing selectedPackage when already set', () => {
+    describe('extractSettingsFromProject - selectedPackage handling', () => {
+        it('should preserve selectedPackage from project when set', () => {
             const project: Project = {
                 name: 'modern-project',
                 created: new Date(),
