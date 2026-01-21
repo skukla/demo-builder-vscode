@@ -647,6 +647,30 @@ export function buildProjectConfig(
         }
     }
 
+    // ============================================================================
+    // VALIDATION: Check for incomplete stack/package configuration
+    // ============================================================================
+    // Validate that if selectedStack is set, selectedPackage should also be set.
+    // This is defensive - normally the wizard ensures both are set together,
+    // but we log if there's a mismatch to help diagnose incomplete state.
+    if (wizardState.selectedStack && !wizardState.selectedPackage) {
+        // User channel: User-friendly warning
+        // eslint-disable-next-line no-console
+        console.warn(
+            '[Demo Builder] Incomplete configuration: architecture is selected but brand/package is missing. ' +
+            'This may result in missing storefront data.',
+        );
+
+        // Debug channel: Technical details for troubleshooting
+        // eslint-disable-next-line no-console
+        console.log('[buildProjectConfig] Validation warning - selectedStack without selectedPackage:', {
+            selectedPackage: wizardState.selectedPackage,
+            selectedStack: wizardState.selectedStack,
+            hasPackages: !!packages,
+            packagesCount: packages?.length || 0,
+        });
+    }
+
     // Resolve frontend source, template config, and content source from selected package/storefront
     // Packages contain storefronts keyed by stack ID (e.g., 'headless-paas', 'eds-paas')
     // All values are explicit configuration - no URL parsing
@@ -675,6 +699,26 @@ export function buildProjectConfig(
 
     // Get components directly from stack config - source of truth
     const stack = wizardState.selectedStack ? getStackById(wizardState.selectedStack) : undefined;
+
+    // ============================================================================
+    // VALIDATION: Check if stack lookup succeeded
+    // ============================================================================
+    if (wizardState.selectedStack && !stack) {
+        // User channel: User-friendly warning
+        // eslint-disable-next-line no-console
+        console.warn(
+            `[Demo Builder] Configuration warning: selected architecture '${wizardState.selectedStack}' not found. ` +
+            'Components may be missing from project.',
+        );
+
+        // Debug channel: Technical details
+        // eslint-disable-next-line no-console
+        console.log('[buildProjectConfig] Validation warning - stack lookup failed:', {
+            selectedStack: wizardState.selectedStack,
+            selectedPackage: wizardState.selectedPackage,
+            stackFound: false,
+        });
+    }
 
     return {
         projectName: wizardState.projectName,
