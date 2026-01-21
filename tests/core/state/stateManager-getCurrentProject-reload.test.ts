@@ -257,26 +257,20 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
         });
     });
 
-    describe('Preserve selectedPackage/selectedStack/selectedAddons from cache', () => {
-        it('should preserve selectedPackage from cache when disk version is undefined', async () => {
+    describe('Manifest is single source of truth for selectedPackage/selectedStack/selectedAddons', () => {
+        it('should load selectedPackage from manifest (no cache recovery needed)', async () => {
             const { stateManager } = testMocks;
 
-            // Initialize with cached project that has selectedPackage
-            const cachedProject = createMockProject();
-            cachedProject.path = '/mock/home/.demo-builder/projects/test-project';
-            (cachedProject as Project).selectedPackage = 'luma';
-            (cachedProject as Project).selectedStack = 'headless-paas';
-            (cachedProject as Project).selectedAddons = ['demo-inspector'];
-
+            // State file only stores path, not full project (new format)
             const mockState = {
                 version: 1,
-                currentProject: cachedProject,
+                currentProjectPath: '/mock/home/.demo-builder/projects/test-project',
                 processes: {},
                 lastUpdated: new Date().toISOString()
             };
 
-            // Manifest WITH the package/stack/addons (matching the cached project during init)
-            const initManifest = {
+            // Manifest WITH the package/stack/addons - this is the source of truth
+            const manifest = {
                 name: 'Test Project',
                 version: '1.0.0',
                 created: '2025-11-20T00:00:00.000Z',
@@ -288,35 +282,61 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
                 selectedAddons: ['demo-inspector'],
             };
 
-            // Mock readFile: first call = state file, second call = manifest during init
             (fs.readFile as jest.Mock)
                 .mockResolvedValueOnce(JSON.stringify(mockState))
-                .mockResolvedValueOnce(JSON.stringify(initManifest));
+                .mockResolvedValueOnce(JSON.stringify(manifest));
+            (fs.access as jest.Mock).mockResolvedValue(undefined);
+            (fs.readdir as jest.Mock).mockResolvedValue([]);
             await stateManager.initialize();
 
-            // Mock fresh manifest WITHOUT selectedPackage (simulating incomplete disk data)
-            const freshManifest = {
+            // Reload should get fresh data from manifest
+            (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(manifest));
+
+            const result = await stateManager.getCurrentProject();
+
+            expect(result).not.toBeNull();
+            expect(result?.selectedPackage).toBe('luma');
+            expect(result?.selectedStack).toBe('headless-paas');
+            expect(result?.selectedAddons).toEqual(['demo-inspector']);
+        });
+
+        it('should return undefined for missing fields if manifest lacks them', async () => {
+            const { stateManager } = testMocks;
+
+            const mockState = {
+                version: 1,
+                currentProjectPath: '/mock/home/.demo-builder/projects/test-project',
+                processes: {},
+                lastUpdated: new Date().toISOString()
+            };
+
+            // Manifest WITHOUT selectedPackage - this is what the project will have
+            const manifest = {
                 name: 'Test Project',
                 version: '1.0.0',
                 created: '2025-11-20T00:00:00.000Z',
                 lastModified: '2025-11-20T00:00:00.000Z',
                 componentInstances: {},
                 componentVersions: {},
-                // Note: selectedPackage, selectedStack, selectedAddons are MISSING
+                // No selectedPackage, selectedStack, selectedAddons
             };
 
-            (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(freshManifest));
+            (fs.readFile as jest.Mock)
+                .mockResolvedValueOnce(JSON.stringify(mockState))
+                .mockResolvedValueOnce(JSON.stringify(manifest));
             (fs.access as jest.Mock).mockResolvedValue(undefined);
             (fs.readdir as jest.Mock).mockResolvedValue([]);
+            await stateManager.initialize();
 
-            // Call getCurrentProject - should reload from disk but preserve cache values
+            (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(manifest));
+
             const result = await stateManager.getCurrentProject();
 
-            // Verify cached values were preserved
+            // Manifest is source of truth - if it doesn't have the field, neither does the project
             expect(result).not.toBeNull();
-            expect(result?.selectedPackage).toBe('luma');
-            expect(result?.selectedStack).toBe('headless-paas');
-            expect(result?.selectedAddons).toEqual(['demo-inspector']);
+            expect(result?.selectedPackage).toBeUndefined();
+            expect(result?.selectedStack).toBeUndefined();
+            expect(result?.selectedAddons).toBeUndefined();
         });
 
         it('should NOT overwrite disk values with cache when disk has values', async () => {
@@ -371,24 +391,18 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
             expect(result?.selectedPackage).toBe('new-package');
         });
 
-        it('should handle preservation across multiple reload cycles', async () => {
+        it('should consistently return manifest data across multiple reload cycles', async () => {
             const { stateManager } = testMocks;
-
-            // Initialize with cached project
-            const cachedProject = createMockProject();
-            cachedProject.path = '/mock/home/.demo-builder/projects/test-project';
-            (cachedProject as Project).selectedPackage = 'luma';
-            (cachedProject as Project).selectedStack = 'headless-paas';
 
             const mockState = {
                 version: 1,
-                currentProject: cachedProject,
+                currentProjectPath: '/mock/home/.demo-builder/projects/test-project',
                 processes: {},
                 lastUpdated: new Date().toISOString()
             };
 
-            // During init, manifest has the package/stack
-            const initManifest = {
+            // Manifest has the package/stack - this is the source of truth
+            const manifest = {
                 name: 'Test Project',
                 version: '1.0.0',
                 created: '2025-11-20T00:00:00.000Z',
@@ -401,24 +415,14 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
 
             (fs.readFile as jest.Mock)
                 .mockResolvedValueOnce(JSON.stringify(mockState))
-                .mockResolvedValueOnce(JSON.stringify(initManifest));
-            await stateManager.initialize();
-
-            // Mock manifest without selectedPackage (simulating async mesh status polling)
-            const freshManifest = {
-                name: 'Test Project',
-                version: '1.0.0',
-                created: '2025-11-20T00:00:00.000Z',
-                lastModified: '2025-11-20T00:00:00.000Z',
-                componentInstances: {},
-                componentVersions: {},
-            };
-
-            (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(freshManifest));
+                .mockResolvedValueOnce(JSON.stringify(manifest));
             (fs.access as jest.Mock).mockResolvedValue(undefined);
             (fs.readdir as jest.Mock).mockResolvedValue([]);
+            await stateManager.initialize();
 
-            // Multiple reload cycles (simulating mesh status polling)
+            (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(manifest));
+
+            // Multiple reload cycles should consistently return manifest data
             const result1 = await stateManager.getCurrentProject();
             expect(result1?.selectedPackage).toBe('luma');
 
@@ -432,15 +436,13 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
     });
 
     describe('Edge cases', () => {
-        it('should handle cached project without path', async () => {
+        it('should return undefined when state has no project path', async () => {
             const { stateManager } = testMocks;
 
-            const cachedProject = createMockProject();
-            cachedProject.path = ''; // Empty path
-
+            // State file with empty/no project path
             const mockState = {
                 version: 1,
-                currentProject: cachedProject,
+                currentProjectPath: '', // Empty path
                 processes: {},
                 lastUpdated: new Date().toISOString()
             };
@@ -448,11 +450,10 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
             (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockState));
             await stateManager.initialize();
 
-            // Should not attempt reload (no path), return cached version
+            // No project path = no project to load
             const result = await stateManager.getCurrentProject();
 
-            expect(result).toBeDefined();
-            expect(result?.path).toBe('');
+            expect(result).toBeUndefined();
         });
 
         it('should handle concurrent calls to getCurrentProject', async () => {

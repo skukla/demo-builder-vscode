@@ -86,9 +86,8 @@ export class ProjectConfigWriter {
      * Writes to temp file first, then renames (atomic on POSIX filesystems).
      * This prevents JSON corruption from interrupted or concurrent writes.
      *
-     * SURGICAL MERGE: Reads existing manifest first and merges in-memory changes.
-     * This preserves fields that exist on disk but not in memory (e.g., selectedPackage
-     * added manually or from a newer extension version).
+     * The manifest is the SINGLE SOURCE OF TRUTH for project data.
+     * We write exactly what's in the project object - no merging with disk.
      */
     private async writeManifest(project: Project): Promise<void> {
         // GUARD: Validate project.path before proceeding
@@ -100,17 +99,9 @@ export class ProjectConfigWriter {
         const tempPath = `${manifestPath}.tmp`;
 
         try {
-            // SURGICAL MERGE: Read existing manifest to preserve fields not in memory
-            let existingManifest: Record<string, unknown> = {};
-            try {
-                const existingData = await fs.readFile(manifestPath, 'utf-8');
-                existingManifest = JSON.parse(existingData);
-            } catch {
-                // No existing manifest or invalid JSON - start fresh
-            }
-
-            // Build the new manifest from in-memory project
-            const newManifest: Record<string, unknown> = {
+            // Build the manifest from project object - no merging needed
+            // The manifest is the single source of truth
+            const manifest: Record<string, unknown> = {
                 name: project.name,
                 version: '1.0.0',
                 // Type-safe Date handling: Handle both Date objects and ISO strings from persistence
@@ -129,21 +120,19 @@ export class ProjectConfigWriter {
                 components: getComponentIds(project.componentInstances),
             };
 
-            // For optional fields, prefer in-memory value if set, otherwise preserve disk value
-            // This ensures we don't lose data that exists on disk but not in memory
-            newManifest.selectedPackage = project.selectedPackage ?? existingManifest.selectedPackage;
-            newManifest.selectedStack = project.selectedStack ?? existingManifest.selectedStack;
-            newManifest.selectedAddons = project.selectedAddons?.length
-                ? project.selectedAddons
-                : existingManifest.selectedAddons;
-
-            // Clean up undefined values (don't write them to JSON)
-            if (newManifest.selectedPackage === undefined) delete newManifest.selectedPackage;
-            if (newManifest.selectedStack === undefined) delete newManifest.selectedStack;
-            if (!newManifest.selectedAddons) delete newManifest.selectedAddons;
+            // Add optional fields if they exist
+            if (project.selectedPackage !== undefined) {
+                manifest.selectedPackage = project.selectedPackage;
+            }
+            if (project.selectedStack !== undefined) {
+                manifest.selectedStack = project.selectedStack;
+            }
+            if (project.selectedAddons?.length) {
+                manifest.selectedAddons = project.selectedAddons;
+            }
 
             // Atomic write: write to temp file first, then rename
-            await fs.writeFile(tempPath, JSON.stringify(newManifest, null, 2));
+            await fs.writeFile(tempPath, JSON.stringify(manifest, null, 2));
 
             // Verify temp file exists before rename
             await fs.access(tempPath);

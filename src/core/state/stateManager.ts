@@ -78,39 +78,45 @@ export class StateManager {
     private async loadState(): Promise<void> {
         try {
             const data = await fs.readFile(this.stateFile, 'utf-8');
-            const parsed = parseJSON<{ version?: number; currentProject?: Project; processes?: Record<string, ProcessInfo>; lastUpdated?: string }>(data);
+            // Support both old format (currentProject) and new format (currentProjectPath)
+            const parsed = parseJSON<{
+                version?: number;
+                currentProjectPath?: string;
+                currentProject?: Project; // Legacy: for migration from old state files
+                processes?: Record<string, ProcessInfo>;
+                lastUpdated?: string;
+            }>(data);
             if (!parsed) {
                 this.logger.warn('Failed to parse state file, using defaults');
                 return;
             }
 
-            // Validate that project path exists if there's a current project
-            let validProject = parsed.currentProject;
-            if (validProject?.path) {
-                try {
-                    await fs.access(validProject.path);
+            // Get project path (new format) or extract from legacy format
+            const projectPath = parsed.currentProjectPath || parsed.currentProject?.path;
+            let validProject: Project | undefined = undefined;
 
-                    // CRITICAL: Reload project from manifest to ensure fresh data
-                    // The state file may contain stale project data (e.g., missing selectedPackage)
-                    // The project's .demo-builder.json manifest is the source of truth
+            if (projectPath) {
+                try {
+                    await fs.access(projectPath);
+
+                    // Load project from manifest - the ONLY source of truth for project data
                     const freshProject = await this.projectFileLoader.loadProject(
-                        validProject.path,
+                        projectPath,
                         () => vscode.window.terminals,
                     );
 
                     if (freshProject) {
                         this.logger.debug(
-                            `[StateManager] Refreshed project from manifest: ` +
+                            `[StateManager] Loaded project from manifest: ` +
                             `selectedPackage=${freshProject.selectedPackage}, selectedStack=${freshProject.selectedStack}`
                         );
                         validProject = freshProject;
                     } else {
-                        this.logger.warn(`[StateManager] Failed to reload project from manifest, using cached state`);
+                        this.logger.warn(`[StateManager] Failed to load project from manifest at ${projectPath}`);
                     }
                 } catch {
                     // Project path doesn't exist, clear it
-                    this.logger.warn(`Project path ${validProject.path} does not exist, clearing project`);
-                    validProject = undefined;
+                    this.logger.warn(`Project path ${projectPath} does not exist, clearing project`);
                 }
             }
 
@@ -130,9 +136,12 @@ export class StateManager {
         try {
             this.state.lastUpdated = new Date();
 
+            // IMPORTANT: Only persist the project PATH, not the full project data.
+            // The manifest (.demo-builder.json) is the single source of truth for project data.
+            // This eliminates sync issues between state.json and the manifest.
             const data = {
                 version: this.state.version,
-                currentProject: this.state.currentProject,
+                currentProjectPath: this.state.currentProject?.path,
                 processes: Object.fromEntries(this.state.processes),
                 lastUpdated: this.state.lastUpdated,
             };
@@ -184,6 +193,10 @@ export class StateManager {
     }
 
     public async saveProject(project: Project): Promise<void> {
+        // DEBUG: Track what's triggering saves
+        const stack = new Error().stack?.split('\n').slice(2, 5).join(' <- ') || 'unknown';
+        this.logger.debug(`[StateManager] saveProject called for ${project.name}, caller: ${stack}`);
+
         // Serialize save operations to prevent concurrent writes racing on temp file
         return StateManager.saveLock.run(async () => {
             // GUARD: Prevent stale background saves from recreating deleted projects
@@ -319,9 +332,8 @@ export class StateManager {
     /**
      * Load a project from a directory path
      *
-     * IMPORTANT: Preserves selectedPackage and selectedStack from cached project
-     * when reloading from disk. This prevents data loss during async reload cycles
-     * (e.g., mesh status polling) where the disk manifest might be stale or incomplete.
+     * The manifest (.demo-builder.json) is the SINGLE SOURCE OF TRUTH for project data.
+     * No recovery from cache or recent projects needed - just load from manifest.
      *
      * @param projectPath - Path to the project directory
      * @param terminalProvider - Optional function to get terminals (for testing)
@@ -334,45 +346,11 @@ export class StateManager {
         options: { persistAfterLoad?: boolean } = {},
     ): Promise<Project | null> {
         const { persistAfterLoad = true } = options;
+
+        // Load project from manifest - the single source of truth
         const project = await this.projectFileLoader.loadProject(projectPath, terminalProvider);
 
         if (project) {
-            // CRITICAL: Preserve selectedPackage/selectedStack from cached project
-            // when disk version has them as undefined. This prevents data loss during
-            // async reload cycles (mesh status polling, etc.)
-            const cachedProject = this.state.currentProject;
-            if (cachedProject && cachedProject.path === projectPath) {
-                if (project.selectedPackage === undefined && cachedProject.selectedPackage !== undefined) {
-                    project.selectedPackage = cachedProject.selectedPackage;
-                }
-                if (project.selectedStack === undefined && cachedProject.selectedStack !== undefined) {
-                    project.selectedStack = cachedProject.selectedStack;
-                }
-                if (project.selectedAddons === undefined && cachedProject.selectedAddons !== undefined) {
-                    project.selectedAddons = cachedProject.selectedAddons;
-                }
-            }
-
-            // FALLBACK: If metadata still undefined, check recent projects for backup
-            // This handles cases where manifest was corrupted and project is not current
-            if (project.selectedPackage === undefined || project.selectedStack === undefined) {
-                const recentProject = await this.recentProjectsManager.findByPath(projectPath);
-                if (recentProject) {
-                    if (project.selectedPackage === undefined && recentProject.selectedPackage) {
-                        project.selectedPackage = recentProject.selectedPackage;
-                        this.logger.debug(`[StateManager] Recovered selectedPackage from recent projects: ${recentProject.selectedPackage}`);
-                    }
-                    if (project.selectedStack === undefined && recentProject.selectedStack) {
-                        project.selectedStack = recentProject.selectedStack;
-                        this.logger.debug(`[StateManager] Recovered selectedStack from recent projects: ${recentProject.selectedStack}`);
-                    }
-                    if (project.selectedAddons === undefined && recentProject.selectedAddons) {
-                        project.selectedAddons = recentProject.selectedAddons;
-                        this.logger.debug(`[StateManager] Recovered selectedAddons from recent projects`);
-                    }
-                }
-            }
-
             if (persistAfterLoad) {
                 // Set as current project and persist to disk
                 await this.saveProject(project);
