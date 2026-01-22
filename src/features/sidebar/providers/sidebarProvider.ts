@@ -76,7 +76,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         webviewView.onDidDispose(() => {
             messageListener.dispose();
             this.view = undefined;
-            this.logger.debug('Sidebar view disposed');
         });
 
         // When sidebar is revealed (user clicks extension icon), auto-open the main dashboard
@@ -99,8 +98,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             this.hasCheckedForUpdates = true;
             this.triggerUpdateCheck();
         }
-
-        this.logger.debug('Sidebar view resolved');
     }
 
     /**
@@ -203,7 +200,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
      * Call this when showing/hiding the Projects List
      */
     public async setShowingProjectsList(showing: boolean): Promise<void> {
-        this.logger.info(`Setting showingProjectsList: ${showing}`);
         this.showingProjectsList = showing;
 
         // Update sidebar context
@@ -215,8 +211,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
      * Handle messages from the webview
      */
     private async handleMessage(message: { type: string; payload?: unknown }): Promise<void> {
-        this.logger.info(`Sidebar message: ${message.type}`);
-
         switch (message.type) {
             case 'getContext':
                 await this.handleGetContext();

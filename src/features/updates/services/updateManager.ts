@@ -74,28 +74,22 @@ export class UpdateManager {
         const channel = this.getUpdateChannel();
 
         if (!project.componentInstances) {
-            this.logger.debug('[Updates] No componentInstances in project');
             return results;
         }
 
         const componentIds = getComponentIds(project.componentInstances);
-        this.logger.debug(`[Updates] Checking ${componentIds.length} components: ${componentIds.join(', ')}`);
 
         for (const componentId of componentIds) {
             // Get repository from components.json
             const repoInfo = await this.repositoryResolver.getRepositoryInfo(componentId);
             if (!repoInfo) {
-                this.logger.debug(`[Updates] Skipping ${componentId}: no Git source in components.json`);
                 continue;
             }
 
             const currentVersion = getComponentVersion(project, componentId) || 'unknown';
-            this.logger.debug(`[Updates] ${componentId}: current=${currentVersion}, channel=${channel}, repo=${repoInfo.repository}`);
-
             const latestRelease = await this.fetchLatestRelease(repoInfo.repository, channel);
 
             if (!latestRelease) {
-                this.logger.debug(`[Updates] ${componentId}: no release found`);
                 results.set(componentId, {
                     hasUpdate: false,
                     current: currentVersion,
@@ -104,12 +98,8 @@ export class UpdateManager {
                 continue;
             }
 
-            this.logger.debug(`[Updates] ${componentId}: latest=${latestRelease.version}`);
-
             const hasUpdate = currentVersion === 'unknown' ||
                         this.isNewerVersion(latestRelease.version, currentVersion);
-
-            this.logger.debug(`[Updates] ${componentId}: hasUpdate=${hasUpdate}`);
 
             results.set(componentId, {
                 hasUpdate,
@@ -149,8 +139,6 @@ export class UpdateManager {
             }
         }
 
-        this.logger.debug(`[Updates] Checking ${componentProjectMap.size} unique components across ${projects.length} projects`);
-
         const results: MultiProjectUpdateResult[] = [];
 
         // For each unique component, fetch latest version once and check all projects
@@ -158,13 +146,11 @@ export class UpdateManager {
             // Get repository from components.json
             const repoInfo = await this.repositoryResolver.getRepositoryInfo(componentId);
             if (!repoInfo) {
-                this.logger.debug(`[Updates] Skipping ${componentId}: no Git source in components.json`);
                 continue;
             }
 
             const latestRelease = await this.fetchLatestRelease(repoInfo.repository, channel);
             if (!latestRelease) {
-                this.logger.debug(`[Updates] ${componentId}: no release found`);
                 continue;
             }
 
@@ -175,7 +161,6 @@ export class UpdateManager {
             });
 
             if (outdatedProjects.length > 0) {
-                this.logger.debug(`[Updates] ${componentId}: ${outdatedProjects.length} project(s) have outdated version (latest: ${latestRelease.version})`);
 
                 results.push({
                     componentId,
@@ -207,15 +192,12 @@ export class UpdateManager {
             // Get repository from components.json (submodules may also be registered as components)
             const repoInfo = await this.repositoryResolver.getRepositoryInfo(submoduleId);
             if (!repoInfo) {
-                this.logger.debug(`[Updates] Skipping submodule ${submoduleId}: no Git source in components.json`);
                 continue;
             }
 
             // Get current submodule commit
             const submodulePath = path.join(parentComponentPath, submoduleConfig.path);
             const currentCommit = await this.getGitCommit(submodulePath);
-
-            this.logger.debug(`[Updates] Checking submodule ${submoduleId}: current=${currentCommit?.substring(0, 8) || 'unknown'}`);
 
             // Fetch latest release from GitHub
             const latestRelease = await this.fetchLatestRelease(repoInfo.repository, channel);
@@ -232,10 +214,6 @@ export class UpdateManager {
             // For submodules, we compare commit-based versions
             // If current commit is unknown or different from latest tag, an update may be available
             const hasUpdate = !currentCommit || currentCommit !== latestRelease.version;
-
-            if (hasUpdate) {
-                this.logger.debug(`[Updates] ${submoduleId} update available: ${currentCommit?.substring(0, 8) || 'unknown'} -> ${latestRelease.version}`);
-            }
 
             results.set(submoduleId, {
                 hasUpdate,
@@ -288,7 +266,6 @@ export class UpdateManager {
                 // HTTP status validation (Step 4)
                 if (!response.ok) {
                     if (response.status === 404) {
-                        this.logger.debug(`[Updates] Release not found for ${repo}`);
                         return null;
                     }
                     if (response.status === 403) {
@@ -320,7 +297,6 @@ export class UpdateManager {
                 }
 
                 if (!release || release.message === 'Not Found') {
-                    this.logger.debug(`[Updates] No releases found for ${repo}`);
                     return null;
                 }
 
@@ -331,7 +307,6 @@ export class UpdateManager {
                     : release.zipball_url;
 
                 if (!asset) {
-                    this.logger.debug(`[Updates] No valid asset found in release for ${repo}`);
                     return null;
                 }
 
@@ -350,7 +325,6 @@ export class UpdateManager {
                 }
 
                 const version = this.parseVersionFromTag(release.tag_name);
-                this.logger.debug(`[Updates] Latest ${channel}: v${version} (${repo.split('/')[1]})`);
 
                 return {
                     version,
@@ -362,12 +336,11 @@ export class UpdateManager {
             } finally {
                 clearTimeout(timeout);
             }
-        } catch (error) {
+        } catch {
             // INTENTIONALLY SILENT: Network/API errors should not alarm users.
             // Graceful degradation: returning null means "no update available" which
             // is better UX than showing "update check failed" errors for transient
             // network issues, rate limits, or GitHub outages.
-            this.logger.debug(`[Updates] Failed to fetch release for ${repo}:`, error);
             return null;
         }
     }
@@ -381,8 +354,7 @@ export class UpdateManager {
         try {
             // semver.gt() properly handles: 1.0.0-beta.6 > 1.0.0-beta.5
             return semver.gt(latest, current);
-        } catch (error) {
-            this.logger.debug(`[Updates] Version comparison failed: ${error}`);
+        } catch {
             return false;
         }
     }

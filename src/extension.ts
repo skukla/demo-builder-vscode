@@ -109,7 +109,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register SidebarProvider with ServiceLocator (for wizard/command access)
         ServiceLocator.setSidebarProvider(sidebarProvider);
-        logger.debug('[Extension] Sidebar provider registered');
 
         // Register Component TreeView
         // This displays the component file browser when a project is loaded
@@ -133,7 +132,6 @@ export async function activate(context: vscode.ExtensionContext) {
             // Guard against opening during webview transitions (prevents duplicate panels)
             if (shouldAutoOpenProjectsList(e.visible, isOpeningProjectsList)) {
                 isOpeningProjectsList = true;
-                logger.debug('[Extension] User clicked icon with no main webview - opening projects list');
                 await vscode.commands.executeCommand('demoBuilder.showProjectsList');
                 isOpeningProjectsList = false;
             }
@@ -144,20 +142,16 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(componentTreeProvider);
         context.subscriptions.push(projectChangeSubscription);
         context.subscriptions.push(treeViewVisibilitySubscription);
-        logger.debug('[Extension] Component TreeView registered');
 
         // Set up disposal callback to open Projects List when Dashboard closes
         // Only fires for non-transition closures (e.g., user clicking X, not Back button)
         BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
-            logger.debug(`[Extension] Webview disposed: ${webviewId}`);
             // Skip if we're in a transition (back button navigation handles this itself)
             if (BaseWebviewCommand.isWebviewTransitionInProgress()) {
-                logger.debug('[Extension] Skipping disposal callback during transition');
                 return;
             }
             // When Project Dashboard closes, open Projects List
             if (webviewId === 'demoBuilder.projectDashboard') {
-                logger.debug('[Extension] Dashboard closed, opening Projects List');
                 await vscode.commands.executeCommand('demoBuilder.showProjectsList');
             }
         });
@@ -219,7 +213,6 @@ export async function activate(context: vscode.ExtensionContext) {
         if (autoZoomEnabled) {
             // Reset zoom to 100% for consistent demo experience
             await vscode.commands.executeCommand('workbench.action.zoomReset');
-            logger.debug('[Extension] Reset zoom to 100% for demo visibility');
         }
 
         // Initialize status bar

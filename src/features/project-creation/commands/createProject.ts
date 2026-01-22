@@ -120,9 +120,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     ) {
         super(context, stateManager, statusBar, logger);
 
-        // Debug: Track instance creation
+        // Track instance for debugging
         this.instanceId = ++CreateProjectWebviewCommand.instanceCounter;
-        this.logger.debug(`[Wizard:Instance] CREATED instance #${this.instanceId} (total created: ${CreateProjectWebviewCommand.instanceCounter})`);
 
         // PrerequisitesManager is initialized with proper path
         this.prereqManager = new PrerequisitesManager(context.extensionPath, logger);
@@ -386,17 +385,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         editProject?: EditProjectConfig;
     }): Promise<void> {
         try {
-            this.logger.debug(`[Wizard:Instance] EXECUTE called for instance #${this.instanceId}`, {
-                hasImportedSettings: !!options?.importedSettings,
-                hasEditProject: !!options?.editProject,
-                editProjectName: options?.editProject?.projectName,
-                sharedStateOnEntry: {
-                    hasAbortController: !!this.sharedState.projectCreationAbortController,
-                    hasComponentSelection: !!this.sharedState.currentComponentSelection,
-                },
-                timestamp: new Date().toISOString(),
-            });
-            this.logger.debug('[Project Creation] Initializing wizard interface...');
 
             // Store imported settings for use in getInitialData
             this.importedSettings = options?.importedSettings ?? null;
@@ -463,17 +451,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     // Override dispose to clean up polling intervals and sidebar context
     public dispose(): void {
-        this.logger.debug(`[Wizard:Instance] DISPOSE called for instance #${this.instanceId}`, {
-            sharedState: {
-                hasAbortController: !!this.sharedState.projectCreationAbortController,
-                meshCreatedForWorkspace: this.sharedState.meshCreatedForWorkspace,
-                meshExistedBeforeSession: this.sharedState.meshExistedBeforeSession,
-                hasComponentSelection: !!this.sharedState.currentComponentSelection,
-                hasComponentsData: !!this.sharedState.componentsData,
-            },
-            timestamp: new Date().toISOString(),
-        });
-
         // Update context variable for view switching (fire-and-forget since dispose is synchronous)
         vscode.commands.executeCommand('setContext', 'demoBuilder.wizardActive', false);
 

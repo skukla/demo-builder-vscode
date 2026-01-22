@@ -128,8 +128,6 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
     // ============================================================================
 
     public async execute(): Promise<void> {
-        this.logger.debug('[ProjectsList] Showing projects list');
-
         // Set context to show webview sidebar instead of tree view
         await vscode.commands.executeCommand('setContext', 'demoBuilder.showingProjectsList', true);
 
@@ -197,7 +195,6 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
 
             // Send to webview
             await this.sendMessage('projectsUpdated', { projects });
-            this.logger.debug(`[ProjectsList] Sent ${projects.length} projects to webview`);
         } catch (error) {
             this.logger.error('[ProjectsList] Failed to refresh projects list', error as Error);
         }

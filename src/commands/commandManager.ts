@@ -303,9 +303,6 @@ export class CommandManager {
                 vscode.window.showErrorMessage(`Failed to open component: ${error instanceof Error ? error.message : String(error)}`);
             }
         });
-
-        const commandList = Array.from(this.commands.keys());
-        this.logger.debug(`Registered ${this.commands.size} commands: ${commandList.slice(0, 3).join(', ')}${commandList.length > 3 ? ` ... (and ${commandList.length - 3} more)` : ''}`);
     }
 
     private registerCommand(command: string, callback: (...args: unknown[]) => unknown): void {

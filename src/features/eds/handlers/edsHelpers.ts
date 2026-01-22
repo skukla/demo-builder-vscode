@@ -14,6 +14,7 @@
 
 import * as vscode from 'vscode';
 import type { HandlerContext } from '@/types/handlers';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubFileOperations } from '../services/githubFileOperations';
@@ -405,8 +406,8 @@ export async function showDaLiveAuthQuickPick(
                 await context.context.globalState.update('daLive.setupComplete', true);
 
                 context.logger.info(`[DA.live Auth] Successfully authenticated to org: ${trimmedOrg}`);
-                // Don't await - let the progress dismiss immediately and show success message briefly
-                vscode.window.showInformationMessage(`Connected to DA.live (${trimmedOrg})`);
+                // Auto-dismissing notification for non-blocking feedback
+                vscode.window.setStatusBarMessage(`✅ Connected to DA.live (${trimmedOrg})`, TIMEOUTS.STATUS_BAR_INFO);
 
                 return {
                     success: true,

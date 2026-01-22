@@ -231,14 +231,14 @@ export class DaLiveContentOperations {
             },
         );
 
-        // Preserve empty structural divs by adding a zero-width space
-        // DA.live/Helix strips completely empty elements AND HTML comments during processing
+        // Preserve empty structural divs by adding a paragraph with non-breaking space
+        // DA.live/Helix strips completely empty elements during processing
         // These empty divs are important for EDS blocks (e.g., header expects 3 sections)
         // Pattern: <div></div> or <div> </div> (with only whitespace)
-        // Using &#8203; (zero-width space) which is invisible but prevents stripping
+        // Using <p>&nbsp;</p> which DA.live preserves during round-trip conversion
         transformed = transformed.replace(
             /<div>(\s*)<\/div>/gi,
-            '<div>\u200B</div>',
+            '<div><p>&nbsp;</p></div>',
         );
 
         // Wrap in expected document structure
@@ -262,6 +262,13 @@ export class DaLiveContentOperations {
         destPath: string,
     ): Promise<boolean> {
         const sourceBaseUrl = `https://main--${source.site}--${source.org}.aem.live`;
+
+        // Check if this is a spreadsheet path (like /config) by testing for JSON response
+        // Spreadsheets are stored as .xlsx in DA.live and served as .json on CDN
+        const isSpreadsheet = await this.isSpreadsheetPath(sourceBaseUrl, sourcePath);
+        if (isSpreadsheet) {
+            return this.copySpreadsheetFile(token, source, sourcePath, destination, destPath);
+        }
 
         // For HTML content, fetch .plain.html which returns just the main content
         // This is closer to what DA.live expects than the full rendered page
@@ -373,6 +380,160 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Check if a path is a spreadsheet (Excel file in DA.live, served as JSON on CDN)
+     * Spreadsheets don't have .plain.html versions, they're served as .json
+     */
+    private async isSpreadsheetPath(baseUrl: string, path: string): Promise<boolean> {
+        // Skip paths that already have extensions or are obviously HTML
+        if (path.match(/\.(html|htm)$/i) || path === '/' || path.endsWith('/')) {
+            return false;
+        }
+
+        // Try fetching as JSON - spreadsheets return JSON, HTML pages return 404
+        const jsonUrl = `${baseUrl}${path}.json`;
+        try {
+            const response = await fetch(jsonUrl, {
+                method: 'HEAD',
+                signal: AbortSignal.timeout(5000),
+            });
+            if (response.ok) {
+                const contentType = response.headers.get('content-type') || '';
+                return contentType.includes('application/json');
+            }
+        } catch {
+            // Ignore errors - not a spreadsheet
+        }
+        return false;
+    }
+
+    /**
+     * Copy a spreadsheet file from source to destination
+     * Fetches JSON from public CDN and converts to HTML table for DA.live upload
+     * (Can't use DA.live admin API for cross-org copies - no auth access to source)
+     */
+    private async copySpreadsheetFile(
+        token: string,
+        source: { org: string; site: string },
+        sourcePath: string,
+        destination: { org: string; site: string },
+        destPath: string,
+    ): Promise<boolean> {
+        const normalizedPath = normalizePath(sourcePath);
+        // Fetch JSON from public CDN (works without auth for any org)
+        const sourceUrl = `https://main--${source.site}--${source.org}.aem.live${sourcePath}.json`;
+
+        try {
+            const sourceResponse = await fetch(sourceUrl, {
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+
+            if (!sourceResponse.ok) {
+                this.logger.warn(`[DA.live] Failed to fetch spreadsheet JSON ${sourcePath}: ${sourceResponse.status}`);
+                return false;
+            }
+
+            const jsonData = await sourceResponse.json();
+
+            // Convert JSON to HTML table format that DA.live can process
+            const htmlContent = this.convertSpreadsheetJsonToHtml(jsonData);
+            if (!htmlContent) {
+                this.logger.warn(`[DA.live] Failed to convert spreadsheet ${sourcePath} to HTML`);
+                return false;
+            }
+
+            // Upload as HTML to destination DA.live (will be converted to sheet)
+            const destNormalizedPath = normalizePath(destPath);
+            const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${destNormalizedPath}.html`;
+
+            const formData = new FormData();
+            formData.append('data', new Blob([htmlContent], { type: 'text/html' }));
+
+            const response = await fetch(destUrl, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData,
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+
+            if (response.ok) {
+                this.logger.info(`[DA.live] Copied spreadsheet ${sourcePath}`);
+                return true;
+            }
+
+            this.logger.warn(`[DA.live] Failed to upload spreadsheet ${destPath}: ${response.status}`);
+            return false;
+        } catch (error) {
+            this.logger.error(`[DA.live] Spreadsheet copy error for ${destPath}`, error as Error);
+            return false;
+        }
+    }
+
+    /**
+     * Convert EDS spreadsheet JSON to HTML table format
+     * Handles both single-sheet and multi-sheet formats
+     */
+    private convertSpreadsheetJsonToHtml(json: Record<string, unknown>): string | null {
+        try {
+            // Check for multi-sheet format
+            if (json[':type'] === 'multi-sheet' && Array.isArray(json[':names'])) {
+                // Multi-sheet: create multiple tables
+                const names = json[':names'] as string[];
+                const tables = names
+                    .filter(name => !name.startsWith('dnt')) // Skip "do not translate" sheets
+                    .map(name => {
+                        const sheet = json[name] as { columns?: string[]; data?: Record<string, unknown>[] };
+                        if (!sheet?.data) return '';
+                        return this.createHtmlTable(sheet.columns || [], sheet.data, name);
+                    })
+                    .filter(Boolean)
+                    .join('\n');
+                return this.wrapInDocument(tables);
+            }
+
+            // Single-sheet format
+            const data = json.data as Record<string, unknown>[] | undefined;
+            const columns = json.columns as string[] | undefined;
+            if (!data || !Array.isArray(data)) return null;
+
+            const table = this.createHtmlTable(columns || Object.keys(data[0] || {}), data);
+            return this.wrapInDocument(table);
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Create an HTML table from columns and data
+     */
+    private createHtmlTable(columns: string[], data: Record<string, unknown>[], sheetName?: string): string {
+        const headerRow = `<tr>${columns.map(col => `<th>${this.escapeHtml(col)}</th>`).join('')}</tr>`;
+        const dataRows = data.map(row =>
+            `<tr>${columns.map(col => `<td>${this.escapeHtml(String(row[col] ?? ''))}</td>`).join('')}</tr>`
+        ).join('\n');
+
+        const className = sheetName ? ` class="sheet-${sheetName}"` : '';
+        return `<table${className}>\n<thead>\n${headerRow}\n</thead>\n<tbody>\n${dataRows}\n</tbody>\n</table>`;
+    }
+
+    /**
+     * Wrap table(s) in a minimal HTML document
+     */
+    private wrapInDocument(content: string): string {
+        return `<!DOCTYPE html>\n<html>\n<body>\n${content}\n</body>\n</html>`;
+    }
+
+    /**
+     * Escape HTML special characters
+     */
+    private escapeHtml(str: string): string {
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    /**
      * Create or update source content
      * @param org - Organization name
      * @param site - Site name
@@ -452,6 +613,29 @@ export class DaLiveContentOperations {
 
         // Get content paths from index
         const contentPaths = await this.getContentPathsFromIndex(source);
+
+        // Add essential root-level spreadsheets that may not be in the content index
+        // These are stored as .xlsx in DA.live and served as .json on CDN
+        // Note: /config is handled separately via code generation (config.json in GitHub repo)
+        // - /placeholders: i18n text strings and labels
+        // - /redirects: URL redirect rules
+        // - /metadata: Default page metadata
+        // - /sitemap: Sitemap configuration
+        const essentialConfigs = ['/placeholders', '/redirects', '/metadata', '/sitemap'];
+        for (const configPath of essentialConfigs) {
+            if (!contentPaths.includes(configPath)) {
+                // Check if config exists on source before adding
+                const sourceUrl = `https://main--${source.site}--${source.org}.aem.live${configPath}.json`;
+                try {
+                    const response = await fetch(sourceUrl, { method: 'HEAD' });
+                    if (response.ok) {
+                        contentPaths.unshift(configPath); // Add at beginning for priority
+                    }
+                } catch {
+                    // Config doesn't exist, skip
+                }
+            }
+        }
 
         const copiedFiles: string[] = [];
         const failedFiles: { path: string; error: string }[] = [];

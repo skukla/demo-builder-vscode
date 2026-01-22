@@ -788,8 +788,10 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 );
 
                 if (configResult.success && configResult.content) {
+                    // Generate both config.json (used by storefront) and demo-config.json (template default)
+                    fileOverrides.set('config.json', configResult.content);
                     fileOverrides.set('demo-config.json', configResult.content);
-                    context.logger.info('[ProjectsList] Generated demo-config.json for reset');
+                    context.logger.info('[ProjectsList] Generated config.json for reset');
                 } else {
                     context.logger.warn(`[ProjectsList] Failed to generate demo-config.json: ${configResult.error}`);
                     // Continue without demo-config.json - site will show configuration error but can be manually fixed

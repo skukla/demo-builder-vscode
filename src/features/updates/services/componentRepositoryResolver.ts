@@ -70,10 +70,6 @@ export class ComponentRepositoryResolver {
         this.extractFromCategory(registry.appBuilderApps, repositories);
         this.extractFromCategory(registry.tools, repositories);
 
-        this.logger.debug(
-            `[ComponentRepositoryResolver] Found ${repositories.size} components with Git sources: ${Array.from(repositories.keys()).join(', ')}`,
-        );
-
         this.cache = repositories;
         return repositories;
     }
