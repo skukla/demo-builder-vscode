@@ -430,6 +430,104 @@ Demo Builder:
 
 **Note**: All paths lead to DA.live because that's what Helix expects in `fstab.yaml`. DA.live acts as the content normalization layer.
 
+## DA.live Spreadsheet Limitation (Discovered January 2025)
+
+### The Problem
+
+EDS uses spreadsheets for configuration data (placeholders, redirects, metadata, etc.). These spreadsheets:
+- Are stored as `.xlsx` files in DA.live
+- Are served as `.json` endpoints by Helix CDN
+- Example: `/placeholders/global.xlsx` → `https://site.aem.live/placeholders/global.json`
+
+**The limitation**: DA.live's `/source/` API does NOT support programmatic spreadsheet creation.
+
+### What We Tried (All Failed)
+
+| Approach | Result |
+|----------|--------|
+| Upload HTML table as `.html` | DA.live creates HTML document, not spreadsheet |
+| Upload HTML table without extension | 404 - not recognized |
+| Upload JSON directly | 404 - not served as endpoint |
+| Upload `.xlsx` binary | Stored as raw file, not recognized as spreadsheet |
+| Upload `.xlsx` with `helix-` prefixed sheets | Same result - still raw file storage |
+
+### Root Cause Analysis
+
+DA.live's source API (`POST /source/{org}/{site}/{path}`) has no spreadsheet-specific handling. Verified by:
+
+1. **API Documentation** (docs.da.live): Only describes generic blob upload via `multipart/form-data`
+2. **Source Code** (`adobe/da-admin` GitHub repo): `put.js` treats all data generically, no content-type inspection for xlsx/csv
+
+**How spreadsheets actually work in DA.live:**
+- Spreadsheets require **document authoring** (connected Google Sheets or SharePoint via `fstab.yaml`)
+- When authors edit a Google Sheet, DA.live syncs it and serves as JSON
+- The `/source/` API is for **storing files**, not creating spreadsheets
+
+### The Solution: GitHub Code Files
+
+Since DA.live can't programmatically create spreadsheets, we commit JSON files directly to GitHub:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     EDS Reset Flow                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Source CDN                    GitHub Repo                       │
+│  (demo-system-stores)          (user's repo)                     │
+│                                                                  │
+│  placeholders/global.json  →   placeholders/global.json          │
+│  placeholders/auth.json    →   placeholders/auth.json            │
+│  placeholders/cart.json    →   placeholders/cart.json            │
+│                                                                  │
+│  Committed as CODE files, not uploaded to DA.live                │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Implementation** (`dashboardHandlers.ts`):
+```typescript
+const placeholderPaths = [
+    'placeholders/global',
+    'placeholders/auth',
+    'placeholders/cart',
+    'placeholders/recommendations',
+    'placeholders/wishlist',
+];
+
+for (const placeholderPath of placeholderPaths) {
+    const sourceUrl = `https://main--${templateRepo}--${templateOwner}.aem.live/${placeholderPath}.json`;
+    const response = await fetch(sourceUrl);
+    const jsonContent = await response.text();
+    fileOverrides.set(`${placeholderPath}.json`, jsonContent);
+}
+```
+
+### Why This Works: Helix Content > Code Precedence
+
+Helix has a **Content overrides Code** rule:
+- If both DA.live content AND GitHub code exist at the same path, **content wins**
+- This means authors can later create DA.live spreadsheets to override the GitHub defaults
+
+**The authoring experience**:
+1. **Day 1**: Site works immediately (JSON served from GitHub)
+2. **Day N**: Author creates spreadsheet in DA.live → automatically overrides GitHub version
+3. **No migration needed**: Just create the DA.live spreadsheet when ready
+
+### File Types Summary
+
+| Path Pattern | Stored In | Served As | Notes |
+|--------------|-----------|-----------|-------|
+| `/*.html` | DA.live | HTML page | Content pages |
+| `/placeholders/*.json` | GitHub | JSON | Code files (workaround for DA.live limitation) |
+| `/config.json` | GitHub | JSON | Commerce config (nested object, not spreadsheet) |
+| `/demo-config.json` | GitHub | JSON | Brand/theming config |
+| `/media/*` | DA.live | Binary | Images, videos |
+
+### Related Files
+
+- `src/features/projects-dashboard/handlers/dashboardHandlers.ts` - GitHub code file approach (placeholder JSON fetch)
+- `src/features/eds/services/daLiveContentOperations.ts` - HTML content copy (spreadsheet copy code removed)
+
 ## Comparison with Other Architectures
 
 ### Headless (PWA Studio, Venia)

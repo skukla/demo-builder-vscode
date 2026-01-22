@@ -797,6 +797,35 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     // Continue without demo-config.json - site will show configuration error but can be manually fixed
                 }
 
+                // Copy placeholder JSON files from source to GitHub as code files
+                // DA.live's source API doesn't support programmatic spreadsheet creation,
+                // so we commit placeholders as JSON code files that Helix serves directly.
+                // Authors can later create DA.live spreadsheets to override (Content > Code).
+                const placeholderPaths = [
+                    'placeholders/global',
+                    'placeholders/auth',
+                    'placeholders/cart',
+                    'placeholders/recommendations',
+                    'placeholders/wishlist',
+                ];
+
+                for (const placeholderPath of placeholderPaths) {
+                    try {
+                        const sourceUrl = `https://main--${templateRepo}--${templateOwner}.aem.live/${placeholderPath}.json`;
+                        const response = await fetch(sourceUrl, {
+                            signal: AbortSignal.timeout(10000),
+                        });
+
+                        if (response.ok) {
+                            const jsonContent = await response.text();
+                            fileOverrides.set(`${placeholderPath}.json`, jsonContent);
+                            context.logger.info(`[ProjectsList] Added ${placeholderPath}.json to code files`);
+                        }
+                    } catch {
+                        context.logger.warn(`[ProjectsList] Failed to fetch ${placeholderPath}.json from source`);
+                    }
+                }
+
                 // Perform bulk reset
                 const resetResult = await githubFileOps.resetRepoToTemplate(
                     templateOwner,
