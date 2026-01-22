@@ -104,13 +104,16 @@ export function extractSettingsFromProject(
     const edsStorefront = project.componentInstances?.['eds-storefront'];
     if (edsStorefront?.metadata) {
         const metadata = edsStorefront.metadata as Record<string, unknown>;
+        // Parse "owner/repo" format from githubRepo metadata
+        const githubRepoParts = metadata.githubRepo?.toString().split('/');
         edsConfig = {
             templateOwner: metadata.templateOwner as string | undefined,
             templateRepo: metadata.templateRepo as string | undefined,
             contentSource: metadata.contentSource as SettingsEdsConfig['contentSource'],
             daLiveOrg: metadata.daLiveOrg as string | undefined,
             daLiveSite: metadata.daLiveSite as string | undefined,
-            repoName: metadata.githubRepo?.toString().split('/')[1], // Extract repo name from "owner/repo"
+            githubOwner: githubRepoParts?.[0], // Extract owner from "owner/repo"
+            repoName: githubRepoParts?.[1], // Extract repo name from "owner/repo"
             patches: metadata.patches as string[] | undefined,
         };
     }

@@ -280,6 +280,18 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         const config = vscode.workspace.getConfiguration('demoBuilder');
         const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
 
+        // Debug: Log EDS config being sent to webview
+        if (this.editProject?.settings?.edsConfig) {
+            this.logger.debug(`[getInitialData] Sending edsConfig to webview: ${JSON.stringify({
+                githubOwner: this.editProject.settings.edsConfig.githubOwner,
+                repoName: this.editProject.settings.edsConfig.repoName,
+                daLiveOrg: this.editProject.settings.edsConfig.daLiveOrg,
+                daLiveSite: this.editProject.settings.edsConfig.daLiveSite,
+            })}`);
+        } else if (this.editProject) {
+            this.logger.debug('[getInitialData] editProject exists but NO edsConfig');
+        }
+
         return {
             theme: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
             workspacePath: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,

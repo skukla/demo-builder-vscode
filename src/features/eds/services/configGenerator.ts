@@ -43,6 +43,8 @@ export interface ConfigGeneratorParams {
     websiteCode?: string;
     /** Customer group hash */
     customerGroup?: string;
+    /** Whether AEM Assets integration is enabled */
+    aemAssetsEnabled?: boolean;
 }
 
 /**
@@ -84,6 +86,7 @@ export function extractConfigParams(project: DemoProject): Partial<ConfigGenerat
         storeCode: edsConfig.ADOBE_COMMERCE_STORE_CODE || meshConfig.ADOBE_COMMERCE_STORE_CODE,
         websiteCode: edsConfig.ADOBE_COMMERCE_WEBSITE_CODE || meshConfig.ADOBE_COMMERCE_WEBSITE_CODE,
         customerGroup: edsConfig.ADOBE_COMMERCE_CUSTOMER_GROUP || meshConfig.ADOBE_COMMERCE_CUSTOMER_GROUP,
+        aemAssetsEnabled: edsConfig.AEM_ASSETS_ENABLED === 'true',
     };
 }
 
@@ -187,6 +190,12 @@ export async function generateConfigJson(
             if (analytics) {
                 const storeUrl = `https://main--${params.daLiveSite}--${params.githubOwner}.aem.live/`;
                 analytics['store-url'] = storeUrl;
+            }
+
+            // Enable AEM Assets integration if configured
+            if (params.aemAssetsEnabled) {
+                defaultConfig['commerce-assets-enabled'] = true;
+                logger.debug('[ConfigGenerator] Enabled AEM Assets integration (commerce-assets-enabled: true)');
             }
         }
 

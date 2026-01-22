@@ -78,6 +78,15 @@ interface StorefrontSetupStartPayload {
             htmlUrl: string;
             isPrivate?: boolean;
         };
+        // Selected existing DA.live site (from searchable list)
+        // Used to determine if user is using an existing site vs creating new
+        selectedSite?: {
+            id: string;
+            name: string;
+        };
+        // Whether to reset existing site content (repopulate with demo data)
+        // Only applies when selectedSite is set (existing site mode)
+        resetSiteContent?: boolean;
         // GitHub auth info from Connect Services step
         githubAuth?: {
             isAuthenticated?: boolean;
@@ -396,6 +405,27 @@ async function executeStorefrontSetupPhases(
     const daLiveOrgOps = new DaLiveOrgOperations(tokenProvider, logger);
     const daLiveContentOps = new DaLiveContentOperations(tokenProvider, logger);
 
+    // Derive skipContent from user selections:
+    // - If using an EXISTING site (selectedSite exists) AND not resetting content → skip content copy
+    // - If creating a NEW site OR resetting existing site → copy content
+    const isUsingExistingSite = Boolean(edsConfig.selectedSite);
+    const wantsToResetContent = Boolean(edsConfig.resetSiteContent);
+    const skipContent = isUsingExistingSite && !wantsToResetContent;
+
+    // Create a modified config with the derived skipContent value
+    const resolvedEdsConfig = {
+        ...edsConfig,
+        skipContent,
+    };
+
+    // Log content handling decision with full context for debugging
+    logger.info(`[Storefront Setup] Content handling decision:`);
+    logger.info(`  - selectedSite: ${edsConfig.selectedSite ? JSON.stringify(edsConfig.selectedSite) : 'undefined (new site)'}`);
+    logger.info(`  - resetSiteContent: ${edsConfig.resetSiteContent ?? 'undefined (default false)'}`);
+    logger.info(`  - isUsingExistingSite: ${isUsingExistingSite}`);
+    logger.info(`  - wantsToResetContent: ${wantsToResetContent}`);
+    logger.info(`  - RESULT skipContent: ${skipContent} (${skipContent ? 'will SKIP content copy' : 'will COPY content'})`);
+
     // GitHub owner can come from explicit githubOwner or from githubAuth.user.login
     // The UI stores it at githubAuth.user.login when authenticated via Connect Services
     const githubOwner = edsConfig.githubOwner || edsConfig.githubAuth?.user?.login;
@@ -422,7 +452,7 @@ async function executeStorefrontSetupPhases(
 
     // Validate content source if content copy is needed
     const contentSource = edsConfig.contentSource;
-    if (!edsConfig.skipContent && !contentSource) {
+    if (!resolvedEdsConfig.skipContent && !contentSource) {
         logger.error('[Storefront Setup] Content source not configured. edsConfig:', JSON.stringify(edsConfig, null, 2));
         return {
             success: false,
@@ -672,7 +702,7 @@ async function executeStorefrontSetupPhases(
         // ============================================
         // Phase 4: DA.live Content Population
         // ============================================
-        if (edsConfig.skipContent) {
+        if (resolvedEdsConfig.skipContent) {
             // Skip content copy when using existing content
             logger.info('[Storefront Setup] Skipping DA.live content copy (skipContent=true)');
             await context.sendMessage('storefront-setup-progress', {
@@ -730,7 +760,7 @@ async function executeStorefrontSetupPhases(
         // Phase 5: Publish Content to CDN
         // ============================================
         // This makes the site LIVE and viewable
-        if (!edsConfig.skipContent) {
+        if (!resolvedEdsConfig.skipContent) {
             await context.sendMessage('storefront-setup-progress', {
                 phase: 'content-publish',
                 message: 'Publishing content to CDN...',

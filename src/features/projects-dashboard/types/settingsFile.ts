@@ -69,6 +69,8 @@ export interface SettingsEdsConfig {
     daLiveOrg?: string;
     /** DA.live site name (user's site) */
     daLiveSite?: string;
+    /** GitHub owner/username (user's GitHub account) */
+    githubOwner?: string;
     /** GitHub repository name (user's repo) */
     repoName?: string;
     /** Array of patch IDs to apply during reset (from demo-packages.json) */

@@ -408,6 +408,27 @@ export const handleEditProject: MessageHandler<{ projectPath: string }> = async 
         context.logger.debug(`[Edit] Project package/stack: ${project.selectedPackage}/${project.selectedStack}`);
         context.logger.debug(`[Edit] Settings package/stack: ${settings.selectedPackage}/${settings.selectedStack}`);
 
+        // Debug: Log EDS config extraction for troubleshooting
+        const edsStorefront = project.componentInstances?.['eds-storefront'];
+        context.logger.debug(`[Edit] EDS storefront instance exists: ${!!edsStorefront}`);
+        if (edsStorefront) {
+            context.logger.debug(`[Edit] EDS storefront has metadata: ${!!edsStorefront.metadata}`);
+            if (edsStorefront.metadata) {
+                const metadata = edsStorefront.metadata as Record<string, unknown>;
+                context.logger.debug(`[Edit] EDS metadata keys: [${Object.keys(metadata).join(', ')}]`);
+                context.logger.debug(`[Edit] EDS metadata.githubRepo: ${metadata.githubRepo}`);
+                context.logger.debug(`[Edit] EDS metadata.daLiveOrg: ${metadata.daLiveOrg}`);
+                context.logger.debug(`[Edit] EDS metadata.daLiveSite: ${metadata.daLiveSite}`);
+            }
+        }
+        context.logger.debug(`[Edit] Extracted edsConfig: ${settings.edsConfig ? JSON.stringify(settings.edsConfig) : 'undefined'}`);
+        if (settings.edsConfig) {
+            context.logger.debug(`[Edit] edsConfig.githubOwner: ${settings.edsConfig.githubOwner}`);
+            context.logger.debug(`[Edit] edsConfig.repoName: ${settings.edsConfig.repoName}`);
+            context.logger.debug(`[Edit] edsConfig.daLiveOrg: ${settings.edsConfig.daLiveOrg}`);
+            context.logger.debug(`[Edit] edsConfig.daLiveSite: ${settings.edsConfig.daLiveSite}`);
+        }
+
         // Open wizard in edit mode
         await vscode.commands.executeCommand('demoBuilder.createProject', {
             editProject: {

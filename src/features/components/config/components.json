@@ -28,7 +28,7 @@
                 ],
                 "optionalEnvVars": [
                     "ADOBE_COMMERCE_CUSTOMER_GROUP",
-                    "ADOBE_ASSETS_URL",
+                    "AEM_ASSETS_ENABLED",
                     "PAAS_CATALOG_SERVICE_ENDPOINT",
                     "ACCS_CATALOG_SERVICE_ENDPOINT"
                 ],
@@ -118,7 +118,7 @@
                     "ADOBE_COMMERCE_ENVIRONMENT_ID",
                     "ADOBE_CATALOG_API_KEY"
                 ],
-                "optionalEnvVars": ["ADOBE_COMMERCE_CUSTOMER_GROUP", "ADOBE_ASSETS_URL"]
+                "optionalEnvVars": ["ADOBE_COMMERCE_CUSTOMER_GROUP"]
             }
         },
         "adobe-commerce-accs": {
@@ -462,6 +462,18 @@
             "required": false,
             "placeholder": "https://delivery-p57319-e1619941.adobeaemcloud.com",
             "description": "Supply if the storefront should load assets from AEM",
+            "group": "adobe-assets"
+        },
+        "AEM_ASSETS_ENABLED": {
+            "label": "AEM Assets Integration",
+            "type": "select",
+            "required": false,
+            "default": "false",
+            "options": [
+                { "value": "false", "label": "Disabled" },
+                { "value": "true", "label": "Enabled" }
+            ],
+            "description": "Enable AEM Assets for product images (requires backend AEM Assets integration)",
             "group": "adobe-assets"
         },
         "ADOBE_CATALOG_API_KEY": {

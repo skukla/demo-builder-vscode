@@ -96,7 +96,20 @@ function computeInitialState(
             hasSelections: !!editSettings.selections,
             hasAdobe: !!editSettings.adobe,
             hasConfigs: !!editSettings.configs,
+            hasEdsConfig: !!editSettings.edsConfig,
         });
+
+        // Debug: Log EDS config details for step satisfaction troubleshooting
+        if (editSettings.edsConfig) {
+            log.info('Edit mode EDS config:', {
+                githubOwner: editSettings.edsConfig.githubOwner,
+                repoName: editSettings.edsConfig.repoName,
+                daLiveOrg: editSettings.edsConfig.daLiveOrg,
+                daLiveSite: editSettings.edsConfig.daLiveSite,
+            });
+        } else {
+            log.warn('Edit mode: No EDS config found in project settings');
+        }
 
         return {
             currentStep: firstStep,
@@ -137,6 +150,7 @@ function computeInitialState(
             selectedStack: editSettings.selectedStack,
             selectedAddons: editSettings.selectedAddons,
             // EDS configuration from source project (for EDS stacks)
+            // Construct selectedRepo and selectedSite objects for list pre-selection
             edsConfig: editSettings.edsConfig ? {
                 accsHost: '',
                 storeViewCode: '',
@@ -147,6 +161,27 @@ function computeInitialState(
                 templateOwner: editSettings.edsConfig.templateOwner,
                 templateRepo: editSettings.edsConfig.templateRepo,
                 contentSource: editSettings.edsConfig.contentSource,
+                // Mark GitHub/DA.live as authenticated since project already exists
+                githubAuth: (editSettings.edsConfig.githubOwner && editSettings.edsConfig.repoName) ? {
+                    isAuthenticated: true,
+                    user: { login: editSettings.edsConfig.githubOwner },
+                } : undefined,
+                daLiveAuth: editSettings.edsConfig.daLiveOrg ? {
+                    isAuthenticated: true,
+                    org: editSettings.edsConfig.daLiveOrg,
+                } : undefined,
+                // Pre-select GitHub repo if owner and name are available
+                repoMode: (editSettings.edsConfig.githubOwner && editSettings.edsConfig.repoName) ? 'existing' : undefined,
+                selectedRepo: (editSettings.edsConfig.githubOwner && editSettings.edsConfig.repoName) ? {
+                    id: `${editSettings.edsConfig.githubOwner}/${editSettings.edsConfig.repoName}`,
+                    name: editSettings.edsConfig.repoName,
+                    fullName: `${editSettings.edsConfig.githubOwner}/${editSettings.edsConfig.repoName}`,
+                } : undefined,
+                // Pre-select DA.live site if site name is available
+                selectedSite: editSettings.edsConfig.daLiveSite ? {
+                    id: editSettings.edsConfig.daLiveSite,
+                    name: editSettings.edsConfig.daLiveSite,
+                } : undefined,
             } : undefined,
         };
     }
@@ -188,6 +223,7 @@ function computeInitialState(
         selectedStack: importedSettings?.selectedStack,
         selectedAddons: importedSettings?.selectedAddons,
         // EDS configuration from imported settings (for EDS stacks)
+        // Construct selectedRepo and selectedSite objects for list pre-selection
         edsConfig: importedSettings?.edsConfig ? {
             accsHost: '',
             storeViewCode: '',
@@ -198,6 +234,27 @@ function computeInitialState(
             templateOwner: importedSettings.edsConfig.templateOwner,
             templateRepo: importedSettings.edsConfig.templateRepo,
             contentSource: importedSettings.edsConfig.contentSource,
+            // Mark GitHub/DA.live as authenticated since importing from existing project
+            githubAuth: (importedSettings.edsConfig.githubOwner && importedSettings.edsConfig.repoName) ? {
+                isAuthenticated: true,
+                user: { login: importedSettings.edsConfig.githubOwner },
+            } : undefined,
+            daLiveAuth: importedSettings.edsConfig.daLiveOrg ? {
+                isAuthenticated: true,
+                org: importedSettings.edsConfig.daLiveOrg,
+            } : undefined,
+            // Pre-select GitHub repo if owner and name are available
+            repoMode: (importedSettings.edsConfig.githubOwner && importedSettings.edsConfig.repoName) ? 'existing' : undefined,
+            selectedRepo: (importedSettings.edsConfig.githubOwner && importedSettings.edsConfig.repoName) ? {
+                id: `${importedSettings.edsConfig.githubOwner}/${importedSettings.edsConfig.repoName}`,
+                name: importedSettings.edsConfig.repoName,
+                fullName: `${importedSettings.edsConfig.githubOwner}/${importedSettings.edsConfig.repoName}`,
+            } : undefined,
+            // Pre-select DA.live site if site name is available
+            selectedSite: importedSettings.edsConfig.daLiveSite ? {
+                id: importedSettings.edsConfig.daLiveSite,
+                name: importedSettings.edsConfig.daLiveSite,
+            } : undefined,
         } : undefined,
     };
 }
@@ -289,6 +346,40 @@ export function useWizardState({
         return [];
     });
     const [highestCompletedStepIndex, setHighestCompletedStepIndex] = useState(-1);
+
+    // Track stacks loading to recalculate completedSteps when stacks become available
+    // This fixes a race condition where EDS steps aren't in WIZARD_STEPS on first render
+    // because stacks are loaded asynchronously
+    const hasRecalculatedForStacksRef = useRef<boolean>(false);
+    useEffect(() => {
+        // Only run once when stacks become available
+        if (hasRecalculatedForStacksRef.current) return;
+        if (!stacks || stacks.length === 0) return;
+
+        const isReviewMode = editProject || importedSettings;
+        if (!isReviewMode) return;
+
+        // Mark that we've done the recalculation
+        hasRecalculatedForStacksRef.current = true;
+
+        log.info('Stacks loaded, recalculating completed steps for EDS steps');
+
+        // Recalculate completed and confirmed steps now that WIZARD_STEPS includes EDS steps
+        const newCompletedSteps = WIZARD_STEPS
+            .filter(step => step.id !== 'project-creation' && step.id !== 'review')
+            .filter(step => isStepSatisfied(step.id, state))
+            .map(step => step.id);
+
+        const newConfirmedSteps = WIZARD_STEPS
+            .filter(step => step.id !== 'project-creation' && step.id !== 'review')
+            .filter(step => isStepSatisfied(step.id, state))
+            .map(step => step.id);
+
+        setCompletedSteps(newCompletedSteps);
+        setConfirmedSteps(newConfirmedSteps);
+
+        log.info(`Recalculated steps after stacks loaded: completed=[${newCompletedSteps.join(', ')}]`);
+    }, [stacks, editProject, importedSettings, WIZARD_STEPS, state]);
 
     // Track org ID to detect changes (for recomputing completedSteps)
     const prevOrgIdRef = useRef<string | undefined>(state.adobeOrg?.id);

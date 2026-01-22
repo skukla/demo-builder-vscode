@@ -771,12 +771,41 @@ export class EnvConfigPhase {
             } else {
                 this.logger.info('[EDS] Generated config.json template (mesh endpoint will be added post-deployment)');
             }
+
+            // Post-process: Add AEM Assets integration flag if enabled
+            const aemAssetsEnabled = backendEnv.AEM_ASSETS_ENABLED === 'true';
+            if (aemAssetsEnabled) {
+                await this.addAemAssetsFlag(configJsonPath);
+            }
         } catch (error) {
             throw new EdsProjectError(
                 `Failed to generate config.json: ${(error as Error).message}`,
                 'env-config',
                 error as Error,
             );
+        }
+    }
+
+    /**
+     * Add commerce-assets-enabled flag to config.json
+     * This enables AEM Assets integration for product images in the storefront
+     */
+    private async addAemAssetsFlag(configJsonPath: string): Promise<void> {
+        try {
+            const content = await fs.readFile(configJsonPath, 'utf-8');
+            const configJson = JSON.parse(content) as Record<string, unknown>;
+
+            // Navigate to public.default and add the flag
+            const publicConfig = configJson.public as Record<string, Record<string, unknown>> | undefined;
+            if (publicConfig?.default) {
+                publicConfig.default['commerce-assets-enabled'] = true;
+                await fs.writeFile(configJsonPath, JSON.stringify(configJson, null, 2), 'utf-8');
+                this.logger.info('[EDS] Enabled AEM Assets integration (commerce-assets-enabled: true)');
+            } else {
+                this.logger.warn('[EDS] Could not add commerce-assets-enabled: public.default section not found');
+            }
+        } catch (error) {
+            this.logger.warn(`[EDS] Failed to add AEM Assets flag: ${(error as Error).message}`);
         }
     }
 
@@ -951,10 +980,39 @@ export async function generateConfigJsonPostMesh(params: ConfigJsonPostMeshParam
             description: 'EDS runtime configuration (config.json)',
         });
 
+        // Post-process: Add AEM Assets integration flag if enabled
+        const aemAssetsEnabled = backendEnv.AEM_ASSETS_ENABLED === 'true';
+        if (aemAssetsEnabled) {
+            await addAemAssetsFlagToConfig(configJsonPath, logger);
+        }
+
         logger.info('[EDS] Generated config.json with mesh endpoint');
     } catch (error) {
         logger.error('[EDS] Failed to generate config.json', error as Error);
         throw error;
+    }
+}
+
+/**
+ * Add commerce-assets-enabled flag to config.json
+ * This enables AEM Assets integration for product images in the storefront
+ */
+async function addAemAssetsFlagToConfig(configJsonPath: string, logger: Logger): Promise<void> {
+    try {
+        const content = await fs.readFile(configJsonPath, 'utf-8');
+        const configJson = JSON.parse(content) as Record<string, unknown>;
+
+        // Navigate to public.default and add the flag
+        const publicConfig = configJson.public as Record<string, Record<string, unknown>> | undefined;
+        if (publicConfig?.default) {
+            publicConfig.default['commerce-assets-enabled'] = true;
+            await fs.writeFile(configJsonPath, JSON.stringify(configJson, null, 2), 'utf-8');
+            logger.info('[EDS] Enabled AEM Assets integration (commerce-assets-enabled: true)');
+        } else {
+            logger.warn('[EDS] Could not add commerce-assets-enabled: public.default section not found');
+        }
+    } catch (error) {
+        logger.warn(`[EDS] Failed to add AEM Assets flag: ${(error as Error).message}`);
     }
 }
 

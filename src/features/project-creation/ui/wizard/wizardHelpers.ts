@@ -490,10 +490,12 @@ export function isStepSatisfied(stepId: WizardStep, state: WizardState): boolean
         case 'eds-repository-config':
             return Boolean(state.edsConfig?.repoName || state.edsConfig?.selectedRepo);
 
-        case 'data-source-config':
+        case 'eds-data-source':
+        case 'data-source-config':  // Legacy ID for backward compatibility
             return Boolean(state.edsConfig?.daLiveSite || state.edsConfig?.selectedSite);
 
-        case 'connect-services':
+        case 'eds-connect-services':
+        case 'connect-services':  // Legacy ID for backward compatibility
             return Boolean(state.edsConfig?.githubAuth?.isAuthenticated);
 
         // Component configuration (step ID can be 'settings' or 'component-config')
