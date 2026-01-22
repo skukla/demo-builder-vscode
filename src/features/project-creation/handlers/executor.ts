@@ -288,6 +288,15 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         componentsDir: tempComponentsDir,
     };
 
+    // EDIT MODE: Clear old component instances before cloning new ones
+    // When switching stacks (e.g., EDS→Headless), old component entries must be removed
+    // Otherwise getMeshComponentInstance may return stale entries with invalid paths
+    if (isEditMode) {
+        const oldComponents = Object.keys(project.componentInstances || {});
+        context.logger.debug(`[Project Edit] Clearing old component instances: [${oldComponents.join(', ')}]`);
+        project.componentInstances = {};
+    }
+
     await cloneAllComponents(installationContext);
     await installAllComponents(installationContext);
 
