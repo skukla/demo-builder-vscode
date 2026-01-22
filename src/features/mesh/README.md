@@ -53,28 +53,6 @@ if (result.success) {
 }
 ```
 
-### MeshDeployer
-
-**Purpose**: High-level mesh deployment orchestration with error handling
-
-**Key Methods**:
-- `deploy(options)` - Deploy mesh with comprehensive error handling and verification
-- `buildMeshConfig(options)` - Build mesh.json from environment variables
-- `validateMeshConfig(configPath)` - Validate mesh.json structure
-
-**Example Usage**:
-```typescript
-import { MeshDeployer } from '@/features/mesh';
-
-const deployer = new MeshDeployer(logger);
-
-const result = await deployer.deploy({
-    meshConfigPath: '/path/to/mesh.json',
-    componentPath: '/path/to/mesh-component',  // eds-commerce-mesh or headless-commerce-mesh
-    onProgress: (message) => console.log(message)
-});
-```
-
 ### verifyMeshDeployment / syncMeshStatus
 
 **Purpose**: Verify mesh exists in Adobe I/O and sync component status
@@ -202,7 +180,6 @@ features/mesh/
 │   └── shared.ts               # Shared handler utilities
 ├── services/
 │   ├── meshDeployment.ts       # Deploy mesh component
-│   ├── meshDeployer.ts         # High-level deployment orchestration
 │   ├── meshEndpoint.ts         # Endpoint URL generation
 │   ├── meshVerifier.ts         # Deployment verification
 │   ├── meshDeploymentVerifier.ts  # Deployment polling
@@ -215,7 +192,7 @@ features/mesh/
 ```
 Deploy Command (deployMesh.ts)
     ↓
-deployMeshComponent() or MeshDeployer.deploy()
+deployMeshComponent()
     ↓
 1. Validate mesh.json
 2. Execute aio api-mesh update
@@ -284,28 +261,7 @@ if (result.success) {
 }
 ```
 
-### Example 2: Manual Mesh Deployment
-```typescript
-import { MeshDeployer } from '@/features/mesh';
-
-const deployer = new MeshDeployer(logger);
-
-try {
-    const result = await deployer.deploy({
-        meshConfigPath: path.join(meshComponentPath, 'mesh.json'),
-        componentPath: meshComponentPath,
-        onProgress: (message) => {
-            vscode.window.showInformationMessage(message);
-        }
-    });
-
-    vscode.window.showInformationMessage(`Mesh deployed at: ${result.endpoint}`);
-} catch (error) {
-    vscode.window.showErrorMessage(`Deployment failed: ${error.message}`);
-}
-```
-
-### Example 3: Check Mesh Status (Dashboard)
+### Example 2: Check Mesh Status (Dashboard)
 ```typescript
 import { detectMeshChanges, verifyMeshDeployment } from '@/features/mesh';
 
@@ -332,7 +288,7 @@ if (changes.hasChanges) {
 displayMeshStatus(meshStatus);
 ```
 
-### Example 4: Fetch Deployed Config for Comparison
+### Example 3: Fetch Deployed Config for Comparison
 ```typescript
 import { fetchDeployedMeshConfig } from '@/features/mesh';
 
@@ -356,7 +312,7 @@ if (deployedConfig) {
 }
 ```
 
-### Example 5: Update Mesh State After Deployment
+### Example 4: Update Mesh State After Deployment
 ```typescript
 import { updateMeshState } from '@/features/mesh';
 
@@ -373,7 +329,7 @@ await stateManager.saveProject(project);
 console.log('Mesh state captured - future changes will be detected');
 ```
 
-### Example 6: Detect Frontend Changes (Restart Prompt)
+### Example 5: Detect Frontend Changes (Restart Prompt)
 ```typescript
 import { detectFrontendChanges } from '@/features/mesh';
 

@@ -17,7 +17,6 @@ export { getSetupInstructions, getEndpoint as getHandlerEndpoint } from './handl
 // Services
 export { deployMeshComponent, type MeshDeploymentResult as MeshDeploymentResult_Service } from './services/meshDeployment';
 export { getEndpoint as getServiceEndpoint } from './services/meshEndpoint';
-export { MeshDeployer } from './services/meshDeployer';
 export { verifyMeshDeployment, syncMeshStatus, type MeshVerificationResult } from './services/meshVerifier';
 export { waitForMeshDeployment, type MeshDeploymentVerificationResult } from './services/meshDeploymentVerifier';
 export {

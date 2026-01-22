@@ -141,18 +141,6 @@ export interface CommerceConfig {
         websiteCode: string;
         storeCode: string;
     };
-    services: {
-        catalog?: {
-            enabled: boolean;
-            endpoint: string;
-            apiKey?: string;
-        };
-        liveSearch?: {
-            enabled: boolean;
-            endpoint: string;
-            apiKey?: string;
-        };
-    };
 }
 
 export interface ProcessInfo {
