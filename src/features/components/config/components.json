@@ -14,8 +14,8 @@
             "name": "EDS Storefront",
             "description": "EDS storefront with Commerce Drop-in components",
             "icon": {
-                "light": "eds-file-icon-light.svg",
-                "dark": "eds-file-icon-dark.svg"
+                "light": "adobe-file-icon-light.svg",
+                "dark": "adobe-file-icon-dark.svg"
             },
             "configuration": {
                 "requiredEnvVars": [
