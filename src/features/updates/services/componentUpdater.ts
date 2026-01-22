@@ -38,7 +38,18 @@ export class ComponentUpdater {
     ): Promise<void> {
         const component = project.componentInstances?.[componentId];
         if (!component?.path) {
-            throw new Error(`Component ${componentId} not found`);
+            throw new Error(`Component ${componentId} not found in project state`);
+        }
+
+        // RESILIENCE: Verify component path exists on filesystem
+        // Handles cases where component was deleted but still registered in state
+        try {
+            await fs.access(component.path);
+        } catch {
+            throw new Error(
+                `Component ${componentId} path does not exist on filesystem: ${component.path}. ` +
+                'The component may have been deleted. Remove it from the project or reinstall it.',
+            );
         }
 
         // RESILIENCE: Check for concurrent updates

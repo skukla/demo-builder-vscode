@@ -1,3 +1,4 @@
+import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
@@ -130,6 +131,22 @@ export class UpdateManager {
 
             const componentIds = getComponentIds(project.componentInstances);
             for (const componentId of componentIds) {
+                const component = project.componentInstances[componentId];
+
+                // RESILIENCE: Skip components whose paths don't exist on filesystem
+                // This handles cases where a component was deleted but still registered in state
+                if (!component?.path) {
+                    this.logger.debug(`[Updates] Skipping ${componentId} in ${project.name}: no path registered`);
+                    continue;
+                }
+
+                try {
+                    await fs.access(component.path);
+                } catch {
+                    this.logger.debug(`[Updates] Skipping ${componentId} in ${project.name}: path does not exist (${component.path})`);
+                    continue;
+                }
+
                 const currentVersion = getComponentVersion(project, componentId) || 'unknown';
 
                 if (!componentProjectMap.has(componentId)) {
