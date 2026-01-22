@@ -38,7 +38,8 @@ export class ComponentInstallation {
             throw new Error('Git source URL not provided');
         }
 
-        const componentsDir = path.join(projectPath, 'components');
+        // Use custom componentsDir if provided (edit mode), otherwise default
+        const componentsDir = options.componentsDir || path.join(projectPath, 'components');
         const componentPath = path.join(componentsDir, componentDef.id);
 
         // Create components directory if it doesn't exist

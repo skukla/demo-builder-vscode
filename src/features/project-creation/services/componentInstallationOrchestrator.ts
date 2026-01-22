@@ -62,18 +62,17 @@ export async function cloneAllComponents(
     const componentManager = new ComponentManager(logger);
 
     // Clone all components in parallel
-    // If using custom componentsDir, create a project context that points to the parent
-    // so components are installed to the correct location
-    const projectContext = componentsDir
-        ? { ...project, path: path.dirname(componentsDir) }
-        : project;
-
     const clonePromises = Array.from(componentDefinitions.entries()).map(
         async ([compId, { definition, installOptions }]) => {
             logger.debug(`[Project Creation] Cloning: ${definition.name}`);
 
             // Clone without npm install (skipDependencies: true)
-            const result = await componentManager.installComponent(projectContext, definition, installOptions);
+            // Pass custom componentsDir through options for edit mode (atomic swap)
+            const optionsWithDir = componentsDir
+                ? { ...installOptions, componentsDir: targetComponentsDir }
+                : installOptions;
+
+            const result = await componentManager.installComponent(project, definition, optionsWithDir);
 
             if (!result.success || !result.component) {
                 throw new Error(`Failed to clone ${definition.name}: ${result.error}`);

@@ -15,6 +15,12 @@ export interface ComponentInstallOptions {
      * If undefined/empty, no submodules are initialized.
      */
     selectedSubmodules?: string[];
+    /**
+     * Custom components directory override.
+     * Used in edit mode to install to a temp directory for atomic swap.
+     * If not provided, defaults to `<projectPath>/components`.
+     */
+    componentsDir?: string;
 }
 
 /**
