@@ -10,7 +10,7 @@
 
 import { Flex, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo } from 'react';
-import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
+import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
     getStatusText,
     getStatusVariant,
@@ -85,9 +85,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     const port = getFrontendPort(project);
     const statusText = getStatusText(project.status, port, isEds);
     const statusVariant = getStatusVariant(project.status, isEds);
-    const componentSummary = useMemo(() => getComponentSummary(project), [project]);
+    const brandStackSummary = useMemo(() => getBrandStackSummary(project), [project]);
 
-    const ariaLabel = `${project.name}, ${statusText}${componentSummary ? `, ${componentSummary}` : ''}`;
+    const ariaLabel = `${project.name}, ${statusText}${brandStackSummary ? `, ${brandStackSummary}` : ''}`;
 
     return (
         <div
@@ -119,10 +119,10 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 />
             </Flex>
 
-            {/* Component Summary */}
-            {componentSummary && (
+            {/* Brand & Stack Summary */}
+            {brandStackSummary && (
                 <Text UNSAFE_className="project-card-spectrum-components">
-                    {componentSummary}
+                    {brandStackSummary}
                 </Text>
             )}
 

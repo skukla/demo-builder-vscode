@@ -8,6 +8,7 @@
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import { getComponentInstanceValues } from '@/types/typeGuards';
+import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
 
 /**
  * Component display name mappings
@@ -71,6 +72,43 @@ export function getComponentSummary(
     }
 
     return names.join(' · ');
+}
+
+/**
+ * Generates a summary string showing brand/package and stack for a project
+ *
+ * Returns brand and stack names joined with " · " (e.g., "CitiSignal · Edge Delivery + PaaS")
+ * Returns undefined if package info is not available.
+ *
+ * @param project - The project to summarize
+ * @returns Summary string or undefined
+ */
+export function getBrandStackSummary(project: Project): string | undefined {
+    if (!project.selectedPackage) {
+        return undefined;
+    }
+
+    const parts: string[] = [];
+
+    // Get package name
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const demoPackagesConfig = require('@/features/project-creation/config/demo-packages.json');
+    const pkg = demoPackagesConfig.packages?.find(
+        (p: { id: string }) => p.id === project.selectedPackage,
+    );
+    if (pkg) {
+        parts.push(pkg.name);
+    }
+
+    // Get stack name
+    if (project.selectedStack) {
+        const stack = getStackById(project.selectedStack);
+        if (stack) {
+            parts.push(stack.name);
+        }
+    }
+
+    return parts.length > 0 ? parts.join(' · ') : undefined;
 }
 
 /**
