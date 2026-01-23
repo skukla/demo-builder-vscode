@@ -514,8 +514,8 @@ export function GitHubRepoSelectionStep({
                         )}
                     />
 
-                    {/* Reset to template option - only show when repo is selected */}
-                    {selectedRepo && (
+                    {/* Reset to template option - only show when repo is selected and not loading */}
+                    {selectedRepo && !showLoading && (
                         <Flex direction="column" gap="size-100" marginTop="size-300">
                             <Checkbox
                                 isSelected={resetToTemplate}
