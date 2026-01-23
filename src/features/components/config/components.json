@@ -28,9 +28,7 @@
                 ],
                 "optionalEnvVars": [
                     "ADOBE_COMMERCE_CUSTOMER_GROUP",
-                    "AEM_ASSETS_ENABLED",
-                    "PAAS_CATALOG_SERVICE_ENDPOINT",
-                    "ACCS_CATALOG_SERVICE_ENDPOINT"
+                    "AEM_ASSETS_ENABLED"
                 ],
                 "configFiles": {
                     ".env": {
