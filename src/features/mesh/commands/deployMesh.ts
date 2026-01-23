@@ -36,6 +36,9 @@ export class DeployMeshCommand extends BaseCommand {
         }
 
         await DeployMeshCommand.lock.run(async () => {
+            // Import ProjectDashboardWebviewCommand early for status updates
+            const { ProjectDashboardWebviewCommand } = await import('@/features/dashboard/commands/showDashboard');
+
             try {
             // Get current project
             const project = await this.stateManager.getCurrentProject();
@@ -44,22 +47,29 @@ export class DeployMeshCommand extends BaseCommand {
                 return;
             }
 
+            // Send "deploying" status immediately to prevent UI flash
+            // This ensures the dashboard shows "Deploying..." while pre-flight checks run
+            await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Checking requirements...');
+
             // PRE-FLIGHT: Check authentication
             const authManager = ServiceLocator.getAuthenticationService();
 
             const isAuthenticated = await authManager.isAuthenticated();
             
             if (!isAuthenticated) {
+                // Refresh status to show correct state (will show 'needs-auth')
+                await ProjectDashboardWebviewCommand.refreshStatus();
+
                 // Direct user to dashboard for authentication (dashboard handles browser auth gracefully)
                 const selection = await vscode.window.showWarningMessage(
                     'Adobe authentication required to deploy mesh. Please sign in via the Project Dashboard.',
                     'Open Dashboard',
                 );
-                
+
                 if (selection === 'Open Dashboard') {
                     await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
                 }
-                
+
                 this.logger.debug('[Mesh Deployment] Authentication required - directed user to dashboard');
                 return;
             }
@@ -68,6 +78,9 @@ export class DeployMeshCommand extends BaseCommand {
             if (project.adobe?.organization) {
                 const currentOrg = await authManager.getCurrentOrganization();
                 if (!currentOrg || currentOrg.id !== project.adobe.organization) {
+                    // Refresh status to show correct state
+                    await ProjectDashboardWebviewCommand.refreshStatus();
+
                     vscode.window.showWarningMessage(
                         `You no longer have access to the organization for "${project.name}". ` +
                         'Local demo will continue working, but mesh deployment is unavailable.\n\n' +
@@ -80,6 +93,9 @@ export class DeployMeshCommand extends BaseCommand {
             // Find mesh component (uses subType detection, supports both EDS and Headless mesh)
             const meshComponent = getMeshComponentInstance(project);
             if (!meshComponent?.path) {
+                // Refresh status to show correct state
+                await ProjectDashboardWebviewCommand.refreshStatus();
+
                 vscode.window.showWarningMessage('This project does not have an API Mesh component.');
                 return;
             }
@@ -89,15 +105,15 @@ export class DeployMeshCommand extends BaseCommand {
             try {
                 await fs.access(meshConfigPath);
             } catch {
+                // Refresh status to show correct state
+                await ProjectDashboardWebviewCommand.refreshStatus();
+
                 vscode.window.showErrorMessage(
                     `mesh.json not found in ${meshComponent.path}. Please ensure the mesh configuration file exists.`,
                 );
                 return;
             }
 
-            // Import ProjectDashboardWebviewCommand for real-time updates
-            const { ProjectDashboardWebviewCommand } = await import('@/features/dashboard/commands/showDashboard');
-            
             // Log deployment start
             this.logger.info('='.repeat(60));
             this.logger.info('API Mesh Deployment Started');
