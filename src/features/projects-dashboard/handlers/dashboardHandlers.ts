@@ -21,6 +21,7 @@ import { BaseWebviewCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { executeCommandForProject } from '@/core/handlers';
 import { sessionUIState } from '@/core/state/sessionUIState';
+import { openInIncognito } from '@/core/utils';
 import { validateProjectPath } from '@/core/validation';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
@@ -487,6 +488,9 @@ export const handleOpenBrowser: MessageHandler<{ projectPath: string }> = async 
 
 /**
  * Open EDS live site in browser
+ *
+ * Opens in incognito/private browsing mode to ensure a clean session
+ * without cached content or logged-in states that could affect the demo.
  */
 export const handleOpenLiveSite: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
@@ -512,7 +516,9 @@ export const handleOpenLiveSite: MessageHandler<{ projectPath: string }> = async
         return { success: false, error: 'EDS live URL not available' };
     }
 
-    await vscode.env.openExternal(vscode.Uri.parse(liveUrl));
+    // Open in incognito mode for clean demo experience (no cached content/cookies)
+    // Falls back to normal browser if incognito mode is not available
+    await openInIncognito(liveUrl);
     return { success: true };
 };
 

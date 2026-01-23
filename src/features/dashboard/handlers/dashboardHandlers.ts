@@ -21,6 +21,7 @@ import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { openInIncognito } from '@/core/utils';
 import { validateURL } from '@/core/validation';
 import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
@@ -324,6 +325,9 @@ export const handleOpenBrowser: MessageHandler = async (context) => {
 
 /**
  * Handle 'openLiveSite' message - Open EDS live site in browser
+ *
+ * Opens in incognito/private browsing mode to ensure a clean session
+ * without cached content or logged-in states that could affect the demo.
  */
 export const handleOpenLiveSite: MessageHandler = async (context, data) => {
     const payload = data as { url?: string };
@@ -341,8 +345,10 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
         return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
     }
 
-    await vscode.env.openExternal(vscode.Uri.parse(payload.url));
-    context.logger.debug(`[Dashboard] Opening live site: ${payload.url}`);
+    // Open in incognito mode for clean demo experience (no cached content/cookies)
+    // Falls back to normal browser if incognito mode is not available
+    const openedIncognito = await openInIncognito(payload.url);
+    context.logger.debug(`[Dashboard] Opening live site: ${payload.url} (incognito: ${openedIncognito})`);
 
     return { success: true };
 };
