@@ -161,6 +161,7 @@ function computeInitialState(
                 templateOwner: editSettings.edsConfig.templateOwner,
                 templateRepo: editSettings.edsConfig.templateRepo,
                 contentSource: editSettings.edsConfig.contentSource,
+                patches: editSettings.edsConfig.patches,
                 // Mark GitHub/DA.live as authenticated since project already exists
                 githubAuth: (editSettings.edsConfig.githubOwner && editSettings.edsConfig.repoName) ? {
                     isAuthenticated: true,
