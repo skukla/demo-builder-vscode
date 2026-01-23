@@ -372,8 +372,8 @@ export function DataSourceConfigStep({
                         )}
                     </ListView>
 
-                    {/* Reset site content option - only show when site is selected */}
-                    {selectedSite && (
+                    {/* Reset site content option - only show when site is selected and not loading */}
+                    {selectedSite && !showLoading && (
                         <Flex direction="column" gap="size-100" marginTop="size-300">
                             <Checkbox
                                 isSelected={resetSiteContent}
