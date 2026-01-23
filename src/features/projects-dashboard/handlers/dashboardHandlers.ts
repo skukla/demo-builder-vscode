@@ -801,10 +801,8 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     ...extractConfigParams(project),
                 };
 
-                const configResult = await generateConfigJson(
-                    templateOwner,
-                    templateRepo,
-                    configParams,
+                const configResult = generateConfigJson(
+                    configParams as import('@/features/eds/services/configGenerator').ConfigGeneratorParams,
                     context.logger,
                 );
 

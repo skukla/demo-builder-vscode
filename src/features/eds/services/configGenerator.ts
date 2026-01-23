@@ -1,9 +1,9 @@
 /**
- * Config Generator for EDS Reset
+ * Config Generator for EDS Storefronts
  *
- * Generates demo-config.json content for EDS storefronts during reset operations.
- * Fetches the template demo-config.json and updates Commerce configuration values
- * (endpoints, API keys, store codes) with the project's actual configuration.
+ * Generates config.json content for EDS storefronts using a bundled template.
+ * This is the single source of truth for config.json generation, used by both
+ * project creation and EDS Reset operations.
  *
  * @module features/eds/services/configGenerator
  */
@@ -11,12 +11,15 @@
 import type { Logger } from '@/core/logging';
 import type { DemoProject } from '@/types';
 
+// Bundled template - single source of truth
+import configTemplate from '../config/config-template.json';
+
 // ==========================================================
 // Types
 // ==========================================================
 
 /**
- * Parameters for demo-config.json generation
+ * Parameters for config.json generation
  */
 export interface ConfigGeneratorParams {
     /** GitHub owner/org for the user's repo */
@@ -48,7 +51,7 @@ export interface ConfigGeneratorParams {
 }
 
 /**
- * Result of demo-config.json generation
+ * Result of config.json generation
  */
 export interface ConfigGeneratorResult {
     success: boolean;
@@ -64,7 +67,7 @@ export interface ConfigGeneratorResult {
  * Extract config parameters from a DemoProject
  *
  * Pulls Commerce configuration values from the project's component configs
- * and mesh state to build the params needed for demo-config.json generation.
+ * and mesh state to build the params needed for config.json generation.
  *
  * @param project - The demo project to extract config from
  * @returns Config parameters for generation
@@ -91,118 +94,74 @@ export function extractConfigParams(project: DemoProject): Partial<ConfigGenerat
 }
 
 /**
- * Generate demo-config.json content for EDS storefront
+ * Generate config.json content for EDS storefront
  *
- * Fetches the demo-config.json template from the source repository and updates
- * Commerce configuration values with the project's actual configuration.
- * This ensures the storefront connects to the correct Commerce backend after reset.
+ * Uses a bundled template and replaces placeholders with the project's
+ * actual configuration values. This is the single source of truth for
+ * config.json generation, used by both project creation and EDS Reset.
  *
- * @param templateOwner - GitHub owner of the template repo
- * @param templateRepo - Template repository name
  * @param params - Configuration parameters to inject
  * @param logger - Logger instance
  * @returns Generation result with content or error
  */
-export async function generateConfigJson(
-    templateOwner: string,
-    templateRepo: string,
+export function generateConfigJson(
     params: ConfigGeneratorParams,
     logger: Logger,
-): Promise<ConfigGeneratorResult> {
+): ConfigGeneratorResult {
     try {
-        // Fetch demo-config.json from template repository
-        const configUrl = `https://raw.githubusercontent.com/${templateOwner}/${templateRepo}/main/demo-config.json`;
-        logger.debug(`[ConfigGenerator] Fetching template demo-config from ${configUrl}`);
+        logger.debug('[ConfigGenerator] Generating config.json from bundled template');
 
-        const response = await fetch(configUrl, {
-            headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'Demo-Builder-VSCode',
-            },
-            signal: AbortSignal.timeout(10000),
-        });
+        // Deep clone the template to avoid mutating the imported object
+        const config = JSON.parse(JSON.stringify(configTemplate));
 
-        if (!response.ok) {
-            return {
-                success: false,
-                error: `Failed to fetch template demo-config.json: ${response.status} ${response.statusText}`,
-            };
+        // Build replacement map for placeholders
+        const contentSourceUrl = `https://content.da.live/${params.daLiveOrg}/${params.daLiveSite}`;
+        const storeUrl = `https://main--${params.repoName}--${params.githubOwner}.aem.live/`;
+
+        // Replace placeholders throughout the config
+        const replacements: Record<string, string> = {
+            '{ORG}': params.githubOwner,
+            '{REPO}': params.repoName,
+            '{SITE}': params.daLiveSite,
+            '{CONTENT_SOURCE}': contentSourceUrl,
+            '{COMMERCE_ENDPOINT}': params.commerceEndpoint || '',
+            '{CS_ENDPOINT}': params.catalogServiceEndpoint || params.commerceEndpoint || '',
+            '{STORE_VIEW_CODE}': params.storeViewCode || 'default',
+            '{STORE_CODE}': params.storeCode || 'default',
+            '{WEBSITE_CODE}': params.websiteCode || 'base',
+            '{COMMERCE_API_KEY}': params.commerceApiKey || '',
+            '{COMMERCE_ENVIRONMENT_ID}': params.commerceEnvironmentId || '',
+            '{CUSTOMER_GROUP}': params.customerGroup || '',
+            '{DOMAIN}': storeUrl,
+            '{AEM_ASSETS_ENABLED}': params.aemAssetsEnabled ? 'true' : 'false',
+        };
+
+        // Convert to string, replace all placeholders, parse back
+        let configStr = JSON.stringify(config, null, 2);
+        for (const [placeholder, value] of Object.entries(replacements)) {
+            configStr = configStr.split(placeholder).join(value);
         }
 
-        const templateContent = await response.text();
+        // Parse back to object to handle special conversions
+        const finalConfig = JSON.parse(configStr);
 
-        // Parse the template JSON to modify it properly
-        let config: Record<string, unknown>;
-        try {
-            config = JSON.parse(templateContent);
-        } catch (parseError) {
-            return {
-                success: false,
-                error: `Template demo-config.json is not valid JSON: ${(parseError as Error).message}`,
-            };
-        }
-
-        // Update the public.default section with project's Commerce config
-        const publicConfig = config.public as Record<string, Record<string, unknown>> | undefined;
-        if (publicConfig?.default) {
-            const defaultConfig = publicConfig.default;
-
-            // Update Commerce endpoints
-            if (params.commerceEndpoint) {
-                defaultConfig['commerce-core-endpoint'] = params.commerceEndpoint;
-                defaultConfig['commerce-endpoint'] = params.commerceEndpoint;
-                logger.debug(`[ConfigGenerator] Set commerce endpoints to ${params.commerceEndpoint}`);
-            }
-
-            // Update headers section
-            const headers = defaultConfig.headers as Record<string, Record<string, string>> | undefined;
-            if (headers) {
-                // Update "all" headers
-                if (headers.all && params.storeViewCode) {
-                    headers.all.Store = params.storeViewCode;
-                }
-
-                // Update "cs" (catalog service) headers
-                if (headers.cs) {
-                    if (params.storeCode) {
-                        headers.cs['Magento-Store-Code'] = params.storeCode;
-                    }
-                    if (params.storeViewCode) {
-                        headers.cs['Magento-Store-View-Code'] = params.storeViewCode;
-                    }
-                    if (params.websiteCode) {
-                        headers.cs['Magento-Website-Code'] = params.websiteCode;
-                    }
-                    if (params.commerceApiKey) {
-                        headers.cs['x-api-key'] = params.commerceApiKey;
-                    }
-                    if (params.commerceEnvironmentId) {
-                        headers.cs['Magento-Environment-Id'] = params.commerceEnvironmentId;
-                    }
-                    if (params.customerGroup) {
-                        headers.cs['Magento-Customer-Group'] = params.customerGroup;
-                    }
-                }
-            }
-
-            // Update analytics section with correct store URL
-            const analytics = defaultConfig.analytics as Record<string, unknown> | undefined;
-            if (analytics) {
-                const storeUrl = `https://main--${params.daLiveSite}--${params.githubOwner}.aem.live/`;
-                analytics['store-url'] = storeUrl;
-            }
-
-            // Enable AEM Assets integration if configured
-            if (params.aemAssetsEnabled) {
-                defaultConfig['commerce-assets-enabled'] = true;
-                logger.debug('[ConfigGenerator] Enabled AEM Assets integration (commerce-assets-enabled: true)');
+        // Convert commerce-assets-enabled from string to boolean
+        if (finalConfig.public?.default) {
+            const assetsEnabled = finalConfig.public.default['commerce-assets-enabled'];
+            if (assetsEnabled === 'true') {
+                finalConfig.public.default['commerce-assets-enabled'] = true;
+            } else if (assetsEnabled === 'false') {
+                // Remove the field entirely if disabled (cleaner config)
+                delete finalConfig.public.default['commerce-assets-enabled'];
             }
         }
 
-        // Serialize back to JSON with proper formatting
-        const configContent = JSON.stringify(config, null, 2);
+        // Serialize with proper formatting
+        const configContent = JSON.stringify(finalConfig, null, 2);
 
-        logger.info('[ConfigGenerator] Successfully generated demo-config.json');
+        logger.info('[ConfigGenerator] Successfully generated config.json');
+        logger.debug(`[ConfigGenerator] Config size: ${configContent.length} bytes`);
+
         return {
             success: true,
             content: configContent,
@@ -210,7 +169,7 @@ export async function generateConfigJson(
 
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        logger.error(`[ConfigGenerator] Failed to generate demo-config.json: ${message}`);
+        logger.error(`[ConfigGenerator] Failed to generate config.json: ${message}`);
         return {
             success: false,
             error: message,

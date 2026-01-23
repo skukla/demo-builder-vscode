@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "code": {
+    "owner": "{ORG}",
+    "repo": "{REPO}",
+    "source": {
+      "type": "github",
+      "url": "https://github.com/{ORG}/{REPO}"
+    }
+  },
+  "content": {
+    "source": {
+      "url": "{CONTENT_SOURCE}",
+      "type": "markup"
+    }
+  },
+  "folders": {
+    "/products/": "/products/default"
+  },
+  "cdn": {
+    "live": {
+      "host": "main--{REPO}--{ORG}.aem.live"
+    },
+    "preview": {
+      "host": "main--{REPO}--{ORG}.aem.page"
+    }
+  },
+  "headers": {},
+  "public": {
+    "default": {
+      "commerce-core-endpoint": "{COMMERCE_ENDPOINT}",
+      "commerce-endpoint": "{COMMERCE_ENDPOINT}",
+      "commerce-assets-enabled": "{AEM_ASSETS_ENABLED}",
+      "headers": {
+        "all": {
+          "Store": "{STORE_VIEW_CODE}"
+        },
+        "cs": {
+          "Magento-Customer-Group": "{CUSTOMER_GROUP}",
+          "Magento-Store-Code": "{STORE_CODE}",
+          "Magento-Store-View-Code": "{STORE_VIEW_CODE}",
+          "Magento-Website-Code": "{WEBSITE_CODE}",
+          "x-api-key": "{COMMERCE_API_KEY}",
+          "Magento-Environment-Id": "{COMMERCE_ENVIRONMENT_ID}"
+        }
+      },
+      "analytics": {
+        "base-currency-code": "USD",
+        "environment": "Production",
+        "store-id": 1,
+        "store-name": "Main Website Store",
+        "store-url": "https://main--{REPO}--{ORG}.aem.live/",
+        "store-view-id": 1,
+        "store-view-name": "Default Store View",
+        "website-id": 1,
+        "website-name": "Main Website"
+      }
+    }
+  },
+  "robots": {
+    "txt": "User-agent: *\nAllow: /\nDisallow: /drafts/\nDisallow: /enrichment/\nDisallow: /tools/\nDisallow: /plugins/experimentation/\n\nSitemap: https://main--{REPO}--{ORG}.aem.live/sitemap-index.xml"
+  },
+  "sidekick": {
+    "project": "Demo Builder Project",
+    "plugins": [
+      {
+        "id": "cif",
+        "title": "Commerce",
+        "environments": ["edit"],
+        "url": "https://main--{REPO}--{ORG}.aem.live/tools/picker/dist/index.html",
+        "isPalette": true,
+        "paletteRect": "top: 54px; left: 5px; bottom: 5px; width: 300px; height: calc(100% - 59px); border-radius: var(--hlx-sk-button-border-radius); overflow: hidden; resize: horizontal;"
+      },
+      {
+        "id": "personalisation",
+        "title": "Personalisation",
+        "environments": ["edit"],
+        "url": "https://main--{REPO}--{ORG}.aem.live/tools/segments/dist/index.html",
+        "isPalette": true,
+        "paletteRect": "top: 54px; left: 5px; bottom: 5px; width: 300px; height: calc(100% - 59px); border-radius: var(--hlx-sk-button-border-radius); overflow: hidden; resize: horizontal;"
+      }
+    ]
+  }
+}

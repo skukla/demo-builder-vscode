@@ -54,6 +54,7 @@ jest.mock('vscode', () => {
             withProgress: jest.fn().mockImplementation((_options, callback) => {
                 return callback();
             }),
+            setStatusBarMessage: jest.fn().mockReturnValue({ dispose: jest.fn() }),
         },
         env: {
             openExternal: jest.fn(),
@@ -318,9 +319,10 @@ describe('showDaLiveAuthQuickPick', () => {
             // When: showDaLiveAuthQuickPick is called
             await showDaLiveAuthQuickPick(mockContext);
 
-            // Then: Should show success message (second call, first is the DA.live prompt)
-            expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
-                'Connected to DA.live (my-org)',
+            // Then: Should show success message in status bar
+            expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
+                '✅ Connected to DA.live (my-org)',
+                expect.any(Number),
             );
         });
     });

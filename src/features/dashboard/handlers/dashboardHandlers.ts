@@ -762,12 +762,7 @@ export const handleResetEds: MessageHandler = async (context) => {
                     ...extractConfigParams(project),
                 };
 
-                const configResult = await generateConfigJson(
-                    templateOwner,
-                    templateRepo,
-                    configParams,
-                    context.logger,
-                );
+                const configResult = generateConfigJson(configParams, context.logger);
 
                 if (configResult.success && configResult.content) {
                     // Generate both config.json (used by storefront) and demo-config.json (template default)

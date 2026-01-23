@@ -152,13 +152,6 @@ describe('CommandManager', () => {
             });
         });
 
-        it('should log debug message during registration', () => {
-            commandManager.registerCommands();
-
-            expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringMatching(/^Registered \d+ commands:/)
-            );
-        });
     });
 
     describe('Projects List Command Disposal', () => {

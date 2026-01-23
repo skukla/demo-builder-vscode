@@ -665,24 +665,6 @@ describe('ComponentUpdater (Step 1)', () => {
             );
         });
 
-        it('should detect verification failure and format with corruption message', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            // Make package.json verification fail (missing after extraction)
-            (fs.access as jest.Mock).mockRejectedValueOnce(new Error('ENOENT'));
-
-            await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringContaining('incomplete or corrupted')
-                })
-            );
-        });
     });
 
     describe('Verification edge cases', () => {

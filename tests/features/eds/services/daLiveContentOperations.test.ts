@@ -63,6 +63,18 @@ describe('DaLiveContentOperations', () => {
         } as unknown as Response;
     }
 
+    /**
+     * Helper to mock HEAD requests for essential config checks
+     * The production code checks for /placeholders.json, /redirects.json, /metadata.json, /sitemap.json
+     * These mocks return 404 so the configs aren't added to the content paths
+     */
+    function mockEssentialConfigChecks(): void {
+        // Mock 4 HEAD requests for essential configs (all return 404)
+        for (let i = 0; i < 4; i++) {
+            mockFetch.mockResolvedValueOnce(mockFetchResponse(404));
+        }
+    }
+
     describe('getContentPathsFromIndex', () => {
         it('should fetch and return content paths from index', async () => {
             // Given: A content index with multiple paths
@@ -149,15 +161,19 @@ describe('DaLiveContentOperations', () => {
             // Mock order:
             // 1. Fetch /about HTML (to scan for media)
             // 2. Fetch /products HTML (to scan for media)
-            // 3. Fetch media_abc123.png from source (copySingleFile step 1)
-            // 4. POST media_abc123.png to dest (copySingleFile step 2)
-            // 5. Fetch media_def456.jpg from source (copySingleFile step 1)
-            // 6. POST media_def456.jpg to dest (copySingleFile step 2)
+            // 3. HEAD /media_abc123.png.json (isSpreadsheetPath check)
+            // 4. Fetch media_abc123.png from source (copySingleFile step 1)
+            // 5. POST media_abc123.png to dest (copySingleFile step 2)
+            // 6. HEAD /media_def456.jpg.json (isSpreadsheetPath check)
+            // 7. Fetch media_def456.jpg from source (copySingleFile step 1)
+            // 8. POST media_def456.jpg to dest (copySingleFile step 2)
             mockFetch
                 .mockResolvedValueOnce(mockFetchResponse(200, aboutHtml)) // scan /about
                 .mockResolvedValueOnce(mockFetchResponse(200, productsHtml)) // scan /products
+                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_abc123.png.json
                 .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/png')) // fetch media_abc123.png
                 .mockResolvedValueOnce(mockFetchResponse(200)) // POST media_abc123.png
+                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_def456.jpg.json
                 .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/jpeg')) // fetch media_def456.jpg
                 .mockResolvedValueOnce(mockFetchResponse(200)); // POST media_def456.jpg
 
@@ -207,6 +223,7 @@ describe('DaLiveContentOperations', () => {
             mockFetch
                 .mockResolvedValueOnce(mockFetchResponse(200, aboutHtml))
                 .mockResolvedValueOnce(mockFetchResponse(200, contactHtml))
+                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_abc123.png.json
                 .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/png')) // fetch media_abc123.png
                 .mockResolvedValueOnce(mockFetchResponse(200)); // POST media_abc123.png
 
@@ -231,8 +248,10 @@ describe('DaLiveContentOperations', () => {
 
             mockFetch
                 .mockResolvedValueOnce(mockFetchResponse(200, aboutHtml))
+                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_abc123.png.json
                 .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/png'))
                 .mockResolvedValueOnce(mockFetchResponse(200))
+                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_def456.jpg.json
                 .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/jpeg'))
                 .mockResolvedValueOnce(mockFetchResponse(200));
 
@@ -275,9 +294,11 @@ describe('DaLiveContentOperations', () => {
             mockFetch
                 .mockResolvedValueOnce(mockFetchResponse(200, aboutHtml))
                 // Copy media_abc123.png - success
+                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_abc123.png.json
                 .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/png'))
                 .mockResolvedValueOnce(mockFetchResponse(200))
                 // Copy media_def456.jpg - fails
+                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_def456.jpg.json
                 .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/jpeg'))
                 .mockResolvedValueOnce(mockFetchResponse(500));
 
@@ -319,6 +340,7 @@ describe('DaLiveContentOperations', () => {
             mockFetch
                 .mockResolvedValueOnce(mockFetchResponse(500)) // /about fails
                 .mockResolvedValueOnce(mockFetchResponse(200, productsHtml)) // /products succeeds
+                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_def456.jpg.json
                 .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/jpeg'))
                 .mockResolvedValueOnce(mockFetchResponse(200));
 
@@ -366,6 +388,13 @@ describe('DaLiveContentOperations', () => {
             mockFetch
                 // Content index fetch
                 .mockResolvedValueOnce(mockFetchResponse(200, { data: [{ path: '/nav' }] }, 'application/json'))
+                // HEAD requests for essential configs (placeholders, redirects, metadata, sitemap)
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                // HEAD request for isSpreadsheetPath check (/nav.json)
+                .mockResolvedValueOnce(mockFetchResponse(404))
                 // Fetch /nav.plain.html (should fetch .plain.html for HTML content)
                 .mockImplementationOnce(async (url: string) => {
                     fetchedUrl = url;
@@ -424,6 +453,13 @@ describe('DaLiveContentOperations', () => {
 
             mockFetch
                 .mockResolvedValueOnce(mockFetchResponse(200, { data: [{ path: '/page' }] }, 'application/json'))
+                // HEAD requests for essential configs (placeholders, redirects, metadata, sitemap)
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                // HEAD request for isSpreadsheetPath check (/page.json)
+                .mockResolvedValueOnce(mockFetchResponse(404))
                 .mockImplementationOnce(async () => {
                     return {
                         ok: true,
@@ -473,6 +509,13 @@ describe('DaLiveContentOperations', () => {
 
             mockFetch
                 .mockResolvedValueOnce(mockFetchResponse(200, { data: [{ path: '/page' }] }, 'application/json'))
+                // HEAD requests for essential configs (placeholders, redirects, metadata, sitemap)
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                // HEAD request for isSpreadsheetPath check (/page.json)
+                .mockResolvedValueOnce(mockFetchResponse(404))
                 .mockImplementationOnce(async () => {
                     return {
                         ok: true,
@@ -519,6 +562,11 @@ describe('DaLiveContentOperations', () => {
             mockFetch
                 // Content index fetch with directory path
                 .mockResolvedValueOnce(mockFetchResponse(200, { data: [{ path: '/citisignal-fr/' }] }, 'application/json'))
+                // HEAD requests for essential configs (placeholders, redirects, metadata, sitemap)
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
                 // Fetch /citisignal-fr/index.plain.html (NOT /citisignal-fr/.plain.html)
                 .mockImplementationOnce(async (url: string) => {
                     fetchedUrl = url;
@@ -559,6 +607,13 @@ describe('DaLiveContentOperations', () => {
 
             mockFetch
                 .mockResolvedValueOnce(mockFetchResponse(200, { data: [{ path: '/page' }] }, 'application/json'))
+                // HEAD requests for essential configs (placeholders, redirects, metadata, sitemap)
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                // HEAD request for isSpreadsheetPath check (/page.json)
+                .mockResolvedValueOnce(mockFetchResponse(404))
                 .mockImplementationOnce(async () => {
                     return {
                         ok: true,
@@ -596,7 +651,7 @@ describe('DaLiveContentOperations', () => {
             expect(postedHtml).toContain('src="/images/logo.svg"');
         });
 
-        it('should preserve empty structural divs with placeholder comment', async () => {
+        it('should preserve empty structural divs with placeholder content', async () => {
             // Given: Nav-style HTML with empty third div (required by header.js for nav-tools)
             // The header block expects 3 sections: brand, sections, tools
             // The empty <div></div> is a placeholder for dynamic content (search, cart, wishlist)
@@ -608,6 +663,13 @@ describe('DaLiveContentOperations', () => {
 
             mockFetch
                 .mockResolvedValueOnce(mockFetchResponse(200, { data: [{ path: '/nav' }] }, 'application/json'))
+                // HEAD requests for essential configs (placeholders, redirects, metadata, sitemap)
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                .mockResolvedValueOnce(mockFetchResponse(404))
+                // HEAD request for isSpreadsheetPath check (/nav.json)
+                .mockResolvedValueOnce(mockFetchResponse(404))
                 .mockImplementationOnce(async () => {
                     return {
                         ok: true,
@@ -635,14 +697,14 @@ describe('DaLiveContentOperations', () => {
                 'dest-site',
             );
 
-            // Then: Empty div should be preserved with zero-width space
+            // Then: Empty div should be preserved with placeholder content
             // This prevents DA.live/Helix from stripping the empty element
             expect(postedFormData).not.toBeNull();
             const postedBlob = postedFormData!.get('data') as Blob;
             const postedHtml = await postedBlob.text();
 
-            // The empty div should now have a zero-width space (\u200B) to prevent stripping
-            expect(postedHtml).toContain('<div>\u200B</div>');
+            // The empty div should now have <p>&nbsp;</p> which DA.live preserves during round-trip
+            expect(postedHtml).toContain('<div><p>&nbsp;</p></div>');
             // Should still have all 3 divs
             expect((postedHtml.match(/<div>/g) || []).length).toBe(3);
         });

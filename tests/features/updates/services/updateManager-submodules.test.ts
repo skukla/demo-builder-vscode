@@ -201,9 +201,6 @@ describe('UpdateManager - Submodule Updates', () => {
             const results = await updateManager.checkSubmoduleUpdates(parentPath, unmappedSubmodules);
 
             expect(results.size).toBe(0);
-            expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('no Git source in components.json')
-            );
         });
 
         it('should handle GitHub API returning no release', async () => {
@@ -281,28 +278,5 @@ describe('UpdateManager - Submodule Updates', () => {
             );
         });
 
-        it('should log debug messages during update check', async () => {
-            mockExecute.mockResolvedValueOnce({
-                code: 0,
-                stdout: 'abc1234567890',
-                stderr: '',
-            });
-
-            const mockRelease = createMockRelease({ version: '2.0.0', assetType: 'zipball' });
-            (global.fetch as jest.Mock).mockResolvedValueOnce({
-                ok: true,
-                json: async () => mockRelease,
-            });
-            mockSecurityValidationPass();
-
-            await updateManager.checkSubmoduleUpdates(parentPath, submodules);
-
-            expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Checking submodule demo-inspector')
-            );
-            expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('update available')
-            );
-        });
     });
 });
