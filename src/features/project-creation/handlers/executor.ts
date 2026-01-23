@@ -30,8 +30,9 @@ import { AdobeConfig } from '@/types/base';
 import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 
-// EDS config.json generation (called after mesh deployment)
-import { generateConfigJsonPostMesh } from '@/features/eds/services/edsSetupPhases';
+// EDS config.json generation (consolidated - used for both creation and reset)
+import { generateConfigJson } from '@/features/eds/services/configGenerator';
+import type { ConfigGeneratorParams } from '@/features/eds/services/configGenerator';
 
 // Stacks configuration - source of truth for frontend/backend/dependencies
 import stacksConfig from '../config/stacks.json';
@@ -501,61 +502,91 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     if (!repoInfo) {
                         context.logger.warn('[EDS Post-Mesh] Could not parse repo URL, skipping config.json generation');
                     } else {
-                        // Get backend env vars for store codes
+                        // Get component configs for store codes and feature flags
                         const backendComponentId = typedConfig.components?.backend || '';
-                        const backendEnvVars = typedConfig.componentConfigs?.[backendComponentId] as Record<string, string> | undefined;
+                        const frontendComponentId = typedConfig.components?.frontend || '';
+                        // Find mesh component ID in dependencies (eds-commerce-mesh or headless-commerce-mesh)
+                        const meshComponentId = typedConfig.components?.dependencies?.find(
+                            (dep: string) => dep === COMPONENT_IDS.EDS_COMMERCE_MESH || dep === COMPONENT_IDS.HEADLESS_COMMERCE_MESH,
+                        );
+
+                        const backendConfig = typedConfig.componentConfigs?.[backendComponentId] as Record<string, string> | undefined;
+                        const frontendConfig = typedConfig.componentConfigs?.[frontendComponentId] as Record<string, string> | undefined;
+                        const meshConfig = meshComponentId ? typedConfig.componentConfigs?.[meshComponentId] as Record<string, string> | undefined : undefined;
 
                         // Get DA.live config from wizard's edsConfig
                         const daLiveOrg = typedConfig.edsConfig?.daLiveOrg || '';
                         const daLiveSite = typedConfig.edsConfig?.daLiveSite || '';
 
-                        // Step 1: Generate config.json locally with mesh endpoint
-                        await generateConfigJsonPostMesh({
-                            componentPath: edsComponentPath,
-                            meshEndpoint: project.meshState.endpoint,
-                            githubOwner: repoInfo.owner,
-                            repoName: repoInfo.repo,
-                            daLiveOrg,
-                            daLiveSite,
-                            backendEnvVars,
-                            logger: context.logger,
-                        });
-                        context.logger.info('[EDS Post-Mesh] Local config.json generated successfully');
+                        // Get template info for fetching demo-config.json
+                        const templateOwner = typedConfig.edsConfig?.templateOwner;
+                        const templateRepo = typedConfig.edsConfig?.templateRepo;
 
-                        // Step 2: Push config.json to GitHub (ONCE - no staleness window)
-                        const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
-                        const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
+                        if (!templateOwner || !templateRepo) {
+                            context.logger.warn('[EDS Post-Mesh] Template info not available, skipping config.json generation');
+                        } else {
+                            // Build ConfigGeneratorParams - consolidates backend, frontend, and mesh configs
+                            const configParams: ConfigGeneratorParams = {
+                                githubOwner: repoInfo.owner,
+                                repoName: repoInfo.repo,
+                                daLiveOrg,
+                                daLiveSite,
+                                // Commerce endpoints - prefer mesh endpoint
+                                commerceEndpoint: project.meshState.endpoint,
+                                catalogServiceEndpoint: backendConfig?.PAAS_CATALOG_SERVICE_ENDPOINT || meshConfig?.ADOBE_CATALOG_SERVICE_ENDPOINT,
+                                // Store codes from backend or mesh config
+                                commerceApiKey: backendConfig?.ADOBE_CATALOG_API_KEY || meshConfig?.ADOBE_CATALOG_API_KEY,
+                                commerceEnvironmentId: backendConfig?.ADOBE_COMMERCE_ENVIRONMENT_ID || meshConfig?.ADOBE_COMMERCE_ENVIRONMENT_ID,
+                                storeViewCode: backendConfig?.ADOBE_COMMERCE_STORE_VIEW_CODE || meshConfig?.ADOBE_COMMERCE_STORE_VIEW_CODE,
+                                storeCode: backendConfig?.ADOBE_COMMERCE_STORE_CODE || meshConfig?.ADOBE_COMMERCE_STORE_CODE,
+                                websiteCode: backendConfig?.ADOBE_COMMERCE_WEBSITE_CODE || meshConfig?.ADOBE_COMMERCE_WEBSITE_CODE,
+                                customerGroup: backendConfig?.ADOBE_COMMERCE_CUSTOMER_GROUP || frontendConfig?.ADOBE_COMMERCE_CUSTOMER_GROUP,
+                                // AEM Assets flag from frontend config (eds-storefront)
+                                aemAssetsEnabled: frontendConfig?.AEM_ASSETS_ENABLED === 'true',
+                            };
 
-                        const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
-                        const githubFileOperations = new GitHubFileOperations(githubTokenService, context.logger);
+                            // Step 1: Generate config.json content using consolidated generator
+                            const result = await generateConfigJson(templateOwner, templateRepo, configParams, context.logger);
 
-                        // Read generated config.json
-                        const configJsonPath = path.join(edsComponentPath, 'config.json');
-                        const fs = await import('fs/promises');
-                        const content = await fs.readFile(configJsonPath, 'utf-8');
-                        context.logger.debug(`[EDS Post-Mesh] Read local config.json (${content.length} bytes)`);
+                            if (!result.success || !result.content) {
+                                throw new Error(result.error || 'Failed to generate config.json content');
+                            }
 
-                        // Check if config.json already exists on GitHub (from template)
-                        context.logger.debug(`[EDS Post-Mesh] Checking for existing config.json on GitHub...`);
-                        const existingFile = await githubFileOperations.getFileContent(
-                            repoInfo.owner,
-                            repoInfo.repo,
-                            'config.json',
-                        );
-                        context.logger.debug(`[EDS Post-Mesh] Existing file SHA: ${existingFile?.sha || 'not found'}`);
+                            // Step 2: Write content to local file
+                            const fs = await import('fs/promises');
+                            const configJsonPath = path.join(edsComponentPath, 'config.json');
+                            await fs.writeFile(configJsonPath, result.content, 'utf-8');
+                            context.logger.info('[EDS Post-Mesh] Local config.json generated successfully');
 
-                        // Push config.json to GitHub
-                        context.logger.debug(`[EDS Post-Mesh] Pushing config.json to GitHub...`);
-                        await githubFileOperations.createOrUpdateFile(
-                            repoInfo.owner,
-                            repoInfo.repo,
-                            'config.json',
-                            content,
-                            'chore: add config.json with mesh endpoint',
-                            existingFile?.sha,
-                        );
+                            // Step 3: Push config.json to GitHub (ONCE - no staleness window)
+                            const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
+                            const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
 
-                        context.logger.info(`[EDS Post-Mesh] ✓ config.json pushed to GitHub (${repoInfo.owner}/${repoInfo.repo})`);
+                            const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
+                            const githubFileOperations = new GitHubFileOperations(githubTokenService, context.logger);
+
+                            // Check if config.json already exists on GitHub (from template)
+                            context.logger.debug(`[EDS Post-Mesh] Checking for existing config.json on GitHub...`);
+                            const existingFile = await githubFileOperations.getFileContent(
+                                repoInfo.owner,
+                                repoInfo.repo,
+                                'config.json',
+                            );
+                            context.logger.debug(`[EDS Post-Mesh] Existing file SHA: ${existingFile?.sha || 'not found'}`);
+
+                            // Push config.json to GitHub using already-generated content
+                            context.logger.debug(`[EDS Post-Mesh] Pushing config.json to GitHub...`);
+                            await githubFileOperations.createOrUpdateFile(
+                                repoInfo.owner,
+                                repoInfo.repo,
+                                'config.json',
+                                result.content,
+                                'chore: add config.json with mesh endpoint',
+                                existingFile?.sha,
+                            );
+
+                            context.logger.info(`[EDS Post-Mesh] ✓ config.json pushed to GitHub (${repoInfo.owner}/${repoInfo.repo})`);
+                        }
                     }
                 }
             } catch (error) {

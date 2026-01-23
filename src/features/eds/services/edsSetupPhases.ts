@@ -637,11 +637,11 @@ async function fetchStoreConfig(
 /**
  * Environment Configuration Phase
  *
- * NOTE: This class is DEPRECATED and maintained only for test compatibility.
- * The functionality has been moved to the standalone function `generateConfigJsonPostMesh`
- * which is called post-mesh deployment for better timing.
- *
- * New code should use `generateConfigJsonPostMesh` directly.
+ * @deprecated This class is DEPRECATED and maintained only for test compatibility.
+ * New code should use `generateConfigJson` from `configGenerator.ts` which:
+ * - Is the single source of truth for config.json generation
+ * - Correctly reads all config from frontend, backend, and mesh components
+ * - Is used by both project creation and EDS Reset operations
  */
 export class EnvConfigPhase {
     constructor(private logger: Logger) {}
@@ -889,11 +889,13 @@ export interface ConfigJsonPostMeshParams {
 /**
  * Generate config.json AFTER mesh deployment (Phase 5 optimization)
  *
- * This function generates config.json from scratch with the mesh endpoint already set.
- * Unlike the old flow (generate empty → deploy mesh → update), this:
- * - Generates config.json ONCE with complete data
- * - Eliminates the staleness window
- * - Reduces GitHub pushes from 2 to 1
+ * @deprecated Use `generateConfigJson` from `configGenerator.ts` instead.
+ * This function has been replaced by the consolidated config generator which:
+ * - Correctly reads AEM_ASSETS_ENABLED from frontend config (eds-storefront)
+ * - Is used by both project creation and EDS Reset operations
+ * - Returns content as string instead of writing to disk (more flexible)
+ *
+ * This function is maintained only for backward compatibility with existing tests.
  *
  * @param params - Configuration parameters for config.json generation
  * @throws Error if generation fails
