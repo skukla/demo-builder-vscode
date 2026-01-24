@@ -253,6 +253,18 @@ export const TIMEOUTS = {
 
     /** Complete project creation workflow (30 minutes) */
     PROJECT_CREATION_OVERALL: 30 * 60 * 1000,
+
+    /** State settling before DOM operations (100ms) */
+    UI_UPDATE_DELAY: 100,
+
+    /** Step transitions in wizard (300ms) */
+    STEP_TRANSITION: 300,
+
+    /** Step content focus timing (150ms) */
+    STEP_CONTENT_FOCUS: 150,
+
+    /** Mesh deployment total timeout (3 minutes) */
+    MESH_DEPLOY_TOTAL: 180000,
 } as const;
 
 /**

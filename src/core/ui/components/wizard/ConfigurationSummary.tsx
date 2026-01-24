@@ -1,6 +1,6 @@
 import { View, Heading, Divider } from '@adobe/react-spectrum';
 import React from 'react';
-import { StatusSection } from './StatusSection';
+import { StatusSection, type StatusSectionProps } from './StatusSection';
 import { getStepStatus } from './configurationSummaryHelpers';
 import { WizardState, WizardStep } from '@/types/webview';
 

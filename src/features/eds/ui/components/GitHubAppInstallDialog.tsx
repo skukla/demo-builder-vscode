@@ -53,7 +53,7 @@ export function GitHubAppInstallDialog({
                 isInstalled: boolean;
             }>('check-github-app', { owner, repo, lenient: true });
 
-            if (result.data?.success && result.data?.isInstalled) {
+            if (result.success && result.isInstalled) {
                 onInstallDetected();
             } else {
                 // App not installed yet

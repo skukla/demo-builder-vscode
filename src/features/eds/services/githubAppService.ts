@@ -86,7 +86,7 @@ export class GitHubAppService {
                 headers: {
                     'x-auth-token': token.token,
                 },
-                signal: AbortSignal.timeout(TIMEOUTS.POLL.INTERVAL),
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
             });
 
             if (!response.ok) {

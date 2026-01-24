@@ -173,7 +173,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     if (isEditMode) {
         context.logger.info(`[Project Edit] Editing existing project at: ${projectPath}`);
         try {
-            existingProject = await context.stateManager.loadProjectFromPath(projectPath);
+            existingProject = await context.stateManager.loadProjectFromPath(projectPath) ?? undefined;
             if (existingProject) {
                 context.logger.debug('[Project Edit] Loaded existing project state for creation date preservation');
             }
@@ -435,7 +435,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         context.logger.info('[Mesh Setup] Edit mode - reusing existing mesh from project');
         const existingMesh = {
             endpoint: existingProject.meshState.endpoint,
-            meshId: getMeshComponentInstance(existingProject)?.metadata?.meshId || '',
+            meshId: (getMeshComponentInstance(existingProject)?.metadata?.meshId as string) || '',
             meshStatus: 'deployed' as const,
             workspace: typedConfig.adobe?.workspace,
         };

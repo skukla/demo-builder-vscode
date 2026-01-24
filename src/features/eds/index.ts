@@ -30,7 +30,7 @@ export { CleanupService } from './services/cleanupService';
 export {
     applyTemplatePatches,
     getPatchById,
-    getEnabledPatches,
+    getAllPatches,
     TEMPLATE_PATCHES,
 } from './services/templatePatchRegistry';
 export type { TemplatePatch, PatchResult } from './services/templatePatchRegistry';

@@ -480,6 +480,7 @@ export class HelixConfigPhase {
 export class ContentPhase {
     constructor(
         private daLiveContentOps: DaLiveContentOperations,
+        private daLiveOrgOps: DaLiveOrgOperations,
         private componentManager: ComponentManager,
         private logger: Logger,
     ) {}

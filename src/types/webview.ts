@@ -13,6 +13,7 @@ export type WizardStep =
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
     | 'adobe-context'  // Kept for compatibility
+    | 'adobe-org'  // Legacy: Adobe org selection
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
     | 'eds-connect-services'  // EDS: Combined GitHub + DA.live authentication (conditional: requiresGitHub OR requiresDaLive stack)
@@ -22,10 +23,13 @@ export type WizardStep =
     | 'eds-data-source'  // EDS: ACCS data source configuration (conditional: requiresDaLive stack)
     | 'storefront-setup'  // EDS: Storefront setup (GitHub repo, DA.live content, Helix config)
     | 'settings'  // Component-specific settings collection
+    | 'component-config'  // Legacy: Component configuration
     | 'commerce-config'  // Kept for compatibility
+    | 'data-source-config'  // Legacy: Data source configuration
+    | 'connect-services'  // Legacy: Connect services step
+    | 'api-mesh'  // Legacy: API Mesh step (mesh deployment now in Project Creation Phase 3)
     | 'review'
     | 'project-creation';
-    // Note: 'api-mesh' and 'mesh-deployment' removed - mesh deployment now in Project Creation Phase 3
 
 export interface WizardState {
     currentStep: WizardStep;
@@ -136,6 +140,8 @@ export interface GitHubRepoItem {
     id: string;
     /** Repository name (without owner) */
     name: string;
+    /** Repository owner (user or org) */
+    owner?: string;
     /** Full repository name (owner/repo) - same as id */
     fullName: string;
     /** Repository description */
@@ -338,11 +344,11 @@ export interface ComponentEnvVar {
  */
 export interface EDSConfig {
     /** ACCS host URL (must start with https://) */
-    accsHost: string;
+    accsHost?: string;
     /** Store view code for ACCS */
-    storeViewCode: string;
+    storeViewCode?: string;
     /** Customer group for ACCS */
-    customerGroup: string;
+    customerGroup?: string;
     /** Data source selection */
     dataSource?: 'citisignal-electronics' | 'citisignal-fashion' | 'custom';
     /** Whether ACCS credentials have been validated */
@@ -353,13 +359,14 @@ export interface EDSConfig {
     githubAuth?: {
         isAuthenticated: boolean;
         isAuthenticating?: boolean;
+        isChecking?: boolean;
         user?: { login: string; avatarUrl?: string; email?: string };
         error?: string;
     };
     /** Repository mode: create new or use existing */
     repoMode?: 'new' | 'existing';
     /** GitHub repository name (for new repos) */
-    repoName: string;
+    repoName?: string;
     /** Selected existing repository (from searchable list) */
     selectedRepo?: GitHubRepoItem;
     /** Existing repository full name (owner/repo format) - deprecated, use selectedRepo */
@@ -369,7 +376,7 @@ export interface EDSConfig {
     /** Whether to reset existing repo to template (repurpose flow) */
     resetToTemplate?: boolean;
     /** DA.live organization name */
-    daLiveOrg: string;
+    daLiveOrg?: string;
     /** Whether DA.live org access has been verified */
     daLiveOrgVerified?: boolean;
     /** DA.live org verification error */
@@ -377,7 +384,7 @@ export interface EDSConfig {
     /** DA.live site mode: create new or use existing */
     siteMode?: 'new' | 'existing';
     /** DA.live site name (for new sites or manual entry) */
-    daLiveSite: string;
+    daLiveSite?: string;
     /** Selected existing DA.live site (from searchable list) */
     selectedSite?: DaLiveSiteItem;
     /** Whether to reset existing site content (repopulate with demo data) */
@@ -386,6 +393,8 @@ export interface EDSConfig {
     daLiveAuth?: {
         isAuthenticated: boolean;
         isAuthenticating?: boolean;
+        isChecking?: boolean;
+        org?: string;
         error?: string;
     };
 

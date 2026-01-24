@@ -94,6 +94,16 @@ export function RenameProjectDialog({
     const isValid = !getProjectNameError(newName, existingProjectNames, project.name);
     const hasChanged = newName.trim() !== project.name;
 
+    // Compute validation state for TextField
+    // - 'invalid' when there's an error
+    // - 'valid' when touched and valid
+    // - undefined otherwise (neutral state)
+    const getValidationState = (): 'invalid' | 'valid' | undefined => {
+        if (validationError) return 'invalid';
+        if (isTouched && isValid) return 'valid';
+        return undefined;
+    };
+
     return (
         <Dialog>
             <Heading>Rename Project</Heading>
@@ -105,7 +115,7 @@ export function RenameProjectDialog({
                         onChange={handleNameChange}
                         autoFocus
                         width="100%"
-                        validationState={validationError ? 'invalid' : (isTouched && isValid ? 'valid' : undefined)}
+                        validationState={getValidationState()}
                         errorMessage={validationError}
                     />
                     {!validationError && (

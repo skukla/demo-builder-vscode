@@ -277,7 +277,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             // Using type assertion since dashboard handlers don't actually use these managers
             prereqManager: undefined as unknown as HandlerContext['prereqManager'],
             authManager: undefined as unknown as HandlerContext['authManager'],
-            componentHandler: undefined as unknown as HandlerContext['componentHandler'],
             errorLogger: undefined as unknown as HandlerContext['errorLogger'],
             progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
             stepLogger: undefined as unknown as HandlerContext['stepLogger'],

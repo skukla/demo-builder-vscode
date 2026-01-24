@@ -53,6 +53,23 @@ export class DaLiveAuthService {
     }
 
     /**
+     * Authenticate with DA.live
+     *
+     * OAuth PKCE flow is not available for VS Code extensions as it requires
+     * callbacks to the da.live domain. Returns an error directing users to
+     * use the bookmarklet flow instead.
+     *
+     * @returns Result indicating OAuth is not available
+     */
+    async authenticate(): Promise<DaLiveAuthResult> {
+        this.logger.warn('[DA.live Auth] OAuth flow not available - use bookmarklet flow');
+        return {
+            success: false,
+            error: 'OAuth flow not available. Please use the DA.live bookmarklet to obtain a token.',
+        };
+    }
+
+    /**
      * Check if user is authenticated with DA.live
      *
      * Returns true if a valid, non-expired token exists.

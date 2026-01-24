@@ -6,10 +6,8 @@
  * be folders within "citisignal-eds-paas".
  */
 
-import type { Logger } from '@/types/logger';
-import type { HandlerContext } from '@/core/handlers/HandlerContext';
+import type { HandlerContext } from '@/types/handlers';
 import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
-import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 
 interface CleanupDaLiveSitesRequest {
     orgName: string;
@@ -30,15 +28,18 @@ export async function cleanupDaLiveSites(
     request: CleanupDaLiveSitesRequest,
     context: HandlerContext,
 ): Promise<CleanupDaLiveSitesResponse> {
-    const logger = context.services.get<Logger>('logger');
-    
+    const logger = context.logger;
+
     try {
         const { orgName, sitePrefix } = request;
 
         logger.info(`[DA.live Cleanup] Scanning org: ${orgName} for sites starting with: ${sitePrefix}`);
 
         // Get auth service and DA.live operations
-        const authService = context.services.get<AuthenticationService>('authService');
+        const authService = context.authManager;
+        if (!authService) {
+            return { success: false, error: 'Authentication service not available' };
+        }
         const tokenManager = authService.getTokenManager();
         const daLiveOps = new DaLiveOrgOperations(
             { 

@@ -147,6 +147,9 @@ export interface SharedState {
     // EDS preflight control
     edsPreflightAbortController?: AbortController;
 
+    // Storefront setup control
+    storefrontSetupAbortController?: AbortController;
+
     // Mesh lifecycle tracking
     meshCreatedForWorkspace?: string;
     meshExistedBeforeSession?: string;

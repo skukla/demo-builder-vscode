@@ -200,6 +200,12 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
         return { org, site, mode };
     }, [edsConfig]);
 
+    // Check if AEM Assets is enabled (from frontend component config)
+    const aemAssetsEnabled = useMemo(() => {
+        const frontendConfig = state.componentConfigs?.[COMPONENT_IDS.EDS_STOREFRONT];
+        return frontendConfig?.AEM_ASSETS_ENABLED === 'true';
+    }, [state.componentConfigs]);
+
     // Resolve package/stack names
     const packageName = state.selectedPackage
         ? packages?.find(p => p.id === state.selectedPackage)?.name
@@ -269,6 +275,12 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
                                 label="DA.live Project"
                                 value={daLiveInfo.org ? `${daLiveInfo.org}/${daLiveInfo.site}` : daLiveInfo.site}
                                 subItems={[daLiveInfo.mode]}
+                            />
+                        )}
+                        {aemAssetsEnabled && (
+                            <LabelValue
+                                label="AEM Assets"
+                                value="Enabled"
                             />
                         )}
                     </Section>

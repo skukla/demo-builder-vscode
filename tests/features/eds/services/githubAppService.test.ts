@@ -11,6 +11,7 @@ global.fetch = mockFetch;
 // Mock timeoutConfig
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
+        NORMAL: 30000,
         POLL: {
             INTERVAL: 5000,
         },

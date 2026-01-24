@@ -52,6 +52,8 @@ export interface StorefrontSetupPartialState {
  */
 interface StorefrontSetupStartPayload {
     projectName: string;
+    /** Component configurations for config.json generation */
+    componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
     edsConfig: {
         repoName: string;
         repoMode?: 'new' | 'existing';
@@ -95,6 +97,8 @@ interface StorefrontSetupStartPayload {
             url: string;
             fullName: string;
         };
+        // Patch IDs to apply during setup (from demo-packages.json storefronts)
+        patches?: string[];
         // GitHub auth info from Connect Services step
         githubAuth?: {
             isAuthenticated?: boolean;
@@ -247,7 +251,13 @@ export async function handleStartStorefrontSetup(
 
     try {
         // Execute storefront setup phases
-        const result = await executeStorefrontSetupPhases(context, projectName, edsConfig, abortController.signal);
+        const result = await executeStorefrontSetupPhases(
+            context,
+            projectName,
+            edsConfig,
+            payload.componentConfigs,
+            abortController.signal,
+        );
 
         if (result.success) {
             context.logger.info(`[Storefront Setup] Complete: ${result.repoUrl}`);
@@ -383,6 +393,7 @@ interface StorefrontSetupResult {
  * @param context - Handler context
  * @param projectName - Project name
  * @param edsConfig - EDS configuration from wizard
+ * @param componentConfigs - Component configurations for config.json generation
  * @param signal - Abort signal for cancellation
  * @returns Setup result with repo details
  */
@@ -390,6 +401,7 @@ async function executeStorefrontSetupPhases(
     context: HandlerContext,
     projectName: string,
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    componentConfigs: StorefrontSetupStartPayload['componentConfigs'],
     signal: AbortSignal,
 ): Promise<StorefrontSetupResult> {
     const logger = context.logger;
@@ -638,6 +650,111 @@ async function executeStorefrontSetupPhases(
         );
 
         logger.info('[Storefront Setup] fstab.yaml pushed to GitHub');
+
+        // ============================================
+        // Phase 2b: Apply Template Patches
+        // ============================================
+        // Apply patches from demo-packages.json (e.g., header-nav-tools-defensive)
+        // These fix issues with the template code for specific configurations
+        if (edsConfig.patches && edsConfig.patches.length > 0) {
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'helix-config',
+                message: 'Applying template patches...',
+                progress: 30,
+            });
+
+            const { applyTemplatePatches } = await import('../services/templatePatchRegistry');
+
+            // Create fileOverrides map to collect patched content
+            const fileOverrides = new Map<string, string>();
+
+            const patchResults = await applyTemplatePatches(
+                templateOwner,
+                templateRepo,
+                edsConfig.patches,
+                fileOverrides,
+                logger,
+            );
+
+            // Log patch results
+            for (const result of patchResults) {
+                if (result.applied) {
+                    logger.info(`[Storefront Setup] Patch '${result.patchId}' applied to ${result.filePath}`);
+                } else {
+                    logger.warn(`[Storefront Setup] Patch '${result.patchId}' not applied: ${result.reason}`);
+                }
+            }
+
+            // Push patched files to GitHub
+            for (const [filePath, content] of fileOverrides) {
+                // Check if file already exists (to get SHA for update)
+                const existingFile = await githubFileOps.getFileContent(repoOwner, repoName, filePath);
+                const fileSha = existingFile?.sha;
+
+                await githubFileOps.createOrUpdateFile(
+                    repoOwner,
+                    repoName,
+                    filePath,
+                    content,
+                    `chore: apply template patch for ${filePath}`,
+                    fileSha,
+                );
+
+                logger.info(`[Storefront Setup] Pushed patched file: ${filePath}`);
+            }
+
+            logger.info(`[Storefront Setup] Template patches applied: ${patchResults.filter((r: { applied: boolean }) => r.applied).length}/${patchResults.length}`);
+        }
+
+        // ============================================
+        // Phase 2c: Generate and Push config.json
+        // ============================================
+        // Generate config.json with Commerce configuration for the storefront
+        if (componentConfigs) {
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'helix-config',
+                message: 'Generating storefront configuration...',
+                progress: 32,
+            });
+
+            const { generateConfigJson, extractConfigParamsFromConfigs } = await import('../services/configGenerator');
+
+            // Extract Commerce config values using shared helper
+            const commerceParams = extractConfigParamsFromConfigs(componentConfigs);
+
+            // Build full config params with EDS-specific values
+            const configParams = {
+                githubOwner: repoOwner,
+                repoName,
+                daLiveOrg: edsConfig.daLiveOrg,
+                daLiveSite: edsConfig.daLiveSite,
+                ...commerceParams,
+            };
+
+            const configResult = generateConfigJson(configParams, logger);
+
+            if (configResult.success && configResult.content) {
+                // Check if config.json already exists (to get SHA for update)
+                const existingConfig = await githubFileOps.getFileContent(repoOwner, repoName, 'config.json');
+                const configSha = existingConfig?.sha;
+
+                await githubFileOps.createOrUpdateFile(
+                    repoOwner,
+                    repoName,
+                    'config.json',
+                    configResult.content,
+                    'chore: configure storefront with Commerce settings',
+                    configSha,
+                );
+
+                logger.info('[Storefront Setup] config.json pushed to GitHub');
+            } else {
+                logger.warn(`[Storefront Setup] Failed to generate config.json: ${configResult.error}`);
+                // Continue without config.json - site will show configuration error but can be manually fixed
+            }
+        } else {
+            logger.warn('[Storefront Setup] No componentConfigs provided - skipping config.json generation');
+        }
 
         await context.sendMessage('storefront-setup-progress', {
             phase: 'helix-config',

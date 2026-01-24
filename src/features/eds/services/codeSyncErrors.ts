@@ -34,6 +34,7 @@ export interface TimeoutErrorContext {
     repo: string;
     attempts: number;
     durationMs?: number;
+    [key: string]: unknown;
 }
 
 /**
@@ -72,6 +73,7 @@ export interface PermissionErrorContext {
     owner: string;
     repo: string;
     statusCode: number;
+    [key: string]: unknown;
 }
 
 /**
@@ -102,6 +104,7 @@ export interface NotFoundErrorContext {
     owner: string;
     repo: string;
     url: string;
+    [key: string]: unknown;
 }
 
 /**
@@ -133,6 +136,7 @@ export interface VerificationErrorContext {
     repo: string;
     url: string;
     statusCode: number;
+    [key: string]: unknown;
 }
 
 /**

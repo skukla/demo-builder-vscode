@@ -17,7 +17,7 @@ import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
 
 interface SiteQuickPickItem extends vscode.QuickPickItem {
     siteName: string;
-    lastModified?: string;
+    lastModified?: number;
 }
 
 export async function cleanupDaLiveSitesCommand(): Promise<void> {
@@ -66,7 +66,7 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
             logger,
         );
 
-        let allSites: Array<{ name: string; id: string; lastModified?: string }> = [];
+        let allSites: Array<{ name: string; lastModified?: number }> = [];
 
         await vscode.window.withProgress(
             {

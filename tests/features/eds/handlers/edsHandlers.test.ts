@@ -62,13 +62,13 @@ describe('edsHandlers', () => {
             expect(hasHandler(edsHandlers, 'storefront-setup-resume')).toBe(true);
         });
 
-        it('should have exactly 17 handlers', () => {
+        it('should have exactly 18 handlers', () => {
             // Given: edsHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(edsHandlers);
 
-            // Then: Exactly 17 handlers (5 GitHub + 8 DA.live + 1 ACCS + 3 Storefront Setup)
-            expect(types).toHaveLength(17);
+            // Then: Exactly 18 handlers (6 GitHub + 8 DA.live + 1 ACCS + 3 Storefront Setup)
+            expect(types).toHaveLength(18);
         });
 
         it('should have handlers as functions', () => {

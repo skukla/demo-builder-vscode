@@ -822,7 +822,7 @@ export class HelixService {
         // Phase 1: Bulk preview (sync from DA.live to preview CDN)
         onProgress?.({
             phase: HelixService.PublishPhases.PUBLISHING,
-            message: 'Previewing all content (bulk)...',
+            message: 'Previewing all content...',
             current: 0,
             total: pages.length,
         });
@@ -846,7 +846,7 @@ export class HelixService {
         // Phase 2: Bulk publish (sync from preview to live CDN)
         onProgress?.({
             phase: HelixService.PublishPhases.PUBLISHING,
-            message: 'Publishing to live CDN (bulk)...',
+            message: 'Publishing to live CDN...',
             current: Math.floor(pages.length / 2),
             total: pages.length,
         });

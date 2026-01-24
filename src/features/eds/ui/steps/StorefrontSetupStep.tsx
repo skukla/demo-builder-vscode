@@ -327,8 +327,9 @@ export function StorefrontSetupStep({
         vscode.postMessage('storefront-setup-start', {
             projectName: state.projectName,
             edsConfig: state.edsConfig,
+            componentConfigs: state.componentConfigs,
         });
-    }, [state.projectName, state.edsConfig]);
+    }, [state.projectName, state.edsConfig, state.componentConfigs]);
 
     /**
      * Handle GitHub App installation detected
@@ -350,7 +351,11 @@ export function StorefrontSetupStep({
     // Track if setup has been started to prevent duplicate sends
     const setupStartedRef = useRef(false);
     // Store initial config in ref to use in one-time effect
-    const initialConfigRef = useRef({ projectName: state.projectName, edsConfig: state.edsConfig });
+    const initialConfigRef = useRef({
+        projectName: state.projectName,
+        edsConfig: state.edsConfig,
+        componentConfigs: state.componentConfigs,
+    });
 
     // Set up message listeners (stable callbacks, no re-subscription needed)
     useEffect(() => {
@@ -402,6 +407,7 @@ export function StorefrontSetupStep({
         vscode.postMessage('storefront-setup-start', {
             projectName: initialConfigRef.current.projectName,
             edsConfig: initialConfigRef.current.edsConfig,
+            componentConfigs: initialConfigRef.current.componentConfigs,
         });
     }, []);
 

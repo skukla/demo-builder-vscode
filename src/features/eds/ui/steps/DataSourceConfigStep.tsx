@@ -29,7 +29,6 @@ import {
 // Note: Heading is still used for the "Create New Site" subsection (level={3})
 import Add from '@spectrum-icons/workflow/Add';
 import Alert from '@spectrum-icons/workflow/Alert';
-import Info from '@spectrum-icons/workflow/Info';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
@@ -441,12 +440,6 @@ export function DataSourceConfigStep({
                         autoFocus
                     />
 
-                    <Flex alignItems="center" gap="size-150" marginTop="size-200">
-                        <Info size="S" UNSAFE_className="text-blue-500" />
-                        <Text UNSAFE_className="text-sm text-gray-600">
-                            A new site will be created with the selected template content.
-                        </Text>
-                    </Flex>
                 </View>
             )}
             </>}

@@ -117,8 +117,16 @@ export interface StateManager {
 
     /**
      * Load project from filesystem path
+     * @param projectPath - Path to the project directory
+     * @param terminalProvider - Optional function to get terminals for process detection
+     * @param options - Optional loading options
+     * @param options.persistAfterLoad - Whether to save the project after loading (default: true)
      */
-    loadProjectFromPath(projectPath: string): Promise<Project | null>;
+    loadProjectFromPath(
+        projectPath: string,
+        terminalProvider?: () => readonly import('vscode').Terminal[],
+        options?: { persistAfterLoad?: boolean },
+    ): Promise<Project | null>;
 
     /**
      * Get all projects from projects directory

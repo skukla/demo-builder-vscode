@@ -8,8 +8,8 @@
  * @module features/eds/services/configGenerator
  */
 
-import type { Logger } from '@/core/logging';
-import type { DemoProject } from '@/types';
+import type { Logger } from '@/types';
+import type { Project } from '@/types';
 
 // Bundled template - single source of truth
 import configTemplate from '../config/config-template.json';
@@ -64,33 +64,56 @@ export interface ConfigGeneratorResult {
 // ==========================================================
 
 /**
- * Extract config parameters from a DemoProject
+ * Component configs type for extraction
+ */
+type ComponentConfigs = Record<string, Record<string, string | boolean | number | undefined>>;
+
+/**
+ * Extract config parameters from component configs
  *
- * Pulls Commerce configuration values from the project's component configs
- * and mesh state to build the params needed for config.json generation.
+ * Core extraction logic used by both project-based and raw componentConfigs callers.
+ * Pulls Commerce configuration values from eds-storefront and eds-commerce-mesh configs.
  *
- * @param project - The demo project to extract config from
+ * @param componentConfigs - Component configurations (eds-storefront, eds-commerce-mesh, etc.)
+ * @param meshEndpoint - Optional deployed mesh endpoint (overrides config value)
  * @returns Config parameters for generation
  */
-export function extractConfigParams(project: DemoProject): Partial<ConfigGeneratorParams> {
-    const edsConfig = project.componentConfigs?.['eds-storefront'] || {};
-    const meshConfig = project.componentConfigs?.['eds-commerce-mesh'] || {};
-    const meshState = project.meshState;
+export function extractConfigParamsFromConfigs(
+    componentConfigs: ComponentConfigs | undefined,
+    meshEndpoint?: string,
+): Partial<ConfigGeneratorParams> {
+    const edsConfig = componentConfigs?.['eds-storefront'] || {};
+    const meshConfig = componentConfigs?.['eds-commerce-mesh'] || {};
 
     // Prefer mesh endpoint if deployed, otherwise use direct Commerce endpoint
-    const commerceEndpoint = meshState?.endpoint || edsConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT;
+    const commerceEndpoint = meshEndpoint || edsConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT;
 
     return {
-        commerceEndpoint,
-        catalogServiceEndpoint: edsConfig.PAAS_CATALOG_SERVICE_ENDPOINT || edsConfig.ACCS_CATALOG_SERVICE_ENDPOINT,
-        commerceApiKey: edsConfig.ADOBE_CATALOG_API_KEY || meshConfig.ADOBE_CATALOG_API_KEY,
-        commerceEnvironmentId: edsConfig.ADOBE_COMMERCE_ENVIRONMENT_ID || meshConfig.ADOBE_COMMERCE_ENVIRONMENT_ID,
-        storeViewCode: edsConfig.ADOBE_COMMERCE_STORE_VIEW_CODE || meshConfig.ADOBE_COMMERCE_STORE_VIEW_CODE,
-        storeCode: edsConfig.ADOBE_COMMERCE_STORE_CODE || meshConfig.ADOBE_COMMERCE_STORE_CODE,
-        websiteCode: edsConfig.ADOBE_COMMERCE_WEBSITE_CODE || meshConfig.ADOBE_COMMERCE_WEBSITE_CODE,
-        customerGroup: edsConfig.ADOBE_COMMERCE_CUSTOMER_GROUP || meshConfig.ADOBE_COMMERCE_CUSTOMER_GROUP,
+        commerceEndpoint: commerceEndpoint as string | undefined,
+        catalogServiceEndpoint: (edsConfig.PAAS_CATALOG_SERVICE_ENDPOINT || edsConfig.ACCS_CATALOG_SERVICE_ENDPOINT) as string | undefined,
+        commerceApiKey: (edsConfig.ADOBE_CATALOG_API_KEY || meshConfig.ADOBE_CATALOG_API_KEY) as string | undefined,
+        commerceEnvironmentId: (edsConfig.ADOBE_COMMERCE_ENVIRONMENT_ID || meshConfig.ADOBE_COMMERCE_ENVIRONMENT_ID) as string | undefined,
+        storeViewCode: (edsConfig.ADOBE_COMMERCE_STORE_VIEW_CODE || meshConfig.ADOBE_COMMERCE_STORE_VIEW_CODE) as string | undefined,
+        storeCode: (edsConfig.ADOBE_COMMERCE_STORE_CODE || meshConfig.ADOBE_COMMERCE_STORE_CODE) as string | undefined,
+        websiteCode: (edsConfig.ADOBE_COMMERCE_WEBSITE_CODE || meshConfig.ADOBE_COMMERCE_WEBSITE_CODE) as string | undefined,
+        customerGroup: (edsConfig.ADOBE_COMMERCE_CUSTOMER_GROUP || meshConfig.ADOBE_COMMERCE_CUSTOMER_GROUP) as string | undefined,
         aemAssetsEnabled: edsConfig.AEM_ASSETS_ENABLED === 'true',
     };
+}
+
+/**
+ * Extract config parameters from a Project
+ *
+ * Convenience wrapper that extracts componentConfigs and meshState from project.
+ *
+ * @param project - The project to extract config from
+ * @returns Config parameters for generation
+ */
+export function extractConfigParams(project: Project): Partial<ConfigGeneratorParams> {
+    return extractConfigParamsFromConfigs(
+        project.componentConfigs as ComponentConfigs | undefined,
+        project.meshState?.endpoint,
+    );
 }
 
 /**

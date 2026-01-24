@@ -93,8 +93,8 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         frontendDependencies: FRONTEND_DEPENDENCIES,
         frontendAddons: FRONTEND_ADDONS,
         componentsData: (componentsData || {}) as {
-            backends?: Array<{ id: string; configuration?: { requiredServices?: string[]; providesServices?: string[] } }>;
-            addons?: Array<{ id: string; configuration?: { providesServices?: string[] } }>;
+            backends?: Array<{ id: string; name: string; configuration?: { requiredServices?: string[]; providesServices?: string[] } }>;
+            addons?: Array<{ id: string; name: string; configuration?: { providesServices?: string[] } }>;
             services?: Record<string, { id: string; name: string }>;
         },
         selectedAddons: state.selectedAddons,

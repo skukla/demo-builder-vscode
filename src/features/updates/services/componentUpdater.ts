@@ -132,9 +132,18 @@ export class ComponentUpdater {
                     let nodeVersion: string | null = null;
                     try {
                         const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
-                        const registryManager = new ComponentRegistryManager(this.extensionPath, this.logger);
+                        const registryManager = new ComponentRegistryManager(this.extensionPath);
                         const registry = await registryManager.loadRegistry();
-                        const componentDef = registry.definitions[componentId];
+                        // Search for component across all categories
+                        const allComponents = [
+                            ...(registry.components.frontends || []),
+                            ...(registry.components.backends || []),
+                            ...(registry.components.dependencies || []),
+                            ...(registry.components.mesh || []),
+                            ...(registry.components.integrations || []),
+                            ...(registry.components.appBuilder || []),
+                        ];
+                        const componentDef = allComponents.find(c => c.id === componentId);
                         nodeVersion = componentDef?.configuration?.nodeVersion || null;
                     } catch (error) {
                         this.logger.debug('[Updates] Could not determine node version from registry, using default');

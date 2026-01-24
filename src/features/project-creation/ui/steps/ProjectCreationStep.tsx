@@ -15,14 +15,15 @@ import { MeshErrorDialog } from '@/features/mesh/ui/steps/components/MeshErrorDi
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
 import { getCancelButtonText } from '../helpers/buttonTextHelpers';
 import { WizardState } from '@/types/webview';
-import { buildProjectConfig } from '../wizard/wizardHelpers';
+import { DemoPackage } from '@/types/demoPackages';
+import { buildProjectConfig, ImportedSettings } from '../wizard/wizardHelpers';
 
 interface ProjectCreationStepProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
     onBack: () => void;
-    importedSettings?: unknown;
-    packages?: unknown;
+    importedSettings?: ImportedSettings | null;
+    packages?: DemoPackage[];
 }
 
 interface MeshCheckResult {
@@ -30,6 +31,7 @@ interface MeshCheckResult {
     apiEnabled: boolean;
     meshExists?: boolean;
     meshId?: string;
+    meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error';
     endpoint?: string;
     error?: string;
     setupInstructions?: { step: string; details: string; important?: boolean }[];
@@ -111,15 +113,12 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
                 error?: string;
             }>('check-github-app', { owner, repo });
 
-            // webviewClient.request wraps the response in { success, data }
-            const data = result.data as { success: boolean; isInstalled: boolean; installUrl?: string };
-            
-            if (data.success && !data.isInstalled && data.installUrl) {
+            if (result.success && !result.isInstalled && result.installUrl) {
                 // App not installed, show dialog
                 setGitHubAppInstallData({
                     owner,
                     repo,
-                    installUrl: data.installUrl,
+                    installUrl: result.installUrl,
                     message: 'GitHub App installation required for code sync',
                 });
                 setPhase('github-app-install');
@@ -138,7 +137,7 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
      */
     const runPreFlightChecks = useCallback(async () => {
         // Store mesh info from check result (React state updates are async, can't rely on state)
-        let detectedMeshInfo: { meshId?: string; meshStatus?: string; endpoint?: string } | undefined;
+        let detectedMeshInfo: { meshId?: string; meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error'; endpoint?: string } | undefined;
 
         // First check mesh (if needed)
         if (needsMeshCheck) {
@@ -201,7 +200,15 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
         setPhase('creating');
 
         // Build config with fresh mesh info (React state may be stale)
-        const stateWithMeshInfo = detectedMeshInfo ? { ...state, apiMesh: detectedMeshInfo } : state;
+        const stateWithMeshInfo = detectedMeshInfo ? {
+            ...state,
+            apiMesh: {
+                isChecking: false,
+                apiEnabled: true,
+                meshExists: true,
+                ...detectedMeshInfo,
+            },
+        } : state;
         // eslint-disable-next-line no-console
         console.log('[ProjectCreationStep] Before buildProjectConfig - state.edsConfig:', {
             hasEdsConfig: !!stateWithMeshInfo.edsConfig,

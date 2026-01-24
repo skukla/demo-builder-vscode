@@ -360,19 +360,19 @@ export function GitHubRepoSelectionStep({
                 error?: string;
             }>('check-github-app', { owner, repo, lenient });
 
-            if (result.data?.success) {
+            if (result.success) {
                 setGitHubAppStatus({
                     isChecking: false,
-                    isInstalled: result.data.isInstalled,
-                    codeStatus: result.data.codeStatus,
-                    installUrl: result.data.installUrl,
+                    isInstalled: result.isInstalled,
+                    codeStatus: result.codeStatus,
+                    installUrl: result.installUrl,
                 });
             } else {
                 setGitHubAppStatus({
                     isChecking: false,
                     isInstalled: false,
-                    codeStatus: result.data?.codeStatus,
-                    error: result.data?.error || 'Failed to check GitHub App status',
+                    codeStatus: result.codeStatus,
+                    error: result.error || 'Failed to check GitHub App status',
                 });
             }
         } catch (error) {
@@ -728,7 +728,7 @@ export function GitHubRepoSelectionStep({
                                     onClose={handleDismiss}
                                 >
                                     {/* Fixed height container prevents modal resize during recheck */}
-                                    <div style={{ minHeight: '200px' }}>
+                                    <div style={{ minHeight: '220px' }}>
                                         {isRechecking ? (
                                             <LoadingDisplay message="Checking installation status..." />
                                         ) : (
@@ -736,19 +736,19 @@ export function GitHubRepoSelectionStep({
                                                 instructions={[
                                                     {
                                                         step: 'Click "Install App"',
-                                                        details: 'Opens the GitHub app installation page',
+                                                        details: 'Opens the AEM Code Sync GitHub App page',
                                                     },
                                                     {
-                                                        step: `Select "${owner}/${repo}"`,
-                                                        details: 'Choose which repositories the app can access',
+                                                        step: 'Configure the app',
+                                                        details: `Click "Configure", sign in if prompted, then click "Configure" next to "${owner}"`,
                                                     },
                                                     {
-                                                        step: 'Click "Install" to authorize',
-                                                        details: 'The app needs read access for content sync',
+                                                        step: 'Grant repository access',
+                                                        details: `Select "Only select repositories", search for "${repo}", and click the green "Save" button`,
                                                     },
                                                     {
-                                                        step: 'Click "Check Again"',
-                                                        details: 'We\'ll verify the installation',
+                                                        step: 'Return here and click "Check Again"',
+                                                        details: 'We\'ll verify the installation completed',
                                                     },
                                                 ]}
                                             />

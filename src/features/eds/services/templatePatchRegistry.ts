@@ -11,7 +11,7 @@
  * with the addition of separate files for code content (better syntax highlighting).
  */
 
-import type { Logger } from '@/core/logging/Logger';
+import type { Logger } from '@/types';
 
 // Import patch metadata from JSON config
 import patchesConfig from '../config/template-patches.json';

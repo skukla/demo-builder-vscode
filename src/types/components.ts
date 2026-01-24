@@ -194,6 +194,8 @@ export interface RawComponentRegistry {
     /** v3.0.0: Integrations (e.g., experience-platform) */
     integrations?: Record<string, RawComponentDefinition>;
     infrastructure?: Record<string, RawComponentDefinition>;
+    /** v3.0.0: Tools (standalone CLI tools) */
+    tools?: Record<string, RawComponentDefinition>;
     services?: Record<string, ServiceDefinition>;
     envVars?: Record<string, Omit<EnvVarDefinition, 'key'>>;
     presets?: PresetDefinition[];

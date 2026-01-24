@@ -99,8 +99,8 @@ describe('GitHubRepoSelectionStep', () => {
                 </TestWrapper>
             );
 
-            // Then: Should show "New Repository" heading (the form is displayed)
-            expect(screen.getByRole('heading', { name: /New Repository/i })).toBeInTheDocument();
+            // Then: Should show repository name input (the form is displayed)
+            expect(screen.getByLabelText(/Repository Name/i)).toBeInTheDocument();
         });
 
         it('should show repository name input in new mode', async () => {
@@ -284,10 +284,10 @@ describe('GitHubRepoSelectionStep', () => {
     });
 
     describe('Navigation State', () => {
-        it('should enable Continue when new repo name is valid and GitHub App verified', async () => {
-            // Given: New mode with valid repo name and GitHub App installed
-            // Mock returns { data: { success, isInstalled } } - webviewClient.request response shape
-            mockRequest.mockResolvedValue({ data: { success: true, isInstalled: true } });
+        it('should NOT enable Continue when new repo name is valid but repo not yet created', async () => {
+            // Given: New mode with valid repo name but repo not created yet
+            // Component requires repo to be created AND GitHub App verified for new repos
+            mockRequest.mockResolvedValue({ success: true, isInstalled: true });
             const state = createDefaultState({
                 repoMode: 'new',
                 repoName: 'my-valid-repo',
@@ -305,15 +305,16 @@ describe('GitHubRepoSelectionStep', () => {
                 </TestWrapper>
             );
 
-            // Then: Should enable Continue after GitHub App check completes
+            // Then: Should NOT enable Continue (repo must be created first)
+            // In new mode, user must click "Create" to create repo before proceeding
             await waitFor(() => {
-                expect(mockSetCanProceed).toHaveBeenCalledWith(true);
+                expect(mockSetCanProceed).toHaveBeenCalledWith(false);
             });
         });
 
         it('should enable Continue when existing repo is selected and GitHub App verified', async () => {
             // Given: Existing mode with repo selected and GitHub App installed
-            mockRequest.mockResolvedValue({ data: { success: true, isInstalled: true } });
+            mockRequest.mockResolvedValue({ success: true, isInstalled: true });
             const state = createDefaultState({
                 repoMode: 'existing',
                 selectedRepo: {
@@ -343,7 +344,7 @@ describe('GitHubRepoSelectionStep', () => {
 
         it('should NOT enable Continue when GitHub App is not installed', async () => {
             // Given: Existing mode with repo selected but GitHub App not installed
-            mockRequest.mockResolvedValue({ data: { success: true, isInstalled: false } });
+            mockRequest.mockResolvedValue({ success: true, isInstalled: false });
             const state = createDefaultState({
                 repoMode: 'existing',
                 selectedRepo: {
