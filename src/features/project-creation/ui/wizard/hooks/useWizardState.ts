@@ -162,14 +162,16 @@ function computeInitialState(
                 templateRepo: editSettings.edsConfig.templateRepo,
                 contentSource: editSettings.edsConfig.contentSource,
                 patches: editSettings.edsConfig.patches,
-                // Mark GitHub/DA.live as authenticated since project already exists
+                // Don't assume authenticated - let hooks validate tokens on step visit
+                // Set user/org from saved config so UI can display them while checking
                 githubAuth: (editSettings.edsConfig.githubOwner && editSettings.edsConfig.repoName) ? {
-                    isAuthenticated: true,
+                    isAuthenticated: false,  // Will be validated by useGitHubAuth hook
+                    isChecking: true,        // Indicate validation pending
                     user: { login: editSettings.edsConfig.githubOwner },
                 } : undefined,
                 daLiveAuth: editSettings.edsConfig.daLiveOrg ? {
-                    isAuthenticated: true,
-                    org: editSettings.edsConfig.daLiveOrg,
+                    isAuthenticated: false,  // Will be validated by useDaLiveAuth hook
+                    isChecking: true,        // Indicate validation pending
                 } : undefined,
                 // Pre-select GitHub repo if owner and name are available
                 repoMode: (editSettings.edsConfig.githubOwner && editSettings.edsConfig.repoName) ? 'existing' : undefined,
@@ -319,11 +321,12 @@ export function useWizardState({
     }, [wizardSteps, stacks, state.selectedStack, editProject]);
 
     // Step completion tracking
-    // In edit/import mode, mark steps as completed if they have data (satisfied)
-    // Steps without data (new from stack change) remain incomplete
+    // In import mode, mark steps as completed if they have data (satisfied)
+    // In edit mode, don't pre-mark - user confirms each step by clicking Continue
+    // This makes edit mode more predictable and ensures token validation happens
     const [completedSteps, setCompletedSteps] = useState<WizardStep[]>(() => {
-        const isReviewMode = editProject || importedSettings;
-        if (isReviewMode) {
+        // Only auto-mark in import mode, not edit mode
+        if (importedSettings && !editProject) {
             // Mark steps as completed only if they have data (satisfied)
             return WIZARD_STEPS
                 .filter(step => step.id !== 'project-creation' && step.id !== 'review')
@@ -333,11 +336,11 @@ export function useWizardState({
         return [];
     });
     // Steps confirmed by user in review mode
-    // In review mode, satisfied steps start as confirmed (green checkmark)
-    // because they already have valid data from import/edit
+    // In import mode, satisfied steps start as confirmed (green checkmark)
+    // In edit mode, no steps are pre-confirmed - user must visit each
     const [confirmedSteps, setConfirmedSteps] = useState<WizardStep[]>(() => {
-        const isReviewMode = editProject || importedSettings;
-        if (isReviewMode) {
+        // Only auto-confirm in import mode, not edit mode
+        if (importedSettings && !editProject) {
             // Auto-confirm all satisfied steps (they have data)
             return WIZARD_STEPS
                 .filter(step => step.id !== 'project-creation' && step.id !== 'review')
@@ -351,19 +354,21 @@ export function useWizardState({
     // Track stacks loading to recalculate completedSteps when stacks become available
     // This fixes a race condition where EDS steps aren't in WIZARD_STEPS on first render
     // because stacks are loaded asynchronously
+    // Only applies to import mode - edit mode doesn't pre-mark steps
     const hasRecalculatedForStacksRef = useRef<boolean>(false);
     useEffect(() => {
         // Only run once when stacks become available
         if (hasRecalculatedForStacksRef.current) return;
         if (!stacks || stacks.length === 0) return;
 
-        const isReviewMode = editProject || importedSettings;
-        if (!isReviewMode) return;
+        // Only recalculate for import mode, not edit mode
+        const isImportMode = importedSettings && !editProject;
+        if (!isImportMode) return;
 
         // Mark that we've done the recalculation
         hasRecalculatedForStacksRef.current = true;
 
-        log.info('Stacks loaded, recalculating completed steps for EDS steps');
+        log.info('Stacks loaded, recalculating completed steps for EDS steps (import mode)');
 
         // Recalculate completed and confirmed steps now that WIZARD_STEPS includes EDS steps
         const newCompletedSteps = WIZARD_STEPS

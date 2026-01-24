@@ -496,7 +496,11 @@ export function isStepSatisfied(stepId: WizardStep, state: WizardState): boolean
 
         case 'eds-connect-services':
         case 'connect-services':  // Legacy ID for backward compatibility
-            return Boolean(state.edsConfig?.githubAuth?.isAuthenticated);
+            // Both GitHub AND DA.live must be authenticated
+            return Boolean(
+                state.edsConfig?.githubAuth?.isAuthenticated &&
+                state.edsConfig?.daLiveAuth?.isAuthenticated
+            );
 
         // Component configuration (step ID can be 'settings' or 'component-config')
         case 'settings':
