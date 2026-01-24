@@ -453,6 +453,80 @@ export const handleEditProject: MessageHandler<{ projectPath: string }> = async 
 };
 
 // ============================================================================
+// Rename Project Handler
+// ============================================================================
+
+/**
+ * Rename an existing project
+ *
+ * Updates the project name in the manifest without requiring the full edit wizard.
+ */
+export const handleRenameProject: MessageHandler<{ projectPath: string; newName: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string; newName: string },
+): Promise<HandlerResponse> => {
+    try {
+        if (!payload?.projectPath || !payload?.newName) {
+            return {
+                success: false,
+                error: 'Project path and new name are required',
+            };
+        }
+
+        const newName = payload.newName.trim();
+        if (!newName) {
+            return {
+                success: false,
+                error: 'Project name cannot be empty',
+            };
+        }
+
+        try {
+            validateProjectPath(payload.projectPath);
+        } catch {
+            return {
+                success: false,
+                error: 'Invalid project path',
+            };
+        }
+
+        // Load project (persist after load since we'll be saving changes)
+        const project = await context.stateManager.loadProjectFromPath(
+            payload.projectPath,
+            undefined,
+            { persistAfterLoad: true },
+        );
+        if (!project) {
+            return {
+                success: false,
+                error: 'Project not found',
+            };
+        }
+
+        const oldName = project.name;
+
+        // Update the name
+        project.name = newName;
+
+        // Save the updated project
+        await context.stateManager.saveProject(project);
+
+        context.logger.info(`Renamed project: "${oldName}" → "${newName}"`);
+
+        return {
+            success: true,
+            data: { success: true, newName },
+        };
+    } catch (error) {
+        context.logger.error('Failed to rename project', error instanceof Error ? error : undefined);
+        return {
+            success: false,
+            error: 'Failed to rename project',
+        };
+    }
+};
+
+// ============================================================================
 // Demo Control Handlers (Start/Stop/Open)
 // ============================================================================
 

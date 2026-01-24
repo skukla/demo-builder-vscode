@@ -59,6 +59,8 @@ export interface ProjectsDashboardProps {
     onResetEds?: (project: Project) => void;
     /** Callback to edit project settings */
     onEditProject?: (project: Project) => void;
+    /** Callback to rename project */
+    onRenameProject?: (project: Project) => void;
     /** Callback to export project settings */
     onExportProject?: (project: Project) => void;
     /** Callback to delete project */
@@ -101,6 +103,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     onOpenDaLive,
     onResetEds,
     onEditProject,
+    onRenameProject,
     onExportProject,
     onDeleteProject,
     isLoading = false,
@@ -271,6 +274,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         onOpenDaLive={onOpenDaLive}
                         onResetEds={onResetEds}
                         onEditProject={onEditProject}
+                        onRenameProject={onRenameProject}
                         onExportProject={onExportProject}
                         onDeleteProject={onDeleteProject}
                     />
@@ -285,7 +289,9 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         onOpenBrowser={onOpenBrowser}
                         onOpenLiveSite={onOpenLiveSite}
                         onOpenDaLive={onOpenDaLive}
+                        onResetEds={onResetEds}
                         onEditProject={onEditProject}
+                        onRenameProject={onRenameProject}
                         onExportProject={onExportProject}
                         onDeleteProject={onDeleteProject}
                     />

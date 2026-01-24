@@ -18,6 +18,7 @@ import Export from '@spectrum-icons/workflow/Export';
 import Globe from '@spectrum-icons/workflow/Globe';
 import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
 import Play from '@spectrum-icons/workflow/Play';
+import Rename from '@spectrum-icons/workflow/Rename';
 import Revert from '@spectrum-icons/workflow/Revert';
 import Stop from '@spectrum-icons/workflow/Stop';
 import React, { useCallback, useMemo } from 'react';
@@ -28,7 +29,7 @@ import { isEdsProject } from '@/types/typeGuards';
 interface MenuItem {
     key: string;
     label: string;
-    icon: 'play' | 'stop' | 'globe' | 'dalive' | 'edit' | 'export' | 'delete' | 'reset';
+    icon: 'play' | 'stop' | 'globe' | 'dalive' | 'edit' | 'rename' | 'export' | 'delete' | 'reset';
 }
 
 export interface ProjectActionsMenuProps {
@@ -50,6 +51,8 @@ export interface ProjectActionsMenuProps {
     onResetEds?: (project: Project) => void;
     /** Callback to edit project settings */
     onEdit?: (project: Project) => void;
+    /** Callback to rename project */
+    onRename?: (project: Project) => void;
     /** Callback to export project settings */
     onExport?: (project: Project) => void;
     /** Callback to delete project */
@@ -74,6 +77,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     onOpenDaLive,
     onResetEds,
     onEdit,
+    onRename,
     onExport,
     onDelete,
     className,
@@ -103,6 +107,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             case 'edit':
                 onEdit?.(project);
                 break;
+            case 'rename':
+                onRename?.(project);
+                break;
             case 'export':
                 onExport?.(project);
                 break;
@@ -110,7 +117,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 onDelete?.(project);
                 break;
         }
-    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetEds, onEdit, onExport, onDelete]);
+    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetEds, onEdit, onRename, onExport, onDelete]);
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
@@ -133,6 +140,10 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             if (onEdit) {
                 items.push({ key: 'edit', label: 'Edit', icon: 'edit' });
             }
+            // Rename is always available
+            if (onRename) {
+                items.push({ key: 'rename', label: 'Rename', icon: 'rename' });
+            }
             // Reset EDS project from template
             if (onResetEds) {
                 items.push({ key: 'resetEds', label: 'Reset', icon: 'reset' });
@@ -154,6 +165,11 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             if (!isRunning && onEdit) {
                 items.push({ key: 'edit', label: 'Edit', icon: 'edit' });
             }
+
+            // Rename is always available (doesn't affect running demo)
+            if (onRename) {
+                items.push({ key: 'rename', label: 'Rename', icon: 'rename' });
+            }
         }
 
         // Export and Delete always available for all project types
@@ -164,7 +180,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             items.push({ key: 'delete', label: 'Delete', icon: 'delete' });
         }
         return items;
-    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetEds, onEdit, onExport, onDelete]);
+    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetEds, onEdit, onRename, onExport, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {
@@ -189,6 +205,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                             {item.icon === 'globe' && <Globe size="S" />}
                             {item.icon === 'dalive' && <Edit size="S" />}
                             {item.icon === 'edit' && <Edit size="S" />}
+                            {item.icon === 'rename' && <Rename size="S" />}
                             {item.icon === 'reset' && <Revert size="S" />}
                             {item.icon === 'export' && <Export size="S" />}
                             {item.icon === 'delete' && <Delete size="S" />}

@@ -123,3 +123,85 @@ export function getRepositoryNameError(name: string): string | undefined {
     return undefined;
 }
 
+/**
+ * Project name validation pattern.
+ * - Must start with a lowercase letter
+ * - Can contain lowercase letters, numbers, and hyphens
+ */
+const PROJECT_NAME_PATTERN = /^[a-z][a-z0-9-]*$/;
+
+/**
+ * Validate a project name and return an error message if invalid.
+ *
+ * Validates:
+ * - Required (not empty)
+ * - Pattern (starts with letter, lowercase letters/numbers/hyphens only)
+ * - Min length (3 characters)
+ * - Max length (30 characters)
+ * - Uniqueness (not in existingNames, unless it matches allowedName)
+ *
+ * @param name - The project name to validate
+ * @param existingNames - Array of existing project names to check for duplicates
+ * @param allowedName - Optional name that's allowed even if in existingNames (for edit/rename)
+ * @returns Error message string, or undefined if valid
+ *
+ * @example
+ * // New project validation
+ * getProjectNameError('my-project', ['other-project']); // undefined (valid)
+ * getProjectNameError('my-project', ['my-project']); // 'A project with this name already exists'
+ *
+ * // Rename validation (allow keeping current name)
+ * getProjectNameError('my-project', ['my-project'], 'my-project'); // undefined (valid - same name)
+ * getProjectNameError('other-project', ['my-project', 'other-project'], 'my-project'); // 'A project with this name already exists'
+ */
+export function getProjectNameError(
+    name: string,
+    existingNames: string[] = [],
+    allowedName?: string,
+): string | undefined {
+    // Required check
+    if (!name || name.trim() === '') {
+        return 'Project name is required';
+    }
+
+    const trimmedName = name.trim();
+
+    // Pattern check (must start with letter, lowercase only)
+    if (!PROJECT_NAME_PATTERN.test(trimmedName)) {
+        return 'Must start with a letter and contain only lowercase letters, numbers, and hyphens';
+    }
+
+    // Min length check
+    if (trimmedName.length < 3) {
+        return 'Name must be at least 3 characters';
+    }
+
+    // Max length check
+    if (trimmedName.length > 30) {
+        return 'Name must be less than 30 characters';
+    }
+
+    // Uniqueness check (allow the current name in edit/rename mode)
+    if (trimmedName !== allowedName && existingNames.includes(trimmedName)) {
+        return 'A project with this name already exists';
+    }
+
+    return undefined;
+}
+
+/**
+ * Check if a project name is valid.
+ *
+ * @param name - The project name to validate
+ * @param existingNames - Array of existing project names to check for duplicates
+ * @param allowedName - Optional name that's allowed even if in existingNames
+ * @returns true if the name is valid
+ */
+export function isValidProjectName(
+    name: string,
+    existingNames: string[] = [],
+    allowedName?: string,
+): boolean {
+    return getProjectNameError(name, existingNames, allowedName) === undefined;
+}
+

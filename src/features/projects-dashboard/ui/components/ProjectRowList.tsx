@@ -30,6 +30,8 @@ export interface ProjectRowListProps {
     onResetEds?: (project: Project) => void;
     /** Callback to edit project settings */
     onEditProject?: (project: Project) => void;
+    /** Callback to rename project */
+    onRenameProject?: (project: Project) => void;
     /** Callback to export project settings */
     onExportProject?: (project: Project) => void;
     /** Callback to delete project */
@@ -50,6 +52,7 @@ export const ProjectRowList: React.FC<ProjectRowListProps> = ({
     onOpenDaLive,
     onResetEds,
     onEditProject,
+    onRenameProject,
     onExportProject,
     onDeleteProject,
 }) => {
@@ -68,6 +71,7 @@ export const ProjectRowList: React.FC<ProjectRowListProps> = ({
                     onOpenDaLive={onOpenDaLive}
                     onResetEds={onResetEds}
                     onEdit={onEditProject}
+                    onRename={onRenameProject}
                     onExport={onExportProject}
                     onDelete={onDeleteProject}
                 />

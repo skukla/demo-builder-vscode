@@ -23,6 +23,7 @@ import {
     handleOpenDaLive,
     handleResetEds,
     handleEditProject,
+    handleRenameProject,
     handleOpenDocs,
     handleOpenHelp,
     handleOpenSettings,
@@ -65,6 +66,9 @@ export const projectsListHandlers = defineHandlers({
 
     // Project edit handler
     'editProject': handleEditProject,
+
+    // Project rename handler
+    'renameProject': handleRenameProject,
 
     // Utility handlers (docs, help, settings)
     'openDocs': handleOpenDocs,

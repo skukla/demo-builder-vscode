@@ -5,8 +5,10 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { cn } from '@/core/ui/utils/classNames';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
-import { normalizeProjectName } from '@/features/project-creation/helpers/formatters';
+import {
+    normalizeProjectName,
+    getProjectNameError,
+} from '@/core/validation/normalizers';
 import { DemoPackage } from '@/types/demoPackages';
 import { Stack } from '@/types/stacks';
 import { BaseStepProps } from '@/types/wizard';
@@ -35,38 +37,12 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     const hasPackages = packages && packages.length > 0;
     const hasStacks = stacks && stacks.length > 0;
 
-    // Custom validator for duplicate project name check
+    // Validate project name using shared validation function
     // In edit mode, allow the original project name (user is keeping it)
-    const notDuplicate = useCallback(
-        (message: string) => (value: string) => {
-            // Never allow empty names (required validator should catch this first,
-            // but be explicit to prevent any bypass)
-            if (!value || value.trim() === '') {
-                return { valid: false, error: 'Project name is required' };
-            }
-            // In edit mode, the original name is always allowed
-            if (state.editMode && value === state.editOriginalName) {
-                return { valid: true, error: undefined };
-            }
-            const isDuplicate = existingProjectNames.includes(value);
-            return {
-                valid: !isDuplicate,
-                error: isDuplicate ? message : undefined,
-            };
-        },
-        [existingProjectNames, state.editMode, state.editOriginalName],
-    );
-
     const validateProjectName = useCallback((value: string): string | undefined => {
-        const validator = compose(
-            required('Project name is required'),
-            pattern(/^[a-z][a-z0-9-]*$/, 'Must start with a letter and contain only lowercase letters, numbers, and hyphens'),
-            minLength(3, 'Name must be at least 3 characters'),
-            maxLength(30, 'Name must be less than 30 characters'),
-            notDuplicate('A project with this name already exists'),
-        );
-        return validator(value).error;
-    }, [notDuplicate]);
+        const allowedName = state.editMode ? state.editOriginalName : undefined;
+        return getProjectNameError(value, existingProjectNames, allowedName);
+    }, [existingProjectNames, state.editMode, state.editOriginalName]);
 
     /**
      * Get validation state for project name field

@@ -29,6 +29,8 @@ export interface ProjectsGridProps {
     onResetEds?: (project: Project) => void;
     /** Callback to edit project settings */
     onEditProject?: (project: Project) => void;
+    /** Callback to rename project */
+    onRenameProject?: (project: Project) => void;
     /** Callback to export project settings */
     onExportProject?: (project: Project) => void;
     /** Callback to delete project */
@@ -49,6 +51,7 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
     onOpenDaLive,
     onResetEds,
     onEditProject,
+    onRenameProject,
     onExportProject,
     onDeleteProject,
 }) => {
@@ -70,6 +73,7 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
                     onOpenDaLive={onOpenDaLive}
                     onResetEds={onResetEds}
                     onEdit={onEditProject}
+                    onRename={onRenameProject}
                     onExport={onExportProject}
                     onDelete={onDeleteProject}
                 />

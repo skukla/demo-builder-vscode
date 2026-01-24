@@ -40,6 +40,8 @@ export interface ProjectRowProps {
     onResetEds?: (project: Project) => void;
     /** Callback to edit project settings */
     onEdit?: (project: Project) => void;
+    /** Callback to rename project */
+    onRename?: (project: Project) => void;
     /** Callback to export project settings */
     onExport?: (project: Project) => void;
     /** Callback to delete project */
@@ -60,6 +62,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
     onOpenDaLive,
     onResetEds,
     onEdit,
+    onRename,
     onExport,
     onDelete,
 }) => {
@@ -119,6 +122,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         onOpenDaLive={onOpenDaLive}
                         onResetEds={onResetEds}
                         onEdit={onEdit}
+                        onRename={onRename}
                         onExport={onExport}
                         onDelete={onDelete}
                         className="project-row-menu-button"

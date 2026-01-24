@@ -5,8 +5,10 @@
  * Renders the main dashboard with project cards.
  */
 
+import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
+import { RenameProjectDialog } from './components/RenameProjectDialog';
 import { ProjectsDashboard } from './ProjectsDashboard';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -30,6 +32,7 @@ const ProjectsDashboardApp: React.FC = () => {
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [initialViewMode, setInitialViewMode] = useState<'cards' | 'rows'>('cards');
     const [runningProjectPath, setRunningProjectPath] = useState<string | undefined>(undefined);
+    const [projectToRename, setProjectToRename] = useState<Project | null>(null);
     // Track whether initial fetch was triggered (prevent StrictMode double-fetch)
     const initialFetchTriggeredRef = useRef(false);
 
@@ -277,6 +280,40 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
+    // Handle rename project - opens dialog
+    const handleRenameProject = useCallback((project: Project) => {
+        setProjectToRename(project);
+    }, []);
+
+    // Handle rename dialog confirmation
+    const handleRenameConfirm = useCallback(async (newName: string) => {
+        if (!projectToRename) return;
+
+        try {
+            const response = await webviewClient.request<{
+                success: boolean;
+                data?: { success: boolean; newName: string };
+            }>('renameProject', {
+                projectPath: projectToRename.path,
+                newName,
+            });
+
+            // Refresh projects list if rename was successful
+            if (response?.success && response.data?.success) {
+                fetchProjects(true);
+            }
+        } catch (error) {
+            console.error('Failed to rename project:', error);
+        } finally {
+            setProjectToRename(null);
+        }
+    }, [projectToRename, fetchProjects]);
+
+    // Handle rename dialog close
+    const handleRenameClose = useCallback(() => {
+        setProjectToRename(null);
+    }, []);
+
     // Handle view mode override - saves to backend for session persistence
     const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
         setInitialViewMode(mode);
@@ -285,29 +322,44 @@ const ProjectsDashboardApp: React.FC = () => {
     }, []);
 
     return (
-        <ProjectsDashboard
-            projects={projects}
-            runningProjectPath={runningProjectPath}
-            onSelectProject={handleSelectProject}
-            onCreateProject={handleCreateProject}
-            onCopyFromExisting={handleCopyFromExisting}
-            onImportFromFile={handleImportFromFile}
-            onStartDemo={handleStartDemo}
-            onStopDemo={handleStopDemo}
-            onOpenBrowser={handleOpenBrowser}
-            onOpenLiveSite={handleOpenLiveSite}
-            onOpenDaLive={handleOpenDaLive}
-            onResetEds={handleResetEds}
-            onEditProject={handleEditProject}
-            onExportProject={handleExportProject}
-            onDeleteProject={handleDeleteProject}
-            isLoading={isLoading}
-            isRefreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            hasLoadedOnce={hasLoadedOnce}
-            initialViewMode={initialViewMode}
-            onViewModeOverride={handleViewModeOverride}
-        />
+        <>
+            <ProjectsDashboard
+                projects={projects}
+                runningProjectPath={runningProjectPath}
+                onSelectProject={handleSelectProject}
+                onCreateProject={handleCreateProject}
+                onCopyFromExisting={handleCopyFromExisting}
+                onImportFromFile={handleImportFromFile}
+                onStartDemo={handleStartDemo}
+                onStopDemo={handleStopDemo}
+                onOpenBrowser={handleOpenBrowser}
+                onOpenLiveSite={handleOpenLiveSite}
+                onOpenDaLive={handleOpenDaLive}
+                onResetEds={handleResetEds}
+                onEditProject={handleEditProject}
+                onRenameProject={handleRenameProject}
+                onExportProject={handleExportProject}
+                onDeleteProject={handleDeleteProject}
+                isLoading={isLoading}
+                isRefreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                hasLoadedOnce={hasLoadedOnce}
+                initialViewMode={initialViewMode}
+                onViewModeOverride={handleViewModeOverride}
+            />
+
+            {/* Rename Project Dialog */}
+            <DialogContainer onDismiss={handleRenameClose}>
+                {projectToRename && (
+                    <RenameProjectDialog
+                        project={projectToRename}
+                        existingProjectNames={projects.map(p => p.name)}
+                        onRename={handleRenameConfirm}
+                        onClose={handleRenameClose}
+                    />
+                )}
+            </DialogContainer>
+        </>
     );
 };
 
