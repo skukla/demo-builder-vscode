@@ -28,6 +28,7 @@ export {
     handleGitHubChangeAccount,
     handleGetGitHubRepos,
     handleVerifyGitHubRepo,
+    handleCreateGitHubRepo,
 } from './edsGitHubHandlers';
 
 // Re-export all DA.live handlers
@@ -147,6 +148,7 @@ import {
     handleGitHubChangeAccount,
     handleGetGitHubRepos,
     handleVerifyGitHubRepo,
+    handleCreateGitHubRepo,
 } from './edsGitHubHandlers';
 import {
     handleVerifyDaLiveOrg,
@@ -177,6 +179,7 @@ export const edsHandlers = defineHandlers({
     'github-change-account': handleGitHubChangeAccount,
     'get-github-repos': handleGetGitHubRepos,
     'verify-github-repo': handleVerifyGitHubRepo,
+    'create-github-repo': handleCreateGitHubRepo,
 
     // DA.live handlers
     'check-dalive-auth': handleCheckDaLiveAuth,

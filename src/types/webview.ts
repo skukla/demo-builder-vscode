@@ -403,6 +403,15 @@ export interface EDSConfig {
     /** Patch IDs to apply during reset (from demo-packages.json storefronts) */
     patches?: string[];
 
+    // Repository creation state (set by GitHubRepoSelectionStep when creating new repo)
+    /** Created repository info - set when repo is created in selection step, before proceeding */
+    createdRepo?: {
+        owner: string;
+        name: string;
+        url: string;
+        fullName: string;
+    };
+
     // Preflight completion state (set by StorefrontSetupStep)
     /** Whether preflight operations completed - tells executor to skip EDS setup */
     preflightComplete?: boolean;

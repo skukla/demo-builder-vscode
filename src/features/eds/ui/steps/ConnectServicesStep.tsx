@@ -33,8 +33,12 @@ export function ConnectServicesStep({
     // DA.live auth state
     const daLiveAuth = useDaLiveAuth({ state, updateState });
 
-    // Enable Continue when both services are connected
-    useCanProceedAll([gitHubAuth.isAuthenticated, daLiveAuth.isAuthenticated], setCanProceed);
+    // Enable Continue when both services are connected AND verification is complete
+    // Must wait for isChecking to complete to handle expired tokens in edit mode
+    useCanProceedAll([
+        gitHubAuth.isAuthenticated && !gitHubAuth.isChecking,
+        daLiveAuth.isAuthenticated && !daLiveAuth.isChecking,
+    ], setCanProceed);
 
     const handleDaLiveSetup = () => {
         daLiveAuth.openDaLive();

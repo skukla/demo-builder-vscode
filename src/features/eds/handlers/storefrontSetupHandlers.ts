@@ -87,6 +87,14 @@ interface StorefrontSetupStartPayload {
         // Whether to reset existing site content (repopulate with demo data)
         // Only applies when selectedSite is set (existing site mode)
         resetSiteContent?: boolean;
+        // Created repository info (set when repo was created in GitHubRepoSelectionStep)
+        // If present, skip repo creation in StorefrontSetupStep
+        createdRepo?: {
+            owner: string;
+            name: string;
+            url: string;
+            fullName: string;
+        };
         // GitHub auth info from Connect Services step
         githubAuth?: {
             isAuthenticated?: boolean;
@@ -467,12 +475,31 @@ async function executeStorefrontSetupPhases(
     // Determine if using existing repo
     const repoMode = edsConfig.repoMode || 'new';
     const useExistingRepo = repoMode === 'existing' && (edsConfig.selectedRepo || edsConfig.existingRepo);
+    // Check if repo was pre-created in GitHubRepoSelectionStep (new flow)
+    const usePreCreatedRepo = repoMode === 'new' && !!edsConfig.createdRepo;
 
     try {
         // ============================================
         // Phase 1: GitHub Repository Setup
         // ============================================
-        if (useExistingRepo) {
+        if (usePreCreatedRepo && edsConfig.createdRepo) {
+            // Repository was already created in GitHubRepoSelectionStep
+            // Just use the info and skip creation
+            repoOwner = edsConfig.createdRepo.owner;
+            repoName = edsConfig.createdRepo.name;
+            repoUrl = edsConfig.createdRepo.url;
+
+            logger.info(`[Storefront Setup] Using pre-created repository: ${repoOwner}/${repoName}`);
+
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'github-repo',
+                message: `Using repository: ${repoOwner}/${repoName}`,
+                progress: 15,
+                repoUrl,
+                repoOwner,
+                repoName,
+            });
+        } else if (useExistingRepo) {
             // Use existing repository
             if (edsConfig.selectedRepo) {
                 // Parse from selectedRepo (newer format)

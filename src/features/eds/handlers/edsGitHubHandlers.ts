@@ -340,3 +340,79 @@ export async function handleVerifyGitHubRepo(
         return { success: false, error: (error as Error).message };
     }
 }
+
+// ==========================================================
+// GitHub Repository Creation Handler
+// ==========================================================
+
+/**
+ * Payload for handleCreateGitHubRepo
+ */
+interface CreateGitHubRepoPayload {
+    repoName: string;
+    templateOwner: string;
+    templateRepo: string;
+    isPrivate?: boolean;
+}
+
+/**
+ * Create a GitHub repository from a template
+ *
+ * Creates the repository and waits for template content to be populated.
+ * This is called from GitHubRepoSelectionStep when creating a new repository,
+ * allowing the repo to exist before proceeding to code sync verification.
+ *
+ * @param context - Handler context with logging and messaging
+ * @param payload - Contains repository creation parameters
+ * @returns Success with repository info
+ */
+export async function handleCreateGitHubRepo(
+    context: HandlerContext,
+    payload?: CreateGitHubRepoPayload,
+): Promise<HandlerResponse> {
+    const { repoName, templateOwner, templateRepo, isPrivate } = payload || {};
+
+    if (!repoName || !templateOwner || !templateRepo) {
+        const error = 'Missing required parameters: repoName, templateOwner, templateRepo';
+        context.logger.error('[EDS] handleCreateGitHubRepo:', error);
+        return { success: false, error };
+    }
+
+    try {
+        context.logger.info(`[EDS] Creating GitHub repository: ${repoName} from ${templateOwner}/${templateRepo}`);
+        const { repoOperations } = getGitHubServices(context);
+
+        // Create repository from template
+        const repo = await repoOperations.createFromTemplate(
+            templateOwner,
+            templateRepo,
+            repoName,
+            isPrivate ?? false,
+        );
+
+        context.logger.debug(`[EDS] Repository created: ${repo.fullName}`);
+
+        // Wait for template content to be populated
+        context.logger.debug('[EDS] Waiting for repository content...');
+        await repoOperations.waitForContent(repo.fullName.split('/')[0], repo.name);
+
+        context.logger.info(`[EDS] Repository ready: ${repo.htmlUrl}`);
+
+        // Parse owner from fullName
+        const [owner, name] = repo.fullName.split('/');
+
+        return {
+            success: true,
+            data: {
+                owner,
+                name,
+                url: repo.htmlUrl,
+                fullName: repo.fullName,
+            },
+        };
+    } catch (error) {
+        const errorMessage = (error as Error).message;
+        context.logger.error('[EDS] Error creating GitHub repo:', error as Error);
+        return { success: false, error: errorMessage };
+    }
+}

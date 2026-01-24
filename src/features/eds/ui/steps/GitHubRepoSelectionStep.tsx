@@ -30,7 +30,6 @@ import {
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import Alert from '@spectrum-icons/workflow/Alert';
-import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import LinkOut from '@spectrum-icons/workflow/LinkOut';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
@@ -64,6 +63,15 @@ interface GitHubAppStatus {
 }
 
 /**
+ * Repository creation state tracking
+ */
+interface RepoCreationState {
+    isCreating: boolean;
+    isCreated: boolean;
+    error?: string;
+}
+
+/**
  * GitHubConfigurationSummary - Right column summary for GitHub selection
  */
 interface GitHubConfigurationSummaryProps {
@@ -72,6 +80,7 @@ interface GitHubConfigurationSummaryProps {
     repoMode: 'new' | 'existing';
     repoName: string;
     githubAppStatus: GitHubAppStatus;
+    repoCreationState: RepoCreationState;
 }
 
 function GitHubConfigurationSummary({
@@ -80,6 +89,7 @@ function GitHubConfigurationSummary({
     repoMode,
     repoName,
     githubAppStatus,
+    repoCreationState,
 }: GitHubConfigurationSummaryProps) {
     // Build display value for repository
     const getRepoDisplayValue = () => {
@@ -133,9 +143,9 @@ function GitHubConfigurationSummary({
                 emptyText={repoMode === 'new' ? 'Enter repository name' : 'Not selected'}
             />
 
-            {/* GitHub App Status - only show for existing repos */}
-            {/* New repos skip this - app will be installed after repo creation */}
-            {repoMode === 'existing' && isRepoComplete && (
+            {/* GitHub App Status - show for existing repos OR for new repos after creation */}
+            {((repoMode === 'existing' && isRepoComplete) ||
+              (repoMode === 'new' && repoCreationState.isCreated)) && (
                 <>
                     <Divider size="S" />
                     <StatusSection
@@ -167,6 +177,12 @@ export function GitHubRepoSelectionStep({
 
     // Validation state
     const [repoNameError, setRepoNameError] = useState<string | undefined>();
+
+    // Repository creation state (for new repos)
+    const [repoCreationState, setRepoCreationState] = useState<RepoCreationState>({
+        isCreating: false,
+        isCreated: !!edsConfig?.createdRepo,  // Restore from state if navigating back
+    });
 
     // GitHub App installation status
     const [githubAppStatus, setGitHubAppStatus] = useState<GitHubAppStatus>({
@@ -258,22 +274,36 @@ export function GitHubRepoSelectionStep({
      * Handle switching to create new mode
      */
     const handleCreateNew = useCallback(() => {
+        // Clear existing repo selection
         updateEdsConfig({
             repoMode: 'new',
             selectedRepo: undefined,
             existingRepo: undefined,
             existingRepoVerified: undefined,
             resetToTemplate: false,
+            createdRepo: undefined, // Clear any previously created repo
         });
+        // Reset local creation state
+        setRepoCreationState({ isCreating: false, isCreated: false });
+        setGitHubAppStatus({ isChecking: false, isInstalled: null });
+        setIsModalDismissed(false);
+        lastCheckedRepo.current = null;
     }, [updateEdsConfig]);
 
     /**
      * Handle switching to use existing mode
      */
     const handleUseExisting = useCallback(() => {
+        // Clear new repo state
         updateEdsConfig({
             repoMode: 'existing',
+            createdRepo: undefined, // Clear any previously created repo
         });
+        // Reset local creation state
+        setRepoCreationState({ isCreating: false, isCreated: false });
+        setGitHubAppStatus({ isChecking: false, isInstalled: null });
+        setIsModalDismissed(false);
+        lastCheckedRepo.current = null;
     }, [updateEdsConfig]);
 
     /**
@@ -358,12 +388,103 @@ export function GitHubRepoSelectionStep({
     }, []);
 
     /**
+     * Create a new GitHub repository from template
+     * Called when user clicks "Create" button
+     */
+    const handleCreateRepository = useCallback(async () => {
+        // Validate template config is available
+        const templateOwner = edsConfig?.templateOwner;
+        const templateRepo = edsConfig?.templateRepo;
+
+        if (!templateOwner || !templateRepo) {
+            setRepoCreationState({
+                isCreating: false,
+                isCreated: false,
+                error: 'Template configuration not available. Please check your stack settings.',
+            });
+            return;
+        }
+
+        if (!repoName || !isValidRepositoryName(repoName)) {
+            setRepoNameError(getRepositoryNameError(repoName));
+            return;
+        }
+
+        // Start creation
+        setRepoCreationState({ isCreating: true, isCreated: false });
+        setRepoNameError(undefined);
+
+        try {
+            const result = await webviewClient.request<{
+                success: boolean;
+                data?: {
+                    owner: string;
+                    name: string;
+                    url: string;
+                    fullName: string;
+                };
+                error?: string;
+            }>('create-github-repo', {
+                repoName,
+                templateOwner,
+                templateRepo,
+                isPrivate: false,
+            });
+
+            if (result.success && result.data) {
+                // Repository created successfully
+                const createdRepo = result.data;
+
+                // Store the created repo info in state
+                updateEdsConfig({
+                    createdRepo: {
+                        owner: createdRepo.owner,
+                        name: createdRepo.name,
+                        url: createdRepo.url,
+                        fullName: createdRepo.fullName,
+                    },
+                });
+
+                setRepoCreationState({ isCreating: false, isCreated: true });
+
+                // For newly created repos from template, the GitHub App is NEVER pre-installed.
+                // Skip the automatic check (which can return stale cached data from a previously
+                // deleted repo with the same name) and directly show "not installed" status.
+                // User must install the app and click "Check Again" to verify.
+                setGitHubAppStatus({
+                    isChecking: false,
+                    isInstalled: false,
+                    installUrl: `https://github.com/apps/aem-code-sync/installations/select_target`,
+                });
+            } else {
+                throw new Error(result.error || 'Failed to create repository');
+            }
+        } catch (error) {
+            console.error('[GitHub Repo] Creation failed:', error);
+            setRepoCreationState({
+                isCreating: false,
+                isCreated: false,
+                error: (error as Error).message,
+            });
+        }
+    }, [repoName, edsConfig?.templateOwner, edsConfig?.templateRepo, updateEdsConfig, checkGitHubApp]);
+
+    /**
      * Handle "Check Again" button click from within the modal
      * Uses lenient mode since user just completed installation
      */
     const handleCheckAgain = useCallback(() => {
-        const owner = githubUser?.login;
-        const repo = repoMode === 'new' ? repoName : selectedRepo?.name;
+        // For new repos, use the created repo info; for existing repos, use selected repo
+        let owner: string | undefined;
+        let repo: string | undefined;
+
+        if (repoMode === 'new' && edsConfig?.createdRepo) {
+            owner = edsConfig.createdRepo.owner;
+            repo = edsConfig.createdRepo.name;
+        } else if (repoMode === 'existing' && selectedRepo) {
+            owner = selectedRepo.fullName.split('/')[0];
+            repo = selectedRepo.name;
+        }
 
         if (owner && repo) {
             setIsRechecking(true);
@@ -374,7 +495,7 @@ export function GitHubRepoSelectionStep({
             // Use lenient mode - accepts non-404 since user just installed the app
             checkGitHubApp(owner, repo, true);
         }
-    }, [githubUser?.login, repoMode, repoName, selectedRepo?.name, checkGitHubApp]);
+    }, [repoMode, edsConfig?.createdRepo, selectedRepo, checkGitHubApp]);
 
     /**
      * Open GitHub App installation page
@@ -388,11 +509,12 @@ export function GitHubRepoSelectionStep({
     // Check GitHub App when EXISTING repo is selected
     // Skip check for NEW repos - the repo doesn't exist yet, so app can't be installed
     useEffect(() => {
-        const owner = githubUser?.login;
-        if (!owner) return;
-
         // Only check for existing repos - new repos don't exist yet
         if (repoMode === 'existing' && selectedRepo) {
+            // Extract owner from fullName (e.g., "owner/repo" -> "owner")
+            // Don't use githubUser.login - repo may belong to an org
+            const owner = selectedRepo.fullName.split('/')[0];
+
             // Reset state immediately when repo changes to prevent stale state flash
             setIsModalDismissed(false);
             setGitHubAppStatus({
@@ -409,23 +531,25 @@ export function GitHubRepoSelectionStep({
             setIsModalDismissed(false);
             lastCheckedRepo.current = null;
         }
-    }, [githubUser?.login, repoMode, selectedRepo, checkGitHubApp]);
+    }, [repoMode, selectedRepo, checkGitHubApp]);
 
-    // Update canProceed based on selection AND GitHub App status (existing repos only)
+    // Update canProceed based on selection AND GitHub App status
     useEffect(() => {
-        const isNewValid = repoMode === 'new' && repoName.trim() !== '' && isValidRepositoryName(repoName);
-        const isExistingValid = repoMode === 'existing' && !!selectedRepo;
+        const appVerified = githubAppStatus.isInstalled === true;
+        const isCheckingApp = githubAppStatus.isChecking;
+        const isCreatingRepo = repoCreationState.isCreating;
 
         if (repoMode === 'new') {
-            // New repos: just need valid name (app will be installed after repo creation)
-            setCanProceed(isNewValid);
+            // New repos: require repo to be created AND app verified
+            // User must click "Create" first, then wait for app installation
+            const isRepoCreated = repoCreationState.isCreated;
+            setCanProceed(isRepoCreated && appVerified && !isCheckingApp && !isCreatingRepo);
         } else {
-            // Existing repos: require app verification
-            const appVerified = githubAppStatus.isInstalled === true;
-            const isCheckingApp = githubAppStatus.isChecking;
+            // Existing repos: require repo selection AND app verification
+            const isExistingValid = !!selectedRepo;
             setCanProceed(isExistingValid && appVerified && !isCheckingApp);
         }
-    }, [repoMode, repoName, selectedRepo, githubAppStatus, setCanProceed]);
+    }, [repoMode, repoCreationState, selectedRepo, githubAppStatus, setCanProceed]);
 
     // Left column: Repository selection
     const leftContent = (
@@ -433,8 +557,23 @@ export function GitHubRepoSelectionStep({
             {/* Create New Repository mode */}
             {repoMode === 'new' && (
                 <>
-                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-300">
-                        <Heading level={2}>New Repository</Heading>
+                    <Flex justifyContent="end" gap="size-100" marginBottom="size-200">
+                        {/* Create button - matches "New" button position in existing mode */}
+                        {!repoCreationState.isCreated && (
+                            <Button
+                                variant="accent"
+                                onPress={handleCreateRepository}
+                                isDisabled={
+                                    !repoName ||
+                                    !isValidRepositoryName(repoName) ||
+                                    repoCreationState.isCreating ||
+                                    !edsConfig?.templateOwner ||
+                                    !edsConfig?.templateRepo
+                                }
+                            >
+                                Create
+                            </Button>
+                        )}
                         <Button variant="secondary" onPress={handleUseExisting}>
                             Browse
                         </Button>
@@ -445,29 +584,20 @@ export function GitHubRepoSelectionStep({
                         value={repoName}
                         onChange={handleRepoNameChange}
                         onBlur={handleRepoNameBlur}
-                        validationState={repoNameError ? 'invalid' : undefined}
-                        errorMessage={repoNameError}
+                        validationState={repoNameError || repoCreationState.error ? 'invalid' : undefined}
+                        errorMessage={repoNameError || repoCreationState.error}
                         placeholder="my-eds-project"
                         description={githubUser ? `Will be created as ${githubUser.login}/${repoName || 'my-eds-project'}` : 'Name for your new GitHub repository'}
                         width="100%"
                         isRequired
                         autoFocus
+                        isDisabled={repoCreationState.isCreated || repoCreationState.isCreating}
                     />
 
-                    <View
-                        backgroundColor="gray-50"
-                        borderRadius="medium"
-                        padding="size-200"
-                        marginTop="size-300"
-                    >
-                        <Flex alignItems="center" gap="size-150">
-                            <InfoOutline size="S" UNSAFE_className="text-blue-500" />
-                            <Text UNSAFE_className="text-sm text-gray-600">
-                                Repository will be created from the EDS template with starter content.
-                            </Text>
-                        </Flex>
-                    </View>
+                    {/* Loading overlay while creating */}
+                    <LoadingOverlay isVisible={repoCreationState.isCreating} />
                 </>
+
             )}
 
             {/* Use Existing Repository mode */}
@@ -546,11 +676,14 @@ export function GitHubRepoSelectionStep({
                 </>
             )}
 
-            {/* GitHub App Status Section - only shows for EXISTING repos */}
-            {/* New repos skip this check - app will be installed after repo creation */}
+            {/* GitHub App Status Section - shows for EXISTING repos OR NEW repos after creation */}
             {(() => {
-                // Only show for existing repos with a selection
-                if (repoMode !== 'existing' || !selectedRepo) return null;
+                // Determine if we should show the modal based on repo mode
+                const isExistingWithSelection = repoMode === 'existing' && !!selectedRepo;
+                const isNewWithCreatedRepo = repoMode === 'new' && repoCreationState.isCreated && !!edsConfig?.createdRepo;
+
+                // Only show for repos that need app verification
+                if (!isExistingWithSelection && !isNewWithCreatedRepo) return null;
 
                 // Success state: no banner needed - status shown in Configuration Summary panel
                 if (githubAppStatus.isInstalled === true) {
@@ -559,8 +692,19 @@ export function GitHubRepoSelectionStep({
 
                 // Show modal when not installed OR when rechecking (unless dismissed)
                 if ((githubAppStatus.isInstalled === false || isRechecking) && !isModalDismissed) {
-                    const owner = githubUser?.login || '';
-                    const repo = selectedRepo?.name || '';
+                    // Get owner/repo for display
+                    let owner: string;
+                    let repo: string;
+
+                    if (isNewWithCreatedRepo && edsConfig?.createdRepo) {
+                        owner = edsConfig.createdRepo.owner;
+                        repo = edsConfig.createdRepo.name;
+                    } else if (selectedRepo) {
+                        owner = selectedRepo.fullName.split('/')[0];
+                        repo = selectedRepo.name;
+                    } else {
+                        return null;
+                    }
 
                     const handleDismiss = () => {
                         setIsModalDismissed(true);
@@ -629,6 +773,7 @@ export function GitHubRepoSelectionStep({
             repoMode={repoMode}
             repoName={repoName}
             githubAppStatus={githubAppStatus}
+            repoCreationState={repoCreationState}
         />
     );
 
