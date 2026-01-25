@@ -327,14 +327,14 @@ describe('Executor - EDS Standard Flow', () => {
 
             expect(projectWithMetadata).toBeDefined();
             const edsInstance = projectWithMetadata?.componentInstances?.['eds-storefront'];
-            // Note: previewUrl/liveUrl are NOT stored - they're derived from githubRepo by typeGuards
+            // Note: Only project-specific EDS data is stored in metadata
+            // previewUrl/liveUrl are derived from githubRepo by typeGuards
+            // templateOwner/templateRepo/contentSource/patches are derived from brand+stack
             expect(edsInstance?.metadata).toMatchObject({
                 repoUrl: 'https://github.com/testuser/test-repo',
                 githubRepo: 'testuser/test-repo', // Source data for URL derivation
                 daLiveOrg: 'test-org',
                 daLiveSite: 'test-site',
-                templateOwner: 'adobe',
-                templateRepo: 'aem-boilerplate',
             });
         });
     });

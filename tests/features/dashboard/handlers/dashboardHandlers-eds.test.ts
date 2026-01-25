@@ -166,7 +166,9 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
         status: 'running',
         created: new Date('2025-01-26T10:00:00.000Z'),
         lastModified: new Date('2025-01-26T12:00:00.000Z'),
-        selectedStack: 'eds-commerce',
+        // Must match demo-packages.json for template lookup
+        selectedPackage: 'citisignal',
+        selectedStack: 'eds-paas',
         componentInstances: {
             'eds-storefront': {
                 id: 'eds-storefront',
@@ -177,12 +179,8 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
                     githubRepo: 'test-org/test-repo',
                     daLiveOrg: 'test-org',
                     daLiveSite: 'test-site',
-                    templateOwner: 'hlxsites',
-                    templateRepo: 'citisignal',
-                    contentSource: {
-                        org: 'demo-system-stores',
-                        site: 'accs-citisignal',
-                    },
+                    // Note: templateOwner/templateRepo are derived from brand+stack in demo-packages.json
+                    // keeping here for reference but they're not used by the reset flow
                     liveUrl: 'https://main--test-repo--test-org.aem.live',
                     previewUrl: 'https://main--test-repo--test-org.aem.page',
                 },
@@ -335,13 +333,14 @@ describe('handleResetEds', () => {
         await handleResetEds(context);
 
         // Then: Should call bulk reset with template and target repos
+        // Template values derived from demo-packages.json: citisignal package + eds-paas stack
         expect(mockFileOps.resetRepoToTemplate).toHaveBeenCalledWith(
-            'hlxsites',       // templateOwner
-            'citisignal',     // templateRepo
-            'test-org',       // targetOwner
-            'test-repo',      // targetRepo
-            expect.any(Map),  // fileOverrides (contains fstab.yaml)
-            'main',           // branch
+            'demo-system-stores',   // templateOwner (from demo-packages.json)
+            'accs-citisignal',      // templateRepo (from demo-packages.json)
+            'test-org',             // targetOwner
+            'test-repo',            // targetRepo
+            expect.any(Map),        // fileOverrides (contains fstab.yaml)
+            'main',                 // branch
         );
 
         // And: fileOverrides should contain fstab.yaml with DA.live path

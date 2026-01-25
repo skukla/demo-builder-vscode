@@ -967,6 +967,7 @@ describe('wizardHelpers', () => {
         });
 
         it('should use explicit templateOwner/templateRepo and contentSource from storefront config', () => {
+            // Template config is derived in WelcomeStep and stored in edsConfig
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
@@ -977,6 +978,13 @@ describe('wizardHelpers', () => {
                     repoMode: 'new',
                     daLiveOrg: 'myorg',
                     daLiveSite: 'mysite',
+                    // These are derived from brand+stack in WelcomeStep
+                    templateOwner: 'demo-system-stores',
+                    templateRepo: 'accs-citisignal',
+                    contentSource: {
+                        org: 'content-org',
+                        site: 'content-site',
+                    },
                 },
             };
 
@@ -992,13 +1000,6 @@ describe('wizardHelpers', () => {
                                 url: 'https://github.com/demo-system-stores/accs-citisignal',
                                 branch: 'main',
                             },
-                            // Template config is explicit - not derived from source URL
-                            templateOwner: 'demo-system-stores',
-                            templateRepo: 'accs-citisignal',
-                            contentSource: {
-                                org: 'content-org',
-                                site: 'content-site',
-                            },
                         },
                     },
                 },
@@ -1006,10 +1007,9 @@ describe('wizardHelpers', () => {
 
             const config = buildProjectConfig(state, null, packages);
 
-            // Template should be from explicit config (for GitHub reset)
+            // Template config passes through from edsConfig (set by WelcomeStep)
             expect(config.edsConfig?.templateOwner).toBe('demo-system-stores');
             expect(config.edsConfig?.templateRepo).toBe('accs-citisignal');
-            // Content source should be from explicit config (for DA.live content)
             expect(config.edsConfig?.contentSource).toEqual({
                 org: 'content-org',
                 site: 'content-site',

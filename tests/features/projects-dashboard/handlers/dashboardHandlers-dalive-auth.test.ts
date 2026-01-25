@@ -198,7 +198,9 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
         status: 'running',
         created: new Date('2025-01-26T10:00:00.000Z'),
         lastModified: new Date('2025-01-26T12:00:00.000Z'),
-        selectedStack: 'eds-commerce',
+        // Must match demo-packages.json for template lookup
+        selectedPackage: 'citisignal',
+        selectedStack: 'eds-paas',
         componentInstances: {
             'eds-storefront': {
                 id: 'eds-storefront',
@@ -209,12 +211,7 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
                     githubRepo: 'test-org/test-repo',
                     daLiveOrg: 'test-org',
                     daLiveSite: 'test-site',
-                    templateOwner: 'hlxsites',
-                    templateRepo: 'citisignal',
-                    contentSource: {
-                        org: 'demo-system-stores',
-                        site: 'accs-citisignal',
-                    },
+                    // Note: templateOwner/templateRepo are derived from brand+stack in demo-packages.json
                     liveUrl: 'https://main--test-repo--test-org.aem.live',
                     previewUrl: 'https://main--test-repo--test-org.aem.page',
                 },
