@@ -551,6 +551,9 @@ export function GitHubRepoSelectionStep({
         }
     }, [repoMode, repoCreationState, selectedRepo, githubAppStatus, setCanProceed]);
 
+    // Derived state for showing reset option (extracted per SOP to avoid long boolean chain in JSX)
+    const shouldShowResetOption = selectedRepo && hasLoadedOnce && !isLoading;
+
     // Left column: Repository selection
     const leftContent = (
         <>
@@ -645,7 +648,7 @@ export function GitHubRepoSelectionStep({
                     />
 
                     {/* Reset to template option - only show when repo is selected and initial load complete */}
-                    {selectedRepo && hasLoadedOnce && !isLoading && (
+                    {shouldShowResetOption && (
                         <Flex direction="column" gap="size-100" marginTop="size-300">
                             <Checkbox
                                 isSelected={resetToTemplate}
