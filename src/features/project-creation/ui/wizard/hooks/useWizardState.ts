@@ -173,12 +173,15 @@ function computeInitialState(
                     isAuthenticated: false,  // Will be validated by useDaLiveAuth hook
                     isChecking: true,        // Indicate validation pending
                 } : undefined,
+                repoUrl: editSettings.edsConfig.repoUrl,
                 // Pre-select GitHub repo if owner and name are available
                 repoMode: (editSettings.edsConfig.githubOwner && editSettings.edsConfig.repoName) ? 'existing' : undefined,
                 selectedRepo: (editSettings.edsConfig.githubOwner && editSettings.edsConfig.repoName) ? {
                     id: `${editSettings.edsConfig.githubOwner}/${editSettings.edsConfig.repoName}`,
                     name: editSettings.edsConfig.repoName,
                     fullName: `${editSettings.edsConfig.githubOwner}/${editSettings.edsConfig.repoName}`,
+                    // Include htmlUrl for storefrontSetupHandlers which uses selectedRepo.htmlUrl
+                    htmlUrl: `https://github.com/${editSettings.edsConfig.githubOwner}/${editSettings.edsConfig.repoName}`,
                 } : undefined,
                 // Pre-select DA.live site if site name is available
                 selectedSite: editSettings.edsConfig.daLiveSite ? {
@@ -234,9 +237,8 @@ function computeInitialState(
             repoName: importedSettings.edsConfig.repoName || '',
             daLiveOrg: importedSettings.edsConfig.daLiveOrg || '',
             daLiveSite: importedSettings.edsConfig.daLiveSite || '',
-            templateOwner: importedSettings.edsConfig.templateOwner,
-            templateRepo: importedSettings.edsConfig.templateRepo,
-            contentSource: importedSettings.edsConfig.contentSource,
+            // Note: templateOwner, templateRepo, contentSource, patches are derived
+            // from brand+stack in WelcomeStep, not stored per-project
             // Mark GitHub/DA.live as authenticated since importing from existing project
             githubAuth: (importedSettings.edsConfig.githubOwner && importedSettings.edsConfig.repoName) ? {
                 isAuthenticated: true,
@@ -246,12 +248,15 @@ function computeInitialState(
                 isAuthenticated: true,
                 org: importedSettings.edsConfig.daLiveOrg,
             } : undefined,
+            repoUrl: importedSettings.edsConfig.repoUrl,
             // Pre-select GitHub repo if owner and name are available
             repoMode: (importedSettings.edsConfig.githubOwner && importedSettings.edsConfig.repoName) ? 'existing' : undefined,
             selectedRepo: (importedSettings.edsConfig.githubOwner && importedSettings.edsConfig.repoName) ? {
                 id: `${importedSettings.edsConfig.githubOwner}/${importedSettings.edsConfig.repoName}`,
                 name: importedSettings.edsConfig.repoName,
                 fullName: `${importedSettings.edsConfig.githubOwner}/${importedSettings.edsConfig.repoName}`,
+                // Include htmlUrl for storefrontSetupHandlers which uses selectedRepo.htmlUrl
+                htmlUrl: `https://github.com/${importedSettings.edsConfig.githubOwner}/${importedSettings.edsConfig.repoName}`,
             } : undefined,
             // Pre-select DA.live site if site name is available
             selectedSite: importedSettings.edsConfig.daLiveSite ? {
