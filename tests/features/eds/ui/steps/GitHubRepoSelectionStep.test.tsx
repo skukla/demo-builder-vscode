@@ -228,7 +228,7 @@ describe('GitHubRepoSelectionStep', () => {
 
     describe('Reset to Template', () => {
         it('should show reset to template checkbox when repo selected', async () => {
-            // Given: A repository is selected
+            // Given: A repository is selected and repos cache is populated (hasLoadedOnce = true)
             const state = createDefaultState({
                 repoMode: 'existing',
                 selectedRepo: {
@@ -237,6 +237,10 @@ describe('GitHubRepoSelectionStep', () => {
                     fullName: 'testuser/my-repo',
                 },
             });
+            // Pre-populate cache so hasLoadedOnce is true (checkbox requires hasLoadedOnce && !isLoading)
+            (state as WizardState & { githubReposCache: unknown[] }).githubReposCache = [
+                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+            ];
 
             // When: Component renders
             const { GitHubRepoSelectionStep } = await import('@/features/eds/ui/steps/GitHubRepoSelectionStep');
@@ -250,12 +254,12 @@ describe('GitHubRepoSelectionStep', () => {
                 </TestWrapper>
             );
 
-            // Then: Should show reset checkbox
+            // Then: Should show reset checkbox (cache populated means hasLoadedOnce = true, isLoading = false)
             expect(screen.getByRole('checkbox', { name: /reset to template/i })).toBeInTheDocument();
         });
 
         it('should show warning when reset is checked', async () => {
-            // Given: A repository is selected with reset enabled
+            // Given: A repository is selected with reset enabled and repos cache is populated
             const state = createDefaultState({
                 repoMode: 'existing',
                 selectedRepo: {
@@ -265,6 +269,10 @@ describe('GitHubRepoSelectionStep', () => {
                 },
                 resetToTemplate: true,
             });
+            // Pre-populate cache so hasLoadedOnce is true
+            (state as WizardState & { githubReposCache: unknown[] }).githubReposCache = [
+                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+            ];
 
             // When: Component renders
             const { GitHubRepoSelectionStep } = await import('@/features/eds/ui/steps/GitHubRepoSelectionStep');
