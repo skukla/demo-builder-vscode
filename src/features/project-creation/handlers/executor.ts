@@ -374,16 +374,14 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
                     : undefined);
 
+            // Only save project-specific EDS data to metadata
+            // templateOwner, templateRepo, contentSource, patches are derived from brand+stack
             edsInstance.metadata = {
                 ...edsInstance.metadata,
                 repoUrl: typedConfig.edsConfig.repoUrl,
                 githubRepo, // Source data for URL derivation (typeGuards derive previewUrl/liveUrl from this)
                 daLiveOrg: typedConfig.edsConfig.daLiveOrg,
                 daLiveSite: typedConfig.edsConfig.daLiveSite,
-                templateOwner: typedConfig.edsConfig.templateOwner,
-                templateRepo: typedConfig.edsConfig.templateRepo,
-                contentSource: typedConfig.edsConfig.contentSource,
-                patches: typedConfig.edsConfig.patches, // Patch IDs to apply during reset
             };
             await context.stateManager.saveProject(project);
             context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}, daLiveOrg=${edsInstance.metadata?.daLiveOrg}`);
@@ -579,6 +577,30 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                         );
 
                         context.logger.info(`[EDS Post-Mesh] ✓ config.json pushed to GitHub (${repoInfo.owner}/${repoInfo.repo})`);
+
+                        // Step 4: Publish config.json to Helix CDN
+                        // After pushing to GitHub, we must preview/publish via Helix Admin API
+                        // for the CDN to serve the updated config.json
+                        progressTracker('Publishing Config', 88, 'Publishing config.json to CDN...');
+                        context.logger.debug(`[EDS Post-Mesh] Publishing config.json to Helix CDN...`);
+
+                        const { HelixService } = await import('@/features/eds/services/helixService');
+
+                        // HelixService needs GitHub token for admin API auth
+                        // Note: Code preview/publish only requires GitHub auth (no DA.live token)
+                        const helixService = new HelixService(
+                            context.authManager!,
+                            context.logger,
+                            githubTokenService,
+                        );
+
+                        await helixService.previewCode(
+                            repoInfo.owner,
+                            repoInfo.repo,
+                            '/config.json',
+                        );
+
+                        context.logger.info(`[EDS Post-Mesh] ✓ config.json published to CDN`);
                     }
                 }
             } catch (error) {

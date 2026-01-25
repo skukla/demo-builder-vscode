@@ -34,6 +34,7 @@ import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { HelixService } from '@/features/eds/services/helixService';
 import { getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
+import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -345,10 +346,21 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
         return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
     }
 
-    // Open in incognito mode for clean demo experience (no cached content/cookies)
-    // Falls back to normal browser if incognito mode is not available
-    const openedIncognito = await openInIncognito(payload.url);
-    context.logger.debug(`[Dashboard] Opening live site: ${payload.url} (incognito: ${openedIncognito})`);
+    // Show progress notification while browser is opening
+    // Incognito mode can take a moment to launch
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Opening in private browser...',
+            cancellable: false,
+        },
+        async () => {
+            // Open in incognito mode for clean demo experience (no cached content/cookies)
+            // Falls back to normal browser if incognito mode is not available
+            const openedIncognito = await openInIncognito(payload.url!);
+            context.logger.debug(`[Dashboard] Opening live site: ${payload.url} (incognito: ${openedIncognito})`);
+        },
+    );
 
     return { success: true };
 };
@@ -568,15 +580,25 @@ export const handleResetEds: MessageHandler = async (context) => {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    // Get EDS metadata from component instance
+    // Get EDS metadata from component instance (project-specific data)
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
     const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
     const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
-    const templateOwner = edsInstance?.metadata?.templateOwner as string | undefined;
-    const templateRepo = edsInstance?.metadata?.templateRepo as string | undefined;
-    const contentSourceConfig = edsInstance?.metadata?.contentSource as { org: string; site: string; indexPath?: string } | undefined;
-    const patches = edsInstance?.metadata?.patches as string[] | undefined;
+
+    // Derive template config from brand+stack (source of truth)
+    const pkg = demoPackagesConfig.packages.find((p: { id: string }) => p.id === project.selectedPackage);
+    const storefronts = pkg?.storefronts as Record<string, {
+        templateOwner?: string;
+        templateRepo?: string;
+        contentSource?: { org: string; site: string; indexPath?: string };
+        patches?: string[];
+    }> | undefined;
+    const storefront = project.selectedStack ? storefronts?.[project.selectedStack] : undefined;
+    const templateOwner = storefront?.templateOwner;
+    const templateRepo = storefront?.templateRepo;
+    const contentSourceConfig = storefront?.contentSource;
+    const patches = storefront?.patches;
 
     if (!repoFullName) {
         context.logger.error('[Dashboard] resetEds: Missing EDS metadata (githubRepo)');
@@ -791,12 +813,12 @@ export const handleResetEds: MessageHandler = async (context) => {
                 );
 
                 context.logger.info(`[Dashboard] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
-                progress.report({ message: `Step 1/4: Reset ${resetResult.fileCount} files` });
+                progress.report({ message: `Step 1/5: Reset ${resetResult.fileCount} files` });
 
                 // ============================================
                 // Step 2: Wait for code sync
                 // ============================================
-                progress.report({ message: 'Step 2/4: Waiting for code sync...' });
+                progress.report({ message: 'Step 2/5: Waiting for code sync...' });
 
                 const codeUrl = `https://admin.hlx.page/code/${repoOwner}/${repoName}/main/scripts/aem.js`;
                 let syncVerified = false;
@@ -804,7 +826,7 @@ export const handleResetEds: MessageHandler = async (context) => {
                 const pollInterval = 2000;
 
                 for (let attempt = 0; attempt < maxAttempts && !syncVerified; attempt++) {
-                    progress.report({ message: `Step 2/4: Verifying code sync (attempt ${attempt + 1}/${maxAttempts})` });
+                    progress.report({ message: `Step 2/5: Verifying code sync (attempt ${attempt + 1}/${maxAttempts})` });
                     try {
                         const response = await fetch(codeUrl, {
                             method: 'GET',
@@ -824,10 +846,32 @@ export const handleResetEds: MessageHandler = async (context) => {
 
                 if (!syncVerified) {
                     context.logger.warn('[Dashboard] Code sync verification timed out, continuing anyway');
-                    progress.report({ message: 'Step 2/4: Code sync timed out, continuing...' });
+                    progress.report({ message: 'Step 2/5: Code sync timed out, continuing...' });
                 } else {
                     context.logger.info('[Dashboard] Code sync verified');
-                    progress.report({ message: 'Step 2/4: Code sync verified' });
+                    progress.report({ message: 'Step 2/5: Code sync verified' });
+                }
+
+                // ============================================
+                // Step 3: Publish config.json to CDN
+                // ============================================
+                // After code sync, explicitly publish config.json to CDN
+                // This ensures the Commerce configuration is available on the live site
+                progress.report({ message: 'Step 3/5: Publishing config.json to CDN...' });
+                context.logger.info(`[Dashboard] Publishing config.json to CDN for ${repoOwner}/${repoName}`);
+
+                // Create HelixService for code publish (only needs GitHub token)
+                const { HelixService } = await import('@/features/eds/services/helixService');
+                const helixServiceForCode = new HelixService(authService, context.logger, githubTokenService);
+
+                try {
+                    await helixServiceForCode.previewCode(repoOwner, repoName, '/config.json');
+                    context.logger.info('[Dashboard] config.json published to CDN');
+                    progress.report({ message: 'Step 3/5: config.json published' });
+                } catch (configError) {
+                    // Log warning but continue - site may work without config.json if template has defaults
+                    context.logger.warn(`[Dashboard] Failed to publish config.json: ${(configError as Error).message}`);
+                    progress.report({ message: 'Step 3/5: config.json publish failed, continuing...' });
                 }
 
                 // Build full content source with index URL from explicit config
@@ -839,17 +883,17 @@ export const handleResetEds: MessageHandler = async (context) => {
                 };
 
                 // ============================================
-                // Step 3: Copy demo content to DA.live
+                // Step 4: Copy demo content to DA.live
                 // ============================================
                 // Content HTML is uploaded with absolute image URLs pointing to source CDN.
                 // The Admin API will download images during preview and store in Media Bus.
-                progress.report({ message: 'Step 3/4: Copying demo content to DA.live...' });
+                progress.report({ message: 'Step 4/5: Copying demo content to DA.live...' });
 
                 context.logger.info(`[Dashboard] Copying content from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
 
                 // Progress callback to show per-file progress
                 const onContentProgress = (info: { processed: number; total: number; currentFile?: string }) => {
-                    progress.report({ message: `Step 3/4: Copying content (${info.processed}/${info.total})` });
+                    progress.report({ message: `Step 4/5: Copying content (${info.processed}/${info.total})` });
                 };
 
                 const contentResult = await daLiveContentOps.copyContentFromSource(
@@ -863,13 +907,13 @@ export const handleResetEds: MessageHandler = async (context) => {
                     throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
                 }
 
-                progress.report({ message: `Step 3/4: Copied ${contentResult.totalFiles} content files` });
+                progress.report({ message: `Step 4/5: Copied ${contentResult.totalFiles} content files` });
                 context.logger.info(`[Dashboard] DA.live content populated: ${contentResult.totalFiles} files`);
 
                 // ============================================
-                // Step 4: Publish all content to CDN
+                // Step 5: Publish all content to CDN
                 // ============================================
-                progress.report({ message: 'Step 4/4: Publishing content to CDN...' });
+                progress.report({ message: 'Step 5/5: Publishing content to CDN...' });
                 context.logger.info(`[Dashboard] Publishing content to CDN for ${repoOwner}/${repoName}`);
 
                 // IMPORTANT: Pass DA.live token provider to HelixService for x-content-source-authorization
@@ -884,11 +928,11 @@ export const handleResetEds: MessageHandler = async (context) => {
                     total?: number;
                     currentPath?: string;
                 }) => {
-                    // Format: "Step 4/4: Publishing (15/42 pages)"
+                    // Format: "Step 5/5: Publishing (15/42 pages)"
                     if (info.current !== undefined && info.total !== undefined) {
-                        progress.report({ message: `Step 4/4: Publishing to CDN (${info.current}/${info.total} pages)` });
+                        progress.report({ message: `Step 5/5: Publishing to CDN (${info.current}/${info.total} pages)` });
                     } else {
-                        progress.report({ message: `Step 4/4: ${info.message}` });
+                        progress.report({ message: `Step 5/5: ${info.message}` });
                     }
                 };
 

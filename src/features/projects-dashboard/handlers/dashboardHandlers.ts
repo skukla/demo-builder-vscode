@@ -26,6 +26,7 @@ import { validateProjectPath } from '@/core/validation';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
+import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -590,9 +591,21 @@ export const handleOpenLiveSite: MessageHandler<{ projectPath: string }> = async
         return { success: false, error: 'EDS live URL not available' };
     }
 
-    // Open in incognito mode for clean demo experience (no cached content/cookies)
-    // Falls back to normal browser if incognito mode is not available
-    await openInIncognito(liveUrl);
+    // Show progress notification while browser is opening
+    // Incognito mode can take a moment to launch
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Opening in private browser...',
+            cancellable: false,
+        },
+        async () => {
+            // Open in incognito mode for clean demo experience (no cached content/cookies)
+            // Falls back to normal browser if incognito mode is not available
+            await openInIncognito(liveUrl);
+        },
+    );
+
     return { success: true };
 };
 
@@ -668,15 +681,25 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project not found' };
     }
 
-    // Get EDS metadata from component instance
+    // Get EDS metadata from component instance (project-specific data)
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
     const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
     const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
-    const templateOwner = edsInstance?.metadata?.templateOwner as string | undefined;
-    const templateRepo = edsInstance?.metadata?.templateRepo as string | undefined;
-    const contentSourceConfig = edsInstance?.metadata?.contentSource as { org: string; site: string; indexPath?: string } | undefined;
-    const patches = edsInstance?.metadata?.patches as string[] | undefined;
+
+    // Derive template config from brand+stack (source of truth)
+    const pkg = demoPackagesConfig.packages.find((p: { id: string }) => p.id === project.selectedPackage);
+    const storefronts = pkg?.storefronts as Record<string, {
+        templateOwner?: string;
+        templateRepo?: string;
+        contentSource?: { org: string; site: string; indexPath?: string };
+        patches?: string[];
+    }> | undefined;
+    const storefront = project.selectedStack ? storefronts?.[project.selectedStack] : undefined;
+    const templateOwner = storefront?.templateOwner;
+    const templateRepo = storefront?.templateRepo;
+    const contentSourceConfig = storefront?.contentSource;
+    const patches = storefront?.patches;
 
     if (!repoFullName) {
         const errorMsg = 'EDS metadata missing - no GitHub repository configured';
