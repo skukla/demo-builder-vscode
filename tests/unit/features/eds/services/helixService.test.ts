@@ -12,8 +12,8 @@
  * - Preview page via POST /preview/{org}/{site}/main/{path}
  * - Publish page via POST /live/{org}/{site}/main/{path}
  * - Preview and publish single page
- * - Bulk preview via POST /preview/{org}/{site}/main with JSON body containing paths
- * - Bulk publish via POST /live/{org}/{site}/main with JSON body containing paths
+ * - Bulk preview via POST /preview/{org}/{site}/main/* with JSON body containing paths
+ * - Bulk publish via POST /live/{org}/{site}/main/* with JSON body containing paths
  * - Job polling for bulk operations (GET /jobs/{topic}/{jobName})
  * - Bulk publish all site content with job completion tracking
  * - Fallback to page-by-page when bulk API returns 404
@@ -260,7 +260,7 @@ describe('HelixService', () => {
     // Bulk Preview/Publish Tests
     // ==========================================================
     describe('Bulk Preview/Publish', () => {
-        it('should preview all content via POST /preview/{org}/{site}/main with JSON body containing paths', async () => {
+        it('should preview all content via POST /preview/{org}/{site}/main/* with JSON body containing paths', async () => {
             // Given: Valid authentication
             mockFetch.mockResolvedValueOnce({
                 ok: true,
@@ -270,10 +270,10 @@ describe('HelixService', () => {
             // When: Previewing all content
             await service.previewAllContent('testuser', 'my-site');
 
-            // Then: Should call POST on /preview endpoint (without /*) with JSON body containing paths: ["/*"]
-            // Note: The /* wildcard goes in the JSON body, NOT the URL path
+            // Then: Should call POST on /preview endpoint with /* suffix for bulk operation
+            // The /* in URL triggers async processing (returns 202), paths in body specify what to process
             expect(mockFetch).toHaveBeenCalledWith(
-                'https://admin.hlx.page/preview/testuser/my-site/main',
+                'https://admin.hlx.page/preview/testuser/my-site/main/*',
                 expect.objectContaining({
                     method: 'POST',
                     headers: expect.objectContaining({
@@ -281,14 +281,14 @@ describe('HelixService', () => {
                         'Content-Type': 'application/json',
                     }),
                     body: JSON.stringify({
-                        paths: ['/*'],
+                        paths: ['/'],
                         forceUpdate: true,
                     }),
                 }),
             );
         });
 
-        it('should publish all content via POST /live/{org}/{site}/main with JSON body containing paths', async () => {
+        it('should publish all content via POST /live/{org}/{site}/main/* with JSON body containing paths', async () => {
             // Given: Valid authentication
             mockFetch.mockResolvedValueOnce({
                 ok: true,
@@ -298,10 +298,10 @@ describe('HelixService', () => {
             // When: Publishing all content
             await service.publishAllContent('testuser', 'my-site');
 
-            // Then: Should call POST on /live endpoint (without /*) with JSON body containing paths: ["/*"]
-            // Note: The /* wildcard goes in the JSON body, NOT the URL path
+            // Then: Should call POST on /live endpoint with /* suffix for bulk operation
+            // The /* in URL triggers async processing (returns 202), paths in body specify what to process
             expect(mockFetch).toHaveBeenCalledWith(
-                'https://admin.hlx.page/live/testuser/my-site/main',
+                'https://admin.hlx.page/live/testuser/my-site/main/*',
                 expect.objectContaining({
                     method: 'POST',
                     headers: expect.objectContaining({
@@ -309,7 +309,7 @@ describe('HelixService', () => {
                         'Content-Type': 'application/json',
                     }),
                     body: JSON.stringify({
-                        paths: ['/*'],
+                        paths: ['/'],
                         forceUpdate: true,
                     }),
                 }),
@@ -377,15 +377,28 @@ describe('HelixService', () => {
             const calls = mockFetch.mock.calls;
             expect(calls.every((c: any[]) => c[0].includes('github-owner/github-repo'))).toBe(true);
 
-            // Verify bulk preview call has correct JSON body
+            // Verify bulk preview call has correct URL (with /*) and JSON body with discovered paths
             const bulkPreviewCall = calls[1];
-            expect(bulkPreviewCall[0]).toContain('/preview/github-owner/github-repo/main');
-            expect(JSON.parse(bulkPreviewCall[1].body)).toEqual({ paths: ['/*'], forceUpdate: true });
+            expect(bulkPreviewCall[0]).toContain('/preview/github-owner/github-repo/main/*');
+            // The paths should be the discovered pages from DA.live (index->/, about->/about, nav->/nav, products/index->/products)
+            const previewBody = JSON.parse(bulkPreviewCall[1].body);
+            expect(previewBody.forceUpdate).toBe(true);
+            expect(previewBody.paths).toContain('/');
+            expect(previewBody.paths).toContain('/about');
+            expect(previewBody.paths).toContain('/nav');
+            expect(previewBody.paths).toContain('/products');
+            expect(previewBody.paths.length).toBe(4);
 
-            // Verify bulk publish call has correct JSON body
+            // Verify bulk publish call has correct URL (with /*) and JSON body with discovered paths
             const bulkPublishCall = calls[3];
-            expect(bulkPublishCall[0]).toContain('/live/github-owner/github-repo/main');
-            expect(JSON.parse(bulkPublishCall[1].body)).toEqual({ paths: ['/*'], forceUpdate: true });
+            expect(bulkPublishCall[0]).toContain('/live/github-owner/github-repo/main/*');
+            const publishBody = JSON.parse(bulkPublishCall[1].body);
+            expect(publishBody.forceUpdate).toBe(true);
+            expect(publishBody.paths).toContain('/');
+            expect(publishBody.paths).toContain('/about');
+            expect(publishBody.paths).toContain('/nav');
+            expect(publishBody.paths).toContain('/products');
+            expect(publishBody.paths.length).toBe(4);
         });
 
         it('should fall back to GitHub org/site if DA.live org/site not provided', async () => {

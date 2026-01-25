@@ -234,7 +234,8 @@ export class HelixService {
         onProgress?: BulkProgressCallback,
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
-        const url = `${HELIX_ADMIN_URL}/${topic}/${org}/${site}/${branch}/jobs/${topic}/${jobName}`;
+        // Job status URL format: GET /job/{org}/{site}/{ref}/{topic}/{jobId}
+        const url = `${HELIX_ADMIN_URL}/job/${org}/${site}/${branch}/${topic}/${jobName}`;
         const startTime = Date.now();
 
         this.logger.debug(`[Helix] Polling job status: ${url}`);
@@ -266,23 +267,24 @@ export class HelixService {
 
                 const status: JobStatusResponse = await response.json();
 
+
                 // Report progress if available
                 if (status.progress && onProgress) {
                     onProgress(status.progress.processed, status.progress.total);
                 }
 
-                // Check job state
-                if (status.state === 'stopped') {
+                // Check job state - handle both 'stopped' and 'finished' states
+                if (status.state === 'stopped' || (status as any).state === 'finished' || (status as any).status === 'finished') {
                     // Job completed
-                    if (status.error) {
-                        throw new Error(`Bulk ${topic} job failed: ${status.error}`);
+                    if (status.error || (status as any).error) {
+                        throw new Error(`Bulk ${topic} job failed: ${status.error || (status as any).error}`);
                     }
                     this.logger.debug(`[Helix] Bulk ${topic} job completed successfully`);
                     return;
                 }
 
                 // Job still running, wait and poll again
-                this.logger.debug(`[Helix] Job state: ${status.state}, progress: ${status.progress?.processed ?? '?'}/${status.progress?.total ?? '?'}`);
+                this.logger.debug(`[Helix] Job state: ${status.state || (status as any).status}, progress: ${status.progress?.processed ?? (status as any).processed ?? '?'}/${status.progress?.total ?? (status as any).total ?? '?'}`);
                 await new Promise(resolve => setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS));
             } catch (error) {
                 const errorMessage = (error as Error).message;
@@ -433,13 +435,14 @@ export class HelixService {
      *
      * The bulk API requires:
      * - Content-Type: application/json header
-     * - JSON body with paths array (e.g., ["/*"] for recursive)
+     * - JSON body with paths array
      * - Optional forceUpdate flag
      *
      * @param org - Organization/owner name
      * @param site - Site/repository name
      * @param branch - Branch name (default: main)
      * @param onProgress - Optional callback for progress updates (processed, total)
+     * @param paths - Optional explicit list of paths to preview (if not provided, uses "/" which only processes root)
      * @see https://www.aem.live/docs/admin.html
      */
     async previewAllContent(
@@ -447,17 +450,21 @@ export class HelixService {
         site: string,
         branch: string = DEFAULT_BRANCH,
         onProgress?: BulkProgressCallback,
+        paths?: string[],
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
         const imsToken = await this.getDaLiveToken();
-        // Bulk API: POST to /preview/{org}/{site}/{ref} without /* in URL path
-        // The /* goes in the paths array in the JSON body
-        const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}`;
+        // Bulk API: POST to /preview/{org}/{site}/{ref}/*
+        // The /* in the URL triggers bulk/async processing (returns 202)
+        // The paths array in the body specifies what to process
+        const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}/*`;
 
-        this.logger.debug(`[Helix] Previewing all content (bulk): ${url}`);
+        // Use explicit paths if provided, otherwise default to root
+        const pathsToProcess = paths && paths.length > 0 ? paths : ['/'];
+
+        this.logger.debug(`[Helix] Previewing all content (bulk): ${url} - ${pathsToProcess.length} paths`);
 
         // Bulk API requires JSON body with paths array
-        // Using "/*" to recursively preview all content
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -466,7 +473,7 @@ export class HelixService {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                paths: ['/*'],
+                paths: pathsToProcess,
                 forceUpdate: true,
             }),
             signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
@@ -478,6 +485,18 @@ export class HelixService {
 
         if (response.status === 403) {
             throw new Error('Access denied. You do not have permission to preview this content.');
+        }
+
+        // 400 = Bad request - log details for debugging
+        if (response.status === 400) {
+            let errorBody: string | undefined;
+            try {
+                errorBody = await response.text();
+            } catch {
+                // Ignore parse errors
+            }
+            this.logger.error(`[Helix] Bulk preview returned 400 Bad Request. Response: ${errorBody || 'empty'}`);
+            throw new Error(`Failed to preview all content: 400 Bad Request - ${errorBody || 'Invalid request'}`);
         }
 
         // 202 = Bulk preview scheduled (async job created)
@@ -493,13 +512,17 @@ export class HelixService {
             }
 
             // If we have job info, poll for completion
-            if (jobInfo?.job?.name) {
+            // Handle both nested (job.name) and top-level (name) response formats
+            const jobName = jobInfo?.job?.name || (jobInfo as any)?.name;
+            const jobTopic = jobInfo?.job?.topic || (jobInfo as any)?.topic || 'preview';
+
+            if (jobName) {
                 await this.pollJobCompletion(
                     org,
                     site,
                     branch,
-                    jobInfo.job.name,
-                    'preview',
+                    jobName,
+                    jobTopic,
                     onProgress,
                 );
             } else {
@@ -510,7 +533,17 @@ export class HelixService {
         }
 
         if (response.ok) {
-            this.logger.debug('[Helix] Bulk preview completed synchronously');
+            // 200 OK is unexpected for bulk operations - should be 202
+            // Log the response body for debugging
+            let responseBody: string | undefined;
+            try {
+                responseBody = await response.text();
+            } catch {
+                // Ignore parse errors
+            }
+            this.logger.warn(
+                `[Helix] Bulk preview returned 200 (expected 202). This may indicate the bulk operation was not processed correctly. Response: ${responseBody?.substring(0, 500) || 'empty'}`
+            );
             return;
         }
 
@@ -531,6 +564,7 @@ export class HelixService {
      * @param site - Site/repository name
      * @param branch - Branch name (default: main)
      * @param onProgress - Optional callback for progress updates (processed, total)
+     * @param paths - Optional explicit list of paths to publish (if not provided, uses "/" which only processes root)
      * @see https://www.aem.live/docs/admin.html
      */
     async publishAllContent(
@@ -538,17 +572,21 @@ export class HelixService {
         site: string,
         branch: string = DEFAULT_BRANCH,
         onProgress?: BulkProgressCallback,
+        paths?: string[],
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
         const imsToken = await this.getDaLiveToken();
-        // Bulk API: POST to /live/{org}/{site}/{ref} without /* in URL path
-        // The /* goes in the paths array in the JSON body
-        const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}`;
+        // Bulk API: POST to /live/{org}/{site}/{ref}/*
+        // The /* in the URL triggers bulk/async processing (returns 202)
+        // The paths array in the body specifies what to process
+        const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}/*`;
 
-        this.logger.debug(`[Helix] Publishing all content (bulk): ${url}`);
+        // Use explicit paths if provided, otherwise default to root
+        const pathsToProcess = paths && paths.length > 0 ? paths : ['/'];
+
+        this.logger.debug(`[Helix] Publishing all content (bulk): ${url} - ${pathsToProcess.length} paths`);
 
         // Bulk API requires JSON body with paths array
-        // Using "/*" to recursively publish all content
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -557,7 +595,7 @@ export class HelixService {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                paths: ['/*'],
+                paths: pathsToProcess,
                 forceUpdate: true,
             }),
             signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
@@ -569,6 +607,18 @@ export class HelixService {
 
         if (response.status === 403) {
             throw new Error('Access denied. You do not have permission to publish this content.');
+        }
+
+        // 400 = Bad request - log details for debugging
+        if (response.status === 400) {
+            let errorBody: string | undefined;
+            try {
+                errorBody = await response.text();
+            } catch {
+                // Ignore parse errors
+            }
+            this.logger.error(`[Helix] Bulk publish returned 400 Bad Request. Response: ${errorBody || 'empty'}`);
+            throw new Error(`Failed to publish all content: 400 Bad Request - ${errorBody || 'Invalid request'}`);
         }
 
         // 202 = Bulk publish scheduled (async job created)
@@ -584,13 +634,17 @@ export class HelixService {
             }
 
             // If we have job info, poll for completion
-            if (jobInfo?.job?.name) {
+            // Handle both nested (job.name) and top-level (name) response formats
+            const jobName = jobInfo?.job?.name || (jobInfo as any)?.name;
+            const jobTopic = jobInfo?.job?.topic || (jobInfo as any)?.topic || 'live';
+
+            if (jobName) {
                 await this.pollJobCompletion(
                     org,
                     site,
                     branch,
-                    jobInfo.job.name,
-                    'live',
+                    jobName,
+                    jobTopic,
                     onProgress,
                 );
             } else {
@@ -601,7 +655,17 @@ export class HelixService {
         }
 
         if (response.ok) {
-            this.logger.debug('[Helix] Bulk publish completed synchronously');
+            // 200 OK is unexpected for bulk operations - should be 202
+            // Log the response body for debugging
+            let responseBody: string | undefined;
+            try {
+                responseBody = await response.text();
+            } catch {
+                // Ignore parse errors
+            }
+            this.logger.warn(
+                `[Helix] Bulk publish returned 200 (expected 202). This may indicate the bulk operation was not processed correctly. Response: ${responseBody?.substring(0, 500) || 'empty'}`
+            );
             return;
         }
 
@@ -649,18 +713,14 @@ export class HelixService {
 
         try {
             const entries = await this.daLiveOps.listDirectory(org, site, path);
-            this.logger.debug(`[Helix] Listed ${entries.length} entries at ${path}`);
 
             for (const entry of entries) {
-                this.logger.debug(`[Helix] Entry: ${entry.name} (ext: ${entry.ext || 'folder'}) path: ${entry.path}`);
-
                 // Determine if it's a folder (no ext field) or file (has ext field)
                 const isFolder = !entry.ext;
 
                 if (isFolder) {
                     // Skip excluded folders
                     if (HelixService.EXCLUDED_FOLDERS.includes(entry.name)) {
-                        this.logger.debug(`[Helix] Skipping excluded folder: ${entry.name}`);
                         continue;
                     }
 
@@ -672,13 +732,11 @@ export class HelixService {
                 } else {
                     // It's a file - check if it's publishable HTML content
                     if (entry.ext !== 'html') {
-                        this.logger.debug(`[Helix] Skipping non-HTML file: ${entry.name}.${entry.ext}`);
                         continue;
                     }
 
                     // Skip excluded names
                     if (HelixService.EXCLUDED_NAMES.includes(entry.name)) {
-                        this.logger.debug(`[Helix] Skipping excluded file: ${entry.name}`);
                         continue;
                     }
 
@@ -686,7 +744,6 @@ export class HelixService {
                     // entry.path is like /org/site/accessories.html
                     // We need /accessories (strip prefix and .html)
                     const webPath = this.daLivePathToWebPath(entry.path, pathPrefix);
-                    this.logger.debug(`[Helix] Adding page: ${entry.path} -> ${webPath}`);
                     pages.push(webPath);
                 }
             }
@@ -839,6 +896,7 @@ export class HelixService {
                     total: pages.length,
                 });
             },
+            pages, // Pass the discovered pages explicitly
         );
 
         this.logger.info('[Helix] Bulk preview completed');
@@ -863,6 +921,7 @@ export class HelixService {
                     total: pages.length,
                 });
             },
+            pages, // Pass the discovered pages explicitly
         );
 
         this.logger.info(`[Helix] Successfully published ${pages.length} pages using bulk API`);
@@ -1140,6 +1199,62 @@ export class HelixService {
         }
 
         return result;
+    }
+
+    // ==========================================================
+    // Code Preview Operations
+    // ==========================================================
+
+    /**
+     * Preview a code file (sync from GitHub to CDN)
+     *
+     * This triggers the Helix Admin to fetch code from GitHub
+     * and make it available on the CDN. Used for config files
+     * like config.json that need to be refreshed after updates.
+     *
+     * Unlike content preview, code preview only requires GitHub auth
+     * (no DA.live token needed since code comes from GitHub).
+     *
+     * @param org - Organization/owner name
+     * @param site - Site/repository name
+     * @param path - File path (e.g., '/config.json')
+     * @param branch - Branch name (default: main)
+     * @throws Error on access denied (403) or network error
+     */
+    async previewCode(
+        org: string,
+        site: string,
+        path: string = '/*',
+        branch: string = DEFAULT_BRANCH,
+    ): Promise<void> {
+        const githubToken = await this.getGitHubToken();
+        // Normalize path - ensure it starts with /
+        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+        const url = `${HELIX_ADMIN_URL}/code/${org}/${site}/${branch}${normalizedPath}`;
+
+        this.logger.debug(`[Helix] Previewing code: ${url}`);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'x-auth-token': githubToken,
+            },
+            signal: AbortSignal.timeout(TIMEOUTS.LONG),
+        });
+
+        if (response.status === 401) {
+            throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
+        }
+
+        if (response.status === 403) {
+            throw new Error('Access denied. You do not have permission to preview this code.');
+        }
+
+        if (!response.ok) {
+            throw new Error(`Failed to preview code: ${response.status} ${response.statusText}`);
+        }
+
+        this.logger.debug(`[Helix] Successfully previewed code: ${normalizedPath}`);
     }
 
     // ==========================================================
