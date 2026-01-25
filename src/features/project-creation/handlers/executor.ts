@@ -407,6 +407,17 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         },
     };
 
+    // Debug logging for mesh deployment decision context (helps diagnose edit mode issues)
+    context.logger.debug(`[Mesh Setup] Decision context:`);
+    context.logger.debug(`  - isEditMode: ${isEditMode}`);
+    context.logger.debug(`  - existingProject?.meshState?.endpoint: ${existingProject?.meshState?.endpoint}`);
+    context.logger.debug(`  - typedConfig.apiMesh: ${JSON.stringify(typedConfig.apiMesh)}`);
+    context.logger.debug(`  - meshComponent?.path: ${meshComponent?.path}`);
+    context.logger.debug(`  - meshComponent?.endpoint: ${meshComponent?.endpoint}`);
+    context.logger.debug(`  - meshId: ${meshId}`);
+    context.logger.debug(`  - meshDefinition: ${meshDefinition ? 'found' : 'NOT FOUND'}`);
+    context.logger.debug(`  - shouldConfigureExistingMesh result: ${shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint)}`);
+
     // Check for same-workspace import FIRST - if user imported settings from same workspace,
     // the mesh already exists there, so we can skip deployment entirely
     const isSameWorkspaceImport = typedConfig.importedWorkspaceId &&
