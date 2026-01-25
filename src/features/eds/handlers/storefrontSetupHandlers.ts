@@ -840,6 +840,43 @@ async function executeStorefrontSetupPhases(
         await context.sendMessage('storefront-setup-progress', {
             phase: 'code-sync',
             message: 'Code synchronized',
+            progress: 42,
+        });
+
+        // ============================================
+        // Phase 3b: Publish Code to CDN
+        // ============================================
+        // Code sync only makes code accessible via admin.hlx.page/code
+        // We need to POST to actually publish code to the CDN (aem.live)
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'code-publish',
+            message: 'Publishing code to CDN...',
+            progress: 43,
+        });
+
+        try {
+            // Create HelixService for code preview (only needs GitHub token)
+            // DA.live token not needed for code operations but we provide it for consistency
+            const daLiveAuthService = new DaLiveAuthService(context.context);
+            const daLiveTokenProvider = {
+                getAccessToken: async () => {
+                    return await daLiveAuthService.getAccessToken();
+                },
+            };
+            const helixServiceForCode = new HelixService(context.authManager!, logger, githubTokenService, daLiveTokenProvider);
+
+            // Preview all code files (/* wildcard) to publish to CDN
+            await helixServiceForCode.previewCode(repoOwner, repoName, '/*', 'main');
+
+            logger.info('[Storefront Setup] Code published to CDN');
+        } catch (error) {
+            // Code preview failure is not fatal - site may still work, just with stale code
+            logger.warn(`[Storefront Setup] Code preview warning: ${(error as Error).message}`);
+        }
+
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'code-sync',
+            message: 'Code synchronized',
             progress: 45,
         });
 
