@@ -609,10 +609,14 @@ export class DaLiveContentOperations {
         destSite: string,
         progressCallback?: DaLiveProgressCallback,
     ): Promise<DaLiveCopyResult> {
+        // Report initialization progress
+        progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Fetching content index...' });
+
         const token = await this.getImsToken();
 
         // Get content paths from index
         const contentPaths = await this.getContentPathsFromIndex(source);
+        progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Checking configurations...' });
 
         // Add essential root-level spreadsheets that may not be in the content index
         // These are stored as .xlsx in DA.live and served as .json on CDN

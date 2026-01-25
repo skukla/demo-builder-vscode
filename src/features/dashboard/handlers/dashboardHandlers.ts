@@ -891,9 +891,11 @@ export const handleResetEds: MessageHandler = async (context) => {
 
                 context.logger.info(`[Dashboard] Copying content from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
 
-                // Progress callback to show per-file progress
-                const onContentProgress = (info: { processed: number; total: number; currentFile?: string }) => {
-                    progress.report({ message: `Step 4/5: Copying content (${info.processed}/${info.total})` });
+                // Progress callback to show per-file progress (with support for init messages)
+                const onContentProgress = (info: { processed: number; total: number; currentFile?: string; message?: string }) => {
+                    // Use custom message if provided (during initialization), otherwise show file count
+                    const statusMessage = info.message || `Copying content (${info.processed}/${info.total})`;
+                    progress.report({ message: `Step 4/5: ${statusMessage}` });
                 };
 
                 const contentResult = await daLiveContentOps.copyContentFromSource(

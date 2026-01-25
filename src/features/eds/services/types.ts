@@ -202,6 +202,8 @@ export type DaLiveProgressCallback = (progress: {
     total: number;
     /** Progress percentage (0-100) */
     percentage: number;
+    /** Optional status message for initialization phases */
+    message?: string;
 }) => void;
 
 /**

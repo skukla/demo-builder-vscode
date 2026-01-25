@@ -915,9 +915,11 @@ async function executeStorefrontSetupPhases(
                 (progress) => {
                     // Scale progress from 50% to 60% during content copy
                     const progressValue = 50 + Math.round(progress.percentage * 0.10);
+                    // Use custom message if provided (during initialization), otherwise show file count
+                    const statusMessage = progress.message || `Copying content (${progress.processed}/${progress.total})`;
                     context.sendMessage('storefront-setup-progress', {
                         phase: 'content-copy',
-                        message: `Copying content (${progress.processed}/${progress.total})`,
+                        message: statusMessage,
                         subMessage: progress.currentFile,
                         progress: progressValue,
                     });
