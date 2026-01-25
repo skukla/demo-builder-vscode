@@ -27,6 +27,8 @@ interface CheckGitHubAppResponse {
     codeStatus?: number;
     installUrl?: string;
     error?: string;
+    /** Index signature for HandlerResponse compatibility */
+    [key: string]: unknown;
 }
 
 export async function checkGitHubApp(
@@ -63,16 +65,16 @@ export async function checkGitHubApp(
 
         context.logger.debug(`[GitHub App Check] ${request.owner}/${request.repo}: installed=${result.isInstalled}, codeStatus=${result.codeStatus}`);
 
-        return { success: true, data: response };
+        // Return response directly (not wrapped in { data }) so UI can access fields directly
+        return response;
     } catch (error) {
         context.logger.error('[GitHub App Check] Failed', error as Error);
-        
-        const response: CheckGitHubAppResponse = {
+
+        // Return error response directly
+        return {
             success: false,
             isInstalled: false,
             error: (error as Error).message,
         };
-
-        return { success: true, data: response };
     }
 }
