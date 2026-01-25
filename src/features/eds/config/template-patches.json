@@ -11,6 +11,11 @@
             "id": "aem-assets-sku-sanitization",
             "filePath": "scripts/__dropins__/tools/lib/aem/assets.js",
             "description": "Auto-sanitizes SKU aliases in AEM Assets URL generation. Product SKUs containing forward slashes (e.g., 'apple-iphone-se/iphone-se') create invalid URLs. This patch modifies makeAemAssetsImageSlot to replace slashes with dashes automatically, eliminating the need to patch 16+ individual block files."
+        },
+        {
+            "id": "product-link-sku-encoding",
+            "filePath": "scripts/commerce.js",
+            "description": "URL-encodes SKUs in product links to handle special characters. Product SKUs containing forward slashes create invalid URLs with extra path segments, causing 404 errors. This patch modifies getProductLink to URL-encode SKUs and getSkuFromUrl to decode them."
         }
     ]
 }
