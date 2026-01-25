@@ -386,7 +386,7 @@ describe('handleResetEds', () => {
 
         // And: Should show auto-dismissing success notification
         expect(vscode.window.withProgress).toHaveBeenCalledWith(
-            { location: vscode.ProgressLocation.Notification, title: '✓ "test-eds-project" reset successfully!' },
+            { location: vscode.ProgressLocation.Notification, title: '"test-eds-project" reset successfully' },
             expect.any(Function),
         );
     });
