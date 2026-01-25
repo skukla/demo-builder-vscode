@@ -179,38 +179,22 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         setCanProceed(isProjectNameValid && isPackageStackValid);
     }, [state.projectName, state.selectedPackage, state.selectedStack, setCanProceed, validateProjectName, hasPackages, hasStacks]);
 
-    // Edit/Import mode: Populate EDS template config from package if missing
-    // This handles cases where:
-    // 1. Editing an existing project that was created before metadata was saved properly
-    // 2. Importing settings that don't have template info
-    // The template info (templateOwner, templateRepo, contentSource) comes from the
-    // static package config and doesn't need to be stored per-project.
+    // Derive EDS template config from package (source of truth)
+    // Template info (templateOwner, templateRepo, contentSource, patches) is determined
+    // by brand + stack combination, not stored per-project.
     useEffect(() => {
         // Skip if not an EDS stack
         if (!state.selectedStack?.startsWith('eds-')) return;
 
-        // Skip if already have template info
-        if (state.edsConfig?.templateOwner && state.edsConfig?.templateRepo) return;
-
         // Skip if no package selected or packages not loaded yet
-        // Note: packages starts as [] and loads async, so check length
         if (!state.selectedPackage || !packages || packages.length === 0) return;
 
-        // Look up template info from package config
+        // Look up storefront config from package
         const pkg = packages.find(p => p.id === state.selectedPackage);
         const storefront = pkg?.storefronts?.[state.selectedStack];
+        if (!storefront) return;
 
-        // Skip if package doesn't have storefront config for this stack
-        if (!storefront?.templateOwner || !storefront?.templateRepo) return;
-
-        // eslint-disable-next-line no-console
-        console.log('[WelcomeStep] Populating EDS template config from package:', {
-            templateOwner: storefront.templateOwner,
-            templateRepo: storefront.templateRepo,
-            hasContentSource: !!storefront.contentSource,
-        });
-
-        // Populate the missing template info
+        // Always set template config from storefront (source of truth)
         updateState({
             edsConfig: {
                 ...state.edsConfig,
@@ -223,9 +207,10 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 templateOwner: storefront.templateOwner,
                 templateRepo: storefront.templateRepo,
                 contentSource: storefront.contentSource,
+                patches: storefront.patches,
             },
         });
-    }, [state.selectedStack, state.selectedPackage, state.edsConfig?.templateOwner, state.edsConfig?.templateRepo, packages, updateState, state.edsConfig]);
+    }, [state.selectedStack, state.selectedPackage, packages, updateState, state.edsConfig]);
 
     // Project Name Input - shared between both layouts
     const projectNameField = (

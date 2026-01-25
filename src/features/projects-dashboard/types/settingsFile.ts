@@ -52,19 +52,11 @@ export interface SettingsSource {
 
 /**
  * EDS (Edge Delivery Services) configuration
- * Extracted from project's eds-storefront component metadata
+ * Contains project-specific EDS settings (user's repos/sites).
+ * Note: templateOwner, templateRepo, contentSource, patches are derived from
+ * selectedPackage + selectedStack via demo-packages.json, not stored per-project.
  */
 export interface SettingsEdsConfig {
-    /** GitHub owner of the template repository (for reset-to-template operations) */
-    templateOwner?: string;
-    /** GitHub repository name of the template (for reset-to-template operations) */
-    templateRepo?: string;
-    /** DA.live content source configuration (explicit, not derived from GitHub URL) */
-    contentSource?: {
-        org: string;
-        site: string;
-        indexPath?: string;
-    };
     /** DA.live organization name (user's org) */
     daLiveOrg?: string;
     /** DA.live site name (user's site) */
@@ -73,8 +65,8 @@ export interface SettingsEdsConfig {
     githubOwner?: string;
     /** GitHub repository name (user's repo) */
     repoName?: string;
-    /** Array of patch IDs to apply during reset (from demo-packages.json) */
-    patches?: string[];
+    /** Full GitHub repository URL (e.g., https://github.com/owner/repo) */
+    repoUrl?: string;
 }
 
 /**

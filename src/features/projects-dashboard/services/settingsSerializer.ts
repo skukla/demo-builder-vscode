@@ -106,15 +106,15 @@ export function extractSettingsFromProject(
         const metadata = edsStorefront.metadata as Record<string, unknown>;
         // Parse "owner/repo" format from githubRepo metadata
         const githubRepoParts = metadata.githubRepo?.toString().split('/');
+
+        // Only include project-specific EDS fields
+        // templateOwner, templateRepo, contentSource, patches are derived from brand+stack
         edsConfig = {
-            templateOwner: metadata.templateOwner as string | undefined,
-            templateRepo: metadata.templateRepo as string | undefined,
-            contentSource: metadata.contentSource as SettingsEdsConfig['contentSource'],
             daLiveOrg: metadata.daLiveOrg as string | undefined,
             daLiveSite: metadata.daLiveSite as string | undefined,
             githubOwner: githubRepoParts?.[0], // Extract owner from "owner/repo"
             repoName: githubRepoParts?.[1], // Extract repo name from "owner/repo"
-            patches: metadata.patches as string[] | undefined,
+            repoUrl: metadata.repoUrl as string | undefined,
         };
     }
 
