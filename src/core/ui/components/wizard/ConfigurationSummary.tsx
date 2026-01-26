@@ -22,7 +22,7 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
         'adobe-workspace',
         'settings',
         'review',
-        'project-creation',
+        'deploy-mesh',
     ];
 
     const getCurrentStepIndex = () => {

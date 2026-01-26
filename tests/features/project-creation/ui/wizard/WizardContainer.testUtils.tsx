@@ -30,10 +30,9 @@ export const createMockWizardSteps = () => [
     { id: 'adobe-workspace', name: 'Adobe Workspace', enabled: true },
     { id: 'component-selection', name: 'Component Selection', enabled: true },
     { id: 'prerequisites', name: 'Prerequisites', enabled: true },
-    { id: 'api-mesh', name: 'API Mesh', enabled: false },  // Disabled: mesh deploys in project-creation
     { id: 'settings', name: 'Settings', enabled: true },
     { id: 'review', name: 'Review', enabled: true },
-    { id: 'project-creation', name: 'Creating Project', enabled: true },
+    { id: 'deploy-mesh', name: 'Deploy Mesh', enabled: true },
 ];
 
 /**
