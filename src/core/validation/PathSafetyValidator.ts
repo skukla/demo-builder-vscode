@@ -7,6 +7,7 @@
  * - Access outside allowed directories
  */
 
+import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { sanitizeErrorForLogging } from './SensitiveDataRedactor';
@@ -22,11 +23,9 @@ export async function validatePathSafety(
     targetPath: string,
     expectedParent?: string,
 ): Promise<{ safe: boolean; reason?: string }> {
-    const fs = await import('fs/promises');
-
     try {
         // Check if path exists
-        const stats = await fs.lstat(targetPath);
+        const stats = await fsPromises.lstat(targetPath);
 
         // Check if it's a symlink
         if (stats.isSymbolicLink()) {

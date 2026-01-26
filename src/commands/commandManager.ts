@@ -1,3 +1,5 @@
+import * as fsPromises from 'fs/promises';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
@@ -261,18 +263,15 @@ export class CommandManager {
                 await vscode.commands.executeCommand('revealInExplorer', componentUri);
 
                 // Try to open README.md or package.json for quick reference
-                const fs = await import('fs/promises');
-                const path = await import('path');
-
                 try {
                     const readmePath = path.join(component.path, 'README.md');
-                    await fs.access(readmePath);
+                    await fsPromises.access(readmePath);
                     await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(readmePath));
                 } catch {
                     // No README, try package.json
                     try {
                         const packagePath = path.join(component.path, 'package.json');
-                        await fs.access(packagePath);
+                        await fsPromises.access(packagePath);
                         await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(packagePath));
                     } catch {
                         // No package.json either, just reveal the folder

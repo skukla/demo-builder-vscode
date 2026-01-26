@@ -6,6 +6,8 @@
  * Phase 2: Install npm dependencies for all components
  */
 
+import * as fsPromises from 'fs/promises';
+import * as path from 'path';
 import { ProgressTracker } from '../handlers/shared';
 import type { Project, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
@@ -46,14 +48,11 @@ export async function cloneAllComponents(
     progressTracker('Downloading Components', 25, 'Cloning repositories...');
     logger.debug('[Project Creation] Phase 1: Downloading components...');
 
-    const path = await import('path');
-    const fs = await import('fs/promises');
-
     // Determine target directory: use override if provided (edit mode), otherwise default
     const targetComponentsDir = componentsDir || path.join(project.path, 'components');
 
     // Ensure target directory exists
-    await fs.mkdir(targetComponentsDir, { recursive: true });
+    await fsPromises.mkdir(targetComponentsDir, { recursive: true });
 
     if (componentsDir) {
         logger.debug(`[Project Creation] Using custom components directory: ${componentsDir}`);

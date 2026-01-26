@@ -9,6 +9,9 @@
  * - cancel-auth-polling: User cancels authentication
  */
 
+import * as fsPromises from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { validateProjectPath, validateURL } from '@/core/validation';
@@ -124,15 +127,11 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
 
         // Set flag to reopen dashboard after Extension Host restart
         try {
-            const os = await import('os');
-            const path = await import('path');
-            const fs = await import('fs/promises');
-
             const demoBuilderDir = path.join(os.homedir(), '.demo-builder');
-            await fs.mkdir(demoBuilderDir, { recursive: true });
+            await fsPromises.mkdir(demoBuilderDir, { recursive: true });
 
             const flagFile = path.join(demoBuilderDir, '.open-dashboard-after-restart');
-            await fs.writeFile(flagFile, JSON.stringify({
+            await fsPromises.writeFile(flagFile, JSON.stringify({
                 projectName: project.name,
                 projectPath: project.path,
                 timestamp: Date.now(),
@@ -314,10 +313,6 @@ export async function handleOpenExternal(
     try {
         // Handle data URLs by writing to temp file
         if (url.startsWith('data:')) {
-            const os = await import('os');
-            const path = await import('path');
-            const fs = await import('fs/promises');
-
             // Extract content from data URL
             const match = url.match(/^data:([^;]+);([^,]+),(.*)$/);
             if (!match) {
@@ -333,7 +328,7 @@ export async function handleOpenExternal(
             // Write to temp file
             const ext = mimeType.includes('html') ? '.html' : '.txt';
             const tempFile = path.join(os.tmpdir(), `demo-builder-setup${ext}`);
-            await fs.writeFile(tempFile, content, 'utf-8');
+            await fsPromises.writeFile(tempFile, content, 'utf-8');
 
             context.logger.info('[OpenExternal] Wrote data URL to temp file:', tempFile);
             await vscode.env.openExternal(vscode.Uri.file(tempFile));

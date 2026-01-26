@@ -1,3 +1,4 @@
+import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
@@ -315,7 +316,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
                 const envLocalPath = path.join(componentPath, '.env.local');
 
                 // Check if files exist
-                const fsPromises = (await import('fs')).promises;
                 try {
                     await fsPromises.access(envPath);
                     envFiles.push(envPath);

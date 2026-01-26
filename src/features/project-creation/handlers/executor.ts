@@ -9,6 +9,8 @@
  */
 
 import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
@@ -158,16 +160,11 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // Safety check: Ensure port is available
     await handlePortConflicts(context, typedConfig, progressTracker);
 
-    // Import dependencies (use fsPromises to avoid shadowing sync fs import at top)
-    const fsPromises = await import('fs/promises');
-    const pathAsync = await import('path');
-    const osAsync = await import('os');
-
     // Determine project path based on edit mode
     const isEditMode = typedConfig.editMode && typedConfig.editProjectPath;
     const projectPath = isEditMode
         ? typedConfig.editProjectPath!
-        : pathAsync.join(osAsync.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
+        : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
 
     // Load existing project state if in edit mode (to preserve creation date)
     let existingProject: import('@/types').Project | undefined;
@@ -192,9 +189,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     progressTracker('Setting Up Project', 10, 'Creating project directory structure...');
 
-    const componentsDir = pathAsync.join(projectPath, 'components');
+    const componentsDir = path.join(projectPath, 'components');
     await fsPromises.mkdir(componentsDir, { recursive: true });
-    await fsPromises.mkdir(pathAsync.join(projectPath, 'logs'), { recursive: true });
+    await fsPromises.mkdir(path.join(projectPath, 'logs'), { recursive: true });
 
     context.logger.debug(`[Project Creation] Created directory: ${projectPath}`);
 
@@ -235,7 +232,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // metadata populated from runtime config (from preflight step).
 
     const isEdsStack = isEdsStackId(typedConfig.selectedStack);
-    const edsComponentPath = pathAsync.join(projectPath, 'components', COMPONENT_IDS.EDS_STOREFRONT);
+    const edsComponentPath = path.join(projectPath, 'components', COMPONENT_IDS.EDS_STOREFRONT);
 
     // ========================================================================
     // LOAD COMPONENT DEFINITIONS
@@ -264,7 +261,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     let tempComponentsDir: string | undefined;
 
     if (isEditMode) {
-        tempComponentsDir = pathAsync.join(projectPath, 'components.tmp');
+        tempComponentsDir = path.join(projectPath, 'components.tmp');
 
         // Clean up any stale temp directory from previous failed attempts
         const tempDirExists = await fsPromises.access(tempComponentsDir).then(() => true).catch(() => false);
@@ -324,14 +321,14 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             // Update component instance paths from .tmp to production
             // (paths were set during clone to point to components.tmp)
             // Use proper path reconstruction to avoid substring matching issues
-            const tempComponentsPath = pathAsync.join(projectPath, 'components.tmp');
-            const productionComponentsPath = pathAsync.join(projectPath, 'components');
+            const tempComponentsPath = path.join(projectPath, 'components.tmp');
+            const productionComponentsPath = path.join(projectPath, 'components');
 
             for (const [compId, instance] of Object.entries(project.componentInstances)) {
                 if (instance.path && instance.path.startsWith(tempComponentsPath)) {
-                    const relativePath = pathAsync.relative(tempComponentsPath, instance.path);
+                    const relativePath = path.relative(tempComponentsPath, instance.path);
                     const oldPath = instance.path;
-                    instance.path = pathAsync.join(productionComponentsPath, relativePath);
+                    instance.path = path.join(productionComponentsPath, relativePath);
                     context.logger.debug(`[Project Edit] Updated path for ${compId}: ${oldPath} → ${instance.path}`);
                 }
             }
@@ -805,38 +802,35 @@ async function swapComponentsDirectory(
     projectPath: string,
     logger: import('@/types/logger').Logger,
 ): Promise<void> {
-    const fs = await import('fs/promises');
-    const pathModule = await import('path');
-
-    const componentsDir = pathModule.join(projectPath, 'components');
-    const tempDir = pathModule.join(projectPath, 'components.tmp');
-    const backupDir = pathModule.join(projectPath, 'components.backup');
+    const componentsDir = path.join(projectPath, 'components');
+    const tempDir = path.join(projectPath, 'components.tmp');
+    const backupDir = path.join(projectPath, 'components.backup');
 
     logger.debug('[Project Edit] Starting atomic component swap');
 
     // Pre-flight: Clean up stale backup directory from previous failed attempts
-    const staleBackupExists = await fs.access(backupDir).then(() => true).catch(() => false);
+    const staleBackupExists = await fsPromises.access(backupDir).then(() => true).catch(() => false);
     if (staleBackupExists) {
         logger.warn('[Project Edit] Found stale backup directory from previous attempt, removing');
-        await fs.rm(backupDir, { recursive: true, force: true });
+        await fsPromises.rm(backupDir, { recursive: true, force: true });
     }
 
     try {
         // Step 1: Backup existing components (if they exist)
-        const componentsExist = await fs.access(componentsDir).then(() => true).catch(() => false);
+        const componentsExist = await fsPromises.access(componentsDir).then(() => true).catch(() => false);
         if (componentsExist) {
             logger.debug('[Project Edit] Backing up existing components');
-            await fs.rename(componentsDir, backupDir);
+            await fsPromises.rename(componentsDir, backupDir);
         }
 
         // Step 2: Promote temp to production (atomic rename)
         logger.debug('[Project Edit] Promoting temporary components to production');
-        await fs.rename(tempDir, componentsDir);
+        await fsPromises.rename(tempDir, componentsDir);
 
         // Step 3: Remove backup on success
         if (componentsExist) {
             logger.debug('[Project Edit] Removing backup components');
-            await fs.rm(backupDir, { recursive: true, force: true });
+            await fsPromises.rm(backupDir, { recursive: true, force: true });
         }
 
         logger.debug('[Project Edit] Component swap completed successfully');
@@ -844,13 +838,13 @@ async function swapComponentsDirectory(
         // Rollback: If rename failed and backup exists, restore it
         logger.error('[Project Edit] Component swap failed, attempting rollback', error as Error);
 
-        const backupExists = await fs.access(backupDir).then(() => true).catch(() => false);
-        const componentsExists = await fs.access(componentsDir).then(() => true).catch(() => false);
+        const backupExists = await fsPromises.access(backupDir).then(() => true).catch(() => false);
+        const componentsExists = await fsPromises.access(componentsDir).then(() => true).catch(() => false);
 
         // If backup exists and components doesn't, restore backup
         if (backupExists && !componentsExists) {
             try {
-                await fs.rename(backupDir, componentsDir);
+                await fsPromises.rename(backupDir, componentsDir);
                 logger.info('[Project Edit] Restored components from backup');
             } catch (restoreError) {
                 logger.error('[Project Edit] Failed to restore backup', restoreError as Error);
@@ -863,10 +857,10 @@ async function swapComponentsDirectory(
         }
 
         // Clean up temp dir if it still exists
-        const tempExists = await fs.access(tempDir).then(() => true).catch(() => false);
+        const tempExists = await fsPromises.access(tempDir).then(() => true).catch(() => false);
         if (tempExists) {
             try {
-                await fs.rm(tempDir, { recursive: true, force: true });
+                await fsPromises.rm(tempDir, { recursive: true, force: true });
                 logger.debug('[Project Edit] Cleaned up temporary directory');
             } catch (cleanupError) {
                 logger.warn('[Project Edit] Failed to clean up temporary directory', cleanupError as Error);
