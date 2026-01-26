@@ -158,10 +158,8 @@ function computeInitialState(
                 repoName: editSettings.edsConfig.repoName || '',
                 daLiveOrg: editSettings.edsConfig.daLiveOrg || '',
                 daLiveSite: editSettings.edsConfig.daLiveSite || '',
-                templateOwner: editSettings.edsConfig.templateOwner,
-                templateRepo: editSettings.edsConfig.templateRepo,
-                contentSource: editSettings.edsConfig.contentSource,
-                patches: editSettings.edsConfig.patches,
+                // Note: templateOwner, templateRepo, contentSource, patches are derived
+                // from brand+stack in WelcomeStep, not stored per-project
                 // Don't assume authenticated - let hooks validate tokens on step visit
                 // Set user/org from saved config so UI can display them while checking
                 githubAuth: (editSettings.edsConfig.githubOwner && editSettings.edsConfig.repoName) ? {
