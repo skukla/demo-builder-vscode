@@ -164,6 +164,31 @@ export async function deleteProject(
         context.logger.info(`[Delete Project] Cleanup summary:\n${summary}`);
     }
 
+    // Offer to enable auto-delete after successful external resource cleanup
+    // Only prompt if: (1) not already enabled, (2) haven't asked before, (3) actually deleted resources
+    if (isEds && cleanupResults.length > 0) {
+        const config = vscode.workspace.getConfiguration('demoBuilder');
+        const autoDeleteEnabled = config.get<boolean>('edsCleanup.autoDelete', false);
+        const promptShown = context.context.globalState.get<boolean>('edsCleanup.autoDeletePromptShown', false);
+        const deletedSomeResources = cleanupResults.some(r => r.success && (r.type === 'github' || r.type === 'daLive'));
+
+        if (!autoDeleteEnabled && !promptShown && deletedSomeResources) {
+            // Mark prompt as shown so we don't ask again
+            await context.context.globalState.update('edsCleanup.autoDeletePromptShown', true);
+
+            const selection = await vscode.window.showInformationMessage(
+                'Would you like to always delete external EDS resources automatically?',
+                'Yes, always delete',
+                'No, ask each time',
+            );
+
+            if (selection === 'Yes, always delete') {
+                await config.update('edsCleanup.autoDelete', true, vscode.ConfigurationTarget.Global);
+                context.logger.info('[Delete Project] Auto-delete preference saved');
+            }
+        }
+    }
+
     return {
         success: true,
         data: { success: true, projectName: project.name, cleanupResults },
@@ -279,7 +304,7 @@ async function showCleanupConfirmation(
         return { deleteGitHubRepo: false, deleteDaLiveSite: false };
     }
 
-    // Define buttons: [Delete Selected] [Skip & Delete Locally] [Always Delete All]
+    // Define buttons: [Delete Selected] [Skip & Delete Locally]
     const deleteSelectedButton: vscode.QuickInputButton = {
         iconPath: new vscode.ThemeIcon('trash'),
         tooltip: 'Delete Selected',
@@ -287,10 +312,6 @@ async function showCleanupConfirmation(
     const skipButton: vscode.QuickInputButton = {
         iconPath: new vscode.ThemeIcon('close'),
         tooltip: 'Skip & Delete Locally',
-    };
-    const alwaysDeleteAllButton: vscode.QuickInputButton = {
-        iconPath: new vscode.ThemeIcon('check-all'),
-        tooltip: 'Always Delete All (save preference)',
     };
 
     // Show QuickPick with cleanup options
@@ -301,13 +322,13 @@ async function showCleanupConfirmation(
     quickPick.ignoreFocusOut = true; // Prevent dismissal when webview takes focus
     quickPick.items = items;
     quickPick.selectedItems = items.filter(i => i.picked);
-    quickPick.buttons = [deleteSelectedButton, skipButton, alwaysDeleteAllButton];
+    quickPick.buttons = [deleteSelectedButton, skipButton];
 
     return new Promise<CleanupOptions | null>((resolve) => {
         let resolved = false;
 
         // Handle button clicks
-        quickPick.onDidTriggerButton(async (button) => {
+        quickPick.onDidTriggerButton((button) => {
             if (resolved) return;
             resolved = true;
             quickPick.hide();
@@ -315,16 +336,6 @@ async function showCleanupConfirmation(
             if (button === skipButton) {
                 // Skip cleanup, but still delete local project
                 resolve({ deleteGitHubRepo: false, deleteDaLiveSite: false });
-            } else if (button === alwaysDeleteAllButton) {
-                // Save preference and delete all available resources
-                await config.update('edsCleanup.autoDelete', true, vscode.ConfigurationTarget.Global);
-                resolve({
-                    deleteGitHubRepo: authStatus.gitHubAuthenticated && !!edsMetadata?.githubRepo,
-                    deleteDaLiveSite:
-                        authStatus.daLiveAuthenticated &&
-                        !!edsMetadata?.daLiveOrg &&
-                        !!edsMetadata?.daLiveSite,
-                });
             } else {
                 // Delete selected resources
                 const selected = quickPick.selectedItems;

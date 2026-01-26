@@ -25,6 +25,7 @@ import { DaLiveAuthService } from '../services/daLiveAuthService';
 import { HelixService } from '../services/helixService';
 import { ToolManager } from '../services/toolManager';
 import { generateFstabContent } from '../services/fstabGenerator';
+import { PollingService } from '@/core/shell/pollingService';
 
 // ==========================================================
 // Types
@@ -955,6 +956,69 @@ async function executeStorefrontSetupPhases(
                 phase: 'content-publish',
                 message: 'Content publish skipped',
                 progress: 90,
+            });
+        }
+
+        // ============================================
+        // Phase 6: Verify Frontend Availability
+        // ============================================
+        // Poll the live frontend URL to ensure the site is actually accessible
+        // before telling the user setup is complete
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'content-publish',
+            message: 'Verifying frontend availability...',
+            progress: 92,
+        });
+
+        const frontendUrl = `https://main--${repoName}--${repoOwner}.aem.live/`;
+        logger.info(`[Storefront Setup] Verifying frontend availability: ${frontendUrl}`);
+
+        const pollingService = new PollingService();
+        let frontendAvailable = false;
+
+        try {
+            await pollingService.pollUntilCondition(
+                async () => {
+                    const response = await fetch(frontendUrl, {
+                        method: 'GET',
+                        signal: AbortSignal.timeout(5000),
+                    });
+                    return response.ok;
+                },
+                {
+                    maxAttempts: 15,
+                    initialDelay: 2000,
+                    maxDelay: 2000,     // No backoff - keep constant 2s intervals
+                    backoffFactor: 1,   // No exponential backoff
+                    timeout: 35000,     // Overall timeout: 15 attempts * 2s + buffer
+                    name: `frontend-${repoOwner}/${repoName}`,
+                    abortSignal: signal,
+                },
+            );
+            frontendAvailable = true;
+            logger.info('[Storefront Setup] Frontend available');
+        } catch (error) {
+            // Check if operation was cancelled
+            if (signal.aborted) {
+                throw new Error('Operation cancelled');
+            }
+            // Timeout or max attempts - not fatal, site may take longer to load
+            logger.warn('[Storefront Setup] Frontend not yet available - site may take a moment to load');
+        }
+
+        if (frontendAvailable) {
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'content-publish',
+                message: 'Frontend verified!',
+                progress: 95,
+            });
+        } else {
+            // Frontend not available yet - warn but don't fail
+            // The CDN may take a bit longer to propagate
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'content-publish',
+                message: 'Site deployed (may take a moment to load)',
+                progress: 95,
             });
         }
 
