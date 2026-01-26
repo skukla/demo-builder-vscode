@@ -575,7 +575,7 @@ describe('wizardHelpers', () => {
 
         it('should return false when on last step', () => {
             expect(shouldShowWizardFooter(true, 'review', false)).toBe(false);
-            expect(shouldShowWizardFooter(true, 'project-creation', false)).toBe(false);
+            expect(shouldShowWizardFooter(true, 'deploy-mesh', false)).toBe(false);
         });
 
         it('should return false when on mesh-deployment step', () => {
@@ -744,8 +744,8 @@ describe('wizardHelpers', () => {
                 expect(isStepSatisfied('review', createEmptyState())).toBe(false);
             });
 
-            it('should return false for project-creation step', () => {
-                expect(isStepSatisfied('project-creation', createEmptyState())).toBe(false);
+            it('should return false for deploy-mesh step', () => {
+                expect(isStepSatisfied('deploy-mesh', createEmptyState())).toBe(false);
             });
         });
     });

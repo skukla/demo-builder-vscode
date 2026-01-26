@@ -67,7 +67,7 @@ describe('Storefront Setup Rename - Type Safety', () => {
             'eds-data-source',
             'settings',
             'review',
-            'project-creation',
+            'deploy-mesh',
             'storefront-setup', // New step ID
         ];
 
@@ -111,9 +111,9 @@ describe('Storefront Setup Rename - Step Configuration', () => {
         expect(storefrontIndex).toBeGreaterThan(reviewIndex);
     });
 
-    it('should place storefront-setup before project-creation step', () => {
+    it('should place storefront-setup before deploy-mesh step', () => {
         const storefrontIndex = wizardStepsConfig.steps.findIndex(s => s.id === 'storefront-setup');
-        const creationIndex = wizardStepsConfig.steps.findIndex(s => s.id === 'project-creation');
+        const creationIndex = wizardStepsConfig.steps.findIndex(s => s.id === 'deploy-mesh');
 
         expect(storefrontIndex).toBeGreaterThan(-1);
         expect(creationIndex).toBeGreaterThan(-1);

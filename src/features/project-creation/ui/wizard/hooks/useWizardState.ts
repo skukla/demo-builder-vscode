@@ -332,7 +332,7 @@ export function useWizardState({
         if (importedSettings && !editProject) {
             // Mark steps as completed only if they have data (satisfied)
             return WIZARD_STEPS
-                .filter(step => step.id !== 'project-creation' && step.id !== 'review')
+                .filter(step => step.id !== 'deploy-mesh' && step.id !== 'review')
                 .filter(step => isStepSatisfied(step.id, state))
                 .map(step => step.id);
         }
@@ -346,7 +346,7 @@ export function useWizardState({
         if (importedSettings && !editProject) {
             // Auto-confirm all satisfied steps (they have data)
             return WIZARD_STEPS
-                .filter(step => step.id !== 'project-creation' && step.id !== 'review')
+                .filter(step => step.id !== 'deploy-mesh' && step.id !== 'review')
                 .filter(step => isStepSatisfied(step.id, state))
                 .map(step => step.id);
         }
@@ -375,12 +375,12 @@ export function useWizardState({
 
         // Recalculate completed and confirmed steps now that WIZARD_STEPS includes EDS steps
         const newCompletedSteps = WIZARD_STEPS
-            .filter(step => step.id !== 'project-creation' && step.id !== 'review')
+            .filter(step => step.id !== 'deploy-mesh' && step.id !== 'review')
             .filter(step => isStepSatisfied(step.id, state))
             .map(step => step.id);
 
         const newConfirmedSteps = WIZARD_STEPS
-            .filter(step => step.id !== 'project-creation' && step.id !== 'review')
+            .filter(step => step.id !== 'deploy-mesh' && step.id !== 'review')
             .filter(step => isStepSatisfied(step.id, state))
             .map(step => step.id);
 
@@ -422,7 +422,6 @@ export function useWizardState({
                     const orgDependentSteps: WizardStep[] = [
                         'adobe-project',
                         'adobe-workspace',
-                        'api-mesh',
                         'settings',
                     ];
                     // Remove org-dependent steps that are no longer satisfied
@@ -437,7 +436,6 @@ export function useWizardState({
                     const orgDependentSteps: WizardStep[] = [
                         'adobe-project',
                         'adobe-workspace',
-                        'api-mesh',
                         'settings',
                     ];
                     const preserved = prev.filter(stepId => !orgDependentSteps.includes(stepId));

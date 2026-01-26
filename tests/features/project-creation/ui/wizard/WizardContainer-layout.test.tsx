@@ -139,12 +139,12 @@ describe('WizardContainer - Layout Components', () => {
             expect(continueButton).not.toBeDisabled();
         });
 
-        it('should hide footer on last step (project-creation)', async () => {
+        it('should hide footer on last step (deploy-mesh)', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            // Create steps that go directly to project-creation for testing
+            // Create steps that go directly to deploy-mesh for testing
             const minimalSteps = [
                 { id: 'review', name: 'Review', enabled: true },
-                { id: 'project-creation', name: 'Creating Project', enabled: true },
+                { id: 'deploy-mesh', name: 'Deploy Mesh', enabled: true },
             ];
 
             renderWithTheme(

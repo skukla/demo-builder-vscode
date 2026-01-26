@@ -37,7 +37,7 @@ describe('ProjectCreationStep', () => {
     const mockOnBack = jest.fn();
 
     const baseState: Partial<WizardState> = {
-        currentStep: 'project-creation',
+        currentStep: 'deploy-mesh',
         projectName: 'my-demo-project',
         projectTemplate: 'citisignal',
         creationProgress: {

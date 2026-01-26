@@ -31,8 +31,8 @@ export function useMessageListeners({
     useEffect(() => {
         const unsubscribe = vscode.onMessage('feedback', (message: FeedbackMessage) => {
             setState(prev => {
-                // Only update if in project-creation step with active progress
-                if (prev.currentStep !== 'project-creation' || !prev.creationProgress) {
+                // Only update if in deploy-mesh step with active progress
+                if (prev.currentStep !== 'deploy-mesh' || !prev.creationProgress) {
                     return prev;
                 }
 

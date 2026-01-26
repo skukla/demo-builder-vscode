@@ -120,7 +120,7 @@ describe('Storefront Setup Operations', () => {
 
             // This is a logical assertion - the actual URL test would be integration
             const siteAccessibleAfter = 'content-publish';
-            expect(siteAccessibleAfter).not.toBe('project-creation'); // Old behavior
+            expect(siteAccessibleAfter).not.toBe('deploy-mesh'); // Old behavior
             expect(siteAccessibleAfter).toBe('content-publish'); // New behavior
         });
     });
@@ -221,13 +221,13 @@ describe('Storefront Setup Operations', () => {
             expect(availableInStorefrontSetup).toBe(false);
         });
 
-        it('should have tools-clone run after project-creation', () => {
+        it('should have tools-clone run after deploy-mesh', () => {
             // Tools clone happens in executor after local project is created
             const toolsCloneLocation = 'executor';
-            const runsAfter = 'project-creation';
+            const runsAfter = 'deploy-mesh';
 
             expect(toolsCloneLocation).toBe('executor');
-            expect(runsAfter).toBe('project-creation');
+            expect(runsAfter).toBe('deploy-mesh');
         });
     });
 });

@@ -27,9 +27,8 @@ export type WizardStep =
     | 'commerce-config'  // Kept for compatibility
     | 'data-source-config'  // Legacy: Data source configuration
     | 'connect-services'  // Legacy: Connect services step
-    | 'api-mesh'  // Legacy: API Mesh step (mesh deployment now in Project Creation Phase 3)
     | 'review'
-    | 'project-creation';
+    | 'deploy-mesh';
 
 export interface WizardState {
     currentStep: WizardStep;

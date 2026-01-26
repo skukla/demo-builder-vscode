@@ -240,7 +240,7 @@ export function WizardContainer({
             const stackDependentSteps = ['adobe-project', 'adobe-workspace'];
             
             const satisfiedSteps = WIZARD_STEPS
-                .filter(step => step.id !== 'project-creation' && step.id !== 'review')
+                .filter(step => step.id !== 'deploy-mesh' && step.id !== 'review')
                 .filter(step => isStepSatisfied(step.id, newState))
                 .filter(step => !stackDependentSteps.includes(step.id)) // Force re-confirmation
                 .map(step => step.id);
@@ -326,7 +326,7 @@ export function WizardContainer({
                 return <ComponentConfigStep {...props} />;
             case 'review':
                 return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} packages={packages} stacks={stacks} />;
-            case 'project-creation':
+            case 'deploy-mesh':
                 return <ProjectCreationStep state={state} updateState={updateState} onBack={goBack} importedSettings={importedSettings} packages={packages} />;
             default:
                 return null;
@@ -344,7 +344,7 @@ export function WizardContainer({
     }
 
     const currentStepIndex = getCurrentStepIndex();
-    const isLastStep = state.currentStep === 'project-creation';
+    const isLastStep = state.currentStep === 'deploy-mesh';
     const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
     const currentStepDescription = WIZARD_STEPS[currentStepIndex]?.description;
 

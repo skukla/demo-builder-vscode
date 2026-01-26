@@ -507,13 +507,9 @@ export function isStepSatisfied(stepId: WizardStep, state: WizardState): boolean
         case 'component-config':
             return Boolean(state.componentConfigs && Object.keys(state.componentConfigs).length > 0);
 
-        // API Mesh (if enabled)
-        case 'api-mesh':
-            return Boolean(state.apiMesh?.meshExists);
-
         // Terminal steps - never satisfied (need user action)
         case 'review':
-        case 'project-creation':
+        case 'deploy-mesh':
             return false;
 
         default:

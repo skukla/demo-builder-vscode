@@ -90,9 +90,9 @@
       }
     },
     {
-      "id": "project-creation",
-      "name": "Deploy Project",
-      "description": "Install components and deploy your demo project.",
+      "id": "deploy-mesh",
+      "name": "Deploy Mesh",
+      "description": "Install components and deploy API Mesh.",
       "enabled": true
     }
   ]
