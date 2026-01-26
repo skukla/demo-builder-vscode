@@ -360,7 +360,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     context.logger.debug(`[Project Creation] Component instances after clone: [${instanceKeys.join(', ')}]`);
     context.logger.debug(`[Project Creation] EDS metadata check: isEdsStack=${isEdsStack}, hasEdsConfig=${!!typedConfig.edsConfig}`);
     if (typedConfig.edsConfig) {
-        context.logger.debug(`[Project Creation] EDS config values: repoUrl=${typedConfig.edsConfig.repoUrl}, githubOwner=${typedConfig.edsConfig.githubOwner}, repoName=${typedConfig.edsConfig.repoName}, daLiveOrg=${typedConfig.edsConfig.daLiveOrg}, daLiveSite=${typedConfig.edsConfig.daLiveSite}`);
+        context.logger.debug(`[Project Creation] EDS config values: repoUrl=${typedConfig.edsConfig.repoUrl}, githubOwner=${typedConfig.edsConfig.githubOwner}, repoName=${typedConfig.edsConfig.repoName}, daLiveOrg=${typedConfig.edsConfig.daLiveOrg}, daLiveSite=${typedConfig.edsConfig.daLiveSite}, preflightComplete=${typedConfig.edsConfig.preflightComplete}`);
     }
     if (isEdsStack && typedConfig.edsConfig) {
         const { COMPONENT_IDS } = await import('@/core/constants');

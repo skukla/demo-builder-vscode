@@ -780,6 +780,8 @@ export function buildProjectConfig(
             patches: wizardState.edsConfig.patches,
             // Results from StorefrontSetupStep (wizard handles all remote setup)
             repoUrl: wizardState.edsConfig.repoUrl,
+            // Indicates StorefrontSetupStep completed successfully (enables Phase 5 config sync)
+            preflightComplete: wizardState.edsConfig.preflightComplete,
             // Note: previewUrl/liveUrl not passed - derived from githubRepo by typeGuards
         } : undefined,
     };
