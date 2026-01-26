@@ -83,6 +83,7 @@ async function main() {
         outfile: 'dist/extension.js',
         external: [
             'vscode', // Provided by VS Code runtime
+            'fs', // Node.js fs module - externalize to prevent minification issues with fs/promises vs fs
         ],
         loader: {
             '.node': 'copy', // Handle native modules if any

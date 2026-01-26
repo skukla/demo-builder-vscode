@@ -3,8 +3,8 @@
  *
  * Utilities for extracting and parsing environment variables from .env files.
  */
-import * as fs from 'fs/promises';
-import * as fsSync from 'fs';
+import * as fsPromises from 'fs/promises';
+import * as fs from 'fs';
 
 /**
  * Extracts environment variables from a .env file
@@ -16,7 +16,7 @@ import * as fsSync from 'fs';
  */
 export async function extractEnvVars(filePath: string): Promise<Record<string, string>> {
     try {
-        const content = await fs.readFile(filePath, 'utf8');
+        const content = await fsPromises.readFile(filePath, 'utf8');
         const envVars: Record<string, string> = {};
 
         // Parse .env format (KEY=value)
@@ -59,7 +59,7 @@ export async function extractEnvVars(filePath: string): Promise<Record<string, s
  */
 export function extractEnvVarsSync(filePath: string): Record<string, string> {
     try {
-        const content = fsSync.readFileSync(filePath, 'utf8');
+        const content = fs.readFileSync(filePath, 'utf8');
         const envVars: Record<string, string> = {};
 
         const lines = content.split('\n');

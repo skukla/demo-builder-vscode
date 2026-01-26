@@ -10,7 +10,7 @@
  */
 
 import * as crypto from 'crypto';
-import * as fs from 'fs/promises';
+import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { getLogger } from '@/core/logging';
 import { getFrontendEnvVars } from '@/core/state';
@@ -167,7 +167,7 @@ export async function readMeshEnvVarsFromFile(meshComponentPath: string): Promis
 
     try {
         const envFilePath = path.join(meshComponentPath, '.env');
-        const content = await fs.readFile(envFilePath, 'utf-8');
+        const content = await fsPromises.readFile(envFilePath, 'utf-8');
 
         // Parse each line of the .env file
         for (const line of content.split('\n')) {
@@ -304,7 +304,7 @@ async function calculateMeshSourceHashImpl(meshComponentPath: string, logger: Lo
 
         // Include mesh config - changes to this ALWAYS require deployment
         try {
-            const meshConfig = await fs.readFile(meshConfigPath, 'utf-8');
+            const meshConfig = await fsPromises.readFile(meshConfigPath, 'utf-8');
             combinedContent += meshConfig;
         } catch {
             // mesh.config.js might not exist yet
@@ -312,13 +312,13 @@ async function calculateMeshSourceHashImpl(meshComponentPath: string, logger: Lo
 
         // Include all resolver files
         try {
-            const resolverFiles = (await fs.readdir(resolversDir))
+            const resolverFiles = (await fsPromises.readdir(resolversDir))
                 .filter(f => f.endsWith('.js'))
                 .sort(); // Sort for consistent hash
 
             for (const file of resolverFiles) {
                 const filePath = path.join(resolversDir, file);
-                const content = await fs.readFile(filePath, 'utf-8');
+                const content = await fsPromises.readFile(filePath, 'utf-8');
                 combinedContent += content;
             }
         } catch {
@@ -327,13 +327,13 @@ async function calculateMeshSourceHashImpl(meshComponentPath: string, logger: Lo
 
         // Include all schema files
         try {
-            const schemaFiles = (await fs.readdir(schemasDir))
+            const schemaFiles = (await fsPromises.readdir(schemasDir))
                 .filter(f => f.endsWith('.graphql'))
                 .sort();
 
             for (const file of schemaFiles) {
                 const filePath = path.join(schemasDir, file);
-                const content = await fs.readFile(filePath, 'utf-8');
+                const content = await fsPromises.readFile(filePath, 'utf-8');
                 combinedContent += content;
             }
         } catch {
