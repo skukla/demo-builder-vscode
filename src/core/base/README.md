@@ -452,7 +452,6 @@ async execute(): Promise<void> {
 - `@/shared/state` - StateManager
 - `@/shared/logging` - Logger
 - `@/shared/communication` - WebviewCommunicationManager
-- `@/providers/statusBar` - StatusBarManager
 - `@/utils/loadingHTML` - Webview loading states
 
 ## Best Practices

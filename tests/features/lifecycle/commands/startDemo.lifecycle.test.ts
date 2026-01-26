@@ -14,7 +14,6 @@ import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { ServiceLocator } from '@/core/di';
 import { StateManager } from '@/core/state';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
 import * as vscode from 'vscode';
 
@@ -61,7 +60,6 @@ describe('StartDemoCommand - Lifecycle', () => {
     let command: StartDemoCommand;
     let mockContext: jest.Mocked<vscode.ExtensionContext>;
     let mockStateManager: jest.Mocked<StateManager>;
-    let mockStatusBar: jest.Mocked<StatusBarManager>;
     let mockLogger: jest.Mocked<Logger>;
     let mockProcessCleanup: jest.Mocked<ProcessCleanup>;
     let mockTerminal: { name: string; dispose: jest.Mock; sendText: jest.Mock; show: jest.Mock };
@@ -127,12 +125,6 @@ describe('StartDemoCommand - Lifecycle', () => {
             saveProject: jest.fn().mockResolvedValue(undefined),
         } as any;
 
-        // Mock status bar
-        mockStatusBar = {
-            updateProject: jest.fn(),
-            clear: jest.fn(),
-        } as any;
-
         // Mock logger
         mockLogger = {
             info: jest.fn(),
@@ -163,7 +155,6 @@ describe('StartDemoCommand - Lifecycle', () => {
         command = new StartDemoCommand(
             mockContext,
             mockStateManager,
-            mockStatusBar,
             mockLogger
         );
     });

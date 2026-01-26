@@ -20,7 +20,6 @@ describe('ResetAllCommand - Adobe CLI cleanup', () => {
     let mockContext: any;
     let mockStateManager: any;
     let mockLogger: any;
-    let mockStatusBar: any;
     let mockAuthService: any;
 
     beforeEach(() => {
@@ -57,11 +56,6 @@ describe('ResetAllCommand - Adobe CLI cleanup', () => {
             debug: jest.fn(),
         } as any;
 
-        // Mock StatusBar
-        mockStatusBar = {
-            reset: jest.fn(),
-        };
-
         // Mock VS Code window methods
         (vscode.window.showWarningMessage as jest.Mock) = jest
             .fn()
@@ -88,7 +82,7 @@ describe('ResetAllCommand - Adobe CLI cleanup', () => {
         mockValidatePathSafety.mockResolvedValue({ safe: true });
 
         // Create command instance
-        command = new ResetAllCommand(mockContext, mockStateManager, mockStatusBar, mockLogger);
+        command = new ResetAllCommand(mockContext, mockStateManager, mockLogger);
     });
 
     describe('Adobe CLI logout integration', () => {
@@ -165,11 +159,6 @@ describe('ResetAllCommand - Adobe CLI cleanup', () => {
             mockAuthService.logout.mockImplementation(() => {
                 callOrder.push('logout');
                 return Promise.resolve();
-            });
-
-            // Track status bar reset (step 7, after logout)
-            mockStatusBar.reset.mockImplementation(() => {
-                callOrder.push('statusBarReset');
             });
 
             // Use module-level fs import for consistent mock reference

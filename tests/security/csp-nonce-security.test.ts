@@ -11,7 +11,6 @@
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
 
 // Mock dependencies
@@ -55,7 +54,6 @@ describe('Security: CSP Nonce Generation', () => {
     let command: TestWebviewCommand;
     let mockContext: vscode.ExtensionContext;
     let mockStateManager: StateManager;
-    let mockStatusBar: StatusBarManager;
     let mockLogger: Logger;
 
     beforeEach(() => {
@@ -65,7 +63,6 @@ describe('Security: CSP Nonce Generation', () => {
         } as unknown as vscode.ExtensionContext;
 
         mockStateManager = {} as StateManager;
-        mockStatusBar = {} as StatusBarManager;
         mockLogger = {
             info: jest.fn(),
             debug: jest.fn(),
@@ -76,7 +73,6 @@ describe('Security: CSP Nonce Generation', () => {
         command = new TestWebviewCommand(
             mockContext,
             mockStateManager,
-            mockStatusBar,
             mockLogger
         );
     });

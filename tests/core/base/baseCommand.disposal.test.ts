@@ -68,7 +68,6 @@ class TestCommand extends BaseCommand {
 describe('BaseCommand Disposal Support', () => {
     let mockContext: vscode.ExtensionContext;
     let mockStateManager: any;
-    let mockStatusBar: any;
     let mockLogger: any;
 
     beforeEach(() => {
@@ -89,10 +88,6 @@ describe('BaseCommand Disposal Support', () => {
             setState: jest.fn(),
         };
 
-        mockStatusBar = {
-            update: jest.fn(),
-        };
-
         mockLogger = {
             info: jest.fn(),
             error: jest.fn(),
@@ -106,7 +101,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new TestCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -120,7 +114,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new TestCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -136,7 +129,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new TestCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -152,7 +144,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new TestCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -173,7 +164,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new TestCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -195,7 +185,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new TestCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -212,7 +201,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new TestCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -228,7 +216,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new TestCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -254,7 +241,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new SubCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -279,7 +265,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new SubCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -307,7 +292,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new SubCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -324,7 +308,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new TestCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -340,7 +323,6 @@ describe('BaseCommand Disposal Support', () => {
             const command = new TestCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 

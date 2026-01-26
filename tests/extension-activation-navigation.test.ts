@@ -108,13 +108,8 @@ jest.mock('@/commands/commandManager', () => ({
     })),
 }));
 
-// Mock status bar manager
+// Mock vscode utilities
 jest.mock('@/core/vscode', () => ({
-    StatusBarManager: jest.fn().mockImplementation(() => ({
-        initialize: jest.fn(),
-        updateProject: jest.fn(),
-        dispose: jest.fn(),
-    })),
     WorkspaceWatcherManager: jest.fn().mockImplementation(() => ({
         dispose: jest.fn(),
     })),

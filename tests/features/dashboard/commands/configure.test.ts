@@ -10,7 +10,6 @@
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
 import type { Project } from '@/types';
 
@@ -19,7 +18,6 @@ jest.mock('vscode');
 
 // Mock dependencies
 jest.mock('@/core/state');
-jest.mock('@/core/vscode/StatusBarManager');
 jest.mock('@/features/components/services/ComponentRegistryManager');
 
 // Mock logger used by WebviewCommunicationManager and other modules
@@ -42,7 +40,6 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
     let command: ConfigureProjectWebviewCommand;
     let mockContext: vscode.ExtensionContext;
     let mockStateManager: jest.Mocked<StateManager>;
-    let mockStatusBar: StatusBarManager;
     let mockLogger: Logger;
     let mockPanel: vscode.WebviewPanel;
     let mockWebview: vscode.Webview;
@@ -92,9 +89,6 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
             } as Project),
         } as unknown as jest.Mocked<StateManager>;
 
-        // Create mock status bar
-        mockStatusBar = new StatusBarManager(mockContext, mockStateManager as unknown as StateManager);
-
         // Create mock logger
         mockLogger = {
             debug: jest.fn(),
@@ -107,7 +101,6 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
         command = new ConfigureProjectWebviewCommand(
             mockContext,
             mockStateManager as unknown as StateManager,
-            mockStatusBar,
             mockLogger
         );
 
@@ -247,7 +240,6 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
             const command2 = new ConfigureProjectWebviewCommand(
                 mockContext,
                 mockStateManager as unknown as StateManager,
-                mockStatusBar,
                 mockLogger
             );
             (command2 as any).panel = mockPanel;

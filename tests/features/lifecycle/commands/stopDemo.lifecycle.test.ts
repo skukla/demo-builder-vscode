@@ -14,7 +14,6 @@ import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { ServiceLocator } from '@/core/di';
 import { StateManager } from '@/core/state';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
 import * as vscode from 'vscode';
 
@@ -53,7 +52,6 @@ describe('StopDemoCommand - Lifecycle', () => {
     let command: StopDemoCommand;
     let mockContext: jest.Mocked<vscode.ExtensionContext>;
     let mockStateManager: jest.Mocked<StateManager>;
-    let mockStatusBar: jest.Mocked<StatusBarManager>;
     let mockLogger: jest.Mocked<Logger>;
     let mockProcessCleanup: jest.Mocked<ProcessCleanup>;
     let mockTerminal: { name: string; dispose: jest.Mock };
@@ -112,12 +110,6 @@ describe('StopDemoCommand - Lifecycle', () => {
             saveProject: jest.fn().mockResolvedValue(undefined),
         } as any;
 
-        // Mock status bar
-        mockStatusBar = {
-            updateProject: jest.fn(),
-            clear: jest.fn(),
-        } as any;
-
         // Mock logger
         mockLogger = {
             info: jest.fn(),
@@ -148,7 +140,6 @@ describe('StopDemoCommand - Lifecycle', () => {
         command = new StopDemoCommand(
             mockContext,
             mockStateManager,
-            mockStatusBar,
             mockLogger
         );
     });

@@ -2,46 +2,68 @@
 
 **Status:** 🔴 No tests currently exist for this module
 
-**Purpose:** This directory will contain tests for VS Code API integrations and UI components.
+**Purpose:** This directory will contain tests for VS Code API integrations and file watcher services.
 
 ## Modules to Test
 
-### 1. StatusBarManager.ts
+### 1. WorkspaceWatcherManager.ts
 **What to test:**
-- Status bar item creation
-- Status bar updates (text, tooltip, icon)
-- Status bar commands (click handlers)
-- Status bar disposal/cleanup
-- Status bar visibility toggling
+- File watcher creation and disposal
+- Workspace-scoped file watching
+- Event handling for file changes
+- Multiple watcher management
+- Proper cleanup on disposal
 
-**Test file:** `StatusBarManager.test.ts`
+**Test file:** `workspaceWatcherManager.test.ts`
 
 **Suggested test structure:**
 ```typescript
-describe('StatusBarManager', () => {
+describe('WorkspaceWatcherManager', () => {
   describe('initialization', () => {
-    it('should create status bar item with correct alignment')
-    it('should set initial text and tooltip')
+    it('should create watcher for given glob pattern')
+    it('should scope watcher to workspace')
   })
 
-  describe('updates', () => {
-    it('should update status bar text')
-    it('should update tooltip')
-    it('should update icon')
-  })
-
-  describe('commands', () => {
-    it('should register click command')
-    it('should execute command on click')
-  })
-
-  describe('visibility', () => {
-    it('should show status bar item')
-    it('should hide status bar item')
+  describe('file changes', () => {
+    it('should trigger callback on file create')
+    it('should trigger callback on file change')
+    it('should trigger callback on file delete')
   })
 
   describe('cleanup', () => {
-    it('should dispose status bar item')
+    it('should dispose all watchers')
+    it('should not trigger callbacks after disposal')
+  })
+})
+```
+
+### 2. EnvFileWatcherService.ts
+**What to test:**
+- .env file change detection
+- Hash-based change validation
+- Notification suppression for programmatic writes
+- Grace period handling
+- Session-based notification tracking
+
+**Test file:** `envFileWatcherService.test.ts`
+
+**Suggested test structure:**
+```typescript
+describe('EnvFileWatcherService', () => {
+  describe('change detection', () => {
+    it('should detect .env file changes')
+    it('should ignore changes with same hash')
+    it('should detect content changes via hash')
+  })
+
+  describe('notification management', () => {
+    it('should suppress notifications for programmatic writes')
+    it('should show notification once per session')
+    it('should respect grace period on startup')
+  })
+
+  describe('cleanup', () => {
+    it('should dispose watcher on cleanup')
   })
 })
 ```
@@ -49,29 +71,29 @@ describe('StatusBarManager', () => {
 ## Test Coverage Goals
 
 - **Overall Target:** 85%+
-- **Critical Paths:** 100% (status bar updates, command handling)
-- **Edge Cases:** Rapid updates, disposal during updates, missing icons
+- **Critical Paths:** 100% (file change detection, notification management)
+- **Edge Cases:** Rapid changes, concurrent modifications, hash collisions
 
 ## Dependencies for Testing
 
-- Mock VS Code status bar API
-- Mock VS Code window API
-- Mock command registration
+- Mock VS Code workspace API
+- Mock VS Code file system API
+- Mock notification API
 - Path aliases: `@/core/vscode/*`
 
 ## Notes
 
 - VS Code integrations require extensive mocking
-- Test state management (visibility, text, commands)
+- Test state management (file hashes, notification state)
 - Verify proper disposal to prevent memory leaks
-- Test command registration and execution flow
+- Test grace period and suppression logic
 
 ## When to Create Tests
 
 Create tests when:
-1. Adding new VS Code UI integrations
-2. Changing status bar behavior
-3. Debugging VS Code API issues
-4. Implementing new VS Code features (progress indicators, notifications, etc.)
+1. Adding new VS Code file watcher features
+2. Changing notification behavior
+3. Debugging file system API issues
+4. Implementing new VS Code integrations
 
 **TDD Reminder:** Write tests BEFORE implementing VS Code integration changes.

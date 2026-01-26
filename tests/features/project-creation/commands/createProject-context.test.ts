@@ -10,7 +10,6 @@
 import * as vscode from 'vscode';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { StateManager } from '@/core/state';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
 
 // Mock dependencies
@@ -196,18 +195,6 @@ function createMockStateManager(): StateManager {
 }
 
 /**
- * Create mock StatusBarManager
- */
-function createMockStatusBar(): StatusBarManager {
-    return {
-        showLoading: jest.fn(),
-        showSuccess: jest.fn(),
-        showError: jest.fn(),
-        showIdle: jest.fn(),
-    } as any;
-}
-
-/**
  * Create mock Logger
  */
 function createMockLogger(): Logger {
@@ -225,13 +212,11 @@ function createMockLogger(): Logger {
 function createWizardCommand(): CreateProjectWebviewCommand {
     const mockContext = createMockExtensionContext();
     const mockStateManager = createMockStateManager();
-    const mockStatusBar = createMockStatusBar();
     const mockLogger = createMockLogger();
 
     return new CreateProjectWebviewCommand(
         mockContext,
         mockStateManager,
-        mockStatusBar,
         mockLogger
     );
 }

@@ -9,7 +9,6 @@
 
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
 import { StateManager } from '@/core/state';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
 
 // Mock VS Code API with proper types
@@ -59,7 +58,6 @@ describe('DeleteProjectCommand - Error Handling', () => {
     let command: DeleteProjectCommand;
     let mockContext: jest.Mocked<vscode.ExtensionContext>;
     let mockStateManager: jest.Mocked<StateManager>;
-    let mockStatusBar: jest.Mocked<StatusBarManager>;
     let mockLogger: jest.Mocked<Logger>;
     const testProjectPath = '/tmp/test-project-error';
 
@@ -94,12 +92,6 @@ describe('DeleteProjectCommand - Error Handling', () => {
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
         } as any;
 
-        // Mock status bar
-        mockStatusBar = {
-            clear: jest.fn(),
-            reset: jest.fn(),
-        } as any;
-
         // Mock logger
         mockLogger = {
             info: jest.fn(),
@@ -127,7 +119,6 @@ describe('DeleteProjectCommand - Error Handling', () => {
         command = new DeleteProjectCommand(
             mockContext,
             mockStateManager,
-            mockStatusBar,
             mockLogger
         );
     });
@@ -179,23 +170,6 @@ describe('DeleteProjectCommand - Error Handling', () => {
             // Then: State should NOT be cleared (project remains in state)
             expect(mockStateManager.clearProject).not.toHaveBeenCalled();
             expect(mockStateManager.removeFromRecentProjects).not.toHaveBeenCalled();
-        });
-
-        it('should not clear status bar if deletion fails', async () => {
-            // Given: Deletion always fails with ENOTEMPTY code
-            const error = new Error('directory not empty') as NodeJS.ErrnoException;
-            error.code = 'ENOTEMPTY';
-            mockRm.mockRejectedValue(error);
-
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
-
-            // When: Deletion attempted
-            await command.execute();
-
-            // Then: Status bar should NOT be cleared
-            expect(mockStatusBar.clear).not.toHaveBeenCalled();
         });
 
         it('should log all retry attempts', async () => {

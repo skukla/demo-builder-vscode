@@ -72,7 +72,6 @@ Configure Demo Builder through VSCode settings:
   "demoBuilder.defaultPort": 3000,
   "demoBuilder.autoUpdate": true,
   "demoBuilder.updateChannel": "stable",
-  "demoBuilder.showStatusBar": true,
   "demoBuilder.logLevel": "info"
 }
 ```

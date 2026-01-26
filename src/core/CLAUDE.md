@@ -65,7 +65,6 @@ core/
 ├── validation/         # Validation barrel (re-exports from @/shared/validation)
 │   └── index.ts
 ├── vscode/             # VS Code API wrappers
-│   ├── StatusBarManager.ts
 │   ├── workspaceWatcherManager.ts
 │   ├── envFileWatcherService.ts
 │   └── index.ts
@@ -376,7 +375,6 @@ store.add(eventEmitter.event(handler));
 **Purpose**: VS Code API wrappers and utilities
 
 **Key Services:**
-- `StatusBarManager` - Status bar integration
 - `WorkspaceWatcherManager` - Workspace-scoped file watcher management
 - `EnvFileWatcherService` - .env file change detection with hash-based validation
 

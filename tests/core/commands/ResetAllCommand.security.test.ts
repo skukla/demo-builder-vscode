@@ -34,7 +34,6 @@ describe('ResetAllCommand - Security Tests', () => {
     let mockContext: any;
     let mockStateManager: any;
     let mockLogger: any;
-    let mockStatusBar: any;
     let mockAuthService: any;
 
     beforeEach(() => {
@@ -69,11 +68,6 @@ describe('ResetAllCommand - Security Tests', () => {
             debug: jest.fn(),
         } as any;
 
-        // Mock StatusBar
-        mockStatusBar = {
-            reset: jest.fn(),
-        };
-
         // Mock VS Code window methods
         (vscode.window.showWarningMessage as jest.Mock) = jest
             .fn()
@@ -100,7 +94,7 @@ describe('ResetAllCommand - Security Tests', () => {
         mockValidatePathSafety.mockResolvedValue({ safe: true });
 
         // Create command instance
-        command = new ResetAllCommand(mockContext, mockStateManager, mockStatusBar, mockLogger);
+        command = new ResetAllCommand(mockContext, mockStateManager, mockLogger);
     });
 
     describe('Symlink Attack Prevention', () => {

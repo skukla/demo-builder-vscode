@@ -9,7 +9,6 @@
 
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
 import { StateManager } from '@/core/state';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
 
 // Mock VS Code API with proper types
@@ -59,7 +58,6 @@ describe('DeleteProjectCommand - Retry Logic', () => {
     let command: DeleteProjectCommand;
     let mockContext: jest.Mocked<vscode.ExtensionContext>;
     let mockStateManager: jest.Mocked<StateManager>;
-    let mockStatusBar: jest.Mocked<StatusBarManager>;
     let mockLogger: jest.Mocked<Logger>;
     const testProjectPath = '/tmp/test-project-retry';
 
@@ -93,12 +91,6 @@ describe('DeleteProjectCommand - Retry Logic', () => {
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
         } as any;
 
-        // Mock status bar
-        mockStatusBar = {
-            clear: jest.fn(),
-            reset: jest.fn(),
-        } as any;
-
         // Mock logger
         mockLogger = {
             info: jest.fn(),
@@ -123,7 +115,6 @@ describe('DeleteProjectCommand - Retry Logic', () => {
         command = new DeleteProjectCommand(
             mockContext,
             mockStateManager,
-            mockStatusBar,
             mockLogger
         );
     });

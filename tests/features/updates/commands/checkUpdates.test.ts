@@ -20,7 +20,6 @@ import { UpdateManager } from '@/features/updates/services/updateManager';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/core/logging';
 import type { StateManager } from '@/core/state';
-import type { StatusBarManager } from '@/core/vscode/StatusBarManager';
 
 // Mock VS Code API
 jest.mock('vscode', () => ({
@@ -49,7 +48,6 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
     let command: CheckUpdatesCommand;
     let mockContext: any;
     let mockStateManager: jest.Mocked<StateManager>;
-    let mockStatusBar: jest.Mocked<StatusBarManager>;
     let mockLogger: jest.Mocked<Logger>;
     let mockProgress: any;
 
@@ -74,13 +72,6 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
             loadProjectFromPath: jest.fn().mockResolvedValue(null),
         } as any;
 
-        // Create mock status bar manager
-        mockStatusBar = {
-            show: jest.fn(),
-            hide: jest.fn(),
-            updateStatus: jest.fn(),
-        } as any;
-
         // Create mock logger
         mockLogger = {
             info: jest.fn(),
@@ -100,7 +91,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
         });
 
         // Create command instance
-        command = new CheckUpdatesCommand(mockContext, mockStateManager, mockStatusBar, mockLogger);
+        command = new CheckUpdatesCommand(mockContext, mockStateManager, mockLogger);
     });
 
     afterEach(() => {

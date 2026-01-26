@@ -15,7 +15,6 @@ import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
 import { StateManager } from '@/core/state';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { ServiceLocator } from '@/core/di';
 import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';
@@ -61,7 +60,6 @@ describe('DeployMeshCommand - Storage Behavior', () => {
     // Mocks
     let mockContext: vscode.ExtensionContext;
     let mockStateManager: jest.Mocked<StateManager>;
-    let mockStatusBar: jest.Mocked<StatusBarManager>;
     let mockLogger: jest.Mocked<Logger>;
     let mockAuthManager: { isAuthenticated: jest.Mock; getCurrentOrganization: jest.Mock };
     let mockCommandExecutor: { execute: jest.Mock };
@@ -126,12 +124,6 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             capturedProject = JSON.parse(JSON.stringify(project)); // Deep clone
         });
 
-        // Setup mock StatusBar
-        mockStatusBar = {
-            show: jest.fn(),
-            hide: jest.fn(),
-        } as unknown as jest.Mocked<StatusBarManager>;
-
         // Setup mock Logger
         mockLogger = {
             debug: jest.fn(),
@@ -189,7 +181,6 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             const command = new DeployMeshCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger
             );
             await command.execute();
@@ -217,7 +208,6 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             const command = new DeployMeshCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger
             );
             await command.execute();
@@ -242,7 +232,6 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             const command = new DeployMeshCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger
             );
             await command.execute();
@@ -261,7 +250,6 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             const command = new DeployMeshCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger
             );
             await command.execute();
@@ -286,7 +274,6 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             const command = new DeployMeshCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger
             );
             await command.execute();
@@ -318,7 +305,6 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             const command = new DeployMeshCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger
             );
             await command.execute();

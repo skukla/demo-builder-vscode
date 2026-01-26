@@ -9,7 +9,6 @@
 
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
 import { StateManager } from '@/core/state';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
 
 // Mock VS Code API with proper types
@@ -61,7 +60,6 @@ describe('DeleteProjectCommand - Lifecycle', () => {
     let command: DeleteProjectCommand;
     let mockContext: jest.Mocked<vscode.ExtensionContext>;
     let mockStateManager: jest.Mocked<StateManager>;
-    let mockStatusBar: jest.Mocked<StatusBarManager>;
     let mockLogger: jest.Mocked<Logger>;
     const testProjectPath = '/tmp/test-project-delete';
 
@@ -95,12 +93,6 @@ describe('DeleteProjectCommand - Lifecycle', () => {
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
         } as any;
 
-        // Mock status bar
-        mockStatusBar = {
-            clear: jest.fn(),
-            reset: jest.fn(),
-        } as any;
-
         // Mock logger
         mockLogger = {
             info: jest.fn(),
@@ -125,7 +117,6 @@ describe('DeleteProjectCommand - Lifecycle', () => {
         command = new DeleteProjectCommand(
             mockContext,
             mockStateManager,
-            mockStatusBar,
             mockLogger
         );
     });
@@ -169,15 +160,6 @@ describe('DeleteProjectCommand - Lifecycle', () => {
             // And: State should be cleaned up
             expect(mockStateManager.clearProject).toHaveBeenCalled();
             expect(mockStateManager.removeFromRecentProjects).toHaveBeenCalledWith(testProjectPath);
-        });
-
-        it('should reset status bar before file deletion', async () => {
-            // Given: Project exists
-            // When: deleteProject command executes
-            await command.execute();
-
-            // Then: Status bar should be reset (stops timer to prevent race condition)
-            expect(mockStatusBar.reset).toHaveBeenCalled();
         });
     });
 
@@ -236,16 +218,6 @@ describe('DeleteProjectCommand - Lifecycle', () => {
 
             // Then: Current project should be cleared
             expect(mockStateManager.clearProject).toHaveBeenCalled();
-        });
-
-        it('should reset status bar (stops timer to prevent race condition)', async () => {
-            // Given: Project exists
-            // When: Deletion succeeds
-            await command.execute();
-
-            // Then: Status bar should be reset (not just cleared)
-            // reset() stops the update timer AND clears the display
-            expect(mockStatusBar.reset).toHaveBeenCalled();
         });
 
         it('should open Projects List after successful deletion', async () => {

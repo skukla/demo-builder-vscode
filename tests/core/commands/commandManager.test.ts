@@ -9,7 +9,6 @@
 import { CommandManager } from '@/commands/commandManager';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import type { Logger } from '@/types/logger';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
@@ -42,16 +41,14 @@ jest.mock('@/features/lifecycle/commands/stopDemo');
 jest.mock('@/features/mesh/commands/deployMesh');
 jest.mock('@/features/updates/commands/checkUpdates');
 
-// Mock StateManager, StatusBarManager, Logger
+// Mock StateManager, Logger
 jest.mock('@/core/state');
-jest.mock('@/core/vscode/StatusBarManager');
 jest.mock('@/core/logging');
 
 describe('CommandManager', () => {
     let commandManager: CommandManager;
     let mockContext: vscode.ExtensionContext;
     let mockStateManager: StateManager;
-    let mockStatusBar: StatusBarManager;
     let mockLogger: Logger;
     let mockDisposable: vscode.Disposable;
 
@@ -70,7 +67,6 @@ describe('CommandManager', () => {
 
         // Create mock dependencies
         mockStateManager = new StateManager(mockContext);
-        mockStatusBar = new StatusBarManager(mockContext, mockStateManager);
         mockLogger = {
             debug: jest.fn(),
             info: jest.fn(),
@@ -91,7 +87,6 @@ describe('CommandManager', () => {
         commandManager = new CommandManager(
             mockContext,
             mockStateManager,
-            mockStatusBar,
             mockLogger
         );
     });
@@ -104,7 +99,6 @@ describe('CommandManager', () => {
             expect(ShowProjectsListCommand).toHaveBeenCalledWith(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger
             );
 
@@ -183,7 +177,6 @@ describe('CommandManager', () => {
         it('should store all dependencies', () => {
             expect(commandManager).toHaveProperty('context');
             expect(commandManager).toHaveProperty('stateManager');
-            expect(commandManager).toHaveProperty('statusBar');
             expect(commandManager).toHaveProperty('logger');
         });
 

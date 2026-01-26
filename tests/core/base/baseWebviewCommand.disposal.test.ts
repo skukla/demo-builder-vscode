@@ -149,7 +149,6 @@ class TestWebviewCommand extends BaseWebviewCommand {
 describe('BaseWebviewCommand Disposal', () => {
     let mockContext: vscode.ExtensionContext;
     let mockStateManager: any;
-    let mockStatusBar: any;
     let mockLogger: any;
 
     beforeEach(() => {
@@ -170,10 +169,6 @@ describe('BaseWebviewCommand Disposal', () => {
             saveProject: jest.fn().mockResolvedValue(undefined),
         };
 
-        mockStatusBar = {
-            update: jest.fn(),
-        };
-
         mockLogger = {
             info: jest.fn(),
             error: jest.fn(),
@@ -187,7 +182,6 @@ describe('BaseWebviewCommand Disposal', () => {
             const command = new TestWebviewCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -201,7 +195,6 @@ describe('BaseWebviewCommand Disposal', () => {
             const command = new TestWebviewCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -215,7 +208,6 @@ describe('BaseWebviewCommand Disposal', () => {
             const command = new TestWebviewCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -233,7 +225,6 @@ describe('BaseWebviewCommand Disposal', () => {
             const command = new TestWebviewCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -253,7 +244,6 @@ describe('BaseWebviewCommand Disposal', () => {
             const command = new TestWebviewCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -273,7 +263,6 @@ describe('BaseWebviewCommand Disposal', () => {
             const command = new TestWebviewCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -290,7 +279,6 @@ describe('BaseWebviewCommand Disposal', () => {
             const command = new TestWebviewCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -312,7 +300,6 @@ describe('BaseWebviewCommand Disposal', () => {
             const command = new TestWebviewCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
@@ -344,7 +331,6 @@ describe('BaseWebviewCommand Disposal', () => {
             const command = new TestWebviewCommand(
                 mockContext,
                 mockStateManager,
-                mockStatusBar,
                 mockLogger,
             );
 
