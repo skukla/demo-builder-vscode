@@ -80,7 +80,12 @@
       },
       {
         "command": "demoBuilder.cleanupDaLiveSites",
-        "title": "Manage DA.live Projects",
+        "title": "Manage DA.live Sites",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.manageGitHubRepos",
+        "title": "Manage GitHub Repositories",
         "category": "Demo Builder"
       }
     ],

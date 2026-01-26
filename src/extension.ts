@@ -18,6 +18,7 @@ import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
+import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 
 /**
  * Check if projects list should auto-open when activity bar icon is clicked
@@ -85,6 +86,9 @@ export async function activate(context: vscode.ExtensionContext) {
         // Initialize state manager FIRST (needed by sidebar)
         stateManager = new StateManager(context);
         await stateManager.initialize();
+
+        // Register StateManager with ServiceLocator (for commands without handler context)
+        ServiceLocator.setStateManager(stateManager);
 
         // Initialize context variables for view switching
         const hasProject = await stateManager.hasProject();
@@ -262,6 +266,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
         context.subscriptions.push(
             vscode.commands.registerCommand('demoBuilder.cleanupDaLiveSites', cleanupDaLiveSitesCommand),
+        );
+
+        context.subscriptions.push(
+            vscode.commands.registerCommand('demoBuilder.manageGitHubRepos', () => manageGitHubReposCommand(context)),
         );
 
         // Initialize auto-updater (but don't check yet - wait for sidebar activation)

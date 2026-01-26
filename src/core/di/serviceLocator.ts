@@ -20,6 +20,7 @@
 import { CommandExecutor } from '@/core/shell';
 import type { AuthenticationService } from '@/features/authentication';
 import type { SidebarProvider } from '@/features/sidebar';
+import type { StateManager as IStateManager } from '@/types/state';
 
 /**
  * Centralized service registry for dependency injection
@@ -28,6 +29,7 @@ export class ServiceLocator {
     private static commandExecutor: CommandExecutor | null = null;
     private static authenticationService: AuthenticationService | null = null;
     private static sidebarProvider: SidebarProvider | null = null;
+    private static stateManager: IStateManager | null = null;
 
     /**
      * Register CommandExecutor instance
@@ -61,6 +63,31 @@ export class ServiceLocator {
     }
 
     /**
+     * Register StateManager instance
+     *
+     * **Called by**: extension.ts during activation
+     *
+     * @param manager - StateManager singleton
+     */
+    static setStateManager(manager: IStateManager): void {
+        if (this.stateManager) {
+            throw new Error('StateManager already registered. Cannot register twice.');
+        }
+        this.stateManager = manager;
+    }
+
+    /**
+     * Get StateManager instance
+     *
+     * **Called by**: Commands and handlers that need project state
+     *
+     * @returns StateManager singleton or null if not initialized
+     */
+    static getStateManager(): IStateManager | null {
+        return this.stateManager;
+    }
+
+    /**
      * Reset all services
      *
      * **Used for**: Testing only
@@ -70,6 +97,7 @@ export class ServiceLocator {
         this.commandExecutor = null;
         this.authenticationService = null;
         this.sidebarProvider = null;
+        this.stateManager = null;
     }
 
     /**
