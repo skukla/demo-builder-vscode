@@ -252,11 +252,12 @@ export function DataSourceConfigStep({
     }, [hasLoadedOnce, sites, selectedSite, isCreatingNew, updateEdsConfig]);
 
     // Update canProceed based on site selection
+    // Also disable while site list is loading
     useEffect(() => {
         const isNewValid = isCreatingNew && daLiveSite.trim() !== '' && isValidSiteName(daLiveSite);
-        const isExistingValid = !isCreatingNew && !!selectedSite;
+        const isExistingValid = !isCreatingNew && !!selectedSite && !isLoading;
         setCanProceed(isNewValid || isExistingValid);
-    }, [isCreatingNew, daLiveSite, selectedSite, setCanProceed]);
+    }, [isCreatingNew, daLiveSite, selectedSite, isLoading, setCanProceed]);
 
     // Loading state
     if (showLoading || (isLoading && !hasLoadedOnce)) {

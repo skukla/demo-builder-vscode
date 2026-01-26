@@ -211,6 +211,20 @@ async function showCleanupConfirmation(
     edsMetadata: ReturnType<typeof extractEdsMetadata>,
     authStatus: CleanupAuthStatus,
 ): Promise<CleanupOptions | null> {
+    // Check auto-delete configuration setting
+    const config = vscode.workspace.getConfiguration('demoBuilder');
+    const autoDelete = config.get<boolean>('edsCleanup.autoDelete', false);
+
+    if (autoDelete) {
+        // Auto-delete: return all available options without showing QuickPick
+        // Only delete resources where we have valid authentication and metadata
+        return {
+            deleteGitHubRepo: authStatus.gitHubAuthenticated && !!edsMetadata?.githubRepo,
+            deleteDaLiveSite:
+                authStatus.daLiveAuthenticated && !!edsMetadata?.daLiveOrg && !!edsMetadata?.daLiveSite,
+        };
+    }
+
     // Build QuickPick items matching plan: "Delete Repository", "Delete DA.live Site"
     interface CleanupQuickPickItem extends vscode.QuickPickItem {
         id: 'github' | 'daLive';
@@ -265,7 +279,7 @@ async function showCleanupConfirmation(
         return { deleteGitHubRepo: false, deleteDaLiveSite: false };
     }
 
-    // Define buttons per plan: [Delete Selected] [Skip & Delete Locally]
+    // Define buttons: [Delete Selected] [Skip & Delete Locally] [Always Delete All]
     const deleteSelectedButton: vscode.QuickInputButton = {
         iconPath: new vscode.ThemeIcon('trash'),
         tooltip: 'Delete Selected',
@@ -273,6 +287,10 @@ async function showCleanupConfirmation(
     const skipButton: vscode.QuickInputButton = {
         iconPath: new vscode.ThemeIcon('close'),
         tooltip: 'Skip & Delete Locally',
+    };
+    const alwaysDeleteAllButton: vscode.QuickInputButton = {
+        iconPath: new vscode.ThemeIcon('check-all'),
+        tooltip: 'Always Delete All (save preference)',
     };
 
     // Show QuickPick with cleanup options
@@ -283,13 +301,13 @@ async function showCleanupConfirmation(
     quickPick.ignoreFocusOut = true; // Prevent dismissal when webview takes focus
     quickPick.items = items;
     quickPick.selectedItems = items.filter(i => i.picked);
-    quickPick.buttons = [deleteSelectedButton, skipButton];
+    quickPick.buttons = [deleteSelectedButton, skipButton, alwaysDeleteAllButton];
 
     return new Promise<CleanupOptions | null>((resolve) => {
         let resolved = false;
 
         // Handle button clicks
-        quickPick.onDidTriggerButton((button) => {
+        quickPick.onDidTriggerButton(async (button) => {
             if (resolved) return;
             resolved = true;
             quickPick.hide();
@@ -297,6 +315,16 @@ async function showCleanupConfirmation(
             if (button === skipButton) {
                 // Skip cleanup, but still delete local project
                 resolve({ deleteGitHubRepo: false, deleteDaLiveSite: false });
+            } else if (button === alwaysDeleteAllButton) {
+                // Save preference and delete all available resources
+                await config.update('edsCleanup.autoDelete', true, vscode.ConfigurationTarget.Global);
+                resolve({
+                    deleteGitHubRepo: authStatus.gitHubAuthenticated && !!edsMetadata?.githubRepo,
+                    deleteDaLiveSite:
+                        authStatus.daLiveAuthenticated &&
+                        !!edsMetadata?.daLiveOrg &&
+                        !!edsMetadata?.daLiveSite,
+                });
             } else {
                 // Delete selected resources
                 const selected = quickPick.selectedItems;

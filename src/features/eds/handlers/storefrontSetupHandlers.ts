@@ -760,8 +760,8 @@ async function executeStorefrontSetupPhases(
             }
 
             if (!syncVerified) {
-                // Code sync failed - check if GitHub App is installed
-                const { isInstalled } = await githubAppService.isAppInstalled(repoOwner, repoName);
+                // Code sync not yet complete - check if GitHub App is installed
+                const { isInstalled, codeStatus } = await githubAppService.isAppInstalled(repoOwner, repoName);
 
                 if (!isInstalled) {
                     const installUrl = githubAppService.getInstallUrl(repoOwner, repoName);
@@ -785,10 +785,17 @@ async function executeStorefrontSetupPhases(
                     };
                 }
 
-                throw new Error('Code sync verification timed out');
+                // App is installed - sync will complete eventually, continue setup
+                if (codeStatus === 400) {
+                    // Status 400 = sync initializing, this is normal for new repos
+                    logger.info('[Storefront Setup] Code sync in progress (initializing), continuing...');
+                } else {
+                    // Status 200 but file not found, or other status - unexpected but not fatal
+                    logger.warn(`[Storefront Setup] Code sync status unclear (code.status: ${codeStatus}), continuing...`);
+                }
+            } else {
+                logger.info('[Storefront Setup] Code sync verified');
             }
-
-            logger.info('[Storefront Setup] Code sync verified');
         } catch (error) {
             if ((error as Error).message === 'GitHub App installation required') {
                 throw error;

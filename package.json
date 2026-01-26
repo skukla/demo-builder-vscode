@@ -136,6 +136,11 @@
           ],
           "default": "cards",
           "description": "Default view mode for the projects list: cards (grid layout) or rows (list layout)"
+        },
+        "demoBuilder.edsCleanup.autoDelete": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically delete external EDS resources (GitHub repository, DA.live site) when deleting a project. When disabled, shows a selection dialog."
         }
       }
     },

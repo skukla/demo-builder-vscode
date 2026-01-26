@@ -564,10 +564,11 @@ export function GitHubRepoSelectionStep({
             setCanProceed(isRepoCreated && appVerified && !isCheckingApp && !isCreatingRepo);
         } else {
             // Existing repos: require repo selection AND app verification
+            // Also disable while repository list is loading
             const isExistingValid = !!selectedRepo;
-            setCanProceed(isExistingValid && appVerified && !isCheckingApp);
+            setCanProceed(isExistingValid && appVerified && !isCheckingApp && !isLoading);
         }
-    }, [repoMode, repoCreationState, selectedRepo, githubAppStatus, setCanProceed]);
+    }, [repoMode, repoCreationState, selectedRepo, githubAppStatus, isLoading, setCanProceed]);
 
     // Derived state for showing reset option (extracted per SOP to avoid long boolean chain in JSX)
     const shouldShowResetOption = selectedRepo && hasLoadedOnce && !isLoading;
