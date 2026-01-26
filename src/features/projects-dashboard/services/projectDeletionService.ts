@@ -164,28 +164,26 @@ export async function deleteProject(
         context.logger.info(`[Delete Project] Cleanup summary:\n${summary}`);
     }
 
-    // Offer to enable auto-delete after successful external resource cleanup
-    // Only prompt if: (1) not already enabled, (2) haven't asked before, (3) actually deleted resources
+    // Show one-time tip about cleanup settings (only if we showed the QuickPick)
     if (isEds && cleanupResults.length > 0) {
-        const config = vscode.workspace.getConfiguration('demoBuilder');
-        const autoDeleteEnabled = config.get<boolean>('edsCleanup.autoDelete', false);
-        const promptShown = context.context.globalState.get<boolean>('edsCleanup.autoDeletePromptShown', false);
-        const deletedSomeResources = cleanupResults.some(r => r.success && (r.type === 'github' || r.type === 'daLive'));
+        const tipShown = context.context.globalState.get<boolean>('edsCleanup.settingsTipShown', false);
 
-        if (!autoDeleteEnabled && !promptShown && deletedSomeResources) {
-            // Mark prompt as shown so we don't ask again
-            await context.context.globalState.update('edsCleanup.autoDeletePromptShown', true);
+        if (!tipShown) {
+            // Mark tip as shown so we don't show it again
+            await context.context.globalState.update('edsCleanup.settingsTipShown', true);
 
-            const selection = await vscode.window.showInformationMessage(
-                'Would you like to always delete external EDS resources automatically?',
-                'Yes, always delete',
-                'No, ask each time',
-            );
-
-            if (selection === 'Yes, always delete') {
-                await config.update('edsCleanup.autoDelete', true, vscode.ConfigurationTarget.Global);
-                context.logger.info('[Delete Project] Auto-delete preference saved');
-            }
+            // Show non-blocking tip with link to settings
+            vscode.window.showInformationMessage(
+                'Tip: You can customize cleanup behavior in Settings → Demo Builder',
+                'Open Settings',
+            ).then(selection => {
+                if (selection === 'Open Settings') {
+                    vscode.commands.executeCommand(
+                        'workbench.action.openSettings',
+                        'demoBuilder.edsCleanup.behavior',
+                    );
+                }
+            });
         }
     }
 
@@ -236,18 +234,23 @@ async function showCleanupConfirmation(
     edsMetadata: ReturnType<typeof extractEdsMetadata>,
     authStatus: CleanupAuthStatus,
 ): Promise<CleanupOptions | null> {
-    // Check auto-delete configuration setting
+    // Check cleanup behavior configuration setting
     const config = vscode.workspace.getConfiguration('demoBuilder');
-    const autoDelete = config.get<boolean>('edsCleanup.autoDelete', false);
+    const behavior = config.get<string>('edsCleanup.behavior', 'ask');
 
-    if (autoDelete) {
-        // Auto-delete: return all available options without showing QuickPick
+    if (behavior === 'deleteAll') {
+        // Auto-delete all: return all available options without showing QuickPick
         // Only delete resources where we have valid authentication and metadata
         return {
             deleteGitHubRepo: authStatus.gitHubAuthenticated && !!edsMetadata?.githubRepo,
             deleteDaLiveSite:
                 authStatus.daLiveAuthenticated && !!edsMetadata?.daLiveOrg && !!edsMetadata?.daLiveSite,
         };
+    }
+
+    if (behavior === 'localOnly') {
+        // Local only: skip external cleanup entirely
+        return { deleteGitHubRepo: false, deleteDaLiveSite: false };
     }
 
     // Build QuickPick items matching plan: "Delete Repository", "Delete DA.live Site"
