@@ -278,6 +278,7 @@ export function StorefrontSetupStep({
             edsConfig: {
                 ...edsConfigRef.current,
                 repoUrl: data.githubRepo,
+                preflightComplete: true,
             },
         });
     }, [updateState]);
