@@ -29,7 +29,7 @@ import { isEdsProject } from '@/types/typeGuards';
 interface MenuItem {
     key: string;
     label: string;
-    icon: 'play' | 'stop' | 'globe' | 'dalive' | 'edit' | 'rename' | 'export' | 'delete' | 'reset';
+    icon: 'play' | 'stop' | 'globe' | 'dalive' | 'edit' | 'rename' | 'export' | 'delete' | 'reset' | 'republish';
 }
 
 export interface ProjectActionsMenuProps {
@@ -49,6 +49,8 @@ export interface ProjectActionsMenuProps {
     onOpenDaLive?: (project: Project) => void;
     /** Callback to reset EDS project from template (for EDS projects) */
     onResetEds?: (project: Project) => void;
+    /** Callback to republish content to CDN (for EDS projects) */
+    onRepublishContent?: (project: Project) => void;
     /** Callback to edit project settings */
     onEdit?: (project: Project) => void;
     /** Callback to rename project */
@@ -76,6 +78,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     onOpenLiveSite,
     onOpenDaLive,
     onResetEds,
+    onRepublishContent,
     onEdit,
     onRename,
     onExport,
@@ -104,6 +107,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             case 'resetEds':
                 onResetEds?.(project);
                 break;
+            case 'republishContent':
+                onRepublishContent?.(project);
+                break;
             case 'edit':
                 onEdit?.(project);
                 break;
@@ -117,7 +123,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 onDelete?.(project);
                 break;
         }
-    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetEds, onEdit, onRename, onExport, onDelete]);
+    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetEds, onRepublishContent, onEdit, onRename, onExport, onDelete]);
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
@@ -147,6 +153,10 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             // Reset EDS project from template
             if (onResetEds) {
                 items.push({ key: 'resetEds', label: 'Reset', icon: 'reset' });
+            }
+            // Republish Content (EDS only)
+            if (onRepublishContent) {
+                items.push({ key: 'republishContent', label: 'Republish Content', icon: 'republish' });
             }
         } else {
             // Non-EDS projects: Start/Stop based on running state
@@ -180,7 +190,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             items.push({ key: 'delete', label: 'Delete', icon: 'delete' });
         }
         return items;
-    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetEds, onEdit, onRename, onExport, onDelete]);
+    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetEds, onRepublishContent, onEdit, onRename, onExport, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {
@@ -207,6 +217,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                             {item.icon === 'edit' && <Edit size="S" />}
                             {item.icon === 'rename' && <Rename size="S" />}
                             {item.icon === 'reset' && <Revert size="S" />}
+                            {item.icon === 'republish' && <Globe size="S" />}
                             {item.icon === 'export' && <Export size="S" />}
                             {item.icon === 'delete' && <Delete size="S" />}
                             <Text>{item.label}</Text>

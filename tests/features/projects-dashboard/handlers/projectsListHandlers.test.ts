@@ -95,15 +95,16 @@ describe('projectsListHandlers', () => {
             // When: Checking for EDS action message types
             // Then: EDS action handlers present
             expect(hasHandler(projectsListHandlers, 'resetEds')).toBe(true);
+            expect(hasHandler(projectsListHandlers, 'republishContent')).toBe(true);
         });
 
-        it('should have exactly 19 handlers', () => {
+        it('should have exactly 20 handlers', () => {
             // Given: projectsListHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(projectsListHandlers);
 
-            // Then: Exactly 19 handlers
-            expect(types).toHaveLength(19);
+            // Then: Exactly 20 handlers
+            expect(types).toHaveLength(20);
         });
 
         it('should have handlers as functions', () => {

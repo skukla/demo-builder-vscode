@@ -268,6 +268,15 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, [fetchProjects]);
 
+    // Handle republish content (EDS projects)
+    const handleRepublishContent = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.request('republishContent', { projectPath: project.path });
+        } catch (error) {
+            console.error('Failed to republish content:', error);
+        }
+    }, []);
+
     // Handle edit project
     const handleEditProject = useCallback(async (project: Project) => {
         try {
@@ -336,6 +345,7 @@ const ProjectsDashboardApp: React.FC = () => {
                 onOpenLiveSite={handleOpenLiveSite}
                 onOpenDaLive={handleOpenDaLive}
                 onResetEds={handleResetEds}
+                onRepublishContent={handleRepublishContent}
                 onEditProject={handleEditProject}
                 onRenameProject={handleRenameProject}
                 onExportProject={handleExportProject}

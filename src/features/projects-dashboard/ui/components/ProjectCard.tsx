@@ -40,6 +40,8 @@ export interface ProjectCardProps {
     onOpenDaLive?: (project: Project) => void;
     /** Callback to reset EDS project from template (for EDS projects) */
     onResetEds?: (project: Project) => void;
+    /** Callback to republish content to CDN (for EDS projects) */
+    onRepublishContent?: (project: Project) => void;
     /** Callback to edit project settings */
     onEdit?: (project: Project) => void;
     /** Callback to rename project */
@@ -65,6 +67,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     onOpenLiveSite,
     onOpenDaLive,
     onResetEds,
+    onRepublishContent,
     onEdit,
     onRename,
     onExport,
@@ -115,6 +118,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                     onOpenLiveSite={onOpenLiveSite}
                     onOpenDaLive={onOpenDaLive}
                     onResetEds={onResetEds}
+                    onRepublishContent={onRepublishContent}
                     onEdit={onEdit}
                     onRename={onRename}
                     onExport={onExport}

@@ -22,6 +22,7 @@ import {
     handleOpenLiveSite,
     handleOpenDaLive,
     handleResetEds,
+    handleRepublishContent,
     handleEditProject,
     handleRenameProject,
     handleOpenDocs,
@@ -61,8 +62,9 @@ export const projectsListHandlers = defineHandlers({
     'openLiveSite': handleOpenLiveSite,
     'openDaLive': handleOpenDaLive,
 
-    // EDS action handler
+    // EDS action handlers
     'resetEds': handleResetEds,
+    'republishContent': handleRepublishContent,
 
     // Project edit handler
     'editProject': handleEditProject,

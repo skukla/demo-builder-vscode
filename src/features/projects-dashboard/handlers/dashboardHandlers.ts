@@ -660,6 +660,158 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
  * 3. Copies demo content to DA.live
  * 4. Publishes all content to CDN
  */
+/**
+ * Republishes all content from DA.live to CDN for an EDS project.
+ * This syncs config.json and all authored content to preview and live CDN.
+ *
+ * Useful when:
+ * - Configuration changes need to propagate (e.g., config.json folder mappings)
+ * - Content gets out of sync between DA.live and CDN
+ * - After manual content edits in DA.live
+ */
+export const handleRepublishContent: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    if (!payload?.projectPath) {
+        return { success: false, error: 'Project path is required' };
+    }
+
+    try {
+        validateProjectPath(payload.projectPath);
+    } catch {
+        return { success: false, error: 'Invalid project path' };
+    }
+
+    const project = await context.stateManager.loadProjectFromPath(
+        payload.projectPath,
+        undefined,
+        { persistAfterLoad: false },
+    );
+    if (!project) {
+        return { success: false, error: 'Project not found' };
+    }
+
+    // Get EDS metadata from component instance (project-specific data)
+    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
+    const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
+    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+
+    if (!repoFullName) {
+        return { success: false, error: 'Repository information not found. Republish is only available for EDS projects.' };
+    }
+
+    const [repoOwner, repoName] = repoFullName.split('/');
+    if (!repoOwner || !repoName) {
+        return { success: false, error: 'Invalid repository format' };
+    }
+
+    // Use daLiveOrg/daLiveSite from metadata, fallback to repo owner/name
+    const effectiveDaLiveOrg = daLiveOrg || repoOwner;
+    const effectiveDaLiveSite = daLiveSite || repoName;
+
+    // Pre-check DA.live authentication
+    // Token must be valid to list and publish content from DA.live
+    const daLiveAuthService = new DaLiveAuthService(context.context);
+    const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
+
+    if (!isDaLiveAuthenticated) {
+        context.logger.info('[ProjectsList] republishContent: DA.live token expired or missing');
+
+        // Show notification with Sign In action
+        const signInButton = 'Sign In';
+        const selection = await vscode.window.showWarningMessage(
+            'Your DA.live session has expired. Please sign in to continue.',
+            signInButton,
+        );
+
+        if (selection === signInButton) {
+            // User clicked "Sign In" - invoke QuickPick auth flow
+            const authResult = await showDaLiveAuthQuickPick(context);
+            if (authResult.cancelled || !authResult.success) {
+                return {
+                    success: false,
+                    error: authResult.error || 'DA.live authentication required',
+                    errorType: 'DALIVE_AUTH_REQUIRED',
+                    cancelled: authResult.cancelled,
+                };
+            }
+            // Token is now valid - continue with republish
+        } else {
+            // User dismissed notification - abort operation
+            return {
+                success: false,
+                error: 'DA.live authentication required',
+                errorType: 'DALIVE_AUTH_REQUIRED',
+            };
+        }
+    }
+
+    return vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: `Republishing ${project.name}`,
+            cancellable: false,
+        },
+        async (progress) => {
+            try {
+                context.logger.info(`[ProjectsList] Republishing content for ${repoFullName}`);
+
+                // Initialize services
+                const { HelixService } = await import('@/features/eds/services/helixService');
+                const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
+
+                const { tokenService: githubTokenService } = getGitHubServices(context);
+                const authService = ServiceLocator.getAuthenticationService();
+
+                // Create TokenProvider adapter for DA.live operations
+                // Required to list and publish content from DA.live
+                const daLiveTokenProvider = {
+                    getAccessToken: async () => {
+                        return await daLiveAuthService.getAccessToken();
+                    },
+                };
+
+                // Create HelixService with GitHub token for Admin API and DA.live token for content operations
+                const helixService = new HelixService(authService, context.logger, githubTokenService, daLiveTokenProvider);
+
+                // Step 1: Sync all code files (includes config.json, patches, scripts)
+                progress.report({ message: 'Step 1/2: Syncing code to CDN...' });
+                await helixService.previewCode(repoOwner, repoName, '/*');
+                context.logger.debug('[ProjectsList] Code synced to CDN');
+
+                // Step 2: Publish all content
+                progress.report({ message: 'Step 2/2: Publishing content to CDN...' });
+                await helixService.publishAllSiteContent(
+                    repoFullName,
+                    'main',
+                    effectiveDaLiveOrg,
+                    effectiveDaLiveSite,
+                    (info) => {
+                        progress.report({ message: `Step 2/2: ${info.message}` });
+                    },
+                );
+
+                context.logger.info(`[ProjectsList] Content republished for ${repoFullName}`);
+
+                // Show auto-dismissing success notification (2 seconds)
+                void vscode.window.withProgress(
+                    { location: vscode.ProgressLocation.Notification, title: `Content republished for "${project.name}"` },
+                    async () => new Promise(resolve => setTimeout(resolve, 2000)),
+                );
+
+                return { success: true };
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                context.logger.error('[ProjectsList] Republish failed', error as Error);
+                vscode.window.showErrorMessage(`Failed to republish content: ${errorMessage}`);
+                return { success: false, error: errorMessage };
+            }
+        },
+    );
+};
+
 export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
     payload?: { projectPath: string },

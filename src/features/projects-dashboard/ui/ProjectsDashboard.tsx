@@ -57,6 +57,8 @@ export interface ProjectsDashboardProps {
     onOpenDaLive?: (project: Project) => void;
     /** Callback to reset EDS project from template (for EDS projects) */
     onResetEds?: (project: Project) => void;
+    /** Callback to republish content to CDN (for EDS projects) */
+    onRepublishContent?: (project: Project) => void;
     /** Callback to edit project settings */
     onEditProject?: (project: Project) => void;
     /** Callback to rename project */
@@ -102,6 +104,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     onOpenLiveSite,
     onOpenDaLive,
     onResetEds,
+    onRepublishContent,
     onEditProject,
     onRenameProject,
     onExportProject,
@@ -273,6 +276,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         onOpenLiveSite={onOpenLiveSite}
                         onOpenDaLive={onOpenDaLive}
                         onResetEds={onResetEds}
+                        onRepublishContent={onRepublishContent}
                         onEditProject={onEditProject}
                         onRenameProject={onRenameProject}
                         onExportProject={onExportProject}
@@ -290,6 +294,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         onOpenLiveSite={onOpenLiveSite}
                         onOpenDaLive={onOpenDaLive}
                         onResetEds={onResetEds}
+                        onRepublishContent={onRepublishContent}
                         onEditProject={onEditProject}
                         onRenameProject={onRenameProject}
                         onExportProject={onExportProject}
