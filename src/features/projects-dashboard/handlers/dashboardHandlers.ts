@@ -1229,6 +1229,67 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 const meshComponent = getMeshComponentInstance(project);
 
                 if (meshComponent?.path) {
+                    // Pre-check Adobe I/O authentication before mesh deployment
+                    // Mesh deployment requires valid Adobe I/O credentials
+                    const isAdobeAuthenticated = await authService.isAuthenticated();
+
+                    if (!isAdobeAuthenticated) {
+                        context.logger.info('[ProjectsList] resetEds: Adobe I/O token expired or missing');
+
+                        // Show notification with Sign In action
+                        const signInButton = 'Sign In';
+                        const selection = await vscode.window.showWarningMessage(
+                            'Your Adobe I/O session has expired. Please sign in to continue.',
+                            signInButton,
+                        );
+
+                        if (selection === signInButton) {
+                            progress.report({ message: 'Step 5/5: Opening browser for authentication...' });
+                            const loginSuccess = await authService.login();
+
+                            if (!loginSuccess) {
+                                context.logger.error('[ProjectsList] Adobe I/O login failed or cancelled');
+                                vscode.window.showErrorMessage('Reset failed: Adobe I/O authentication is required for mesh deployment.');
+                                return { success: false, error: 'Adobe I/O authentication required' };
+                            }
+
+                            // Restore Adobe context (org/project/workspace) after re-authentication
+                            // This ensures mesh commands have the required context
+                            progress.report({ message: 'Step 5/5: Restoring Adobe context...' });
+
+                            if (project.adobe?.organization) {
+                                try {
+                                    await authService.selectOrganization(project.adobe.organization);
+                                    context.logger.debug('[ProjectsList] Organization restored after re-auth');
+                                } catch (orgError) {
+                                    context.logger.warn('[ProjectsList] Could not restore organization', orgError as Error);
+                                }
+                            }
+
+                            if (project.adobe?.projectId && project.adobe?.organization) {
+                                try {
+                                    await authService.selectProject(project.adobe.projectId, project.adobe.organization);
+                                    context.logger.debug('[ProjectsList] Project restored after re-auth');
+                                } catch (projectError) {
+                                    context.logger.warn('[ProjectsList] Could not restore project', projectError as Error);
+                                }
+                            }
+
+                            if (project.adobe?.workspace && project.adobe?.projectId) {
+                                try {
+                                    await authService.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
+                                    context.logger.debug('[ProjectsList] Workspace restored after re-auth');
+                                } catch (workspaceError) {
+                                    context.logger.warn('[ProjectsList] Could not restore workspace', workspaceError as Error);
+                                }
+                            }
+                        } else {
+                            // User dismissed notification
+                            context.logger.info('[ProjectsList] User cancelled Adobe I/O authentication');
+                            return { success: false, error: 'Adobe I/O authentication required', cancelled: true };
+                        }
+                    }
+
                     progress.report({ message: 'Step 5/5: Redeploying API Mesh...' });
                     context.logger.info(`[ProjectsList] Redeploying mesh for ${repoFullName}`);
 
