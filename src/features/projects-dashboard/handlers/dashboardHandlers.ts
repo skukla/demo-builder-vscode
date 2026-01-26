@@ -775,7 +775,7 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                 };
 
                 // Create HelixService with GitHub token for Admin API and DA.live token for content operations
-                const helixService = new HelixService(authService, context.logger, githubTokenService, daLiveTokenProvider);
+                const helixService = new HelixService(context.logger, githubTokenService, daLiveTokenProvider);
 
                 // Step 1: Sync all code files (includes config.json, patches, scripts)
                 progress.report({ message: 'Step 1/2: Syncing code to CDN...' });
@@ -1200,7 +1200,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
 
                 // IMPORTANT: Pass DA.live token provider to HelixService for x-content-source-authorization
                 // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
-                const helixService = new HelixService(authService, context.logger, githubTokenService, tokenProvider);
+                const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
 
                 // Progress callback to update notification with publish details
                 const onPublishProgress = (info: {

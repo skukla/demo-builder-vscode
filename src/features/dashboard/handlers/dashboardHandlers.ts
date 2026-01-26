@@ -864,7 +864,7 @@ export const handleResetEds: MessageHandler = async (context) => {
 
                 // Create HelixService for code publish (only needs GitHub token)
                 const { HelixService } = await import('@/features/eds/services/helixService');
-                const helixServiceForCode = new HelixService(authService, context.logger, githubTokenService);
+                const helixServiceForCode = new HelixService(context.logger, githubTokenService);
 
                 try {
                     await helixServiceForCode.previewCode(repoOwner, repoName, '/config.json');
@@ -922,7 +922,7 @@ export const handleResetEds: MessageHandler = async (context) => {
 
                 // IMPORTANT: Pass DA.live token provider to HelixService for x-content-source-authorization
                 // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
-                const helixService = new HelixService(authService, context.logger, githubTokenService, tokenProvider);
+                const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
 
                 // Progress callback to update notification with publish details
                 const onPublishProgress = (info: {

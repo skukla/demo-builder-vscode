@@ -58,10 +58,6 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
     })),
 }));
 
-// Import types
-import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { TokenManager } from '@/features/authentication/services/tokenManager';
-
 // Type for the service we'll import dynamically
 type HelixServiceType = import('@/features/eds/services/helixService').HelixService;
 
@@ -78,8 +74,6 @@ interface MockDaLiveTokenProvider {
 
 describe('HelixService', () => {
     let service: HelixServiceType;
-    let mockAuthService: jest.Mocked<Partial<AuthenticationService>>;
-    let mockTokenManager: jest.Mocked<Partial<TokenManager>>;
     let mockGitHubTokenService: MockGitHubTokenService;
     let mockDaLiveTokenProvider: MockDaLiveTokenProvider;
     let mockFetch: jest.Mock;
@@ -90,18 +84,6 @@ describe('HelixService', () => {
     beforeEach(async () => {
         jest.clearAllMocks();
         mockListDirectory.mockReset();
-
-        // Mock TokenManager
-        mockTokenManager = {
-            getAccessToken: jest.fn(),
-            isTokenValid: jest.fn(),
-        };
-
-        // Mock AuthenticationService (used for DA.live operations - legacy fallback)
-        mockAuthService = {
-            getTokenManager: jest.fn().mockReturnValue(mockTokenManager),
-            isAuthenticated: jest.fn(),
-        };
 
         // Mock GitHubTokenService (used for Helix Admin API authentication)
         mockGitHubTokenService = {
@@ -118,16 +100,12 @@ describe('HelixService', () => {
         mockFetch = jest.fn();
         global.fetch = mockFetch;
 
-        // Setup valid IMS token by default (for legacy fallback)
-        mockTokenManager.getAccessToken.mockResolvedValue('valid-adobe-ims-token');
-
         // Dynamically import to get fresh instance after mocks are set up
         const module = await import('@/features/eds/services/helixService');
-        // Pass mockGitHubTokenService as third parameter for Helix Admin API auth
-        // Pass mockDaLiveTokenProvider as fourth parameter for DA.live content source auth
+        // Pass mockGitHubTokenService as second parameter for Helix Admin API auth
+        // Pass mockDaLiveTokenProvider as third parameter for DA.live content source auth
         service = new module.HelixService(
-            mockAuthService as unknown as AuthenticationService,
-            undefined,
+            undefined, // logger (defaults to getLogger())
             mockGitHubTokenService,
             mockDaLiveTokenProvider,
         );
@@ -845,8 +823,7 @@ describe('HelixService', () => {
             // Given: Service created without DA.live token provider
             const module = await import('@/features/eds/services/helixService');
             const serviceWithoutDaLiveProvider = new module.HelixService(
-                mockAuthService as unknown as AuthenticationService,
-                undefined,
+                undefined, // logger
                 mockGitHubTokenService,
                 // No DA.live token provider - this should cause operations to fail
             );

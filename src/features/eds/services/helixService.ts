@@ -5,7 +5,7 @@
  * including preview/publish and unpublish operations.
  *
  * Features:
- * - IMS token integration via AuthenticationService
+ * - DA.live token integration via DaLiveTokenProvider
  * - Preview content (POST /preview/{org}/{site}/main/{path})
  * - Publish content (POST /live/{org}/{site}/main/{path})
  * - Unpublish from live (DELETE /live/{org}/{site}/main/*)
@@ -16,7 +16,6 @@
 
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { Logger } from '@/types/logger';
 import { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubTokenService } from './githubTokenService';
@@ -103,14 +102,12 @@ export interface DaLiveTokenProvider {
  */
 export class HelixService {
     private logger: Logger;
-    private authService: AuthenticationService;
     private githubTokenService?: GitHubTokenService;
     private daLiveOps: DaLiveContentOperations;
     private daLiveTokenProvider?: DaLiveTokenProvider;
 
     /**
      * Create a HelixService
-     * @param authService - Authentication service (kept for backward compatibility, not used for DA.live)
      * @param logger - Optional logger for dependency injection (defaults to getLogger())
      * @param githubTokenService - Optional GitHub token service for Helix Admin API authentication
      * @param daLiveTokenProvider - DA.live token provider for content source authorization.
@@ -120,15 +117,10 @@ export class HelixService {
      *        silent failures where images become `about:error`.
      */
     constructor(
-        authService: AuthenticationService,
         logger?: Logger,
         githubTokenService?: GitHubTokenService,
         daLiveTokenProvider?: DaLiveTokenProvider,
     ) {
-        if (!authService) {
-            throw new Error('AuthenticationService is required');
-        }
-        this.authService = authService;
         this.logger = logger ?? getLogger();
         this.githubTokenService = githubTokenService;
         this.daLiveTokenProvider = daLiveTokenProvider;
