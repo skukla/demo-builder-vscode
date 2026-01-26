@@ -81,6 +81,8 @@ export interface ConfigFileDefinition {
     format: 'env' | 'json' | 'yaml' | 'ini';
     /** Optional template file name (relative to component root) */
     template?: string;
+    /** Custom generator to use instead of template-based generation */
+    generator?: 'eds-config';
     /** Rename env vars for this format. Source (env var key) → Target (output field name) */
     fieldRenames?: Record<string, string>;
     /** Additional fields with static values not from env vars */

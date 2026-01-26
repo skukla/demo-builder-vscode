@@ -328,8 +328,9 @@ export function StorefrontSetupStep({
             projectName: state.projectName,
             edsConfig: state.edsConfig,
             componentConfigs: state.componentConfigs,
+            backendComponentId: state.components?.backend,
         });
-    }, [state.projectName, state.edsConfig, state.componentConfigs]);
+    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend]);
 
     /**
      * Handle GitHub App installation detected
@@ -355,6 +356,7 @@ export function StorefrontSetupStep({
         projectName: state.projectName,
         edsConfig: state.edsConfig,
         componentConfigs: state.componentConfigs,
+        backendComponentId: state.components?.backend,
     });
 
     // Set up message listeners (stable callbacks, no re-subscription needed)
@@ -408,6 +410,7 @@ export function StorefrontSetupStep({
             projectName: initialConfigRef.current.projectName,
             edsConfig: initialConfigRef.current.edsConfig,
             componentConfigs: initialConfigRef.current.componentConfigs,
+            backendComponentId: initialConfigRef.current.backendComponentId,
         });
     }, []);
 

@@ -28,22 +28,10 @@
   "headers": {},
   "public": {
     "default": {
-      "commerce-core-endpoint": "{COMMERCE_ENDPOINT}",
+      "commerce-core-endpoint": "{CS_ENDPOINT}",
       "commerce-endpoint": "{COMMERCE_ENDPOINT}",
       "commerce-assets-enabled": "{AEM_ASSETS_ENABLED}",
-      "headers": {
-        "all": {
-          "Store": "{STORE_VIEW_CODE}"
-        },
-        "cs": {
-          "Magento-Customer-Group": "{CUSTOMER_GROUP}",
-          "Magento-Store-Code": "{STORE_CODE}",
-          "Magento-Store-View-Code": "{STORE_VIEW_CODE}",
-          "Magento-Website-Code": "{WEBSITE_CODE}",
-          "x-api-key": "{COMMERCE_API_KEY}",
-          "Magento-Environment-Id": "{COMMERCE_ENVIRONMENT_ID}"
-        }
-      },
+      "headers": {},
       "analytics": {
         "base-currency-code": "USD",
         "environment": "Production",

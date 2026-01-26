@@ -36,15 +36,7 @@
                     },
                     "config.json": {
                         "format": "json",
-                        "template": "default-site.json",
-                        "fieldRenames": {
-                            "MESH_ENDPOINT": "commerce-core-endpoint",
-                            "PAAS_CATALOG_SERVICE_ENDPOINT": "commerce-endpoint",
-                            "ACCS_CATALOG_SERVICE_ENDPOINT": "commerce-endpoint",
-                            "ADOBE_COMMERCE_STORE_VIEW_CODE": "store-view-code",
-                            "ADOBE_COMMERCE_WEBSITE_CODE": "website-code",
-                            "ADOBE_COMMERCE_STORE_CODE": "store-code"
-                        }
+                        "generator": "eds-config"
                     }
                 },
                 "skipNpmInstall": true
