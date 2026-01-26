@@ -8,6 +8,9 @@ import { formatGroupName } from './formatters';
 import { generateConfigFile } from '@/core/config/configFileGenerator';
 import { TransformedComponentDefinition, EnvVarDefinition, ConfigFileDefinition, ComponentRegistry } from '@/types/components';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
+import { COMPONENT_IDS } from '@/core/constants';
+import { generateConfigJson, mapBackendToEnvironmentType, extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
+import type { ConfigGeneratorParams } from '@/features/eds/services/configGenerator';
 
 /**
  * Resolves all environment variable keys for a component, including backend-specific service env vars.
@@ -234,11 +237,14 @@ export async function generateComponentConfigFiles(
     
     // Generate all explicitly defined config files
     context.logger.debug(`[Project Creation] Generating ${Object.keys(configFiles).length} config file(s) for ${componentDef.name}`);
-    
+
     for (const [filename, configFileDef] of Object.entries(configFiles)) {
         if (configFileDef.format === 'env') {
             // Generate .env format file
             await generateComponentEnvFile(componentPath, componentId, componentDef, context);
+        } else if (configFileDef.generator === 'eds-config') {
+            // Use canonical EDS config generator
+            await generateEdsConfigJson(componentPath, context);
         } else {
             // Generate other format files (json, yaml, etc.)
             await generateSingleConfigFile(
@@ -370,4 +376,75 @@ async function generateSingleConfigFile(
     }
     
     context.logger.debug(`[Project Creation] Created ${filename} for ${componentDef.name}`);
+}
+
+/**
+ * Generate config.json for EDS storefront using the canonical config generator
+ *
+ * This is the single canonical method for generating EDS config.json.
+ * It uses the bundled template and replaces placeholders with project-specific values.
+ *
+ * @param componentPath - Path to the EDS component directory
+ * @param context - Project setup context with registry, config, logger
+ */
+async function generateEdsConfigJson(
+    componentPath: string,
+    context: ProjectSetupContext,
+): Promise<void> {
+    const logger = context.logger;
+
+    // Get EDS component instance metadata (populated during EDS setup phases)
+    const edsInstance = context.project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const metadata = edsInstance?.metadata || {};
+
+    // Extract GitHub owner and repo from githubRepo (format: "owner/repo")
+    const githubRepo = metadata.githubRepo as string | undefined;
+    let githubOwner = '';
+    let repoName = '';
+    if (githubRepo && githubRepo.includes('/')) {
+        [githubOwner, repoName] = githubRepo.split('/');
+    }
+
+    // Get DA.live org and site
+    const daLiveOrg = (metadata.daLiveOrg as string) || '';
+    const daLiveSite = (metadata.daLiveSite as string) || '';
+
+    // Extract Commerce config params from componentConfigs
+    const componentConfigs = context.getComponentConfigs();
+    const meshEndpoint = context.getMeshEndpoint();
+    const backendId = context.getBackendId();
+
+    const configParams = extractConfigParamsFromConfigs(componentConfigs, meshEndpoint, backendId);
+
+    // Build full ConfigGeneratorParams
+    const params: ConfigGeneratorParams = {
+        githubOwner,
+        repoName,
+        daLiveOrg,
+        daLiveSite,
+        ...configParams,
+    };
+
+    // Validate required params
+    if (!githubOwner || !repoName) {
+        logger.warn('[Config Generator] Missing GitHub repo info, config.json may have incomplete values');
+    }
+    if (!daLiveOrg || !daLiveSite) {
+        logger.warn('[Config Generator] Missing DA.live info, config.json may have incomplete values');
+    }
+
+    // Generate config.json using canonical generator
+    const result = generateConfigJson(params, logger);
+
+    if (!result.success || !result.content) {
+        // Throw error instead of silent return - caller must know config generation failed
+        // This ensures Phase 5 sync doesn't try to push stale/missing config
+        throw new Error(`Config.json generation failed: ${result.error || 'Unknown error'}`);
+    }
+
+    // Write config.json locally
+    const configFilePath = path.join(componentPath, 'config.json');
+    await fsPromises.writeFile(configFilePath, result.content, 'utf-8');
+
+    logger.info(`[Config Generator] Created config.json for EDS storefront (env: ${configParams.environmentType || 'paas'})`);
 }

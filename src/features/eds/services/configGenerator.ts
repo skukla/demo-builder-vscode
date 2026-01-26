@@ -5,6 +5,18 @@
  * This is the single source of truth for config.json generation, used by both
  * project creation and EDS Reset operations.
  *
+ * ## Generation Timeline (EDS Projects)
+ *
+ * config.json must be generated AFTER mesh deployment because it requires the mesh endpoint:
+ *
+ * 1. **StorefrontSetupStep (preflight)**: Creates repo, fstab.yaml, content (no mesh needed)
+ * 2. **executor Phase 3**: Deploys mesh → project.meshState.endpoint
+ * 3. **executor Phase 4**: Generates config.json WITH mesh endpoint (this module)
+ * 4. **executor Phase 5**: Syncs config.json to GitHub and publishes to CDN
+ *
+ * The mesh endpoint is required for `commerce-core-endpoint` and `commerce-endpoint` fields.
+ * Without it, Commerce features will not work on the live site.
+ *
  * @module features/eds/services/configGenerator
  */
 
@@ -19,6 +31,16 @@ import configTemplate from '../config/config-template.json';
 // ==========================================================
 
 /**
+ * Backend environment type for config.json generation.
+ * Different environments require different headers in the config.
+ *
+ * - **paas**: Adobe Commerce PaaS - requires x-api-key, Magento-Environment-Id headers
+ * - **accs**: Adobe Commerce Cloud Services - store codes only, no API key headers
+ * - **aco**: Adobe Commerce Optimizer - AC-View-ID, AC-Price-Book-ID placeholders
+ */
+export type EnvironmentType = 'paas' | 'accs' | 'aco';
+
+/**
  * Parameters for config.json generation
  */
 export interface ConfigGeneratorParams {
@@ -30,13 +52,15 @@ export interface ConfigGeneratorParams {
     daLiveOrg: string;
     /** DA.live site name */
     daLiveSite: string;
+    /** Backend environment type (paas, accs, aco) - defaults to 'paas' for backward compatibility */
+    environmentType?: EnvironmentType;
     /** Commerce GraphQL endpoint (mesh or direct) */
     commerceEndpoint?: string;
     /** Catalog Service endpoint */
     catalogServiceEndpoint?: string;
-    /** Commerce API key */
+    /** Commerce API key (PaaS only) */
     commerceApiKey?: string;
-    /** Commerce environment ID */
+    /** Commerce environment ID (PaaS only) */
     commerceEnvironmentId?: string;
     /** Store view code */
     storeViewCode?: string;
@@ -69,6 +93,98 @@ export interface ConfigGeneratorResult {
 type ComponentConfigs = Record<string, Record<string, string | boolean | number | undefined>>;
 
 /**
+ * Header configuration structure for config.json
+ */
+interface ConfigHeaders {
+    all?: Record<string, string>;
+    cs?: Record<string, string>;
+}
+
+/**
+ * Generate Commerce headers based on environment type.
+ *
+ * Different Adobe Commerce environments require different headers:
+ * - **PaaS**: Full authentication headers (x-api-key, Magento-Environment-Id, store codes)
+ * - **ACCS**: Store codes only (no API key headers required)
+ * - **ACO**: Commerce Optimizer headers (AC-View-ID, AC-Price-Book-ID placeholders)
+ *
+ * @param params - Configuration parameters including environment type
+ * @returns Headers object to inject into config.json
+ */
+export function generateHeaders(params: ConfigGeneratorParams): ConfigHeaders {
+    const storeViewCode = params.storeViewCode || 'default';
+    const storeCode = params.storeCode || 'default';
+    const websiteCode = params.websiteCode || 'base';
+    const customerGroup = params.customerGroup || '';
+
+    // Base headers - common store code for all environments
+    const baseHeaders: ConfigHeaders = {
+        all: {
+            Store: storeViewCode,
+        },
+    };
+
+    const environmentType = params.environmentType || 'paas';
+
+    switch (environmentType) {
+        case 'aco':
+            // Adobe Commerce Optimizer - ACO-specific headers with placeholders
+            return {
+                ...baseHeaders,
+                cs: {
+                    'AC-View-ID': '{{AC_VIEW_ID}}',
+                    'AC-Price-Book-ID': '{{AC_PRICE_BOOK_ID}}',
+                },
+            };
+
+        case 'accs':
+            // Adobe Commerce Cloud Services - store codes only, no API key
+            return {
+                ...baseHeaders,
+                cs: {
+                    'Magento-Customer-Group': customerGroup,
+                    'Magento-Store-Code': storeCode,
+                    'Magento-Store-View-Code': storeViewCode,
+                    'Magento-Website-Code': websiteCode,
+                },
+            };
+
+        case 'paas':
+        default:
+            // Adobe Commerce PaaS - full authentication headers
+            return {
+                ...baseHeaders,
+                cs: {
+                    'Magento-Customer-Group': customerGroup,
+                    'Magento-Store-Code': storeCode,
+                    'Magento-Store-View-Code': storeViewCode,
+                    'Magento-Website-Code': websiteCode,
+                    'x-api-key': params.commerceApiKey || '',
+                    'Magento-Environment-Id': params.commerceEnvironmentId || '',
+                },
+            };
+    }
+}
+
+/**
+ * Map backend component ID to environment type.
+ *
+ * @param backendComponentId - The component ID (e.g., 'adobe-commerce-paas')
+ * @returns The corresponding environment type
+ */
+export function mapBackendToEnvironmentType(backendComponentId?: string): EnvironmentType {
+    switch (backendComponentId) {
+        case 'adobe-commerce-accs':
+            return 'accs';
+        case 'adobe-commerce-aco':
+            return 'aco';
+        case 'adobe-commerce-paas':
+        default:
+            return 'paas';
+    }
+}
+
+/**
  * Extract config parameters from component configs
  *
  * Core extraction logic used by both project-based and raw componentConfigs callers.
@@ -76,19 +192,25 @@ type ComponentConfigs = Record<string, Record<string, string | boolean | number 
  *
  * @param componentConfigs - Component configurations (eds-storefront, eds-commerce-mesh, etc.)
  * @param meshEndpoint - Optional deployed mesh endpoint (overrides config value)
+ * @param backendComponentId - Backend component ID for environment type (e.g., 'adobe-commerce-paas')
  * @returns Config parameters for generation
  */
 export function extractConfigParamsFromConfigs(
     componentConfigs: ComponentConfigs | undefined,
     meshEndpoint?: string,
+    backendComponentId?: string,
 ): Partial<ConfigGeneratorParams> {
     const edsConfig = componentConfigs?.['eds-storefront'] || {};
     const meshConfig = componentConfigs?.['eds-commerce-mesh'] || {};
+
+    // Map backend component ID to environment type (defaults to 'paas' if not provided)
+    const environmentType = mapBackendToEnvironmentType(backendComponentId);
 
     // Prefer mesh endpoint if deployed, otherwise use direct Commerce endpoint
     const commerceEndpoint = meshEndpoint || edsConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT;
 
     return {
+        environmentType,
         commerceEndpoint: commerceEndpoint as string | undefined,
         catalogServiceEndpoint: (edsConfig.PAAS_CATALOG_SERVICE_ENDPOINT || edsConfig.ACCS_CATALOG_SERVICE_ENDPOINT) as string | undefined,
         commerceApiKey: (edsConfig.ADOBE_CATALOG_API_KEY || meshConfig.ADOBE_CATALOG_API_KEY) as string | undefined,
@@ -132,7 +254,8 @@ export function generateConfigJson(
     logger: Logger,
 ): ConfigGeneratorResult {
     try {
-        logger.debug('[ConfigGenerator] Generating config.json from bundled template');
+        const environmentType = params.environmentType || 'paas';
+        logger.debug(`[ConfigGenerator] Generating config.json from bundled template (env: ${environmentType})`);
 
         // Deep clone the template to avoid mutating the imported object
         const config = JSON.parse(JSON.stringify(configTemplate));
@@ -141,14 +264,22 @@ export function generateConfigJson(
         const contentSourceUrl = `https://content.da.live/${params.daLiveOrg}/${params.daLiveSite}`;
         const storeUrl = `https://main--${params.repoName}--${params.githubOwner}.aem.live/`;
 
+        // Determine commerce endpoints based on environment type
+        // PaaS has both commerce-core-endpoint (catalog service) and commerce-endpoint (mesh)
+        // ACCS/ACO have commerce-endpoint only
+        const commerceEndpoint = params.commerceEndpoint || '';
+        const catalogServiceEndpoint = environmentType === 'paas'
+            ? (params.catalogServiceEndpoint || commerceEndpoint)
+            : commerceEndpoint;
+
         // Replace placeholders throughout the config
         const replacements: Record<string, string> = {
             '{ORG}': params.githubOwner,
             '{REPO}': params.repoName,
             '{SITE}': params.daLiveSite,
             '{CONTENT_SOURCE}': contentSourceUrl,
-            '{COMMERCE_ENDPOINT}': params.commerceEndpoint || '',
-            '{CS_ENDPOINT}': params.catalogServiceEndpoint || params.commerceEndpoint || '',
+            '{COMMERCE_ENDPOINT}': commerceEndpoint,
+            '{CS_ENDPOINT}': catalogServiceEndpoint,
             '{STORE_VIEW_CODE}': params.storeViewCode || 'default',
             '{STORE_CODE}': params.storeCode || 'default',
             '{WEBSITE_CODE}': params.websiteCode || 'base',
@@ -168,8 +299,14 @@ export function generateConfigJson(
         // Parse back to object to handle special conversions
         const finalConfig = JSON.parse(configStr);
 
-        // Convert commerce-assets-enabled from string to boolean
+        // Generate environment-specific headers
+        const headers = generateHeaders(params);
+
+        // Inject dynamically generated headers into public.default.headers
         if (finalConfig.public?.default) {
+            finalConfig.public.default.headers = headers;
+
+            // Convert commerce-assets-enabled from string to boolean
             const assetsEnabled = finalConfig.public.default['commerce-assets-enabled'];
             if (assetsEnabled === 'true') {
                 finalConfig.public.default['commerce-assets-enabled'] = true;
@@ -177,12 +314,22 @@ export function generateConfigJson(
                 // Remove the field entirely if disabled (cleaner config)
                 delete finalConfig.public.default['commerce-assets-enabled'];
             }
+
+            // For non-PaaS environments, remove commerce-core-endpoint if it equals commerce-endpoint
+            // (cleaner config - no need for redundant endpoints)
+            if (environmentType !== 'paas') {
+                const coreEndpoint = finalConfig.public.default['commerce-core-endpoint'];
+                const endpoint = finalConfig.public.default['commerce-endpoint'];
+                if (coreEndpoint === endpoint) {
+                    delete finalConfig.public.default['commerce-core-endpoint'];
+                }
+            }
         }
 
         // Serialize with proper formatting
         const configContent = JSON.stringify(finalConfig, null, 2);
 
-        logger.info('[ConfigGenerator] Successfully generated config.json');
+        logger.info(`[ConfigGenerator] Successfully generated config.json (env: ${environmentType})`);
         logger.debug(`[ConfigGenerator] Config size: ${configContent.length} bytes`);
 
         return {

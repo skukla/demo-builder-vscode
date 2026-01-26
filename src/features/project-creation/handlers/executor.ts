@@ -8,6 +8,8 @@
  * - Phase 4-5: Finalization (via projectFinalizationService)
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     cloneAllComponents,
@@ -30,9 +32,8 @@ import { AdobeConfig } from '@/types/base';
 import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 
-// EDS config.json generation (consolidated - used for both creation and reset)
-import { generateConfigJson } from '@/features/eds/services/configGenerator';
-import type { ConfigGeneratorParams } from '@/features/eds/services/configGenerator';
+// EDS config.json sync to remote (Phase 5)
+import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 
 // Stacks configuration - source of truth for frontend/backend/dependencies
 import stacksConfig from '../config/stacks.json';
@@ -477,166 +478,6 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     }
 
     // ========================================================================
-    // EDS POST-MESH: Generate config.json with mesh endpoint and push to GitHub
-    // ========================================================================
-    //
-    // Phase 5 optimization: Generate config.json AFTER mesh deployment
-    // This eliminates the staleness window where config.json had empty endpoint.
-    // Old flow: generate empty → deploy mesh → update → re-push (2 pushes)
-    // New flow: deploy mesh → generate with endpoint → push ONCE
-
-    // Check if EDS setup completed (wizard always sets edsConfig for EDS stacks)
-    const edsSetupComplete = !!typedConfig.edsConfig;
-    context.logger.debug(`[EDS Post-Mesh] Checking conditions: isEdsStack=${isEdsStack}, edsSetupComplete=${edsSetupComplete}, meshState.endpoint=${project.meshState?.endpoint ? 'set' : 'not set'}`);
-
-    if (isEdsStack && edsSetupComplete && project.meshState?.endpoint) {
-        const isPaasBackend = typedConfig.components?.backend === 'adobe-commerce-paas';
-        context.logger.debug(`[EDS Post-Mesh] isPaasBackend=${isPaasBackend}`);
-
-        if (isPaasBackend) {
-            progressTracker('Generating EDS Config', 86, 'Generating config.json with mesh endpoint...');
-            context.logger.info(`[EDS Post-Mesh] Generating config.json with mesh endpoint: ${project.meshState.endpoint}`);
-
-            try {
-                // Get repo URL and parse it (need owner/repo for config generation)
-                const repoUrl = typedConfig.edsConfig?.repoUrl;
-                context.logger.debug(`[EDS Post-Mesh] EDS repo URL: ${repoUrl}`);
-
-                if (!repoUrl) {
-                    context.logger.warn('[EDS Post-Mesh] No repo URL available, skipping config.json generation');
-                } else {
-                    const repoInfo = parseGitHubUrl(repoUrl);
-                    context.logger.debug(`[EDS Post-Mesh] Parsed repo info: owner=${repoInfo?.owner}, repo=${repoInfo?.repo}`);
-
-                    if (!repoInfo) {
-                        context.logger.warn('[EDS Post-Mesh] Could not parse repo URL, skipping config.json generation');
-                    } else {
-                        // Get component configs for store codes and feature flags
-                        const backendComponentId = typedConfig.components?.backend || '';
-                        const frontendComponentId = typedConfig.components?.frontend || '';
-                        // Find mesh component ID in dependencies (eds-commerce-mesh or headless-commerce-mesh)
-                        const meshComponentId = typedConfig.components?.dependencies?.find(
-                            (dep: string) => dep === COMPONENT_IDS.EDS_COMMERCE_MESH || dep === COMPONENT_IDS.HEADLESS_COMMERCE_MESH,
-                        );
-
-                        const backendConfig = typedConfig.componentConfigs?.[backendComponentId] as Record<string, string> | undefined;
-                        const frontendConfig = typedConfig.componentConfigs?.[frontendComponentId] as Record<string, string> | undefined;
-                        const meshConfig = meshComponentId ? typedConfig.componentConfigs?.[meshComponentId] as Record<string, string> | undefined : undefined;
-
-                        // Get DA.live config from wizard's edsConfig
-                        const daLiveOrg = typedConfig.edsConfig?.daLiveOrg || '';
-                        const daLiveSite = typedConfig.edsConfig?.daLiveSite || '';
-
-                        // Build ConfigGeneratorParams - consolidates backend, frontend, and mesh configs
-                        const configParams: ConfigGeneratorParams = {
-                            githubOwner: repoInfo.owner,
-                            repoName: repoInfo.repo,
-                            daLiveOrg,
-                            daLiveSite,
-                            // Commerce endpoints - prefer mesh endpoint
-                            commerceEndpoint: project.meshState.endpoint,
-                            catalogServiceEndpoint: backendConfig?.PAAS_CATALOG_SERVICE_ENDPOINT || meshConfig?.ADOBE_CATALOG_SERVICE_ENDPOINT,
-                            // Store codes from backend or mesh config
-                            commerceApiKey: backendConfig?.ADOBE_CATALOG_API_KEY || meshConfig?.ADOBE_CATALOG_API_KEY,
-                            commerceEnvironmentId: backendConfig?.ADOBE_COMMERCE_ENVIRONMENT_ID || meshConfig?.ADOBE_COMMERCE_ENVIRONMENT_ID,
-                            storeViewCode: backendConfig?.ADOBE_COMMERCE_STORE_VIEW_CODE || meshConfig?.ADOBE_COMMERCE_STORE_VIEW_CODE,
-                            storeCode: backendConfig?.ADOBE_COMMERCE_STORE_CODE || meshConfig?.ADOBE_COMMERCE_STORE_CODE,
-                            websiteCode: backendConfig?.ADOBE_COMMERCE_WEBSITE_CODE || meshConfig?.ADOBE_COMMERCE_WEBSITE_CODE,
-                            customerGroup: backendConfig?.ADOBE_COMMERCE_CUSTOMER_GROUP || frontendConfig?.ADOBE_COMMERCE_CUSTOMER_GROUP,
-                            // AEM Assets flag from frontend config (eds-storefront)
-                            aemAssetsEnabled: frontendConfig?.AEM_ASSETS_ENABLED === 'true',
-                        };
-
-                        // Step 1: Generate config.json content using bundled template
-                        const result = generateConfigJson(configParams, context.logger);
-
-                        if (!result.success || !result.content) {
-                            throw new Error(result.error || 'Failed to generate config.json content');
-                        }
-
-                        // Step 2: Write content to local file
-                        const fs = await import('fs/promises');
-                        const configJsonPath = path.join(edsComponentPath, 'config.json');
-                        await fs.writeFile(configJsonPath, result.content, 'utf-8');
-                        context.logger.info('[EDS Post-Mesh] Local config.json generated successfully');
-
-                        // Step 3: Push config.json to GitHub (ONCE - no staleness window)
-                        const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
-                        const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
-
-                        const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
-                        const githubFileOperations = new GitHubFileOperations(githubTokenService, context.logger);
-
-                        // Check if config.json already exists on GitHub (from template)
-                        context.logger.debug(`[EDS Post-Mesh] Checking for existing config.json on GitHub...`);
-                        const existingFile = await githubFileOperations.getFileContent(
-                            repoInfo.owner,
-                            repoInfo.repo,
-                            'config.json',
-                        );
-                        context.logger.debug(`[EDS Post-Mesh] Existing file SHA: ${existingFile?.sha || 'not found'}`);
-
-                        // Push config.json to GitHub using already-generated content
-                        context.logger.debug(`[EDS Post-Mesh] Pushing config.json to GitHub...`);
-                        await githubFileOperations.createOrUpdateFile(
-                            repoInfo.owner,
-                            repoInfo.repo,
-                            'config.json',
-                            result.content,
-                            'chore: add config.json with mesh endpoint',
-                            existingFile?.sha,
-                        );
-
-                        context.logger.info(`[EDS Post-Mesh] ✓ config.json pushed to GitHub (${repoInfo.owner}/${repoInfo.repo})`);
-
-                        // Step 4: Publish config.json to Helix CDN
-                        // After pushing to GitHub, we must preview/publish via Helix Admin API
-                        // for the CDN to serve the updated config.json
-                        progressTracker('Publishing Config', 88, 'Publishing config.json to CDN...');
-                        context.logger.debug(`[EDS Post-Mesh] Publishing config.json to Helix CDN...`);
-
-                        const { HelixService } = await import('@/features/eds/services/helixService');
-
-                        // HelixService needs GitHub token for admin API auth
-                        // Note: Code preview/publish only requires GitHub auth (no DA.live token)
-                        const helixService = new HelixService(
-                            context.authManager!,
-                            context.logger,
-                            githubTokenService,
-                        );
-
-                        await helixService.previewCode(
-                            repoInfo.owner,
-                            repoInfo.repo,
-                            '/config.json',
-                        );
-
-                        context.logger.info(`[EDS Post-Mesh] ✓ config.json published to CDN`);
-                    }
-                }
-            } catch (error) {
-                // Phase 6: Make config.json push failure fatal
-                // User must know Commerce features won't work
-                context.logger.error('[EDS Post-Mesh] Failed to generate/push config.json on GitHub', error as Error);
-                throw new Error(
-                    `Commerce configuration failed: Could not push config.json to GitHub. ` +
-                    `The storefront is live but Commerce features will not work. ` +
-                    `Error: ${(error as Error).message}`,
-                );
-            }
-        }
-    } else {
-        // Log why we're skipping the post-mesh generation
-        if (!isEdsStack) {
-            context.logger.debug('[EDS Post-Mesh] Skipped - not an EDS stack');
-        } else if (!edsSetupComplete) {
-            context.logger.debug('[EDS Post-Mesh] Skipped - EDS config not set');
-        } else if (!project.meshState?.endpoint) {
-            context.logger.warn('[EDS Post-Mesh] Skipped - meshState.endpoint not set (mesh deployment may have failed)');
-        }
-    }
-
-    // ========================================================================
     // PHASE 4-5: FINALIZATION
     // ========================================================================
     //
@@ -669,6 +510,89 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             }
             project.componentConfigs[meshIdForConfig] = meshEnvVars;
             context.logger.debug(`[Project Creation] Populated componentConfigs[${meshIdForConfig}] with ${Object.keys(meshEnvVars).length} env vars`);
+        }
+    }
+
+    // ========================================================================
+    // PHASE 5: SYNC EDS CONFIG TO REMOTE
+    // ========================================================================
+    // Sync locally generated config.json to GitHub and publish to CDN.
+    // This happens AFTER Phase 4 generates the file with mesh endpoint.
+    //
+    // Config.json generation timeline for EDS projects:
+    // 1. StorefrontSetupStep (preflight): Generates fstab.yaml (no mesh endpoint needed)
+    // 2. executor Phase 3: Deploys mesh → project.meshState.endpoint
+    // 3. executor Phase 4: Generates config.json WITH mesh endpoint (via generateEdsConfigJson)
+    // 4. executor Phase 5: Syncs config.json to GitHub/CDN (this phase)
+
+    // Check if EDS preflight completed AND mesh endpoint available
+    // preflightComplete ensures StorefrontSetupStep finished successfully
+    const edsSetupCompleteForSync = !!typedConfig.edsConfig?.preflightComplete;
+
+    if (isEdsStack && edsSetupCompleteForSync && project.meshState?.endpoint) {
+        progressTracker('Syncing Config', 92, 'Pushing config.json to GitHub...');
+
+        const repoUrl = typedConfig.edsConfig?.repoUrl;
+        if (repoUrl) {
+            const repoInfo = parseGitHubUrl(repoUrl);
+            if (repoInfo) {
+                // Validate config.json exists and is valid before syncing
+                const configJsonPath = path.join(edsComponentPath, 'config.json');
+                if (!fs.existsSync(configJsonPath)) {
+                    throw new Error(
+                        `Commerce configuration failed: config.json not found at ${configJsonPath}. ` +
+                        `Config generation may have failed in Phase 4.`,
+                    );
+                }
+
+                // Validate it's valid JSON
+                try {
+                    const configContent = fs.readFileSync(configJsonPath, 'utf-8');
+                    JSON.parse(configContent);
+                } catch (parseError) {
+                    throw new Error(
+                        `Commerce configuration failed: config.json is invalid JSON. ` +
+                        `Error: ${(parseError as Error).message}`,
+                    );
+                }
+
+                context.logger.info(`[Phase 5] Syncing config.json to ${repoInfo.owner}/${repoInfo.repo}`);
+
+                const syncResult = await syncConfigToRemote({
+                    componentPath: edsComponentPath,
+                    repoOwner: repoInfo.owner,
+                    repoName: repoInfo.repo,
+                    logger: context.logger,
+                    secrets: context.context.secrets,
+                    authManager: context.authManager,
+                });
+
+                if (!syncResult.success) {
+                    // Make config sync failure fatal - user must know Commerce features won't work
+                    throw new Error(
+                        `Commerce configuration failed: Could not sync config.json to GitHub. ` +
+                        `The storefront is live but Commerce features will not work. ` +
+                        `Error: ${syncResult.error}`,
+                    );
+                }
+
+                context.logger.info(`[Phase 5] Config synced: GitHub=${syncResult.githubPushed}, CDN=${syncResult.cdnPublished}`);
+            } else {
+                context.logger.warn('[Phase 5] Could not parse repo URL, skipping config sync');
+            }
+        } else {
+            context.logger.warn('[Phase 5] No repo URL available, skipping config sync');
+        }
+    } else {
+        // Log why we're skipping the Phase 5 sync
+        if (!isEdsStack) {
+            context.logger.debug('[Phase 5] Skipped - not an EDS stack');
+        } else if (!typedConfig.edsConfig) {
+            context.logger.debug('[Phase 5] Skipped - edsConfig not set');
+        } else if (!typedConfig.edsConfig.preflightComplete) {
+            context.logger.debug('[Phase 5] Skipped - preflight not completed');
+        } else if (!project.meshState?.endpoint) {
+            context.logger.debug('[Phase 5] Skipped - meshState.endpoint not set');
         }
     }
 
