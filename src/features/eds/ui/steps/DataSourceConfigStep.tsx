@@ -236,6 +236,21 @@ export function DataSourceConfigStep({
         }
     }, [sites, selectItem]);
 
+    // Validate pre-selected site exists in loaded sites (for import flow)
+    // If the imported site no longer exists, clear the selection
+    useEffect(() => {
+        if (!isCreatingNew && selectedSite && hasLoadedOnce && sites.length > 0) {
+            const siteExists = sites.some(site => site.id === selectedSite.id);
+            if (!siteExists) {
+                // Pre-selected site doesn't exist - clear selection
+                updateEdsConfig({
+                    selectedSite: undefined,
+                    daLiveSite: '',
+                });
+            }
+        }
+    }, [hasLoadedOnce, sites, selectedSite, isCreatingNew, updateEdsConfig]);
+
     // Update canProceed based on site selection
     useEffect(() => {
         const isNewValid = isCreatingNew && daLiveSite.trim() !== '' && isValidSiteName(daLiveSite);

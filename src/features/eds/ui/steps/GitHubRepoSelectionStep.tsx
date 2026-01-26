@@ -274,9 +274,10 @@ export function GitHubRepoSelectionStep({
      * Handle switching to create new mode
      */
     const handleCreateNew = useCallback(() => {
-        // Clear existing repo selection
+        // Clear existing repo selection and repo name (start fresh)
         updateEdsConfig({
             repoMode: 'new',
+            repoName: '', // Clear so user enters a new name
             selectedRepo: undefined,
             existingRepo: undefined,
             existingRepoVerified: undefined,
@@ -506,6 +507,23 @@ export function GitHubRepoSelectionStep({
         }
     }, [githubAppStatus.installUrl]);
 
+    // Validate pre-selected repo exists in loaded repos (for import flow)
+    // If the imported repo no longer exists, clear all repo-related state
+    useEffect(() => {
+        if (repoMode === 'existing' && selectedRepo && hasLoadedOnce && repos.length > 0) {
+            const repoExists = repos.some(repo => repo.id === selectedRepo.id);
+            if (!repoExists) {
+                // Pre-selected repo doesn't exist - clear selection and name
+                updateEdsConfig({
+                    selectedRepo: undefined,
+                    existingRepo: undefined,
+                    existingRepoVerified: undefined,
+                    repoName: '', // Clear imported name since repo doesn't exist
+                });
+            }
+        }
+    }, [hasLoadedOnce, repos, selectedRepo, repoMode, updateEdsConfig]);
+
     // Check GitHub App when EXISTING repo is selected
     // Skip check for NEW repos - the repo doesn't exist yet, so app can't be installed
     useEffect(() => {
@@ -559,27 +577,34 @@ export function GitHubRepoSelectionStep({
         <>
             {/* Create New Repository mode */}
             {repoMode === 'new' && (
-                <>
-                    <Flex justifyContent="end" gap="size-100" marginBottom="size-200">
-                        {/* Create button - matches "New" button position in existing mode */}
-                        {!repoCreationState.isCreated && (
-                            <Button
-                                variant="accent"
-                                onPress={handleCreateRepository}
-                                isDisabled={
-                                    !repoName ||
-                                    !isValidRepositoryName(repoName) ||
-                                    repoCreationState.isCreating ||
-                                    !edsConfig?.templateOwner ||
-                                    !edsConfig?.templateRepo
-                                }
-                            >
-                                Create
+                <View
+                    backgroundColor="gray-50"
+                    borderRadius="medium"
+                    padding="size-300"
+                >
+                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
+                        <Heading level={3} margin={0}>Create New Repository</Heading>
+                        <Flex gap="size-100">
+                            {/* Create button */}
+                            {!repoCreationState.isCreated && (
+                                <Button
+                                    variant="accent"
+                                    onPress={handleCreateRepository}
+                                    isDisabled={
+                                        !repoName ||
+                                        !isValidRepositoryName(repoName) ||
+                                        repoCreationState.isCreating ||
+                                        !edsConfig?.templateOwner ||
+                                        !edsConfig?.templateRepo
+                                    }
+                                >
+                                    Create
+                                </Button>
+                            )}
+                            <Button variant="secondary" onPress={handleUseExisting}>
+                                Browse
                             </Button>
-                        )}
-                        <Button variant="secondary" onPress={handleUseExisting}>
-                            Browse
-                        </Button>
+                        </Flex>
                     </Flex>
 
                     <TextField
@@ -599,8 +624,7 @@ export function GitHubRepoSelectionStep({
 
                     {/* Loading overlay while creating */}
                     <LoadingOverlay isVisible={repoCreationState.isCreating} />
-                </>
-
+                </View>
             )}
 
             {/* Use Existing Repository mode */}

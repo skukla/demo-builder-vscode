@@ -324,71 +324,14 @@ export function useWizardState({
     }, [wizardSteps, stacks, state.selectedStack, editProject]);
 
     // Step completion tracking
-    // In import mode, mark steps as completed if they have data (satisfied)
-    // In edit mode, don't pre-mark - user confirms each step by clicking Continue
-    // This makes edit mode more predictable and ensures token validation happens
-    const [completedSteps, setCompletedSteps] = useState<WizardStep[]>(() => {
-        // Only auto-mark in import mode, not edit mode
-        if (importedSettings && !editProject) {
-            // Mark steps as completed only if they have data (satisfied)
-            return WIZARD_STEPS
-                .filter(step => step.id !== 'deploy-mesh' && step.id !== 'review')
-                .filter(step => isStepSatisfied(step.id, state))
-                .map(step => step.id);
-        }
-        return [];
-    });
-    // Steps confirmed by user in review mode
-    // In import mode, satisfied steps start as confirmed (green checkmark)
-    // In edit mode, no steps are pre-confirmed - user must visit each
-    const [confirmedSteps, setConfirmedSteps] = useState<WizardStep[]>(() => {
-        // Only auto-confirm in import mode, not edit mode
-        if (importedSettings && !editProject) {
-            // Auto-confirm all satisfied steps (they have data)
-            return WIZARD_STEPS
-                .filter(step => step.id !== 'deploy-mesh' && step.id !== 'review')
-                .filter(step => isStepSatisfied(step.id, state))
-                .map(step => step.id);
-        }
-        return [];
-    });
+    // Neither import mode nor edit mode pre-marks steps as completed
+    // User must go through each step sequentially (consistent UX)
+    const [completedSteps, setCompletedSteps] = useState<WizardStep[]>([]);
+
+    // Steps confirmed by user (clicked Continue)
+    // No steps are pre-confirmed - user must visit each
+    const [confirmedSteps, setConfirmedSteps] = useState<WizardStep[]>([]);
     const [highestCompletedStepIndex, setHighestCompletedStepIndex] = useState(-1);
-
-    // Track stacks loading to recalculate completedSteps when stacks become available
-    // This fixes a race condition where EDS steps aren't in WIZARD_STEPS on first render
-    // because stacks are loaded asynchronously
-    // Only applies to import mode - edit mode doesn't pre-mark steps
-    const hasRecalculatedForStacksRef = useRef<boolean>(false);
-    useEffect(() => {
-        // Only run once when stacks become available
-        if (hasRecalculatedForStacksRef.current) return;
-        if (!stacks || stacks.length === 0) return;
-
-        // Only recalculate for import mode, not edit mode
-        const isImportMode = importedSettings && !editProject;
-        if (!isImportMode) return;
-
-        // Mark that we've done the recalculation
-        hasRecalculatedForStacksRef.current = true;
-
-        log.info('Stacks loaded, recalculating completed steps for EDS steps (import mode)');
-
-        // Recalculate completed and confirmed steps now that WIZARD_STEPS includes EDS steps
-        const newCompletedSteps = WIZARD_STEPS
-            .filter(step => step.id !== 'deploy-mesh' && step.id !== 'review')
-            .filter(step => isStepSatisfied(step.id, state))
-            .map(step => step.id);
-
-        const newConfirmedSteps = WIZARD_STEPS
-            .filter(step => step.id !== 'deploy-mesh' && step.id !== 'review')
-            .filter(step => isStepSatisfied(step.id, state))
-            .map(step => step.id);
-
-        setCompletedSteps(newCompletedSteps);
-        setConfirmedSteps(newConfirmedSteps);
-
-        log.info(`Recalculated steps after stacks loaded: completed=[${newCompletedSteps.join(', ')}]`);
-    }, [stacks, editProject, importedSettings, WIZARD_STEPS, state]);
 
     // Track org ID to detect changes (for recomputing completedSteps)
     const prevOrgIdRef = useRef<string | undefined>(state.adobeOrg?.id);

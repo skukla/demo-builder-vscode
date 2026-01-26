@@ -223,7 +223,7 @@ async function showCleanupConfirmation(
     if (edsMetadata?.githubRepo) {
         items.push({
             id: 'github',
-            label: '$(repo) Delete Repository',
+            label: '$(github) Delete Repository',
             description: edsMetadata.githubRepo,
             detail: authStatus.gitHubAuthenticated
                 ? undefined
@@ -237,7 +237,7 @@ async function showCleanupConfirmation(
     if (edsMetadata?.daLiveOrg && edsMetadata?.daLiveSite) {
         items.push({
             id: 'daLive',
-            label: '$(cloud) Delete DA.live Site',
+            label: '$(file-text) Delete DA.live Site',
             description: `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`,
             detail: authStatus.daLiveAuthenticated
                 ? undefined
