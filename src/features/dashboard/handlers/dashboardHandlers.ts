@@ -31,6 +31,7 @@ import { MessageHandler, HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance, getProjectFrontendPort } from '@/types/typeGuards';
 import { COMPONENT_IDS } from '@/core/constants';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { generateFstabContent } from '@/features/eds/services/fstabGenerator';
 import { HelixService } from '@/features/eds/services/helixService';
 import { getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
@@ -752,10 +753,11 @@ export const handleResetEds: MessageHandler = async (context) => {
                 progress.report({ message: 'Step 1/5: Resetting repository to template...' });
                 context.logger.info(`[Dashboard] Resetting repo using bulk tree operations`);
 
-                // Build fstab.yaml content for the override
-                const fstabContent = `mountpoints:
-  /: https://content.da.live/${daLiveOrg}/${daLiveSite}/
-`;
+                // Build fstab.yaml content using centralized generator (single source of truth)
+                const fstabContent = generateFstabContent({
+                    daLiveOrg,
+                    daLiveSite,
+                });
 
                 // Create file overrides map (files with custom content)
                 const fileOverrides = new Map<string, string>();

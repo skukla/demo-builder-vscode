@@ -307,3 +307,4 @@ export const handleValidateSelection: MessageHandler = async (
         };
     }
 };
+

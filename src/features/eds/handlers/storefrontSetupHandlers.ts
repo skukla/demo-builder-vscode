@@ -29,6 +29,7 @@ import {
     HelixConfigPhase,
     ContentPhase,
 } from '../services/edsSetupPhases';
+import { generateFstabContent } from '../services/fstabGenerator';
 
 // ==========================================================
 // Types
@@ -624,10 +625,11 @@ async function executeStorefrontSetupPhases(
             progress: 20,
         });
 
-        // Generate fstab.yaml content
-        const fstabContent = `mountpoints:
-  /: https://content.da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}/
-`;
+        // Generate fstab.yaml content using centralized generator (single source of truth)
+        const fstabContent = generateFstabContent({
+            daLiveOrg: edsConfig.daLiveOrg,
+            daLiveSite: edsConfig.daLiveSite,
+        });
 
         // Push fstab.yaml to GitHub
         await context.sendMessage('storefront-setup-progress', {

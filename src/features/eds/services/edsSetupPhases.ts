@@ -34,6 +34,7 @@ import {
     type PhaseProgressCallback,
 } from './types';
 import type { GitHubAppService } from './githubAppService';
+import { generateFstabContent } from './fstabGenerator';
 
 // Re-export PhaseProgressCallback for consumers
 export type { PhaseProgressCallback } from './types';
@@ -336,10 +337,11 @@ export class HelixConfigPhase {
     private async generateFstabYaml(config: EdsProjectConfig): Promise<string> {
         const fstabPath = path.join(config.componentPath, 'fstab.yaml');
 
-        // fstab.yaml format for Helix 5
-        const fstabContent = `mountpoints:
-  /: https://content.da.live/${config.daLiveOrg}/${config.daLiveSite}/
-`;
+        // Use centralized fstab generator (single source of truth)
+        const fstabContent = generateFstabContent({
+            daLiveOrg: config.daLiveOrg,
+            daLiveSite: config.daLiveSite,
+        });
 
         try {
             await fs.writeFile(fstabPath, fstabContent, 'utf-8');

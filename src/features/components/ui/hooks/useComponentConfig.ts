@@ -239,7 +239,7 @@ export function useComponentConfig({
             // Use centralized env var resolution (includes component vars + service vars)
             // Note: Can't use resolveComponentEnvVars() here directly because we're in browser context
             // and need to use componentsData (loaded via vscode.request), not ComponentRegistryManager
-            
+
             // Add component's own env vars
             data.configuration?.requiredEnvVars?.forEach(addField);
             data.configuration?.optionalEnvVars?.forEach(addField);
