@@ -808,7 +808,7 @@ async function executeStorefrontSetupPhases(
         // Code sync only makes code accessible via admin.hlx.page/code
         // We need to POST to actually publish code to the CDN (aem.live)
         await context.sendMessage('storefront-setup-progress', {
-            phase: 'code-publish',
+            phase: 'code-sync',  // Use code-sync (code-publish not a valid UI phase)
             message: 'Publishing code to CDN...',
             progress: 43,
         });
