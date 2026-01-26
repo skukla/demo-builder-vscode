@@ -158,16 +158,16 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // Safety check: Ensure port is available
     await handlePortConflicts(context, typedConfig, progressTracker);
 
-    // Import dependencies
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const os = await import('os');
+    // Import dependencies (use fsPromises to avoid shadowing sync fs import at top)
+    const fsPromises = await import('fs/promises');
+    const pathAsync = await import('path');
+    const osAsync = await import('os');
 
     // Determine project path based on edit mode
     const isEditMode = typedConfig.editMode && typedConfig.editProjectPath;
     const projectPath = isEditMode
         ? typedConfig.editProjectPath!
-        : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
+        : pathAsync.join(osAsync.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
 
     // Load existing project state if in edit mode (to preserve creation date)
     let existingProject: import('@/types').Project | undefined;
@@ -183,7 +183,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         }
     } else {
         // Clean up orphaned/invalid directories (new project only)
-        await cleanupOrphanedDirectory(projectPath, context, progressTracker, fs);
+        await cleanupOrphanedDirectory(projectPath, context, progressTracker, fsPromises);
     }
 
     // ========================================================================
@@ -192,9 +192,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     progressTracker('Setting Up Project', 10, 'Creating project directory structure...');
 
-    const componentsDir = path.join(projectPath, 'components');
-    await fs.mkdir(componentsDir, { recursive: true });
-    await fs.mkdir(path.join(projectPath, 'logs'), { recursive: true });
+    const componentsDir = pathAsync.join(projectPath, 'components');
+    await fsPromises.mkdir(componentsDir, { recursive: true });
+    await fsPromises.mkdir(pathAsync.join(projectPath, 'logs'), { recursive: true });
 
     context.logger.debug(`[Project Creation] Created directory: ${projectPath}`);
 
@@ -235,7 +235,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // metadata populated from runtime config (from preflight step).
 
     const isEdsStack = isEdsStackId(typedConfig.selectedStack);
-    const edsComponentPath = path.join(projectPath, 'components', COMPONENT_IDS.EDS_STOREFRONT);
+    const edsComponentPath = pathAsync.join(projectPath, 'components', COMPONENT_IDS.EDS_STOREFRONT);
 
     // ========================================================================
     // LOAD COMPONENT DEFINITIONS
@@ -264,13 +264,13 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     let tempComponentsDir: string | undefined;
 
     if (isEditMode) {
-        tempComponentsDir = path.join(projectPath, 'components.tmp');
+        tempComponentsDir = pathAsync.join(projectPath, 'components.tmp');
 
         // Clean up any stale temp directory from previous failed attempts
-        const tempDirExists = await fs.access(tempComponentsDir).then(() => true).catch(() => false);
+        const tempDirExists = await fsPromises.access(tempComponentsDir).then(() => true).catch(() => false);
         if (tempDirExists) {
             context.logger.info('[Project Edit] Cleaning up stale temporary components directory');
-            await fs.rm(tempComponentsDir, { recursive: true, force: true });
+            await fsPromises.rm(tempComponentsDir, { recursive: true, force: true });
         }
 
         context.logger.info('[Project Edit] Will install components to temporary directory for atomic swap');
@@ -324,14 +324,14 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             // Update component instance paths from .tmp to production
             // (paths were set during clone to point to components.tmp)
             // Use proper path reconstruction to avoid substring matching issues
-            const tempComponentsPath = path.join(projectPath, 'components.tmp');
-            const productionComponentsPath = path.join(projectPath, 'components');
+            const tempComponentsPath = pathAsync.join(projectPath, 'components.tmp');
+            const productionComponentsPath = pathAsync.join(projectPath, 'components');
 
             for (const [compId, instance] of Object.entries(project.componentInstances)) {
                 if (instance.path && instance.path.startsWith(tempComponentsPath)) {
-                    const relativePath = path.relative(tempComponentsPath, instance.path);
+                    const relativePath = pathAsync.relative(tempComponentsPath, instance.path);
                     const oldPath = instance.path;
-                    instance.path = path.join(productionComponentsPath, relativePath);
+                    instance.path = pathAsync.join(productionComponentsPath, relativePath);
                     context.logger.debug(`[Project Edit] Updated path for ${compId}: ${oldPath} → ${instance.path}`);
                 }
             }
