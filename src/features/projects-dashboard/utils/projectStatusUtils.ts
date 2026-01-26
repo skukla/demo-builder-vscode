@@ -23,8 +23,14 @@ export type StatusVariant = 'success' | 'neutral' | 'warning' | 'error';
  * @returns Human-readable status text
  */
 export function getStatusText(status: ProjectStatus, port?: number, isEds?: boolean): string {
-    // EDS projects are always "Published" - they don't have start/stop
+    // EDS projects show "Published" unless they're in a transitional state
     if (isEds) {
+        if (status === 'resetting') {
+            return 'Resetting...';
+        }
+        if (status === 'republishing') {
+            return 'Republishing...';
+        }
         return 'Published';
     }
 
@@ -35,6 +41,10 @@ export function getStatusText(status: ProjectStatus, port?: number, isEds?: bool
             return 'Starting...';
         case 'stopping':
             return 'Stopping...';
+        case 'resetting':
+            return 'Resetting...';
+        case 'republishing':
+            return 'Republishing...';
         case 'stopped':
         case 'ready':
             return 'Stopped';
@@ -53,8 +63,11 @@ export function getStatusText(status: ProjectStatus, port?: number, isEds?: bool
  * @returns StatusDot variant for color coding
  */
 export function getStatusVariant(status: ProjectStatus, isEds?: boolean): StatusVariant {
-    // EDS projects are always "success" (green) since they're always published
+    // EDS projects show "success" (green) unless they're in a transitional state
     if (isEds) {
+        if (status === 'resetting' || status === 'republishing') {
+            return 'warning'; // Yellow/orange during transitional operations
+        }
         return 'success';
     }
 
@@ -63,6 +76,8 @@ export function getStatusVariant(status: ProjectStatus, isEds?: boolean): Status
             return 'success';
         case 'starting':
         case 'stopping':
+        case 'resetting':
+        case 'republishing':
             return 'warning';
         case 'error':
             return 'error';

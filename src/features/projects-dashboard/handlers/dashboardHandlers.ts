@@ -749,10 +749,16 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
         }
     }
 
-    return vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: `Republishing ${project.name}`,
+    // Set project status to 'republishing' so UI shows transitional state
+    const originalStatus = project.status;
+    project.status = 'republishing';
+    await context.stateManager.saveProject(project);
+
+    try {
+        return await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: `Republishing ${project.name}`,
             cancellable: false,
         },
         async (progress) => {
@@ -810,7 +816,12 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                 return { success: false, error: errorMessage };
             }
         },
-    );
+        );
+    } finally {
+        // Reset status back to original (typically 'ready' for EDS projects, shown as "Published")
+        project.status = originalStatus;
+        await context.stateManager.saveProject(project);
+    }
 };
 
 export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
@@ -984,16 +995,22 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         }
     }
 
+    // Set project status to 'resetting' so UI shows transitional state
+    const originalStatus = project.status;
+    project.status = 'resetting';
+    await context.stateManager.saveProject(project);
+
     // Show progress notification
-    return vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Resetting EDS Project',
-            cancellable: false,
-        },
-        async (progress) => {
-            try {
-                context.logger.info(`[ProjectsList] Resetting EDS project: ${repoFullName}`);
+    try {
+        return await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: 'Resetting EDS Project',
+                cancellable: false,
+            },
+            async (progress) => {
+                try {
+                    context.logger.info(`[ProjectsList] Resetting EDS project: ${repoFullName}`);
 
                 // Create service dependencies
                 const { ServiceLocator } = await import('@/core/di/serviceLocator');
@@ -1370,4 +1387,9 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
             }
         },
     );
+    } finally {
+        // Reset status back to original (typically 'ready' for EDS projects, shown as "Published")
+        project.status = originalStatus;
+        await context.stateManager.saveProject(project);
+    }
 };

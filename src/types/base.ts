@@ -118,6 +118,8 @@ export type ProjectStatus =
     | 'running'
     | 'stopping'      // Transitional: demo is shutting down
     | 'stopped'
+    | 'resetting'     // Transitional: EDS project is being reset
+    | 'republishing'  // Transitional: EDS project content is being republished
     | 'error';
 
 export interface AdobeConfig {
