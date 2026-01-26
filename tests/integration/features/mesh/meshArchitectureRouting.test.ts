@@ -85,22 +85,16 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
     // EDS Config.json Mesh Endpoint Tests (3 tests)
     // ==========================================================
     describe('EDS Config.json Mesh Endpoints', () => {
-        it('EDS frontend should map both commerce endpoints from mesh', () => {
+        it('EDS frontend should use eds-config generator for config.json', () => {
             // Given: EDS frontend configuration
             const edsFrontend = componentsJson.frontends['eds-storefront'];
 
-            // When: Checking config file field mappings
-            const configMappings = edsFrontend.configuration?.configFiles?.['config.json']?.fieldRenames;
+            // When: Checking config file configuration
+            const configJsonConfig = edsFrontend.configuration?.configFiles?.['config.json'];
 
-            // Then: Both endpoints should be mapped to mesh or catalog service fields
-            expect(configMappings).toBeDefined();
-            // commerce-core-endpoint comes from MESH_ENDPOINT
-            expect(configMappings['MESH_ENDPOINT']).toBe('commerce-core-endpoint');
-            // commerce-endpoint maps from catalog service endpoint vars
-            expect(
-                configMappings['PAAS_CATALOG_SERVICE_ENDPOINT'] === 'commerce-endpoint' ||
-                configMappings['ACCS_CATALOG_SERVICE_ENDPOINT'] === 'commerce-endpoint'
-            ).toBe(true);
+            // Then: Should use the eds-config generator (replaces legacy fieldRenames approach)
+            expect(configJsonConfig).toBeDefined();
+            expect(configJsonConfig.generator).toBe('eds-config');
         });
 
         it('EDS mesh should provide MESH_ENDPOINT environment variable', () => {
@@ -124,10 +118,10 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
             const requiresMesh = stack.requiredComponents.includes('eds-commerce-mesh');
 
             // Then: Mesh is required, meaning both endpoints will use mesh URL
-            // (The actual URL substitution is tested in unit tests for edsSetupPhases)
+            // The eds-config generator maps MESH_ENDPOINT to both commerce endpoints
             expect(requiresMesh).toBe(true);
 
-            // And the mesh provides the endpoint that both commerce fields will use
+            // And the mesh provides the endpoint that the generator will use
             const edsMesh = componentsJson.mesh['eds-commerce-mesh'];
             expect(edsMesh.configuration.providesEnvVars).toContain('MESH_ENDPOINT');
         });
