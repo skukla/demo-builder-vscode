@@ -42,6 +42,10 @@ export {
 } from './services/configGenerator';
 export type { ConfigGeneratorParams, ConfigGeneratorResult } from './services/configGenerator';
 
+// Fstab Generator (single source of truth for fstab.yaml)
+export { generateFstabContent } from './services/fstabGenerator';
+export type { FstabConfig } from './services/fstabGenerator';
+
 // Error Formatters
 export {
     formatGitHubError,
