@@ -32,6 +32,36 @@ import {
 } from './daLiveConstants';
 
 /**
+ * Batch size for parallel content copying operations.
+ * Process 5 files concurrently to balance speed vs API rate limits.
+ */
+const CONTENT_COPY_BATCH_SIZE = 5;
+
+/**
+ * Filter out product overlay documents from content paths.
+ *
+ * Product overlays (e.g., /products/sku-123) are template documents used by
+ * EDS routing but should not be copied during content migration. Only the
+ * default product page template (/products/default) should be copied.
+ *
+ * @param paths - Array of content paths from the index
+ * @returns Filtered paths with product overlays removed
+ */
+export function filterProductOverlays(paths: string[]): string[] {
+    return paths.filter(path => {
+        // Check if this is a product path
+        if (path.includes('/products/')) {
+            // Keep /products/default and anything under it
+            // e.g., /products/default, /products/default/something
+            return path.endsWith('/products/default') ||
+                   path.includes('/products/default/');
+        }
+        // Keep all non-product paths unchanged
+        return true;
+    });
+}
+
+/**
  * Content source configuration for copying content between DA.live sites
  */
 export interface DaLiveContentSource {
@@ -50,6 +80,44 @@ export interface DaLiveContentSource {
  */
 export interface TokenProvider {
     getAccessToken(): Promise<string | null>;
+}
+
+/**
+ * Authentication manager interface for token provider creation.
+ * This matches the shape of AuthenticationService.getTokenManager().
+ */
+interface TokenManager {
+    getAccessToken(): Promise<string | undefined>;
+}
+
+interface AuthManagerLike {
+    getTokenManager(): TokenManager;
+}
+
+/**
+ * Create a TokenProvider adapter from an authentication manager.
+ *
+ * This factory function consolidates the repeated pattern of creating
+ * TokenProvider adapters throughout the codebase. It handles:
+ * - Null/undefined authManager (returns null-returning provider)
+ * - Converting undefined tokens to null (as required by TokenProvider)
+ *
+ * @param authManager - Optional authentication manager with getTokenManager()
+ * @returns TokenProvider that wraps the auth manager's token access
+ */
+export function createDaLiveTokenProvider(authManager?: AuthManagerLike | null): TokenProvider {
+    if (!authManager) {
+        return {
+            getAccessToken: async () => null,
+        };
+    }
+
+    return {
+        getAccessToken: async () => {
+            const token = await authManager.getTokenManager().getAccessToken();
+            return token ?? null;
+        },
+    };
 }
 
 /**
@@ -615,7 +683,16 @@ export class DaLiveContentOperations {
         const token = await this.getImsToken();
 
         // Get content paths from index
-        const contentPaths = await this.getContentPathsFromIndex(source);
+        let contentPaths = await this.getContentPathsFromIndex(source);
+
+        // Filter out product overlay documents (keep only /products/default)
+        const originalCount = contentPaths.length;
+        contentPaths = filterProductOverlays(contentPaths);
+        const filteredCount = originalCount - contentPaths.length;
+        if (filteredCount > 0) {
+            this.logger.info(`[DA.live] Filtered ${filteredCount} product overlay paths`);
+        }
+
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Checking configurations...' });
 
         // Add essential root-level spreadsheets that may not be in the content index
@@ -645,32 +722,41 @@ export class DaLiveContentOperations {
         const failedFiles: { path: string; error: string }[] = [];
         const totalFiles = contentPaths.length;
 
-        // Copy each file
-        for (let i = 0; i < contentPaths.length; i++) {
-            const sourcePath = contentPaths[i];
+        // Copy files in parallel batches for improved performance (~5x faster)
+        for (let i = 0; i < contentPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
+            const batch = contentPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
 
-            // Report progress
+            // Report progress at batch start
             if (progressCallback) {
                 progressCallback({
-                    currentFile: sourcePath,
+                    currentFile: batch[0],
                     processed: i,
                     total: totalFiles,
                     percentage: Math.round((i / totalFiles) * 100),
                 });
             }
 
-            // Copy the file
-            const success = await this.copySingleFile(
-                token,
-                { org: source.org, site: source.site },
-                sourcePath,
-                { org: destOrg, site: destSite },
-                sourcePath,
+            // Copy batch in parallel
+            const results = await Promise.all(
+                batch.map(async (sourcePath) => {
+                    const success = await this.copySingleFile(
+                        token,
+                        { org: source.org, site: source.site },
+                        sourcePath,
+                        { org: destOrg, site: destSite },
+                        sourcePath,
+                    );
+                    return { path: sourcePath, success };
+                }),
             );
-            if (success) {
-                copiedFiles.push(sourcePath);
-            } else {
-                failedFiles.push({ path: sourcePath, error: 'Copy failed' });
+
+            // Track results
+            for (const result of results) {
+                if (result.success) {
+                    copiedFiles.push(result.path);
+                } else {
+                    failedFiles.push({ path: result.path, error: 'Copy failed' });
+                }
             }
         }
 
@@ -759,33 +845,41 @@ export class DaLiveContentOperations {
         const failedFiles: { path: string; error: string }[] = [];
         const totalFiles = mediaPaths.length;
 
-        // Copy each media file
-        for (let i = 0; i < mediaPaths.length; i++) {
-            const mediaPath = mediaPaths[i];
+        // Copy media files in parallel batches for improved performance (~5x faster)
+        for (let i = 0; i < mediaPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
+            const batch = mediaPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
 
-            // Report progress
+            // Report progress at batch start
             if (progressCallback) {
                 progressCallback({
-                    currentFile: mediaPath,
+                    currentFile: batch[0],
                     processed: i,
                     total: totalFiles,
                     percentage: Math.round((i / totalFiles) * 100),
                 });
             }
 
-            // Copy the file
-            const success = await this.copySingleFile(
-                token,
-                { org: source.org, site: source.site },
-                mediaPath,
-                { org: destOrg, site: destSite },
-                mediaPath,
+            // Copy batch in parallel
+            const results = await Promise.all(
+                batch.map(async (mediaPath) => {
+                    const success = await this.copySingleFile(
+                        token,
+                        { org: source.org, site: source.site },
+                        mediaPath,
+                        { org: destOrg, site: destSite },
+                        mediaPath,
+                    );
+                    return { path: mediaPath, success };
+                }),
             );
 
-            if (success) {
-                copiedFiles.push(mediaPath);
-            } else {
-                failedFiles.push({ path: mediaPath, error: 'Copy failed' });
+            // Track results
+            for (const result of results) {
+                if (result.success) {
+                    copiedFiles.push(result.path);
+                } else {
+                    failedFiles.push({ path: result.path, error: 'Copy failed' });
+                }
             }
         }
 

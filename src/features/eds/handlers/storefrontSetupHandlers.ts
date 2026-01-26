@@ -20,15 +20,10 @@ import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { GitHubAppService } from '../services/githubAppService';
 import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
-import { DaLiveContentOperations } from '../services/daLiveContentOperations';
+import { DaLiveContentOperations, createDaLiveTokenProvider } from '../services/daLiveContentOperations';
 import { DaLiveAuthService } from '../services/daLiveAuthService';
 import { HelixService } from '../services/helixService';
 import { ToolManager } from '../services/toolManager';
-import {
-    GitHubRepoPhase,
-    HelixConfigPhase,
-    ContentPhase,
-} from '../services/edsSetupPhases';
 import { generateFstabContent } from '../services/fstabGenerator';
 
 // ==========================================================
@@ -55,6 +50,8 @@ interface StorefrontSetupStartPayload {
     projectName: string;
     /** Component configurations for config.json generation */
     componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
+    /** Backend component ID for environment-aware config generation */
+    backendComponentId?: string;
     edsConfig: {
         repoName: string;
         repoMode?: 'new' | 'existing';
@@ -257,6 +254,7 @@ export async function handleStartStorefrontSetup(
             projectName,
             edsConfig,
             payload.componentConfigs,
+            payload.backendComponentId,
             abortController.signal,
         );
 
@@ -403,6 +401,7 @@ async function executeStorefrontSetupPhases(
     projectName: string,
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     componentConfigs: StorefrontSetupStartPayload['componentConfigs'],
+    backendComponentId: string | undefined,
     signal: AbortSignal,
 ): Promise<StorefrontSetupResult> {
     const logger = context.logger;
@@ -414,17 +413,20 @@ async function executeStorefrontSetupPhases(
     const githubAppService = new GitHubAppService(githubTokenService, logger);
 
     // Create TokenProvider adapter for DA.live operations
-    const tokenProvider = context.authManager ? {
-        getAccessToken: async () => {
-            const token = await context.authManager!.getTokenManager().getAccessToken();
-            return token ?? null;
-        },
-    } : {
-        getAccessToken: async () => null,
-    };
+    const tokenProvider = createDaLiveTokenProvider(context.authManager);
 
     const daLiveOrgOps = new DaLiveOrgOperations(tokenProvider, logger);
     const daLiveContentOps = new DaLiveContentOperations(tokenProvider, logger);
+
+    // Create HelixService for CDN operations (code preview, content publish)
+    // Uses GitHub token for admin API auth and DA.live token for x-content-source-authorization
+    const daLiveAuthService = new DaLiveAuthService(context.context);
+    const daLiveTokenProvider = {
+        getAccessToken: async () => {
+            return await daLiveAuthService.getAccessToken();
+        },
+    };
+    const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
 
     // Derive skipContent from user selections:
     // - If using an EXISTING site (selectedSite exists) AND not resetting content → skip content copy
@@ -708,55 +710,10 @@ async function executeStorefrontSetupPhases(
             logger.info(`[Storefront Setup] Template patches applied: ${patchResults.filter((r: { applied: boolean }) => r.applied).length}/${patchResults.length}`);
         }
 
-        // ============================================
-        // Phase 2c: Generate and Push config.json
-        // ============================================
-        // Generate config.json with Commerce configuration for the storefront
-        if (componentConfigs) {
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'helix-config',
-                message: 'Generating storefront configuration...',
-                progress: 32,
-            });
-
-            const { generateConfigJson, extractConfigParamsFromConfigs } = await import('../services/configGenerator');
-
-            // Extract Commerce config values using shared helper
-            const commerceParams = extractConfigParamsFromConfigs(componentConfigs);
-
-            // Build full config params with EDS-specific values
-            const configParams = {
-                githubOwner: repoOwner,
-                repoName,
-                daLiveOrg: edsConfig.daLiveOrg,
-                daLiveSite: edsConfig.daLiveSite,
-                ...commerceParams,
-            };
-
-            const configResult = generateConfigJson(configParams, logger);
-
-            if (configResult.success && configResult.content) {
-                // Check if config.json already exists (to get SHA for update)
-                const existingConfig = await githubFileOps.getFileContent(repoOwner, repoName, 'config.json');
-                const configSha = existingConfig?.sha;
-
-                await githubFileOps.createOrUpdateFile(
-                    repoOwner,
-                    repoName,
-                    'config.json',
-                    configResult.content,
-                    'chore: configure storefront with Commerce settings',
-                    configSha,
-                );
-
-                logger.info('[Storefront Setup] config.json pushed to GitHub');
-            } else {
-                logger.warn(`[Storefront Setup] Failed to generate config.json: ${configResult.error}`);
-                // Continue without config.json - site will show configuration error but can be manually fixed
-            }
-        } else {
-            logger.warn('[Storefront Setup] No componentConfigs provided - skipping config.json generation');
-        }
+        // NOTE: config.json generation moved to executor Phase 4/5
+        // Phase 4 generates config.json locally with mesh endpoint (via generateEdsConfigJson)
+        // Phase 5 syncs config.json to GitHub and publishes to CDN (via syncConfigToRemote)
+        // This consolidation ensures config.json always has the mesh endpoint and is only pushed once
 
         await context.sendMessage('storefront-setup-progress', {
             phase: 'helix-config',
@@ -857,19 +814,8 @@ async function executeStorefrontSetupPhases(
         });
 
         try {
-            // Create HelixService for code preview (only needs GitHub token)
-            // DA.live token not needed for code operations but we provide it for consistency
-            const daLiveAuthService = new DaLiveAuthService(context.context);
-            const daLiveTokenProvider = {
-                getAccessToken: async () => {
-                    return await daLiveAuthService.getAccessToken();
-                },
-            };
-            const helixServiceForCode = new HelixService(context.authManager!, logger, githubTokenService, daLiveTokenProvider);
-
             // Preview all code files (/* wildcard) to publish to CDN
-            await helixServiceForCode.previewCode(repoOwner, repoName, '/*', 'main');
-
+            await helixService.previewCode(repoOwner, repoName, '/*', 'main');
             logger.info('[Storefront Setup] Code published to CDN');
         } catch (error) {
             // Code preview failure is not fatal - site may still work, just with stale code
@@ -953,18 +899,6 @@ async function executeStorefrontSetupPhases(
             });
 
             logger.info(`[Storefront Setup] Publishing content to CDN for ${repoOwner}/${repoName}`);
-
-            // Create HelixService for publish operation
-            // HelixService uses GitHub token for admin API auth
-            // IMPORTANT: Also need DA.live token provider for x-content-source-authorization
-            // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
-            const daLiveAuthService = new DaLiveAuthService(context.context);
-            const daLiveTokenProvider = {
-                getAccessToken: async () => {
-                    return await daLiveAuthService.getAccessToken();
-                },
-            };
-            const helixService = new HelixService(context.authManager!, logger, githubTokenService, daLiveTokenProvider);
 
             try {
                 // Progress callback to report publish status to UI
@@ -1050,14 +984,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     const githubRepoOps = new GitHubRepoOperations(githubTokenService, context.logger);
 
     // Create TokenProvider adapter from AuthenticationService if available
-    const tokenProvider = context.authManager ? {
-        getAccessToken: async () => {
-            const token = await context.authManager!.getTokenManager().getAccessToken();
-            return token ?? null;
-        },
-    } : {
-        getAccessToken: async () => null,
-    };
+    const tokenProvider = createDaLiveTokenProvider(context.authManager);
 
     const daLiveOrgOps = new DaLiveOrgOperations(tokenProvider, context.logger);
 
@@ -1074,7 +1001,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
             return await daLiveAuthService.getAccessToken();
         },
     };
-    const helixService = new HelixService(context.authManager, context.logger, githubTokenService, daLiveTokenProvider);
+    const helixService = new HelixService(context.logger, githubTokenService, daLiveTokenProvider);
 
     const toolManager = new ToolManager(context.logger);
 

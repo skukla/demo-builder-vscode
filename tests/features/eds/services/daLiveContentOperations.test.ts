@@ -5,7 +5,7 @@
  * copyMediaFromContent() method for copying media files by scanning content.
  */
 
-import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLiveContentOperations';
+import { DaLiveContentOperations, type TokenProvider, filterProductOverlays } from '@/features/eds/services/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
 import type { DaLiveProgressCallback } from '@/features/eds/services/types';
 
@@ -152,30 +152,77 @@ describe('DaLiveContentOperations', () => {
         const destOrg = 'user-org';
         const destSite = 'user-site';
 
+        /**
+         * Helper to create URL-based mock implementation
+         * This handles parallel batch processing where mocks are consumed concurrently
+         */
+        function createUrlBasedMock(config: {
+            contentPages?: Record<string, string>;
+            mediaResponses?: Record<string, { ok: boolean; contentType?: string }>;
+            failedPages?: string[];
+        }) {
+            const { contentPages = {}, mediaResponses = {}, failedPages = [] } = config;
+
+            return async (url: string, options?: RequestInit) => {
+                // Check for failed content pages
+                for (const failedPage of failedPages) {
+                    if (url.includes(failedPage)) {
+                        return mockFetchResponse(500);
+                    }
+                }
+
+                // Check for content page scan requests
+                for (const [page, html] of Object.entries(contentPages)) {
+                    if (url.includes(page) && !url.includes('media_')) {
+                        return {
+                            ok: true,
+                            status: 200,
+                            headers: { get: () => 'text/html' },
+                            text: async () => html,
+                        } as unknown as Response;
+                    }
+                }
+
+                // Check for HEAD requests (isSpreadsheetPath check)
+                if (options?.method === 'HEAD' && url.includes('.json')) {
+                    return mockFetchResponse(404);
+                }
+
+                // Check for media requests
+                for (const [mediaPath, response] of Object.entries(mediaResponses)) {
+                    if (url.includes(mediaPath)) {
+                        // POST to DA.live
+                        if (options?.method === 'POST') {
+                            return mockFetchResponse(response.ok ? 200 : 500);
+                        }
+                        // GET from source
+                        return mockFetchResponse(
+                            response.ok ? 200 : 500,
+                            undefined,
+                            response.contentType || 'image/png'
+                        );
+                    }
+                }
+
+                // Default response
+                return mockFetchResponse(404);
+            };
+        }
+
         it('should extract and copy media files from content pages', async () => {
             // Given: Content pages with media references
             const contentPaths = ['/about', '/products'];
-            const aboutHtml = '<html><body><img src="./media_abc123.png"></body></html>';
-            const productsHtml = '<html><body><img src="/media_def456.jpg"></body></html>';
 
-            // Mock order:
-            // 1. Fetch /about HTML (to scan for media)
-            // 2. Fetch /products HTML (to scan for media)
-            // 3. HEAD /media_abc123.png.json (isSpreadsheetPath check)
-            // 4. Fetch media_abc123.png from source (copySingleFile step 1)
-            // 5. POST media_abc123.png to dest (copySingleFile step 2)
-            // 6. HEAD /media_def456.jpg.json (isSpreadsheetPath check)
-            // 7. Fetch media_def456.jpg from source (copySingleFile step 1)
-            // 8. POST media_def456.jpg to dest (copySingleFile step 2)
-            mockFetch
-                .mockResolvedValueOnce(mockFetchResponse(200, aboutHtml)) // scan /about
-                .mockResolvedValueOnce(mockFetchResponse(200, productsHtml)) // scan /products
-                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_abc123.png.json
-                .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/png')) // fetch media_abc123.png
-                .mockResolvedValueOnce(mockFetchResponse(200)) // POST media_abc123.png
-                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_def456.jpg.json
-                .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/jpeg')) // fetch media_def456.jpg
-                .mockResolvedValueOnce(mockFetchResponse(200)); // POST media_def456.jpg
+            mockFetch.mockImplementation(createUrlBasedMock({
+                contentPages: {
+                    '/about': '<html><body><img src="./media_abc123.png"></body></html>',
+                    '/products': '<html><body><img src="/media_def456.jpg"></body></html>',
+                },
+                mediaResponses: {
+                    'media_abc123.png': { ok: true, contentType: 'image/png' },
+                    'media_def456.jpg': { ok: true, contentType: 'image/jpeg' },
+                },
+            }));
 
             // When: copyMediaFromContent is called
             const result = await service.copyMediaFromContent(
@@ -195,9 +242,12 @@ describe('DaLiveContentOperations', () => {
         it('should return success with empty lists when no media found', async () => {
             // Given: Content pages with no media references
             const contentPaths = ['/about'];
-            const aboutHtml = '<html><body><p>No images here</p></body></html>';
 
-            mockFetch.mockResolvedValueOnce(mockFetchResponse(200, aboutHtml));
+            mockFetch.mockImplementation(createUrlBasedMock({
+                contentPages: {
+                    '/about': '<html><body><p>No images here</p></body></html>',
+                },
+            }));
 
             // When: copyMediaFromContent is called
             const result = await service.copyMediaFromContent(
@@ -217,15 +267,16 @@ describe('DaLiveContentOperations', () => {
         it('should deduplicate media references across pages', async () => {
             // Given: Multiple pages referencing the same media file
             const contentPaths = ['/about', '/contact'];
-            const aboutHtml = '<html><body><img src="./media_abc123.png"></body></html>';
-            const contactHtml = '<html><body><img src="/media_abc123.png"></body></html>'; // Same file!
 
-            mockFetch
-                .mockResolvedValueOnce(mockFetchResponse(200, aboutHtml))
-                .mockResolvedValueOnce(mockFetchResponse(200, contactHtml))
-                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_abc123.png.json
-                .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/png')) // fetch media_abc123.png
-                .mockResolvedValueOnce(mockFetchResponse(200)); // POST media_abc123.png
+            mockFetch.mockImplementation(createUrlBasedMock({
+                contentPages: {
+                    '/about': '<html><body><img src="./media_abc123.png"></body></html>',
+                    '/contact': '<html><body><img src="/media_abc123.png"></body></html>',
+                },
+                mediaResponses: {
+                    'media_abc123.png': { ok: true, contentType: 'image/png' },
+                },
+            }));
 
             // When: copyMediaFromContent is called
             const result = await service.copyMediaFromContent(
@@ -244,16 +295,16 @@ describe('DaLiveContentOperations', () => {
         it('should invoke progress callback correctly', async () => {
             // Given: Content with media files
             const contentPaths = ['/about'];
-            const aboutHtml = '<html><body><img src="./media_abc123.png"><img src="./media_def456.jpg"></body></html>';
 
-            mockFetch
-                .mockResolvedValueOnce(mockFetchResponse(200, aboutHtml))
-                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_abc123.png.json
-                .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/png'))
-                .mockResolvedValueOnce(mockFetchResponse(200))
-                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_def456.jpg.json
-                .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/jpeg'))
-                .mockResolvedValueOnce(mockFetchResponse(200));
+            mockFetch.mockImplementation(createUrlBasedMock({
+                contentPages: {
+                    '/about': '<html><body><img src="./media_abc123.png"><img src="./media_def456.jpg"></body></html>',
+                },
+                mediaResponses: {
+                    'media_abc123.png': { ok: true, contentType: 'image/png' },
+                    'media_def456.jpg': { ok: true, contentType: 'image/jpeg' },
+                },
+            }));
 
             const progressCallback: DaLiveProgressCallback = jest.fn();
 
@@ -273,7 +324,7 @@ describe('DaLiveContentOperations', () => {
             const calls = (progressCallback as jest.Mock).mock.calls;
             expect(calls.length).toBeGreaterThanOrEqual(2);
 
-            // First call should be processing first file
+            // First call should be processing first batch
             expect(calls[0][0]).toMatchObject({
                 processed: 0,
                 total: 2,
@@ -289,18 +340,16 @@ describe('DaLiveContentOperations', () => {
         it('should return partial success when some files fail to copy', async () => {
             // Given: Content with media files but one fails to copy
             const contentPaths = ['/about'];
-            const aboutHtml = '<html><body><img src="./media_abc123.png"><img src="./media_def456.jpg"></body></html>';
 
-            mockFetch
-                .mockResolvedValueOnce(mockFetchResponse(200, aboutHtml))
-                // Copy media_abc123.png - success
-                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_abc123.png.json
-                .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/png'))
-                .mockResolvedValueOnce(mockFetchResponse(200))
-                // Copy media_def456.jpg - fails
-                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_def456.jpg.json
-                .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/jpeg'))
-                .mockResolvedValueOnce(mockFetchResponse(500));
+            mockFetch.mockImplementation(createUrlBasedMock({
+                contentPages: {
+                    '/about': '<html><body><img src="./media_abc123.png"><img src="./media_def456.jpg"></body></html>',
+                },
+                mediaResponses: {
+                    'media_abc123.png': { ok: true, contentType: 'image/png' },
+                    'media_def456.jpg': { ok: false, contentType: 'image/jpeg' }, // This one fails
+                },
+            }));
 
             // When: copyMediaFromContent is called
             const result = await service.copyMediaFromContent(
@@ -335,14 +384,16 @@ describe('DaLiveContentOperations', () => {
         it('should handle content page fetch errors gracefully', async () => {
             // Given: One content page fails to fetch
             const contentPaths = ['/about', '/products'];
-            const productsHtml = '<html><body><img src="./media_def456.jpg"></body></html>';
 
-            mockFetch
-                .mockResolvedValueOnce(mockFetchResponse(500)) // /about fails
-                .mockResolvedValueOnce(mockFetchResponse(200, productsHtml)) // /products succeeds
-                .mockResolvedValueOnce(mockFetchResponse(404)) // HEAD /media_def456.jpg.json
-                .mockResolvedValueOnce(mockFetchResponse(200, undefined, 'image/jpeg'))
-                .mockResolvedValueOnce(mockFetchResponse(200));
+            mockFetch.mockImplementation(createUrlBasedMock({
+                contentPages: {
+                    '/products': '<html><body><img src="./media_def456.jpg"></body></html>',
+                },
+                mediaResponses: {
+                    'media_def456.jpg': { ok: true, contentType: 'image/jpeg' },
+                },
+                failedPages: ['/about'],
+            }));
 
             // When: copyMediaFromContent is called
             const result = await service.copyMediaFromContent(
@@ -708,5 +759,63 @@ describe('DaLiveContentOperations', () => {
             // Should still have all 3 divs
             expect((postedHtml.match(/<div>/g) || []).length).toBe(3);
         });
+    });
+});
+
+describe('filterProductOverlays', () => {
+    it('should keep /products/default', () => {
+        const paths = ['/about', '/products/default', '/contact'];
+        const result = filterProductOverlays(paths);
+        expect(result).toContain('/products/default');
+    });
+
+    it('should keep paths under /products/default/', () => {
+        const paths = ['/products/default/variant1', '/products/default/info'];
+        const result = filterProductOverlays(paths);
+        expect(result).toEqual(['/products/default/variant1', '/products/default/info']);
+    });
+
+    it('should filter out /products/sku-123 overlay paths', () => {
+        const paths = ['/about', '/products/sku-123', '/products/abc-widget', '/contact'];
+        const result = filterProductOverlays(paths);
+        expect(result).toEqual(['/about', '/contact']);
+        expect(result).not.toContain('/products/sku-123');
+        expect(result).not.toContain('/products/abc-widget');
+    });
+
+    it('should filter /products/overlay-page paths', () => {
+        const paths = ['/products/overlay-page', '/products/another-overlay'];
+        const result = filterProductOverlays(paths);
+        expect(result).toEqual([]);
+    });
+
+    it('should keep non-product paths unchanged', () => {
+        const paths = ['/about', '/contact', '/blog/post-1', '/categories/clothing'];
+        const result = filterProductOverlays(paths);
+        expect(result).toEqual(['/about', '/contact', '/blog/post-1', '/categories/clothing']);
+    });
+
+    it('should handle empty paths array', () => {
+        const paths: string[] = [];
+        const result = filterProductOverlays(paths);
+        expect(result).toEqual([]);
+    });
+
+    it('should handle mixed content with both product default and overlays', () => {
+        const paths = [
+            '/about',
+            '/products/default',
+            '/products/default/info',
+            '/products/sku-apple-watch',
+            '/products/sku-iphone-15',
+            '/contact',
+        ];
+        const result = filterProductOverlays(paths);
+        expect(result).toEqual([
+            '/about',
+            '/products/default',
+            '/products/default/info',
+            '/contact',
+        ]);
     });
 });
