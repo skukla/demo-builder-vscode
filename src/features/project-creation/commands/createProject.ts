@@ -115,10 +115,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     constructor(
         context: vscode.ExtensionContext,
         stateManager: import('@/core/state').StateManager,
-        statusBar: import('@/core/vscode/StatusBarManager').StatusBarManager,
         logger: import('@/types/logger').Logger,
     ) {
-        super(context, stateManager, statusBar, logger);
+        super(context, stateManager, logger);
 
         // Track instance for debugging
         this.instanceId = ++CreateProjectWebviewCommand.instanceCounter;

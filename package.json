@@ -111,11 +111,6 @@
           "default": "stable",
           "description": "Update channel: stable (production releases) or beta (testing)"
         },
-        "demoBuilder.showStatusBar": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show Demo Builder status in the status bar"
-        },
         "demoBuilder.logLevel": {
           "type": "string",
           "enum": [

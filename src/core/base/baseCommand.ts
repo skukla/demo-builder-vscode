@@ -4,7 +4,6 @@ import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import { DisposableStore } from '@/core/utils/disposableStore';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 
 /**
  * Base class for all VS Code commands
@@ -37,7 +36,7 @@ import { StatusBarManager } from '@/core/vscode/StatusBarManager';
  * }
  *
  * // Usage
- * const command = new MyCommand(context, state, statusBar, logger);
+ * const command = new MyCommand(context, state, logger);
  * context.subscriptions.push(command); // Auto-disposed on deactivation
  * ```
  *
@@ -68,19 +67,16 @@ import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 export abstract class BaseCommand implements vscode.Disposable {
     protected context: vscode.ExtensionContext;
     protected stateManager: StateManager;
-    protected statusBar: StatusBarManager;
     protected logger: Logger;
     protected disposables = new DisposableStore();
 
     constructor(
         context: vscode.ExtensionContext,
         stateManager: StateManager,
-        statusBar: StatusBarManager,
         logger: Logger,
     ) {
         this.context = context;
         this.stateManager = stateManager;
-        this.statusBar = statusBar;
         this.logger = logger;
     }
 

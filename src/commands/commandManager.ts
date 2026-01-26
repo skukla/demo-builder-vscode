@@ -4,7 +4,6 @@ import { DiagnosticsCommand } from './diagnostics';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
@@ -21,7 +20,6 @@ import type { Logger } from '@/types/logger';
 export class CommandManager {
     private context: vscode.ExtensionContext;
     private stateManager: StateManager;
-    private statusBar: StatusBarManager;
     private logger: Logger;
     private commands: Map<string, vscode.Disposable>;
     public createProjectWebview!: CreateProjectWebviewCommand;
@@ -29,12 +27,10 @@ export class CommandManager {
     constructor(
         context: vscode.ExtensionContext,
         stateManager: StateManager,
-        statusBar: StatusBarManager,
         logger: Logger,
     ) {
         this.context = context;
         this.stateManager = stateManager;
-        this.statusBar = statusBar;
         this.logger = logger;
         this.commands = new Map();
     }
@@ -45,7 +41,6 @@ export class CommandManager {
         const projectsList = new ShowProjectsListCommand(
             this.context,
             this.stateManager,
-            this.statusBar,
             this.logger,
         );
         this.registerCommand('demoBuilder.showProjectsList', async () => {
@@ -59,7 +54,6 @@ export class CommandManager {
         this.createProjectWebview = new CreateProjectWebviewCommand(
             this.context,
             this.stateManager,
-            this.statusBar,
             this.logger,
         );
         this.registerCommand('demoBuilder.createProject', async (...args: unknown[]) => {
@@ -80,7 +74,6 @@ export class CommandManager {
         const projectDashboard = new ProjectDashboardWebviewCommand(
             this.context,
             this.stateManager,
-            this.statusBar,
             this.logger,
         );
         this.registerCommand('demoBuilder.showProjectDashboard', async () => {
@@ -126,7 +119,6 @@ export class CommandManager {
             const project = await this.stateManager.loadProjectFromPath(projectPath);
             if (project) {
                 this.logger.info(`[LoadProject] Loaded project: ${project.name}`);
-                this.statusBar.updateProject(project);
                 vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
             } else {
                 vscode.window.showErrorMessage(`Failed to load project from ${projectPath}`);
@@ -137,7 +129,6 @@ export class CommandManager {
         const startDemo = new StartDemoCommand(
             this.context,
             this.stateManager,
-            this.statusBar,
             this.logger,
         );
         this.registerCommand('demoBuilder.startDemo', () => startDemo.execute());
@@ -146,7 +137,6 @@ export class CommandManager {
         const stopDemo = new StopDemoCommand(
             this.context,
             this.stateManager,
-            this.statusBar,
             this.logger,
         );
         this.registerCommand('demoBuilder.stopDemo', () => stopDemo.execute());
@@ -155,7 +145,6 @@ export class CommandManager {
         const deleteProject = new DeleteProjectCommand(
             this.context,
             this.stateManager,
-            this.statusBar,
             this.logger,
         );
         this.registerCommand('demoBuilder.deleteProject', () => deleteProject.execute());
@@ -164,7 +153,6 @@ export class CommandManager {
         const viewStatus = new ViewStatusCommand(
             this.context,
             this.stateManager,
-            this.statusBar,
             this.logger,
         );
         this.registerCommand('demoBuilder.viewStatus', () => viewStatus.execute());
@@ -173,7 +161,6 @@ export class CommandManager {
         const configure = new ConfigureCommand(
             this.context,
             this.stateManager,
-            this.statusBar,
             this.logger,
         );
         this.registerCommand('demoBuilder.configure', () => configure.execute());
@@ -182,7 +169,6 @@ export class CommandManager {
         const configureProject = new ConfigureProjectWebviewCommand(
             this.context,
             this.stateManager,
-            this.statusBar,
             this.logger,
         );
         this.registerCommand('demoBuilder.configureProject', async () => {
@@ -193,7 +179,6 @@ export class CommandManager {
         const deployMesh = new DeployMeshCommand(
             this.context,
             this.stateManager,
-            this.statusBar,
             this.logger,
         );
         this.registerCommand('demoBuilder.deployMesh', () => deployMesh.execute());
@@ -202,7 +187,6 @@ export class CommandManager {
         const checkUpdates = new CheckUpdatesCommand(
             this.context,
             this.stateManager,
-            this.statusBar,
             this.logger,
         );
         this.registerCommand('demoBuilder.checkForUpdates', () => checkUpdates.execute());
@@ -212,7 +196,6 @@ export class CommandManager {
             const resetAll = new ResetAllCommand(
                 this.context,
                 this.stateManager,
-                this.statusBar,
                 this.logger,
             );
             this.registerCommand('demoBuilder.resetAll', () => resetAll.execute());

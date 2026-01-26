@@ -286,8 +286,7 @@ export class StartDemoCommand extends BaseCommand {
                 frontendComponent.status = 'starting';
                 frontendComponent.port = port;
                 await this.stateManager.saveProject(project);
-                this.statusBar.updateProject(project);
-                
+
                 // Create project-specific terminal name (allows us to identify which project is running)
                 const terminalName = `${project.name} - Frontend`;
                 const terminal = this.createTerminal(terminalName);
@@ -351,9 +350,6 @@ export class StartDemoCommand extends BaseCommand {
                 if (envFiles.length > 0) {
                     await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', envFiles);
                 }
-                
-                // Update status bar
-                this.statusBar.updateProject(project);
 
                 // Notify Projects Dashboard if it's open (so card status updates to "STARTED")
                 const projectsPanel = BaseWebviewCommand.getActivePanel('demoBuilder.projectsList');

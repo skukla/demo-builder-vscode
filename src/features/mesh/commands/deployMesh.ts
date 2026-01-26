@@ -8,7 +8,6 @@ import { ServiceLocator } from '@/core/di';
 import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Project } from '@/types/base';
 import { getMeshComponentInstance, parseJSON } from '@/types/typeGuards';
 
@@ -22,10 +21,9 @@ export class DeployMeshCommand extends BaseCommand {
     constructor(
         context: vscode.ExtensionContext,
         stateManager: StateManager,
-        statusBar: StatusBarManager,
         logger: Logger,
     ) {
-        super(context, stateManager, statusBar, logger);
+        super(context, stateManager, logger);
     }
 
     async execute(): Promise<void> {

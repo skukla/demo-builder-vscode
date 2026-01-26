@@ -103,10 +103,7 @@ export class ResetAllCommand extends BaseCommand {
                 this.logger.warn('To manually logout, run: aio auth logout');
             }
 
-            // 7. Reset status bar
-            this.statusBar.reset();
-
-            // 8. Delete .demo-builder directory (after all cleanup steps)
+            // 7. Delete .demo-builder directory (after all cleanup steps)
             try {
                 // SECURITY: Validate path safety before deletion (symlink attack prevention)
                 const homeDir = os.homedir();

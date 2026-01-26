@@ -132,7 +132,6 @@ export class StopDemoCommand extends BaseCommand {
                 project.status = 'stopping';
                 frontendComponent.status = 'stopping';
                 await this.stateManager.saveProject(project);
-                this.statusBar.updateProject(project);
 
                 // Get port for process discovery
                 const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
@@ -182,9 +181,6 @@ export class StopDemoCommand extends BaseCommand {
 
                 // Notify extension to reset env change grace period
                 await vscode.commands.executeCommand('demoBuilder._internal.demoStopped');
-
-                // Update status bar
-                this.statusBar.updateProject(project);
 
                 // Notify Projects Dashboard if it's open (so card status updates to "STOPPED")
                 const projectsPanel = BaseWebviewCommand.getActivePanel('demoBuilder.projectsList');

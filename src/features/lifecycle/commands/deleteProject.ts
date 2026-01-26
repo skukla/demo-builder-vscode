@@ -50,11 +50,6 @@ export class DeleteProjectCommand extends BaseCommand {
                     // Save project path before clearing state
                     const projectPath = project.path;
 
-                    // STEP 1.5: Stop status bar timer BEFORE deleting files
-                    // This prevents race condition where timer calls getCurrentProject()
-                    // while files are being deleted, causing spurious reload warnings
-                    this.statusBar.reset();
-
                     // STEP 2: Delete project files with retry logic
                     if (projectPath) {
                         this.logger.debug(`[Delete Project] Deleting directory: ${projectPath}`);

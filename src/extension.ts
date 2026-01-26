@@ -10,7 +10,7 @@ import type { Logger } from '@/types/logger';
 import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { StatusBarManager, WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
+import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { AuthenticationService } from '@/features/authentication';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
 import { SidebarProvider } from '@/features/sidebar';
@@ -45,7 +45,6 @@ function shouldAutoOpenProjectsList(
 }
 
 let logger: Logger;
-let statusBar: StatusBarManager;
 let stateManager: StateManager;
 let autoUpdater: AutoUpdater;
 let externalCommandManager: CommandExecutor;
@@ -215,12 +214,8 @@ export async function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand('workbench.action.zoomReset');
         }
 
-        // Initialize status bar
-        statusBar = new StatusBarManager(context, stateManager);
-        statusBar.initialize();
-
         // Initialize command manager
-        const commandManager = new CommandManager(context, stateManager, statusBar, logger);
+        const commandManager = new CommandManager(context, stateManager, logger);
         commandManager.registerCommands();
 
         // Register file watchers early (before loading projects)
@@ -282,16 +277,6 @@ export async function activate(context: vscode.ExtensionContext) {
             // Ignore errors
         }
 
-        // Load existing project if available (for status bar)
-        const hasExistingProject = await stateManager.hasProject();
-        if (hasExistingProject) {
-            const project = await stateManager.getCurrentProject();
-            if (project) {
-                statusBar.updateProject(project);
-                logger.debug(`[Extension] Loaded existing project: ${project.name}`);
-            }
-        }
-
         // Note: Projects List auto-opens via tree view visibility handler (line 128-137)
         // when the sidebar becomes visible with no active webview panels.
         // No explicit setTimeout needed here - that would cause double-opening.
@@ -313,7 +298,6 @@ export function deactivate() {
     logger.info('Adobe Demo Builder extension is deactivating...');
 
     // Clean up resources
-    statusBar?.dispose();
     autoUpdater?.dispose();
     componentTreeView?.dispose();
     componentTreeProvider?.dispose();
