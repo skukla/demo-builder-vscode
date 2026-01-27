@@ -449,15 +449,14 @@ export async function showDaLiveAuthQuickPick(
                     return { success: false, error };
                 }
 
-                // Success! Store the token and org
+                // Success! Store via service (handles all keys including setupComplete)
                 const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
-                await context.context.globalState.update('daLive.accessToken', trimmedToken);
-                await context.context.globalState.update('daLive.tokenExpiration', tokenExpiry);
-                await context.context.globalState.update('daLive.orgName', trimmedOrg);
-                if (validation.email) {
-                    await context.context.globalState.update('daLive.userEmail', validation.email);
-                }
-                await context.context.globalState.update('daLive.setupComplete', true);
+                const authService = getDaLiveAuthService(context);
+                await authService.storeToken(trimmedToken, {
+                    expiresAt: tokenExpiry,
+                    email: validation.email,
+                    orgName: trimmedOrg,
+                });
 
                 context.logger.info(`[DA.live Auth] Successfully authenticated to org: ${trimmedOrg}`);
                 // Auto-dismissing notification for non-blocking feedback

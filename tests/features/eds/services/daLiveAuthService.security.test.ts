@@ -85,6 +85,8 @@ describe('DaLiveAuthService Security Tests', () => {
                 'daLive.accessToken',
                 'daLive.tokenExpiration',
                 'daLive.userEmail',
+                'daLive.orgName',
+                'daLive.setupComplete',
             ];
 
             stateKeys.forEach(key => {
@@ -190,23 +192,16 @@ describe('DaLiveAuthService Security Tests', () => {
             globalStateStore.set('daLive.accessToken', 'sensitive-token');
             globalStateStore.set('daLive.tokenExpiration', Date.now() + 3600000);
             globalStateStore.set('daLive.userEmail', 'user@example.com');
+            globalStateStore.set('daLive.orgName', 'my-org');
 
             // When: Logout is called
             await service.logout();
 
             // Then: All sensitive data should be cleared
-            expect(mockContext.globalState.update).toHaveBeenCalledWith(
-                'daLive.accessToken',
-                undefined,
-            );
-            expect(mockContext.globalState.update).toHaveBeenCalledWith(
-                'daLive.tokenExpiration',
-                undefined,
-            );
-            expect(mockContext.globalState.update).toHaveBeenCalledWith(
-                'daLive.userEmail',
-                undefined,
-            );
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.accessToken', undefined);
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.tokenExpiration', undefined);
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.userEmail', undefined);
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.orgName', undefined);
         });
     });
 });

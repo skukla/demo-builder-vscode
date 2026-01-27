@@ -282,31 +282,67 @@ describe('DaLiveAuthService', () => {
                 'jwt-user@example.com',
             );
         });
+
+        it('should use pre-validated opts when provided', async () => {
+            // Given: Token with opts containing expiresAt, email, orgName
+            const token = createTestToken({ sub: 'user123' });
+            const expiresAt = Date.now() + 3600000;
+
+            // When: storeToken called with opts
+            await service.storeToken(token, {
+                expiresAt,
+                email: 'opts@example.com',
+                orgName: 'my-org',
+            });
+
+            // Then: opts values are stored directly
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.tokenExpiration', expiresAt);
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.userEmail', 'opts@example.com');
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.orgName', 'my-org');
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.setupComplete', true);
+        });
+
+        it('should mark setupComplete on every storeToken call', async () => {
+            // Given: Token without opts
+            const token = createTestToken({ sub: 'user123' });
+
+            // When: storeToken called
+            await service.storeToken(token);
+
+            // Then: setupComplete is set
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.setupComplete', true);
+        });
     });
 
     describe('logout', () => {
-        it('should clear all stored token data', async () => {
+        it('should clear all stored token data and orgName', async () => {
             // Given: Token stored in globalState
             globalStateStore.set('daLive.accessToken', 'token-to-clear');
             globalStateStore.set('daLive.tokenExpiration', Date.now() + 60000);
             globalStateStore.set('daLive.userEmail', 'user@example.com');
+            globalStateStore.set('daLive.orgName', 'my-org');
+            globalStateStore.set('daLive.setupComplete', true);
 
             // When: logout() called
             await service.logout();
 
-            // Then: All token data cleared
-            expect(mockContext.globalState.update).toHaveBeenCalledWith(
-                'daLive.accessToken',
-                undefined,
-            );
-            expect(mockContext.globalState.update).toHaveBeenCalledWith(
-                'daLive.tokenExpiration',
-                undefined,
-            );
-            expect(mockContext.globalState.update).toHaveBeenCalledWith(
-                'daLive.userEmail',
-                undefined,
-            );
+            // Then: Token data and orgName cleared
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.accessToken', undefined);
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.tokenExpiration', undefined);
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.userEmail', undefined);
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.orgName', undefined);
+        });
+
+        it('should preserve setupComplete on logout', async () => {
+            // Given: setupComplete is true
+            globalStateStore.set('daLive.setupComplete', true);
+
+            // When: logout() called
+            await service.logout();
+
+            // Then: setupComplete is NOT cleared
+            expect(mockContext.globalState.update).not.toHaveBeenCalledWith('daLive.setupComplete', undefined);
+            expect(globalStateStore.get('daLive.setupComplete')).toBe(true);
         });
 
         it('should not throw when no token stored', async () => {
@@ -314,6 +350,47 @@ describe('DaLiveAuthService', () => {
 
             // When/Then: logout() completes without error
             await expect(service.logout()).resolves.not.toThrow();
+        });
+    });
+
+    describe('resetAll', () => {
+        it('should clear everything including setupComplete', async () => {
+            // Given: Full state
+            globalStateStore.set('daLive.accessToken', 'token');
+            globalStateStore.set('daLive.tokenExpiration', Date.now() + 60000);
+            globalStateStore.set('daLive.userEmail', 'user@example.com');
+            globalStateStore.set('daLive.orgName', 'my-org');
+            globalStateStore.set('daLive.setupComplete', true);
+
+            // When: resetAll() called
+            await service.resetAll();
+
+            // Then: Everything cleared including setupComplete
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.setupComplete', undefined);
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.accessToken', undefined);
+            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.orgName', undefined);
+        });
+    });
+
+    describe('getOrgName', () => {
+        it('should return stored org name', () => {
+            globalStateStore.set('daLive.orgName', 'test-org');
+            expect(service.getOrgName()).toBe('test-org');
+        });
+
+        it('should return undefined when no org stored', () => {
+            expect(service.getOrgName()).toBeUndefined();
+        });
+    });
+
+    describe('isSetupComplete', () => {
+        it('should return true when setupComplete is stored', () => {
+            globalStateStore.set('daLive.setupComplete', true);
+            expect(service.isSetupComplete()).toBe(true);
+        });
+
+        it('should return false when not stored', () => {
+            expect(service.isSetupComplete()).toBe(false);
         });
     });
 

@@ -23,6 +23,9 @@ import {
     offerSaveDefaultOrg,
 } from './edsHelpers';
 
+/** Bookmarklet URL is static — compute once */
+const bookmarkletUrl = getBookmarkletUrl();
+
 // ==========================================================
 // Payload Types
 // ==========================================================
@@ -114,9 +117,9 @@ export async function handleCheckDaLiveAuth(
         const authService = getDaLiveAuthService(context);
 
         // Check if user has completed bookmarklet setup before
-        const setupComplete = context.context.globalState.get<boolean>('daLive.setupComplete') || false;
+        const setupComplete = authService.isSetupComplete();
         // Get cached org name (from previous successful verification)
-        const cachedOrgName = context.context.globalState.get<string>('daLive.orgName')
+        const cachedOrgName = authService.getOrgName()
             || vscode.workspace.getConfiguration('demoBuilder').get<string>('daLive.defaultOrg', '');
 
         const isAuth = await authService.isAuthenticated();
@@ -129,6 +132,7 @@ export async function handleCheckDaLiveAuth(
                 email: tokenInfo?.email,
                 setupComplete,
                 orgName: cachedOrgName,
+                bookmarkletUrl,
             });
         } else {
             context.logger.debug('[EDS] No valid DA.live auth');
@@ -136,6 +140,7 @@ export async function handleCheckDaLiveAuth(
                 isAuthenticated: false,
                 setupComplete,
                 orgName: cachedOrgName || undefined,
+                bookmarkletUrl,
             });
         }
 
@@ -231,16 +236,13 @@ export async function handleStoreDaLiveToken(
             return { success: false, error: validation.error };
         }
 
-        // Store token with expiry from JWT or default 24-hour
+        // Store token via service (handles expiry, email, and setupComplete)
         const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
-        await context.context.globalState.update('daLive.accessToken', token);
-        await context.context.globalState.update('daLive.tokenExpiration', tokenExpiry);
-        if (validation.email) {
-            await context.context.globalState.update('daLive.userEmail', validation.email);
-        }
-
-        // Mark setup as complete (user has successfully used the bookmarklet flow)
-        await context.context.globalState.update('daLive.setupComplete', true);
+        const authService = getDaLiveAuthService(context);
+        await authService.storeToken(token, {
+            expiresAt: tokenExpiry,
+            email: validation.email,
+        });
 
         context.logger.info('[EDS] DA.live token stored successfully');
         await context.sendMessage('dalive-token-stored', {
@@ -352,15 +354,14 @@ export async function handleStoreDaLiveTokenWithOrg(
             return { success: false, error: 'Verification failed' };
         }
 
-        // Org verified! Now store the token and org name
+        // Org verified! Store via service (handles all keys including setupComplete)
         const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
-        await context.context.globalState.update('daLive.accessToken', token);
-        await context.context.globalState.update('daLive.tokenExpiration', tokenExpiry);
-        await context.context.globalState.update('daLive.orgName', orgName);
-        if (validation.email) {
-            await context.context.globalState.update('daLive.userEmail', validation.email);
-        }
-        await context.context.globalState.update('daLive.setupComplete', true);
+        const authService = getDaLiveAuthService(context);
+        await authService.storeToken(token, {
+            expiresAt: tokenExpiry,
+            email: validation.email,
+            orgName,
+        });
 
         context.logger.info('[EDS] DA.live token stored and org verified:', orgName);
 
@@ -407,19 +408,17 @@ export async function handleClearDaLiveAuth(
     try {
         context.logger.debug('[EDS] Clearing DA.live auth');
 
-        // Clear stored token and related data
-        await context.context.globalState.update('daLive.accessToken', undefined);
-        await context.context.globalState.update('daLive.tokenExpiration', undefined);
-        await context.context.globalState.update('daLive.userEmail', undefined);
-        await context.context.globalState.update('daLive.orgName', undefined);
-        // Note: Keep setupComplete so user doesn't have to re-learn the bookmarklet flow
+        // Clear stored token and related data via service
+        // Note: logout() preserves setupComplete so user doesn't re-learn the bookmarklet flow
+        const authService = getDaLiveAuthService(context);
+        await authService.logout();
 
         context.logger.info('[EDS] DA.live auth cleared');
 
         // Send confirmation
         await context.sendMessage('dalive-auth-status', {
             isAuthenticated: false,
-            setupComplete: context.context.globalState.get<boolean>('daLive.setupComplete') || false,
+            setupComplete: authService.isSetupComplete(),
         });
 
         return { success: true };

@@ -290,7 +290,7 @@ describe('showDaLiveAuthQuickPick', () => {
             );
         });
 
-        it('should store token, org, and email on success', async () => {
+        it('should store token via auth service on success', async () => {
             // Given: Valid inputs and successful org verification
             showInputBoxResponses = ['my-org', validToken];
             showInfoMessageResponse = 'I have my token';
@@ -299,18 +299,13 @@ describe('showDaLiveAuthQuickPick', () => {
             // When: showDaLiveAuthQuickPick is called
             await showDaLiveAuthQuickPick(mockContext);
 
-            // Then: Should store all credentials
-            expect(mockContext.context.globalState.update).toHaveBeenCalledWith(
-                'daLive.accessToken',
+            // Then: Should store credentials via auth service
+            expect(mockStoreToken).toHaveBeenCalledWith(
                 validToken,
-            );
-            expect(mockContext.context.globalState.update).toHaveBeenCalledWith(
-                'daLive.orgName',
-                'my-org',
-            );
-            expect(mockContext.context.globalState.update).toHaveBeenCalledWith(
-                'daLive.userEmail',
-                'user@example.com',
+                expect.objectContaining({
+                    email: 'user@example.com',
+                    orgName: 'my-org',
+                }),
             );
         });
 
