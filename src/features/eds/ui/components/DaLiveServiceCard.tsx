@@ -52,6 +52,8 @@ export interface DaLiveServiceCardProps {
     onOpenDaLive?: () => void;
     /** Show compact view (minimal details when another card is active) */
     compact?: boolean;
+    /** Default org name from config setting (for pre-filling) */
+    defaultOrg?: string;
 }
 
 /**
@@ -74,8 +76,9 @@ export function DaLiveServiceCard({
     onCancelInput,
     onOpenDaLive,
     compact = false,
+    defaultOrg,
 }: DaLiveServiceCardProps): React.ReactElement {
-    const [orgValue, setOrgValue] = useState('');
+    const [orgValue, setOrgValue] = useState(defaultOrg || '');
     const [tokenValue, setTokenValue] = useState('');
 
     const isLoading = isChecking || (isAuthenticating && !showInput);
@@ -115,25 +118,6 @@ export function DaLiveServiceCard({
                             {isAuthenticating ? 'Verifying...' : 'Checking...'}
                         </Text>
                     </Flex>
-                ) : isAuthenticated ? (
-                    compact ? (
-                        <Flex alignItems="center" gap="size-100">
-                            <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                            <Text UNSAFE_className="status-text">Connected</Text>
-                        </Flex>
-                    ) : (
-                        <Flex alignItems="center" justifyContent="space-between">
-                            <Flex alignItems="center" gap="size-100">
-                                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                                <Text UNSAFE_className="status-text">
-                                    {verifiedOrg || 'Connected'}
-                                </Text>
-                            </Flex>
-                            <button className="service-action-link" onClick={onReset}>
-                                Change
-                            </button>
-                        </Flex>
-                    )
                 ) : showInput ? (
                     <div className="dalive-input-form">
                         <input
@@ -180,6 +164,25 @@ export function DaLiveServiceCard({
                             )}
                         </Flex>
                     </div>
+                ) : isAuthenticated ? (
+                    compact ? (
+                        <Flex alignItems="center" gap="size-100">
+                            <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                            <Text UNSAFE_className="status-text">Connected</Text>
+                        </Flex>
+                    ) : (
+                        <Flex alignItems="center" justifyContent="space-between">
+                            <Flex alignItems="center" gap="size-100">
+                                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                                <Text UNSAFE_className="status-text">
+                                    {verifiedOrg || 'Connected'}
+                                </Text>
+                            </Flex>
+                            <button className="service-action-link" onClick={onReset}>
+                                Change
+                            </button>
+                        </Flex>
+                    )
                 ) : error ? (
                     <Flex direction="column" gap="size-100">
                         <Flex alignItems="center" gap="size-100">

@@ -65,6 +65,11 @@ jest.mock('vscode', () => {
         ProgressLocation: {
             Notification: 15,
         },
+        workspace: {
+            getConfiguration: jest.fn().mockReturnValue({
+                get: jest.fn().mockReturnValue(''),
+            }),
+        },
     };
 }, { virtual: true });
 
@@ -230,6 +235,21 @@ describe('showDaLiveAuthQuickPick', () => {
 
             // Then: Org input should have stored value pre-filled
             expect(showInputBoxCalls[0].value).toBe('stored-org');
+        });
+
+        it('should fall back to config setting when no stored org', async () => {
+            // Given: No stored org but config setting is set
+            (mockContext.context.globalState.get as jest.Mock).mockReturnValue(undefined);
+            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+                get: jest.fn().mockReturnValue('config-org'),
+            });
+            showInputBoxResponses = [undefined]; // Cancel to see the value
+
+            // When: showDaLiveAuthQuickPick is called
+            await showDaLiveAuthQuickPick(mockContext);
+
+            // Then: Org input should have config value pre-filled
+            expect(showInputBoxCalls[0].value).toBe('config-org');
         });
 
         it('should open DA.live when user clicks Open DA.live button', async () => {

@@ -20,6 +20,7 @@ import { getBookmarkletUrl } from '../utils/daLiveTokenBookmarklet';
 import {
     getDaLiveAuthService,
     validateDaLiveToken,
+    offerSaveDefaultOrg,
 } from './edsHelpers';
 
 // ==========================================================
@@ -115,7 +116,8 @@ export async function handleCheckDaLiveAuth(
         // Check if user has completed bookmarklet setup before
         const setupComplete = context.context.globalState.get<boolean>('daLive.setupComplete') || false;
         // Get cached org name (from previous successful verification)
-        const cachedOrgName = context.context.globalState.get<string>('daLive.orgName');
+        const cachedOrgName = context.context.globalState.get<string>('daLive.orgName')
+            || vscode.workspace.getConfiguration('demoBuilder').get<string>('daLive.defaultOrg', '');
 
         const isAuth = await authService.isAuthenticated();
 
@@ -133,6 +135,7 @@ export async function handleCheckDaLiveAuth(
             await context.sendMessage('dalive-auth-status', {
                 isAuthenticated: false,
                 setupComplete,
+                orgName: cachedOrgName || undefined,
             });
         }
 
@@ -360,6 +363,9 @@ export async function handleStoreDaLiveTokenWithOrg(
         await context.context.globalState.update('daLive.setupComplete', true);
 
         context.logger.info('[EDS] DA.live token stored and org verified:', orgName);
+
+        // Offer to save org as default (one-time, non-blocking)
+        offerSaveDefaultOrg(context, orgName);
 
         // Send success with verified org
         await context.sendMessage('dalive-token-with-org-result', {

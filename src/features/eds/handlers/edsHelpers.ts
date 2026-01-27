@@ -241,6 +241,58 @@ export function validateDaLiveToken(token: string): DaLiveTokenValidationResult 
 }
 
 // ==========================================================
+// DA.live Default Org Tip
+// ==========================================================
+
+/**
+ * Show a one-time tip offering to save the org name as a default setting.
+ *
+ * Only shown when:
+ * - The config setting is not already set
+ * - The tip has not been shown before (tracked via globalState)
+ *
+ * Non-blocking: uses fire-and-forget `.then()` so it never delays the caller.
+ *
+ * @param context - Handler context for globalState access
+ * @param orgName - The verified org name to offer saving
+ */
+export function offerSaveDefaultOrg(
+    context: HandlerContext,
+    orgName: string,
+): void {
+    const config = vscode.workspace.getConfiguration('demoBuilder');
+    const existingDefault = config.get<string>('daLive.defaultOrg', '');
+
+    // Already configured — nothing to do
+    if (existingDefault) {
+        return;
+    }
+
+    const tipShown = context.context.globalState.get<boolean>('daLive.defaultOrgTipShown', false);
+    if (tipShown) {
+        return;
+    }
+
+    // Mark as shown immediately so concurrent calls don't double-fire
+    context.context.globalState.update('daLive.defaultOrgTipShown', true);
+
+    vscode.window.showInformationMessage(
+        `Tip: Save "${orgName}" as your default DA.live org so it auto-fills next time.`,
+        `Save "${orgName}"`,
+        'Open Settings',
+    ).then(selection => {
+        if (selection === `Save "${orgName}"`) {
+            config.update('daLive.defaultOrg', orgName, vscode.ConfigurationTarget.Global);
+        } else if (selection === 'Open Settings') {
+            vscode.commands.executeCommand(
+                'workbench.action.openSettings',
+                'demoBuilder.daLive.defaultOrg',
+            );
+        }
+    });
+}
+
+// ==========================================================
 // DA.live Multi-Step Input Authentication
 // ==========================================================
 
@@ -274,7 +326,9 @@ export async function showDaLiveAuthQuickPick(
     context.logger.info('[DA.live Auth] Starting multi-step authentication flow');
 
     // Get stored org name as default value for returning users
-    const storedOrgName = context.context.globalState.get<string>('daLive.orgName') || '';
+    const storedOrgName = context.context.globalState.get<string>('daLive.orgName')
+        || vscode.workspace.getConfiguration('demoBuilder').get<string>('daLive.defaultOrg', '')
+        || '';
 
     // Step 1: Ask for organization name
     const orgName = await vscode.window.showInputBox({
@@ -408,6 +462,9 @@ export async function showDaLiveAuthQuickPick(
                 context.logger.info(`[DA.live Auth] Successfully authenticated to org: ${trimmedOrg}`);
                 // Auto-dismissing notification for non-blocking feedback
                 vscode.window.setStatusBarMessage(`✅ Connected to DA.live (${trimmedOrg})`, TIMEOUTS.STATUS_BAR_INFO);
+
+                // Offer to save org as default (one-time, non-blocking)
+                offerSaveDefaultOrg(context, trimmedOrg);
 
                 return {
                     success: true,

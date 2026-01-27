@@ -51,12 +51,10 @@ export function ConnectServicesStep({
     };
 
     const handleDaLiveReset = () => {
-        daLiveAuth.resetAuth();
-        setShowDaLiveInput(true);  // Show input form directly for credential change
+        setShowDaLiveInput(true);
     };
 
     const handleCancelInput = () => {
-        daLiveAuth.cancelAuth();
         setShowDaLiveInput(false);
     };
 
@@ -80,6 +78,7 @@ export function ConnectServicesStep({
                     error={daLiveAuth.error}
                     showInput={showDaLiveInput}
                     setupComplete={daLiveAuth.setupComplete}
+                    defaultOrg={state.edsConfig?.daLiveOrg}
                     onSetup={handleDaLiveSetup}
                     onSubmit={handleDaLiveSubmit}
                     onReset={handleDaLiveReset}

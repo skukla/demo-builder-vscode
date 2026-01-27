@@ -254,6 +254,25 @@ export function useDaLiveAuth({
                         },
                     },
                 });
+            } else if (!authData.isAuthenticated && authData.orgName) {
+                // Not authenticated but have a default org — pre-fill it
+                updateStateRef.current({
+                    edsConfig: {
+                        ...edsConfigRef.current,
+                        accsHost: edsConfigRef.current?.accsHost || '',
+                        storeViewCode: edsConfigRef.current?.storeViewCode || '',
+                        customerGroup: edsConfigRef.current?.customerGroup || '',
+                        repoName: edsConfigRef.current?.repoName || '',
+                        daLiveOrg: authData.orgName,
+                        daLiveSite: edsConfigRef.current?.daLiveSite || '',
+                        daLiveAuth: {
+                            ...edsConfigRef.current?.daLiveAuth,
+                            isAuthenticated: false,
+                            isAuthenticating: false,
+                            error: authData.error,
+                        },
+                    },
+                });
             } else {
                 updateDaLiveAuthRef.current({
                     isAuthenticated: authData.isAuthenticated,

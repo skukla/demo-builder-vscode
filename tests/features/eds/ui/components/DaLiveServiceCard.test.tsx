@@ -422,6 +422,63 @@ describe('DaLiveServiceCard', () => {
         });
     });
 
+    describe('Default Org Pre-fill', () => {
+        it('should pre-fill org input with defaultOrg prop', async () => {
+            // Given: defaultOrg is provided
+            const { DaLiveServiceCard } = await import(
+                '@/features/eds/ui/components/DaLiveServiceCard'
+            );
+
+            // When: Component renders with showInput and defaultOrg
+            render(
+                <TestWrapper>
+                    <DaLiveServiceCard
+                        isChecking={false}
+                        isAuthenticating={false}
+                        isAuthenticated={false}
+                        showInput={true}
+                        defaultOrg="config-org"
+                        onSetup={mockOnSetup}
+                        onSubmit={mockOnSubmit}
+                        onReset={mockOnReset}
+                        onCancelInput={mockOnCancelInput}
+                    />
+                </TestWrapper>
+            );
+
+            // Then: Org input should have the default value
+            const orgInput = screen.getByPlaceholderText(/organization/i) as HTMLInputElement;
+            expect(orgInput.value).toBe('config-org');
+        });
+
+        it('should have empty org input when no defaultOrg', async () => {
+            // Given: No defaultOrg
+            const { DaLiveServiceCard } = await import(
+                '@/features/eds/ui/components/DaLiveServiceCard'
+            );
+
+            // When: Component renders with showInput
+            render(
+                <TestWrapper>
+                    <DaLiveServiceCard
+                        isChecking={false}
+                        isAuthenticating={false}
+                        isAuthenticated={false}
+                        showInput={true}
+                        onSetup={mockOnSetup}
+                        onSubmit={mockOnSubmit}
+                        onReset={mockOnReset}
+                        onCancelInput={mockOnCancelInput}
+                    />
+                </TestWrapper>
+            );
+
+            // Then: Org input should be empty
+            const orgInput = screen.getByPlaceholderText(/organization/i) as HTMLInputElement;
+            expect(orgInput.value).toBe('');
+        });
+    });
+
     describe('Card Display', () => {
         it('should render card with DA icon and title', async () => {
             // Given: Service card component

@@ -137,6 +137,11 @@
           "default": "cards",
           "description": "Default view mode for the projects list: cards (grid layout) or rows (list layout)"
         },
+        "demoBuilder.daLive.defaultOrg": {
+          "type": "string",
+          "default": "",
+          "description": "Default DA.live organization name. Auto-fills the organization field during authentication."
+        },
         "demoBuilder.edsCleanup.behavior": {
           "type": "string",
           "enum": ["ask", "deleteAll", "localOnly"],

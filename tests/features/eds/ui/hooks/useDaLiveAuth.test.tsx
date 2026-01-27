@@ -155,6 +155,43 @@ describe('useDaLiveAuth Hook', () => {
             });
         });
 
+        it('should pre-fill org when unauthenticated with default orgName', async () => {
+            // Given: Default state
+            const state = createDefaultState();
+            const { useDaLiveAuth } = await import('@/features/eds/ui/hooks/useDaLiveAuth');
+
+            renderHook(() => useDaLiveAuth({
+                state,
+                updateState: mockUpdateState,
+            }));
+
+            // When: Receiving unauthenticated status with orgName (from config setting)
+            const authHandler = messageHandlers.get('dalive-auth-status');
+            expect(authHandler).toBeDefined();
+
+            act(() => {
+                authHandler?.({
+                    isAuthenticated: false,
+                    orgName: 'default-org',
+                });
+            });
+
+            // Then: Should update state with org for pre-fill
+            await waitFor(() => {
+                expect(mockUpdateState).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        edsConfig: expect.objectContaining({
+                            daLiveOrg: 'default-org',
+                            daLiveAuth: expect.objectContaining({
+                                isAuthenticated: false,
+                                isAuthenticating: false,
+                            }),
+                        }),
+                    })
+                );
+            });
+        });
+
         it('should set isChecking to false after receiving auth status', async () => {
             // Given: Default state
             const state = createDefaultState();
