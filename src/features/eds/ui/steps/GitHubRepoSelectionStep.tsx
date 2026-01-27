@@ -230,7 +230,7 @@ export function GitHubRepoSelectionStep({
                     accsHost: edsConfig?.accsHost || '',
                     storeViewCode: edsConfig?.storeViewCode || '',
                     customerGroup: edsConfig?.customerGroup || '',
-                    repoName: edsConfig?.repoName || '',
+                    repoName: repo.name,  // Update to selected repo's name
                     daLiveOrg: edsConfig?.daLiveOrg || '',
                     daLiveSite: edsConfig?.daLiveSite || '',
                     repoMode: 'existing',
