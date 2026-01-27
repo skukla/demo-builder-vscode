@@ -224,7 +224,7 @@ async function checkCleanupAuth(context: HandlerContext): Promise<CleanupAuthSta
  * Show cleanup confirmation dialog for EDS projects
  *
  * Presents a QuickPick with cleanup options and two action buttons:
- * - "Delete Selected" (trash icon): Delete selected external resources + local project
+ * - "Delete Selected" (check icon): Delete selected external resources + local project
  * - "Skip & Delete Locally" (x icon): Skip cleanup, only delete local project
  *
  * @returns Cleanup options, empty options (skip cleanup), or null if cancelled
@@ -249,7 +249,20 @@ async function showCleanupConfirmation(
     }
 
     if (behavior === 'localOnly') {
-        // Local only: skip external cleanup entirely
+        // Local only: show standard confirmation, skip external cleanup
+        const confirm = await vscode.window.showWarningMessage(
+            `Are you sure you want to delete "${project.name}"?`,
+            {
+                modal: true,
+                detail: 'This will remove all project files and configuration. This action cannot be undone.',
+            },
+            'Delete',
+        );
+
+        if (confirm !== 'Delete') {
+            return null;
+        }
+
         return { deleteGitHubRepo: false, deleteDaLiveSite: false };
     }
 
@@ -270,7 +283,7 @@ async function showCleanupConfirmation(
             detail: authStatus.gitHubAuthenticated
                 ? undefined
                 : '$(warning) GitHub token missing - will skip',
-            picked: authStatus.gitHubAuthenticated,
+            picked: false,
             enabled: authStatus.gitHubAuthenticated,
         });
     }
@@ -284,7 +297,7 @@ async function showCleanupConfirmation(
             detail: authStatus.daLiveAuthenticated
                 ? undefined
                 : '$(warning) DA.live session expired - will skip',
-            picked: authStatus.daLiveAuthenticated,
+            picked: false,
             enabled: authStatus.daLiveAuthenticated,
         });
     }
@@ -309,7 +322,7 @@ async function showCleanupConfirmation(
 
     // Define buttons: [Delete Selected] [Skip & Delete Locally]
     const deleteSelectedButton: vscode.QuickInputButton = {
-        iconPath: new vscode.ThemeIcon('trash'),
+        iconPath: new vscode.ThemeIcon('check'),
         tooltip: 'Delete Selected',
     };
     const skipButton: vscode.QuickInputButton = {

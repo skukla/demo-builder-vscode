@@ -36,6 +36,7 @@ import { HelixService } from '@/features/eds/services/helixService';
 import { getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
+import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -478,13 +479,16 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
 /**
  * Handle 'deleteProject' message - Delete current project
  *
- * Note: Panel disposal is handled by the deleteProject command itself
- * (via closeProjectPanels) only when deletion succeeds. We don't dispose
- * here because the user might cancel the confirmation dialog.
+ * Uses projectDeletionService for unified delete experience including EDS cleanup.
+ * Panel disposal is handled by projectDeletionService when deletion succeeds.
  */
-export const handleDeleteProject: MessageHandler = async () => {
-    await vscode.commands.executeCommand('demoBuilder.deleteProject');
-    return { success: true };
+export const handleDeleteProject: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found to delete' };
+    }
+
+    return deleteProject(context, project);
 };
 
 /**
