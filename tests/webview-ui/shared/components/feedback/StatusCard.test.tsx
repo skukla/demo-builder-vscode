@@ -18,8 +18,25 @@ describe('StatusCard', () => {
             renderWithProviders(
                 <StatusCard label="Demo Status" status="Running" color="green" />
             );
-            // Label and status are combined with colon separator
-            expect(screen.getByText('Demo Status: Running')).toBeInTheDocument();
+            expect(screen.getByText('Demo Status')).toBeInTheDocument();
+            expect(screen.getByText('Running')).toBeInTheDocument();
+        });
+
+        it('renders label and status as separate elements', () => {
+            const { container } = renderWithProviders(
+                <StatusCard label="Frontend" status="Running" color="green" />
+            );
+            const label = container.querySelector('.status-label');
+            const status = container.querySelector('.status-text');
+            expect(label).toHaveTextContent('Frontend');
+            expect(status).toHaveTextContent('Running');
+        });
+
+        it('does not render label element when no label provided', () => {
+            const { container } = renderWithProviders(
+                <StatusCard status="Running" color="green" />
+            );
+            expect(container.querySelector('.status-label')).not.toBeInTheDocument();
         });
 
         it('renders with custom className', () => {
@@ -116,12 +133,12 @@ describe('StatusCard', () => {
             // Key assertion: status-row provides horizontal layout via CSS (flex-direction: row)
         });
 
-        it('shows label with status when provided', () => {
+        it('shows label and status when label provided', () => {
             renderWithProviders(
                 <StatusCard label="Mesh Status" status="Deployed" color="green" />
             );
-            // Label and status are combined
-            expect(screen.getByText('Mesh Status: Deployed')).toBeInTheDocument();
+            expect(screen.getByText('Mesh Status')).toBeInTheDocument();
+            expect(screen.getByText('Deployed')).toBeInTheDocument();
         });
     });
 
@@ -134,50 +151,46 @@ describe('StatusCard', () => {
             expect(status).toBeInTheDocument();
         });
 
-        it('applies correct font weight to status with label', () => {
-            renderWithProviders(
+        it('renders label and status as separate styled elements', () => {
+            const { container } = renderWithProviders(
                 <StatusCard label="Status" status="Running" color="green" />
             );
-            const combined = screen.getByText('Status: Running');
-            expect(combined).toBeInTheDocument();
-        });
-
-        it('applies correct styles to combined label and status', () => {
-            renderWithProviders(
-                <StatusCard label="Demo Status" status="Running" color="green" />
-            );
-            const combined = screen.getByText('Demo Status: Running');
-            expect(combined).toBeInTheDocument();
+            expect(container.querySelector('.status-label')).toHaveTextContent('Status');
+            expect(container.querySelector('.status-text')).toHaveTextContent('Running');
         });
     });
 
     describe('Dashboard Use Cases', () => {
         it('renders demo status indicator', () => {
             renderWithProviders(
-                <StatusCard label="Demo Status" status="Running" color="green" />
+                <StatusCard label="Frontend" status="Running" color="green" />
             );
-            expect(screen.getByText('Demo Status: Running')).toBeInTheDocument();
+            expect(screen.getByText('Frontend')).toBeInTheDocument();
+            expect(screen.getByText('Running')).toBeInTheDocument();
         });
 
         it('renders mesh status indicator', () => {
             renderWithProviders(
-                <StatusCard label="Mesh Status" status="Deployed" color="green" />
+                <StatusCard label="API Mesh" status="Deployed" color="green" />
             );
-            expect(screen.getByText('Mesh Status: Deployed')).toBeInTheDocument();
+            expect(screen.getByText('API Mesh')).toBeInTheDocument();
+            expect(screen.getByText('Deployed')).toBeInTheDocument();
         });
 
         it('renders stale mesh status', () => {
             renderWithProviders(
-                <StatusCard label="Mesh Status" status="Stale" color="yellow" />
+                <StatusCard label="API Mesh" status="Stale" color="yellow" />
             );
-            expect(screen.getByText('Mesh Status: Stale')).toBeInTheDocument();
+            expect(screen.getByText('API Mesh')).toBeInTheDocument();
+            expect(screen.getByText('Stale')).toBeInTheDocument();
         });
 
         it('renders error status', () => {
             renderWithProviders(
                 <StatusCard label="Deployment" status="Failed" color="red" />
             );
-            expect(screen.getByText('Deployment: Failed')).toBeInTheDocument();
+            expect(screen.getByText('Deployment')).toBeInTheDocument();
+            expect(screen.getByText('Failed')).toBeInTheDocument();
         });
     });
 
@@ -211,8 +224,8 @@ describe('StatusCard', () => {
                 />
             );
 
-            // Label and status are combined
-            expect(screen.getByText('Custom Status: Processing')).toBeInTheDocument();
+            expect(screen.getByText('Custom Status')).toBeInTheDocument();
+            expect(screen.getByText('Processing')).toBeInTheDocument();
             expect(container.querySelector('.my-status-card')).toBeInTheDocument();
         });
 

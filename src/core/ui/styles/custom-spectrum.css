@@ -1534,6 +1534,36 @@ button[class*="spectrum-Button"][disabled],
     margin: 0 auto;
 }
 
+/* Dashboard status grid - align labels and values across rows */
+.dashboard-status-grid {
+    display: grid !important;
+    grid-template-columns: auto auto 1fr !important;
+    align-items: center !important;
+    row-gap: 4px !important;
+    column-gap: 8px !important;
+}
+
+.dashboard-status-grid .status-row {
+    display: contents !important;
+}
+
+/* Dashboard status badges - match card grid style */
+.dashboard-status-badge .status-label,
+.dashboard-status-badge .status-text {
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+.dashboard-status-badge .status-label {
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+}
+
+.dashboard-status-badge .status-text {
+    color: var(--spectrum-global-color-gray-600) !important;
+}
+
 /* Dashboard grid - center fixed-width buttons */
 .dashboard-grid-container {
     display: flex;

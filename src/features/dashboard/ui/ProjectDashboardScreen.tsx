@@ -42,6 +42,8 @@ interface ProjectDashboardScreenProps {
     edsLiveUrl?: string;
     /** DA.live authoring URL for EDS projects */
     edsDaLiveUrl?: string;
+    /** Initial mesh status from card grid computation (avoids loading flash) */
+    initialMeshStatus?: string;
 }
 
 /**
@@ -55,7 +57,7 @@ interface ProjectDashboardScreenProps {
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, initialMeshStatus }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
@@ -90,7 +92,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         displayName: statusDisplayName,
         status,
         meshStatus,
-    } = useDashboardStatus({ hasMesh }, isEdsStable);
+    } = useDashboardStatus({ hasMesh, initialMeshStatus }, isEdsStable);
 
     // Action handlers via extracted hook
     const {
@@ -169,23 +171,31 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                             <Flex alignItems="center" gap="size-300">
                                 {/* Status indicators */}
                                 <View flex>
+                                <div className="dashboard-status-grid">
                                 {/* Demo Status */}
                                 <StatusCard
-                                    label="Demo"
+                                    label="Frontend"
                                     status={demoStatusDisplay.text}
                                     color={demoStatusDisplay.color}
                                     size="S"
+                                    className="dashboard-status-badge"
                                 />
 
                                 {/* Mesh Status */}
                                 {meshStatusDisplay && (
+                                    <StatusCard
+                                        label="API Mesh"
+                                        status={meshStatusDisplay.text}
+                                        color={meshStatusDisplay.color}
+                                        size="S"
+                                        className="dashboard-status-badge"
+                                    />
+                                )}
+                                </div>
+
+                                {/* Mesh action buttons */}
+                                {meshStatusDisplay && (
                                     <Flex direction="row" alignItems="center" gap="size-100" marginTop="size-50">
-                                        <StatusCard
-                                            label="API Mesh"
-                                            status={meshStatusDisplay.text}
-                                            color={meshStatusDisplay.color}
-                                            size="S"
-                                        />
 
                                         {meshStatus === 'needs-auth' && (
                                             <button

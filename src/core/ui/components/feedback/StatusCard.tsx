@@ -68,20 +68,12 @@ export const StatusCard = React.memo<StatusCardProps>(({
         }
     };
 
-    // Format as "Label: Status" for inline display
-    // Handle both string and ReactNode status values
-    const renderContent = () => {
-        if (label) {
-            return <>{label}: {status}</>;
-        }
-        return status;
-    };
-
     return (
         <div className={className ? `status-row ${className}` : 'status-row'}>
             <StatusDot variant={getVariant()} size={getSizeInPixels()} />
+            {label && <span className="status-label">{label}</span>}
             <span className="status-text">
-                {renderContent()}
+                {status}
             </span>
         </div>
     );
