@@ -459,8 +459,8 @@ export class GitHubRepoOperations {
     /**
      * Reset repository to match a template repository
      *
-     * Uses Git Data API to atomically replace the repo's tree with the template's tree.
-     * This is much faster than copying files one-by-one (~4 API calls vs 4000+).
+     * Uses git commands to efficiently reset a repo to match a template.
+     * This is much faster than the API approach for large repos (2000+ files).
      *
      * @param owner - User's repository owner
      * @param repo - User's repository name
@@ -478,55 +478,119 @@ export class GitHubRepoOperations {
         branch = 'main',
         commitMessage = 'chore: reset to template',
     ): Promise<{ commitSha: string }> {
-        const octokit = await this.ensureAuthenticated();
+        const token = await this.tokenService.getToken();
+        if (!token) {
+            throw new Error(ERROR_MESSAGES.NOT_AUTHENTICATED);
+        }
 
         this.logger.info(`[GitHub] Resetting ${owner}/${repo} to template ${templateOwner}/${templateRepo}`);
 
-        // Step 1: Get template repo's tree SHA from HEAD commit
-        this.logger.debug(`[GitHub] Getting template tree SHA...`);
-        const templateBranch = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
-            owner: templateOwner,
-            repo: templateRepo,
-            branch,
-        });
-        const templateTreeSha = templateBranch.data.commit.commit.tree.sha;
-        this.logger.debug(`[GitHub] Template tree SHA: ${templateTreeSha}`);
+        // Use git commands - much more efficient for large repos
+        const commandManager = ServiceLocator.getCommandExecutor();
+        const fs = await import('fs/promises');
+        const os = await import('os');
 
-        // Step 2: Get user repo's current HEAD commit SHA (to use as parent)
-        this.logger.debug(`[GitHub] Getting user repo HEAD...`);
-        const userBranch = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
-            owner,
-            repo,
-            branch,
-        });
-        const userHeadSha = userBranch.data.commit.sha;
-        this.logger.debug(`[GitHub] User HEAD SHA: ${userHeadSha}`);
+        // Create temp directory for the operation
+        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'github-reset-'));
+        this.logger.debug(`[GitHub] Using temp directory: ${tempDir}`);
 
-        // Step 3: Create a new commit with template's tree and user's HEAD as parent
-        this.logger.debug(`[GitHub] Creating reset commit...`);
-        const newCommit = await octokit.request('POST /repos/{owner}/{repo}/git/commits', {
-            owner,
-            repo,
-            message: commitMessage,
-            tree: templateTreeSha,
-            parents: [userHeadSha],
-        });
-        const newCommitSha = newCommit.data.sha;
-        this.logger.debug(`[GitHub] New commit SHA: ${newCommitSha}`);
+        try {
+            // Step 1: Clone user's repo (shallow clone for speed)
+            this.logger.debug(`[GitHub] Cloning user repo...`);
+            const userRepoUrl = injectTokenIntoUrl(`https://github.com/${owner}/${repo}.git`, token.token);
+            const cloneResult = await commandManager.execute(
+                `git clone --depth 1 --branch ${branch} "${userRepoUrl}" repo`,
+                { cwd: tempDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL },
+            );
+            if (cloneResult.code !== 0) {
+                throw new Error(`Failed to clone user repo: ${cloneResult.stderr}`);
+            }
 
-        // Step 4: Update branch to point to new commit
-        this.logger.debug(`[GitHub] Updating branch ref...`);
-        await octokit.request('PATCH /repos/{owner}/{repo}/git/refs/heads/{branch}', {
-            owner,
-            repo,
-            branch,
-            sha: newCommitSha,
-            force: true, // Required since we're changing the tree
-        });
+            const repoDir = path.join(tempDir, 'repo');
 
-        this.logger.info(`[GitHub] Reset complete - ${owner}/${repo} now matches template`);
+            // Step 2: Add template as remote and fetch
+            this.logger.debug(`[GitHub] Fetching template repo...`);
+            const templateUrl = `https://github.com/${templateOwner}/${templateRepo}.git`;
+            await commandManager.execute(`git remote add template "${templateUrl}"`, {
+                cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
+            });
 
-        return { commitSha: newCommitSha };
+            const fetchResult = await commandManager.execute(`git fetch template ${branch}`, {
+                cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
+            });
+            if (fetchResult.code !== 0) {
+                throw new Error(`Failed to fetch template: ${fetchResult.stderr}`);
+            }
+
+            // Step 3: Reset to template's content (keeps our history, replaces content)
+            this.logger.debug(`[GitHub] Resetting to template content...`);
+
+            // Get template's tree and create a commit with it on our branch
+            // Using read-tree to replace our working tree with template's content
+            const readTreeResult = await commandManager.execute(
+                `git read-tree --reset -u template/${branch}`,
+                { cwd: repoDir, timeout: TIMEOUTS.NORMAL, shell: DEFAULT_SHELL },
+            );
+            if (readTreeResult.code !== 0) {
+                throw new Error(`Failed to read template tree: ${readTreeResult.stderr}`);
+            }
+
+            // Step 4: Commit the changes
+            this.logger.debug(`[GitHub] Creating reset commit...`);
+            await commandManager.execute(`git add -A`, {
+                cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
+            });
+
+            // Check if there are changes to commit
+            const statusResult = await commandManager.execute(`git status --porcelain`, {
+                cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
+            });
+
+            let commitSha: string;
+            if (statusResult.stdout.trim()) {
+                // There are changes, commit them
+                const commitResult = await commandManager.execute(
+                    `git commit -m "${commitMessage}"`,
+                    { cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL },
+                );
+                if (commitResult.code !== 0) {
+                    throw new Error(`Failed to commit: ${commitResult.stderr}`);
+                }
+
+                // Get the new commit SHA
+                const shaResult = await commandManager.execute(`git rev-parse HEAD`, {
+                    cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
+                });
+                commitSha = shaResult.stdout.trim();
+            } else {
+                // No changes - repo already matches template
+                this.logger.info(`[GitHub] Repository already matches template, no changes needed`);
+                const shaResult = await commandManager.execute(`git rev-parse HEAD`, {
+                    cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
+                });
+                commitSha = shaResult.stdout.trim();
+            }
+
+            // Step 5: Push to origin
+            this.logger.debug(`[GitHub] Pushing to origin...`);
+            const pushResult = await commandManager.execute(`git push origin ${branch} --force`, {
+                cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
+            });
+            if (pushResult.code !== 0) {
+                throw new Error(`Failed to push: ${pushResult.stderr}`);
+            }
+
+            this.logger.info(`[GitHub] Reset complete - ${owner}/${repo} now matches template`);
+            return { commitSha };
+        } finally {
+            // Clean up temp directory
+            try {
+                await fs.rm(tempDir, { recursive: true, force: true });
+                this.logger.debug(`[GitHub] Cleaned up temp directory`);
+            } catch (cleanupError) {
+                this.logger.warn(`[GitHub] Failed to clean up temp directory: ${(cleanupError as Error).message}`);
+            }
+        }
     }
 
     /**
