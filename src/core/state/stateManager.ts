@@ -193,9 +193,8 @@ export class StateManager {
     }
 
     public async saveProject(project: Project): Promise<void> {
-        // DEBUG: Track what's triggering saves
         const stack = new Error().stack?.split('\n').slice(2, 5).join(' <- ') || 'unknown';
-        this.logger.debug(`[StateManager] saveProject called for ${project.name}, caller: ${stack}`);
+        this.logger.trace(`[StateManager] saveProject called for ${project.name}, caller: ${stack}`);
 
         // Serialize save operations to prevent concurrent writes racing on temp file
         return StateManager.saveLock.run(async () => {

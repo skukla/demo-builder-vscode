@@ -127,6 +127,8 @@ interface ProjectCreationConfig {
         // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards
         // Patch IDs to apply during reset (from demo-packages.json)
         patches?: string[];
+        // Content patch IDs to apply during DA.live content copy
+        contentPatches?: string[];
     };
 }
 

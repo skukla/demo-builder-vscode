@@ -5,6 +5,7 @@ export interface ActionButton {
     label: string;
     variant: 'primary' | 'secondary' | 'accent' | 'negative';
     onPress: () => void;
+    isDisabled?: boolean;
 }
 
 export interface ModalProps {
@@ -23,19 +24,25 @@ export interface ModalProps {
 interface FocusableButtonProps {
     variant: 'primary' | 'secondary' | 'accent' | 'negative';
     onPress: () => void;
+    isDisabled?: boolean;
     children: React.ReactNode;
 }
 
-function FocusableButton({ variant, onPress, children }: FocusableButtonProps) {
+function FocusableButton({ variant, onPress, isDisabled, children }: FocusableButtonProps) {
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
+            if (isDisabled) return;
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 onPress();
             }
         },
-        [onPress],
+        [onPress, isDisabled],
     );
+
+    const handleClick = useCallback(() => {
+        if (!isDisabled) onPress();
+    }, [onPress, isDisabled]);
 
     // Map variant to CSS class
     const variantClassMap: Record<FocusableButtonProps['variant'], string> = {
@@ -49,10 +56,11 @@ function FocusableButton({ variant, onPress, children }: FocusableButtonProps) {
     return (
         <div
             role="button"
-            tabIndex={0}
-            onClick={onPress}
+            tabIndex={isDisabled ? -1 : 0}
+            onClick={handleClick}
             onKeyDown={handleKeyDown}
-            className={`modal-button ${variantClass}`}
+            className={`modal-button ${variantClass}${isDisabled ? ' modal-button-disabled' : ''}`}
+            aria-disabled={isDisabled}
         >
             {children}
         </div>
@@ -86,6 +94,7 @@ export function Modal({
                             key={index}
                             variant={button.variant}
                             onPress={button.onPress}
+                            isDisabled={button.isDisabled}
                         >
                             {button.label}
                         </FocusableButton>

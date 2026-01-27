@@ -87,6 +87,8 @@ export interface Storefront {
     templateRepo?: string;
     /** Patch IDs to apply during reset (defined in templatePatchRegistry) */
     patches?: string[];
+    /** Content patch IDs to apply during DA.live content copy */
+    contentPatches?: string[];
 }
 
 /**

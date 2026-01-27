@@ -133,6 +133,14 @@
             "minLength": 1
           },
           "description": "Array of patch IDs to apply during reset (defined in templatePatchRegistry)"
+        },
+        "contentPatches": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Array of content patch IDs to apply during DA.live content copy"
         }
       }
     },

@@ -60,7 +60,8 @@
             "org": "demo-system-stores",
             "site": "accs-citisignal"
           },
-          "patches": ["header-nav-tools-defensive", "aem-assets-sku-sanitization", "product-link-sku-encoding", "personalization-auth-guard"]
+          "patches": ["header-nav-tools-defensive", "aem-assets-sku-sanitization", "product-link-sku-encoding", "personalization-auth-guard"],
+          "contentPatches": ["index-product-teaser-sku", "phones-product-teaser-sku", "phones-heading-reorder", "smart-watches-category-id", "smart-watches-url-path"]
         },
         "eds-accs": {
           "name": "CitiSignal EDS + ACCS",
@@ -83,7 +84,8 @@
             "org": "demo-system-stores",
             "site": "accs-citisignal"
           },
-          "patches": ["header-nav-tools-defensive", "aem-assets-sku-sanitization", "product-link-sku-encoding", "personalization-auth-guard"]
+          "patches": ["header-nav-tools-defensive", "aem-assets-sku-sanitization", "product-link-sku-encoding", "personalization-auth-guard"],
+          "contentPatches": ["index-product-teaser-sku", "phones-product-teaser-sku", "phones-heading-reorder", "smart-watches-category-id", "smart-watches-url-path"]
         }
       }
     },

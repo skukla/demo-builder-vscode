@@ -98,6 +98,8 @@ interface StorefrontSetupStartPayload {
         };
         // Patch IDs to apply during setup (from demo-packages.json storefronts)
         patches?: string[];
+        // Content patch IDs to apply during DA.live content copy (from demo-packages.json storefronts)
+        contentPatches?: string[];
         // GitHub auth info from Connect Services step
         githubAuth?: {
             isAuthenticated?: boolean;
@@ -869,6 +871,7 @@ async function executeStorefrontSetupPhases(
                 edsConfig.daLiveOrg,
                 edsConfig.daLiveSite,
                 (progress) => {
+
                     // Scale progress from 50% to 60% during content copy
                     const progressValue = 50 + Math.round(progress.percentage * 0.10);
                     // Use custom message if provided (during initialization), otherwise show file count
@@ -880,6 +883,7 @@ async function executeStorefrontSetupPhases(
                         progress: progressValue,
                     });
                 },
+                edsConfig.contentPatches,
             );
 
             if (!contentResult.success) {

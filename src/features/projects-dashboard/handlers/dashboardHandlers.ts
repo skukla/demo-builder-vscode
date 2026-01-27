@@ -882,12 +882,14 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         templateRepo?: string;
         contentSource?: { org: string; site: string; indexPath?: string };
         patches?: string[];
+        contentPatches?: string[];
     }> | undefined;
     const storefront = project.selectedStack ? storefronts?.[project.selectedStack] : undefined;
     const templateOwner = storefront?.templateOwner;
     const templateRepo = storefront?.templateRepo;
     const contentSourceConfig = storefront?.contentSource;
     const patches = storefront?.patches;
+    const contentPatches = storefront?.contentPatches;
 
     if (!repoFullName) {
         const errorMsg = 'EDS metadata missing - no GitHub repository configured';
@@ -1222,6 +1224,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     daLiveOrg,
                     daLiveSite,
                     onContentProgress,
+                    contentPatches,
                 );
 
                 if (!contentResult.success) {

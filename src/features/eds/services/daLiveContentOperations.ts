@@ -321,6 +321,8 @@ export class DaLiveContentOperations {
      *
      * For HTML content, fetches .plain.html to get just the main content without
      * the full page wrapper, then transforms and wraps it in document structure.
+     *
+     * @param contentPatchIds - Optional content patch IDs to apply to HTML content
      */
     private async copySingleFile(
         token: string,
@@ -328,6 +330,7 @@ export class DaLiveContentOperations {
         sourcePath: string,
         destination: { org: string; site: string },
         destPath: string,
+        contentPatchIds?: string[],
     ): Promise<boolean> {
         const sourceBaseUrl = `https://main--${source.site}--${source.org}.aem.live`;
 
@@ -397,7 +400,26 @@ export class DaLiveContentOperations {
                 // Client-side JS in the project will convert anchors back to images
                 let contentBlob: Blob;
                 if (isHtml) {
-                    const htmlText = await sourceResponse.text();
+                    let htmlText = await sourceResponse.text();
+
+                    // Apply content patches if any match this page path
+                    if (contentPatchIds && contentPatchIds.length > 0) {
+                        const { applyContentPatches } = await import('./contentPatchRegistry');
+                        const { html: patchedHtml, results } = applyContentPatches(
+                            htmlText,
+                            sourcePath,
+                            contentPatchIds,
+                            this.logger,
+                        );
+                        htmlText = patchedHtml;
+
+                        for (const result of results) {
+                            if (!result.applied && result.reason) {
+                                this.logger.debug(`[DA.live] Content patch '${result.patchId}' not applied to ${sourcePath}: ${result.reason}`);
+                            }
+                        }
+                    }
+
                     const transformedHtml = this.transformHtmlForDaLive(htmlText, sourceBaseUrl);
                     contentBlob = new Blob([transformedHtml], { type: 'text/html' });
                 } else {
@@ -676,6 +698,7 @@ export class DaLiveContentOperations {
         destOrg: string,
         destSite: string,
         progressCallback?: DaLiveProgressCallback,
+        contentPatchIds?: string[],
     ): Promise<DaLiveCopyResult> {
         // Report initialization progress
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Fetching content index...' });
@@ -745,6 +768,7 @@ export class DaLiveContentOperations {
                         sourcePath,
                         { org: destOrg, site: destSite },
                         sourcePath,
+                        contentPatchIds,
                     );
                     return { path: sourcePath, success };
                 }),

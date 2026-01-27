@@ -1,0 +1,40 @@
+{
+    "version": "1.0.0",
+    "patches": [
+        {
+            "id": "index-product-teaser-sku",
+            "pagePath": "/",
+            "description": "Replace Orchard7 SKU with apple-iphone-se/iphone-se in the product teaser on the homepage",
+            "searchPattern": "Orchard7",
+            "replacement": "apple-iphone-se/iphone-se"
+        },
+        {
+            "id": "phones-product-teaser-sku",
+            "pagePath": "/phones",
+            "description": "Replace Orchard1-1 SKU with apple-iphone-se/iphone-se in the product teaser on the phones page",
+            "searchPattern": "Orchard1-1",
+            "replacement": "apple-iphone-se/iphone-se"
+        },
+        {
+            "id": "phones-heading-reorder",
+            "pagePath": "/phones",
+            "description": "Move Phones heading from after product-list-page block to before it",
+            "searchPattern": "  <div class=\"product-list-page\">\n    <div>\n      <div>category</div>\n      <div>41</div>\n    </div>\n    <div>\n      <div>urlPath</div>\n      <div>phones</div>\n    </div>\n  </div>\n  <h1 id=\"phones\">Phones</h1>",
+            "replacement": "  <h1 id=\"phones\">Phones</h1>\n  <div class=\"product-list-page\">\n    <div>\n      <div>category</div>\n      <div>41</div>\n    </div>\n    <div>\n      <div>urlPath</div>\n      <div>phones</div>\n    </div>\n  </div>"
+        },
+        {
+            "id": "smart-watches-category-id",
+            "pagePath": "/smart-watches",
+            "description": "Replace category 38 with category 5 in the product-list-page block on the smart-watches page",
+            "searchPattern": "38",
+            "replacement": "5"
+        },
+        {
+            "id": "smart-watches-url-path",
+            "pagePath": "/smart-watches",
+            "description": "Replace urlPath smart-watches with watches in the product-list-page block on the smart-watches page",
+            "searchPattern": "<div>smart-watches</div>",
+            "replacement": "<div>watches</div>"
+        }
+    ]
+}

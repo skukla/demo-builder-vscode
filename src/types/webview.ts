@@ -410,6 +410,8 @@ export interface EDSConfig {
     };
     /** Patch IDs to apply during reset (from demo-packages.json storefronts) */
     patches?: string[];
+    /** Content patch IDs to apply during DA.live content copy */
+    contentPatches?: string[];
 
     // Repository creation state (set by GitHubRepoSelectionStep when creating new repo)
     /** Created repository info - set when repo is created in selection step, before proceeding */

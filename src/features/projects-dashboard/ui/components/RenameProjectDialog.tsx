@@ -13,16 +13,12 @@
  */
 
 import {
-    Dialog,
-    Heading,
-    Content,
-    ButtonGroup,
-    Button,
     TextField,
     Flex,
     Text,
 } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Modal } from '@/core/ui/components/ui/Modal';
 import {
     normalizeProjectName,
     getProjectNameError,
@@ -105,38 +101,35 @@ export function RenameProjectDialog({
     };
 
     return (
-        <Dialog>
-            <Heading>Rename Project</Heading>
-            <Content>
-                <Flex direction="column" gap="size-200">
-                    <TextField
-                        label="Project Name"
-                        value={newName}
-                        onChange={handleNameChange}
-                        autoFocus
-                        width="100%"
-                        validationState={getValidationState()}
-                        errorMessage={validationError}
-                    />
-                    {!validationError && (
-                        <Text UNSAFE_className="text-xs text-gray-500">
-                            This will update the project name in the dashboard.
-                        </Text>
-                    )}
-                </Flex>
-            </Content>
-            <ButtonGroup>
-                <Button variant="secondary" onPress={onClose}>
-                    Cancel
-                </Button>
-                <Button
-                    variant="accent"
-                    onPress={handleRename}
-                    isDisabled={!isValid || !hasChanged}
-                >
-                    Rename
-                </Button>
-            </ButtonGroup>
-        </Dialog>
+        <Modal
+            title="Rename Project"
+            onClose={onClose}
+            size="S"
+            actionButtons={[
+                {
+                    label: 'Rename',
+                    variant: 'accent',
+                    onPress: handleRename,
+                    isDisabled: !isValid || !hasChanged,
+                },
+            ]}
+        >
+            <Flex direction="column" gap="size-200">
+                <TextField
+                    label="Project Name"
+                    value={newName}
+                    onChange={handleNameChange}
+                    autoFocus
+                    width="100%"
+                    validationState={getValidationState()}
+                    errorMessage={validationError}
+                />
+                {!validationError && (
+                    <Text UNSAFE_className="text-xs text-gray-500">
+                        This will update the project name in the dashboard.
+                    </Text>
+                )}
+            </Flex>
+        </Modal>
     );
 }

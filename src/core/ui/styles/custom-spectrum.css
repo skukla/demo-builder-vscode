@@ -1261,6 +1261,12 @@ button[class*="spectrum-Button"][disabled],
     outline-offset: 2px !important;
 }
 
+.modal-button-disabled {
+    opacity: 0.4 !important;
+    cursor: default !important;
+    pointer-events: none !important;
+}
+
 /* Sidebar loading state */
 .sidebar-loading {
     padding: 16px !important;
