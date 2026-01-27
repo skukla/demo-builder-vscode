@@ -6,6 +6,7 @@ import { BaseCommand } from '@/core/base/baseCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { LAST_UPDATE_CHECK_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
+import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging, validatePathSafety } from '@/core/validation';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
@@ -103,7 +104,16 @@ export class ResetAllCommand extends BaseCommand {
                 this.logger.warn('To manually logout, run: aio auth logout');
             }
 
-            // 7. Delete .demo-builder directory (after all cleanup steps)
+            // 7. Reset DA.live auth (clears everything including setupComplete)
+            try {
+                const daLiveAuthService = new DaLiveAuthService(this.context);
+                await daLiveAuthService.resetAll();
+                this.logger.info('DA.live auth reset successful');
+            } catch (error) {
+                this.logger.warn('Failed to reset DA.live auth:', error as Error);
+            }
+
+            // 8. Delete .demo-builder directory (after all cleanup steps)
             try {
                 // SECURITY: Validate path safety before deletion (symlink attack prevention)
                 const homeDir = os.homedir();
