@@ -15,20 +15,20 @@ describe('ProjectDashboardScreen - Mesh Status Display', () => {
     });
 
     describe('Initial Mesh Status', () => {
-        it('should display "Checking status..." initially before projectStatus loads', () => {
+        it('should display "Loading status..." initially before projectStatus loads', () => {
             renderDashboard();
-            expect(screen.getByText(/API Mesh.*Checking status/i)).toBeInTheDocument();
+            expect(screen.getByText(/Loading status/i)).toBeInTheDocument();
         });
 
-        it('should display "Checking status..." when hasMesh is true', () => {
+        it('should display "Loading status..." when hasMesh is true', () => {
             renderDashboard({ hasMesh: true });
-            expect(screen.getByText(/API Mesh.*Checking status/i)).toBeInTheDocument();
+            expect(screen.getByText(/Loading status/i)).toBeInTheDocument();
         });
 
         it('should hide mesh status after projectStatus confirms no mesh', async () => {
             renderDashboard();
 
-            expect(screen.getByText(/Checking status/i)).toBeInTheDocument();
+            expect(screen.getByText(/Loading status/i)).toBeInTheDocument();
 
             ctx.triggerMessage('statusUpdate', {
                 name: 'Test Project',
@@ -57,7 +57,7 @@ describe('ProjectDashboardScreen - Mesh Status Display', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText(/API Mesh.*Deployed/i)).toBeInTheDocument();
+                expect(screen.getByText(/Deployed/i)).toBeInTheDocument();
             });
         });
 
@@ -73,7 +73,7 @@ describe('ProjectDashboardScreen - Mesh Status Display', () => {
                 },
             });
 
-            await waitFor(() => expect(screen.getByText(/API Mesh.*Not deployed/i)).toBeInTheDocument());
+            await waitFor(() => expect(screen.getByText(/Not deployed/i)).toBeInTheDocument());
         });
 
         it('should display "Deploying..." with message', async () => {
@@ -94,7 +94,7 @@ describe('ProjectDashboardScreen - Mesh Status Display', () => {
             });
         });
 
-        it('should display "Redeploy needed" for config-changed status', async () => {
+        it('should display "Redeploy Mesh" for config-changed status', async () => {
             renderDashboard();
 
             ctx.triggerMessage('statusUpdate', {
@@ -107,7 +107,7 @@ describe('ProjectDashboardScreen - Mesh Status Display', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText(/Redeploy needed/i)).toBeInTheDocument();
+                expect(screen.getByText(/Redeploy Mesh/i)).toBeInTheDocument();
             });
         });
 

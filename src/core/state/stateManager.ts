@@ -351,6 +351,10 @@ export class StateManager {
         const project = await this.projectFileLoader.loadProject(projectPath, terminalProvider);
 
         if (project) {
+            // Preserve runtime-only state not stored in the manifest
+            if (this.state.currentProject?.path === projectPath) {
+                project.meshStatusSummary = this.state.currentProject.meshStatusSummary;
+            }
             if (persistAfterLoad) {
                 // Set as current project and persist to disk
                 await this.saveProject(project);

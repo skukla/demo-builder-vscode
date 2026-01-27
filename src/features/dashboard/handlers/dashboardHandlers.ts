@@ -54,6 +54,7 @@ export const handleReady: MessageHandler = async (context) => {
                 name: project.name,
                 path: project.path,
             },
+            initialMeshStatus: project.meshStatusSummary,
         },
     });
 

@@ -323,12 +323,12 @@ describe('useDashboardStatus', () => {
     });
 
     describe('Mesh Status Display', () => {
-        it('should return Checking status... initially when hasMesh is true', () => {
+        it('should return Loading status... initially when hasMesh is true', () => {
             const { result } = renderHook(() => useDashboardStatus({ hasMesh: true }));
 
             expect(result.current.meshStatusDisplay).toEqual({
                 color: 'blue',
-                text: 'Checking status...',
+                text: 'Loading status...',
             });
         });
 
@@ -361,7 +361,7 @@ describe('useDashboardStatus', () => {
 
             expect(result.current.meshStatusDisplay).toEqual({
                 color: 'green',
-                text: 'Deployed',
+                text: 'Mesh Deployed',
             });
         });
 
@@ -383,7 +383,7 @@ describe('useDashboardStatus', () => {
             });
         });
 
-        it('should return Redeploy needed for config-changed', () => {
+        it('should return Redeploy Mesh for config-changed', () => {
             const { result } = renderHook(() => useDashboardStatus());
 
             act(() => {
@@ -397,7 +397,7 @@ describe('useDashboardStatus', () => {
 
             expect(result.current.meshStatusDisplay).toEqual({
                 color: 'yellow',
-                text: 'Redeploy needed',
+                text: 'Redeploy Mesh',
             });
         });
 
@@ -419,7 +419,7 @@ describe('useDashboardStatus', () => {
             });
         });
 
-        it('should return Deployment error for error', () => {
+        it('should return Mesh Error for error', () => {
             const { result } = renderHook(() => useDashboardStatus());
 
             act(() => {
@@ -433,7 +433,7 @@ describe('useDashboardStatus', () => {
 
             expect(result.current.meshStatusDisplay).toEqual({
                 color: 'red',
-                text: 'Deployment error',
+                text: 'Mesh Error',
             });
         });
     });

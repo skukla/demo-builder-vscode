@@ -31,7 +31,7 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
 
         it('should render Demo status card', () => {
             renderDashboard();
-            expect(screen.getByText(/Demo:/i)).toBeInTheDocument();
+            expect(screen.getByText(/Ready/i)).toBeInTheDocument();
         });
     });
 
@@ -117,7 +117,7 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
         it('should hide mesh status after status update confirms no mesh', async () => {
             renderDashboard();
 
-            expect(screen.getByText(/Checking status/i)).toBeInTheDocument();
+            expect(screen.getByText(/Loading status/i)).toBeInTheDocument();
 
             ctx.triggerMessage('statusUpdate', {
                 name: 'Test Project',

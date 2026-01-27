@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useMemo, useRef, Dispatch, SetStateAction } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 
 /**
  * Mesh deployment status values
@@ -62,6 +63,8 @@ export interface StatusDisplay {
 export interface UseDashboardStatusProps {
     /** Whether project has mesh configuration */
     hasMesh?: boolean;
+    /** Initial mesh status from card grid (avoids loading flash) */
+    initialMeshStatus?: string;
 }
 
 /**
@@ -106,7 +109,7 @@ export const isMeshBusy = (status: MeshStatus | undefined): boolean =>
  * @returns Object containing status state and computed displays
  */
 export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = false): UseDashboardStatusReturn {
-    const { hasMesh } = props;
+    const { hasMesh, initialMeshStatus } = props;
 
     const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
     const [isRunning, setIsRunning] = useState(false);
@@ -202,17 +205,22 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     }, [isEds, status, frontendConfigChanged, port]);
 
     const meshStatusDisplay = useMemo((): StatusDisplay | null => {
-        // If no mesh status yet, show checking state until we have definitive info
-        if (!meshStatus) {
+        // Use initialMeshStatus from init payload to avoid loading flash
+        // Translate persisted values: 'stale' → 'config-changed' (dashboard terminology)
+        const effectiveMeshStatus = meshStatus
+            || (initialMeshStatus === 'stale' ? 'config-changed' : initialMeshStatus as MeshStatus | undefined);
+
+        if (!effectiveMeshStatus) {
             // If we know hasMesh, use it
-            if (hasMesh) return { color: 'blue', text: 'Checking status...' };
-            // If projectStatus hasn't loaded yet, show checking (avoids flash)
-            if (!projectStatus) return { color: 'blue', text: 'Checking status...' };
+            if (hasMesh) return { color: 'blue', text: 'Loading status...' };
+            // If projectStatus hasn't loaded yet, show loading (avoids flash)
+            if (!projectStatus) return { color: 'blue', text: 'Loading status...' };
             // projectStatus loaded and no mesh - hide the section
             return null;
         }
 
-        switch (meshStatus) {
+        // Transient dashboard-only states (not persisted)
+        switch (effectiveMeshStatus) {
             case 'checking':
                 return { color: 'blue', text: 'Checking status...' };
             case 'needs-auth':
@@ -221,22 +229,18 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
                 return { color: 'blue', text: meshMessage || 'Signing in...' };
             case 'deploying':
                 return { color: 'blue', text: meshMessage || 'Deploying...' };
-            case 'deployed':
-                return { color: 'green', text: 'Deployed' };
-            case 'config-changed':
-                return { color: 'yellow', text: 'Redeploy needed' };
-            case 'config-incomplete':
-                return { color: 'orange', text: 'Missing configuration' };
-            case 'update-declined':
-                return { color: 'orange', text: 'Needs deployment' };
-            case 'not-deployed':
-                return { color: 'gray', text: 'Not deployed' };
-            case 'error':
-                return { color: 'red', text: 'Deployment error' };
-            default:
-                return { color: 'gray', text: 'Unknown' };
         }
-    }, [meshStatus, meshMessage, hasMesh, projectStatus]);
+
+        // Persisted statuses — use shared display mapping
+        // Dashboard uses 'config-changed' for what's stored as 'stale'
+        const lookupKey = effectiveMeshStatus === 'config-changed' ? 'stale' : effectiveMeshStatus;
+        const display = getMeshStatusDisplay(lookupKey);
+        if (display) {
+            return { color: display.color, text: display.text };
+        }
+
+        return { color: 'gray', text: 'Unknown' };
+    }, [meshStatus, meshMessage, hasMesh, projectStatus, initialMeshStatus]);
 
     return {
         projectStatus,
