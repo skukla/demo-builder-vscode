@@ -2617,6 +2617,14 @@ button[class*="spectrum-Button"][disabled],
     background-color: var(--spectrum-global-color-gray-75) !important;
 }
 
+.sidebar-utility-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 96px;
+    flex-shrink: 0;
+}
+
 /* ===========================================
    Smooth Transitions for Prerequisites
    =========================================== */

@@ -18,6 +18,8 @@ export interface UtilityBarProps {
     onOpenHelp?: () => void;
     /** Callback when user clicks Settings */
     onOpenSettings?: () => void;
+    /** If true, use auto height instead of filling container (for footer placement) */
+    compact?: boolean;
 }
 
 /**
@@ -29,6 +31,7 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
     onOpenDocs,
     onOpenHelp,
     onOpenSettings,
+    compact = false,
 }) => {
     return (
         <Flex
@@ -36,8 +39,9 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             gap="size-300"
             alignItems="center"
             justifyContent="center"
-            height="100%"
+            height={compact ? undefined : '100%'}
             UNSAFE_className="sidebar-utility-bar"
+
         >
             {onOpenDocs && (
                 <Flex direction="column" alignItems="center" gap="size-75">

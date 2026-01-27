@@ -77,68 +77,66 @@ export class GitHubAppService {
         }
 
         try {
-            // Use the status endpoint to check if code sync is working
-            // The status endpoint returns detailed information including internal code status
-            const statusUrl = `${HELIX_ADMIN_BASE_URL}/status/${owner}/${repo}/main?editUrl=auto`;
-
-            const response = await fetch(statusUrl, {
-                method: 'GET',
-                headers: {
-                    'x-auth-token': token.token,
-                },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-
-            if (!response.ok) {
-                this.logger.debug(`[GitHub App] Status endpoint returned HTTP ${response.status}`);
-                return { isInstalled: false };
-            }
-
-            // Parse the JSON response to check the internal code status
-            const data = await response.json();
-
-            // The code.status field indicates whether code sync is actually working:
-            // - 200: Code sync is working (app installed and syncing)
-            // - 400: App may be installed but sync initializing or has config issues
-            // - 404: Code not found (app definitely not installed)
-            // - undefined: Unknown state (can't confirm installation)
-            const codeStatus = data?.code?.status;
-
-            this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}`);
-
-            // Handle undefined - unknown state, can't confirm installation
-            if (codeStatus === undefined) {
-                this.logger.info(`[GitHub App] Unable to determine app status for ${owner}/${repo} (no code.status in response)`);
-                return { isInstalled: false };
-            }
-
-            // Determine if installed based on mode
-            let isInstalled: boolean;
-            if (lenient) {
-                // Lenient mode: Accept any status except 404
-                // Used after user explicitly installs the app
-                isInstalled = codeStatus !== 404;
-            } else {
-                // Strict mode: Accept 200 (working) or 400 (initializing)
-                // Both indicate the app is installed; 400 just means sync is still starting
-                isInstalled = codeStatus === 200 || codeStatus === 400;
-            }
-
-            this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}, installed: ${isInstalled}`);
-
-            if (codeStatus === 404) {
-                this.logger.info(`[GitHub App] AEM Code Sync app not installed for ${owner}/${repo} (code.status: 404)`);
-            } else if (codeStatus === 200) {
-                this.logger.info(`[GitHub App] AEM Code Sync app installed and working for ${owner}/${repo}`);
-            } else {
-                this.logger.info(`[GitHub App] AEM Code Sync app status unclear for ${owner}/${repo} (code.status: ${codeStatus})${lenient ? ' - accepting in lenient mode' : ''}`);
-            }
-
-            return { isInstalled, codeStatus };
+            const result = await this.checkHelixStatus(owner, repo, token.token, lenient);
+            return { isInstalled: result.isInstalled, codeStatus: result.codeStatus };
         } catch (error) {
             this.logger.debug(`[GitHub App] Failed to check app installation: ${(error as Error).message}`);
             return { isInstalled: false };
         }
+    }
+
+    /**
+     * Perform a single Helix admin status check.
+     * Returns httpNotFound=true when the HTTP response itself is 404
+     * (distinct from code.status 404 inside a 200 response).
+     */
+    private async checkHelixStatus(
+        owner: string,
+        repo: string,
+        token: string,
+        lenient: boolean,
+    ): Promise<{ isInstalled: boolean; codeStatus?: number; httpNotFound?: boolean }> {
+        const statusUrl = `${HELIX_ADMIN_BASE_URL}/status/${owner}/${repo}/main?editUrl=auto`;
+
+        const response = await fetch(statusUrl, {
+            method: 'GET',
+            headers: { 'x-auth-token': token },
+            signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+        });
+
+        if (!response.ok) {
+            this.logger.debug(`[GitHub App] Status endpoint returned HTTP ${response.status}`);
+            return { isInstalled: false, httpNotFound: response.status === 404 };
+        }
+
+        const data = await response.json();
+        const codeStatus = data?.code?.status;
+
+        this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}`);
+
+        if (codeStatus === undefined) {
+            this.logger.info(`[GitHub App] Unable to determine app status for ${owner}/${repo} (no code.status in response)`);
+            return { isInstalled: false };
+        }
+
+        let isInstalled: boolean;
+        if (lenient) {
+            isInstalled = codeStatus !== 404;
+        } else {
+            isInstalled = codeStatus === 200 || codeStatus === 400;
+        }
+
+        this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}, installed: ${isInstalled}`);
+
+        if (codeStatus === 404) {
+            this.logger.info(`[GitHub App] AEM Code Sync app not installed for ${owner}/${repo} (code.status: 404)`);
+        } else if (codeStatus === 200) {
+            this.logger.info(`[GitHub App] AEM Code Sync app installed and working for ${owner}/${repo}`);
+        } else {
+            this.logger.info(`[GitHub App] AEM Code Sync app status unclear for ${owner}/${repo} (code.status: ${codeStatus})${lenient ? ' - accepting in lenient mode' : ''}`);
+        }
+
+        return { isInstalled, codeStatus };
     }
 
     /**

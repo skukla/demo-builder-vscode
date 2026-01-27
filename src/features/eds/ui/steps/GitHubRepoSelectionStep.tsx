@@ -108,7 +108,9 @@ function GitHubConfigurationSummary({
     // Get GitHub App status text for display
     const getGitHubAppStatusText = (): string => {
         if (githubAppStatus.isInstalled === null) return 'Not checked';
-        return githubAppStatus.isInstalled ? 'Verified' : 'Not installed';
+        if (githubAppStatus.isInstalled) return 'Verified';
+        // Distinguish HTTP 404 (repo not indexed) from code.status 404 (app not installed)
+        return githubAppStatus.codeStatus === undefined ? 'Registering...' : 'Not installed';
     };
 
     // Get GitHub App status indicator
@@ -192,6 +194,8 @@ export function GitHubRepoSelectionStep({
 
     // Track if we're rechecking from within the modal (vs initial check)
     const [isRechecking, setIsRechecking] = useState(false);
+    const [recheckMessage, setRecheckMessage] = useState('Checking installation status...');
+    const [hasRecheckFailed, setHasRecheckFailed] = useState(false);
 
     // Track if user dismissed the GitHub App modal (reset when repo changes)
     const [isModalDismissed, setIsModalDismissed] = useState(false);
@@ -474,8 +478,7 @@ export function GitHubRepoSelectionStep({
      * Handle "Check Again" button click from within the modal
      * Uses lenient mode since user just completed installation
      */
-    const handleCheckAgain = useCallback(() => {
-        // For new repos, use the created repo info; for existing repos, use selected repo
+    const handleCheckAgain = useCallback(async () => {
         let owner: string | undefined;
         let repo: string | undefined;
 
@@ -487,16 +490,76 @@ export function GitHubRepoSelectionStep({
             repo = selectedRepo.name;
         }
 
-        if (owner && repo) {
-            setIsRechecking(true);
-            setGitHubAppStatus({
-                isChecking: true,
-                isInstalled: null,
-            });
-            // Use lenient mode - accepts non-404 since user just installed the app
-            checkGitHubApp(owner, repo, true);
+        if (!owner || !repo) return;
+
+        const maxAttempts = 5;
+        const retryDelayMs = 5000;
+
+        setIsRechecking(true);
+        setHasRecheckFailed(false);
+        setRecheckMessage('Checking installation status...');
+        setGitHubAppStatus({ isChecking: true, isInstalled: null });
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                const result = await webviewClient.request<{
+                    success: boolean;
+                    isInstalled: boolean;
+                    codeStatus?: number;
+                    installUrl?: string;
+                    error?: string;
+                }>('check-github-app', { owner, repo, lenient: true });
+
+                if (result.success && result.isInstalled) {
+                    setGitHubAppStatus({
+                        isChecking: false,
+                        isInstalled: true,
+                        codeStatus: result.codeStatus,
+                    });
+                    setIsRechecking(false);
+                    return;
+                }
+
+                // HTTP 404 (codeStatus undefined) means repo not yet indexed — retry
+                if (result.codeStatus === undefined && attempt < maxAttempts) {
+                    setRecheckMessage(
+                        `Repository is still being registered... (attempt ${attempt + 1} of ${maxAttempts})`,
+                    );
+                    await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+                    continue;
+                }
+
+                // Final failure — set status with codeStatus for message differentiation
+                setGitHubAppStatus({
+                    isChecking: false,
+                    isInstalled: false,
+                    codeStatus: result.codeStatus,
+                    installUrl: result.installUrl,
+                });
+                setHasRecheckFailed(true);
+                setIsRechecking(false);
+                return;
+            } catch (error) {
+                console.error('[GitHub App] Check failed:', error);
+                setGitHubAppStatus({
+                    isChecking: false,
+                    isInstalled: false,
+                    error: (error as Error).message,
+                });
+                setHasRecheckFailed(true);
+                setIsRechecking(false);
+                return;
+            }
         }
-    }, [repoMode, edsConfig?.createdRepo, selectedRepo, checkGitHubApp]);
+
+        // All retries exhausted
+        setGitHubAppStatus({
+            isChecking: false,
+            isInstalled: false,
+        });
+        setHasRecheckFailed(true);
+        setIsRechecking(false);
+    }, [repoMode, edsConfig?.createdRepo, selectedRepo]);
 
     /**
      * Open GitHub App installation page
@@ -719,7 +782,7 @@ export function GitHubRepoSelectionStep({
                 }
 
                 // Show modal when not installed OR when rechecking (unless dismissed)
-                if ((githubAppStatus.isInstalled === false || isRechecking) && !isModalDismissed) {
+                if (((githubAppStatus.isInstalled === false && githubAppStatus.codeStatus !== undefined) || isRechecking) && !isModalDismissed) {
                     // Get owner/repo for display
                     let owner: string;
                     let repo: string;
@@ -756,9 +819,15 @@ export function GitHubRepoSelectionStep({
                                     onClose={handleDismiss}
                                 >
                                     {/* Fixed height container prevents modal resize during recheck */}
-                                    <div style={{ minHeight: '220px' }}>
+                                    <div style={{ minHeight: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         {isRechecking ? (
-                                            <LoadingDisplay message="Checking installation status..." />
+                                            <LoadingDisplay message={recheckMessage} />
+                                        ) : hasRecheckFailed ? (
+                                            <Text UNSAFE_className="text-sm text-orange-700">
+                                                {githubAppStatus.codeStatus === undefined
+                                                    ? 'Your repository is still being registered. This can take a few minutes for new repositories. Please wait and try again.'
+                                                    : 'App not detected. Please verify the app is installed for this repository.'}
+                                            </Text>
                                         ) : (
                                             <NumberedInstructions
                                                 instructions={[

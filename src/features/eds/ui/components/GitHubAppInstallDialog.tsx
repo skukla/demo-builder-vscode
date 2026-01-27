@@ -36,6 +36,7 @@ export function GitHubAppInstallDialog({
 }: GitHubAppInstallDialogProps) {
     const [isChecking, setIsChecking] = useState(false);
     const [hasError, setHasError] = useState(false);
+    const [lastCodeStatus, setLastCodeStatus] = useState<number | undefined>(undefined);
 
     const handleOpenInstallPage = () => {
         // Open the URL in the system browser via VS Code API
@@ -51,12 +52,13 @@ export function GitHubAppInstallDialog({
             const result = await webviewClient.request<{
                 success: boolean;
                 isInstalled: boolean;
+                codeStatus?: number;
             }>('check-github-app', { owner, repo, lenient: true });
 
             if (result.success && result.isInstalled) {
                 onInstallDetected();
             } else {
-                // App not installed yet
+                setLastCodeStatus(result.codeStatus);
                 setHasError(true);
             }
         } catch (error) {
@@ -127,7 +129,9 @@ export function GitHubAppInstallDialog({
             
             {hasError && (
                 <Text UNSAFE_className="text-sm text-orange-700 text-center" marginTop="size-200">
-                    ⚠️ App not detected yet. Please complete the installation and try again.
+                    {lastCodeStatus === undefined
+                        ? '⚠️ Your repository is still being registered. This can take a few minutes for new repositories. Please wait and try again.'
+                        : '⚠️ App not detected yet. Please complete the installation and try again.'}
                 </Text>
             )}
         </StatusDisplay>

@@ -87,17 +87,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 UNSAFE_className="sidebar-wizard-view"
             >
                 {/* Wizard progress using shared TimelineNav */}
-                <TimelineNav
-                    steps={timelineSteps}
-                    currentStepIndex={context.step - 1}
-                    completedStepIndices={context.completedSteps || []}
-                    confirmedStepIndices={context.confirmedSteps || []}
-                    onStepClick={onWizardStepClick}
-                    compact={true}
-                    showHeader={true}
-                    headerText="Setup Progress"
-                    isEditMode={context.isEditMode}
-                />
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                    <TimelineNav
+                        steps={timelineSteps}
+                        currentStepIndex={context.step - 1}
+                        completedStepIndices={context.completedSteps || []}
+                        confirmedStepIndices={context.confirmedSteps || []}
+                        onStepClick={onWizardStepClick}
+                        compact={true}
+                        showHeader={true}
+                        headerText="Setup Progress"
+                        isEditMode={context.isEditMode}
+                    />
+                </div>
+
+                {/* Footer: utility icons matching PageFooter height */}
+                <div className="border-t sidebar-utility-footer">
+                    <UtilityBar
+                        onOpenDocs={onOpenDocs}
+                        onOpenHelp={onOpenHelp}
+                        onOpenSettings={onOpenSettings}
+                        compact
+                    />
+                </div>
             </Flex>
         );
     }
