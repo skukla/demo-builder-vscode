@@ -233,6 +233,7 @@ function createMockContext(project: Project | undefined): HandlerContext {
         } as unknown as HandlerContext['panel'],
         stateManager: {
             loadProjectFromPath: jest.fn().mockResolvedValue(project),
+            saveProject: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
         logger: {
             info: jest.fn(),

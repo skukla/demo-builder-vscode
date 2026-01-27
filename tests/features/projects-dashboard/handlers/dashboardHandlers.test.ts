@@ -13,6 +13,16 @@ import {
     createMockHandlerContext,
 } from '../testUtils';
 
+// Mock mesh staleness detection
+jest.mock('@/features/dashboard/handlers/meshStatusHelpers', () => ({
+    hasMeshDeploymentRecord: jest.fn().mockReturnValue(false),
+    determineMeshStatus: jest.fn().mockResolvedValue('deployed'),
+}));
+
+jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+    detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
+}));
+
 // Mock vscode
 jest.mock('vscode', () => ({
     commands: {
@@ -95,6 +105,95 @@ describe('dashboardHandlers', () => {
             await handleGetProjects(context as any);
 
             expect(context.sendMessage).not.toHaveBeenCalled();
+        });
+
+        it('should enrich projects with mesh status when mesh is deployed and stale', async () => {
+            const { hasMeshDeploymentRecord, determineMeshStatus } = require('@/features/dashboard/handlers/meshStatusHelpers');
+            const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
+
+            const project = createMockProject({
+                componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
+                meshState: {
+                    envVars: { SOME_VAR: 'value' },
+                    sourceHash: 'abc123',
+                    lastDeployed: new Date().toISOString(),
+                },
+            });
+            const context = createMockHandlerContext([project]);
+
+            hasMeshDeploymentRecord.mockReturnValue(true);
+            detectMeshChanges.mockResolvedValue({ hasChanges: true });
+            determineMeshStatus.mockResolvedValue('config-changed');
+
+            const result = await handleGetProjects(context as any);
+
+            expect(result.success).toBe(true);
+            const projects = (result.data as any).projects;
+            expect(projects[0].meshStatusSummary).toBe('stale');
+            expect(context.stateManager.saveProject).toHaveBeenCalled();
+        });
+
+        it('should set meshStatusSummary to deployed when no changes detected', async () => {
+            const { hasMeshDeploymentRecord, determineMeshStatus } = require('@/features/dashboard/handlers/meshStatusHelpers');
+            const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
+
+            const project = createMockProject({
+                componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
+                meshState: {
+                    envVars: { SOME_VAR: 'value' },
+                    sourceHash: 'abc123',
+                    lastDeployed: new Date().toISOString(),
+                },
+            });
+            const context = createMockHandlerContext([project]);
+
+            hasMeshDeploymentRecord.mockReturnValue(true);
+            detectMeshChanges.mockResolvedValue({ hasChanges: false });
+            determineMeshStatus.mockResolvedValue('deployed');
+
+            const result = await handleGetProjects(context as any);
+
+            const projects = (result.data as any).projects;
+            expect(projects[0].meshStatusSummary).toBe('deployed');
+        });
+
+        it('should set meshStatusSummary to unknown on detection error', async () => {
+            const { hasMeshDeploymentRecord } = require('@/features/dashboard/handlers/meshStatusHelpers');
+            const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
+
+            const project = createMockProject({
+                componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
+                meshState: {
+                    envVars: { SOME_VAR: 'value' },
+                    sourceHash: 'abc123',
+                    lastDeployed: new Date().toISOString(),
+                },
+            });
+            const context = createMockHandlerContext([project]);
+
+            hasMeshDeploymentRecord.mockReturnValue(true);
+            detectMeshChanges.mockRejectedValue(new Error('Detection failed'));
+
+            const result = await handleGetProjects(context as any);
+
+            const projects = (result.data as any).projects;
+            expect(projects[0].meshStatusSummary).toBe('unknown');
+        });
+
+        it('should set meshStatusSummary to not-deployed when no deployment record', async () => {
+            const { hasMeshDeploymentRecord } = require('@/features/dashboard/handlers/meshStatusHelpers');
+
+            const project = createMockProject({
+                componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
+            });
+            const context = createMockHandlerContext([project]);
+
+            hasMeshDeploymentRecord.mockReturnValue(false);
+
+            const result = await handleGetProjects(context as any);
+
+            const projects = (result.data as any).projects;
+            expect(projects[0].meshStatusSummary).toBe('not-deployed');
         });
     });
 

@@ -276,6 +276,8 @@ export class DeployMeshCommand extends BaseCommand {
                         await updateMeshState(project, deployedEndpoint);
                         this.logger.debug('[Mesh Deployment] Updated mesh state after successful deployment');
 
+                        // Persist deployed status for card grid display
+                        project.meshStatusSummary = 'deployed';
                         await this.stateManager.saveProject(project);
                         
                         // Send final "deployed" status to Project Dashboard

@@ -111,6 +111,63 @@ describe('ProjectCard', () => {
         });
     });
 
+    describe('mesh status', () => {
+        it('should show mesh deployed status when meshStatusSummary is deployed', () => {
+            const project = createMockProject({ meshStatusSummary: 'deployed' });
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
+
+            expect(screen.getByText('Mesh Deployed')).toBeInTheDocument();
+        });
+
+        it('should show redeploy needed when meshStatusSummary is stale', () => {
+            const project = createMockProject({ meshStatusSummary: 'stale' });
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
+
+            expect(screen.getByText('Redeploy Mesh')).toBeInTheDocument();
+        });
+
+        it('should not show mesh status when meshStatusSummary is not set', () => {
+            const project = createMockProject();
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
+
+            expect(screen.queryByText('Mesh Deployed')).not.toBeInTheDocument();
+            expect(screen.queryByText('Redeploy Mesh')).not.toBeInTheDocument();
+        });
+
+        it('should show "Mesh Incomplete" when config-incomplete', () => {
+            const project = createMockProject({ meshStatusSummary: 'config-incomplete' });
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
+
+            expect(screen.getByText('Mesh Incomplete')).toBeInTheDocument();
+        });
+
+        it('should show "Mesh Error" when error', () => {
+            const project = createMockProject({ meshStatusSummary: 'error' });
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
+
+            expect(screen.getByText('Mesh Error')).toBeInTheDocument();
+        });
+
+        it('should not show mesh status when not-deployed', () => {
+            const project = createMockProject({ meshStatusSummary: 'not-deployed' });
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
+
+            expect(screen.queryByText(/Mesh/)).not.toBeInTheDocument();
+        });
+    });
+
     describe('interactions', () => {
         it('should call onSelect when clicked', () => {
             const project = createMockProject({ name: 'Clickable Demo' });

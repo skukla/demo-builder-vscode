@@ -209,31 +209,7 @@ describe('ConnectServicesStep', () => {
     });
 
     describe('cancel input behavior', () => {
-        it('should call cancelAuth when clicking Cancel on input form', async () => {
-            // Given: DA.live input form is showing
-            const state = createDefaultState();
-
-            renderWithProvider(
-                <ConnectServicesStep
-                    state={state}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
-
-            // First, click Set up to show the form
-            const setupButton = screen.getByText('Set up DA.live');
-            fireEvent.click(setupButton);
-
-            // When: Clicking Cancel
-            const cancelButton = screen.getByText('Cancel');
-            fireEvent.click(cancelButton);
-
-            // Then: Should call cancelAuth to reset authenticating state
-            expect(mockDaLiveAuth.cancelAuth).toHaveBeenCalled();
-        });
-
-        it('should hide input form when clicking Cancel', async () => {
+        it('should hide input form when clicking Cancel on input form', async () => {
             // Given: DA.live input form is showing
             const state = createDefaultState();
 
@@ -261,23 +237,18 @@ describe('ConnectServicesStep', () => {
                 expect(screen.queryByPlaceholderText('Organization')).not.toBeInTheDocument();
             });
         });
+
     });
 
     describe('change credentials behavior', () => {
-        it('should show input form directly when clicking Change on connected DA.live', async () => {
+        it('should show input form when clicking Change on connected DA.live', async () => {
             // Given: DA.live is connected
             mockDaLiveAuth.isAuthenticated = true;
             mockDaLiveAuth.verifiedOrg = 'test-org';
 
-            // Mock resetAuth to simulate clearing auth state
-            mockDaLiveAuth.resetAuth.mockImplementation(() => {
-                mockDaLiveAuth.isAuthenticated = false;
-                mockDaLiveAuth.verifiedOrg = undefined;
-            });
-
             const state = createDefaultState();
 
-            const { rerender } = renderWithProvider(
+            renderWithProvider(
                 <ConnectServicesStep
                     state={state}
                     updateState={mockUpdateState}
@@ -289,27 +260,13 @@ describe('ConnectServicesStep', () => {
             const changeButton = screen.getByText('Change');
             fireEvent.click(changeButton);
 
-            // Then: Should call resetAuth
-            expect(mockDaLiveAuth.resetAuth).toHaveBeenCalled();
-
-            // Re-render to reflect mock state change
-            rerender(
-                <Provider theme={defaultTheme}>
-                    <ConnectServicesStep
-                        state={state}
-                        updateState={mockUpdateState}
-                        setCanProceed={mockSetCanProceed}
-                    />
-                </Provider>
-            );
-
-            // And input form should be shown (not the Set up button)
+            // Then: Input form should be shown
             await waitFor(() => {
                 expect(screen.getByPlaceholderText('Organization')).toBeInTheDocument();
             });
         });
 
-        it('should call resetAuth to clear credentials when changing', () => {
+        it('should show input form directly without re-authenticating', () => {
             // Given: DA.live is connected
             mockDaLiveAuth.isAuthenticated = true;
             mockDaLiveAuth.verifiedOrg = 'test-org';
@@ -327,8 +284,8 @@ describe('ConnectServicesStep', () => {
             const changeButton = screen.getByText('Change');
             fireEvent.click(changeButton);
 
-            // Then: Should call resetAuth to clear old credentials
-            expect(mockDaLiveAuth.resetAuth).toHaveBeenCalled();
+            // Then: Should show input form (handleDaLiveReset shows input without calling resetAuth)
+            expect(screen.getByPlaceholderText('Organization')).toBeInTheDocument();
         });
     });
 

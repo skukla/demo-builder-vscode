@@ -1,36 +1,56 @@
 /**
  * Tests for handleRequestStatus handler (Pattern B - request-response)
  *
- * Tests verify that handleRequestStatus returns data directly instead of using sendMessage,
- * establishing the request-response pattern for dashboard status operations.
+ * Tests verify that handleRequestStatus reads persisted meshStatusSummary
+ * instead of re-checking, returning data directly via Pattern B.
  */
+
+// IMPORTANT: Mocks must be declared before imports
+jest.mock('@/core/di', () => ({
+    ServiceLocator: {
+        getAuthenticationService: jest.fn(),
+    },
+}));
+jest.mock('@/features/mesh/services/stalenessDetector');
+jest.mock('@/features/authentication');
+jest.mock('@/features/mesh/services/meshVerifier', () => ({
+    verifyMeshDeployment: jest.fn().mockResolvedValue(undefined),
+    syncMeshStatus: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('@/core/validation', () => ({
+    validateOrgId: jest.fn(),
+    validateProjectId: jest.fn(),
+    validateWorkspaceId: jest.fn(),
+    validateURL: jest.fn(),
+}));
+jest.mock('vscode', () => ({
+    window: { activeColorTheme: { kind: 1 } },
+    ColorThemeKind: { Dark: 2, Light: 1 },
+    commands: { executeCommand: jest.fn() },
+    env: { openExternal: jest.fn() },
+    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
+}), { virtual: true });
 
 import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { setupMocks } from './dashboardHandlers.testUtils';
 
 describe('dashboardHandlers - handleRequestStatus', () => {
     beforeEach(() => {
-        // Reset all mocks
         jest.clearAllMocks();
 
-        // Set default mock implementations
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
     });
 
-    it('should return complete project status with mesh data (Pattern B)', async () => {
-        // Arrange: Mock frontend changes detection
+    it('should return persisted mesh status from meshStatusSummary (Pattern B)', async () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        const { mockContext } = setupMocks();
+        // Project has meshStatusSummary='deployed' (set by card grid)
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
 
-        // Act: Call handler
         const result = await handleRequestStatus(mockContext);
 
-        // Assert: Verify Pattern B response structure
-        // Note: When mesh is deployed (not deploying/error), handler returns 'checking'
-        // status immediately and checks asynchronously in background
         expect(result).toMatchObject({
             success: true,
             data: {
@@ -42,39 +62,32 @@ describe('dashboardHandlers - handleRequestStatus', () => {
                 adobeProject: 'Test Project',
                 frontendConfigChanged: false,
                 mesh: {
-                    status: 'checking',
-                    message: 'Verifying deployment status...',
+                    status: 'deployed',
                 },
             },
         });
 
         // CRITICAL: Verify sendMessage was NOT called (anti-pattern)
-        // Pattern B uses return values, not sendMessage
         expect(mockContext.sendMessage).not.toHaveBeenCalled();
     });
 
-    it('should return mesh status as "config-changed" when local config differs from deployed', async () => {
-        // Arrange: Mock frontend changes detection
+    it('should return "config-changed" when meshStatusSummary is stale', async () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        const { mockContext } = setupMocks();
+        const { mockContext } = setupMocks({ meshStatusSummary: 'stale' } as any);
 
-        // Act: Call handler
         const result = await handleRequestStatus(mockContext);
 
-        // Assert: Verify async checking behavior
-        // (Same as previous test - async checking returns 'checking' status)
         expect(result.success).toBe(true);
         expect(result.data).toMatchObject({
             mesh: {
-                status: 'checking',
+                status: 'config-changed',
             },
         });
     });
 
     it('should return mesh status as "not-deployed" when no mesh configured', async () => {
-        // Arrange: Project without mesh
         const { mockContext } = setupMocks({
             componentInstances: {
                 'headless': {
@@ -91,10 +104,8 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        // Act: Call handler
         const result = await handleRequestStatus(mockContext);
 
-        // Assert: Verify not-deployed status
         expect(result.success).toBe(true);
         expect(result.data).toMatchObject({
             name: 'test-project',
@@ -104,33 +115,26 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     });
 
     it('should return error when no project available', async () => {
-        // Arrange: No current project
         const { mockContext } = setupMocks();
         mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(null);
 
-        // Act: Call handler
         const result = await handleRequestStatus(mockContext);
 
-        // Assert: Verify error response
         expect(result).toEqual({
             success: false,
             error: 'No project available',
             code: 'PROJECT_NOT_FOUND',
         });
 
-        // Verify sendMessage was NOT called
         expect(mockContext.sendMessage).not.toHaveBeenCalled();
     });
 
     it('should return error when panel not available', async () => {
-        // Arrange: No panel
         const { mockContext } = setupMocks();
         mockContext.panel = undefined;
 
-        // Act: Call handler
         const result = await handleRequestStatus(mockContext);
 
-        // Assert: Verify error response
         expect(result).toEqual({
             success: false,
             error: 'No panel available',
@@ -139,12 +143,11 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     });
 
     it('should return frontendConfigChanged=true when frontend config differs', async () => {
-        // Arrange: Frontend config changed
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(true);
 
-        // Project needs frontendEnvState for detectFrontendChanges to be called
         const { mockContext } = setupMocks({
+            meshStatusSummary: 'deployed',
             frontendEnvState: {
                 envVars: {
                     NEXT_PUBLIC_MESH_ENDPOINT: 'old-value',
@@ -152,13 +155,33 @@ describe('dashboardHandlers - handleRequestStatus', () => {
             },
         } as any);
 
-        // Act: Call handler
         const result = await handleRequestStatus(mockContext);
 
-        // Assert: Verify frontendConfigChanged=true
         expect(result.success).toBe(true);
         expect(result.data).toMatchObject({
             frontendConfigChanged: true,
+        });
+    });
+
+    it('should return needs-auth when not authenticated', async () => {
+        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        detectFrontendChanges.mockReturnValue(false);
+
+        const { mockContext } = setupMocks();
+
+        // Override auth mock AFTER setupMocks (which sets isAuthenticated=true)
+        const { ServiceLocator } = require('@/core/di');
+        ServiceLocator.getAuthenticationService.mockReturnValue({
+            isAuthenticated: jest.fn().mockResolvedValue(false),
+        });
+
+        const result = await handleRequestStatus(mockContext);
+
+        expect(result.success).toBe(true);
+        expect(result.data).toMatchObject({
+            mesh: {
+                status: 'needs-auth',
+            },
         });
     });
 });

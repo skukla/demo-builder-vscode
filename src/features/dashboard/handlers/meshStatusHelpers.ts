@@ -11,10 +11,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ServiceLocator } from '@/core/di';
 import { parseEnvFile } from '@/core/utils/envParser';
-import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
 import { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
@@ -80,20 +77,6 @@ export function hasAdobeProjectContext(project: Project | null | undefined): pro
 
 // MeshStatusInfo, buildStatusPayload, hasMeshDeploymentRecord are now in dashboardStatusService
 // and re-exported above for backward compatibility
-
-/**
- * Format session expiration message
- *
- * SOP §3: Extracted nested ternary for pluralization
- *
- * @param expiredMinutesAgo - Number of minutes since session expired
- * @returns Human-readable expiration message
- */
-export function getExpirationMessage(expiredMinutesAgo: number): string {
-    if (expiredMinutesAgo <= 0) return 'Session expired';
-    const pluralSuffix = expiredMinutesAgo !== 1 ? 's' : '';
-    return `Session expired ${expiredMinutesAgo} minute${pluralSuffix} ago`;
-}
 
 /**
  * Required environment variables for mesh deployment (INPUT variables)
@@ -176,7 +159,7 @@ export async function determineMeshStatus(
     meshChanges: { hasChanges: boolean; unknownDeployedState?: boolean },
     meshComponent: ComponentInstance,
     project: Project,
-): Promise<'deployed' | 'config-changed' | 'config-incomplete' | 'update-declined' | 'error' | 'checking'> {
+): Promise<'deployed' | 'config-changed' | 'config-incomplete' | 'update-declined' | 'error'> {
     // Get MESH_ENDPOINT from componentInstances (single source of truth)
     const meshEndpointFromConfigs = getMeshEndpoint(project);
 
@@ -193,111 +176,6 @@ export async function determineMeshStatus(
     }
     // No config changes: show error if previous deployment failed, otherwise deployed
     return meshComponent.status === 'error' ? 'error' : 'deployed';
-}
-
-/**
- * Check if we should perform async mesh status check
- * (mesh exists, not currently deploying, and not in error state)
- */
-export function shouldAsyncCheckMesh(meshComponent: ComponentInstance | undefined): boolean {
-    return Boolean(meshComponent && meshComponent.status !== 'deploying' && meshComponent.status !== 'error');
-}
-
-/**
- * Check mesh status asynchronously and update UI when complete
- */
-export async function checkMeshStatusAsync(
-    context: HandlerContext,
-    project: Project,
-    meshComponent: ComponentInstance,
-    frontendConfigChanged: boolean,
-): Promise<void> {
-    context.logger.debug('[Dashboard] Starting async mesh status check');
-
-    try {
-        let meshStatus: 'needs-auth' | 'deploying' | 'deployed' | 'config-changed' | 'config-incomplete' | 'update-declined' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
-        let meshEndpoint: string | undefined;
-        let meshMessage: string | undefined;
-
-        if (project.componentConfigs) {
-            const authManager = ServiceLocator.getAuthenticationService();
-
-            const tokenStatus = await authManager.getTokenStatus();
-
-            if (!tokenStatus.isAuthenticated) {
-                // Calculate how long ago the session expired
-                const expiredMinutesAgo = Math.abs(tokenStatus.expiresInMinutes);
-                const expiredMessage = getExpirationMessage(expiredMinutesAgo);
-
-                context.logger.debug(`[Dashboard] Auth check failed: ${expiredMessage}`);
-                context.panel?.webview.postMessage({
-                    type: 'statusUpdate',
-                    payload: buildStatusPayload(project, frontendConfigChanged, {
-                        status: 'needs-auth',
-                        message: expiredMessage,
-                    }),
-                });
-                return;
-            }
-
-            // Skip org access check during dashboard open - CLI commands can trigger
-            // unexpected browser auth even when token appears valid.
-            // Org access is verified when user attempts mesh operations instead.
-            // See: dashboard regression where opening dashboard triggered browser login
-
-            // Initialize meshState if needed
-            if (!project.meshState) {
-                project.meshState = {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '',
-                };
-            }
-
-            const meshChanges = await detectMeshChanges(project, project.componentConfigs);
-
-            if (meshChanges.shouldSaveProject) {
-                context.stateManager.markDirty('meshState');
-            }
-
-            if (hasMeshDeploymentRecord(project)) {
-                meshStatus = await determineMeshStatus(meshChanges, meshComponent, project);
-                // Read endpoint from meshState (authoritative) with fallback to componentInstance (legacy)
-                meshEndpoint = project.meshState?.endpoint || meshComponent.endpoint;
-
-                verifyMeshDeployment(context, project).catch(() => {
-                    // Background verification - errors logged internally
-                });
-            } else if (meshChanges.unknownDeployedState) {
-                meshStatus = meshComponent.status === 'error' ? 'error' : 'not-deployed';
-                meshMessage = MESH_STATUS_MESSAGES.UNKNOWN;
-            }
-        }
-
-        context.logger.debug(`[Dashboard] Mesh check complete: ${meshStatus}`);
-        if (context.panel) {
-            context.panel.webview.postMessage({
-                type: 'statusUpdate',
-                payload: buildStatusPayload(project, frontendConfigChanged, {
-                    status: meshStatus,
-                    endpoint: meshEndpoint,
-                    message: meshMessage,
-                }),
-            });
-        }
-    } catch (error) {
-        context.logger.error('[Dashboard] Error in async mesh status check', error as Error);
-
-        if (context.panel) {
-            context.panel.webview.postMessage({
-                type: 'statusUpdate',
-                payload: buildStatusPayload(project, frontendConfigChanged, {
-                    status: 'error',
-                    message: 'Failed to check deployment status',
-                }),
-            });
-        }
-    }
 }
 
 /**
@@ -321,23 +199,14 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
         } else if (meshComponent.status === 'error') {
             meshStatus = { status: 'error', message: 'Deployment error' };
         } else if (hasMeshDeploymentRecord(project)) {
-            // Read endpoint from meshState (authoritative) with fallback to componentInstance (legacy)
+            // Read persisted status instead of re-detecting changes
+            // Only 'stale' needs translation — dashboard UI uses 'config-changed'
             const endpoint = project.meshState?.endpoint || meshComponent.endpoint;
-            if (project.componentConfigs) {
-                const meshChanges = await detectMeshChanges(project, project.componentConfigs);
-                // Use determineMeshStatus for consistent config completeness checking
-                const status = await determineMeshStatus(meshChanges, meshComponent, project);
-                meshStatus = {
-                    status,
-                    endpoint,
-                };
-            } else {
-                // No componentConfigs - MESH_ENDPOINT definitely missing from frontend .env
-                meshStatus = {
-                    status: 'config-incomplete',
-                    endpoint,
-                };
-            }
+            const summary = project.meshStatusSummary;
+            const status = summary === 'stale' ? 'config-changed'
+                : (summary === 'unknown' || !summary) ? 'deployed'
+                : summary;
+            meshStatus = { status, endpoint };
         } else {
             meshStatus = { status: 'not-deployed' };
         }

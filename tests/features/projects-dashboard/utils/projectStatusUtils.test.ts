@@ -15,6 +15,8 @@ import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
+    getMeshStatusText,
+    getMeshStatusVariant,
     StatusVariant,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import { createMockProject, createRunningProject } from '../testUtils';
@@ -253,6 +255,90 @@ describe('projectStatusUtils', () => {
 
             // Then: Should be undefined (no ports)
             expect(result).toBeUndefined();
+        });
+    });
+
+    describe('getMeshStatusText', () => {
+        it('should return null when no meshStatusSummary', () => {
+            const project = createMockProject();
+            expect(getMeshStatusText(project)).toBeNull();
+        });
+
+        it('should return "Redeploy Mesh" when stale', () => {
+            const project = createMockProject({ meshStatusSummary: 'stale' });
+            expect(getMeshStatusText(project)).toBe('Redeploy Mesh');
+        });
+
+        it('should return "Mesh Deployed" when deployed', () => {
+            const project = createMockProject({ meshStatusSummary: 'deployed' });
+            expect(getMeshStatusText(project)).toBe('Mesh Deployed');
+        });
+
+        it('should return null when unknown', () => {
+            const project = createMockProject({ meshStatusSummary: 'unknown' });
+            expect(getMeshStatusText(project)).toBeNull();
+        });
+
+        it('should return "Mesh Incomplete" when config-incomplete', () => {
+            const project = createMockProject({ meshStatusSummary: 'config-incomplete' });
+            expect(getMeshStatusText(project)).toBe('Mesh Incomplete');
+        });
+
+        it('should return "Redeploy Mesh" when update-declined', () => {
+            const project = createMockProject({ meshStatusSummary: 'update-declined' });
+            expect(getMeshStatusText(project)).toBe('Redeploy Mesh');
+        });
+
+        it('should return null when not-deployed', () => {
+            const project = createMockProject({ meshStatusSummary: 'not-deployed' });
+            expect(getMeshStatusText(project)).toBeNull();
+        });
+
+        it('should return "Mesh Error" when error', () => {
+            const project = createMockProject({ meshStatusSummary: 'error' });
+            expect(getMeshStatusText(project)).toBe('Mesh Error');
+        });
+    });
+
+    describe('getMeshStatusVariant', () => {
+        it('should return null when no meshStatusSummary', () => {
+            const project = createMockProject();
+            expect(getMeshStatusVariant(project)).toBeNull();
+        });
+
+        it('should return "warning" when stale', () => {
+            const project = createMockProject({ meshStatusSummary: 'stale' });
+            expect(getMeshStatusVariant(project)).toBe('warning');
+        });
+
+        it('should return "success" when deployed', () => {
+            const project = createMockProject({ meshStatusSummary: 'deployed' });
+            expect(getMeshStatusVariant(project)).toBe('success');
+        });
+
+        it('should return "warning" when config-incomplete', () => {
+            const project = createMockProject({ meshStatusSummary: 'config-incomplete' });
+            expect(getMeshStatusVariant(project)).toBe('warning');
+        });
+
+        it('should return "warning" when update-declined', () => {
+            const project = createMockProject({ meshStatusSummary: 'update-declined' });
+            expect(getMeshStatusVariant(project)).toBe('warning');
+        });
+
+        it('should return "error" when error', () => {
+            const project = createMockProject({ meshStatusSummary: 'error' });
+            expect(getMeshStatusVariant(project)).toBe('error');
+        });
+
+        it('should return null when not-deployed', () => {
+            const project = createMockProject({ meshStatusSummary: 'not-deployed' });
+            expect(getMeshStatusVariant(project)).toBeNull();
+        });
+
+        it('should return null when unknown', () => {
+            const project = createMockProject({ meshStatusSummary: 'unknown' });
+            expect(getMeshStatusVariant(project)).toBeNull();
         });
     });
 

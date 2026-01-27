@@ -102,6 +102,13 @@ export function createMockProject(overrides?: Partial<Project>): Project {
 export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
     const mockProject = createMockProject(projectOverrides);
 
+    // Setup auth service mock (used by handleRequestStatus)
+    const { ServiceLocator } = require('@/core/di');
+    ServiceLocator.getAuthenticationService.mockReturnValue({
+        isAuthenticated: jest.fn().mockResolvedValue(true),
+        getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 60 }),
+    });
+
     const mockContext = {
         panel: {
             webview: {
@@ -111,6 +118,7 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
         stateManager: {
             getCurrentProject: jest.fn().mockResolvedValue(mockProject),
             saveProject: jest.fn().mockResolvedValue(undefined),
+            markDirty: jest.fn(),
         } as any,
         logger: {
             info: jest.fn(),

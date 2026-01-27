@@ -70,6 +70,7 @@ jest.mock('@/core/di', () => ({
         setSidebarProvider: jest.fn(),
         setCommandExecutor: jest.fn(),
         setAuthenticationService: jest.fn(),
+        setStateManager: jest.fn(),
         reset: jest.fn(),
     },
 }));

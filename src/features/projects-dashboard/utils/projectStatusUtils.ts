@@ -87,6 +87,55 @@ export function getStatusVariant(status: ProjectStatus, isEds?: boolean): Status
 }
 
 /**
+ * Gets the mesh status display text for a project card
+ *
+ * @returns Display text or null if no mesh status to show
+ */
+export function getMeshStatusText(project: Project): string | null {
+    switch (project.meshStatusSummary) {
+        case 'deployed':
+            return 'Mesh Deployed';
+        case 'stale':
+        case 'update-declined':
+            return 'Redeploy Mesh';
+        case 'config-incomplete':
+            return 'Mesh Incomplete';
+        case 'error':
+            return 'Mesh Error';
+        case 'not-deployed':
+        case 'unknown':
+        case undefined:
+            return null;
+        default:
+            return null;
+    }
+}
+
+/**
+ * Gets the StatusDot variant for mesh status display
+ *
+ * @returns StatusDot variant or null if no mesh status to show
+ */
+export function getMeshStatusVariant(project: Project): StatusVariant | null {
+    switch (project.meshStatusSummary) {
+        case 'deployed':
+            return 'success';
+        case 'stale':
+        case 'config-incomplete':
+        case 'update-declined':
+            return 'warning';
+        case 'error':
+            return 'error';
+        case 'not-deployed':
+        case 'unknown':
+        case undefined:
+            return null;
+        default:
+            return null;
+    }
+}
+
+/**
  * Gets the frontend port from a running project
  *
  * Searches component instances for the first one with a port defined.

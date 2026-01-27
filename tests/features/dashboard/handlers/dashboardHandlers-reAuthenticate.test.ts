@@ -38,7 +38,9 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
     });
 
     it('should return authentication result with success=true (Pattern B)', async () => {
-        // Arrange: Mock authentication flow
+        // Arrange: Setup mocks first, then override auth
+        const { mockContext } = setupMocks();
+
         const { ServiceLocator } = require('@/core/di');
         const mockAuthManager = {
             login: jest.fn().mockResolvedValue(undefined),
@@ -48,8 +50,6 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
             isAuthenticated: jest.fn().mockResolvedValue(true),
         };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
-
-        const { mockContext } = setupMocks();
 
         // Act: Call handler
         const result = await handleReAuthenticate(mockContext);
@@ -93,7 +93,9 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
     });
 
     it('should return error when authentication fails', async () => {
-        // Arrange: Mock authentication failure
+        // Arrange: Setup mocks first, then override auth
+        const { mockContext } = setupMocks();
+
         const { ServiceLocator } = require('@/core/di');
         const error = new Error('Auth failed');
         const mockAuthManager = {
@@ -101,8 +103,6 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
             isAuthenticated: jest.fn().mockResolvedValue(false),
         };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
-
-        const { mockContext } = setupMocks();
 
         // Act: Call handler
         const result = await handleReAuthenticate(mockContext);
@@ -122,7 +122,9 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
     });
 
     it('should auto-select full Adobe context from project (org → project → workspace)', async () => {
-        // Arrange: Mock authentication flow
+        // Arrange: Setup mocks first, then override auth
+        const { mockContext } = setupMocks();
+
         const { ServiceLocator } = require('@/core/di');
         const mockAuthManager = {
             login: jest.fn().mockResolvedValue(undefined),
@@ -132,8 +134,6 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
             isAuthenticated: jest.fn().mockResolvedValue(true),
         };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
-
-        const { mockContext } = setupMocks();
 
         // Act: Call handler
         await handleReAuthenticate(mockContext);
@@ -156,7 +156,9 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
     });
 
     it('should handle organization selection failure gracefully', async () => {
-        // Arrange: Mock org selection failure
+        // Arrange: Setup mocks first, then override auth
+        const { mockContext } = setupMocks();
+
         const { ServiceLocator } = require('@/core/di');
         const orgError = new Error('Org not found');
         const mockAuthManager = {
@@ -167,8 +169,6 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
             isAuthenticated: jest.fn().mockResolvedValue(true),
         };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
-
-        const { mockContext } = setupMocks();
 
         // Act: Call handler (should not throw)
         const result = await handleReAuthenticate(mockContext);
@@ -184,7 +184,9 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
     });
 
     it('should handle project selection failure gracefully', async () => {
-        // Arrange: Mock project selection failure
+        // Arrange: Setup mocks first, then override auth
+        const { mockContext } = setupMocks();
+
         const { ServiceLocator } = require('@/core/di');
         const projectError = new Error('Project not found');
         const mockAuthManager = {
@@ -195,8 +197,6 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
             isAuthenticated: jest.fn().mockResolvedValue(true),
         };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
-
-        const { mockContext } = setupMocks();
 
         // Act: Call handler (should not throw)
         const result = await handleReAuthenticate(mockContext);
@@ -212,7 +212,9 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
     });
 
     it('should handle workspace selection failure gracefully', async () => {
-        // Arrange: Mock workspace selection failure
+        // Arrange: Setup mocks first, then override auth
+        const { mockContext } = setupMocks();
+
         const { ServiceLocator } = require('@/core/di');
         const workspaceError = new Error('Workspace not found');
         const mockAuthManager = {
@@ -223,8 +225,6 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
             isAuthenticated: jest.fn().mockResolvedValue(true),
         };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
-
-        const { mockContext } = setupMocks();
 
         // Act: Call handler (should not throw)
         const result = await handleReAuthenticate(mockContext);
@@ -240,7 +240,15 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
     });
 
     it('should skip project/workspace selection if IDs not available', async () => {
-        // Arrange: Project without projectId/workspace
+        // Arrange: Setup mocks first with custom project, then override auth
+        const { mockContext } = setupMocks({
+            adobe: {
+                organization: 'org123',
+                projectName: 'Test Project',
+                // projectId and workspace intentionally missing
+            } as any,
+        });
+
         const { ServiceLocator } = require('@/core/di');
         const mockAuthManager = {
             login: jest.fn().mockResolvedValue(undefined),
@@ -250,14 +258,6 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
             isAuthenticated: jest.fn().mockResolvedValue(true),
         };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
-
-        const { mockContext } = setupMocks({
-            adobe: {
-                organization: 'org123',
-                projectName: 'Test Project',
-                // projectId and workspace intentionally missing
-            } as any,
-        });
 
         // Act: Call handler
         const result = await handleReAuthenticate(mockContext);

@@ -39,6 +39,8 @@ export interface Project {
     selectedStack?: string;
     /** Optional addons selected during project creation (e.g., ['demo-inspector']) */
     selectedAddons?: string[];
+    // Mesh staleness summary for card grid display
+    meshStatusSummary?: 'deployed' | 'stale' | 'config-incomplete' | 'update-declined' | 'not-deployed' | 'error' | 'unknown';
     // API Mesh deployment state (tracks changes that require redeployment)
     // AUTHORITATIVE location for mesh endpoint - see docs/architecture/state-ownership.md
     meshState?: {

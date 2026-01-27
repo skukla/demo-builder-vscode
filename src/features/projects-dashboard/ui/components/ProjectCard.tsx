@@ -15,6 +15,8 @@ import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
+    getMeshStatusText,
+    getMeshStatusVariant,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import { isEdsProject } from '@/types/typeGuards';
 import { ProjectActionsMenu } from './ProjectActionsMenu';
@@ -92,6 +94,8 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     const statusText = getStatusText(project.status, port, isEds);
     const statusVariant = getStatusVariant(project.status, isEds);
     const brandStackSummary = useMemo(() => getBrandStackSummary(project), [project]);
+    const meshText = getMeshStatusText(project);
+    const meshVariant = getMeshStatusVariant(project);
 
     const ariaLabel = `${project.name}, ${statusText}${brandStackSummary ? `, ${brandStackSummary}` : ''}`;
 
@@ -141,6 +145,16 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                     {statusText}
                 </Text>
             </Flex>
+
+            {/* Mesh Status Row */}
+            {meshText && meshVariant && (
+                <Flex alignItems="center" gap="size-100">
+                    <StatusDot variant={meshVariant} size={6} />
+                    <Text UNSAFE_className="project-card-spectrum-status">
+                        {meshText}
+                    </Text>
+                </Flex>
+            )}
         </div>
     );
 };

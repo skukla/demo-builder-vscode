@@ -53,6 +53,11 @@ jest.mock('@/core/validation', () => ({
     validateURL: jest.fn(),
 }));
 
+// Mock projectDeletionService to avoid deep dependency chain
+jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
+    deleteProject: jest.fn().mockResolvedValue({ success: true }),
+}));
+
 describe('Dashboard Action Handlers', () => {
     const mockExecuteCommand = vscode.commands.executeCommand as jest.Mock;
     const mockOpenExternal = vscode.env.openExternal as jest.Mock;
@@ -72,11 +77,26 @@ describe('Dashboard Action Handlers', () => {
     });
 
     describe('handleDeleteProject', () => {
-        it('should execute deleteProject command', async () => {
-            const result = await handleDeleteProject({} as any);
+        it('should delegate to deleteProject service with current project', async () => {
+            const { mockContext, mockProject } = setupMocks();
+            const { deleteProject } = require('@/features/projects-dashboard/services/projectDeletionService');
+
+            const result = await handleDeleteProject(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.deleteProject');
+            expect(deleteProject).toHaveBeenCalledWith(mockContext, mockProject);
+        });
+
+        it('should return error when no project available', async () => {
+            const { mockContext } = setupMocks();
+            mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(null);
+
+            const result = await handleDeleteProject(mockContext);
+
+            expect(result).toEqual({
+                success: false,
+                error: 'No project found to delete',
+            });
         });
     });
 

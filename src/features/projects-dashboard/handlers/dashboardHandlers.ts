@@ -24,6 +24,8 @@ import { executeCommandForProject } from '@/core/handlers';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito } from '@/core/utils';
 import { validateProjectPath } from '@/core/validation';
+import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
+import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { generateFstabContent } from '@/features/eds/services/fstabGenerator';
 import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
@@ -56,6 +58,26 @@ export const handleGetProjects: MessageHandler = async (
             );
             if (project) {
                 projects.push(project);
+            }
+        }
+
+        // Enrich projects with mesh staleness status (full fidelity check)
+        for (const project of projects) {
+            const meshComponent = getMeshComponentInstance(project);
+            if (meshComponent && project.componentConfigs) {
+                try {
+                    if (hasMeshDeploymentRecord(project)) {
+                        const meshChanges = await detectMeshChanges(project, project.componentConfigs);
+                        const status = await determineMeshStatus(meshChanges, meshComponent, project);
+                        project.meshStatusSummary =
+                            status === 'config-changed' ? 'stale' : status;
+                    } else {
+                        project.meshStatusSummary = 'not-deployed';
+                    }
+                    await context.stateManager.saveProject(project);
+                } catch {
+                    project.meshStatusSummary = 'unknown';
+                }
             }
         }
 

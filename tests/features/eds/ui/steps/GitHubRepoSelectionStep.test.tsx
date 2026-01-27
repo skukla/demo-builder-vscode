@@ -331,6 +331,11 @@ describe('GitHubRepoSelectionStep', () => {
                     fullName: 'testuser/my-repo',
                 },
             });
+            // Pre-populate repos cache so isLoading starts false (useSelectionStep
+            // initializes isLoading=true when cache is empty, blocking canProceed)
+            (state as any).githubReposCache = [
+                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+            ];
 
             // When: Component renders
             const { GitHubRepoSelectionStep } = await import('@/features/eds/ui/steps/GitHubRepoSelectionStep');

@@ -152,6 +152,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
                 // Update project state
                 project.componentConfigs = data.componentConfigs;
+                // Persist mesh staleness for card grid (only mark stale; don't overwrite with deployed)
+                if (meshChanges.hasChanges) {
+                    project.meshStatusSummary = 'stale';
+                }
                 await this.stateManager.saveProject(project);
 
                 // Register programmatic writes BEFORE writing files

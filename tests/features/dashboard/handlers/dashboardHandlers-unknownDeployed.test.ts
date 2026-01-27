@@ -1,8 +1,8 @@
 /**
- * Tests for handleRequestStatus - unknownDeployedState handling
+ * Tests for handleRequestStatus - persisted mesh status reading
  *
- * Tests verify the asynchronous mesh status checking behavior when the
- * deployed state is unknown (fetch failed or meshState.envVars is empty).
+ * Tests verify that handleRequestStatus reads meshStatusSummary from
+ * persisted state and maps it to dashboard mesh status format.
  */
 
 // IMPORTANT: Mock must be declared before imports
@@ -20,302 +20,123 @@ jest.mock('@/features/mesh/services/meshVerifier', () => ({
 
 import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { setupMocks } from './dashboardHandlers.testUtils';
-import { flushPromises } from '../../../testUtils/async';
 
-describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handling', () => {
+describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () => {
     beforeEach(() => {
-        // Reset mock call history
         jest.clearAllMocks();
-
-        // Note: ServiceLocator mock is set up at module level
-        // Individual tests will configure it with their specific needs
     });
 
-    it('should show "not-deployed" status when unknownDeployedState is true (asynchronous path)', async () => {
-        // Given: Project with mesh component but fetch failed (unknownDeployedState)
-        // When we can't verify the deployed state, we assume not-deployed as a safe default
-        const { mockContext } = setupMocks({
-            componentInstances: {
-                'headless': {
-                    id: 'headless',
-                    name: 'CitiSignal Next.js',
-                    status: 'ready',
-                    path: '/path/to/frontend',
-                    port: 3000,
-                },
-                'commerce-mesh': {
-                    id: 'commerce-mesh',
-                    name: 'API Mesh',
-                    subType: 'mesh',
-                    status: 'deployed', // Deployed status triggers async path
-                    path: '/path/to/mesh',
-                },
-            },
-            componentConfigs: {
-                'commerce-mesh': {
-                    endpoint: 'https://commerce.example.com/graphql',
-                },
-            },
-            meshState: {
-                envVars: {},
-                sourceHash: null,
-                lastDeployed: '',
-            },
-        } as any);
-
-        // Mock detectMeshChanges to return unknownDeployedState
-        const { detectMeshChanges, detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
-        detectMeshChanges.mockResolvedValue({
-            hasChanges: false,
-            unknownDeployedState: true,
-            envVarsChanged: false,
-            sourceFilesChanged: false,
-            changedEnvVars: [],
-        });
+    it('should show "not-deployed" when meshStatusSummary is not-deployed', async () => {
+        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        const { ServiceLocator } = require('@/core/di');
-        const mockAuthManager = {
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
-            ensureSDKInitialized: jest.fn().mockResolvedValue(undefined),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org123', name: 'Test Org' }),
-        };
-        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
+        const { mockContext } = setupMocks({
+            meshStatusSummary: 'not-deployed',
+        } as any);
 
-        // When: handleRequestStatus is called
         const result = await handleRequestStatus(mockContext);
 
-        // Then: Initial status is "checking" (async path behavior)
         expect(result.success).toBe(true);
         expect(result.data).toMatchObject({
             mesh: {
-                status: 'checking',
-                message: 'Verifying deployment status...',
+                status: 'not-deployed',
             },
         });
-
-        // Wait for async check to complete
-        await flushPromises();
-
-        // Then: Async update sends "error" status when verification fails
-        // Changed from "not-deployed" to "error" for clearer error reporting
-        expect(mockContext.panel?.webview.postMessage).toHaveBeenCalledWith(
-            expect.objectContaining({
-                type: 'statusUpdate',
-                payload: expect.objectContaining({
-                    mesh: expect.objectContaining({
-                        status: 'error',
-                        message: 'Failed to check deployment status',
-                    }),
-                }),
-            })
-        );
     });
 
-    it('should populate meshState.envVars when fetch succeeds (asynchronous path)', async () => {
-        // Given: Empty meshState.envVars, fetch success scenario
-        const { mockContext } = setupMocks({
-            componentInstances: {
-                'headless': {
-                    id: 'headless',
-                    name: 'CitiSignal Next.js',
-                    status: 'ready',
-                    path: '/path/to/frontend',
-                    port: 3000,
-                },
-                'commerce-mesh': {
-                    id: 'commerce-mesh',
-                    name: 'API Mesh',
-                    subType: 'mesh',
-                    status: 'deployed', // Deployed status triggers async path
-                    path: '/path/to/mesh',
-                    endpoint: 'https://mesh.example.com/graphql',
-                },
-            },
-            componentConfigs: {
-                'commerce-mesh': {
-                    endpoint: 'https://commerce.example.com/graphql',
-                },
-            },
-            meshState: {
-                envVars: {}, // Empty
-                sourceHash: null,
-                lastDeployed: '',
-            },
-        } as any);
-
-        // Mock detectMeshChanges to return shouldSaveProject
-        const { detectMeshChanges, detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
-        detectMeshChanges.mockResolvedValue({
-            hasChanges: false,
-            shouldSaveProject: true,
-            unknownDeployedState: false,
-            envVarsChanged: false,
-            sourceFilesChanged: false,
-            changedEnvVars: [],
-        });
+    it('should show "config-changed" when meshStatusSummary is stale', async () => {
+        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        const { ServiceLocator } = require('@/core/di');
-        const mockAuthManager = {
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
-            ensureSDKInitialized: jest.fn().mockResolvedValue(undefined),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org123', name: 'Test Org' }),
-        };
-        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
-
-        // When: handleRequestStatus is called
-        await handleRequestStatus(mockContext);
-
-        // Wait for async check to complete
-        await flushPromises();
-
-        // Then: Async operation completes without crashing
-        // Note: Actual async status depends on handler's change detection logic
-        expect(mockContext.panel?.webview.postMessage).toHaveBeenCalled();
-    });
-
-    it('should show "changes-pending" status when deployed state is known with changes', async () => {
-        // Given: Project with deployed mesh and known changes
         const { mockContext } = setupMocks({
-            componentInstances: {
-                'headless': {
-                    id: 'headless',
-                    name: 'CitiSignal Next.js',
-                    status: 'ready',
-                    path: '/path/to/frontend',
-                    port: 3000,
-                },
-                'commerce-mesh': {
-                    id: 'commerce-mesh',
-                    name: 'API Mesh',
-                    subType: 'mesh',
-                    status: 'deployed',
-                    path: '/path/to/mesh',
-                    endpoint: 'https://mesh.example.com/graphql',
-                },
-            },
-            componentConfigs: {
-                'commerce-mesh': {
-                    endpoint: 'https://commerce-updated.example.com/graphql', // Different from deployed
-                },
-            },
-            meshState: {
-                envVars: {
-                    ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce.example.com/graphql', // Original
-                },
-                sourceHash: 'hash123',
-                lastDeployed: '2025-01-26T12:00:00.000Z',
-            },
+            meshStatusSummary: 'stale',
         } as any);
 
-        // Mock detectMeshChanges to return hasChanges (known state)
-        const { detectMeshChanges, detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
-        detectMeshChanges.mockResolvedValue({
-            hasChanges: true, // Changes detected
-            unknownDeployedState: false, // Known deployed state
-            envVarsChanged: true,
-            sourceFilesChanged: false,
-            changedEnvVars: ['ADOBE_COMMERCE_GRAPHQL_ENDPOINT'],
-        });
-        detectFrontendChanges.mockReturnValue(false);
-
-        const { ServiceLocator } = require('@/core/di');
-        const mockAuthManager = {
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
-            ensureSDKInitialized: jest.fn().mockResolvedValue(undefined),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org123', name: 'Test Org' }),
-        };
-        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
-
-        // When: handleRequestStatus is called
         const result = await handleRequestStatus(mockContext);
 
-        // Then: Initial status is "checking" (async path)
         expect(result.success).toBe(true);
         expect(result.data).toMatchObject({
             mesh: {
-                status: 'checking',
-                message: 'Verifying deployment status...',
+                status: 'config-changed',
             },
         });
-
-        // Wait for async check to complete
-        await flushPromises();
-
-        // Then: Async operation completes without crashing
-        // Note: Actual async status depends on handler's change detection logic
-        expect(mockContext.panel?.webview.postMessage).toHaveBeenCalled();
     });
 
-    it('should show "deployed" status when deployed state is known without changes', async () => {
-        // Given: Project with deployed mesh and no changes (matching endpoints!)
-        const { mockContext } = setupMocks({
-            componentInstances: {
-                'headless': {
-                    id: 'headless',
-                    name: 'CitiSignal Next.js',
-                    status: 'ready',
-                    path: '/path/to/frontend',
-                    port: 3000,
-                },
-                'commerce-mesh': {
-                    id: 'commerce-mesh',
-                    name: 'API Mesh',
-                    subType: 'mesh',
-                    status: 'deployed',
-                    path: '/path/to/mesh',
-                    endpoint: 'https://mesh.example.com/graphql',
-                },
-            },
-            componentConfigs: {
-                'commerce-mesh': {
-                    endpoint: 'https://commerce.example.com/graphql',
-                },
-            },
-            meshState: {
-                envVars: {
-                    ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce.example.com/graphql', // Same as config
-                },
-                sourceHash: 'hash123',
-                lastDeployed: '2025-01-26T12:00:00.000Z',
-            },
-        } as any);
-
-        // Mock detectMeshChanges to return no changes (known state)
-        const { detectMeshChanges, detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
-        detectMeshChanges.mockResolvedValue({
-            hasChanges: false, // No changes
-            unknownDeployedState: false, // Known deployed state
-            envVarsChanged: false,
-            sourceFilesChanged: false,
-            changedEnvVars: [],
-        });
+    it('should show "deployed" when meshStatusSummary is deployed', async () => {
+        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        const { ServiceLocator } = require('@/core/di');
-        const mockAuthManager = {
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
-            ensureSDKInitialized: jest.fn().mockResolvedValue(undefined),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org123', name: 'Test Org' }),
-        };
-        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
+        const { mockContext } = setupMocks({
+            meshStatusSummary: 'deployed',
+        } as any);
 
-        // When: handleRequestStatus is called
         const result = await handleRequestStatus(mockContext);
 
-        // Then: Initial status is "checking" (async path)
         expect(result.success).toBe(true);
+        expect(result.data).toMatchObject({
+            mesh: {
+                status: 'deployed',
+            },
+        });
+    });
 
-        // Wait for async check to complete
-        await flushPromises();
+    it('should show "config-incomplete" when meshStatusSummary is config-incomplete', async () => {
+        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        detectFrontendChanges.mockReturnValue(false);
 
-        // Then: Async operation completes without crashing
-        // Note: Actual async status depends on handler's change detection logic
-        expect(mockContext.panel?.webview.postMessage).toHaveBeenCalled();
+        const { mockContext } = setupMocks({
+            meshStatusSummary: 'config-incomplete',
+        } as any);
+
+        const result = await handleRequestStatus(mockContext);
+
+        expect(result.success).toBe(true);
+        expect(result.data).toMatchObject({
+            mesh: {
+                status: 'config-incomplete',
+            },
+        });
+    });
+
+    it('should show "needs-auth" when not authenticated, regardless of persisted status', async () => {
+        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        detectFrontendChanges.mockReturnValue(false);
+
+        const { mockContext } = setupMocks({
+            meshStatusSummary: 'deployed',
+        } as any);
+
+        // Override auth mock AFTER setupMocks (which sets isAuthenticated=true)
+        const { ServiceLocator } = require('@/core/di');
+        ServiceLocator.getAuthenticationService.mockReturnValue({
+            isAuthenticated: jest.fn().mockResolvedValue(false),
+        });
+
+        const result = await handleRequestStatus(mockContext);
+
+        expect(result.success).toBe(true);
+        expect(result.data).toMatchObject({
+            mesh: {
+                status: 'needs-auth',
+            },
+        });
+    });
+
+    it('should default to "deployed" when meshStatusSummary is unknown', async () => {
+        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        detectFrontendChanges.mockReturnValue(false);
+
+        const { mockContext } = setupMocks({
+            meshStatusSummary: 'unknown',
+        } as any);
+
+        const result = await handleRequestStatus(mockContext);
+
+        expect(result.success).toBe(true);
+        expect(result.data).toMatchObject({
+            mesh: {
+                status: 'deployed',
+            },
+        });
     });
 });

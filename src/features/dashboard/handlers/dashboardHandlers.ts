@@ -11,9 +11,6 @@ import {
     hasMeshDeploymentRecord,
     hasAdobeWorkspaceContext,
     hasAdobeProjectContext,
-    determineMeshStatus,
-    shouldAsyncCheckMesh,
-    checkMeshStatusAsync,
     sendDemoStatusUpdate,
     verifyMeshDeployment,
 } from './meshStatusHelpers';
@@ -24,8 +21,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { openInIncognito } from '@/core/utils';
 import { validateURL } from '@/core/validation';
 import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
-import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
-import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
+import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance, getProjectFrontendPort } from '@/types/typeGuards';
@@ -81,103 +77,40 @@ export const handleRequestStatus: MessageHandler = async (context) => {
 
     const meshComponent = getMeshComponentInstance(project);
     const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
-    const shouldAsync = meshComponent && shouldAsyncCheckMesh(meshComponent);
 
-    context.logger.debug(`[Dashboard] Status request: mesh=${meshComponent?.status || 'none'}, asyncCheck=${shouldAsync}`);
+    context.logger.debug(`[Dashboard] Status request: mesh=${meshComponent?.status || 'none'}`);
 
-    // Always send initial 'checking' status when mesh exists (unless deploying)
-    // This ensures UI shows "Checking" state during any async operations
-    if (meshComponent && meshComponent.status !== 'deploying') {
-        const initialStatusData = buildStatusPayload(project, frontendConfigChanged, {
-            status: 'checking',
-            message: MESH_STATUS_MESSAGES.CHECKING,
-        });
-
-        context.panel.webview.postMessage({
-            type: 'statusUpdate',
-            payload: initialStatusData,
-        });
-    }
-
-    if (shouldAsync) {
-        // Check mesh status asynchronously
-        checkMeshStatusAsync(context, project, meshComponent, frontendConfigChanged).catch(err => {
-            context.logger.error('[Dashboard] Failed to check mesh status', err as Error);
-        });
-
-        // Return initial 'checking' status data for Pattern B (request-response)
-        // UI receives data via return value AND postMessage updates
-        const initialStatusData = buildStatusPayload(project, frontendConfigChanged, {
-            status: 'checking',
-            message: MESH_STATUS_MESSAGES.CHECKING,
-        });
-        return { success: true, data: initialStatusData };
-    }
-
-    // For other cases (deploying, error, no mesh), continue with synchronous check
-    let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'config-incomplete' | 'update-declined' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
+    // Determine mesh status from persisted state (no redundant re-checking)
+    let meshStatus: string = 'not-deployed';
 
     if (meshComponent) {
         if (meshComponent.status === 'deploying') {
             meshStatus = 'deploying';
-        }
-        // Note: We still check for config changes even when status is 'error'
-        // This allows the user to fix config errors and see 'config-changed' status
-        // instead of being stuck on 'error' forever
-        else {
-            if (project.componentConfigs) {
-                // Pre-check: Verify auth before fetching
-                const authManager = ServiceLocator.getAuthenticationService();
+        } else {
+            // Auth check — override with 'needs-auth' if not authenticated
+            const authManager = ServiceLocator.getAuthenticationService();
+            const isAuthenticated = await authManager.isAuthenticated();
 
-                const isAuthenticated = await authManager.isAuthenticated();
+            if (!isAuthenticated) {
+                meshStatus = 'needs-auth';
+                context.logger.debug('[Dashboard] Auth check failed, showing needs-auth');
+            } else if (hasMeshDeploymentRecord(project)) {
+                // Read persisted status — card grid already computed full fidelity
+                const summary = project.meshStatusSummary;
+                meshStatus = summary === 'stale' ? 'config-changed'
+                    : (summary === 'unknown' || !summary) ? 'deployed'
+                    : summary;
 
-                if (!isAuthenticated) {
-                    meshStatus = 'not-deployed';
-                } else {
-                    // Initialize meshState if it doesn't exist
-                    if (!project.meshState) {
-                        project.meshState = {
-                            envVars: {},
-                            sourceHash: null,
-                            lastDeployed: '',
-                        };
-                    }
-
-                    const meshChanges = await detectMeshChanges(project, project.componentConfigs);
-
-                    if (meshChanges.shouldSaveProject) {
-                        context.logger.debug('[Dashboard] Populated meshState.envVars from deployed config, marking dirty');
-                        context.stateManager.markDirty('meshState');
-                        // Note: Don't set meshStatus here - let the logic below handle it
-                        // based on whether there are actual changes to display
-                    }
-
-                    if (hasMeshDeploymentRecord(project)) {
-                        meshStatus = await determineMeshStatus(meshChanges, meshComponent, project);
-
-                        if (meshChanges.hasChanges && meshChanges.unknownDeployedState) {
-                            context.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state');
-                        }
-
-                        // Verify mesh still exists
-                        verifyMeshDeployment(context, project).catch(err => {
-                            context.logger.debug('[Dashboard] Background mesh verification failed', err);
-                        });
-                    } else if (meshChanges.unknownDeployedState) {
-                        // Unable to determine if config changed
-                        // If previous deployment failed, show error (encourages investigation)
-                        // Otherwise show not-deployed (safe assumption when verification failed)
-                        meshStatus = meshComponent.status === 'error' ? 'error' : 'not-deployed';
-                        context.logger.debug('[Dashboard] Unable to verify mesh deployment status');
-                    }
-                }
+                // Lightweight background verification (is the mesh still there?)
+                verifyMeshDeployment(context, project).catch(err => {
+                    context.logger.debug('[Dashboard] Background mesh verification failed', err);
+                });
             } else {
-                context.logger.debug('[Dashboard] No component configs available for mesh status check');
+                meshStatus = 'not-deployed';
             }
         }
     }
 
-    // Read endpoint from meshState (authoritative) with fallback to componentInstance (legacy)
     const meshEndpoint = project.meshState?.endpoint || meshComponent?.endpoint;
     const statusData = buildStatusPayload(
         project,
