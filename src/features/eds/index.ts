@@ -95,7 +95,7 @@ export type {
     OAuthCallbackParams,
 } from './services/types';
 
-export { REQUIRED_SCOPES } from './services/types';
+export { GITHUB_SCOPES } from './services/types';
 
 // Types - DA.live
 export type {

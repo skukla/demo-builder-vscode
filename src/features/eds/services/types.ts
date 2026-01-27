@@ -23,10 +23,6 @@ export interface GitHubToken {
 export interface GitHubTokenValidation {
     /** Whether the token is valid */
     valid: boolean;
-    /** Scopes the token has */
-    scopes?: string[];
-    /** Required scopes that are missing */
-    missingScopes?: string[];
     /** Authenticated user info (if valid) */
     user?: GitHubUser;
 }
@@ -118,13 +114,15 @@ export interface OAuthCallbackParams {
 }
 
 /**
- * Required OAuth scopes for EDS operations
+ * OAuth scopes for GitHub operations via VS Code authentication
  *
  * - repo: Full control of private repositories (create, clone, push)
- * - user:email: Access user email addresses
+ * - user: Access user profile info
+ * - read:org: Read org membership
  * - delete_repo: Delete repositories (required for repurpose/overwrite flow)
+ * - workflow: Update GitHub Actions workflow files (required for template reset)
  */
-export const REQUIRED_SCOPES = ['repo', 'user:email', 'delete_repo'] as const;
+export const GITHUB_SCOPES = ['repo', 'user', 'read:org', 'delete_repo', 'workflow'] as const;
 
 /**
  * GitHub API error with status

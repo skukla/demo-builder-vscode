@@ -13,7 +13,7 @@ import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-import { REQUIRED_SCOPES, type OAuthCallbackParams } from './types';
+import { GITHUB_SCOPES, type OAuthCallbackParams } from './types';
 
 /** GitHub OAuth authorization URL */
 const GITHUB_OAUTH_URL = 'https://github.com/login/oauth/authorize';
@@ -52,7 +52,7 @@ export class GitHubOAuthService {
         const state = this.generateState();
 
         // Build OAuth URL with required scopes
-        const scopes = REQUIRED_SCOPES.join(' ');
+        const scopes = GITHUB_SCOPES.join(' ');
         const authUrl = new URL(GITHUB_OAUTH_URL);
         authUrl.searchParams.set('client_id', clientId);
         authUrl.searchParams.set('redirect_uri', redirectUri);

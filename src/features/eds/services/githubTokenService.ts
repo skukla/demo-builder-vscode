@@ -17,7 +17,6 @@ import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import {
-    REQUIRED_SCOPES,
     type GitHubToken,
     type GitHubTokenValidation,
     type GitHubUser,
@@ -91,7 +90,7 @@ export class GitHubTokenService {
 
     /**
      * Validate token with GitHub API
-     * @returns Validation result with user info and scopes
+     * @returns Validation result with user info
      */
     async validateToken(): Promise<GitHubTokenValidation> {
         // Check cache first
@@ -112,23 +111,10 @@ export class GitHubTokenService {
             const octokit = this.createAuthenticatedOctokit(token.token);
             const response = await octokit.request('GET /user');
 
-            // Parse scopes from response header
-            const scopeHeader = response.headers['x-oauth-scopes'] as string | undefined;
-            const scopes = scopeHeader
-                ? scopeHeader.split(',').map(s => s.trim())
-                : [];
-
-            // Check for required scopes
-            const missingScopes = REQUIRED_SCOPES.filter(
-                required => !scopes.some(s => s === required),
-            );
-
             const user = this.mapToGitHubUser(response.data);
 
             const result: GitHubTokenValidation = {
-                valid: missingScopes.length === 0,
-                scopes,
-                missingScopes: missingScopes.length > 0 ? missingScopes : undefined,
+                valid: true,
                 user,
             };
 
