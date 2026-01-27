@@ -16,6 +16,11 @@
             "id": "product-link-sku-encoding",
             "filePath": "scripts/commerce.js",
             "description": "URL-encodes SKUs in product links to handle special characters. Product SKUs containing forward slashes create invalid URLs with extra path segments, causing 404 errors. This patch modifies getProductLink to URL-encode SKUs and getSkuFromUrl to decode them."
+        },
+        {
+            "id": "personalization-auth-guard",
+            "filePath": "scripts/initializers/personalization.js",
+            "description": "Prevents 'Authorization header missing or empty' errors for anonymous users. The personalization dropin makes GraphQL queries requiring authentication on cart updates. This patch delays personalization initialization until user is authenticated."
         }
     ]
 }

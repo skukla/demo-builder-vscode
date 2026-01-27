@@ -60,7 +60,7 @@
             "org": "demo-system-stores",
             "site": "accs-citisignal"
           },
-          "patches": ["header-nav-tools-defensive", "aem-assets-sku-sanitization", "product-link-sku-encoding"]
+          "patches": ["header-nav-tools-defensive", "aem-assets-sku-sanitization", "product-link-sku-encoding", "personalization-auth-guard"]
         },
         "eds-accs": {
           "name": "CitiSignal EDS + ACCS",
@@ -83,7 +83,7 @@
             "org": "demo-system-stores",
             "site": "accs-citisignal"
           },
-          "patches": ["header-nav-tools-defensive", "aem-assets-sku-sanitization", "product-link-sku-encoding"]
+          "patches": ["header-nav-tools-defensive", "aem-assets-sku-sanitization", "product-link-sku-encoding", "personalization-auth-guard"]
         }
       }
     },
