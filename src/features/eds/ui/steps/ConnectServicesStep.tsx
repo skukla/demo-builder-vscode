@@ -9,8 +9,10 @@
 import React, { useState } from 'react';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useCanProceedAll } from '@/core/ui/hooks';
+import { vscode } from '@/core/ui/utils/vscode-api';
 import { useGitHubAuth } from '../hooks/useGitHubAuth';
 import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
+import { getBookmarkletSetupPageUrl } from '../helpers/bookmarkletSetupPage';
 import { GitHubServiceCard, DaLiveServiceCard } from '../components';
 import type { BaseStepProps } from '@/types/wizard';
 import '../styles/connect-services.css';
@@ -41,7 +43,15 @@ export function ConnectServicesStep({
     ], setCanProceed);
 
     const handleDaLiveSetup = () => {
-        daLiveAuth.openDaLive();
+        if (!daLiveAuth.setupComplete && daLiveAuth.bookmarkletUrl) {
+            // First time: open the bookmarklet setup page in browser
+            vscode.postMessage('openExternal', {
+                url: getBookmarkletSetupPageUrl(daLiveAuth.bookmarkletUrl),
+            });
+        } else {
+            // Returning user: open da.live directly
+            daLiveAuth.openDaLive();
+        }
         setShowDaLiveInput(true);
     };
 
@@ -56,6 +66,7 @@ export function ConnectServicesStep({
 
     const handleCancelInput = () => {
         setShowDaLiveInput(false);
+        daLiveAuth.cancelAuth();
     };
 
     return (

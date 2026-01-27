@@ -28,6 +28,8 @@ interface DaLiveAuthStatusData {
     setupComplete?: boolean;
     /** Cached org name from previous successful verification */
     orgName?: string;
+    /** Bookmarklet URL for token extraction (provided eagerly) */
+    bookmarkletUrl?: string;
 }
 
 /**
@@ -108,8 +110,8 @@ export function useDaLiveAuth({
     const edsConfig = state.edsConfig;
     const daLiveAuth = edsConfig?.daLiveAuth;
 
-    // Store bookmarklet URL in a ref to avoid re-renders
-    const bookmarkletUrlRef = useRef<string | undefined>(undefined);
+    // Store bookmarklet URL in state so the step can react when it arrives
+    const [bookmarkletUrl, setBookmarkletUrl] = useState<string | undefined>(undefined);
 
     // Track if user has completed bookmarklet setup before
     const setupCompleteRef = useRef<boolean>(false);
@@ -235,6 +237,11 @@ export function useDaLiveAuth({
                 setupCompleteRef.current = authData.setupComplete;
             }
 
+            // Store bookmarklet URL if provided (eagerly sent with auth status)
+            if (authData.bookmarkletUrl) {
+                setBookmarkletUrl(authData.bookmarkletUrl);
+            }
+
             // If backend returned cached org name, store it in edsConfig
             if (authData.isAuthenticated && authData.orgName) {
                 updateStateRef.current({
@@ -287,7 +294,7 @@ export function useDaLiveAuth({
             const openedData = data as DaLiveLoginOpenedData;
             log.debug('DA.live login opened, bookmarklet URL received');
 
-            bookmarkletUrlRef.current = openedData.bookmarkletUrl;
+            setBookmarkletUrl(openedData.bookmarkletUrl);
             // Keep isAuthenticating true - user needs to paste token
         });
 
@@ -370,7 +377,7 @@ export function useDaLiveAuth({
         isAuthenticating: daLiveAuth?.isAuthenticating || false,
         isChecking,
         error: daLiveAuth?.error,
-        bookmarkletUrl: bookmarkletUrlRef.current,
+        bookmarkletUrl,
         setupComplete: setupCompleteRef.current,
         verifiedOrg: edsConfig?.daLiveOrg,
         openDaLive,
