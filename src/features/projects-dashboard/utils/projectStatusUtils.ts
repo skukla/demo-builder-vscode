@@ -8,6 +8,7 @@
 
 import type { Project, ProjectStatus } from '@/types/base';
 import { getComponentInstanceValues } from '@/types/typeGuards';
+import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 
 /**
  * StatusDot variant type for visual status indication
@@ -92,23 +93,8 @@ export function getStatusVariant(status: ProjectStatus, isEds?: boolean): Status
  * @returns Display text or null if no mesh status to show
  */
 export function getMeshStatusText(project: Project): string | null {
-    switch (project.meshStatusSummary) {
-        case 'deployed':
-            return 'Mesh Deployed';
-        case 'stale':
-        case 'update-declined':
-            return 'Redeploy Mesh';
-        case 'config-incomplete':
-            return 'Mesh Incomplete';
-        case 'error':
-            return 'Mesh Error';
-        case 'not-deployed':
-        case 'unknown':
-        case undefined:
-            return null;
-        default:
-            return null;
-    }
+    const display = getMeshStatusDisplay(project.meshStatusSummary);
+    return display?.text ?? null;
 }
 
 /**
@@ -117,22 +103,8 @@ export function getMeshStatusText(project: Project): string | null {
  * @returns StatusDot variant or null if no mesh status to show
  */
 export function getMeshStatusVariant(project: Project): StatusVariant | null {
-    switch (project.meshStatusSummary) {
-        case 'deployed':
-            return 'success';
-        case 'stale':
-        case 'config-incomplete':
-        case 'update-declined':
-            return 'warning';
-        case 'error':
-            return 'error';
-        case 'not-deployed':
-        case 'unknown':
-        case undefined:
-            return null;
-        default:
-            return null;
-    }
+    const display = getMeshStatusDisplay(project.meshStatusSummary);
+    return (display?.variant as StatusVariant) ?? null;
 }
 
 /**

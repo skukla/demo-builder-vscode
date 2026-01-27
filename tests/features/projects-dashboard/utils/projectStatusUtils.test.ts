@@ -289,9 +289,9 @@ describe('projectStatusUtils', () => {
             expect(getMeshStatusText(project)).toBe('Redeploy Mesh');
         });
 
-        it('should return null when not-deployed', () => {
+        it('should return "Not Deployed" when not-deployed', () => {
             const project = createMockProject({ meshStatusSummary: 'not-deployed' });
-            expect(getMeshStatusText(project)).toBeNull();
+            expect(getMeshStatusText(project)).toBe('Not Deployed');
         });
 
         it('should return "Mesh Error" when error', () => {
@@ -331,9 +331,9 @@ describe('projectStatusUtils', () => {
             expect(getMeshStatusVariant(project)).toBe('error');
         });
 
-        it('should return null when not-deployed', () => {
+        it('should return "neutral" when not-deployed', () => {
             const project = createMockProject({ meshStatusSummary: 'not-deployed' });
-            expect(getMeshStatusVariant(project)).toBeNull();
+            expect(getMeshStatusVariant(project)).toBe('neutral');
         });
 
         it('should return null when unknown', () => {
