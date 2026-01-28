@@ -58,12 +58,6 @@
         "category": "Demo Builder"
       },
       {
-        "command": "demoBuilder.showProjectDashboard",
-        "title": "Open Project Dashboard",
-        "category": "Demo Builder",
-        "icon": "$(dashboard)"
-      },
-      {
         "command": "demoBuilder.setRecommendedZoom",
         "title": "Set Recommended Zoom (120%)",
         "category": "Demo Builder"
@@ -71,11 +65,6 @@
       {
         "command": "demoBuilder.resetZoom",
         "title": "Reset Zoom (100%)",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.testDaLiveAuth",
-        "title": "Test DA.live Auth (Dev)",
         "category": "Demo Builder"
       },
       {

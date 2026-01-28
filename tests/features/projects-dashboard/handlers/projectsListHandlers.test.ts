@@ -78,7 +78,6 @@ describe('projectsListHandlers', () => {
             // Given: projectsListHandlers object
             // When: Checking for utility message types
             // Then: Utility handlers present
-            expect(hasHandler(projectsListHandlers, 'openDocs')).toBe(true);
             expect(hasHandler(projectsListHandlers, 'openHelp')).toBe(true);
             expect(hasHandler(projectsListHandlers, 'openSettings')).toBe(true);
         });
@@ -98,13 +97,13 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'republishContent')).toBe(true);
         });
 
-        it('should have exactly 20 handlers', () => {
+        it('should have exactly 19 handlers', () => {
             // Given: projectsListHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(projectsListHandlers);
 
-            // Then: Exactly 20 handlers
-            expect(types).toHaveLength(20);
+            // Then: Exactly 19 handlers
+            expect(types).toHaveLength(19);
         });
 
         it('should have handlers as functions', () => {

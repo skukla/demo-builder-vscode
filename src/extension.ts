@@ -178,29 +178,6 @@ export async function activate(context: vscode.ExtensionContext) {
         // Initialize DA.live auth service (for darkalley OAuth testing)
         daLiveAuthService = new DaLiveAuthService(context);
 
-        // Register test command for DA.live OAuth (temporary - for testing darkalley client)
-        context.subscriptions.push(
-            vscode.commands.registerCommand('demoBuilder.testDaLiveAuth', async () => {
-                logger.info('[DA.live Auth] Testing darkalley OAuth flow...');
-                try {
-                    const result = await daLiveAuthService.authenticate();
-                    if (result.success) {
-                        vscode.window.showInformationMessage(
-                            `DA.live auth successful! Email: ${result.email || 'unknown'}`,
-                        );
-                    } else {
-                        vscode.window.showErrorMessage(
-                            `DA.live auth failed: ${result.error}`,
-                        );
-                    }
-                } catch (error) {
-                    vscode.window.showErrorMessage(
-                        `DA.live auth error: ${(error as Error).message}`,
-                    );
-                }
-            }),
-        );
-
         // Check workspace trust
         if (!vscode.workspace.isTrusted) {
             vscode.window.showWarningMessage(

@@ -25,7 +25,6 @@ import {
     handleRepublishContent,
     handleEditProject,
     handleRenameProject,
-    handleOpenDocs,
     handleOpenHelp,
     handleOpenSettings,
     handleSetViewModeOverride,
@@ -72,8 +71,7 @@ export const projectsListHandlers = defineHandlers({
     // Project rename handler
     'renameProject': handleRenameProject,
 
-    // Utility handlers (docs, help, settings)
-    'openDocs': handleOpenDocs,
+    // Utility handlers (help, settings)
     'openHelp': handleOpenHelp,
     'openSettings': handleOpenSettings,
 

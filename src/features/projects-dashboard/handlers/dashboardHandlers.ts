@@ -196,25 +196,6 @@ export const handleCreateProject: MessageHandler = async (
 };
 
 /**
- * Open documentation URL
- */
-export const handleOpenDocs: MessageHandler = async (
-    context: HandlerContext,
-): Promise<HandlerResponse> => {
-    try {
-        const docsUrl = 'https://github.com/anthropics/demo-builder-vscode#readme';
-        await vscode.env.openExternal(vscode.Uri.parse(docsUrl));
-        return { success: true };
-    } catch (error) {
-        context.logger.error('Failed to open documentation', error instanceof Error ? error : undefined);
-        return {
-            success: false,
-            error: 'Failed to open documentation',
-        };
-    }
-};
-
-/**
  * Open help/support URL
  */
 export const handleOpenHelp: MessageHandler = async (
