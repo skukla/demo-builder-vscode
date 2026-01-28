@@ -915,6 +915,24 @@ button[class*="spectrum-Button"][disabled],
     box-shadow: none !important;
 }
 
+.expandable-brand-card.coming-soon {
+    position: relative;
+    opacity: 0.45;
+    cursor: default !important;
+    pointer-events: none;
+}
+
+.architecture-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
 /* Brand card header area */
 .brand-card-header {
     margin-bottom: 0 !important;

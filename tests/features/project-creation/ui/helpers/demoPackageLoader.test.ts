@@ -184,10 +184,11 @@ describe('demoPackageLoader', () => {
             expect(stacks).toContain('eds-accs');
         });
 
-        it('should return empty array for buildright (no storefronts defined)', async () => {
+        it('should return eds-paas for buildright', async () => {
             const stacks = await getAvailableStacksForPackage('buildright');
 
-            expect(stacks).toHaveLength(0);
+            expect(stacks).toHaveLength(1);
+            expect(stacks).toContain('eds-paas');
         });
 
         it('should return empty array for unknown package', async () => {
@@ -198,10 +199,10 @@ describe('demoPackageLoader', () => {
     });
 
     describe('getAllStorefronts', () => {
-        it('should return all 3 storefronts with package and stack info', async () => {
+        it('should return all 4 storefronts with package and stack info', async () => {
             const storefronts = await getAllStorefronts();
 
-            expect(storefronts).toHaveLength(3);
+            expect(storefronts).toHaveLength(4);
         });
 
         it('should include package ID and stack ID with each storefront', async () => {
@@ -223,11 +224,12 @@ describe('demoPackageLoader', () => {
             expect(citisignalStorefronts).toHaveLength(3);
         });
 
-        it('should have no buildright storefronts (empty in demo-packages.json)', async () => {
+        it('should have 1 buildright storefront', async () => {
             const storefronts = await getAllStorefronts();
             const buildrightStorefronts = storefronts.filter(s => s.packageId === 'buildright');
 
-            expect(buildrightStorefronts).toHaveLength(0);
+            expect(buildrightStorefronts).toHaveLength(1);
+            expect(buildrightStorefronts[0].stackId).toBe('eds-paas');
         });
     });
 });

@@ -95,6 +95,7 @@
       "description": "Construction/hardware demo with BuildRight branding",
       "icon": "buildright",
       "featured": false,
+      "status": "coming-soon",
       "addons": {
         "demo-inspector": "optional",
         "adobe-commerce-aco": "required"
@@ -104,7 +105,26 @@
         "ADOBE_COMMERCE_STORE_CODE": "buildright_store",
         "ADOBE_COMMERCE_STORE_VIEW_CODE": "buildright_us"
       },
-      "storefronts": {}
+      "storefronts": {
+        "eds-paas": {
+          "name": "BuildRight EDS + PaaS",
+          "description": "Edge Delivery Services storefront with Commerce PaaS backend",
+          "icon": "eds",
+          "featured": true,
+          "tags": ["eds", "buildright", "paas"],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/skukla/buildright-eds",
+            "branch": "main",
+            "gitOptions": {
+              "shallow": true,
+              "recursive": false
+            }
+          },
+          "templateOwner": "skukla",
+          "templateRepo": "buildright-eds"
+        }
+      }
     }
   ]
 }

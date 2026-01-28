@@ -539,6 +539,7 @@ describe('handleResetEds DA.live auth pre-check', () => {
             'test-org', // daLiveOrg
             'test-site', // daLiveSite
             expect.any(Function), // progressCallback
+            expect.any(Array), // contentPatches
         );
     });
 });

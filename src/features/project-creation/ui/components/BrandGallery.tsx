@@ -63,18 +63,22 @@ const PackageCard: React.FC<PackageCardProps> = ({
     isDimmed,
     onCardClick,
 }) => {
+    const isComingSoon = pkg.status === 'coming-soon';
+
     const handleCardClick = useCallback(() => {
-        onCardClick();
-    }, [onCardClick]);
+        if (!isComingSoon) {
+            onCardClick();
+        }
+    }, [onCardClick, isComingSoon]);
 
     const handleCardKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+            if (!isComingSoon && (e.key === 'Enter' || e.key === ' ')) {
                 e.preventDefault();
                 onCardClick();
             }
         },
-        [onCardClick],
+        [onCardClick, isComingSoon],
     );
 
     // Card is "complete" when package is selected AND has a stack
@@ -86,21 +90,26 @@ const PackageCard: React.FC<PackageCardProps> = ({
         isComplete && 'expanded',       // Expanded when stack also selected
         isComplete && 'complete',
         isDimmed && 'dimmed',
+        isComingSoon && 'coming-soon',
     );
 
     return (
         <div
             role="button"
-            tabIndex={0}
+            tabIndex={isComingSoon ? -1 : 0}
             data-testid="package-card"
             data-selected={isSelected ? 'true' : 'false'}
             data-dimmed={isDimmed ? 'true' : 'false'}
             onClick={handleCardClick}
             onKeyDown={handleCardKeyDown}
             className={cardClasses}
-            aria-pressed={isSelected}
+            aria-pressed={isComingSoon ? undefined : isSelected}
+            aria-disabled={isComingSoon || undefined}
             aria-label={`${pkg.name}: ${pkg.description}`}
         >
+            {isComingSoon && (
+                <span className="architecture-badge">Coming Soon</span>
+            )}
             {/* Package header - always visible */}
             <div className="brand-card-header">
                 <div className="brand-card-title-row">

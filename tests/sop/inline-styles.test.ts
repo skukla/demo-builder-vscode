@@ -32,6 +32,7 @@ describe('SOP: Inline Styles', () => {
         'FadeTransition.tsx': 'Animation styles that must be inline for transitions',
         'LoadingOverlay.tsx': 'Position relative for overlay stacking context',
         'SidebarNav.tsx': 'Dynamic styles for navigation items',
+        'Sidebar.tsx': 'Flex container for scrollable wizard progress',
 
         // Spectrum UNSAFE_style (required for Spectrum overrides)
         'SearchHeader.tsx': 'Spectrum UNSAFE_style for theme integration',

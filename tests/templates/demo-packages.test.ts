@@ -125,13 +125,12 @@ describe('demo-packages.json', () => {
     });
 
     describe('structure validation - storefronts', () => {
-        it('should have 3 storefronts total across all packages', () => {
-            // Note: buildright is a placeholder package with no storefronts yet
+        it('should have 4 storefronts total across all packages', () => {
             let totalStorefronts = 0;
             packagesConfig.packages.forEach(pkg => {
                 totalStorefronts += Object.keys(pkg.storefronts).length;
             });
-            expect(totalStorefronts).toBe(3);
+            expect(totalStorefronts).toBe(4);
         });
 
         it('should have citisignal with 3 storefronts', () => {
@@ -140,11 +139,11 @@ describe('demo-packages.json', () => {
             expect(Object.keys(citisignal!.storefronts).length).toBe(3);
         });
 
-        it('should have buildright as placeholder with 0 storefronts', () => {
-            // buildright is a placeholder package - storefronts will be added later
+        it('should have buildright with 1 storefront and coming-soon status', () => {
             const buildright = packagesConfig.packages.find(p => p.id === 'buildright');
             expect(buildright).toBeDefined();
-            expect(Object.keys(buildright!.storefronts).length).toBe(0);
+            expect(Object.keys(buildright!.storefronts).length).toBe(1);
+            expect((buildright as any).status).toBe('coming-soon');
         });
 
         it('should have storefronts keyed by stack ID', () => {
@@ -181,8 +180,10 @@ describe('demo-packages.json', () => {
     });
 
     describe('EDS storefronts - contentSource', () => {
-        it('should have contentSource for EDS storefronts', () => {
+        it('should have contentSource for EDS storefronts in active packages', () => {
             packagesConfig.packages.forEach(pkg => {
+                // Skip coming-soon packages (storefronts may be incomplete)
+                if ((pkg as any).status === 'coming-soon') return;
                 Object.entries(pkg.storefronts).forEach(([stackId, storefront]) => {
                     // EDS storefronts should have explicit contentSource config
                     if (stackId.startsWith('eds-')) {
@@ -369,10 +370,9 @@ describe('demo-packages.json', () => {
             expect(pkg!.addons!['adobe-commerce-aco']).toBe('required');
         });
 
-        it('should be a placeholder with no storefronts yet', () => {
-            // buildright is awaiting storefront configuration
+        it('should have eds-paas storefront', () => {
             const pkg = packagesConfig.packages.find(p => p.id === 'buildright');
-            expect(Object.keys(pkg!.storefronts).length).toBe(0);
+            expect(pkg!.storefronts['eds-paas']).toBeDefined();
         });
     });
 

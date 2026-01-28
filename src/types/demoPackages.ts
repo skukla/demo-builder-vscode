@@ -122,6 +122,9 @@ export interface DemoPackage {
     /** Whether this package should be featured in the UI */
     featured?: boolean;
 
+    /** Availability status (default: 'active') */
+    status?: 'active' | 'coming-soon';
+
     /** Addons configuration for this package */
     addons?: Addons;
 
