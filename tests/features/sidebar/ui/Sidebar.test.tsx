@@ -38,17 +38,17 @@ describe('Sidebar', () => {
             expect(container.querySelector('.sidebar-welcome')).not.toBeInTheDocument();
         });
 
-        it('should render Documentation icon button when onOpenDocs provided', () => {
+        it('should render Tools icon button when onOpenTools provided', () => {
             renderWithProvider(
                 <Sidebar
                     context={createProjectsContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                    onOpenDocs={jest.fn()}
+                    onOpenTools={jest.fn()}
                 />
             );
 
-            expect(screen.getByRole('button', { name: /documentation/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
         });
 
         it('should render Get Help icon button when onOpenHelp provided', () => {
@@ -77,20 +77,20 @@ describe('Sidebar', () => {
             expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
         });
 
-        it('should call onOpenDocs when Documentation icon clicked', () => {
-            const onOpenDocs = jest.fn();
+        it('should call onOpenTools when Tools icon clicked', () => {
+            const onOpenTools = jest.fn();
             renderWithProvider(
                 <Sidebar
                     context={createProjectsContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                    onOpenDocs={onOpenDocs}
+                    onOpenTools={onOpenTools}
                 />
             );
 
-            fireEvent.click(screen.getByRole('button', { name: /documentation/i }));
+            fireEvent.click(screen.getByRole('button', { name: /tools/i }));
 
-            expect(onOpenDocs).toHaveBeenCalled();
+            expect(onOpenTools).toHaveBeenCalled();
         });
 
         it('should call onOpenHelp when Get Help icon clicked', () => {
@@ -144,18 +144,18 @@ describe('Sidebar', () => {
             expect(container.querySelector('.sidebar-utility-bar')).toBeInTheDocument();
         });
 
-        it('should render Documentation icon when onOpenDocs provided (project context)', () => {
+        it('should render Tools icon when onOpenTools provided (project context)', () => {
             renderWithProvider(
                 <Sidebar
                     context={createProjectContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                    onOpenDocs={jest.fn()}
+                    onOpenTools={jest.fn()}
                 />
             );
 
             // Project context uses UtilityBar with icons
-            expect(screen.getByRole('button', { name: /documentation/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
         });
     });
 

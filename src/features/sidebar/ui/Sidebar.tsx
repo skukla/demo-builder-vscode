@@ -22,8 +22,8 @@ export interface SidebarProps {
     onBack?: () => void;
     /** Callback for creating a new project */
     onCreateProject: () => void;
-    /** Callback for opening documentation */
-    onOpenDocs?: () => void;
+    /** Callback for opening tools */
+    onOpenTools?: () => void;
     /** Callback for opening help */
     onOpenHelp?: () => void;
     /** Callback for opening settings */
@@ -50,7 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onNavigate,
     onBack,
     onCreateProject: _onCreateProject,
-    onOpenDocs,
+    onOpenTools,
     onOpenHelp,
     onOpenSettings,
     onStartDemo: _onStartDemo,
@@ -65,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (context.type === 'projects' || context.type === 'projectsList' || context.type === 'project') {
         return (
             <UtilityBar
-                onOpenDocs={onOpenDocs}
+                onOpenTools={onOpenTools}
                 onOpenHelp={onOpenHelp}
                 onOpenSettings={onOpenSettings}
             />
@@ -104,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {/* Footer: utility icons matching PageFooter height */}
                 <div className="border-t sidebar-utility-footer">
                     <UtilityBar
-                        onOpenDocs={onOpenDocs}
+                        onOpenTools={onOpenTools}
                         onOpenHelp={onOpenHelp}
                         onOpenSettings={onOpenSettings}
                         compact

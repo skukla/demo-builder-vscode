@@ -228,8 +228,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 await this.handleCreateProject();
                 break;
 
-            case 'openDocs':
-                await this.handleOpenDocs();
+            case 'openTools':
+                await this.handleOpenTools();
                 break;
 
             case 'openHelp':
@@ -378,18 +378,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     /**
-     * Handle open documentation request
+     * Handle open tools request - opens command palette filtered to Demo Builder commands
      */
-    private async handleOpenDocs(): Promise<void> {
-        this.logger.info('Sidebar: Open documentation');
+    private async handleOpenTools(): Promise<void> {
+        this.logger.info('Sidebar: Open tools');
 
         try {
-            // Open documentation URL in browser
-            const docsUrl = 'https://github.com/skukla/demo-builder-vscode#readme';
-            await vscode.env.openExternal(vscode.Uri.parse(docsUrl));
+            await vscode.commands.executeCommand('workbench.action.quickOpen', '>Demo Builder: ');
         } catch (error) {
             this.logger.error(
-                'Open docs failed',
+                'Open tools failed',
                 error instanceof Error ? error : undefined,
             );
         }

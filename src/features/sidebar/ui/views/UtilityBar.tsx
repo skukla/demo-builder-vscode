@@ -6,14 +6,14 @@
  */
 
 import { Flex, Text, ActionButton } from '@adobe/react-spectrum';
-import Book from '@spectrum-icons/workflow/Book';
+import Wrench from '@spectrum-icons/workflow/Wrench';
 import Help from '@spectrum-icons/workflow/Help';
 import Settings from '@spectrum-icons/workflow/Settings';
 import React from 'react';
 
 export interface UtilityBarProps {
-    /** Callback when user clicks Documentation link */
-    onOpenDocs?: () => void;
+    /** Callback when user clicks Tools button */
+    onOpenTools?: () => void;
     /** Callback when user clicks Help link */
     onOpenHelp?: () => void;
     /** Callback when user clicks Settings */
@@ -25,10 +25,10 @@ export interface UtilityBarProps {
 /**
  * UtilityBar - Quick-access utility icons for the sidebar
  *
- * Shows Docs, Help, and Settings icons in a horizontal row with labels.
+ * Shows Tools, Help, and Settings icons in a horizontal row with labels.
  */
 export const UtilityBar: React.FC<UtilityBarProps> = ({
-    onOpenDocs,
+    onOpenTools,
     onOpenHelp,
     onOpenSettings,
     compact = false,
@@ -43,12 +43,12 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             UNSAFE_className="sidebar-utility-bar"
 
         >
-            {onOpenDocs && (
+            {onOpenTools && (
                 <Flex direction="column" alignItems="center" gap="size-75">
-                    <ActionButton isQuiet onPress={onOpenDocs} aria-label="Documentation">
-                        <Book size="L" />
+                    <ActionButton isQuiet onPress={onOpenTools} aria-label="Tools">
+                        <Wrench size="L" />
                     </ActionButton>
-                    <Text UNSAFE_className="text-sm opacity-70">Docs</Text>
+                    <Text UNSAFE_className="text-sm opacity-70">Tools</Text>
                 </Flex>
             )}
 

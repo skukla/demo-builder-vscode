@@ -76,9 +76,9 @@ function SidebarApp(): React.ReactElement {
         sendMessage('createProject');
     }, []);
 
-    // Handle open documentation
-    const handleOpenDocs = useCallback(() => {
-        sendMessage('openDocs');
+    // Handle open tools
+    const handleOpenTools = useCallback(() => {
+        sendMessage('openTools');
     }, []);
 
     // Handle open help
@@ -147,7 +147,7 @@ function SidebarApp(): React.ReactElement {
                 onNavigate={handleNavigate}
                 onBack={handleBack}
                 onCreateProject={handleCreateProject}
-                onOpenDocs={handleOpenDocs}
+                onOpenTools={handleOpenTools}
                 onOpenHelp={handleOpenHelp}
                 onOpenSettings={handleOpenSettings}
                 onStartDemo={handleStartDemo}
