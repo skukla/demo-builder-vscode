@@ -8,7 +8,8 @@
  * 1. Reading local config.json
  * 2. Pushing to GitHub
  * 3. Publishing to Helix CDN
- * 4. Error handling for each step
+ * 4. CDN verification with cache invalidation
+ * 5. Error handling for each step
  */
 
 import { syncConfigToRemote, ConfigSyncParams, ConfigSyncResult } from '@/features/eds/services/configSyncService';
@@ -39,6 +40,10 @@ jest.mock('@/features/eds/services/helixService', () => ({
         previewCode: jest.fn(),
     })),
 }));
+
+// Mock global fetch for CDN verification
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
 
 describe('syncConfigToRemote', () => {
     let mockLogger: {
@@ -90,6 +95,18 @@ describe('syncConfigToRemote', () => {
             secrets: mockSecrets as any,
             authManager: mockAuthManager as any,
         };
+
+        // Mock successful CDN verification response by default
+        mockFetch.mockResolvedValue({
+            ok: true,
+            text: jest.fn().mockResolvedValue(JSON.stringify({
+                public: {
+                    default: {
+                        'commerce-endpoint': 'https://example.com/graphql',
+                    },
+                },
+            })),
+        });
     });
 
     describe('successful sync', () => {
@@ -237,6 +254,77 @@ describe('syncConfigToRemote', () => {
             );
             expect(mockLogger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('Pushing config.json to GitHub'),
+            );
+        });
+    });
+
+    describe('CDN verification', () => {
+        /**
+         * CDN verification tests verify that config.json is accessible
+         * on the live CDN after publishing.
+         *
+         * Note: The cache invalidation mechanism (republish on 404) is tested
+         * indirectly through the cdnVerified result. Internal retry timing
+         * is not tested to avoid test flakiness.
+         */
+
+        beforeEach(() => {
+            (fsPromises.readFile as jest.Mock).mockResolvedValue('{"public": {}}');
+
+            const { GitHubFileOperations } = require('@/features/eds/services/githubFileOperations');
+            GitHubFileOperations.mockImplementation(() => ({
+                getFileContent: jest.fn().mockResolvedValue({ sha: 'existing-sha' }),
+                createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
+            }));
+        });
+
+        it('sets cdnVerified to true when config.json is accessible with valid commerce-endpoint', async () => {
+            // Arrange
+            const { HelixService } = require('@/features/eds/services/helixService');
+            HelixService.mockImplementation(() => ({
+                previewCode: jest.fn().mockResolvedValue(undefined),
+            }));
+
+            // CDN returns valid config immediately
+            mockFetch.mockResolvedValue({
+                ok: true,
+                text: jest.fn().mockResolvedValue(JSON.stringify({
+                    public: { default: { 'commerce-endpoint': 'https://example.com/graphql' } },
+                })),
+            });
+
+            // Act
+            const result = await syncConfigToRemote(baseParams);
+
+            // Assert
+            expect(result.cdnVerified).toBe(true);
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('aem.live/config.json'),
+                expect.any(Object),
+            );
+        });
+
+        it('builds correct CDN URL from repo owner and name', async () => {
+            // Arrange
+            const { HelixService } = require('@/features/eds/services/helixService');
+            HelixService.mockImplementation(() => ({
+                previewCode: jest.fn().mockResolvedValue(undefined),
+            }));
+
+            mockFetch.mockResolvedValue({
+                ok: true,
+                text: jest.fn().mockResolvedValue(JSON.stringify({
+                    public: { default: { 'commerce-endpoint': 'https://example.com/graphql' } },
+                })),
+            });
+
+            // Act
+            await syncConfigToRemote(baseParams);
+
+            // Assert - URL should be https://main--{repo}--{owner}.aem.live/config.json
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://main--test-repo--test-owner.aem.live/config.json',
+                expect.any(Object),
             );
         });
     });

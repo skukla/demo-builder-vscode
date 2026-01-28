@@ -117,7 +117,10 @@ function GitHubConfigurationSummary({
     const getGitHubAppStatusIndicator = (): 'completed' | 'empty' | 'pending' | 'error' => {
         if (githubAppStatus.isChecking) return 'pending';
         if (githubAppStatus.isInstalled === true) return 'completed';
-        if (githubAppStatus.isInstalled === false) return 'error'; // Shows value, not emptyText
+        // HTTP 404 (codeStatus undefined) = repo being registered by Helix, show pending
+        // code.status 404 (codeStatus defined) = app not installed, show error
+        if (githubAppStatus.isInstalled === false && githubAppStatus.codeStatus === undefined) return 'pending';
+        if (githubAppStatus.isInstalled === false) return 'error';
         return 'empty'; // Only for null (not checked yet)
     };
 
@@ -145,9 +148,9 @@ function GitHubConfigurationSummary({
                 emptyText={repoMode === 'new' ? 'Enter repository name' : 'Not selected'}
             />
 
-            {/* GitHub App Status - show for existing repos OR for new repos after creation */}
-            {((repoMode === 'existing' && isRepoComplete) ||
-              (repoMode === 'new' && repoCreationState.isCreated)) && (
+            {/* GitHub App Status - show ONLY for NEW repos after creation
+                EXISTING repos: App check deferred to StorefrontSetup (Helix needs fstab.yaml first) */}
+            {repoMode === 'new' && repoCreationState.isCreated && (
                 <>
                     <Divider size="S" />
                     <StatusSection
@@ -477,20 +480,16 @@ export function GitHubRepoSelectionStep({
     /**
      * Handle "Check Again" button click from within the modal
      * Uses lenient mode since user just completed installation
+     * Note: Only called for NEW repos (existing repos check in StorefrontSetup)
      */
     const handleCheckAgain = useCallback(async () => {
-        let owner: string | undefined;
-        let repo: string | undefined;
-
-        if (repoMode === 'new' && edsConfig?.createdRepo) {
-            owner = edsConfig.createdRepo.owner;
-            repo = edsConfig.createdRepo.name;
-        } else if (repoMode === 'existing' && selectedRepo) {
-            owner = selectedRepo.fullName.split('/')[0];
-            repo = selectedRepo.name;
+        // Only handle new repos - existing repos check happens in StorefrontSetup
+        if (repoMode !== 'new' || !edsConfig?.createdRepo) {
+            return;
         }
 
-        if (!owner || !repo) return;
+        const owner = edsConfig.createdRepo.owner;
+        const repo = edsConfig.createdRepo.name;
 
         const maxAttempts = 5;
         const retryDelayMs = 5000;
@@ -587,34 +586,22 @@ export function GitHubRepoSelectionStep({
         }
     }, [hasLoadedOnce, repos, selectedRepo, repoMode, updateEdsConfig]);
 
-    // Check GitHub App when EXISTING repo is selected
-    // Skip check for NEW repos - the repo doesn't exist yet, so app can't be installed
+    // Reset GitHub App status when repo mode changes
+    // - EXISTING repos: No check at this step (deferred to StorefrontSetup after fstab.yaml)
+    // - NEW repos: Status set to "not installed" in handleCreateRepository after creation
     useEffect(() => {
-        // Only check for existing repos - new repos don't exist yet
-        if (repoMode === 'existing' && selectedRepo) {
-            // Extract owner from fullName (e.g., "owner/repo" -> "owner")
-            // Don't use githubUser.login - repo may belong to an org
-            const owner = selectedRepo.fullName.split('/')[0];
+        // Reset status when switching modes or when existing repo selection changes
+        setGitHubAppStatus({
+            isChecking: false,
+            isInstalled: null,
+        });
+        setIsModalDismissed(false);
+        lastCheckedRepo.current = null;
+    }, [repoMode, selectedRepo]);
 
-            // Reset state immediately when repo changes to prevent stale state flash
-            setIsModalDismissed(false);
-            setGitHubAppStatus({
-                isChecking: true,
-                isInstalled: null,
-            });
-            checkGitHubApp(owner, selectedRepo.name);
-        } else {
-            // Reset status for new repos or when no repo selected
-            setGitHubAppStatus({
-                isChecking: false,
-                isInstalled: null,
-            });
-            setIsModalDismissed(false);
-            lastCheckedRepo.current = null;
-        }
-    }, [repoMode, selectedRepo, checkGitHubApp]);
-
-    // Update canProceed based on selection AND GitHub App status
+    // Update canProceed based on selection and repo mode
+    // - NEW repos: require repo created AND app verified (check happens here)
+    // - EXISTING repos: only require repo selection (app check deferred to StorefrontSetup)
     useEffect(() => {
         const appVerified = githubAppStatus.isInstalled === true;
         const isCheckingApp = githubAppStatus.isChecking;
@@ -626,10 +613,11 @@ export function GitHubRepoSelectionStep({
             const isRepoCreated = repoCreationState.isCreated;
             setCanProceed(isRepoCreated && appVerified && !isCheckingApp && !isCreatingRepo);
         } else {
-            // Existing repos: require repo selection AND app verification
-            // Also disable while repository list is loading
+            // Existing repos: only require repo selection
+            // GitHub App check is deferred to StorefrontSetup (after fstab.yaml push)
+            // because Helix doesn't know about the repo until it's configured
             const isExistingValid = !!selectedRepo;
-            setCanProceed(isExistingValid && appVerified && !isCheckingApp && !isLoading);
+            setCanProceed(isExistingValid && !isLoading);
         }
     }, [repoMode, repoCreationState, selectedRepo, githubAppStatus, isLoading, setCanProceed]);
 
@@ -767,35 +755,29 @@ export function GitHubRepoSelectionStep({
                 </>
             )}
 
-            {/* GitHub App Status Section - shows for EXISTING repos OR NEW repos after creation */}
+            {/* GitHub App Status Section - shows ONLY for NEW repos after creation
+                EXISTING repos: No modal here - check happens in StorefrontSetup after fstab.yaml push */}
             {(() => {
-                // Determine if we should show the modal based on repo mode
-                const isExistingWithSelection = repoMode === 'existing' && !!selectedRepo;
+                // Only show modal for NEW repos after creation
+                // EXISTING repos: Skip modal - app check deferred to StorefrontSetup
                 const isNewWithCreatedRepo = repoMode === 'new' && repoCreationState.isCreated && !!edsConfig?.createdRepo;
 
-                // Only show for repos that need app verification
-                if (!isExistingWithSelection && !isNewWithCreatedRepo) return null;
+                // Only show for new repos that need app verification
+                if (!isNewWithCreatedRepo) return null;
 
                 // Success state: no banner needed - status shown in Configuration Summary panel
                 if (githubAppStatus.isInstalled === true) {
                     return null;
                 }
 
-                // Show modal when not installed OR when rechecking (unless dismissed)
-                if (((githubAppStatus.isInstalled === false && githubAppStatus.codeStatus !== undefined) || isRechecking) && !isModalDismissed) {
-                    // Get owner/repo for display
-                    let owner: string;
-                    let repo: string;
-
-                    if (isNewWithCreatedRepo && edsConfig?.createdRepo) {
-                        owner = edsConfig.createdRepo.owner;
-                        repo = edsConfig.createdRepo.name;
-                    } else if (selectedRepo) {
-                        owner = selectedRepo.fullName.split('/')[0];
-                        repo = selectedRepo.name;
-                    } else {
+                // Show modal when not installed (including HTTP 404 = not yet indexed) OR when rechecking (unless dismissed)
+                if ((githubAppStatus.isInstalled === false || isRechecking) && !isModalDismissed) {
+                    // Get owner/repo for display (only NEW repos reach this point)
+                    if (!edsConfig?.createdRepo) {
                         return null;
                     }
+                    const owner = edsConfig.createdRepo.owner;
+                    const repo = edsConfig.createdRepo.name;
 
                     const handleDismiss = () => {
                         setIsModalDismissed(true);
@@ -874,17 +856,11 @@ export function GitHubRepoSelectionStep({
         />
     );
 
-    // Show overlay during initial GitHub App check (only for existing repos, not during recheck)
-    const isInitialChecking = repoMode === 'existing' && githubAppStatus.isChecking && !isRechecking;
-
     return (
         <div className="h-full w-full relative">
             <TwoColumnLayout
                 leftContent={leftContent}
                 rightContent={rightContent}
-            />
-            <LoadingOverlay
-                isVisible={isInitialChecking}
             />
         </div>
     );

@@ -564,6 +564,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     logger: context.logger,
                     secrets: context.context.secrets,
                     authManager: context.authManager,
+                    onProgress: (message) => progressTracker('Syncing Config', 94, message),
                 });
 
                 if (!syncResult.success) {

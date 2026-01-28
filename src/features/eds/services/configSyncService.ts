@@ -19,6 +19,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { GitHubTokenService } from './githubTokenService';
 import { GitHubFileOperations } from './githubFileOperations';
 import { HelixService } from './helixService';
+import type { PhaseProgressCallback } from './types';
 
 // ==========================================================
 // Types
@@ -40,6 +41,8 @@ export interface ConfigSyncParams {
     secrets: vscode.SecretStorage;
     /** Authentication service for Adobe operations */
     authManager?: AuthenticationService;
+    /** Optional progress callback for UI updates during CDN verification */
+    onProgress?: PhaseProgressCallback;
 }
 
 /**
@@ -74,7 +77,7 @@ export interface ConfigSyncResult {
  * @returns Sync result with status for each operation
  */
 export async function syncConfigToRemote(params: ConfigSyncParams): Promise<ConfigSyncResult> {
-    const { componentPath, repoOwner, repoName, logger, secrets, authManager } = params;
+    const { componentPath, repoOwner, repoName, logger, secrets, authManager, onProgress } = params;
 
     const result: ConfigSyncResult = {
         success: false,
@@ -155,7 +158,7 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
             logger.info(`[ConfigSync] config.json published to Helix CDN`);
 
             // Step 4: Verify config.json is accessible on live CDN
-            // CDN propagation can take a few seconds after publish
+            onProgress?.('Waiting for configuration to reach CDN edge...');
             result.cdnVerified = await verifyCdnAvailability(
                 repoOwner,
                 repoName,
@@ -185,28 +188,38 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
     }
 }
 
+/** Interval between CDN verification attempts (2 seconds) */
+const CDN_VERIFY_INTERVAL = 2000;
+
+/** Number of CDN verification attempts (10 attempts × 2s = ~20s total) */
+const CDN_VERIFY_ATTEMPTS = 10;
+
 /**
  * Verify config.json is accessible on the live CDN.
  *
- * After publishing via Helix Admin API, there can be a short propagation delay.
- * This function polls the live CDN URL to verify the config is available.
+ * After publishing via Helix Admin API, config.json needs time to propagate
+ * to all CDN edge nodes globally. This function waits for propagation by
+ * polling the live CDN URL with retries.
+ *
+ * We use a longer verification window (~20 seconds) because:
+ * - Origin update is fast, but edge propagation takes time
+ * - Different edge nodes may update at different rates
+ * - User's browser may hit different edges than our verification
  *
  * @param repoOwner - GitHub repository owner
  * @param repoName - GitHub repository name
  * @param logger - Logger instance
- * @param maxAttempts - Maximum retry attempts (default: 5)
  * @returns true if config.json is accessible and valid, false if verification timed out
  */
 async function verifyCdnAvailability(
     repoOwner: string,
     repoName: string,
     logger: Logger,
-    maxAttempts = 5,
 ): Promise<boolean> {
     const cdnUrl = `https://main--${repoName}--${repoOwner}.aem.live/config.json`;
     logger.debug(`[ConfigSync] Verifying CDN availability: ${cdnUrl}`);
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    for (let attempt = 1; attempt <= CDN_VERIFY_ATTEMPTS; attempt++) {
         try {
             const response = await fetch(cdnUrl, {
                 signal: AbortSignal.timeout(TIMEOUTS.QUICK),
@@ -218,21 +231,26 @@ async function verifyCdnAvailability(
                 const json = JSON.parse(content);
 
                 if (json.public?.default?.['commerce-endpoint']) {
-                    logger.info(`[ConfigSync] CDN verification successful (attempt ${attempt}/${maxAttempts})`);
+                    // After first success, wait a bit more for edge propagation
+                    if (attempt < 3) {
+                        logger.debug(`[ConfigSync] CDN returned valid config, waiting for edge propagation...`);
+                        await new Promise(resolve => setTimeout(resolve, CDN_VERIFY_INTERVAL * 2));
+                    }
+                    logger.info(`[ConfigSync] CDN verification successful (attempt ${attempt}/${CDN_VERIFY_ATTEMPTS})`);
                     return true;
                 }
 
                 logger.debug(`[ConfigSync] CDN returned config but missing commerce-endpoint, retrying...`);
             } else {
-                logger.debug(`[ConfigSync] CDN returned ${response.status}, retrying (${attempt}/${maxAttempts})...`);
+                logger.debug(`[ConfigSync] CDN returned ${response.status}, retrying (${attempt}/${CDN_VERIFY_ATTEMPTS})...`);
             }
         } catch (error) {
-            logger.debug(`[ConfigSync] CDN verification attempt ${attempt}/${maxAttempts} failed: ${(error as Error).message}`);
+            logger.debug(`[ConfigSync] CDN verification attempt ${attempt}/${CDN_VERIFY_ATTEMPTS} failed: ${(error as Error).message}`);
         }
 
         // Wait before next attempt (skip delay on last attempt)
-        if (attempt < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, TIMEOUTS.POLL.INTERVAL));
+        if (attempt < CDN_VERIFY_ATTEMPTS) {
+            await new Promise(resolve => setTimeout(resolve, CDN_VERIFY_INTERVAL));
         }
     }
 
