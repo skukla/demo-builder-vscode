@@ -390,6 +390,21 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 
+    /**
+     * Dispose the active wizard panel if one exists.
+     * Used to reset the wizard when switching modes (e.g., Create while Edit is open).
+     */
+    public static disposeActivePanel(): void {
+        const panel = BaseWebviewCommand.getActivePanel('demoBuilderWizard');
+        if (panel) {
+            try {
+                panel.dispose();
+            } catch {
+                // Panel may already be disposed
+            }
+        }
+    }
+
     public async execute(options?: {
         importedSettings?: SettingsFile;
         sourceDescription?: string;
@@ -475,7 +490,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
 
         // Navigate to projects list with sidebar closed (fire-and-forget)
-        vscode.commands.executeCommand('demoBuilder.showProjectsList');
+        // Skip during webview transitions (e.g., wizard being re-created for a different mode)
+        if (!BaseWebviewCommand.isWebviewTransitionInProgress()) {
+            vscode.commands.executeCommand('demoBuilder.showProjectsList');
+        }
 
         // Call parent dispose
         super.dispose();

@@ -202,3 +202,13 @@ describe('CreateProjectWebviewCommand - Bundle Loading', () => {
         expect(html).toMatch(/script-src[^;]+vscode-webview:/);
     });
 });
+
+describe('CreateProjectWebviewCommand - Static Methods', () => {
+    describe('disposeActivePanel', () => {
+        it('should be callable as static method', () => {
+            // Given: CreateProjectWebviewCommand class
+            // When/Then: Static method should exist and be callable
+            expect(typeof CreateProjectWebviewCommand.disposeActivePanel).toBe('function');
+        });
+    });
+});

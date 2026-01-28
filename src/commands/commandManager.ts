@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
+import { BaseWebviewCommand } from '@/core/base';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state';
@@ -59,7 +60,11 @@ export class CommandManager {
             this.logger,
         );
         this.registerCommand('demoBuilder.createProject', async (...args: unknown[]) => {
+            // Start transition to suppress disposal side-effects (e.g., wizard re-creation)
+            // execute() calls endWebviewTransition() when the new panel is ready
+            await BaseWebviewCommand.startWebviewTransition();
             // Close other webviews when starting project creation (tab replacement)
+            CreateProjectWebviewCommand.disposeActivePanel();
             ShowProjectsListCommand.disposeActivePanel();
             ProjectDashboardWebviewCommand.disposeActivePanel();
             ConfigureProjectWebviewCommand.disposeActivePanel();
