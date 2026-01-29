@@ -43,6 +43,8 @@ export interface ConfigSyncParams {
     authManager?: AuthenticationService;
     /** Optional progress callback for UI updates during CDN verification */
     onProgress?: PhaseProgressCallback;
+    /** Also verify block library is accessible on CDN (runs in parallel with config verification) */
+    verifyBlockLibrary?: boolean;
 }
 
 /**
@@ -59,6 +61,8 @@ export interface ConfigSyncResult {
     cdnPublished: boolean;
     /** Whether config.json was verified accessible on CDN */
     cdnVerified: boolean;
+    /** Whether block library was verified accessible on CDN (only set if verifyBlockLibrary was true) */
+    blockLibraryVerified?: boolean;
 }
 
 // ==========================================================
@@ -77,7 +81,7 @@ export interface ConfigSyncResult {
  * @returns Sync result with status for each operation
  */
 export async function syncConfigToRemote(params: ConfigSyncParams): Promise<ConfigSyncResult> {
-    const { componentPath, repoOwner, repoName, logger, secrets, authManager, onProgress } = params;
+    const { componentPath, repoOwner, repoName, logger, secrets, authManager, onProgress, verifyBlockLibrary } = params;
 
     const result: ConfigSyncResult = {
         success: false,
@@ -157,16 +161,25 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
             result.cdnPublished = true;
             logger.info(`[ConfigSync] config.json published to Helix CDN`);
 
-            // Step 4: Verify config.json is accessible on live CDN
+            // Step 4: Verify CDN accessibility (config.json + optionally block library)
             onProgress?.('Waiting for configuration to reach CDN edge...');
-            result.cdnVerified = await verifyConfigOnCdn(
+
+            const verification = await verifyCdnResources(
                 repoOwner,
                 repoName,
                 logger,
+                verifyBlockLibrary,
             );
+
+            result.cdnVerified = verification.configVerified;
+            result.blockLibraryVerified = verification.blockLibraryVerified;
 
             if (!result.cdnVerified) {
                 logger.warn(`[ConfigSync] config.json published but CDN verification timed out - may need a few more seconds to propagate`);
+            }
+
+            if (verifyBlockLibrary && !result.blockLibraryVerified) {
+                logger.debug(`[ConfigSync] Block library CDN verification timed out (non-fatal)`);
             }
         } catch (error) {
             // CDN publish failure is not fatal - GitHub push succeeded
@@ -255,4 +268,109 @@ export async function verifyConfigOnCdn(
     }
 
     return false;
+}
+
+/**
+ * Verify block library is accessible on the Helix CDN
+ *
+ * After publishing block library via Helix Admin API, the files need time
+ * to propagate to CDN edge nodes. This function verifies that blocks.json
+ * is accessible and contains valid data.
+ *
+ * @param repoOwner - GitHub repository owner
+ * @param repoName - GitHub repository name
+ * @param logger - Logger instance
+ * @returns true if blocks.json is accessible and valid, false if verification timed out
+ */
+export async function verifyBlockLibraryOnCdn(
+    repoOwner: string,
+    repoName: string,
+    logger: Logger,
+): Promise<boolean> {
+    const cdnUrl = `https://main--${repoName}--${repoOwner}.aem.live/.da/library/blocks.json`;
+    logger.debug(`[ConfigSync] Verifying block library CDN availability: ${cdnUrl}`);
+
+    // Use fewer attempts for library since it's less critical than config.json
+    const maxAttempts = 5;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const response = await fetch(cdnUrl, {
+                signal: AbortSignal.timeout(TIMEOUTS.QUICK),
+            });
+
+            if (response.ok) {
+                // Verify it's valid JSON with expected structure
+                const content = await response.text();
+                const json = JSON.parse(content);
+
+                // Blocks sheet should have data array with name/path entries
+                if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+                    logger.info(`[ConfigSync] Block library CDN verification successful (${json.data.length} blocks, attempt ${attempt}/${maxAttempts})`);
+                    return true;
+                }
+
+                logger.debug(`[ConfigSync] CDN returned blocks.json but no block entries, retrying...`);
+            } else {
+                logger.debug(`[ConfigSync] Block library CDN returned ${response.status}, retrying (${attempt}/${maxAttempts})...`);
+            }
+        } catch (error) {
+            logger.debug(`[ConfigSync] Block library CDN verification attempt ${attempt}/${maxAttempts} failed: ${(error as Error).message}`);
+        }
+
+        // Wait before next attempt (skip delay on last attempt)
+        if (attempt < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, CDN_VERIFY_INTERVAL));
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Result of CDN verification for all resources
+ */
+export interface CdnVerificationResult {
+    /** Whether config.json was verified on CDN */
+    configVerified: boolean;
+    /** Whether block library was verified on CDN (only set if includeBlockLibrary was true) */
+    blockLibraryVerified?: boolean;
+}
+
+/**
+ * Verify CDN resources are accessible (config.json and optionally block library)
+ *
+ * Runs verifications in parallel for efficiency. Both verifications poll with
+ * retries to handle CDN edge propagation delays.
+ *
+ * @param repoOwner - GitHub repository owner
+ * @param repoName - GitHub repository name
+ * @param logger - Logger instance
+ * @param includeBlockLibrary - Also verify block library is accessible
+ * @returns Verification results for each resource
+ */
+export async function verifyCdnResources(
+    repoOwner: string,
+    repoName: string,
+    logger: Logger,
+    includeBlockLibrary = false,
+): Promise<CdnVerificationResult> {
+    const verificationPromises: Promise<boolean>[] = [
+        verifyConfigOnCdn(repoOwner, repoName, logger),
+    ];
+
+    if (includeBlockLibrary) {
+        verificationPromises.push(
+            verifyBlockLibraryOnCdn(repoOwner, repoName, logger),
+        );
+    }
+
+    const [configVerified, blockLibraryVerified] = await Promise.all(verificationPromises);
+
+    const result: CdnVerificationResult = { configVerified };
+    if (includeBlockLibrary) {
+        result.blockLibraryVerified = blockLibraryVerified;
+    }
+
+    return result;
 }

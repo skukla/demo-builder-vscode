@@ -1027,6 +1027,8 @@ async function executeStorefrontSetupPhases(
 
                     try {
                         await bulkPreviewAndPublish(helixService, repoOwner, repoName, libraryPaths, logger);
+                        // Note: Block library CDN verification happens in Phase 5 (syncConfigToRemote)
+                        // alongside config.json verification for efficiency
                     } catch (libPublishError) {
                         // Non-fatal - library config was created, publishing can be retried
                         logger.debug(`[Storefront Setup] Block library publish failed: ${(libPublishError as Error).message}`);

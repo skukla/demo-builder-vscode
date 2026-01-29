@@ -30,6 +30,7 @@ import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { generateFstabContent } from '@/features/eds/services/fstabGenerator';
 import { showDaLiveAuthQuickPick, bulkPreviewAndPublish } from '@/features/eds/handlers/edsHelpers';
+import { verifyCdnResources } from '@/features/eds/services/configSyncService';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 import type { Project } from '@/types/base';
@@ -1257,17 +1258,31 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 context.logger.info('[ProjectsList] Content published to CDN successfully');
 
                 // ============================================
-                // Step 5: Verify config.json on CDN
+                // Step 5: Verify config.json and block library on CDN (parallel)
                 // ============================================
                 progress.report({ message: `Step 5/${totalSteps}: Verifying configuration...` });
-                const { verifyConfigOnCdn } = await import('@/features/eds/services/configSyncService');
-                const configVerified = await verifyConfigOnCdn(repoOwner, repoName, context.logger);
-                if (configVerified) {
+                const includeBlockLibrary = libResult.paths.length > 0;
+                const verification = await verifyCdnResources(
+                    repoOwner,
+                    repoName,
+                    context.logger,
+                    includeBlockLibrary,
+                );
+
+                if (verification.configVerified) {
                     progress.report({ message: `Step 5/${totalSteps}: Configuration verified` });
                     context.logger.info('[ProjectsList] config.json verified on CDN');
                 } else {
                     progress.report({ message: `Step 5/${totalSteps}: Configuration propagating...` });
                     context.logger.warn('[ProjectsList] config.json CDN verification timed out - may need more time to propagate');
+                }
+
+                if (includeBlockLibrary) {
+                    if (verification.blockLibraryVerified) {
+                        context.logger.info('[ProjectsList] Block library verified on CDN');
+                    } else {
+                        context.logger.debug('[ProjectsList] Block library CDN verification timed out (non-fatal)');
+                    }
                 }
 
                 // ============================================

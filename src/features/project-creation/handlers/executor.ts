@@ -565,6 +565,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     secrets: context.context.secrets,
                     authManager: context.authManager,
                     onProgress: (message) => progressTracker('Syncing Config', 94, message),
+                    verifyBlockLibrary: true, // Verify block library CDN in parallel with config
                 });
 
                 if (!syncResult.success) {
@@ -576,7 +577,10 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     );
                 }
 
-                context.logger.info(`[Phase 5] Config synced: GitHub=${syncResult.githubPushed}, CDN=${syncResult.cdnPublished}`);
+                context.logger.info(
+                    `[Phase 5] Config synced: GitHub=${syncResult.githubPushed}, CDN=${syncResult.cdnPublished}, ` +
+                    `BlockLibrary=${syncResult.blockLibraryVerified ?? 'n/a'}`,
+                );
             } else {
                 context.logger.warn('[Phase 5] Could not parse repo URL, skipping config sync');
             }

@@ -176,9 +176,12 @@ jest.mock('@/features/eds/services/configGenerator', () => ({
     extractConfigParams: jest.fn().mockReturnValue({}),
 }));
 
-// Mock configSyncService (dynamically imported for config.json CDN verification)
+// Mock configSyncService for CDN verification
 jest.mock('@/features/eds/services/configSyncService', () => ({
-    verifyConfigOnCdn: jest.fn().mockResolvedValue(true),
+    verifyCdnResources: jest.fn().mockResolvedValue({
+        configVerified: true,
+        blockLibraryVerified: true,
+    }),
 }));
 
 // Mock global fetch for code sync verification
