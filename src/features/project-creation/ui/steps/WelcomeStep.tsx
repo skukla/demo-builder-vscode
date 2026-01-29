@@ -180,6 +180,27 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         setCanProceed(isProjectNameValid && isPackageStackValid);
     }, [state.projectName, state.selectedPackage, state.selectedStack, setCanProceed, validateProjectName, hasPackages, hasStacks]);
 
+    // Derive package config defaults from package (edit mode fix)
+    // When editing a project, selectedPackage is pre-set but packageConfigDefaults is not.
+    // This effect populates packageConfigDefaults so store codes (e.g., citisignal_us) are
+    // correctly applied to config.json during project creation/edit.
+    useEffect(() => {
+        // Skip if no package selected or packages not loaded yet
+        if (!state.selectedPackage || !packages || packages.length === 0) return;
+
+        // Skip if packageConfigDefaults is already set
+        if (state.packageConfigDefaults && Object.keys(state.packageConfigDefaults).length > 0) return;
+
+        // Look up package to get its configDefaults
+        const pkg = packages.find(p => p.id === state.selectedPackage);
+        if (!pkg?.configDefaults) return;
+
+        // Set packageConfigDefaults (store codes, etc.)
+        updateState({
+            packageConfigDefaults: pkg.configDefaults,
+        });
+    }, [state.selectedPackage, packages, state.packageConfigDefaults, updateState]);
+
     // Derive EDS template config from package (source of truth)
     // Template info (templateOwner, templateRepo, contentSource, patches) is determined
     // by brand + stack combination, not stored per-project.
