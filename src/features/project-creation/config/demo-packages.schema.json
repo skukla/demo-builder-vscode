@@ -146,6 +146,32 @@
             "minLength": 1
           },
           "description": "Array of content patch IDs to apply during DA.live content copy"
+        },
+        "contentPatchSource": {
+          "$ref": "#/definitions/contentPatchSource",
+          "description": "External repository for content patches (if not using bundled patches)"
+        }
+      }
+    },
+    "contentPatchSource": {
+      "type": "object",
+      "description": "External GitHub repository for content patches",
+      "required": ["owner", "repo", "path"],
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub owner/organization of the patch repository"
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub repository name"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path within repo to patch directory (contains index.json and patch files)"
         }
       }
     },

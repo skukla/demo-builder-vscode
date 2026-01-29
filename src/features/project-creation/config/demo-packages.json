@@ -47,21 +47,26 @@
           "tags": ["eds", "citisignal", "paas"],
           "source": {
             "type": "git",
-            "url": "https://github.com/demo-system-stores/accs-citisignal",
+            "url": "https://github.com/skukla/citisignal-eds-boilerplate",
             "branch": "main",
             "gitOptions": {
               "shallow": true,
               "recursive": false
             }
           },
-          "templateOwner": "demo-system-stores",
-          "templateRepo": "accs-citisignal",
+          "templateOwner": "skukla",
+          "templateRepo": "citisignal-eds-boilerplate",
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
           },
-          "patches": ["header-nav-tools-defensive", "aem-assets-sku-sanitization", "product-link-sku-encoding", "product-link-sku-slash-encoding", "personalization-auth-guard"],
-          "contentPatches": ["index-product-teaser-sku", "phones-product-teaser-sku", "phones-heading-reorder", "smart-watches-category-id", "smart-watches-url-path"]
+          "patches": [],
+          "contentPatches": ["index-product-teaser-sku", "phones-product-teaser-sku", "phones-heading-reorder", "smart-watches-category-id", "smart-watches-url-path"],
+          "contentPatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-content-patches",
+            "path": "citisignal"
+          }
         },
         "eds-accs": {
           "name": "CitiSignal EDS + ACCS",
@@ -71,21 +76,26 @@
           "tags": ["eds", "citisignal", "accs"],
           "source": {
             "type": "git",
-            "url": "https://github.com/demo-system-stores/accs-citisignal",
+            "url": "https://github.com/skukla/citisignal-eds-boilerplate",
             "branch": "main",
             "gitOptions": {
               "shallow": true,
               "recursive": false
             }
           },
-          "templateOwner": "demo-system-stores",
-          "templateRepo": "accs-citisignal",
+          "templateOwner": "skukla",
+          "templateRepo": "citisignal-eds-boilerplate",
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
           },
-          "patches": ["header-nav-tools-defensive", "aem-assets-sku-sanitization", "product-link-sku-encoding", "product-link-sku-slash-encoding", "personalization-auth-guard"],
-          "contentPatches": ["index-product-teaser-sku", "phones-product-teaser-sku", "phones-heading-reorder", "smart-watches-category-id", "smart-watches-url-path"]
+          "patches": [],
+          "contentPatches": ["index-product-teaser-sku", "phones-product-teaser-sku", "phones-heading-reorder", "smart-watches-category-id", "smart-watches-url-path"],
+          "contentPatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-content-patches",
+            "path": "citisignal"
+          }
         }
       }
     },

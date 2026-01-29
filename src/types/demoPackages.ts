@@ -59,6 +59,22 @@ export interface DaLiveContentSource {
 }
 
 /**
+ * ContentPatchSource - External repository for content patches
+ *
+ * Allows content patches to be fetched from an external GitHub repository
+ * instead of being bundled with the extension. This decouples patch maintenance
+ * from the Demo Builder release cycle.
+ */
+export interface ContentPatchSource {
+    /** GitHub owner/organization of the patch repository */
+    owner: string;
+    /** GitHub repository name */
+    repo: string;
+    /** Path within repo to patch directory (contains index.json and patch files) */
+    path: string;
+}
+
+/**
  * Storefront - A storefront variant within a package
  *
  * Storefronts are keyed by stack ID (e.g., 'headless-paas', 'eds-paas')
@@ -89,6 +105,8 @@ export interface Storefront {
     patches?: string[];
     /** Content patch IDs to apply during DA.live content copy */
     contentPatches?: string[];
+    /** External repository for content patches (if not using bundled patches) */
+    contentPatchSource?: ContentPatchSource;
 }
 
 /**

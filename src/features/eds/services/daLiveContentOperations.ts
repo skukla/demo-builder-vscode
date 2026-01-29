@@ -15,6 +15,7 @@ import * as path from 'path';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
+import type { ContentPatchSource } from '@/types/demoPackages';
 import {
     DaLiveError,
     DaLiveAuthError,
@@ -324,6 +325,7 @@ export class DaLiveContentOperations {
      * the full page wrapper, then transforms and wraps it in document structure.
      *
      * @param contentPatchIds - Optional content patch IDs to apply to HTML content
+     * @param contentPatchSource - Optional external source for content patches
      */
     private async copySingleFile(
         token: string,
@@ -332,6 +334,7 @@ export class DaLiveContentOperations {
         destination: { org: string; site: string },
         destPath: string,
         contentPatchIds?: string[],
+        contentPatchSource?: ContentPatchSource,
     ): Promise<boolean> {
         const sourceBaseUrl = `https://main--${source.site}--${source.org}.aem.live`;
 
@@ -406,11 +409,12 @@ export class DaLiveContentOperations {
                     // Apply content patches if any match this page path
                     if (contentPatchIds && contentPatchIds.length > 0) {
                         const { applyContentPatches } = await import('./contentPatchRegistry');
-                        const { html: patchedHtml, results } = applyContentPatches(
+                        const { html: patchedHtml, results } = await applyContentPatches(
                             htmlText,
                             sourcePath,
                             contentPatchIds,
                             this.logger,
+                            contentPatchSource,
                         );
                         htmlText = patchedHtml;
 
@@ -1145,6 +1149,8 @@ export class DaLiveContentOperations {
      * @param destOrg - Destination organization
      * @param destSite - Destination site
      * @param progressCallback - Optional progress callback
+     * @param contentPatchIds - Optional content patch IDs to apply
+     * @param contentPatchSource - Optional external source for content patches
      * @returns Copy result
      */
     async copyContentFromSource(
@@ -1153,6 +1159,7 @@ export class DaLiveContentOperations {
         destSite: string,
         progressCallback?: DaLiveProgressCallback,
         contentPatchIds?: string[],
+        contentPatchSource?: ContentPatchSource,
     ): Promise<DaLiveCopyResult> {
         // Report initialization progress
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Fetching content index...' });
@@ -1238,6 +1245,7 @@ export class DaLiveContentOperations {
                         { org: destOrg, site: destSite },
                         sourcePath,
                         contentPatchIds,
+                        contentPatchSource,
                     );
                     return { path: sourcePath, success };
                 }),

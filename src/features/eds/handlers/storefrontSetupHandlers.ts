@@ -100,6 +100,12 @@ interface StorefrontSetupStartPayload {
         patches?: string[];
         // Content patch IDs to apply during DA.live content copy (from demo-packages.json storefronts)
         contentPatches?: string[];
+        // External source for content patches (from demo-packages.json storefronts)
+        contentPatchSource?: {
+            owner: string;
+            repo: string;
+            path: string;
+        };
         // GitHub auth info from Connect Services step
         githubAuth?: {
             isAuthenticated?: boolean;
@@ -935,6 +941,7 @@ async function executeStorefrontSetupPhases(
                     });
                 },
                 edsConfig.contentPatches,
+                edsConfig.contentPatchSource,
             );
 
             if (!contentResult.success) {

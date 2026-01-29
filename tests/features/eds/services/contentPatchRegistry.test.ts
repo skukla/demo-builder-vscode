@@ -2,14 +2,17 @@
  * Tests for Content Patch Registry
  *
  * Validates loading, matching, and applying content patches to HTML content.
+ * Tests both local (bundled) patches and external (fetched) patches.
  */
 
 import {
     CONTENT_PATCHES,
     getContentPatchById,
     applyContentPatches,
+    getContentPatches,
 } from '@/features/eds/services/contentPatchRegistry';
 import type { Logger } from '@/types';
+import type { ContentPatchSource } from '@/types/demoPackages';
 
 // Mock logger
 const mockLogger: Logger = {
@@ -60,16 +63,16 @@ describe('getContentPatchById', () => {
 });
 
 describe('applyContentPatches', () => {
-    it('returns unmodified HTML when no patch IDs provided', () => {
+    it('returns unmodified HTML when no patch IDs provided', async () => {
         const html = '<div>Orchard7</div>';
-        const result = applyContentPatches(html, '/', [], mockLogger);
+        const result = await applyContentPatches(html, '/', [], mockLogger);
         expect(result.html).toBe(html);
         expect(result.results).toEqual([]);
     });
 
-    it('applies matching patch to correct page path', () => {
+    it('applies matching patch to correct page path', async () => {
         const html = '<div>Orchard7</div>';
-        const result = applyContentPatches(
+        const result = await applyContentPatches(
             html,
             '/',
             ['index-product-teaser-sku'],
@@ -81,9 +84,9 @@ describe('applyContentPatches', () => {
         expect(result.results[0].patchId).toBe('index-product-teaser-sku');
     });
 
-    it('skips patch when page path does not match', () => {
+    it('skips patch when page path does not match', async () => {
         const html = '<div>Orchard7</div>';
-        const result = applyContentPatches(
+        const result = await applyContentPatches(
             html,
             '/about',
             ['index-product-teaser-sku'],
@@ -93,9 +96,9 @@ describe('applyContentPatches', () => {
         expect(result.results).toEqual([]);
     });
 
-    it('reports not applied when search pattern not found', () => {
+    it('reports not applied when search pattern not found', async () => {
         const html = '<div>no match here</div>';
-        const result = applyContentPatches(
+        const result = await applyContentPatches(
             html,
             '/',
             ['index-product-teaser-sku'],
@@ -107,10 +110,10 @@ describe('applyContentPatches', () => {
         expect(result.results[0].reason).toContain('not found');
     });
 
-    it('applies multiple patches to different pages', () => {
+    it('applies multiple patches to different pages', async () => {
         // Test /phones page
         const phonesHtml = '<div>Orchard1-1</div>';
-        const phonesResult = applyContentPatches(
+        const phonesResult = await applyContentPatches(
             phonesHtml,
             '/phones',
             ['index-product-teaser-sku', 'phones-product-teaser-sku'],
@@ -122,9 +125,9 @@ describe('applyContentPatches', () => {
         expect(phonesResult.results[0].patchId).toBe('phones-product-teaser-sku');
     });
 
-    it('warns about unknown patch IDs', () => {
+    it('warns about unknown patch IDs', async () => {
         const html = '<div>Orchard7</div>';
-        applyContentPatches(
+        await applyContentPatches(
             html,
             '/',
             ['index-product-teaser-sku', 'unknown-patch'],
@@ -135,9 +138,9 @@ describe('applyContentPatches', () => {
         );
     });
 
-    it('applies smart-watches category patch', () => {
+    it('applies smart-watches category patch', async () => {
         const html = '<div class="product-list-page"><p>38</p></div>';
-        const result = applyContentPatches(
+        const result = await applyContentPatches(
             html,
             '/smart-watches',
             ['smart-watches-category-id'],
@@ -147,9 +150,9 @@ describe('applyContentPatches', () => {
         expect(result.results[0].applied).toBe(true);
     });
 
-    it('applies smart-watches url-path patch', () => {
+    it('applies smart-watches url-path patch', async () => {
         const html = '<div><div>urlPath</div>\n      <div>smart-watches</div></div>';
-        const result = applyContentPatches(
+        const result = await applyContentPatches(
             html,
             '/smart-watches',
             ['smart-watches-url-path'],
@@ -159,7 +162,7 @@ describe('applyContentPatches', () => {
         expect(result.results[0].applied).toBe(true);
     });
 
-    it('applies phones heading reorder patch', () => {
+    it('applies phones heading reorder patch', async () => {
         const html = [
             '<div>',
             '  <div class="product-list-page">',
@@ -176,7 +179,7 @@ describe('applyContentPatches', () => {
             '  <div class="enrichment">',
             '</div>',
         ].join('\n');
-        const result = applyContentPatches(
+        const result = await applyContentPatches(
             html,
             '/phones',
             ['phones-heading-reorder'],
@@ -184,5 +187,80 @@ describe('applyContentPatches', () => {
         );
         expect(result.html).toContain('<h1 id="phones">Phones</h1>\n  <div class="product-list-page">');
         expect(result.results[0].applied).toBe(true);
+    });
+});
+
+describe('getContentPatches', () => {
+    it('returns local patches when no source provided', async () => {
+        const patches = await getContentPatches(
+            ['index-product-teaser-sku', 'phones-product-teaser-sku'],
+            undefined,
+            mockLogger,
+        );
+        expect(patches).toHaveLength(2);
+        expect(patches.map(p => p.id)).toContain('index-product-teaser-sku');
+        expect(patches.map(p => p.id)).toContain('phones-product-teaser-sku');
+    });
+
+    it('returns empty array for unknown patch IDs', async () => {
+        const patches = await getContentPatches(
+            ['nonexistent-patch'],
+            undefined,
+            mockLogger,
+        );
+        expect(patches).toHaveLength(0);
+    });
+
+    it('filters out unknown IDs while keeping known ones', async () => {
+        const patches = await getContentPatches(
+            ['index-product-teaser-sku', 'nonexistent-patch'],
+            undefined,
+            mockLogger,
+        );
+        expect(patches).toHaveLength(1);
+        expect(patches[0].id).toBe('index-product-teaser-sku');
+    });
+});
+
+describe('applyContentPatches with external source', () => {
+    // Mock fetch for external patches
+    const originalFetch = global.fetch;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    afterEach(() => {
+        global.fetch = originalFetch;
+    });
+
+    it('falls back to local patches when external fetch fails', async () => {
+        // Mock fetch to fail
+        global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+
+        const source: ContentPatchSource = {
+            owner: 'test-owner',
+            repo: 'test-repo',
+            path: 'patches',
+        };
+
+        const html = '<div>Orchard7</div>';
+        const result = await applyContentPatches(
+            html,
+            '/',
+            ['index-product-teaser-sku'],
+            mockLogger,
+            source,
+        );
+
+        // Should fall back to local patches
+        expect(result.html).toBe('<div>apple-iphone-se/iphone-se</div>');
+        expect(result.results).toHaveLength(1);
+        expect(result.results[0].applied).toBe(true);
+
+        // Should log warning about fallback
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('External fetch failed'),
+        );
     });
 });
