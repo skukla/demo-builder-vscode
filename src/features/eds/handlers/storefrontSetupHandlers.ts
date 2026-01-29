@@ -882,6 +882,9 @@ async function executeStorefrontSetupPhases(
         // ============================================
         // Phase 4: DA.live Content Population
         // ============================================
+        // Track library paths for explicit publishing (may be missed by publishAllSiteContent)
+        let libraryPaths: string[] = [];
+
         if (resolvedEdsConfig.skipContent) {
             // Skip content copy when using existing content
             logger.info('[Storefront Setup] Skipping DA.live content copy (skipContent=true)');
@@ -938,6 +941,34 @@ async function executeStorefrontSetupPhases(
                 message: 'Content populated',
                 progress: 60,
             });
+
+            // ============================================
+            // Phase 4b: Configure Block Library (non-blocking)
+            // ============================================
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'content-copy',
+                message: 'Configuring block library...',
+                progress: 61,
+            });
+
+            const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
+                edsConfig.daLiveOrg,
+                edsConfig.daLiveSite,
+                templateOwner,
+                templateRepo,
+                (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
+            );
+            if (libResult.blocksCount > 0) {
+                logger.info(`[Storefront Setup] Block library: ${libResult.blocksCount} blocks configured`);
+                await context.sendMessage('storefront-setup-progress', {
+                    phase: 'content-copy',
+                    message: `Block library configured (${libResult.blocksCount} blocks)`,
+                    progress: 62,
+                });
+            }
+
+            // Store library paths for explicit publishing later
+            libraryPaths = libResult.paths;
         }
 
         // ============================================
@@ -984,6 +1015,25 @@ async function executeStorefrontSetupPhases(
                     undefined,
                     onPublishProgress,
                 );
+
+                // Explicitly publish block library paths (may be missed due to .da folder)
+                if (libraryPaths.length > 0) {
+                    await context.sendMessage('storefront-setup-progress', {
+                        phase: 'content-publish',
+                        message: 'Publishing block library...',
+                        progress: 88,
+                    });
+
+                    logger.debug(`[Storefront Setup] Publishing ${libraryPaths.length} block library paths`);
+                    for (const libPath of libraryPaths) {
+                        try {
+                            await helixService.previewAndPublishPage(repoOwner, repoName, libPath, 'main');
+                        } catch (libPublishError) {
+                            logger.debug(`[Storefront Setup] Failed to publish ${libPath}: ${(libPublishError as Error).message}`);
+                        }
+                    }
+                }
+
                 logger.info('[Storefront Setup] Content published to CDN successfully');
             } catch (error) {
                 throw new Error(`Failed to publish content to CDN: ${(error as Error).message}`);

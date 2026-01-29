@@ -12,6 +12,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import {
@@ -644,7 +645,7 @@ export class DaLiveContentOperations {
         const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${normalized}`;
 
         const formData = new FormData();
-        formData.append('content', new Blob([content], { type: 'text/html' }));
+        formData.append('data', new Blob([content], { type: 'text/html' }));
         if (options.overwrite) formData.append('overwrite', 'true');
 
         const response = await this.fetchWithRetry(url, {
@@ -659,6 +660,459 @@ export class DaLiveContentOperations {
             return { success: false, path: resultPath, error: 'Document already exists. Use overwrite option to replace.' };
         }
         return { success: false, path: resultPath, error: `Failed to create source: ${response.status} ${response.statusText}` };
+    }
+
+    /**
+     * Delete source content
+     * @param org - Organization name
+     * @param site - Site name
+     * @param path - Content path to delete
+     * @returns Result with success status
+     */
+    async deleteSource(
+        org: string,
+        site: string,
+        path: string,
+    ): Promise<{ success: boolean; error?: string }> {
+        const token = await this.getImsToken();
+        const normalized = normalizePath(path);
+        const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${normalized}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+
+            // 200/204 = deleted, 404 = already doesn't exist (both are success)
+            if (response.ok || response.status === 404) {
+                return { success: true };
+            }
+
+            return { success: false, error: `Failed to delete: ${response.status} ${response.statusText}` };
+        } catch (error) {
+            return { success: false, error: (error as Error).message };
+        }
+    }
+
+    /**
+     * Create a JSON spreadsheet in DA.live's native format
+     *
+     * DA.live stores spreadsheets as .json files with a specific format.
+     * This method creates the JSON directly and uploads it.
+     *
+     * @param org - Organization name
+     * @param site - Site name
+     * @param destPath - Destination path (without extension - .json will be added)
+     * @param headers - Column headers (will be used as keys in data objects)
+     * @param rows - Array of row data (each row is an object with keys matching headers)
+     * @param options - Options {overwrite}
+     * @returns Result with success status and path
+     */
+    async createJsonSpreadsheet(
+        org: string,
+        site: string,
+        destPath: string,
+        headers: string[],
+        rows: Array<Record<string, string>>,
+        options: { overwrite?: boolean } = {},
+    ): Promise<DaLiveSourceResult> {
+        const token = await this.getImsToken();
+
+        // Create DA.live native JSON spreadsheet format
+        const spreadsheetJson = {
+            data: {
+                total: rows.length,
+                limit: rows.length,
+                offset: 0,
+                data: rows,
+                ':colWidths': headers.map(() => 300), // Default column widths
+            },
+            ':names': ['data'],
+            ':version': 3,
+            ':type': 'multi-sheet',
+        };
+
+        // Upload with .json extension
+        const normalized = normalizePath(destPath);
+        const jsonPath = normalized.endsWith('.json') ? normalized : `${normalized}.json`;
+        const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${jsonPath}`;
+
+        const formData = new FormData();
+        formData.append('data', new Blob([JSON.stringify(spreadsheetJson)], {
+            type: 'application/json',
+        }));
+        if (options.overwrite) formData.append('overwrite', 'true');
+
+        const response = await this.fetchWithRetry(url, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+        });
+
+        const resultPath = `/${jsonPath}`;
+        if (response.ok) return { success: true, path: resultPath };
+        if (response.status === 409) {
+            return { success: false, path: resultPath, error: 'Document already exists. Use overwrite option to replace.' };
+        }
+        return { success: false, path: resultPath, error: `Failed to create spreadsheet: ${response.status} ${response.statusText}` };
+    }
+
+    /**
+     * Create block library from a template's component-definition.json
+     *
+     * Fetches component-definition.json from the template repo, extracts blocks,
+     * and creates library configuration in DA.live. Non-blocking - returns
+     * gracefully if template has no blocks or file doesn't exist.
+     *
+     * @param org - Destination DA.live organization (user's site)
+     * @param site - Destination DA.live site (user's site)
+     * @param templateOwner - GitHub owner of template repo
+     * @param templateRepo - GitHub repo name of template
+     * @param getFileContent - Function to fetch file from GitHub (from GitHubFileOperations)
+     * @returns Result with success status, block count, and paths created (for publishing)
+     */
+    async createBlockLibraryFromTemplate(
+        org: string,
+        site: string,
+        templateOwner: string,
+        templateRepo: string,
+        getFileContent: (owner: string, repo: string, path: string) => Promise<{ content: string; sha: string } | null>,
+    ): Promise<{ success: boolean; blocksCount: number; paths: string[]; error?: string }> {
+        try {
+            const componentDef = await getFileContent(templateOwner, templateRepo, 'component-definition.json');
+
+            if (!componentDef?.content) {
+                this.logger.debug('[DA.live] No component-definition.json in template');
+                return { success: true, blocksCount: 0, paths: [] };
+            }
+
+            // GitHubFileOperations.getFileContent already decodes base64
+            const parsed = JSON.parse(componentDef.content);
+            const blocksGroup = parsed.groups?.find((g: { id: string }) => g.id === 'blocks');
+
+            const blocks = blocksGroup?.components?.map((c: {
+                title: string;
+                id: string;
+                plugins?: { da?: { unsafeHTML?: string } };
+            }) => ({
+                title: c.title,
+                id: c.id,
+                exampleHtml: c.plugins?.da?.unsafeHTML,
+            })) ?? [];
+
+            if (blocks.length === 0) {
+                this.logger.debug('[DA.live] No blocks found in component-definition.json');
+                return { success: true, blocksCount: 0, paths: [] };
+            }
+
+            return await this.createBlockLibrary(org, site, blocks);
+        } catch (error) {
+            this.logger.warn(`[DA.live] Block library from template failed: ${(error as Error).message}`);
+            return { success: false, blocksCount: 0, paths: [], error: (error as Error).message };
+        }
+    }
+
+    /**
+     * Create block library configuration in DA.live
+     *
+     * Creates:
+     * 1. /.da/config - Config sheet with library tab pointing to /library/blocks.json
+     * 2. /.da/library/blocks.json - Spreadsheet listing all blocks with paths to docs
+     *
+     * DA.live path mapping: /library/ → /.da/library/ internally
+     * Config references /library/blocks.json but files are stored at /.da/library/
+     *
+     * @param org - Destination organization (user's site)
+     * @param site - Destination site name (user's site)
+     * @param blocks - Array of block definitions
+     * @returns Result with success status, block count, and paths created (for publishing)
+     */
+    private async createBlockLibrary(
+        org: string,
+        site: string,
+        blocks: Array<{ title: string; id: string; exampleHtml?: string }>,
+    ): Promise<{ success: boolean; blocksCount: number; paths: string[]; error?: string }> {
+        if (blocks.length === 0) {
+            return { success: true, blocksCount: 0, paths: [] };
+        }
+
+        try {
+            // Step 1: Update site config via /config/ API
+            // The config API is a special endpoint that manages /.da/config
+            // This is NOT the same as creating a file via /source/
+            // The config automatically syncs to CDN without needing preview/publish
+            const configResult = await this.updateSiteConfig(org, site, [
+                {
+                    title: 'Blocks',
+                    // Path points to the blocks spreadsheet we'll create
+                    path: `https://content.da.live/${org}/${site}/.da/library/blocks.json`,
+                },
+            ]);
+            if (!configResult.success) {
+                this.logger.warn(`[DA.live] Failed to update config: ${configResult.error}`);
+                // Continue - blocks spreadsheet is still useful
+            }
+
+            // Step 2: Delete any existing blocks spreadsheet files
+            // Keep the blocks/ folder - it contains block documentation pages from template
+            await this.deleteSource(org, site, '.da/library/blocks.json');
+            await this.deleteSource(org, site, '.da/library/blocks.html');
+            await this.deleteSource(org, site, '.da/library/blocks.xlsx');
+
+            // Step 3: Create /.da/library/blocks.json spreadsheet
+            // Block paths point to /.da/library/blocks/{id} where template docs are copied
+            const blocksResult = await this.createJsonSpreadsheet(
+                org,
+                site,
+                '.da/library/blocks',
+                ['name', 'path'],
+                blocks.map((b) => ({
+                    name: b.title,
+                    path: `https://content.da.live/${org}/${site}/.da/library/blocks/${b.id}`,
+                })),
+                { overwrite: true },
+            );
+            if (!blocksResult.success) {
+                return { success: false, blocksCount: 0, paths: [], error: 'Failed to create /.da/library/blocks.json' };
+            }
+
+            this.logger.info(`[DA.live] Block library created: ${blocks.length} blocks in ${org}/${site}`);
+
+            // Verify all library files and get list of blocks with documentation pages
+            const existingBlockIds = await this.verifyBlockLibrary(org, site, blocks);
+
+            // Return paths for preview/publish
+            // - Config: handled by /config/ API, no preview/publish needed
+            // - Blocks spreadsheet: needs preview/publish with .json extension
+            // - Block docs: only include blocks that have documentation pages
+            const paths: string[] = [
+                '.da/library/blocks.json', // Spreadsheet - use .json extension for Helix
+            ];
+
+            // Add block document paths only for blocks that have docs
+            // (not all blocks in component-definition.json have documentation pages)
+            for (const blockId of existingBlockIds) {
+                paths.push(`.da/library/blocks/${blockId}`);
+            }
+
+            return { success: true, blocksCount: blocks.length, paths };
+        } catch (error) {
+            this.logger.error(`[DA.live] Block library creation failed: ${(error as Error).message}`);
+            return { success: false, blocksCount: 0, paths: [], error: (error as Error).message };
+        }
+    }
+
+    /**
+     * Verify block library files were created correctly
+     *
+     * Checks that all expected files exist:
+     * 1. Config has library entry (via /config/ API)
+     * 2. Blocks spreadsheet exists at /.da/library/blocks.json
+     * 3. Block documentation pages exist at /.da/library/blocks/{id}
+     *
+     * Logs detailed results to debug channel for troubleshooting.
+     *
+     * @param org - Organization name
+     * @param site - Site name
+     * @param blocks - Array of block definitions that should have been created
+     * @returns Array of block IDs that have documentation pages (for filtering publish paths)
+     */
+    private async verifyBlockLibrary(
+        org: string,
+        site: string,
+        blocks: Array<{ title: string; id: string; exampleHtml?: string }>,
+    ): Promise<string[]> {
+        const token = await this.getImsToken();
+        const verificationResults: {
+            config: { exists: boolean; hasLibrary: boolean; error?: string };
+            blocksSheet: { exists: boolean; error?: string };
+            blockDocs: Array<{ id: string; exists: boolean; error?: string }>;
+        } = {
+            config: { exists: false, hasLibrary: false },
+            blocksSheet: { exists: false },
+            blockDocs: [],
+        };
+
+        // 1. Verify config has library entry
+        try {
+            const configResponse = await fetch(`${DA_LIVE_BASE_URL}/config/${org}/${site}`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+
+            if (configResponse.ok) {
+                verificationResults.config.exists = true;
+                const configData = await configResponse.json();
+                // Check if library sheet exists and has entries
+                const hasLibrary = configData.library?.data?.length > 0;
+                verificationResults.config.hasLibrary = hasLibrary;
+            } else {
+                verificationResults.config.error = `HTTP ${configResponse.status}`;
+            }
+        } catch (error) {
+            verificationResults.config.error = (error as Error).message;
+        }
+
+        // 2. Verify blocks spreadsheet exists
+        try {
+            const blocksSheetUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/.da/library/blocks.json`;
+            const blocksResponse = await fetch(blocksSheetUrl, {
+                method: 'HEAD',
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+
+            verificationResults.blocksSheet.exists = blocksResponse.ok;
+            if (!blocksResponse.ok) {
+                verificationResults.blocksSheet.error = `HTTP ${blocksResponse.status}`;
+            }
+        } catch (error) {
+            verificationResults.blocksSheet.error = (error as Error).message;
+        }
+
+        // 3. Verify block documentation pages exist
+        // Note: Block docs are copied from template during content copy phase,
+        // so they may not exist yet if this is called before content copy completes.
+        // We check them anyway for completeness.
+        for (const block of blocks) {
+            try {
+                const blockDocUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/.da/library/blocks/${block.id}.html`;
+                const blockResponse = await fetch(blockDocUrl, {
+                    method: 'HEAD',
+                    headers: { Authorization: `Bearer ${token}` },
+                    signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+                });
+
+                verificationResults.blockDocs.push({
+                    id: block.id,
+                    exists: blockResponse.ok,
+                    error: blockResponse.ok ? undefined : `HTTP ${blockResponse.status}`,
+                });
+            } catch (error) {
+                verificationResults.blockDocs.push({
+                    id: block.id,
+                    exists: false,
+                    error: (error as Error).message,
+                });
+            }
+        }
+
+        // Log detailed verification results to debug channel
+        this.logger.debug(`[DA.live] Block Library Verification for ${org}/${site}:`);
+        this.logger.debug(`  Config: exists=${verificationResults.config.exists}, hasLibrary=${verificationResults.config.hasLibrary}${verificationResults.config.error ? `, error=${verificationResults.config.error}` : ''}`);
+        this.logger.debug(`  Blocks Sheet (.da/library/blocks.json): exists=${verificationResults.blocksSheet.exists}${verificationResults.blocksSheet.error ? `, error=${verificationResults.blocksSheet.error}` : ''}`);
+
+        const existingDocs = verificationResults.blockDocs.filter(d => d.exists);
+        const missingDocs = verificationResults.blockDocs.filter(d => !d.exists);
+
+        this.logger.debug(`  Block Docs: ${existingDocs.length}/${blocks.length} found`);
+        if (existingDocs.length > 0) {
+            this.logger.debug(`    Found: ${existingDocs.map(d => d.id).join(', ')}`);
+        }
+        if (missingDocs.length > 0) {
+            // Note: Missing docs are expected - not all blocks in component-definition.json have docs
+            this.logger.debug(`    No docs (normal for sub-blocks): ${missingDocs.map(d => d.id).join(', ')}`);
+        }
+
+        // Return IDs of blocks that have documentation pages
+        return existingDocs.map(d => d.id);
+    }
+
+    /**
+     * Update site config via DA.live /config/ API
+     *
+     * The /config/ API is a special endpoint for managing site configuration.
+     * It handles the /.da/config file and automatically syncs to CDN.
+     * This is different from creating files via /source/ endpoint.
+     *
+     * @param org - Organization name
+     * @param site - Site name
+     * @param libraryEntries - Array of library entries with title and path
+     * @returns Result with success status
+     */
+    private async updateSiteConfig(
+        org: string,
+        site: string,
+        libraryEntries: Array<{ title: string; path: string }>,
+    ): Promise<{ success: boolean; error?: string }> {
+        const token = await this.getImsToken();
+
+        // First, get existing config to preserve other settings
+        let existingConfig: Record<string, unknown> = {};
+        try {
+            const getResponse = await fetch(`${DA_LIVE_BASE_URL}/config/${org}/${site}`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+            if (getResponse.ok) {
+                existingConfig = await getResponse.json();
+            }
+        } catch {
+            // No existing config, start fresh
+        }
+
+        // Build updated config with library entries
+        // Preserve existing data sheet, update library sheet
+        const configData = {
+            ...existingConfig,
+            data: (existingConfig.data as Record<string, unknown>) || {
+                total: 1,
+                offset: 0,
+                limit: 1,
+                data: [{}],
+            },
+            library: {
+                total: libraryEntries.length,
+                offset: 0,
+                limit: libraryEntries.length,
+                data: libraryEntries.map((entry) => ({
+                    title: entry.title,
+                    path: entry.path,
+                    format: '',
+                    ref: '',
+                    icon: '',
+                    experience: '',
+                })),
+            },
+            ':version': 3,
+            ':names': ['data', 'library'],
+            ':type': 'multi-sheet',
+        };
+
+        // POST to /config/ API endpoint using FormData
+        // DA.live expects the config as form data with a "config" field containing JSON
+        const url = `${DA_LIVE_BASE_URL}/config/${org}/${site}`;
+        const formData = new FormData();
+        formData.append('config', JSON.stringify(configData));
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    // Note: Don't set Content-Type - fetch sets it automatically with boundary for FormData
+                },
+                body: formData,
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+
+            if (response.ok) {
+                this.logger.debug(`[DA.live] Config updated for ${org}/${site}`);
+                return { success: true };
+            }
+
+            const errorText = await response.text().catch(() => '');
+            return {
+                success: false,
+                error: `Failed to update config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
+            };
+        } catch (error) {
+            return { success: false, error: `Config API error: ${(error as Error).message}` };
+        }
     }
 
     /**
@@ -716,6 +1170,18 @@ export class DaLiveContentOperations {
             this.logger.info(`[DA.live] Filtered ${filteredCount} product overlay paths`);
         }
 
+        // Filter out ONLY the .da/library/blocks spreadsheet - we generate our own with correct paths
+        // The template's spreadsheet has paths pointing to the template site, not the user's site
+        // Note: The index may appear as /.da/library/blocks or /.da/library/blocks.json in full-index.json
+        // BUT: Keep the individual block documentation pages (/.da/library/blocks/hero, etc.)
+        // which contain example HTML and should be copied from the template
+        const libraryIndexPaths = ['/.da/library/blocks', '/.da/library/blocks.json'];
+        const preLibraryCount = contentPaths.length;
+        contentPaths = contentPaths.filter(p => !libraryIndexPaths.includes(p));
+        if (contentPaths.length < preLibraryCount) {
+            this.logger.info(`[DA.live] Excluded library index (will be generated with correct paths)`);
+        }
+
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Checking configurations...' });
 
         // Add essential root-level spreadsheets that may not be in the content index
@@ -746,8 +1212,11 @@ export class DaLiveContentOperations {
         const totalFiles = contentPaths.length;
 
         // Copy files in parallel batches for improved performance (~5x faster)
+        const contentStart = Date.now();
         for (let i = 0; i < contentPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
             const batch = contentPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
+            const batchNum = Math.floor(i / CONTENT_COPY_BATCH_SIZE) + 1;
+            const batchStart = Date.now();
 
             // Report progress at batch start
             if (progressCallback) {
@@ -774,6 +1243,8 @@ export class DaLiveContentOperations {
                 }),
             );
 
+            this.logger.debug(`[DA.live] Content batch ${batchNum}: ${batch.length} files in ${formatDuration(Date.now() - batchStart)}`);
+
             // Track results
             for (const result of results) {
                 if (result.success) {
@@ -783,6 +1254,7 @@ export class DaLiveContentOperations {
                 }
             }
         }
+        this.logger.debug(`[DA.live] Content copy total: ${totalFiles} files in ${formatDuration(Date.now() - contentStart)}`);
 
         // Final progress update
         if (progressCallback) {
@@ -870,8 +1342,11 @@ export class DaLiveContentOperations {
         const totalFiles = mediaPaths.length;
 
         // Copy media files in parallel batches for improved performance (~5x faster)
+        const mediaStart = Date.now();
         for (let i = 0; i < mediaPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
             const batch = mediaPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
+            const batchNum = Math.floor(i / CONTENT_COPY_BATCH_SIZE) + 1;
+            const batchStart = Date.now();
 
             // Report progress at batch start
             if (progressCallback) {
@@ -897,6 +1372,8 @@ export class DaLiveContentOperations {
                 }),
             );
 
+            this.logger.debug(`[DA.live] Media batch ${batchNum}: ${batch.length} files in ${formatDuration(Date.now() - batchStart)}`);
+
             // Track results
             for (const result of results) {
                 if (result.success) {
@@ -906,6 +1383,7 @@ export class DaLiveContentOperations {
                 }
             }
         }
+        this.logger.debug(`[DA.live] Media copy total: ${totalFiles} files in ${formatDuration(Date.now() - mediaStart)}`);
 
         // Final progress update
         if (progressCallback) {

@@ -762,6 +762,352 @@ describe('DaLiveContentOperations', () => {
     });
 });
 
+describe('createBlockLibraryFromTemplate', () => {
+    let service: DaLiveContentOperations;
+    let mockTokenProvider: TokenProvider;
+    let mockLogger: Logger;
+    let mockGetFileContent: jest.Mock;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+
+        mockTokenProvider = {
+            getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
+        };
+
+        mockLogger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        } as unknown as Logger;
+
+        service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
+        mockGetFileContent = jest.fn();
+    });
+
+    const destOrg = 'user-org';
+    const destSite = 'user-site';
+    const templateOwner = 'hlxsites';
+    const templateRepo = 'citisignal';
+
+    /**
+     * Helper to create component-definition.json content
+     * Note: GitHubFileOperations.getFileContent returns decoded content (not base64)
+     */
+    function createComponentDef(blocks: Array<{ title: string; id: string; unsafeHTML?: string }>) {
+        const content = {
+            groups: [{
+                id: 'blocks',
+                title: 'Blocks',
+                components: blocks.map(b => ({
+                    title: b.title,
+                    id: b.id,
+                    plugins: b.unsafeHTML ? { da: { unsafeHTML: b.unsafeHTML } } : undefined,
+                })),
+            }],
+        };
+        return JSON.stringify(content);
+    }
+
+    it('should extract blocks from component-definition.json and create library', async () => {
+        // Given: Template with blocks
+        mockGetFileContent.mockResolvedValue({
+            content: createComponentDef([
+                { title: 'Cards', id: 'cards', unsafeHTML: '<div class="cards">Example</div>' },
+                { title: 'Hero', id: 'hero' },
+            ]),
+            sha: 'abc123',
+        });
+        mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({}) } as Response);
+
+        // When: createBlockLibraryFromTemplate is called
+        const result = await service.createBlockLibraryFromTemplate(
+            destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+        );
+
+        // Then: Should fetch component-definition.json and create library
+        expect(mockGetFileContent).toHaveBeenCalledWith(templateOwner, templateRepo, 'component-definition.json');
+        expect(result.success).toBe(true);
+        expect(result.blocksCount).toBe(2);
+
+        // Verify config was updated via /config/ API (not /source/)
+        const configCall = mockFetch.mock.calls.find((call: [string, RequestInit]) =>
+            call[0].includes('/config/') && !call[0].includes('/source/')
+        );
+        expect(configCall).toBeDefined();
+
+        // Verify blocks spreadsheet was created at /.da/library/blocks.json
+        const blocksCall = mockFetch.mock.calls.find((call: [string, RequestInit]) =>
+            call[0].includes('.da/library/blocks.json')
+        );
+        expect(blocksCall).toBeDefined();
+
+        // Should return paths for publishing:
+        // - Blocks spreadsheet with .json extension
+        // - Block document paths for each block
+        expect(result.paths).toContain('.da/library/blocks.json');
+        expect(result.paths).toContain('.da/library/blocks/cards');
+        expect(result.paths).toContain('.da/library/blocks/hero');
+    });
+
+    it('should return success with zero blocks when template has no component-definition.json', async () => {
+        // Given: Template without component-definition.json
+        mockGetFileContent.mockResolvedValue(null);
+
+        // When: createBlockLibraryFromTemplate is called
+        const result = await service.createBlockLibraryFromTemplate(
+            destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+        );
+
+        // Then: Should return success with zero blocks (graceful handling)
+        expect(result.success).toBe(true);
+        expect(result.blocksCount).toBe(0);
+    });
+
+    it('should return success with zero blocks when template has no blocks group', async () => {
+        // Given: Template with component-definition.json but no blocks group
+        const content = { groups: [{ id: 'other', title: 'Other', components: [] }] };
+        mockGetFileContent.mockResolvedValue({
+            content: JSON.stringify(content),
+            sha: 'abc123',
+        });
+
+        // When: createBlockLibraryFromTemplate is called
+        const result = await service.createBlockLibraryFromTemplate(
+            destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+        );
+
+        // Then: Should return success with zero blocks
+        expect(result.success).toBe(true);
+        expect(result.blocksCount).toBe(0);
+    });
+
+    it('should handle getFileContent errors gracefully', async () => {
+        // Given: getFileContent throws an error
+        mockGetFileContent.mockRejectedValue(new Error('GitHub API error'));
+
+        // When: createBlockLibraryFromTemplate is called
+        const result = await service.createBlockLibraryFromTemplate(
+            destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+        );
+
+        // Then: Should return failure but not throw
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('GitHub API error');
+        expect(result.blocksCount).toBe(0);
+    });
+
+    it('should handle DA.live API errors gracefully', async () => {
+        // Given: Template with blocks but DA.live API fails
+        mockGetFileContent.mockResolvedValue({
+            content: createComponentDef([{ title: 'Cards', id: 'cards' }]),
+            sha: 'abc123',
+        });
+        mockFetch.mockResolvedValue({ ok: false, status: 500 } as Response);
+
+        // When: createBlockLibraryFromTemplate is called
+        const result = await service.createBlockLibraryFromTemplate(
+            destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+        );
+
+        // Then: Should return failure
+        expect(result.success).toBe(false);
+        expect(result.blocksCount).toBe(0);
+    });
+
+    describe('verification logging', () => {
+        /**
+         * Helper to create a mock fetch that tracks URL patterns
+         */
+        function createVerificationMockFetch(config: {
+            configExists?: boolean;
+            configHasLibrary?: boolean;
+            blocksSheetExists?: boolean;
+            blockDocsExist?: Record<string, boolean>;
+        }) {
+            const {
+                configExists = true,
+                configHasLibrary = true,
+                blocksSheetExists = true,
+                blockDocsExist = {},
+            } = config;
+
+            return async (url: string, options?: RequestInit) => {
+                // GET config for reading existing config
+                if (url.includes('/config/') && options?.method === 'GET') {
+                    if (configExists) {
+                        return {
+                            ok: true,
+                            status: 200,
+                            json: async () => configHasLibrary ? { library: { data: [{ title: 'Blocks' }] } } : {},
+                        } as Response;
+                    }
+                    return { ok: false, status: 404 } as Response;
+                }
+
+                // POST config
+                if (url.includes('/config/') && options?.method === 'POST') {
+                    return { ok: true, status: 200 } as Response;
+                }
+
+                // DELETE old spreadsheets
+                if (options?.method === 'DELETE') {
+                    return { ok: true, status: 200 } as Response;
+                }
+
+                // POST blocks spreadsheet
+                if (url.includes('.da/library/blocks.json') && options?.method === 'POST') {
+                    return { ok: blocksSheetExists, status: blocksSheetExists ? 200 : 500 } as Response;
+                }
+
+                // HEAD verification requests for blocks spreadsheet
+                if (url.includes('.da/library/blocks.json') && options?.method === 'HEAD') {
+                    return { ok: blocksSheetExists, status: blocksSheetExists ? 200 : 404 } as Response;
+                }
+
+                // HEAD verification requests for block docs
+                if (url.includes('.da/library/blocks/') && options?.method === 'HEAD') {
+                    // Extract block ID from URL (e.g., .da/library/blocks/cards.html -> cards)
+                    const match = url.match(/\.da\/library\/blocks\/([^.]+)\.html/);
+                    if (match) {
+                        const blockId = match[1];
+                        const exists = blockDocsExist[blockId] ?? false;
+                        return { ok: exists, status: exists ? 200 : 404 } as Response;
+                    }
+                }
+
+                return { ok: true, status: 200 } as Response;
+            };
+        }
+
+        it('should log verification results to debug channel after creating block library', async () => {
+            // Given: Template with blocks and successful DA.live API responses
+            mockGetFileContent.mockResolvedValue({
+                content: createComponentDef([
+                    { title: 'Cards', id: 'cards' },
+                    { title: 'Hero', id: 'hero' },
+                ]),
+                sha: 'abc123',
+            });
+            mockFetch.mockImplementation(createVerificationMockFetch({
+                configExists: true,
+                configHasLibrary: true,
+                blocksSheetExists: true,
+                blockDocsExist: { cards: true, hero: true },
+            }));
+
+            // When: createBlockLibraryFromTemplate is called
+            await service.createBlockLibraryFromTemplate(
+                destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+            );
+
+            // Then: Should log verification results to debug channel
+            const debugCalls = (mockLogger.debug as jest.Mock).mock.calls;
+            const verificationLogs = debugCalls.filter((call: string[]) =>
+                call[0].includes('Block Library Verification')
+            );
+            expect(verificationLogs.length).toBeGreaterThan(0);
+
+            // Should log config status
+            const configLog = debugCalls.find((call: string[]) =>
+                call[0].includes('Config:')
+            );
+            expect(configLog).toBeDefined();
+
+            // Should log blocks sheet status
+            const blocksSheetLog = debugCalls.find((call: string[]) =>
+                call[0].includes('Blocks Sheet')
+            );
+            expect(blocksSheetLog).toBeDefined();
+
+            // Should log block docs status
+            const blockDocsLog = debugCalls.find((call: string[]) =>
+                call[0].includes('Block Docs:')
+            );
+            expect(blockDocsLog).toBeDefined();
+        });
+
+        it('should log missing block docs when they do not exist yet', async () => {
+            // Given: Template with blocks but block docs haven't been copied yet
+            mockGetFileContent.mockResolvedValue({
+                content: createComponentDef([
+                    { title: 'Cards', id: 'cards' },
+                    { title: 'Hero', id: 'hero' },
+                ]),
+                sha: 'abc123',
+            });
+            mockFetch.mockImplementation(createVerificationMockFetch({
+                configExists: true,
+                configHasLibrary: true,
+                blocksSheetExists: true,
+                blockDocsExist: { cards: false, hero: false }, // Docs not copied yet
+            }));
+
+            // When: createBlockLibraryFromTemplate is called
+            await service.createBlockLibraryFromTemplate(
+                destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+            );
+
+            // Then: Should log that block docs don't exist (normal for sub-blocks without docs)
+            const debugCalls = (mockLogger.debug as jest.Mock).mock.calls;
+            const missingLog = debugCalls.find((call: string[]) =>
+                call[0].includes('No docs (normal for sub-blocks)')
+            );
+            expect(missingLog).toBeDefined();
+            expect(missingLog[0]).toContain('cards');
+            expect(missingLog[0]).toContain('hero');
+        });
+
+        it('should log config errors when config verification fails', async () => {
+            // Given: Template with blocks but config verification fails
+            mockGetFileContent.mockResolvedValue({
+                content: createComponentDef([{ title: 'Cards', id: 'cards' }]),
+                sha: 'abc123',
+            });
+
+            // Custom mock where config GET fails during verification
+            let verificationPhase = false;
+            mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
+                // First config GET succeeds (during updateSiteConfig)
+                if (url.includes('/config/') && options?.method === 'GET') {
+                    if (!verificationPhase) {
+                        return { ok: true, status: 200, json: async () => ({}) } as Response;
+                    }
+                    // During verification, simulate error
+                    throw new Error('Network timeout');
+                }
+                if (url.includes('/config/') && options?.method === 'POST') {
+                    verificationPhase = true; // Now entering verification phase
+                    return { ok: true, status: 200 } as Response;
+                }
+                if (options?.method === 'DELETE') {
+                    return { ok: true, status: 200 } as Response;
+                }
+                if (url.includes('.da/library/blocks.json')) {
+                    return { ok: true, status: 200 } as Response;
+                }
+                if (url.includes('.da/library/blocks/')) {
+                    return { ok: true, status: 200 } as Response;
+                }
+                return { ok: true, status: 200 } as Response;
+            });
+
+            // When: createBlockLibraryFromTemplate is called
+            await service.createBlockLibraryFromTemplate(
+                destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+            );
+
+            // Then: Should still succeed (verification is non-blocking) and log the error
+            const debugCalls = (mockLogger.debug as jest.Mock).mock.calls;
+            const configLog = debugCalls.find((call: string[]) =>
+                call[0].includes('Config:') && call[0].includes('error=')
+            );
+            expect(configLog).toBeDefined();
+        });
+    });
+});
+
 describe('filterProductOverlays', () => {
     it('should keep /products/default', () => {
         const paths = ['/about', '/products/default', '/contact'];
