@@ -133,7 +133,11 @@
         },
         "demoBuilder.edsCleanup.behavior": {
           "type": "string",
-          "enum": ["ask", "deleteAll", "localOnly"],
+          "enum": [
+            "ask",
+            "deleteAll",
+            "localOnly"
+          ],
           "enumDescriptions": [
             "Show selection dialog for each deletion",
             "Automatically delete all external resources",
@@ -224,6 +228,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
+    "@types/adm-zip": "^0.5.7",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.3.1",
     "@types/react": "^19.1.12",
@@ -267,6 +272,7 @@
     "@octokit/core": "^6.1.6",
     "@octokit/plugin-retry": "^7.2.1",
     "@types/uuid": "^10.0.0",
+    "adm-zip": "^0.5.16",
     "async-mutex": "^0.5.0",
     "axios": "^1.6.0",
     "crypto-js": "^4.2.0",

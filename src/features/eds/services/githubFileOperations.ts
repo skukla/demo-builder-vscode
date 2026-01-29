@@ -10,6 +10,7 @@
 
 import { Octokit } from '@octokit/core';
 import { retry } from '@octokit/plugin-retry';
+import AdmZip from 'adm-zip';
 import { getLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
 import type {
@@ -360,15 +361,112 @@ export class GitHubFileOperations {
     }
 
     /**
-     * Reset a repository to match a template using bulk tree operations
+     * Fetch blob content from a repository using the Git Blob API
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param sha - Blob SHA
+     * @returns Blob content as string (decoded from base64)
+     */
+    async getBlobContent(owner: string, repo: string, sha: string): Promise<string> {
+        const octokit = await this.ensureAuthenticated();
+
+        const response = await octokit.request('GET /repos/{owner}/{repo}/git/blobs/{file_sha}', {
+            owner,
+            repo,
+            file_sha: sha,
+        });
+
+        // GitHub returns base64-encoded content
+        return Buffer.from(response.data.content, 'base64').toString('utf-8');
+    }
+
+    /**
+     * Download repository as a zipball and extract all file contents
      *
-     * This is MUCH faster than file-by-file copying because it:
-     * 1. Gets template tree (1 API call)
-     * 2. Creates new tree referencing template blobs (1 API call)
-     * 3. Creates commit (1 API call)
-     * 4. Updates branch (1 API call)
+     * This is much more efficient than fetching individual blobs:
+     * - Single HTTP request regardless of file count
+     * - Avoids GitHub API rate limits
      *
-     * Total: 4 API calls instead of 2*N for N files
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param ref - Git ref (branch/tag/commit) - default: 'main'
+     * @returns Map of path -> content
+     */
+    private async downloadRepoContents(
+        owner: string,
+        repo: string,
+        ref = 'main',
+    ): Promise<Map<string, string>> {
+        const token = await this.tokenService.getToken();
+        if (!token) {
+            throw new Error(ERROR_MESSAGES.NOT_AUTHENTICATED);
+        }
+
+        // Use direct GitHub archive URL (doesn't count against API rate limits)
+        const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/${ref}.zip`;
+        this.logger.debug(`[GitHub] Downloading repository archive from ${owner}/${repo}@${ref}`);
+
+        const response = await fetch(zipUrl, {
+            headers: {
+                'User-Agent': 'Demo-Builder-VSCode',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to download archive: HTTP ${response.status}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        this.logger.debug(`[GitHub] Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB archive`);
+
+        // Extract files from zipball
+        const zip = new AdmZip(buffer);
+        const entries = zip.getEntries();
+        const contents = new Map<string, string>();
+
+        // Zipball has a root folder like "owner-repo-sha/" - we need to strip it
+        let rootPrefix = '';
+        for (const entry of entries) {
+            if (entry.isDirectory && !rootPrefix) {
+                rootPrefix = entry.entryName;
+                break;
+            }
+        }
+
+        for (const entry of entries) {
+            if (entry.isDirectory) {
+                continue;
+            }
+
+            const path = entry.entryName.startsWith(rootPrefix)
+                ? entry.entryName.slice(rootPrefix.length)
+                : entry.entryName;
+
+            if (!path) {
+                continue;
+            }
+
+            contents.set(path, entry.getData().toString('utf-8'));
+        }
+
+        this.logger.info(`[GitHub] Extracted ${contents.size} files from archive`);
+        return contents;
+    }
+
+    /**
+     * Reset a repository to match a template using archive download
+     *
+     * This approach:
+     * 1. Downloads template as a zipball (single HTTP request)
+     * 2. Extracts all files from the archive
+     * 3. Creates new tree with content
+     * 4. Creates commit and updates branch
+     *
+     * This is much more efficient than fetching individual blobs:
+     * - Single download request vs N blob fetch requests
+     * - Avoids GitHub API rate limits
+     * - Faster for large repositories (hundreds of files)
      *
      * @param templateOwner - Template repo owner
      * @param templateRepo - Template repo name
@@ -388,45 +486,49 @@ export class GitHubFileOperations {
     ): Promise<{ commitSha: string; fileCount: number }> {
         this.logger.info(`[GitHub] Resetting ${targetOwner}/${targetRepo} to template ${templateOwner}/${templateRepo}`);
 
-        // Step 1: Get template tree (all files with blob SHAs)
-        const templateFiles = await this.listRepoFiles(templateOwner, templateRepo, branch);
-        this.logger.info(`[GitHub] Template has ${templateFiles.length} files`);
-
-        // Step 2: Get target branch info (need current commit as parent)
+        // Step 1: Get target branch info (need current commit as parent)
         const targetBranchInfo = await this.getBranchInfo(targetOwner, targetRepo, branch);
         this.logger.info(`[GitHub] Target branch commit: ${targetBranchInfo.commitSha.substring(0, 7)}`);
 
-        // Step 3: Build tree entries
-        // - Use template blob SHAs directly (GitHub knows these blobs)
-        // - Override specific files with custom content
-        const treeEntries = templateFiles.map(file => {
-            const override = fileOverrides.get(file.path);
+        // Step 2: Download entire template repo as zipball (single request - avoids rate limits)
+        const templateContents = await this.downloadRepoContents(templateOwner, templateRepo, branch);
+
+        // Step 3: Build tree entries with content
+        const treeEntries: Array<{
+            path: string;
+            mode: '100644' | '100755' | '040000' | '160000' | '120000';
+            type: 'blob' | 'tree' | 'commit';
+            content: string;
+        }> = [];
+
+        for (const [path, content] of templateContents) {
+            const override = fileOverrides.get(path);
             if (override !== undefined) {
-                // Custom content for this file
-                return {
-                    path: file.path,
-                    mode: '100644' as const,
-                    type: 'blob' as const,
+                // Use override content
+                treeEntries.push({
+                    path,
+                    mode: '100644',
+                    type: 'blob',
                     content: override,
-                };
+                });
             } else {
-                // Reference template's blob SHA directly
-                return {
-                    path: file.path,
-                    mode: '100644' as const,
-                    type: 'blob' as const,
-                    sha: file.sha,
-                };
+                // Use template content from archive
+                treeEntries.push({
+                    path,
+                    mode: '100644',
+                    type: 'blob',
+                    content,
+                });
             }
-        });
+        }
 
         // Add any override files that don't exist in template
         for (const [path, content] of fileOverrides) {
-            if (!templateFiles.some(f => f.path === path)) {
+            if (!templateContents.has(path)) {
                 treeEntries.push({
                     path,
-                    mode: '100644' as const,
-                    type: 'blob' as const,
+                    mode: '100644',
+                    type: 'blob',
                     content,
                 });
             }
