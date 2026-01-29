@@ -98,7 +98,27 @@ export async function ensureContext(
     const context = await getConsoleWhereContext(deps);
 
     // Check organization context
-    const currentOrgId = extractContextId(context?.org);
+    let currentOrgId = extractContextId(context?.org);
+
+    // If currentOrgId is a name (string from CLI), check cache to resolve to ID
+    if (currentOrgId && typeof context?.org === 'string') {
+        const cachedOrg = deps.cacheManager.getCachedOrganization();
+        if (cachedOrg?.id) {
+            currentOrgId = cachedOrg.id;
+            debugLogger.trace(`[Context Ops] Resolved org name "${context.org}" to ID: ${currentOrgId}`);
+        } else {
+            // Try org list cache as fallback
+            const cachedOrgList = deps.cacheManager.getCachedOrgList();
+            const matchingOrg = cachedOrgList?.find(o => o.name === context.org || o.code === context.org);
+            if (matchingOrg?.id) {
+                currentOrgId = matchingOrg.id;
+                debugLogger.trace(`[Context Ops] Resolved org name "${context.org}" to ID from list: ${currentOrgId}`);
+            } else {
+                debugLogger.trace(`[Context Ops] Cannot resolve org name "${context.org}" - no cached org`);
+            }
+        }
+    }
+
     if (expected.orgId && currentOrgId !== expected.orgId) {
         debugLogger.debug(
             `[Context Ops] Context sync: org mismatch (current: "${currentOrgId || 'none'}"), re-selecting...`,
