@@ -43,6 +43,7 @@ export const createMockLogger = (): jest.Mocked<Logger> => ({
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
+    trace: jest.fn(),
 } as any);
 
 export const createMockStepLogger = (): jest.Mocked<StepLogger> => ({

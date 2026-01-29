@@ -159,7 +159,7 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
 
             // Step 4: Verify config.json is accessible on live CDN
             onProgress?.('Waiting for configuration to reach CDN edge...');
-            result.cdnVerified = await verifyCdnAvailability(
+            result.cdnVerified = await verifyConfigOnCdn(
                 repoOwner,
                 repoName,
                 logger,
@@ -211,7 +211,7 @@ const CDN_VERIFY_ATTEMPTS = 10;
  * @param logger - Logger instance
  * @returns true if config.json is accessible and valid, false if verification timed out
  */
-async function verifyCdnAvailability(
+export async function verifyConfigOnCdn(
     repoOwner: string,
     repoName: string,
     logger: Logger,

@@ -39,8 +39,8 @@ jest.mock('vscode', () => ({
     window: {
         activeColorTheme: { kind: 1 },
         showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        showInformationMessage: jest.fn(),
+        showErrorMessage: jest.fn().mockResolvedValue(undefined),
+        showInformationMessage: jest.fn().mockResolvedValue(undefined),
         withProgress: jest.fn(),
         createQuickPick: jest.fn(() => mockQuickPick),
     },
@@ -101,7 +101,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
             deleteFile: jest.fn(),
             getFileContent: jest.fn(),
             createOrUpdateFile: jest.fn(),
-            resetRepoToTemplate: jest.fn(),
+            resetRepoToTemplate: jest.fn().mockResolvedValue({ commitSha: 'abc1234567890', fileCount: 50 }),
         },
         oauthService: {},
     }),
@@ -123,6 +123,11 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
             copiedFiles: ['file1', 'file2'],
             failedFiles: [],
         }),
+        createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
+            success: true,
+            blocksCount: 0,
+            paths: [],
+        }),
     })),
 }));
 
@@ -133,6 +138,7 @@ jest.mock('@/core/logging', () => ({
         debug: jest.fn(),
         error: jest.fn(),
         warn: jest.fn(),
+        show: jest.fn(),
     }),
     initializeLogger: jest.fn(),
 }));
@@ -168,6 +174,11 @@ jest.mock('@/features/eds/services/configGenerator', () => ({
         content: '{"host":"example.com"}',
     }),
     extractConfigParams: jest.fn().mockReturnValue({}),
+}));
+
+// Mock configSyncService (dynamically imported for config.json CDN verification)
+jest.mock('@/features/eds/services/configSyncService', () => ({
+    verifyConfigOnCdn: jest.fn().mockResolvedValue(true),
 }));
 
 // Mock global fetch for code sync verification
@@ -274,6 +285,7 @@ describe('handleResetEds DA.live auth pre-check', () => {
         // Setup mock HelixService
         mockHelixService = {
             publishAllSiteContent: jest.fn().mockResolvedValue(undefined),
+            previewCode: jest.fn().mockResolvedValue(undefined),
         } as unknown as jest.Mocked<HelixService>;
 
         // Setup mock AuthenticationService
