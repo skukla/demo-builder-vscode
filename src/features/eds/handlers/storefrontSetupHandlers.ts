@@ -25,6 +25,7 @@ import { DaLiveAuthService } from '../services/daLiveAuthService';
 import { HelixService } from '../services/helixService';
 import { ToolManager } from '../services/toolManager';
 import { generateFstabContent } from '../services/fstabGenerator';
+import { bulkPreviewAndPublish } from './edsHelpers';
 
 // ==========================================================
 // Types
@@ -1016,7 +1017,7 @@ async function executeStorefrontSetupPhases(
                     onPublishProgress,
                 );
 
-                // Explicitly publish block library paths (may be missed due to .da folder)
+                // Bulk publish block library paths (may be missed due to .da folder)
                 if (libraryPaths.length > 0) {
                     await context.sendMessage('storefront-setup-progress', {
                         phase: 'content-publish',
@@ -1024,13 +1025,11 @@ async function executeStorefrontSetupPhases(
                         progress: 88,
                     });
 
-                    logger.debug(`[Storefront Setup] Publishing ${libraryPaths.length} block library paths`);
-                    for (const libPath of libraryPaths) {
-                        try {
-                            await helixService.previewAndPublishPage(repoOwner, repoName, libPath, 'main');
-                        } catch (libPublishError) {
-                            logger.debug(`[Storefront Setup] Failed to publish ${libPath}: ${(libPublishError as Error).message}`);
-                        }
+                    try {
+                        await bulkPreviewAndPublish(helixService, repoOwner, repoName, libraryPaths, logger);
+                    } catch (libPublishError) {
+                        // Non-fatal - library config was created, publishing can be retried
+                        logger.debug(`[Storefront Setup] Block library publish failed: ${(libPublishError as Error).message}`);
                     }
                 }
 

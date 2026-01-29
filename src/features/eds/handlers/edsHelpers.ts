@@ -22,7 +22,9 @@ import { GitHubOAuthService } from '../services/githubOAuthService';
 import { DaLiveOrgOperations, type TokenProvider } from '../services/daLiveOrgOperations';
 import { DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { DaLiveAuthService } from '../services/daLiveAuthService';
+import { HelixService } from '../services/helixService';
 import { getLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Service Instance Cache
@@ -477,4 +479,39 @@ export async function showDaLiveAuthQuickPick(
             }
         },
     );
+}
+
+// ==========================================================
+// Bulk Publish Helpers
+// ==========================================================
+
+/**
+ * Bulk preview and publish paths via Helix Admin API
+ *
+ * Use this for publishing multiple paths efficiently instead of looping
+ * through individual previewAndPublishPage calls.
+ *
+ * @param helixService - HelixService instance
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @param paths - Array of paths to preview and publish
+ * @param logger - Logger instance
+ */
+export async function bulkPreviewAndPublish(
+    helixService: HelixService,
+    owner: string,
+    repo: string,
+    paths: string[],
+    logger: Logger,
+): Promise<void> {
+    if (paths.length === 0) return;
+
+    logger.debug(`[EDS] Bulk publishing ${paths.length} paths`);
+    try {
+        await helixService.previewAllContent(owner, repo, 'main', undefined, paths);
+        await helixService.publishAllContent(owner, repo, 'main', undefined, paths);
+    } catch (error) {
+        logger.debug(`[EDS] Bulk publish failed: ${(error as Error).message}`);
+        throw error;
+    }
 }

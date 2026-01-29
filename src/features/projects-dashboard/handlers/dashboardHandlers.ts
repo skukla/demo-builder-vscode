@@ -29,7 +29,7 @@ import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboa
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { generateFstabContent } from '@/features/eds/services/fstabGenerator';
-import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
+import { showDaLiveAuthQuickPick, bulkPreviewAndPublish } from '@/features/eds/handlers/edsHelpers';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 import type { Project } from '@/types/base';
@@ -1243,16 +1243,14 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
 
                 await helixService.publishAllSiteContent(`${repoOwner}/${repoName}`, 'main', undefined, undefined, onPublishProgress);
 
-                // Explicitly publish block library paths (may be missed by publishAllSiteContent due to .da folder)
+                // Bulk publish block library paths (may be missed by publishAllSiteContent due to .da folder)
                 if (libResult.paths.length > 0) {
                     progress.report({ message: `Step 4/${totalSteps}: Publishing block library...` });
-                    context.logger.debug(`[ProjectsList] Publishing ${libResult.paths.length} block library paths`);
-                    for (const libPath of libResult.paths) {
-                        try {
-                            await helixService.previewAndPublishPage(repoOwner, repoName, libPath, 'main');
-                        } catch (libPublishError) {
-                            context.logger.debug(`[ProjectsList] Failed to publish ${libPath}: ${(libPublishError as Error).message}`);
-                        }
+                    try {
+                        await bulkPreviewAndPublish(helixService, repoOwner, repoName, libResult.paths, context.logger);
+                    } catch (libPublishError) {
+                        // Non-fatal - library config was created, publishing can be retried
+                        context.logger.debug(`[ProjectsList] Block library publish failed: ${(libPublishError as Error).message}`);
                     }
                 }
 
