@@ -17,6 +17,7 @@ import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import { toError } from '@/types/typeGuards';
@@ -207,6 +208,7 @@ export async function handleCreateProject(
                         timeout: TIMEOUTS.LONG,
                         configureTelemetry: false,
                         enhancePath: true,
+                        useNodeVersion: getMeshNodeVersion(),
                     });
 
                     if (deleteResult.code === 0) {

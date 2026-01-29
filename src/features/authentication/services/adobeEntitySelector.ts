@@ -24,6 +24,7 @@ import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils';
 import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import type { AuthCacheManager } from './authCacheManager';
 import type { OrganizationValidator } from './organizationValidator';
 import type { AdobeEntityFetcher } from './adobeEntityFetcher';
@@ -59,6 +60,22 @@ export class AdobeEntitySelector {
     }
 
     /**
+     * Resolve entity name to ID using cache (CLI returns names, we compare by ID)
+     */
+    private resolveNameToId(
+        name: string | undefined,
+        cached: { id?: string; name?: string; title?: string } | undefined,
+    ): string | undefined {
+        if (!name || !cached?.id) return name;
+        // Match by name or title (projects use title)
+        if (cached.name === name || cached.title === name) {
+            this.debugLogger.trace(`[Entity Selector] Resolved "${name}" to ID: ${cached.id}`);
+            return cached.id;
+        }
+        return name;
+    }
+
+    /**
      * Ensure Adobe CLI context matches expected state before dependent operations.
      * Re-selects org/project if another process changed the global context.
      *
@@ -69,10 +86,14 @@ export class AdobeEntitySelector {
         const context = await this.resolver.getConsoleWhereContext();
 
         // Check organization context
-        const currentOrgId = this.extractContextId(context?.org);
-        if (expected.orgId && currentOrgId !== expected.orgId) {
+        const currentOrgValue = this.extractContextId(context?.org);
+        const resolvedOrgId = typeof context?.org === 'string'
+            ? this.resolveNameToId(currentOrgValue, this.cacheManager.getCachedOrganization())
+            : currentOrgValue;
+
+        if (expected.orgId && resolvedOrgId !== expected.orgId) {
             this.debugLogger.debug(
-                `[Entity Selector] Context sync: org mismatch (current: "${currentOrgId || 'none'}"), re-selecting...`,
+                `[Entity Selector] Context sync: org mismatch (current: "${resolvedOrgId || 'none'}"), re-selecting...`,
             );
             const orgSelected = await this.selectOrganization(expected.orgId);
             if (!orgSelected) {
@@ -84,23 +105,14 @@ export class AdobeEntitySelector {
         // Check project context (re-fetch context if org was changed)
         if (expected.projectId) {
             const currentContext = expected.orgId ? await this.resolver.getConsoleWhereContext() : context;
-            const currentProjectId = this.extractContextId(currentContext?.project);
-            
-            // If currentProjectId is a name (string from CLI), check cache to resolve to ID
-            let resolvedProjectId = currentProjectId;
-            if (currentProjectId && typeof currentContext?.project === 'string') {
-                const cachedProject = this.cacheManager.getCachedProject();
-                if (cachedProject?.id) {
-                    resolvedProjectId = cachedProject.id;
-                    this.debugLogger.trace(`[Entity Selector] Resolved project name "${currentProjectId}" to ID: ${resolvedProjectId}`);
-                } else {
-                    this.debugLogger.trace(`[Entity Selector] Cannot resolve project name "${currentProjectId}" - no cached project`);
-                }
-            }
-            
+            const currentProjectValue = this.extractContextId(currentContext?.project);
+            const resolvedProjectId = typeof currentContext?.project === 'string'
+                ? this.resolveNameToId(currentProjectValue, this.cacheManager.getCachedProject())
+                : currentProjectValue;
+
             if (resolvedProjectId !== expected.projectId) {
                 this.debugLogger.debug(
-                    `[Entity Selector] Context sync: project mismatch (current: "${resolvedProjectId || currentProjectId || 'none'}"), re-selecting...`,
+                    `[Entity Selector] Context sync: project mismatch (current: "${resolvedProjectId || 'none'}"), re-selecting...`,
                 );
                 const projectSelected = await this.doSelectProject(expected.projectId);
                 if (!projectSelected) {
@@ -128,6 +140,7 @@ export class AdobeEntitySelector {
                 {
                     encoding: 'utf8',
                     timeout: TIMEOUTS.NORMAL,
+                    useNodeVersion: getMeshNodeVersion(),
                 },
             );
 
@@ -220,6 +233,7 @@ export class AdobeEntitySelector {
                 {
                     encoding: 'utf8',
                     timeout: TIMEOUTS.NORMAL,
+                    useNodeVersion: getMeshNodeVersion(),
                 },
             );
 
@@ -323,6 +337,7 @@ export class AdobeEntitySelector {
                 {
                     encoding: 'utf8',
                     timeout: TIMEOUTS.NORMAL,
+                    useNodeVersion: getMeshNodeVersion(),
                 },
             );
 
@@ -417,9 +432,9 @@ export class AdobeEntitySelector {
         try {
             // Use established pattern: Promise.all for parallel execution
             await Promise.all([
-                this.commandManager.execute('aio config delete console.org', { encoding: 'utf8' }),
-                this.commandManager.execute('aio config delete console.project', { encoding: 'utf8' }),
-                this.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.org', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
+                this.commandManager.execute('aio config delete console.project', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
+                this.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
             ]);
 
             // Clear console.where cache since context was cleared

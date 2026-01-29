@@ -13,6 +13,7 @@ import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectId } from '@/core/validation';
 import type { AdobeProject } from '@/features/authentication/services/types';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { toAppError, isTimeout } from '@/types/errors';
 import { HandlerContext } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
@@ -173,7 +174,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
 
         // Step 1: Verify CLI has the API Mesh plugin installed (so commands exist)
         try {
-            const { stdout } = await commandManager.execute('aio plugins --json');
+            const { stdout } = await commandManager.execute('aio plugins --json', { useNodeVersion: getMeshNodeVersion() });
             const plugins = parseJSON<{ name?: string; id?: string }[]>(stdout || '[]');
             if (!plugins) {
                 context.logger.warn('[Adobe Setup] Failed to parse plugins list');
@@ -192,7 +193,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
 
         // Step 2: Confirm project context is selected (best effort)
         try {
-            await commandManager.execute('aio console projects get --json');
+            await commandManager.execute('aio console projects get --json', { useNodeVersion: getMeshNodeVersion() });
         } catch (e) {
             context.debugLogger.debug('[Adobe Setup] Could not confirm project context (non-fatal)', { error: String(e) });
         }
@@ -201,7 +202,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
         // CLI variants differ; try a few options and infer permissions from errors
         // Preferred probe: get active mesh (succeeds only if API enabled; returns 404-style when none exists)
         try {
-            const { stdout } = await commandManager.execute('aio api-mesh:get --active --json');
+            const { stdout } = await commandManager.execute('aio api-mesh:get --active --json', { useNodeVersion: getMeshNodeVersion() });
             context.debugLogger.trace('[Adobe Setup] api-mesh:get --active output', { stdout });
             context.logger.debug('[Adobe Setup] API Mesh access confirmed (active mesh or readable config)');
             return { success: true, data: { hasMesh: true } };

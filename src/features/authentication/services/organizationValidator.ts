@@ -3,6 +3,7 @@ import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { toAppError, isTimeout } from '@/types/errors';
 import { parseJSON, toError } from '@/types/typeGuards';
 
@@ -214,9 +215,9 @@ export class OrganizationValidator {
         try {
             // Run all three operations in parallel
             await Promise.all([
-                this.commandManager.execute('aio config delete console.org', { encoding: 'utf8' }),
-                this.commandManager.execute('aio config delete console.project', { encoding: 'utf8' }),
-                this.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.org', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
+                this.commandManager.execute('aio config delete console.project', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
+                this.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
             ]);
 
             // Clear console.where cache since context was cleared

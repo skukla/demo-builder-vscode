@@ -14,6 +14,7 @@ import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectId } from '@/core/validation';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { parseJSON } from '@/types/typeGuards';
 import type { AuthCache } from './authCache';
 import type { AdobeProject, RawAdobeProject, AdobeConsoleWhereResponse } from './types';
@@ -62,7 +63,7 @@ export class ProjectService {
         // Fetch from CLI
         const result = await this.commandExecutor.execute(
             'aio console project list --json',
-            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
+            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL, useNodeVersion: getMeshNodeVersion() },
         );
 
         // Handle "no projects" case gracefully
@@ -98,7 +99,7 @@ export class ProjectService {
 
         const result = await this.commandExecutor.execute(
             `aio console project select ${projectId}`,
-            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
+            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL, useNodeVersion: getMeshNodeVersion() },
         );
 
         if (result.code !== 0) {
@@ -187,7 +188,7 @@ export class ProjectService {
         // Fetch from CLI
         const result = await this.commandExecutor.execute(
             'aio console where --json',
-            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
+            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL, useNodeVersion: getMeshNodeVersion() },
         );
 
         if (result.code !== 0 || !result.stdout) {

@@ -6,6 +6,7 @@
  */
 
 import { CommandExecutor } from '@/core/shell';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { getMeshStatusCategory, extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 
 /**
@@ -84,7 +85,7 @@ export async function checkMeshExistence(
     error?: string;
 }> {
     try {
-        const { stdout, stderr, code } = await commandExecutor.execute('aio api-mesh get');
+        const { stdout, stderr, code } = await commandExecutor.execute('aio api-mesh get', { useNodeVersion: getMeshNodeVersion() });
 
         if (code !== 0) {
             // Command failed - check if it's because no mesh exists
@@ -166,7 +167,7 @@ export async function fallbackMeshCheck(
     meshStatus?: 'deployed';
 }> {
     try {
-        const { stdout, stderr } = await commandExecutor.execute('aio api-mesh get --active');
+        const { stdout, stderr } = await commandExecutor.execute('aio api-mesh get --active', { useNodeVersion: getMeshNodeVersion() });
         const combined = `${stdout}\n${stderr}`;
 
         // "Unable to get mesh config" indicates API is NOT enabled

@@ -14,6 +14,7 @@ import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { parseJSON } from '@/types/typeGuards';
 import type { AuthCache } from './authCache';
 import type { AdobeWorkspace, RawAdobeWorkspace, AdobeConsoleWhereResponse } from './types';
@@ -60,7 +61,7 @@ export class WorkspaceService {
         // Fetch from CLI
         const result = await this.commandExecutor.execute(
             'aio console workspace list --json',
-            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
+            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL, useNodeVersion: getMeshNodeVersion() },
         );
 
         if (result.code !== 0) {
@@ -91,7 +92,7 @@ export class WorkspaceService {
 
         const result = await this.commandExecutor.execute(
             `aio console workspace select ${workspaceId}`,
-            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
+            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL, useNodeVersion: getMeshNodeVersion() },
         );
 
         if (result.code !== 0) {
@@ -179,7 +180,7 @@ export class WorkspaceService {
         // Fetch from CLI
         const result = await this.commandExecutor.execute(
             'aio console where --json',
-            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
+            { encoding: 'utf8', timeout: TIMEOUTS.NORMAL, useNodeVersion: getMeshNodeVersion() },
         );
 
         if (result.code !== 0 || !result.stdout) {

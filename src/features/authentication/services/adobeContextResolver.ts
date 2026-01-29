@@ -19,6 +19,7 @@
 import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import type { AuthCacheManager } from './authCacheManager';
 import type { AdobeEntityFetcher } from './adobeEntityFetcher';
 import type {
@@ -59,7 +60,7 @@ export class AdobeContextResolver {
             this.debugLogger.debug('[Context Resolver] Fetching context from Adobe CLI');
             const result = await this.commandManager.execute(
                 'aio console where --json',
-                { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
+                { encoding: 'utf8', timeout: TIMEOUTS.NORMAL, useNodeVersion: getMeshNodeVersion() },
             );
 
             if (result.code === 0 && result.stdout) {

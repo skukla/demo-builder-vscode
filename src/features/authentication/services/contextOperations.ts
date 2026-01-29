@@ -10,6 +10,7 @@ import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { AdobeConsoleWhereResponse } from '@/features/authentication/services/types';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { parseJSON } from '@/types/typeGuards';
 
 /**
@@ -174,9 +175,9 @@ export async function clearConsoleContext(
     try {
         // Use established pattern: Promise.all for parallel execution
         await Promise.all([
-            deps.commandManager.execute('aio config delete console.org', { encoding: 'utf8' }),
-            deps.commandManager.execute('aio config delete console.project', { encoding: 'utf8' }),
-            deps.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8' }),
+            deps.commandManager.execute('aio config delete console.org', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
+            deps.commandManager.execute('aio config delete console.project', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
+            deps.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
         ]);
 
         // Clear console.where cache since context was cleared
