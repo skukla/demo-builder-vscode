@@ -21,6 +21,7 @@ import { BaseWebviewCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { executeCommandForProject } from '@/core/handlers';
+import { getLogger } from '@/core/logging';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito } from '@/core/utils';
 import { validateProjectPath } from '@/core/validation';
@@ -33,7 +34,7 @@ import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
-import { getMeshComponentInstance } from '@/types/typeGuards';
+import { getMeshComponentInstance, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
 
 /**
  * Get all projects from StateManager
@@ -590,7 +591,6 @@ export const handleOpenLiveSite: MessageHandler<{ projectPath: string }> = async
         return { success: false, error: 'Project not found' };
     }
 
-    const { getEdsLiveUrl } = await import('@/types/typeGuards');
     const liveUrl = getEdsLiveUrl(project);
 
     if (!liveUrl) {
@@ -635,7 +635,6 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project not found' };
     }
 
-    const { getEdsDaLiveUrl } = await import('@/types/typeGuards');
     const daLiveUrl = getEdsDaLiveUrl(project);
 
     if (!daLiveUrl) {
@@ -1018,7 +1017,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     context.logger.info(`[ProjectsList] Resetting EDS project: ${repoFullName}`);
 
                 // Create service dependencies
-                const { ServiceLocator } = await import('@/core/di/serviceLocator');
+                // Note: ServiceLocator is statically imported at top of file
                 const { HelixService } = await import('@/features/eds/services/helixService');
                 const { DaLiveContentOperations } = await import('@/features/eds/services/daLiveContentOperations');
                 const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
@@ -1036,11 +1035,16 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
 
                 const daLiveContentOps = new DaLiveContentOperations(tokenProvider, context.logger);
 
+                // Determine total steps (5 base + 1 if mesh needs redeployment)
+                const meshComponent = getMeshComponentInstance(project);
+                const hasMesh = !!meshComponent?.path;
+                const totalSteps = hasMesh ? 6 : 5;
+
                 // ============================================
                 // Step 1: Reset repo to template (bulk operation)
                 // ============================================
                 // Uses Git Tree API for efficiency: 4 API calls instead of 2*N for N files
-                progress.report({ message: 'Step 1/5: Resetting repository to template...' });
+                progress.report({ message: `Step 1/${totalSteps}: Resetting code repository...` });
                 context.logger.info(`[ProjectsList] Resetting repo using bulk tree operations`);
 
                 // Build fstab.yaml content using centralized generator (single source of truth)
@@ -1137,43 +1141,26 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 );
 
                 context.logger.info(`[ProjectsList] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
-                progress.report({ message: `Step 1/5: Reset ${resetResult.fileCount} files` });
+                progress.report({ message: `Step 1/${totalSteps}: Reset ${resetResult.fileCount} files` });
 
                 // ============================================
-                // Step 2: Wait for code sync
+                // Step 2: Sync code to CDN
                 // ============================================
-                progress.report({ message: 'Step 2/5: Waiting for code sync...' });
+                // Actively trigger code sync via Helix Admin API (POST /code/*)
+                // This is more reliable than passive polling - the POST completes when sync is done
+                progress.report({ message: `Step 2/${totalSteps}: Syncing code to CDN...` });
 
-                const codeUrl = `https://admin.hlx.page/code/${repoOwner}/${repoName}/main/scripts/aem.js`;
-                let syncVerified = false;
-                const maxAttempts = 25;
-                const pollInterval = 2000;
+                // Create HelixService for code sync (need GitHub token for Admin API)
+                const helixServiceForCodeSync = new HelixService(context.logger, githubTokenService, tokenProvider);
 
-                for (let attempt = 0; attempt < maxAttempts && !syncVerified; attempt++) {
-                    progress.report({ message: `Step 2/5: Verifying code sync (attempt ${attempt + 1}/${maxAttempts})` });
-                    try {
-                        const response = await fetch(codeUrl, {
-                            method: 'GET',
-                            signal: AbortSignal.timeout(5000),
-                        });
-                        if (response.ok) {
-                            syncVerified = true;
-                        }
-                    } catch {
-                        // Continue polling
-                    }
-
-                    if (!syncVerified && attempt < maxAttempts - 1) {
-                        await new Promise(resolve => setTimeout(resolve, pollInterval));
-                    }
-                }
-
-                if (!syncVerified) {
-                    context.logger.warn('[ProjectsList] Code sync verification timed out, continuing anyway');
-                    progress.report({ message: 'Step 2/5: Code sync timed out, continuing...' });
-                } else {
-                    context.logger.info('[ProjectsList] Code sync verified');
-                    progress.report({ message: 'Step 2/5: Code sync verified' });
+                try {
+                    await helixServiceForCodeSync.previewCode(repoOwner, repoName, '/*');
+                    context.logger.info('[ProjectsList] Code synced to CDN');
+                    progress.report({ message: `Step 2/${totalSteps}: Code synchronized` });
+                } catch (codeSyncError) {
+                    // Log warning but continue - the GitHub App may also trigger sync
+                    context.logger.warn(`[ProjectsList] Code sync request failed: ${(codeSyncError as Error).message}, continuing anyway`);
+                    progress.report({ message: `Step 2/${totalSteps}: Code sync pending...` });
                 }
 
                 // Build full content source with index URL from explicit config
@@ -1189,7 +1176,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 // ============================================
                 // Content HTML is uploaded with absolute image URLs pointing to source CDN.
                 // The Admin API will download images during preview and store in Media Bus.
-                progress.report({ message: 'Step 3/5: Copying demo content to DA.live...' });
+                progress.report({ message: `Step 3/${totalSteps}: Copying demo content...` });
 
                 context.logger.info(`[ProjectsList] Copying content from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
 
@@ -1197,7 +1184,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 const onContentProgress = (info: { processed: number; total: number; currentFile?: string; message?: string }) => {
                     // Use custom message if provided (during initialization), otherwise show file count
                     const statusMessage = info.message || `Copying content (${info.processed}/${info.total})`;
-                    progress.report({ message: `Step 3/5: ${statusMessage}` });
+                    progress.report({ message: `Step 3/${totalSteps}: ${statusMessage}` });
                 };
 
                 const contentResult = await daLiveContentOps.copyContentFromSource(
@@ -1212,13 +1199,27 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
                 }
 
-                progress.report({ message: `Step 3/5: Copied ${contentResult.totalFiles} content files` });
+                progress.report({ message: `Step 3/${totalSteps}: Copied ${contentResult.totalFiles} content files` });
                 context.logger.info(`[ProjectsList] DA.live content populated: ${contentResult.totalFiles} files`);
+
+                // Configure Block Library (part of content step)
+                progress.report({ message: `Step 3/${totalSteps}: Configuring block library...` });
+                const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
+                    daLiveOrg,
+                    daLiveSite,
+                    templateOwner,
+                    templateRepo,
+                    (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
+                );
+                if (libResult.blocksCount > 0) {
+                    progress.report({ message: `Step 3/${totalSteps}: Configured ${libResult.blocksCount} blocks` });
+                    context.logger.info(`[ProjectsList] Block library: ${libResult.blocksCount} blocks configured`);
+                }
 
                 // ============================================
                 // Step 4: Publish all content to CDN
                 // ============================================
-                progress.report({ message: 'Step 4/5: Publishing content to CDN...' });
+                progress.report({ message: `Step 4/${totalSteps}: Publishing to CDN...` });
                 context.logger.info(`[ProjectsList] Publishing content to CDN for ${repoOwner}/${repoName}`);
 
                 // IMPORTANT: Pass DA.live token provider to HelixService for x-content-source-authorization
@@ -1233,27 +1234,51 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     total?: number;
                     currentPath?: string;
                 }) => {
-                    // Format: "Step 4/5: Publishing (15/42 pages)"
                     if (info.current !== undefined && info.total !== undefined) {
-                        progress.report({ message: `Step 4/5: Publishing to CDN (${info.current}/${info.total} pages)` });
+                        progress.report({ message: `Step 4/${totalSteps}: Publishing (${info.current}/${info.total} pages)` });
                     } else {
-                        progress.report({ message: `Step 4/5: ${info.message}` });
+                        progress.report({ message: `Step 4/${totalSteps}: ${info.message}` });
                     }
                 };
 
                 await helixService.publishAllSiteContent(`${repoOwner}/${repoName}`, 'main', undefined, undefined, onPublishProgress);
 
+                // Explicitly publish block library paths (may be missed by publishAllSiteContent due to .da folder)
+                if (libResult.paths.length > 0) {
+                    progress.report({ message: `Step 4/${totalSteps}: Publishing block library...` });
+                    context.logger.debug(`[ProjectsList] Publishing ${libResult.paths.length} block library paths`);
+                    for (const libPath of libResult.paths) {
+                        try {
+                            await helixService.previewAndPublishPage(repoOwner, repoName, libPath, 'main');
+                        } catch (libPublishError) {
+                            context.logger.debug(`[ProjectsList] Failed to publish ${libPath}: ${(libPublishError as Error).message}`);
+                        }
+                    }
+                }
+
                 context.logger.info('[ProjectsList] Content published to CDN successfully');
 
                 // ============================================
-                // Step 5: Redeploy API Mesh (if project has mesh component)
+                // Step 5: Verify config.json on CDN
+                // ============================================
+                progress.report({ message: `Step 5/${totalSteps}: Verifying configuration...` });
+                const { verifyConfigOnCdn } = await import('@/features/eds/services/configSyncService');
+                const configVerified = await verifyConfigOnCdn(repoOwner, repoName, context.logger);
+                if (configVerified) {
+                    progress.report({ message: `Step 5/${totalSteps}: Configuration verified` });
+                    context.logger.info('[ProjectsList] config.json verified on CDN');
+                } else {
+                    progress.report({ message: `Step 5/${totalSteps}: Configuration propagating...` });
+                    context.logger.warn('[ProjectsList] config.json CDN verification timed out - may need more time to propagate');
+                }
+
+                // ============================================
+                // Step 6: Redeploy API Mesh (if project has mesh component)
                 // ============================================
                 // Redeploy mesh to refresh GraphQL schema. The existing .env file
                 // in the local mesh directory is reused (not regenerated).
 
-                const meshComponent = getMeshComponentInstance(project);
-
-                if (meshComponent?.path) {
+                if (hasMesh) {
                     // Pre-check Adobe I/O authentication before mesh deployment
                     // Mesh deployment requires valid Adobe I/O credentials
                     const isAdobeAuthenticated = await authService.isAuthenticated();
@@ -1269,44 +1294,13 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                         );
 
                         if (selection === signInButton) {
-                            progress.report({ message: 'Step 5/5: Opening browser for authentication...' });
+                            progress.report({ message: `Step 6/${totalSteps}: Opening browser for authentication...` });
                             const loginSuccess = await authService.login();
 
                             if (!loginSuccess) {
                                 context.logger.error('[ProjectsList] Adobe I/O login failed or cancelled');
                                 vscode.window.showErrorMessage('Reset failed: Adobe I/O authentication is required for mesh deployment.');
                                 return { success: false, error: 'Adobe I/O authentication required' };
-                            }
-
-                            // Restore Adobe context (org/project/workspace) after re-authentication
-                            // This ensures mesh commands have the required context
-                            progress.report({ message: 'Step 5/5: Restoring Adobe context...' });
-
-                            if (project.adobe?.organization) {
-                                try {
-                                    await authService.selectOrganization(project.adobe.organization);
-                                    context.logger.debug('[ProjectsList] Organization restored after re-auth');
-                                } catch (orgError) {
-                                    context.logger.warn('[ProjectsList] Could not restore organization', orgError as Error);
-                                }
-                            }
-
-                            if (project.adobe?.projectId && project.adobe?.organization) {
-                                try {
-                                    await authService.selectProject(project.adobe.projectId, project.adobe.organization);
-                                    context.logger.debug('[ProjectsList] Project restored after re-auth');
-                                } catch (projectError) {
-                                    context.logger.warn('[ProjectsList] Could not restore project', projectError as Error);
-                                }
-                            }
-
-                            if (project.adobe?.workspace && project.adobe?.projectId) {
-                                try {
-                                    await authService.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
-                                    context.logger.debug('[ProjectsList] Workspace restored after re-auth');
-                                } catch (workspaceError) {
-                                    context.logger.warn('[ProjectsList] Could not restore workspace', workspaceError as Error);
-                                }
                             }
                         } else {
                             // User dismissed notification
@@ -1315,7 +1309,20 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                         }
                     }
 
-                    progress.report({ message: 'Step 5/5: Redeploying API Mesh...' });
+                    // Set Adobe CLI context before mesh deployment
+                    progress.report({ message: `Step 6/${totalSteps}: Setting Adobe context...` });
+
+                    if (project.adobe?.organization) {
+                        await authService.selectOrganization(project.adobe.organization);
+                    }
+                    if (project.adobe?.projectId && project.adobe?.organization) {
+                        await authService.selectProject(project.adobe.projectId, project.adobe.organization);
+                    }
+                    if (project.adobe?.workspace && project.adobe?.projectId) {
+                        await authService.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
+                    }
+
+                    progress.report({ message: `Step 6/${totalSteps}: Redeploying API Mesh...` });
                     context.logger.info(`[ProjectsList] Redeploying mesh for ${repoFullName}`);
 
                     try {
@@ -1324,10 +1331,10 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                         const commandManager = ServiceLocator.getCommandExecutor();
 
                         const meshDeployResult = await deployMeshComponent(
-                            meshComponent.path,
+                            meshComponent.path!, // hasMesh guarantees path exists
                             commandManager,
                             context.logger,
-                            (msg, sub) => progress.report({ message: `Step 5/5: ${sub || msg}` }),
+                            (msg, sub) => progress.report({ message: `Step 6/${totalSteps}: ${sub || msg}` }),
                             existingMeshId,
                         );
 
@@ -1388,7 +1395,14 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
 
                 const errorMessage = (error as Error).message;
                 context.logger.error('[ProjectsList] resetEds failed', error as Error);
-                vscode.window.showErrorMessage(`Failed to reset EDS project: ${errorMessage}`);
+                vscode.window.showErrorMessage(
+                    `Failed to reset EDS project: ${errorMessage}`,
+                    'Show Logs',
+                ).then(selection => {
+                    if (selection === 'Show Logs') {
+                        getLogger().show(false);
+                    }
+                });
                 return { success: false, error: errorMessage };
             }
         },

@@ -756,40 +756,23 @@ export const handleResetEds: MessageHandler = async (context) => {
                 progress.report({ message: `Step 1/5: Reset ${resetResult.fileCount} files` });
 
                 // ============================================
-                // Step 2: Wait for code sync
+                // Step 2: Sync code to CDN
                 // ============================================
-                progress.report({ message: 'Step 2/5: Waiting for code sync...' });
+                // Actively trigger code sync via Helix Admin API (POST /code/*)
+                // This is more reliable than passive polling - the POST completes when sync is done
+                progress.report({ message: 'Step 2/5: Syncing code to CDN...' });
 
-                const codeUrl = `https://admin.hlx.page/code/${repoOwner}/${repoName}/main/scripts/aem.js`;
-                let syncVerified = false;
-                const maxAttempts = 25;
-                const pollInterval = 2000;
+                // Create HelixService for code sync (need GitHub token for Admin API)
+                const helixServiceForCodeSync = new HelixService(context.logger, githubTokenService, tokenProvider);
 
-                for (let attempt = 0; attempt < maxAttempts && !syncVerified; attempt++) {
-                    progress.report({ message: `Step 2/5: Verifying code sync (attempt ${attempt + 1}/${maxAttempts})` });
-                    try {
-                        const response = await fetch(codeUrl, {
-                            method: 'GET',
-                            signal: AbortSignal.timeout(5000),
-                        });
-                        if (response.ok) {
-                            syncVerified = true;
-                        }
-                    } catch {
-                        // Continue polling
-                    }
-
-                    if (!syncVerified && attempt < maxAttempts - 1) {
-                        await new Promise(resolve => setTimeout(resolve, pollInterval));
-                    }
-                }
-
-                if (!syncVerified) {
-                    context.logger.warn('[Dashboard] Code sync verification timed out, continuing anyway');
-                    progress.report({ message: 'Step 2/5: Code sync timed out, continuing...' });
-                } else {
-                    context.logger.info('[Dashboard] Code sync verified');
-                    progress.report({ message: 'Step 2/5: Code sync verified' });
+                try {
+                    await helixServiceForCodeSync.previewCode(repoOwner, repoName, '/*');
+                    context.logger.info('[Dashboard] Code synced to CDN');
+                    progress.report({ message: 'Step 2/5: Code synchronized' });
+                } catch (codeSyncError) {
+                    // Log warning but continue - the GitHub App may also trigger sync
+                    context.logger.warn(`[Dashboard] Code sync request failed: ${(codeSyncError as Error).message}, continuing anyway`);
+                    progress.report({ message: 'Step 2/5: Code sync pending...' });
                 }
 
                 // ============================================
@@ -801,7 +784,6 @@ export const handleResetEds: MessageHandler = async (context) => {
                 context.logger.info(`[Dashboard] Publishing config.json to CDN for ${repoOwner}/${repoName}`);
 
                 // Create HelixService for code publish (only needs GitHub token)
-                const { HelixService } = await import('@/features/eds/services/helixService');
                 const helixServiceForCode = new HelixService(context.logger, githubTokenService);
 
                 try {
