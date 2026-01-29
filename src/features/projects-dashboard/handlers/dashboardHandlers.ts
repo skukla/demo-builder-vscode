@@ -1069,7 +1069,10 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     context.logger,
                 );
 
-                // Log patch results
+                // Log patch results and collect patched file paths for later publish
+                const { getAppliedPatchPaths } = await import('@/features/eds/handlers/edsHelpers');
+                const patchedCodePaths = getAppliedPatchPaths(patchResults);
+
                 for (const result of patchResults) {
                     if (!result.applied) {
                         context.logger.warn(`[ProjectsList] Patch '${result.patchId}' not applied: ${result.reason}`);
@@ -1155,6 +1158,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 const helixServiceForCodeSync = new HelixService(context.logger, githubTokenService, tokenProvider);
 
                 try {
+                    // Preview code (syncs from GitHub to preview CDN)
                     await helixServiceForCodeSync.previewCode(repoOwner, repoName, '/*');
                     context.logger.info('[ProjectsList] Code synced to CDN');
                     progress.report({ message: `Step 2/${totalSteps}: Code synchronized` });
@@ -1256,6 +1260,10 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 }
 
                 context.logger.info('[ProjectsList] Content published to CDN successfully');
+
+                // Publish patched code files to live CDN
+                const { publishPatchedCodeToLive } = await import('@/features/eds/handlers/edsHelpers');
+                await publishPatchedCodeToLive(helixService, repoOwner, repoName, patchedCodePaths, context.logger);
 
                 // ============================================
                 // Step 5: Verify config.json and block library on CDN (parallel)

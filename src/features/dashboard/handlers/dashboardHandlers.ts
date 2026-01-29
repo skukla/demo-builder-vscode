@@ -712,7 +712,10 @@ export const handleResetEds: MessageHandler = async (context) => {
                     context.logger,
                 );
 
-                // Log patch results
+                // Log patch results and collect patched file paths for later publish
+                const { getAppliedPatchPaths } = await import('@/features/eds/handlers/edsHelpers');
+                const patchedCodePaths = getAppliedPatchPaths(patchResults);
+
                 for (const result of patchResults) {
                     if (!result.applied) {
                         context.logger.warn(`[Dashboard] Patch '${result.patchId}' not applied: ${result.reason}`);
@@ -863,6 +866,10 @@ export const handleResetEds: MessageHandler = async (context) => {
                 await helixService.publishAllSiteContent(`${repoOwner}/${repoName}`, 'main', undefined, undefined, onPublishProgress);
 
                 context.logger.info('[Dashboard] Content published to CDN successfully');
+
+                // Publish patched code files to live CDN
+                const { publishPatchedCodeToLive } = await import('@/features/eds/handlers/edsHelpers');
+                await publishPatchedCodeToLive(helixService, repoOwner, repoName, patchedCodePaths, context.logger);
 
                 context.logger.info('[Dashboard] EDS project reset successfully');
 

@@ -705,6 +705,9 @@ async function executeStorefrontSetupPhases(
         // ============================================
         // Apply patches from demo-packages.json (e.g., header-nav-tools-defensive)
         // These fix issues with the template code for specific configurations
+        // Track patched code paths for later publish to live CDN (declared outside if block)
+        let patchedCodePaths: string[] = [];
+
         if (edsConfig.patches && edsConfig.patches.length > 0) {
             await context.sendMessage('storefront-setup-progress', {
                 phase: 'helix-config',
@@ -725,7 +728,10 @@ async function executeStorefrontSetupPhases(
                 logger,
             );
 
-            // Log patch results
+            // Log patch results and collect patched file paths for later publish
+            const { getAppliedPatchPaths } = await import('./edsHelpers');
+            patchedCodePaths = getAppliedPatchPaths(patchResults);
+
             for (const result of patchResults) {
                 if (result.applied) {
                     logger.info(`[Storefront Setup] Patch '${result.patchId}' applied to ${result.filePath}`);
@@ -1036,6 +1042,10 @@ async function executeStorefrontSetupPhases(
                 }
 
                 logger.info('[Storefront Setup] Content published to CDN successfully');
+
+                // Publish patched code files to live CDN
+                const { publishPatchedCodeToLive } = await import('./edsHelpers');
+                await publishPatchedCodeToLive(helixService, repoOwner, repoName, patchedCodePaths, logger);
             } catch (error) {
                 throw new Error(`Failed to publish content to CDN: ${(error as Error).message}`);
             }

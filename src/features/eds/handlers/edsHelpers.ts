@@ -515,3 +515,60 @@ export async function bulkPreviewAndPublish(
         throw error;
     }
 }
+
+// ==========================================================
+// Template Patch Helpers
+// ==========================================================
+
+import type { PatchResult } from '../services/templatePatchRegistry';
+
+/**
+ * Extract unique file paths from applied patches.
+ * Multiple patches may target the same file - this deduplicates them.
+ *
+ * @param patchResults - Results from applyTemplatePatches
+ * @returns Array of unique file paths (with leading /) for applied patches
+ */
+export function getAppliedPatchPaths(patchResults: PatchResult[]): string[] {
+    const paths: string[] = [];
+    for (const result of patchResults) {
+        if (result.applied) {
+            const path = `/${result.filePath}`;
+            if (!paths.includes(path)) {
+                paths.push(path);
+            }
+        }
+    }
+    return paths;
+}
+
+/**
+ * Publish patched code files to live CDN.
+ *
+ * Code preview (previewCode) only syncs to the preview domain (.aem.page).
+ * This function explicitly publishes patched code files to the live domain (.aem.live).
+ *
+ * @param helixService - HelixService instance
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @param patchedPaths - Paths to patched code files (from getAppliedPatchPaths)
+ * @param logger - Logger instance
+ */
+export async function publishPatchedCodeToLive(
+    helixService: HelixService,
+    owner: string,
+    repo: string,
+    patchedPaths: string[],
+    logger: Logger,
+): Promise<void> {
+    if (patchedPaths.length === 0) return;
+
+    logger.debug(`[EDS] Publishing ${patchedPaths.length} patched code files to live CDN`);
+    try {
+        await bulkPreviewAndPublish(helixService, owner, repo, patchedPaths, logger);
+        logger.info('[EDS] Patched code published to live CDN');
+    } catch (error) {
+        // Non-fatal - code was synced to preview, live publish can be retried
+        logger.warn(`[EDS] Code publish to live failed: ${(error as Error).message}`);
+    }
+}
