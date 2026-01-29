@@ -145,21 +145,27 @@ export async function applyTemplatePatches(
 
     for (const patch of patchesToApply) {
         try {
-            // Fetch the file from the template repo
-            const fileUrl = `https://raw.githubusercontent.com/${templateOwner}/${templateRepo}/main/${patch.filePath}`;
-            const response = await fetch(fileUrl);
+            // Check if we already have this file in overrides (from a previous patch)
+            // This allows multiple patches to the same file to work correctly
+            let content = fileOverrides.get(patch.filePath);
 
-            if (!response.ok) {
-                results.push({
-                    patchId: patch.id,
-                    filePath: patch.filePath,
-                    applied: false,
-                    reason: `Failed to fetch file: HTTP ${response.status}`,
-                });
-                continue;
+            if (!content) {
+                // Fetch the file from the template repo
+                const fileUrl = `https://raw.githubusercontent.com/${templateOwner}/${templateRepo}/main/${patch.filePath}`;
+                const response = await fetch(fileUrl);
+
+                if (!response.ok) {
+                    results.push({
+                        patchId: patch.id,
+                        filePath: patch.filePath,
+                        applied: false,
+                        reason: `Failed to fetch file: HTTP ${response.status}`,
+                    });
+                    continue;
+                }
+
+                content = await response.text();
             }
-
-            let content = await response.text();
 
             // Check if the search pattern exists
             if (!content.includes(patch.searchPattern)) {
