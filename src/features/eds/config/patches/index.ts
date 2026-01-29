@@ -8,6 +8,7 @@
 import * as headerNavToolsDefensive from './header-nav-tools-defensive';
 import * as aemAssetsSkuSanitization from './aem-assets-sku-sanitization';
 import * as productLinkSkuEncoding from './product-link-sku-encoding';
+import * as productLinkSkuSlashEncoding from './product-link-sku-slash-encoding';
 import * as personalizationAuthGuard from './personalization-auth-guard';
 
 /**
@@ -17,5 +18,6 @@ export const patchContent: Record<string, { searchPattern: string; replacement: 
     'header-nav-tools-defensive': headerNavToolsDefensive,
     'aem-assets-sku-sanitization': aemAssetsSkuSanitization,
     'product-link-sku-encoding': productLinkSkuEncoding,
+    'product-link-sku-slash-encoding': productLinkSkuSlashEncoding,
     'personalization-auth-guard': personalizationAuthGuard,
 };

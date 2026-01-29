@@ -15,7 +15,12 @@
         {
             "id": "product-link-sku-encoding",
             "filePath": "scripts/commerce.js",
-            "description": "URL-encodes SKUs in product links to handle special characters. Product SKUs containing forward slashes create invalid URLs with extra path segments, causing 404 errors. This patch modifies getProductLink to URL-encode SKUs and getSkuFromUrl to decode them."
+            "description": "Decodes SKUs extracted from URLs to handle encoded forward slashes. SKUs with forward slashes are encoded as __ in URLs. This patch modifies getSkuFromUrl to decode __ back to / when extracting the SKU for Commerce API calls."
+        },
+        {
+            "id": "product-link-sku-slash-encoding",
+            "filePath": "scripts/commerce.js",
+            "description": "Encodes forward slashes in SKUs before URL sanitization. Works with product-link-sku-encoding. The sanitizeName function destroys slash information by replacing non-alphanumeric chars with dashes. This patch pre-encodes slashes as __ before sanitization."
         },
         {
             "id": "personalization-auth-guard",
