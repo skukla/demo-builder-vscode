@@ -1,4 +1,4 @@
-import { Dialog, Heading, Content, Divider, Button } from '@adobe/react-spectrum';
+import { Dialog, Heading, Content, Divider } from '@adobe/react-spectrum';
 import React, { ReactNode, useCallback } from 'react';
 
 export interface ActionButton {

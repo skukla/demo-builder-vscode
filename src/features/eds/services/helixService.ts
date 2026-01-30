@@ -19,7 +19,6 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubTokenService } from './githubTokenService';
-import type { DaLiveEntry } from './types';
 
 // ==========================================================
 // Constants

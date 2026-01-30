@@ -30,8 +30,6 @@ import {
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import Alert from '@spectrum-icons/workflow/Alert';
-import LinkOut from '@spectrum-icons/workflow/LinkOut';
-import Refresh from '@spectrum-icons/workflow/Refresh';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { StatusSection } from '@/core/ui/components/wizard';
 import { Modal } from '@/core/ui/components/ui/Modal';

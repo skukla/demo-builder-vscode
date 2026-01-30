@@ -23,7 +23,7 @@ import { validateURL } from '@/core/validation';
 import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { ErrorCode } from '@/types/errorCodes';
-import { MessageHandler, HandlerContext } from '@/types/handlers';
+import { MessageHandler } from '@/types/handlers';
 import { getMeshComponentInstance, getProjectFrontendPort } from '@/types/typeGuards';
 import { COMPONENT_IDS } from '@/core/constants';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';

@@ -9,7 +9,7 @@ import {
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
 import React, { useRef } from 'react';
 import { useComponentSelection } from '../hooks/useComponentSelection';
-import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
+import { COMPONENT_IDS } from '@/core/constants';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { useFocusOnMount } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';

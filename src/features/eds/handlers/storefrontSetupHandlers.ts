@@ -13,8 +13,7 @@
 import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import type { EdsMetadata, EdsCleanupOptions, GitHubRepo } from '../services/types';
-import { GitHubAppNotInstalledError } from '../services/types';
+import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
 import { CleanupService } from '../services/cleanupService';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubFileOperations } from '../services/githubFileOperations';
