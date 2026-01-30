@@ -17,7 +17,7 @@ import { getFrontendEnvVars } from '@/core/state';
 import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
 import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
-import { getMeshComponentId, getMeshComponentInstance, parseJSON, hasEntries, getComponentInstancesByType } from '@/types/typeGuards';
+import { getMeshComponentInstance, parseJSON, hasEntries, getComponentInstancesByType } from '@/types/typeGuards';
 
 export type { MeshState, MeshChanges };
 
@@ -449,10 +449,16 @@ async function detectMeshChangesImpl(
         }
     }
 
-    // Check env vars changes - use dynamic mesh ID lookup
-    const meshId = getMeshComponentId(project);
-    const newMeshConfig = meshId ? (newComponentConfigs[meshId] as Record<string, unknown> | undefined) || {} : {};
-    const newEnvVars = getMeshEnvVarsImpl(newMeshConfig);
+    // Check env vars changes - merge ALL componentConfigs for cross-boundary values
+    // Mesh env vars like ADOBE_COMMERCE_GRAPHQL_ENDPOINT are stored under backend component,
+    // not the mesh component, so we need to look across all configs
+    const allConfigs: Record<string, unknown> = {};
+    for (const config of Object.values(newComponentConfigs)) {
+        if (config && typeof config === 'object') {
+            Object.assign(allConfigs, config as Record<string, unknown>);
+        }
+    }
+    const newEnvVars = getMeshEnvVarsImpl(allConfigs);
 
     const changedEnvVars: string[] = [];
     MESH_ENV_VARS.forEach(key => {

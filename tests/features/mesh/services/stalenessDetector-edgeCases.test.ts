@@ -107,6 +107,39 @@ describe('StalenessDetector - Edge Cases', () => {
             expect(result.changedEnvVars).toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
         });
 
+        it('should detect env var changes from cross-boundary component configs (e.g., backend component)', async () => {
+            // Bug fix verification: Mesh env vars like ADOBE_COMMERCE_GRAPHQL_ENDPOINT
+            // are stored under the backend component (adobe-commerce-paas), not the mesh component.
+            // detectMeshChanges must look across ALL componentConfigs to find changes.
+            const project = createMockProjectWithMesh({
+                meshState: {
+                    envVars: {
+                        ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://old.com/graphql',
+                    },
+                    sourceHash: 'abc123',
+                    lastDeployed: '2024-01-01T00:00:00Z',
+                },
+            });
+
+            // Env var stored under backend component, not mesh component (cross-boundary)
+            const newConfig = {
+                'adobe-commerce-paas': {
+                    ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://new.com/graphql',
+                },
+                'commerce-mesh': {
+                    // Empty - mesh component doesn't store these env vars
+                },
+            };
+
+            setupMockFileSystemWithHash('abc123');
+
+            const result = await detectMeshChanges(project, newConfig);
+
+            expect(result.hasChanges).toBe(true);
+            expect(result.envVarsChanged).toBe(true);
+            expect(result.changedEnvVars).toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
+        });
+
         it('should detect source file changes', async () => {
             const project = createMockProjectWithMesh();
 
