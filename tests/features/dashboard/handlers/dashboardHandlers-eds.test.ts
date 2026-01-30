@@ -65,13 +65,17 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
         fileOperations: {
             listRepoFiles: jest.fn(),
             deleteFile: jest.fn(),
-            getFileContent: jest.fn(),
+            getFileContent: jest.fn().mockResolvedValue(null),
             createOrUpdateFile: jest.fn(),
             resetRepoToTemplate: jest.fn(), // Bulk tree operation
         },
         oauthService: {},
     }),
     clearServiceCache: jest.fn(),
+    showDaLiveAuthQuickPick: jest.fn().mockResolvedValue({ success: false, cancelled: true }),
+    getAppliedPatchPaths: jest.fn().mockReturnValue([]),
+    publishPatchedCodeToLive: jest.fn().mockResolvedValue(undefined),
+    bulkPreviewAndPublish: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock DaLiveContentOperations (dynamically imported)
@@ -93,6 +97,7 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
 jest.mock('@/features/eds/services/daLiveAuthService', () => ({
     DaLiveAuthService: jest.fn().mockImplementation(() => ({
         isAuthenticated: jest.fn().mockResolvedValue(true),
+        getAccessToken: jest.fn().mockResolvedValue('mock-dalive-token'),
     })),
 }));
 
@@ -113,6 +118,7 @@ jest.mock('@/core/validation', () => ({
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
     validateURL: jest.fn(),
+    validateProjectPath: jest.fn(), // Allow all paths in tests
 }));
 
 // Mock GitHubAppService (dynamically imported for Code Sync verification)
@@ -335,12 +341,12 @@ describe('handleResetEds', () => {
         // Then: Should call bulk reset with template and target repos
         // Template values derived from demo-packages.json: citisignal package + eds-paas stack
         expect(mockFileOps.resetRepoToTemplate).toHaveBeenCalledWith(
-            'demo-system-stores',   // templateOwner (from demo-packages.json)
-            'accs-citisignal',      // templateRepo (from demo-packages.json)
-            'test-org',             // targetOwner
-            'test-repo',            // targetRepo
-            expect.any(Map),        // fileOverrides (contains fstab.yaml)
-            'main',                 // branch
+            'skukla',                       // templateOwner (from demo-packages.json)
+            'citisignal-eds-boilerplate',   // templateRepo (from demo-packages.json)
+            'test-org',                     // targetOwner
+            'test-repo',                    // targetRepo
+            expect.any(Map),                // fileOverrides (contains fstab.yaml)
+            'main',                         // branch
         );
 
         // And: fileOverrides should contain fstab.yaml with DA.live path

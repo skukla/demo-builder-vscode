@@ -61,9 +61,11 @@ jest.mock('vscode', () => ({
 
 // Mock DaLiveAuthService
 const mockIsAuthenticated = jest.fn();
+const mockGetAccessToken = jest.fn();
 jest.mock('@/features/eds/services/daLiveAuthService', () => ({
     DaLiveAuthService: jest.fn().mockImplementation(() => ({
         isAuthenticated: mockIsAuthenticated,
+        getAccessToken: mockGetAccessToken,
     })),
 }));
 
@@ -99,7 +101,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
         fileOperations: {
             listRepoFiles: jest.fn(),
             deleteFile: jest.fn(),
-            getFileContent: jest.fn(),
+            getFileContent: jest.fn().mockResolvedValue(null),
             createOrUpdateFile: jest.fn(),
             resetRepoToTemplate: jest.fn().mockResolvedValue({ commitSha: 'abc1234567890', fileCount: 50 }),
         },
@@ -111,6 +113,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     }),
     showDaLiveAuthQuickPick: jest.fn().mockImplementation(() => Promise.resolve(mockQuickPickAuthResult)),
     clearServiceCache: jest.fn(),
+    getAppliedPatchPaths: jest.fn().mockReturnValue([]),
+    publishPatchedCodeToLive: jest.fn().mockResolvedValue(undefined),
+    bulkPreviewAndPublish: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock DaLiveContentOperations (dynamically imported)
@@ -324,6 +329,7 @@ describe('handleResetEds DA.live auth pre-check', () => {
 
         // Default: DA.live token is valid
         mockIsAuthenticated.mockResolvedValue(true);
+        mockGetAccessToken.mockResolvedValue('mock-dalive-token');
 
         // Reset mockQuickPick state
         mockQuickPick.title = '';

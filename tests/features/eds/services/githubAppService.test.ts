@@ -21,6 +21,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 // Mock logger
 jest.mock('@/core/logging', () => ({
     getLogger: jest.fn(() => ({
+        trace: jest.fn(),
         debug: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),

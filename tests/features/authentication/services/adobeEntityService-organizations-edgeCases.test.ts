@@ -208,15 +208,15 @@ describe('AdobeEntityService - Organizations - Edge Cases', () => {
             );
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.org',
-                { encoding: 'utf8' }
+                expect.objectContaining({ encoding: 'utf8' })
             );
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.project',
-                { encoding: 'utf8' }
+                expect.objectContaining({ encoding: 'utf8' })
             );
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.workspace',
-                { encoding: 'utf8' }
+                expect.objectContaining({ encoding: 'utf8' })
             );
 
             // Verify cache cleared
@@ -263,7 +263,7 @@ describe('AdobeEntityService - Organizations - Edge Cases', () => {
             );
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.org',
-                { encoding: 'utf8' }
+                expect.objectContaining({ encoding: 'utf8' })
             );
             expect(mockCacheManager.clearConsoleWhereCache).toHaveBeenCalledTimes(1);
         });

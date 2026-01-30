@@ -7,6 +7,11 @@
 import { fallbackMeshCheck } from '@/features/mesh/services/meshCheckHelpers';
 import { CommandExecutor } from '@/core/shell';
 
+// Mock getMeshNodeVersion to return a consistent value
+jest.mock('@/features/mesh/services/meshConfig', () => ({
+    getMeshNodeVersion: jest.fn(() => '20'),
+}));
+
 describe('fallbackMeshCheck', () => {
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
 
@@ -40,7 +45,8 @@ describe('fallbackMeshCheck', () => {
                 meshExists: false,
             });
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                'aio api-mesh get --active'
+                'aio api-mesh get --active',
+                { useNodeVersion: '20' }
             );
         });
 
