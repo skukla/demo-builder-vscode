@@ -1,11 +1,12 @@
 /**
  * Command: Manage GitHub Repositories
  *
- * Interactive VS Code command to manage GitHub repositories linked to Demo Builder projects.
+ * Interactive VS Code command to manage ALL user's GitHub repositories.
  *
  * Features:
- * - Loads repositories from Demo Builder project metadata
- * - Multi-select QuickPick with project linkage info
+ * - Fetches ALL repositories from GitHub API (not filtered by Demo Builder projects)
+ * - Shows linkage info for repos connected to Demo Builder projects
+ * - Multi-select QuickPick for batch operations
  * - Batch deletion with confirmation
  * - GitHub authentication with proper scopes
  */
@@ -14,7 +15,7 @@ import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getLinkedEdsProjects, type EdsProjectInfo } from '../services/resourceCleanupHelpers';
+import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 
 interface RepoQuickPickItem extends vscode.QuickPickItem {
     repoFullName: string;
@@ -76,28 +77,33 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
             return;
         }
 
-        // Step 2: Load Demo Builder projects with EDS metadata
+        // Step 2: Load ALL user repositories from GitHub API + Demo Builder linkage info
         const stateManager = ServiceLocator.getStateManager();
         if (!stateManager) {
             vscode.window.showErrorMessage('Extension not fully initialized. Please try again.');
             return;
         }
 
-        let edsProjects: EdsProjectInfo[] = [];
+        let allRepos: Array<{ fullName: string }> = [];
         let repoToProjectMap = new Map<string, string[]>();
 
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Loading repositories from Demo Builder projects...',
+                title: 'Loading GitHub repositories...',
                 cancellable: false,
             },
             async () => {
                 try {
-                    edsProjects = await getLinkedEdsProjects(stateManager);
-                    logger.debug(`[GitHub Manage] Found ${edsProjects.length} EDS projects`);
+                    // Fetch ALL repositories from GitHub API
+                    allRepos = await repoOperations.listUserRepositories();
+                    logger.debug(`[GitHub Manage] Found ${allRepos.length} GitHub repositories`);
 
-                    // Build map of repo -> projects (a repo might be linked to multiple projects)
+                    // Also load Demo Builder projects to show linkage info
+                    const edsProjects = await getLinkedEdsProjects(stateManager);
+                    logger.debug(`[GitHub Manage] Found ${edsProjects.length} linked EDS projects`);
+
+                    // Build map of repo -> projects (for linkage display only)
                     for (const project of edsProjects) {
                         if (project.metadata.githubRepo) {
                             const repo = project.metadata.githubRepo;
@@ -107,31 +113,28 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
                         }
                     }
                 } catch (error) {
-                    logger.error('[GitHub Manage] Failed to load projects:', error as Error);
+                    logger.error('[GitHub Manage] Failed to load repositories:', error as Error);
                     throw error;
                 }
             },
         );
 
-        // Get unique repos
-        const uniqueRepos = Array.from(repoToProjectMap.keys());
-
-        if (uniqueRepos.length === 0) {
+        if (allRepos.length === 0) {
             vscode.window.showInformationMessage(
-                'No GitHub repositories found linked to Demo Builder projects.',
+                'No GitHub repositories found for your account.',
             );
             return;
         }
 
-        // Step 3: Create QuickPick items
-        const quickPickItems: RepoQuickPickItem[] = uniqueRepos.map(repo => {
-            const linkedProjects = repoToProjectMap.get(repo) || [];
+        // Step 3: Create QuickPick items from ALL repos
+        const quickPickItems: RepoQuickPickItem[] = allRepos.map(repo => {
+            const linkedProjects = repoToProjectMap.get(repo.fullName) || [];
             return {
-                label: `$(repo) ${repo}`,
+                label: `$(repo) ${repo.fullName}`,
                 description: linkedProjects.length > 0
                     ? `Linked to: ${linkedProjects.join(', ')}`
                     : undefined,
-                repoFullName: repo,
+                repoFullName: repo.fullName,
                 linkedProject: linkedProjects[0],
             };
         });
@@ -139,7 +142,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
         // Step 4: Show multi-select QuickPick
         const selectedItems = await vscode.window.showQuickPick(quickPickItems, {
             canPickMany: true,
-            placeHolder: `Select repositories to delete (${uniqueRepos.length} total)`,
+            placeHolder: `Select repositories to delete (${allRepos.length} total)`,
             title: 'Manage GitHub Repositories',
             matchOnDescription: true,
         });
