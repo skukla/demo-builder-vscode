@@ -48,7 +48,7 @@ export class CheckUpdatesCommand extends BaseCommand {
         await CheckUpdatesCommand.lock.run(async () => {
             try {
                 // Run update check with visible progress notification
-                const { extensionUpdate, multiProjectUpdates, currentProject, hasUpdates } = await vscode.window.withProgress(
+                const { extensionUpdate, multiProjectUpdates, templateUpdates, currentProject, hasUpdates } = await vscode.window.withProgress(
                     {
                         location: vscode.ProgressLocation.Notification,
                         title: 'Demo Builder Updates',

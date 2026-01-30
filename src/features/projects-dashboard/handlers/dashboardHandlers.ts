@@ -361,7 +361,9 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
         const result = await deleteProject(context, project);
 
         // Notify UI to refresh (handles timeout scenarios)
-        if (result.success && result.data?.success) {
+        // Cast data to expected shape - deleteProject returns { success: boolean }
+        const resultData = result.data as { success?: boolean } | undefined;
+        if (result.success && resultData?.success) {
             context.sendMessage?.('projectDeleted', {});
         }
 
