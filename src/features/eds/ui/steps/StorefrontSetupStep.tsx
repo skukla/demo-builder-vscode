@@ -352,6 +352,8 @@ export function StorefrontSetupStep({
 
     // Track if setup has been started to prevent duplicate sends
     const setupStartedRef = useRef(false);
+    // Track if setup is currently running (for cleanup on unmount)
+    const isSetupRunningRef = useRef(false);
     // Store initial config in ref to use in one-time effect
     const initialConfigRef = useRef({
         projectName: state.projectName,
@@ -359,6 +361,30 @@ export function StorefrontSetupStep({
         componentConfigs: state.componentConfigs,
         backendComponentId: state.components?.backend,
     });
+
+    // Update running state when phase changes
+    useEffect(() => {
+        isSetupRunningRef.current = isActivePhase(setupState.phase);
+    }, [setupState.phase]);
+
+    // Cleanup effect: send cancel message when wizard closes during active setup
+    useEffect(() => {
+        return () => {
+            // On unmount, if setup was running, send cancel message to abort backend operations
+            if (isSetupRunningRef.current) {
+                // eslint-disable-next-line no-console
+                console.log('[StorefrontSetupStep] Unmounting during active setup, sending cancel');
+                vscode.postMessage('storefront-setup-cancel', {
+                    partialState: setupState.partialState,
+                    edsConfig: {
+                        daLiveOrg: state.edsConfig?.daLiveOrg,
+                        daLiveSite: state.edsConfig?.daLiveSite,
+                    },
+                });
+            }
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Empty deps - cleanup only runs on unmount
 
     // Set up message listeners (stable callbacks, no re-subscription needed)
     useEffect(() => {

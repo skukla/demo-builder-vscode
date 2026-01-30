@@ -230,13 +230,14 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
                             }
                         } else {
                             // Site not linked to Demo Builder project - direct DA.live delete
-                            // Warn user about potential orphaned CDN content
-                            logger.debug(`[DA.live Manage] Deleting ${siteName} (no linked repo - Helix content may remain)`);
+                            // This is expected for sites created outside Demo Builder
+                            logger.debug(`[DA.live Manage] Deleting ${siteName} (external site - no linked repo for CDN cleanup)`);
 
                             await daLiveOps.deleteSite(orgName, siteName);
                             deleted.push(siteName);
-                            logger.info(`[DA.live Manage] ✓ Deleted: ${siteName} (no Helix unpublish - site not linked)`);
-                            warnings.push(`${siteName}: CDN content may remain (not linked to Demo Builder)`);
+                            logger.info(`[DA.live Manage] ✓ Deleted: ${siteName} (external site - no CDN cleanup needed)`);
+                            // Only add warning if user might care about CDN content
+                            // For external sites, this is expected behavior - don't add to warnings
                         }
                     } catch (error) {
                         const errorMsg = (error as Error).message;

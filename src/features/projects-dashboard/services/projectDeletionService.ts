@@ -24,6 +24,7 @@ import {
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
 import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 
 /**
@@ -451,8 +452,11 @@ async function performEdsCleanup(
                 },
             };
 
+            // Create GitHubTokenService for Helix Admin API authentication
+            const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
+
             // HelixService: (logger, githubTokenService, daLiveTokenProvider)
-            const helixService = new HelixService(context.logger, undefined, tokenProvider);
+            const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
             const daLiveOrgOps = new DaLiveOrgOperations(tokenProvider, context.logger);
 
             progress.report({ message: 'Deleting DA.live site...' });

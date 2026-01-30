@@ -506,6 +506,11 @@ async function executeStorefrontSetupPhases(
         // ============================================
         // Phase 1: GitHub Repository Setup
         // ============================================
+        // Check for cancellation before starting
+        if (signal.aborted) {
+            throw new Error('Operation cancelled');
+        }
+
         if (usePreCreatedRepo && edsConfig.createdRepo) {
             // Repository was already created in GitHubRepoSelectionStep
             // Just use the info and skip creation
@@ -630,6 +635,11 @@ async function executeStorefrontSetupPhases(
         // ============================================
         // Phase 2: Helix Configuration
         // ============================================
+        // Check for cancellation before continuing
+        if (signal.aborted) {
+            throw new Error('Operation cancelled');
+        }
+
         await context.sendMessage('storefront-setup-progress', {
             phase: 'helix-config',
             message: 'Configuring Edge Delivery Services...',
@@ -895,6 +905,11 @@ async function executeStorefrontSetupPhases(
         // ============================================
         // Phase 4: DA.live Content Population
         // ============================================
+        // Check for cancellation before continuing
+        if (signal.aborted) {
+            throw new Error('Operation cancelled');
+        }
+
         // Track library paths for explicit publishing (may be missed by publishAllSiteContent)
         let libraryPaths: string[] = [];
 
@@ -988,6 +1003,11 @@ async function executeStorefrontSetupPhases(
         // ============================================
         // Phase 5: Publish Content to CDN
         // ============================================
+        // Check for cancellation before continuing
+        if (signal.aborted) {
+            throw new Error('Operation cancelled');
+        }
+
         // This makes the site LIVE and viewable
         if (!resolvedEdsConfig.skipContent) {
             await context.sendMessage('storefront-setup-progress', {
@@ -1044,7 +1064,8 @@ async function executeStorefrontSetupPhases(
                         // alongside config.json verification for efficiency
                     } catch (libPublishError) {
                         // Non-fatal - library config was created, publishing can be retried
-                        logger.debug(`[Storefront Setup] Block library publish failed: ${(libPublishError as Error).message}`);
+                        // Log at WARN level so it's visible for troubleshooting
+                        logger.warn(`[Storefront Setup] Block library publish failed: ${(libPublishError as Error).message}`);
                     }
                 }
 

@@ -290,8 +290,9 @@ export async function verifyBlockLibraryOnCdn(
     const cdnUrl = `https://main--${repoName}--${repoOwner}.aem.live/.da/library/blocks.json`;
     logger.debug(`[ConfigSync] Verifying block library CDN availability: ${cdnUrl}`);
 
-    // Use fewer attempts for library since it's less critical than config.json
-    const maxAttempts = 5;
+    // Increase attempts for library to handle CDN edge propagation delays
+    // CDN propagation can take 20-30+ seconds for edge nodes globally
+    const maxAttempts = 10;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
@@ -310,7 +311,7 @@ export async function verifyBlockLibraryOnCdn(
                     return true;
                 }
 
-                logger.debug(`[ConfigSync] CDN returned blocks.json but no block entries, retrying...`);
+                logger.warn(`[ConfigSync] CDN returned blocks.json but no block entries, retrying...`);
             } else {
                 logger.debug(`[ConfigSync] Block library CDN returned ${response.status}, retrying (${attempt}/${maxAttempts})...`);
             }

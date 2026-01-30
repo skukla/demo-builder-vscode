@@ -132,7 +132,11 @@ export class GitHubAppService {
             this.logger.info(`[GitHub App] AEM Code Sync app not installed for ${owner}/${repo} (code.status: 404)`);
         } else if (codeStatus === 200) {
             this.logger.info(`[GitHub App] AEM Code Sync app installed and working for ${owner}/${repo}`);
+        } else if (codeStatus === 400) {
+            // 400 is expected for repos where sync is initializing - log at trace level to reduce noise
+            this.logger.trace(`[GitHub App] AEM Code Sync app sync initializing for ${owner}/${repo} (code.status: 400)`);
         } else {
+            // Truly unexpected status codes - keep at info level
             this.logger.info(`[GitHub App] AEM Code Sync app status unclear for ${owner}/${repo} (code.status: ${codeStatus})${lenient ? ' - accepting in lenient mode' : ''}`);
         }
 
