@@ -111,7 +111,7 @@ interface StorefrontSetupStepProps {
  * Get human-readable description for the current phase
  * These appear in the PageHeader as status text - keep them concise
  */
-function getPhaseDescription(phase: StorefrontSetupPhase): string {
+function _getPhaseDescription(phase: StorefrontSetupPhase): string {
     switch (phase) {
         case 'idle':
             return 'Preparing setup...';

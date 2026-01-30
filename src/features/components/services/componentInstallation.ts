@@ -229,7 +229,7 @@ export class ComponentInstallation {
      * 3. Final fallback to commit hash
      */
     private async detectVersion(
-        componentDef: TransformedComponentDefinition,
+        _componentDef: TransformedComponentDefinition,
         componentPath: string,
     ): Promise<string | null> {
         const commandManager = ServiceLocator.getCommandExecutor();

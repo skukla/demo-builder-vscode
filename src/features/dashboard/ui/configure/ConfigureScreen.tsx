@@ -66,9 +66,6 @@ interface ServiceGroup {
     fields: UniqueField[];
 }
 
-interface ComponentInstance {
-    type?: string;
-}
 
 interface SaveConfigurationResponse {
     success: boolean;

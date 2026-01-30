@@ -81,7 +81,7 @@ export interface ConfigSyncResult {
  * @returns Sync result with status for each operation
  */
 export async function syncConfigToRemote(params: ConfigSyncParams): Promise<ConfigSyncResult> {
-    const { componentPath, repoOwner, repoName, logger, secrets, authManager, onProgress, verifyBlockLibrary } = params;
+    const { componentPath, repoOwner, repoName, logger, secrets, authManager: _authManager, onProgress, verifyBlockLibrary } = params;
 
     const result: ConfigSyncResult = {
         success: false,

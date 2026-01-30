@@ -90,7 +90,6 @@ export class TokenManager {
 
         // Cache miss or expired, fetch fresh
         const maxRetries = 3;
-        let _lastError: Error | null = null;
 
         // Retry loop with exponential backoff
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -164,7 +163,6 @@ export class TokenManager {
 
                 return result;
             } catch (error) {
-                _lastError = toError(error);
                 const appError = toAppError(error);
 
                 // Check if it's a timeout error that should be retried

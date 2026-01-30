@@ -198,7 +198,7 @@ export function getAdobeStepIndices(wizardSteps: WizardStepConfig[]): AdobeStepI
  * @returns Partial state updates to apply
  */
 export function computeStateUpdatesForBackwardNav(
-    currentState: WizardState,
+    _currentState: WizardState,
     targetStep: WizardStep,
     targetIndex: number,
     indices: AdobeStepIndices,

@@ -241,7 +241,7 @@ export class ProgressUnifier {
      */
     private async parseFnmOutput(
         output: string,
-        step: InstallStep,
+        _step: InstallStep,
         context: ExecutionContext,
         onProgress: ProgressHandler,
         lastDetail: string,
@@ -295,7 +295,7 @@ export class ProgressUnifier {
      */
     private async parseGenericOutput(
         output: string,
-        step: InstallStep,
+        _step: InstallStep,
         context: ExecutionContext,
         onProgress: ProgressHandler,
         lastDetail: string,

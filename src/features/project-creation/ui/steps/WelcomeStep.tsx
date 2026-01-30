@@ -3,7 +3,6 @@ import React, { useEffect, useCallback } from 'react';
 import { BrandGallery } from '../components/BrandGallery';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
-import { cn } from '@/core/ui/utils/classNames';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     normalizeProjectName,
@@ -29,7 +28,7 @@ interface WelcomeStepProps extends BaseStepProps {
     onArchitectureChange?: (oldStackId: string, newStackId: string) => void;
 }
 
-export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], initialViewMode, packages, stacks, onArchitectureChange }: WelcomeStepProps) {
+export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], initialViewMode: _initialViewMode, packages, stacks, onArchitectureChange }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
 

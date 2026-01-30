@@ -257,7 +257,7 @@ export class ComponentRegistryManager {
         };
     }
 
-    private buildServicesForComponent(
+    private _buildServicesForComponent(
         serviceIds: string[],
         services: Record<string, ServiceDefinition>,
         sharedEnvVars: Record<string, Omit<EnvVarDefinition, 'key'>>,
@@ -369,7 +369,7 @@ export class ComponentRegistryManager {
         frontendId?: string,
         backendId?: string,
         dependencies?: string[],
-        integrations?: string[],
+        _integrations?: string[],
         appBuilder?: string[],
     ): Promise<Set<string>> {
         const nodeVersions = new Set<string>();
@@ -448,7 +448,7 @@ export class ComponentRegistryManager {
         frontendId?: string,
         backendId?: string,
         dependencies?: string[],
-        integrations?: string[],
+        _integrations?: string[],
         appBuilder?: string[],
     ): Promise<Record<string, string>> {
         const mapping: Record<string, string> = {};
@@ -546,7 +546,7 @@ export class ComponentRegistryManager {
         frontendId?: string,
         backendId?: string,
         dependencies?: string[],
-        integrations?: string[],
+        _integrations?: string[],
         appBuilder?: string[],
     ): Promise<Record<string, string>> {
         const mapping: Record<string, string> = {};

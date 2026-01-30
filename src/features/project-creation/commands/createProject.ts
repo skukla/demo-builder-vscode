@@ -85,7 +85,7 @@ interface InitialWizardData {
 export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     // Debug: Instance tracking for diagnosing retry/state issues
     private static instanceCounter = 0;
-    private readonly instanceId: number;
+    private readonly _instanceId: number;
 
     // Prerequisites are handled by PrerequisitesManager
     private prereqManager: PrerequisitesManager;
@@ -120,7 +120,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         super(context, stateManager, logger);
 
         // Track instance for debugging
-        this.instanceId = ++CreateProjectWebviewCommand.instanceCounter;
+        this._instanceId = ++CreateProjectWebviewCommand.instanceCounter;
 
         // PrerequisitesManager is initialized with proper path
         this.prereqManager = new PrerequisitesManager(context.extensionPath, logger);
@@ -570,7 +570,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     // Helper method to send feedback messages
-    private async sendFeedback(
+    private async _sendFeedback(
         step: string,
         status: string,
         primary: string,
@@ -592,7 +592,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     // Helper methods that delegate to extracted helpers
-    private getSetupInstructions(selectedComponents: string[] = []): { step: string; details: string; important?: boolean }[] | undefined {
+    private _getSetupInstructions(selectedComponents: string[] = []): { step: string; details: string; important?: boolean }[] | undefined {
         return getSetupInstructionsHelper(this.sharedState.apiServicesConfig, selectedComponents, this.sharedState.componentsData as import('@/types/components').ComponentRegistry | undefined);
     }
 
@@ -602,7 +602,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
      * 2. Call aio api-mesh:describe (official Adobe method, ~3s)
      * 3. Construct from meshId as reliable fallback
      */
-    private async getEndpoint(
+    private async _getEndpoint(
         meshId: string,
         cachedEndpoint?: string,
     ): Promise<string> {
@@ -619,7 +619,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     /**
      * Format group name for display
      */
-    private formatGroupName(group: string): string {
+    private _formatGroupName(group: string): string {
         return formatGroupNameHelper(group);
     }
     
@@ -627,7 +627,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
      * Deploy mesh component from cloned repository
      * Reads mesh.json from component path and deploys it to Adobe I/O
      */
-    private async deployMeshComponent(
+    private async _deployMeshComponent(
         componentPath: string,
         onProgress?: (message: string, subMessage?: string) => void,
     ): Promise<{

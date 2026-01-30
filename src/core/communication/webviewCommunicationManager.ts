@@ -78,7 +78,10 @@ export class WebviewCommunicationManager {
     private messageQueue: Message[] = [];
     private pendingRequests = new Map<string, PendingRequest>();
     private messageHandlers = new Map<string, MessageHandlerFunction>();
+    // Tracking state for handshake protocol - values assigned but read indirectly
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     private isWebviewReady = false;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     private isExtensionReady = false;
     private handshakeComplete = false;
     private stateVersion = 0;

@@ -14,7 +14,6 @@ import type { ComponentDefinitionEntry } from './componentInstallationOrchestrat
 import { isMeshComponentId } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { ProjectSetupContext, generateComponentConfigFiles } from '@/features/project-creation/helpers';
-import type { Project } from '@/types';
 import { getComponentIds, getEntryCount } from '@/types/typeGuards';
 
 export interface FinalizationContext {

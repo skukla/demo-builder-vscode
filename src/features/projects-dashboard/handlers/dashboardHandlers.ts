@@ -773,7 +773,6 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                 const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
 
                 const { tokenService: githubTokenService } = getGitHubServices(context);
-                const authService = ServiceLocator.getAuthenticationService();
 
                 // Create TokenProvider adapter for DA.live operations
                 // Required to list and publish content from DA.live

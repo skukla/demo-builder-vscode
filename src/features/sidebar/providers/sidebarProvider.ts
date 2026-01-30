@@ -38,11 +38,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     private hasCheckedForUpdates = false;
 
     constructor(
-        private context: vscode.ExtensionContext,
+        private _context: vscode.ExtensionContext,
         private stateManager: StateManager,
         private logger: Logger,
     ) {
-        this.extensionUri = context.extensionUri;
+        this.extensionUri = _context.extensionUri;
     }
 
     /**

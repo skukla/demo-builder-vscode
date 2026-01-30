@@ -277,7 +277,6 @@ export class CommandExecutor {
             };
         } catch (error) {
             const execaError = error as ExecaError;
-            const _duration = Date.now() - startTime;
 
             if (execaError.timedOut) {
                 this.logger.warn(`[Command Executor] Command timed out after ${options.timeout}ms`);

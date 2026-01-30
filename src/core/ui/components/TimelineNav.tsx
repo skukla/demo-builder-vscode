@@ -137,12 +137,12 @@ export function TimelineNav({
     steps,
     currentStepIndex,
     completedStepIndices,
-    confirmedStepIndices = [],
+    confirmedStepIndices: _confirmedStepIndices = [],
     onStepClick,
     showHeader = true,
     headerText = 'Setup Progress',
     compact = false,
-    isEditMode = false,
+    isEditMode: _isEditMode = false,
 }: TimelineNavProps) {
     // Track previous steps for detecting changes
     const prevStepsRef = useRef<TimelineStep[]>([]);

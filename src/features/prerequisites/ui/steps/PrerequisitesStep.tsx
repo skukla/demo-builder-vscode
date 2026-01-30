@@ -65,8 +65,6 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
         resetAutoScroll,
     );
 
-    const hasErrors = checks.some(check => check.status === 'error');
-
     return (
         <div className="container-wizard">
             <Text marginBottom="size-200" UNSAFE_className={cn('text-gray-700', 'text-md')}>

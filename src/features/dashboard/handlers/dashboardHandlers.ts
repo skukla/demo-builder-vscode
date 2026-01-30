@@ -670,7 +670,6 @@ export const handleResetEds: MessageHandler = async (context) => {
 
                 // Create service dependencies
                 const { tokenService: githubTokenService, fileOperations: githubFileOps } = getGitHubServices(context);
-                const authService = ServiceLocator.getAuthenticationService();
 
                 // Create TokenProvider adapter for DA.live operations
                 // IMPORTANT: Use DA.live token (not Adobe IMS token) for content operations

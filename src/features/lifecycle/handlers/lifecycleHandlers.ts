@@ -111,7 +111,7 @@ export async function handleCancelAuthPolling(context: HandlerContext): Promise<
  * Opens the project directory in VS Code, triggering an Extension Host restart.
  */
 export async function handleOpenProject(context: HandlerContext): Promise<SimpleResult> {
-    const vscode = await import('vscode');
+    await import('vscode');
 
     context.logger.info('[Project Creation] ✅ openProject message received');
     context.logger.debug(`[Project Creation] Current panel: ${context.panel ? 'exists' : 'undefined'}`);

@@ -19,7 +19,7 @@ export class AdobeSDKClient {
     // PERFORMANCE FIX: Track in-flight initialization to prevent concurrent calls
     private sdkInitPromise: Promise<void> | null = null;
 
-    constructor(private logger: Logger) {}
+    constructor(private _logger: Logger) {}
 
     /**
      * Check if SDK is initialized

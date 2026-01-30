@@ -303,7 +303,7 @@ export async function handleStartStorefrontSetup(
  */
 export async function handleResumeStorefrontSetup(
     context: HandlerContext,
-    payload?: StorefrontSetupStartPayload,
+    _payload?: StorefrontSetupStartPayload,
 ): Promise<HandlerResponse> {
     context.logger.info('[Storefront Setup] Resume requested after GitHub App installation');
 
@@ -407,10 +407,10 @@ interface StorefrontSetupResult {
  */
 async function executeStorefrontSetupPhases(
     context: HandlerContext,
-    projectName: string,
+    _projectName: string,
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
-    componentConfigs: StorefrontSetupStartPayload['componentConfigs'],
-    backendComponentId: string | undefined,
+    _componentConfigs: StorefrontSetupStartPayload['componentConfigs'],
+    _backendComponentId: string | undefined,
     signal: AbortSignal,
 ): Promise<StorefrontSetupResult> {
     const logger = context.logger;
@@ -424,7 +424,7 @@ async function executeStorefrontSetupPhases(
     // Create TokenProvider adapter for DA.live operations
     const tokenProvider = createDaLiveTokenProvider(context.authManager);
 
-    const daLiveOrgOps = new DaLiveOrgOperations(tokenProvider, logger);
+    const _daLiveOrgOps = new DaLiveOrgOperations(tokenProvider, logger);
     const daLiveContentOps = new DaLiveContentOperations(tokenProvider, logger);
 
     // Create HelixService for CDN operations (code preview, content publish)

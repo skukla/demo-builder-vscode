@@ -71,7 +71,7 @@ export function useSmartFieldFocusScroll({
     // Use ref for comparison to avoid callback recreation
     const currentSectionRef = useRef<string | null>(null);
 
-    const onFieldFocus = useCallback((sectionId: string, fieldId: string) => {
+    const onFieldFocus = useCallback((sectionId: string, _fieldId: string) => {
         // Check if new section before updating
         const isNewSection = sectionId !== currentSectionRef.current;
 

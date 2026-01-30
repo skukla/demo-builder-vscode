@@ -513,7 +513,6 @@ export class DaLiveContentOperations {
         destination: { org: string; site: string },
         destPath: string,
     ): Promise<boolean> {
-        const normalizedPath = normalizePath(sourcePath);
         // Fetch JSON from public CDN (works without auth for any org)
         const sourceUrl = `https://main--${source.site}--${source.org}.aem.live${sourcePath}.json`;
 
@@ -1417,7 +1416,7 @@ export class DaLiveContentOperations {
      * @param path - Starting path (e.g., '/media')
      * @returns Array of file entries (folders are traversed, not returned)
      */
-    private async collectMediaFiles(org: string, site: string, path: string): Promise<DaLiveEntry[]> {
+    private async _collectMediaFiles(org: string, site: string, path: string): Promise<DaLiveEntry[]> {
         const files: DaLiveEntry[] = [];
 
         // listDirectory returns empty array for 404 (graceful handling)
@@ -1429,7 +1428,7 @@ export class DaLiveContentOperations {
             if (isFolder) {
                 // Recursively collect from subfolder
                 const relativePath = entry.path.replace(`/${org}/${site}`, '');
-                const subFiles = await this.collectMediaFiles(org, site, relativePath);
+                const subFiles = await this._collectMediaFiles(org, site, relativePath);
                 files.push(...subFiles);
             } else {
                 // It's a file - add to collection

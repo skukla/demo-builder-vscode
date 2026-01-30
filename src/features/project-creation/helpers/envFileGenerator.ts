@@ -9,7 +9,7 @@ import { generateConfigFile } from '@/core/config/configFileGenerator';
 import { TransformedComponentDefinition, EnvVarDefinition, ConfigFileDefinition, ComponentRegistry } from '@/types/components';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import { COMPONENT_IDS } from '@/core/constants';
-import { generateConfigJson, mapBackendToEnvironmentType, extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
+import { generateConfigJson, extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import type { ConfigGeneratorParams } from '@/features/eds/services/configGenerator';
 
 /**

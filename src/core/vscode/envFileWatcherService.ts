@@ -66,7 +66,7 @@ export class EnvFileWatcherService implements vscode.Disposable {
     private readonly STARTUP_GRACE_PERIOD = TIMEOUTS.STARTUP_UPDATE_CHECK_DELAY;
 
     constructor(
-        private context: vscode.ExtensionContext,
+        private _context: vscode.ExtensionContext,
         private stateManager: any, // Using any to avoid circular dependencies with StateManager
         private watcherManager: WorkspaceWatcherManager,
         private logger: any,

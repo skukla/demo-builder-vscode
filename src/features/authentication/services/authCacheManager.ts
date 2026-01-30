@@ -23,14 +23,14 @@ import type { Logger } from '@/types/logger';
  * SECURITY: Cache TTLs include random jitter (±10%) to prevent timing attacks
  */
 export class AuthCacheManager {
-    private logger: Logger;
+    private _logger: Logger;
 
     /**
      * Create an AuthCacheManager
      * @param logger - Optional logger for dependency injection (defaults to getLogger())
      */
     constructor(logger?: Logger) {
-        this.logger = logger ?? getLogger();
+        this._logger = logger ?? getLogger();
     }
 
     // Session caching for current selections

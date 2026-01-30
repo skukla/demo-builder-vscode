@@ -22,8 +22,8 @@ export class ComponentHandler {
     private registryManager: ComponentRegistryManager;
     private dependencyResolver: DependencyResolver;
 
-    constructor(private context: vscode.ExtensionContext) {
-        this.registryManager = new ComponentRegistryManager(context.extensionPath);
+    constructor(private _context: vscode.ExtensionContext) {
+        this.registryManager = new ComponentRegistryManager(_context.extensionPath);
         this.dependencyResolver = new DependencyResolver(this.registryManager);
     }
 

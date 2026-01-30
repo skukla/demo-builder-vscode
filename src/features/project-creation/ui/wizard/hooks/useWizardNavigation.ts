@@ -4,9 +4,7 @@ import {
     filterCompletedStepsForBackwardNav,
     getAdobeStepIndices,
     computeStateUpdatesForBackwardNav,
-    buildProjectConfig,
     findFirstIncompleteStep,
-    isStepSatisfied,
     REQUIRED_REVIEW_STEPS,
     ImportedSettings,
 } from '../wizardHelpers';
@@ -58,10 +56,10 @@ interface UseWizardNavigationReturn {
  */
 async function handleStepBackendCalls(
     currentStep: string,
-    nextStepId: string,
+    _nextStepId: string,
     wizardState: WizardState,
-    importedSettings?: ImportedSettings | null,
-    packages?: DemoPackage[],
+    _importedSettings?: ImportedSettings | null,
+    _packages?: DemoPackage[],
 ): Promise<void> {
     // Project selection: Commit the UI selection to backend
     if (currentStep === 'adobe-project' && wizardState.adobeProject?.id) {

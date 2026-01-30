@@ -8,7 +8,6 @@ import { ServiceLocator } from '@/core/di';
 import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
-import { Project } from '@/types/base';
 import { getMeshComponentInstance, parseJSON } from '@/types/typeGuards';
 
 /**

@@ -1,4 +1,3 @@
-import { getLogger } from '@/core/logging';
 
 /**
  * Manages mutual exclusion for command execution
@@ -6,7 +5,6 @@ import { getLogger } from '@/core/logging';
  */
 export class ResourceLocker {
     private locks = new Map<string, Promise<void>>();
-    private logger = getLogger();
 
     /**
      * Execute operation with exclusive access to a resource
