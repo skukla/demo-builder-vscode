@@ -447,11 +447,14 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 const isDeferredField = field.key === 'MESH_ENDPOINT';
 
                 if (field.required && !isDeferredField) {
-                    const hasValue = field.componentIds.some(compId =>
+                    // Check componentConfigs first
+                    const hasValueInConfig = field.componentIds.some(compId =>
                         componentConfigs[compId]?.[field.key],
                     );
+                    // Also check if field has a default value (consistent with getFieldValue)
+                    const hasDefault = field.default !== undefined && field.default !== '';
 
-                    if (!hasValue) {
+                    if (!hasValueInConfig && !hasDefault) {
                         errors[field.key] = `${field.label} is required`;
                     }
                 }
