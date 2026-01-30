@@ -11,6 +11,7 @@
  */
 
 import * as vscode from 'vscode';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { EdsMetadata, EdsCleanupOptions, GitHubRepo } from '../services/types';
 import { GitHubAppNotInstalledError } from '../services/types';
@@ -812,7 +813,7 @@ async function executeStorefrontSetupPhases(
                 try {
                     const response = await fetch(codeUrl, {
                         method: 'GET',
-                        signal: AbortSignal.timeout(5000),
+                        signal: AbortSignal.timeout(TIMEOUTS.QUICK),
                     });
                     if (response.ok) {
                         syncVerified = true;

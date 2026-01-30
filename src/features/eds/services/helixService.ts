@@ -1005,7 +1005,7 @@ export class HelixService {
         site: string,
         branch: string,
         maxAttempts: number = 5,
-        delayMs: number = 3000,
+        delayMs: number = TIMEOUTS.UPDATE_RESULT_DISPLAY,
     ): Promise<void> {
         this.logger.info('[Helix] Verifying publish readiness...');
 

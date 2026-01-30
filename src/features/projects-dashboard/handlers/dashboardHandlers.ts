@@ -23,7 +23,7 @@ import { ServiceLocator } from '@/core/di';
 import { executeCommandForProject } from '@/core/handlers';
 import { getLogger } from '@/core/logging';
 import { sessionUIState } from '@/core/state/sessionUIState';
-import { openInIncognito } from '@/core/utils';
+import { openInIncognito, TIMEOUTS } from '@/core/utils';
 import { validateProjectPath } from '@/core/validation';
 import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
@@ -808,7 +808,7 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                 // Show auto-dismissing success notification (2 seconds)
                 void vscode.window.withProgress(
                     { location: vscode.ProgressLocation.Notification, title: `Content republished for "${project.name}"` },
-                    async () => new Promise(resolve => setTimeout(resolve, 2000)),
+                    async () => new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION)),
                 );
 
                 return { success: true };
@@ -1121,7 +1121,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     try {
                         const sourceUrl = `https://main--${templateRepo}--${templateOwner}.aem.live/${placeholderPath}.json`;
                         const response = await fetch(sourceUrl, {
-                            signal: AbortSignal.timeout(10000),
+                            signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
                         });
 
                         if (response.ok) {
@@ -1381,7 +1381,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 // Show auto-dismissing success notification (2 seconds)
                 void vscode.window.withProgress(
                     { location: vscode.ProgressLocation.Notification, title: `"${project.name}" reset successfully` },
-                    async () => new Promise(resolve => setTimeout(resolve, 2000)),
+                    async () => new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION)),
                 );
 
                 return { success: true };

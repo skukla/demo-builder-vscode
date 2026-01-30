@@ -876,7 +876,7 @@ export const handleResetEds: MessageHandler = async (context) => {
                 // Show auto-dismissing success notification (2 seconds)
                 void vscode.window.withProgress(
                     { location: vscode.ProgressLocation.Notification, title: `"${project.name}" reset successfully` },
-                    async () => new Promise(resolve => setTimeout(resolve, 2000)),
+                    async () => new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION)),
                 );
 
                 return { success: true };

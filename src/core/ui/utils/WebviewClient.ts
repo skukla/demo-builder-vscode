@@ -14,6 +14,8 @@
  * sends messages before the webview JavaScript bundle has loaded.
  */
 
+import { FRONTEND_TIMEOUTS } from './frontendTimeouts';
+
 declare global {
     interface Window {
         acquireVsCodeApi: () => VSCodeApi;
@@ -197,7 +199,7 @@ class WebviewClient {
      * @param payload - Request payload
      * @param timeoutMs - Initial timeout (default 30s, may be extended by backend)
      */
-    public async request<T = unknown>(type: string, payload?: unknown, timeoutMs: number = 30000): Promise<T> {
+    public async request<T = unknown>(type: string, payload?: unknown, timeoutMs: number = FRONTEND_TIMEOUTS.REQUEST_TIMEOUT): Promise<T> {
         const message: Message = {
             id: this.generateMessageId(),
             type,

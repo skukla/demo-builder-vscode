@@ -19,6 +19,7 @@
  * @module features/eds/handlers
  */
 
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 // Re-export all GitHub handlers
@@ -103,7 +104,7 @@ export async function handleValidateAccsCredentials(
             body: JSON.stringify({
                 query: '{ __typename }',
             }),
-            signal: AbortSignal.timeout(10000),
+            signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
         });
 
         const isValid = response.ok || response.status === 400; // 400 is acceptable (query might fail but endpoint works)

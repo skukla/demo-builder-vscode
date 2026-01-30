@@ -489,7 +489,7 @@ export class DaLiveContentOperations {
         try {
             const response = await fetch(jsonUrl, {
                 method: 'HEAD',
-                signal: AbortSignal.timeout(5000),
+                signal: AbortSignal.timeout(TIMEOUTS.QUICK),
             });
             if (response.ok) {
                 const contentType = response.headers.get('content-type') || '';

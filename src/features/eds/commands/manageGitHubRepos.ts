@@ -13,6 +13,7 @@
 import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getLinkedEdsProjects, type EdsProjectInfo } from '../services/resourceCleanupHelpers';
 
 interface RepoQuickPickItem extends vscode.QuickPickItem {
@@ -214,7 +215,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
                     cancellable: false,
                 },
                 async () => {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION));
                 },
             );
         } else if (deleted.length > 0 && failed.length > 0) {

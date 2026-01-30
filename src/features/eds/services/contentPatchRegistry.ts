@@ -13,6 +13,7 @@
  * string replacements that fit naturally in JSON.
  */
 
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types';
 import type { ContentPatchSource } from '@/types/demoPackages';
 
@@ -61,7 +62,7 @@ async function fetchExternalPatches(source: ContentPatchSource): Promise<Content
     const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/main/${source.path}/patches.json`;
 
     const response = await fetch(url, {
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
     });
 
     if (!response.ok) {

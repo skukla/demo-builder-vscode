@@ -85,4 +85,11 @@ export const FRONTEND_TIMEOUTS = {
      * Same as CONTINUE_CHECK_DELAY (500ms).
      */
     INIT_ANIMATION_DELAY: 500,
+
+    /**
+     * Default timeout for webview request-response communication.
+     * Matches TIMEOUTS.NORMAL from backend (30000ms / 30 seconds).
+     * Used by WebviewClient for extension communication.
+     */
+    REQUEST_TIMEOUT: 30000,
 } as const;

@@ -14,6 +14,7 @@ import {
     getSuggestedFilename,
 } from './settingsSerializer';
 import { SETTINGS_FILE_VERSION } from '@/features/projects-dashboard/types/settingsFile';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import { showWebviewQuickPick } from '@/core/utils';
 import type { Project } from '@/types/base';
@@ -245,7 +246,7 @@ export async function exportProjectSettings(
                 cancellable: false,
             },
             async () => {
-                await new Promise(resolve => setTimeout(resolve, 2000)); // 2 seconds
+                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION));
             },
         );
 

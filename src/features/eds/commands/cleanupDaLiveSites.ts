@@ -14,6 +14,7 @@
 import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
 import { HelixService } from '../services/helixService';
 import { getLinkedEdsProjects, deleteDaLiveSiteWithUnpublish } from '../services/resourceCleanupHelpers';
@@ -270,7 +271,7 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
                         cancellable: false,
                     },
                     async () => {
-                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION));
                     },
                 );
             }

@@ -13,6 +13,8 @@
 import { Octokit } from '@octokit/core';
 import { retry } from '@octokit/plugin-retry';
 import * as path from 'path';
+import * as fs from 'fs/promises';
+import * as os from 'os';
 import { getLogger } from '@/core/logging';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils';
@@ -487,8 +489,6 @@ export class GitHubRepoOperations {
 
         // Use git commands - much more efficient for large repos
         const commandManager = ServiceLocator.getCommandExecutor();
-        const fs = await import('fs/promises');
-        const os = await import('os');
 
         // Create temp directory for the operation
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'github-reset-'));
