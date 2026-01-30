@@ -101,6 +101,11 @@ const ProjectsDashboardApp: React.FC = () => {
             }
         });
 
+        // Subscribe to project deletion (refresh list)
+        const unsubscribeDeleted = webviewClient.onMessage('projectDeleted', () => {
+            fetchProjects(true);
+        });
+
         // Subscribe to demo state changes (start/stop)
         const unsubscribeDemoState = webviewClient.onMessage('demoStateChanged', (data) => {
             const typedData = data as { runningProjectPath?: string } | undefined;
@@ -110,6 +115,7 @@ const ProjectsDashboardApp: React.FC = () => {
         return () => {
             unsubscribeConfig();
             unsubscribeProjects();
+            unsubscribeDeleted();
             unsubscribeDemoState();
         };
     }, [fetchProjects]);

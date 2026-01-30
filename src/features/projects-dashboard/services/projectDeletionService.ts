@@ -224,11 +224,11 @@ async function checkCleanupAuth(context: HandlerContext): Promise<CleanupAuthSta
 /**
  * Show cleanup confirmation dialog for EDS projects
  *
- * Presents a QuickPick with cleanup options and two action buttons:
- * - "Delete Selected" (check icon): Delete selected external resources + local project
- * - "Skip & Delete Locally" (x icon): Skip cleanup, only delete local project
+ * Presents a QuickPick with checkboxes for external resources to also delete.
+ * - Press Enter or click Delete → Delete local project + selected external resources
+ * - Click outside or press Escape → Cancel entirely (no deletion)
  *
- * @returns Cleanup options, empty options (skip cleanup), or null if cancelled
+ * @returns Cleanup options (which external resources to delete), or null if cancelled
  */
 async function showCleanupConfirmation(
     project: Project,
@@ -283,9 +283,9 @@ async function showCleanupConfirmation(
             description: edsMetadata.githubRepo,
             detail: authStatus.gitHubAuthenticated
                 ? undefined
-                : '$(warning) GitHub token missing - will skip',
+                : '$(key) Sign-in required',
             picked: false,
-            enabled: authStatus.gitHubAuthenticated,
+            enabled: true, // Always selectable - will prompt for auth if needed
         });
     }
 
@@ -297,9 +297,9 @@ async function showCleanupConfirmation(
             description: `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`,
             detail: authStatus.daLiveAuthenticated
                 ? undefined
-                : '$(warning) DA.live session expired - will skip',
+                : '$(key) Sign-in required',
             picked: false,
-            enabled: authStatus.daLiveAuthenticated,
+            enabled: true, // Always selectable - will prompt for auth if needed
         });
     }
 
@@ -321,63 +321,46 @@ async function showCleanupConfirmation(
         return { deleteGitHubRepo: false, deleteDaLiveSite: false };
     }
 
-    // Define buttons: [Delete Selected] [Skip & Delete Locally]
-    const deleteSelectedButton: vscode.QuickInputButton = {
-        iconPath: new vscode.ThemeIcon('check'),
-        tooltip: 'Delete Selected',
-    };
-    const skipButton: vscode.QuickInputButton = {
+    // Cancel button for explicit cancellation
+    const cancelButton: vscode.QuickInputButton = {
         iconPath: new vscode.ThemeIcon('close'),
-        tooltip: 'Skip & Delete Locally',
+        tooltip: 'Cancel',
     };
 
     // Show QuickPick with cleanup options
     const quickPick = vscode.window.createQuickPick<CleanupQuickPickItem>();
     quickPick.title = `Delete "${project.name}"`;
-    quickPick.placeholder = 'Select external resources to delete, then click an action';
+    quickPick.placeholder = 'Also delete these external resources? (Enter to delete)';
     quickPick.canSelectMany = true;
     quickPick.ignoreFocusOut = true; // Prevent dismissal when webview takes focus
     quickPick.items = items;
     quickPick.selectedItems = items.filter(i => i.picked);
-    quickPick.buttons = [deleteSelectedButton, skipButton];
+    quickPick.buttons = [cancelButton];
 
     return new Promise<CleanupOptions | null>((resolve) => {
         let resolved = false;
 
-        // Handle button clicks
-        quickPick.onDidTriggerButton((button) => {
+        // Cancel button = abort deletion
+        quickPick.onDidTriggerButton(() => {
             if (resolved) return;
             resolved = true;
             quickPick.hide();
-
-            if (button === skipButton) {
-                // Skip cleanup, but still delete local project
-                resolve({ deleteGitHubRepo: false, deleteDaLiveSite: false });
-            } else {
-                // Delete selected resources
-                const selected = quickPick.selectedItems;
-                resolve({
-                    deleteGitHubRepo: selected.some(i => i.id === 'github'),
-                    deleteDaLiveSite: selected.some(i => i.id === 'daLive'),
-                });
-            }
+            resolve(null);
         });
 
-        // Enter key = same as "Delete Selected" button
+        // Enter key confirms deletion
         quickPick.onDidAccept(() => {
             if (resolved) return;
             resolved = true;
-
             const selected = quickPick.selectedItems;
             quickPick.hide();
-
             resolve({
                 deleteGitHubRepo: selected.some(i => i.id === 'github'),
                 deleteDaLiveSite: selected.some(i => i.id === 'daLive'),
             });
         });
 
-        // Escape = Cancel entirely (abort deletion)
+        // Escape = Cancel entirely (no deletion)
         quickPick.onDidHide(() => {
             if (resolved) return;
             resolved = true;

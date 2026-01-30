@@ -358,7 +358,14 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
             };
         }
 
-        return deleteProject(context, project);
+        const result = await deleteProject(context, project);
+
+        // Notify UI to refresh (handles timeout scenarios)
+        if (result.success && result.data?.success) {
+            context.sendMessage?.('projectDeleted', {});
+        }
+
+        return result;
     } catch (error) {
         context.logger.error('Failed to delete project', error instanceof Error ? error : undefined);
         return {

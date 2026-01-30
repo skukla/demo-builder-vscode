@@ -50,6 +50,9 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     'check-api-mesh': TIMEOUTS.AUTH.BROWSER,         // 60s - workspace download + mesh describe
     'create-api-mesh': TIMEOUTS.LONG,                // 180s - create and deploy mesh
     'update-api-mesh': TIMEOUTS.LONG,                // 180s - update and deploy mesh
+
+    // Project deletion (EDS cleanup involves multiple external APIs)
+    'deleteProject': TIMEOUTS.LONG,                  // 180s - helix unpublish + DA.live + GitHub + local
 };
 
 /**
