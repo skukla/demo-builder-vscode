@@ -32,6 +32,8 @@ import {
     getRetryDelay,
     normalizePath,
 } from './daLiveConstants';
+import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
+import { getMimeType } from './daLiveMimeTypes';
 
 /**
  * Batch size for parallel content copying operations.
@@ -529,7 +531,7 @@ export class DaLiveContentOperations {
             const jsonData = await sourceResponse.json();
 
             // Convert JSON to HTML table format that DA.live can process
-            const htmlContent = this.convertSpreadsheetJsonToHtml(jsonData);
+            const htmlContent = convertSpreadsheetJsonToHtml(jsonData);
             if (!htmlContent) {
                 this.logger.warn(`[DA.live] Failed to convert spreadsheet ${sourcePath} to HTML`);
                 return false;
@@ -560,71 +562,6 @@ export class DaLiveContentOperations {
             this.logger.error(`[DA.live] Spreadsheet copy error for ${destPath}`, error as Error);
             return false;
         }
-    }
-
-    /**
-     * Convert EDS spreadsheet JSON to HTML table format
-     * Handles both single-sheet and multi-sheet formats
-     */
-    private convertSpreadsheetJsonToHtml(json: Record<string, unknown>): string | null {
-        try {
-            // Check for multi-sheet format
-            if (json[':type'] === 'multi-sheet' && Array.isArray(json[':names'])) {
-                // Multi-sheet: create multiple tables
-                const names = json[':names'] as string[];
-                const tables = names
-                    .filter(name => !name.startsWith('dnt')) // Skip "do not translate" sheets
-                    .map(name => {
-                        const sheet = json[name] as { columns?: string[]; data?: Record<string, unknown>[] };
-                        if (!sheet?.data) return '';
-                        return this.createHtmlTable(sheet.columns || [], sheet.data, name);
-                    })
-                    .filter(Boolean)
-                    .join('\n');
-                return this.wrapInDocument(tables);
-            }
-
-            // Single-sheet format
-            const data = json.data as Record<string, unknown>[] | undefined;
-            const columns = json.columns as string[] | undefined;
-            if (!data || !Array.isArray(data)) return null;
-
-            const table = this.createHtmlTable(columns || Object.keys(data[0] || {}), data);
-            return this.wrapInDocument(table);
-        } catch {
-            return null;
-        }
-    }
-
-    /**
-     * Create an HTML table from columns and data
-     */
-    private createHtmlTable(columns: string[], data: Record<string, unknown>[], sheetName?: string): string {
-        const headerRow = `<tr>${columns.map(col => `<th>${this.escapeHtml(col)}</th>`).join('')}</tr>`;
-        const dataRows = data.map(row =>
-            `<tr>${columns.map(col => `<td>${this.escapeHtml(String(row[col] ?? ''))}</td>`).join('')}</tr>`
-        ).join('\n');
-
-        const className = sheetName ? ` class="sheet-${sheetName}"` : '';
-        return `<table${className}>\n<thead>\n${headerRow}\n</thead>\n<tbody>\n${dataRows}\n</tbody>\n</table>`;
-    }
-
-    /**
-     * Wrap table(s) in a minimal HTML document
-     */
-    private wrapInDocument(content: string): string {
-        return `<!DOCTYPE html>\n<html>\n<body>\n${content}\n</body>\n</html>`;
-    }
-
-    /**
-     * Escape HTML special characters
-     */
-    private escapeHtml(str: string): string {
-        return str
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
     }
 
     /**
@@ -1586,7 +1523,7 @@ export class DaLiveContentOperations {
                 const ext = path.extname(localPath).toLowerCase();
 
                 // Determine content type based on extension
-                const contentType = this.getContentType(ext);
+                const contentType = getMimeType(ext);
 
                 // Normalize destination path
                 const daPath = normalizePath(destPath);
@@ -1621,30 +1558,6 @@ export class DaLiveContentOperations {
             }
         }
         return false;
-    }
-
-    /**
-     * Get content type based on file extension
-     */
-    private getContentType(ext: string): string {
-        const contentTypes: Record<string, string> = {
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif',
-            '.webp': 'image/webp',
-            '.svg': 'image/svg+xml',
-            '.ico': 'image/x-icon',
-            '.mp4': 'video/mp4',
-            '.webm': 'video/webm',
-            '.pdf': 'application/pdf',
-            '.json': 'application/json',
-            '.xml': 'application/xml',
-            '.txt': 'text/plain',
-            '.css': 'text/css',
-            '.js': 'application/javascript',
-        };
-        return contentTypes[ext] || 'application/octet-stream';
     }
 
     /**
