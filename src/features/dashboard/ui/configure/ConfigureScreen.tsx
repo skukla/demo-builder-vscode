@@ -438,6 +438,32 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         };
     }, [serviceGroups]);
 
+    /**
+     * Get value from componentConfigs for validation purposes
+     * Mirrors getFieldValue logic to ensure consistency between display and validation
+     */
+    const getValueFromConfigs = useCallback((field: UniqueField): string | boolean | undefined => {
+        // Check field's specific componentIds first
+        for (const componentId of field.componentIds) {
+            const value = componentConfigs[componentId]?.[field.key];
+            if (value !== undefined && value !== '') {
+                return value;
+            }
+        }
+
+        // Check any component (for shared env vars) - consistent with getFieldValue
+        for (const [componentId, config] of Object.entries(componentConfigs)) {
+            if (!field.componentIds.includes(componentId)) {
+                const value = config[field.key];
+                if (value !== undefined && value !== '') {
+                    return value;
+                }
+            }
+        }
+
+        return undefined;
+    }, [componentConfigs]);
+
     // Validate all fields
     useEffect(() => {
         const errors: Record<string, string> = {};
@@ -446,57 +472,43 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             group.fields.forEach(field => {
                 const isDeferredField = field.key === 'MESH_ENDPOINT';
 
-                if (field.required && !isDeferredField) {
-                    // Check componentConfigs first
-                    const hasValueInConfig = field.componentIds.some(compId =>
-                        componentConfigs[compId]?.[field.key],
-                    );
-                    // Also check if field has a default value (consistent with getFieldValue)
-                    const hasDefault = field.default !== undefined && field.default !== '';
+                // Get value using same logic as display (getFieldValue)
+                const valueInConfig = getValueFromConfigs(field);
+                const hasValueInConfig = valueInConfig !== undefined && valueInConfig !== '';
+                const hasDefault = field.default !== undefined && field.default !== '';
 
+                if (field.required && !isDeferredField) {
                     if (!hasValueInConfig && !hasDefault) {
                         errors[field.key] = `${field.label} is required`;
                     }
                 }
 
                 // URL validation using core validator
-                if (field.type === 'url') {
-                    const firstComponentWithValue = field.componentIds.find(compId =>
-                        componentConfigs[compId]?.[field.key],
-                    );
-
-                    if (firstComponentWithValue) {
-                        const value = componentConfigs[firstComponentWithValue][field.key] as string;
-                        const result = urlValidator(value);
-                        if (!result.valid && result.error) {
-                            errors[field.key] = result.error;
-                        }
+                // Only validate if there's an actual value (not default)
+                if (field.type === 'url' && hasValueInConfig && typeof valueInConfig === 'string') {
+                    const result = urlValidator(valueInConfig);
+                    if (!result.valid && result.error) {
+                        errors[field.key] = result.error;
                     }
                 }
 
                 // Pattern validation using core validator
-                if (field.validation?.pattern) {
-                    const firstComponentWithValue = field.componentIds.find(compId =>
-                        componentConfigs[compId]?.[field.key],
+                // Only validate if there's an actual value (not default)
+                if (field.validation?.pattern && hasValueInConfig && typeof valueInConfig === 'string') {
+                    const patternValidator = pattern(
+                        new RegExp(field.validation.pattern),
+                        field.validation.message || 'Invalid format'
                     );
-
-                    if (firstComponentWithValue) {
-                        const value = componentConfigs[firstComponentWithValue][field.key] as string;
-                        const patternValidator = pattern(
-                            new RegExp(field.validation.pattern),
-                            field.validation.message || 'Invalid format'
-                        );
-                        const result = patternValidator(value);
-                        if (!result.valid && result.error) {
-                            errors[field.key] = result.error;
-                        }
+                    const result = patternValidator(valueInConfig);
+                    if (!result.valid && result.error) {
+                        errors[field.key] = result.error;
                     }
                 }
             });
         });
 
         setValidationErrors(errors);
-    }, [componentConfigs, serviceGroups]);
+    }, [componentConfigs, serviceGroups, getValueFromConfigs]);
 
     const updateField = useCallback((field: UniqueField, value: string | boolean) => {
         setTouchedFields(prev => new Set(prev).add(field.key));
@@ -530,28 +542,20 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             }
         }
 
-        for (const componentId of field.componentIds) {
-            const value = componentConfigs[componentId]?.[field.key];
-            if (value !== undefined && value !== '') {
-                return typeof value === 'number' ? String(value) : value;
-            }
+        // Use shared lookup logic for componentConfigs
+        const value = getValueFromConfigs(field);
+        if (value !== undefined && value !== '') {
+            // Convert numbers to strings for display
+            return typeof value === 'number' ? String(value) : value;
         }
 
-        for (const [componentId, config] of Object.entries(componentConfigs)) {
-            if (!field.componentIds.includes(componentId)) {
-                const value = config[field.key];
-                if (value !== undefined && value !== '') {
-                    return typeof value === 'number' ? String(value) : value;
-                }
-            }
-        }
-
+        // Fall back to field default
         if (field.default !== undefined && field.default !== '') {
             return field.default;
         }
 
         return '';
-    }, [componentConfigs, project]);
+    }, [getValueFromConfigs, project]);
 
     const isFieldComplete = useCallback((field: UniqueField): boolean => {
         const value = getFieldValue(field);
