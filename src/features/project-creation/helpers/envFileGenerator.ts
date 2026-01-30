@@ -59,18 +59,42 @@ export interface EnvGenerationConfig {
 }
 
 /**
- * Generate component-specific .env file using ProjectSetupContext
- * 
+ * Minimal context interface for env file generation.
+ *
+ * Both ProjectSetupContext (for project creation) and ConfigureEnvContext
+ * (for dashboard configure) can implement this interface.
+ */
+export interface EnvGenerationContext {
+    /** Component registry with definitions and env vars */
+    registry: ComponentRegistry;
+    /** Logger for debug output */
+    logger: { debug: (message: string, ...args: unknown[]) => void };
+    /** Get the selected backend component ID */
+    getBackendId(): string | undefined;
+    /** Get all component configurations (values from all components) */
+    getComponentConfigs(): Record<string, Record<string, string | number | boolean | undefined>> | undefined;
+    /** Get shared env var definitions from registry */
+    getEnvVarDefinitions(): Record<string, Omit<EnvVarDefinition, 'key'>>;
+    /** Get mesh endpoint if available */
+    getMeshEndpoint(): string | undefined;
+}
+
+/**
+ * Generate component-specific .env file using EnvGenerationContext
+ *
+ * This function pulls values from ALL componentConfigs, not just the component's own config.
+ * This enables cross-boundary value sharing (e.g., backend config values in frontend .env).
+ *
  * @param componentPath - Path to the component directory
  * @param componentId - ID of the component
  * @param componentDef - Component definition from components.json
- * @param context - Project setup context with registry, config, logger
+ * @param context - Context providing registry, configs, and accessors
  */
 export async function generateComponentEnvFile(
     componentPath: string,
     componentId: string,
     componentDef: TransformedComponentDefinition,
-    context: ProjectSetupContext,
+    context: EnvGenerationContext,
 ): Promise<void> {
     const lines: string[] = [
         `# ${componentDef.name} - Environment Configuration`,

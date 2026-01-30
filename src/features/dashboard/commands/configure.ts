@@ -292,6 +292,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
     /**
      * Load existing environment variable values from component .env files
+     * and project root .env (for values from non-installed components like backends)
      */
     private async loadExistingEnvValues(project: Project): Promise<Record<string, Record<string, string>>> {
         const envValues: Record<string, Record<string, string>> = {};
@@ -326,6 +327,41 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             }
         }
 
+        // Also read project root .env for values from non-installed components
+        // (e.g., backend configs like adobe-commerce-accs that don't have componentInstances)
+        // These values are merged into project.componentConfigs which the UI also checks
+        try {
+            const rootEnvPath = path.join(project.path, '.env');
+            const rootEnvContent = await fs.readFile(rootEnvPath, 'utf-8');
+            const rootEnvValues = parseEnvFile(rootEnvContent);
+
+            // Merge root .env values into any componentConfigs that exist in project state
+            // but don't have componentInstances (non-installed components like backends)
+            if (project.componentConfigs) {
+                for (const [componentId, config] of Object.entries(project.componentConfigs)) {
+                    // Skip components that already have loaded env values
+                    if (envValues[componentId] && Object.keys(envValues[componentId]).length > 0) {
+                        continue;
+                    }
+
+                    // For components without instances, use their config keys to extract
+                    // corresponding values from root .env
+                    const componentEnv: Record<string, string> = {};
+                    for (const key of Object.keys(config)) {
+                        if (rootEnvValues[key] !== undefined) {
+                            componentEnv[key] = rootEnvValues[key];
+                        }
+                    }
+
+                    if (Object.keys(componentEnv).length > 0) {
+                        envValues[componentId] = componentEnv;
+                    }
+                }
+            }
+        } catch {
+            // Root .env doesn't exist or can't be read - that's fine
+        }
+
         return envValues;
     }
 
@@ -353,108 +389,39 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     /**
-     * Regenerate .env files for project and components
+     * Regenerate .env files for project and components.
+     * Merges ALL values from ALL componentConfigs for cross-boundary sharing.
      */
     private async regenerateEnvFiles(project: Project, componentConfigs: ComponentConfigs): Promise<void> {
-        try {
-            // Count files for summary log
-            let fileCount = 1;  // Project root .env
-
-            // Regenerate project root .env file
-            await this.generateProjectEnvFile(project, componentConfigs);
-
-            // Regenerate component .env files
-            // SOP §4: Using helper instead of inline Object.entries
-            for (const [componentId, instance] of getComponentInstanceEntries(project)) {
-                if (instance.path && componentConfigs[componentId]) {
-                    await this.generateComponentEnvFile(
-                        instance.path,
-                        componentId,
-                        componentConfigs[componentId],
-                    );
-                    fileCount++;
-                }
-            }
-
-            this.logger.debug(`[Configure] Regenerated ${fileCount} .env files`);
-        } catch (error) {
-            this.logger.error('[Configure] Failed to regenerate .env files:', error as Error);
-            throw error;
-        }
-    }
-
-    /**
-     * Generate project root .env file
-     */
-    private async generateProjectEnvFile(project: Project, componentConfigs: ComponentConfigs): Promise<void> {
-        const envPath = path.join(project.path, '.env');
-        
-        const lines: string[] = [
-            '# Demo Builder Project Configuration',
-            '# Generated: ' + new Date().toISOString(),
-            '',
-            `PROJECT_NAME=${project.name}`,
-            '',
-        ];
-
-        // Add project-wide configuration from componentConfigs
-        // Collect all unique keys across all components
-        // SOP §4: Extract Object operations to variables
-        const allKeys = new Set<string>();
-        const configValues = Object.values(componentConfigs);
-        for (const config of configValues) {
-            const configKeys = Object.keys(config);
-            for (const key of configKeys) {
-                allKeys.add(key);
-            }
-        }
-
-        // Write each unique key (using first component's value)
-        // Skip empty, null, or undefined values
-        for (const key of allKeys) {
-            // Find first component that has this key with a non-empty value
-            for (const config of configValues) {
-                const value = config[key];
+        // Merge all values once (cross-boundary: backend values go to frontend .env files)
+        const allValues: Record<string, string> = {};
+        for (const config of Object.values(componentConfigs)) {
+            for (const [key, value] of Object.entries(config)) {
                 if (value !== undefined && value !== null && value !== '') {
-                    lines.push(`${key}=${value}`);
-                    break;
+                    allValues[key] = String(value);
                 }
             }
         }
 
-        await fs.writeFile(envPath, lines.join('\n'), 'utf-8');
-    }
+        // Write root .env
+        const rootHeader = `# Demo Builder Project Configuration\n# Generated: ${new Date().toISOString()}\n\nPROJECT_NAME=${project.name}\n`;
+        await fs.writeFile(path.join(project.path, '.env'), rootHeader + this.formatEnvValues(allValues), 'utf-8');
 
-    /**
-     * Generate component-specific .env file
-     */
-    private async generateComponentEnvFile(
-        componentPath: string,
-        componentId: string,
-        config: Record<string, string>,
-    ): Promise<void> {
-        // Next.js uses .env.local, others use .env
-        const envFileName = componentId.includes('nextjs') ? '.env.local' : '.env';
-        const envPath = path.join(componentPath, envFileName);
-        
-        const lines: string[] = [
-            `# ${componentId} - Environment Configuration`,
-            '# Generated by Demo Builder',
-            '# Generated: ' + new Date().toISOString(),
-            '',
-        ];
-
-        // Add all configuration values for this component
-        // Skip empty, null, or undefined values (don't write them to file)
-        // SOP §4: Using for...of instead of Object.entries().forEach()
-        const configEntries = Object.entries(config);
-        for (const [key, value] of configEntries) {
-            if (value !== undefined && value !== null && value !== '') {
-                lines.push(`${key}=${value}`);
+        // Write component .env files
+        for (const [componentId, instance] of getComponentInstanceEntries(project)) {
+            if (instance.path) {
+                const fileName = componentId.includes('nextjs') ? '.env.local' : '.env';
+                const header = `# ${componentId} - Environment Configuration\n# Generated by Demo Builder\n# Generated: ${new Date().toISOString()}\n`;
+                await fs.writeFile(path.join(instance.path, fileName), header + this.formatEnvValues(allValues), 'utf-8');
             }
         }
 
-        await fs.writeFile(envPath, lines.join('\n'), 'utf-8');
+        this.logger.debug(`[Configure] Wrote ${Object.keys(allValues).length} env vars to ${Object.keys(project.componentInstances || {}).length + 1} files`);
     }
+
+    private formatEnvValues(values: Record<string, string>): string {
+        return Object.entries(values).map(([k, v]) => `${k}=${v}`).join('\n');
+    }
+
 }
 

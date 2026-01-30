@@ -442,7 +442,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
      * Get value from componentConfigs for validation purposes
      * Mirrors getFieldValue logic to ensure consistency between display and validation
      */
-    const getValueFromConfigs = useCallback((field: UniqueField): string | boolean | undefined => {
+    const getValueFromConfigs = useCallback((field: UniqueField): string | number | boolean | undefined => {
         // Check field's specific componentIds first
         for (const componentId of field.componentIds) {
             const value = componentConfigs[componentId]?.[field.key];
