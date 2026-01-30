@@ -193,6 +193,10 @@ export abstract class BaseWebviewCommand extends BaseCommand {
                 const existingCommManager = WebviewPanelManager.getActiveCommunicationManager(webviewId);
                 if (existingCommManager) {
                     this.communicationManager = existingCommManager;
+                    // Send fresh initial data when revealing existing panel
+                    // This ensures the webview shows current state, not stale cached state
+                    const initialData = await this.getInitialData();
+                    await this.communicationManager.sendMessage('init', initialData as import('@/types/messages').MessagePayload | undefined);
                 }
                 return existingPanel;
             } catch {
