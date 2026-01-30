@@ -571,6 +571,16 @@ export interface EdsMetadata {
     backendType?: 'commerce' | 'aco';
     /** Brand ID for backend data */
     brandId?: string;
+
+    // === Template Sync Fields ===
+    // These fields enable EDS storefronts to receive updates from their upstream template repository.
+
+    /** Template repository owner (GitHub username or org) for update checks */
+    templateOwner?: string;
+    /** Template repository name for update checks */
+    templateRepo?: string;
+    /** Commit SHA when project was created or last synced with template */
+    lastSyncedCommit?: string;
 }
 
 /**

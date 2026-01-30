@@ -189,6 +189,40 @@ export class GitHubFileOperations {
     }
 
     /**
+     * Get the latest commit SHA for a branch
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param branch - Branch name (default: 'main')
+     * @returns The latest commit SHA, or null if branch/repo not found
+     */
+    async getLatestCommitSha(
+        owner: string,
+        repo: string,
+        branch = 'main',
+    ): Promise<string | null> {
+        const octokit = await this.ensureAuthenticated();
+
+        try {
+            const branchResponse = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
+                owner,
+                repo,
+                branch,
+            });
+
+            return branchResponse.data.commit.sha;
+        } catch (error) {
+            const apiError = error as GitHubApiError;
+
+            if (apiError.status === 404) {
+                // Branch or repo doesn't exist
+                return null;
+            }
+
+            throw error;
+        }
+    }
+
+    /**
      * Delete a file from the repository
      * @param owner - Repository owner
      * @param repo - Repository name

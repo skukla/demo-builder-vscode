@@ -374,17 +374,41 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
                     : undefined);
 
-            // Only save project-specific EDS data to metadata
-            // templateOwner, templateRepo, contentSource, patches are derived from brand+stack
+            // Fetch the template's current commit SHA for template sync feature
+            // This enables future update detection by comparing against the template's latest commit
+            let lastSyncedCommit: string | undefined;
+            const templateOwner = typedConfig.edsConfig.templateOwner;
+            const templateRepo = typedConfig.edsConfig.templateRepo;
+
+            if (templateOwner && templateRepo) {
+                try {
+                    const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
+                    const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
+                    const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
+                    const githubFileOps = new GitHubFileOperations(githubTokenService, context.logger);
+                    lastSyncedCommit = await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, 'main') ?? undefined;
+                    context.logger.debug(`[Project Creation] Fetched template commit SHA: ${lastSyncedCommit?.substring(0, 7)}`);
+                } catch (error) {
+                    // Non-fatal: Template sync is optional, don't fail project creation
+                    context.logger.warn(`[Project Creation] Could not fetch template commit SHA: ${(error as Error).message}`);
+                }
+            }
+
+            // Save project-specific EDS data to metadata
+            // Now includes template info for future update detection
             edsInstance.metadata = {
                 ...edsInstance.metadata,
                 repoUrl: typedConfig.edsConfig.repoUrl,
                 githubRepo, // Source data for URL derivation (typeGuards derive previewUrl/liveUrl from this)
                 daLiveOrg: typedConfig.edsConfig.daLiveOrg,
                 daLiveSite: typedConfig.edsConfig.daLiveSite,
+                // Template sync fields - enables EDS template updates
+                templateOwner,
+                templateRepo,
+                lastSyncedCommit,
             };
             await context.stateManager.saveProject(project);
-            context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}, daLiveOrg=${edsInstance.metadata?.daLiveOrg}`);
+            context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}, daLiveOrg=${edsInstance.metadata?.daLiveOrg}, templateOwner=${templateOwner}, lastSyncedCommit=${lastSyncedCommit?.substring(0, 7)}`);
         } else {
             context.logger.warn(`[Project Creation] EDS instance NOT found for key "${COMPONENT_IDS.EDS_STOREFRONT}" - metadata NOT populated`);
         }

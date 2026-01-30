@@ -5,6 +5,8 @@ import { sanitizeErrorForLogging } from '@/core/validation';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import { UpdateManager, MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
+import { TemplateUpdateChecker, TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
+import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import { Project } from '@/types';
 
 /**
@@ -16,6 +18,15 @@ interface ProjectUpdateItem extends vscode.QuickPickItem {
     currentVersion: string;
     latestVersion: string;
     releaseInfo: MultiProjectUpdateResult['releaseInfo'];
+}
+
+/**
+ * QuickPick item for template updates (EDS projects)
+ */
+interface TemplateUpdateItem extends vscode.QuickPickItem {
+    project: Project;
+    templateUpdate: TemplateUpdateResult;
+    isTemplateUpdate: true;
 }
 
 /**
@@ -78,8 +89,20 @@ export class CheckUpdatesCommand extends BaseCommand {
                             ? await updateManager.checkAllProjectsForUpdates(allProjects)
                             : [];
 
+                        // Check template updates for EDS projects
+                        progress.report({ message: 'Checking EDS templates...' });
+                        const templateUpdateChecker = new TemplateUpdateChecker(this.context.secrets, this.logger);
+                        const templateUpdates: Array<{ project: Project; update: TemplateUpdateResult }> = [];
+
+                        for (const project of allProjects) {
+                            const templateUpdate = await templateUpdateChecker.checkForUpdates(project);
+                            if (templateUpdate?.hasUpdates) {
+                                templateUpdates.push({ project, update: templateUpdate });
+                            }
+                        }
+
                         // Check if any updates available
-                        const hasUpdates = extensionUpdate.hasUpdate || multiProjectUpdates.length > 0;
+                        const hasUpdates = extensionUpdate.hasUpdate || multiProjectUpdates.length > 0 || templateUpdates.length > 0;
 
                         if (!hasUpdates) {
                             // Show "up to date" result
@@ -89,7 +112,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                             await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UPDATE_RESULT_DISPLAY));
                         }
 
-                        return { extensionUpdate, multiProjectUpdates, currentProject, hasUpdates };
+                        return { extensionUpdate, multiProjectUpdates, templateUpdates, currentProject, hasUpdates };
                     },
                 );
 
@@ -118,9 +141,13 @@ export class CheckUpdatesCommand extends BaseCommand {
                     }
                 }
 
-                // Handle multi-project component updates with QuickPick
-                if (multiProjectUpdates.length > 0) {
-                    await this.showMultiProjectUpdatePicker(multiProjectUpdates, currentProject ?? null);
+                // Handle multi-project component updates and template updates with QuickPick
+                if (multiProjectUpdates.length > 0 || templateUpdates.length > 0) {
+                    await this.showMultiProjectUpdatePicker(
+                        multiProjectUpdates,
+                        templateUpdates,
+                        currentProject ?? null,
+                    );
                 }
             } catch (error) {
                 await this.showError('Failed to check for updates', error as Error);
@@ -130,13 +157,14 @@ export class CheckUpdatesCommand extends BaseCommand {
 
     /**
      * Show QuickPick with multi-select to let user choose which projects to update
-     * Organized by project (parent) with components as children
+     * Organized by project (parent) with components/templates as children
      */
     private async showMultiProjectUpdatePicker(
-        updates: MultiProjectUpdateResult[],
+        componentUpdates: MultiProjectUpdateResult[],
+        templateUpdates: Array<{ project: Project; update: TemplateUpdateResult }>,
         currentProject: Project | null,
     ): Promise<void> {
-        // Reorganize data: group by project instead of by component
+        // Reorganize component updates: group by project instead of by component
         const projectComponentMap = new Map<string, {
             project: Project;
             components: Array<{
@@ -147,7 +175,7 @@ export class CheckUpdatesCommand extends BaseCommand {
             }>;
         }>();
 
-        for (const update of updates) {
+        for (const update of componentUpdates) {
             for (const { project, currentVersion } of update.outdatedProjects) {
                 if (!projectComponentMap.has(project.path)) {
                     projectComponentMap.set(project.path, {
@@ -165,10 +193,46 @@ export class CheckUpdatesCommand extends BaseCommand {
         }
 
         // Build QuickPick items organized by project
-        const items: ProjectUpdateItem[] = [];
+        const items: (ProjectUpdateItem | TemplateUpdateItem)[] = [];
+
+        // Get all unique projects (from both component and template updates)
+        const allProjectPaths = new Set([
+            ...projectComponentMap.keys(),
+            ...templateUpdates.map(t => t.project.path),
+        ]);
+
+        // Build project data map
+        const projectDataMap = new Map<string, {
+            project: Project;
+            components: Array<{
+                componentId: string;
+                currentVersion: string;
+                latestVersion: string;
+                releaseInfo: MultiProjectUpdateResult['releaseInfo'];
+            }>;
+            templateUpdate?: TemplateUpdateResult;
+        }>();
+
+        // Add component update data
+        for (const [path, data] of projectComponentMap) {
+            projectDataMap.set(path, { ...data });
+        }
+
+        // Add template update data
+        for (const { project, update } of templateUpdates) {
+            if (projectDataMap.has(project.path)) {
+                projectDataMap.get(project.path)!.templateUpdate = update;
+            } else {
+                projectDataMap.set(project.path, {
+                    project,
+                    components: [],
+                    templateUpdate: update,
+                });
+            }
+        }
 
         // Sort projects: current project first, then alphabetically
-        const sortedProjects = Array.from(projectComponentMap.values()).sort((a, b) => {
+        const sortedProjects = Array.from(projectDataMap.values()).sort((a, b) => {
             const aIsCurrent = a.project.path === currentProject?.path;
             const bIsCurrent = b.project.path === currentProject?.path;
             if (aIsCurrent && !bIsCurrent) return -1;
@@ -176,13 +240,26 @@ export class CheckUpdatesCommand extends BaseCommand {
             return a.project.name.localeCompare(b.project.name);
         });
 
-        for (const { project, components } of sortedProjects) {
+        for (const { project, components, templateUpdate } of sortedProjects) {
             const isCurrent = project.path === currentProject?.path;
             const projectLabel = isCurrent
                 ? `${project.name} (current)`
                 : project.name;
 
-            // Add each component with project as label, component as detail
+            // Add template update item first (if available)
+            if (templateUpdate) {
+                items.push({
+                    label: projectLabel,
+                    detail: `    EDS Template  ${templateUpdate.commitsBehind} commit${templateUpdate.commitsBehind !== 1 ? 's' : ''} behind`,
+                    description: `${templateUpdate.templateOwner}/${templateUpdate.templateRepo}`,
+                    picked: isCurrent, // Pre-select for current project
+                    project,
+                    templateUpdate,
+                    isTemplateUpdate: true,
+                } as TemplateUpdateItem);
+            }
+
+            // Add component update items
             for (const comp of components) {
                 items.push({
                     label: projectLabel,
@@ -193,32 +270,57 @@ export class CheckUpdatesCommand extends BaseCommand {
                     currentVersion: comp.currentVersion,
                     latestVersion: comp.latestVersion,
                     releaseInfo: comp.releaseInfo,
-                });
+                } as ProjectUpdateItem);
             }
         }
 
         // Count totals
-        const totalProjects = projectComponentMap.size;
+        const totalProjects = allProjectPaths.size;
         const totalComponents = Array.from(projectComponentMap.values())
             .reduce((sum, p) => sum + p.components.length, 0);
+        const totalTemplates = templateUpdates.length;
+
+        // Build title
+        const parts: string[] = [];
+        if (totalComponents > 0) {
+            parts.push(`${totalComponents} component${totalComponents !== 1 ? 's' : ''}`);
+        }
+        if (totalTemplates > 0) {
+            parts.push(`${totalTemplates} template${totalTemplates !== 1 ? 's' : ''}`);
+        }
 
         // Show QuickPick with multi-select
         const selected = await vscode.window.showQuickPick(items, {
-            title: `Updates Available (${totalProjects} project${totalProjects > 1 ? 's' : ''}, ${totalComponents} component${totalComponents > 1 ? 's' : ''})`,
-            placeHolder: 'Select component updates to apply',
+            title: `Updates Available (${totalProjects} project${totalProjects !== 1 ? 's' : ''}, ${parts.join(', ')})`,
+            placeHolder: 'Select updates to apply',
             canPickMany: true,
             ignoreFocusOut: true,
         });
 
         if (!selected || selected.length === 0) {
-            this.logger.debug('[Updates] User cancelled multi-project update selection');
+            this.logger.debug('[Updates] User cancelled update selection');
             return;
         }
 
-        this.logger.debug(`[Updates] User selected ${selected.length} component update(s) to apply`);
+        // Separate component and template updates
+        const selectedComponents = selected.filter(
+            (item): item is ProjectUpdateItem => !('isTemplateUpdate' in item),
+        );
+        const selectedTemplates = selected.filter(
+            (item): item is TemplateUpdateItem => 'isTemplateUpdate' in item && item.isTemplateUpdate,
+        );
 
-        // Perform updates for selected items
-        await this.performMultiProjectUpdates(selected);
+        this.logger.debug(`[Updates] User selected ${selectedComponents.length} component(s) and ${selectedTemplates.length} template(s) to update`);
+
+        // Perform component updates
+        if (selectedComponents.length > 0) {
+            await this.performMultiProjectUpdates(selectedComponents);
+        }
+
+        // Perform template updates
+        if (selectedTemplates.length > 0) {
+            await this.performTemplateUpdates(selectedTemplates);
+        }
     }
 
     /**
@@ -327,4 +429,106 @@ export class CheckUpdatesCommand extends BaseCommand {
         }
     }
 
+    /**
+     * Perform template sync for selected EDS projects
+     */
+    private async performTemplateUpdates(selections: TemplateUpdateItem[]): Promise<void> {
+        // Check for running demos first
+        for (const selection of selections) {
+            const project = selection.project;
+
+            if (project.status === 'running') {
+                const stop = await vscode.window.showWarningMessage(
+                    `"${project.name}" is currently running. Stop it before syncing template?`,
+                    'Stop & Sync',
+                    'Skip',
+                );
+
+                if (stop !== 'Stop & Sync') {
+                    this.logger.debug(`[Updates] Skipping template sync for ${project.name} (demo running, user declined)`);
+                    selections = selections.filter(s => s.project.path !== project.path);
+                    continue;
+                }
+
+                // If this is the current project, stop it
+                const currentProject = await this.stateManager.getCurrentProject();
+                if (currentProject?.path === project.path) {
+                    await vscode.commands.executeCommand('demoBuilder.stopDemo');
+                    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STOP_WAIT));
+                }
+            }
+        }
+
+        if (selections.length === 0) {
+            return;
+        }
+
+        // Perform template syncs with progress indicator
+        // Uses merge strategy with automatic reset fallback on conflicts
+        const { successCount, failCount } = await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: 'Syncing Templates',
+                cancellable: false,
+            },
+            async (progress) => {
+                const templateSyncService = new TemplateSyncService(this.context.secrets, this.logger);
+                let successCount = 0;
+                let failCount = 0;
+
+                for (let i = 0; i < selections.length; i++) {
+                    const selection = selections[i];
+                    const project = selection.project;
+
+                    progress.report({
+                        message: `${project.name}...`,
+                        increment: (100 / selections.length),
+                    });
+
+                    try {
+                        const result = await templateSyncService.syncWithTemplate(project, {
+                            strategy: 'merge',
+                        });
+
+                        if (result.success) {
+                            // Update lastSyncedCommit in project
+                            await templateSyncService.updateLastSyncedCommit(
+                                project,
+                                result.syncedCommit,
+                                this.stateManager,
+                            );
+
+                            successCount++;
+                            this.logger.info(`[Updates] Template synced for ${project.name} (${result.strategy}${result.fallbackOccurred ? ', fallback' : ''})`);
+
+                            if (result.fallbackOccurred && result.conflicts) {
+                                vscode.window.showWarningMessage(
+                                    `${project.name}: Merge conflicts in ${result.conflicts.length} files, fell back to reset.`,
+                                );
+                            }
+                        } else {
+                            throw new Error(result.error || 'Unknown error');
+                        }
+                    } catch (error) {
+                        failCount++;
+                        const sanitizedError = sanitizeErrorForLogging(error as Error);
+                        this.logger.error(`[Updates] Template sync failed for ${project.name}`, error as Error);
+                        vscode.window.showErrorMessage(
+                            `Failed to sync template for ${project.name}: ${sanitizedError}`,
+                        );
+                    }
+                }
+
+                return { successCount, failCount };
+            },
+        );
+
+        // Show summary message
+        if (successCount > 0) {
+            const message = failCount > 0
+                ? `Synced ${successCount} template(s), ${failCount} failed.`
+                : `Successfully synced ${successCount} template(s).`;
+            vscode.window.showInformationMessage(message);
+        }
+    }
 }
