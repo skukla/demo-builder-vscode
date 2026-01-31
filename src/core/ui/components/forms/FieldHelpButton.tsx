@@ -124,7 +124,10 @@ function isUrl(text: string): boolean {
  * ClickableUrl - Opens URL in browser when clicked
  */
 function ClickableUrl({ url }: { url: string }) {
-    const handleClick = () => {
+    const handleClick = (e: React.MouseEvent | React.KeyboardEvent) => {
+        // Stop propagation to prevent dialog from intercepting the click
+        e.stopPropagation();
+        e.preventDefault();
         vscode.postMessage('openExternal', { url });
     };
 
@@ -136,7 +139,7 @@ function ClickableUrl({ url }: { url: string }) {
             tabIndex={0}
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
-                    handleClick();
+                    handleClick(e);
                 }
             }}
         >
