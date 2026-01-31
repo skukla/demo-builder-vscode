@@ -1,35 +1,35 @@
 {
-  "$schema": "./api-services.schema.json",
-  "services": {
-    "apiMesh": {
-      "displayName": "API Mesh for Adobe Developer App Builder",
-      "detection": {
-        "namePatterns": ["API Mesh"],
-        "codes": ["MeshAPI"],
-        "codeNames": ["MeshAPI"]
-      },
-      "description": "API Mesh enables GraphQL federation and API aggregation",
-      "setupInstructions": [
-        {
-          "step": "Add an API Service and Authentication",
-          "details": "In the workspace dropdown, select 'Add service', then choose 'API'.  Click the 'Adobe Experience Platform' filter to show the API Mesh API.  Click 'Next' to set up API authentication."
-        },
-        {
-          "step": "Select the API",
-          "details": "Click on 'API Mesh for Adobe Developer App Builder' to add it to your workspace"
-        },
-        {
-          "step": "Configure Allowed Domains",
-          "details": "In the API configuration, add '{{ALLOWED_DOMAINS}}' to the Allowed Domains list",
-          "dynamicValues": {
-            "ALLOWED_DOMAINS": {
-              "source": "selectedComponents",
-              "filter": "frontends",
-              "format": "localhost:{{port}}"
-            }
-          }
+    "$schema": "./api-services.schema.json",
+    "services": {
+        "apiMesh": {
+            "displayName": "API Mesh for Adobe Developer App Builder",
+            "detection": {
+                "namePatterns": ["API Mesh"],
+                "codes": ["MeshAPI"],
+                "codeNames": ["MeshAPI"]
+            },
+            "description": "API Mesh enables GraphQL federation and API aggregation",
+            "setupInstructions": [
+                {
+                    "step": "Add an API Service and Authentication",
+                    "details": "Beneath the workspace dropdown, click 'Add service', then choose 'API'.  Click the 'Adobe Experience Platform' filter to show the API Mesh API."
+                },
+                {
+                    "step": "Select the API",
+                    "details": "Click on 'API Mesh for Adobe Developer App Builder' to add it to your workspace. Click 'Next' twice to set up API authentication."
+                },
+                {
+                    "step": "Configure Allowed Domains",
+                    "details": "In the API configuration, add '{{ALLOWED_DOMAINS}}' to the Allowed Domains list",
+                    "dynamicValues": {
+                        "ALLOWED_DOMAINS": {
+                            "source": "selectedComponents",
+                            "filter": "frontends",
+                            "format": "localhost:{{port}}"
+                        }
+                    }
+                }
+            ]
         }
-      ]
     }
-  }
 }
