@@ -13,7 +13,7 @@ import { useFocusTrap } from '@/core/ui/hooks';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
-import { url, pattern } from '@/core/validation/Validator';
+import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
 import type { Project } from '@/types/base';
 import { getMeshComponentInstance, hasEntries } from '@/types/typeGuards';
@@ -110,6 +110,7 @@ interface FormFieldRenderContext {
     validationErrors: Record<string, string>;
     touchedFields: Set<string>;
     updateField: (field: UniqueField, value: string | boolean) => void;
+    normalizeUrlField: (field: UniqueField) => void;
     selectableDefaultProps: Record<string, unknown>;
 }
 
@@ -139,6 +140,7 @@ function renderFormField(
             type={field.type as 'text' | 'url' | 'password' | 'select' | 'number'}
             value={value !== undefined && value !== null ? String(value) : ''}
             onChange={(val) => context.updateField(field, val)}
+            onBlur={field.type === 'url' ? () => context.normalizeUrlField(field) : undefined}
             placeholder={field.placeholder}
             description={field.description}
             required={field.required}
@@ -527,6 +529,39 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         });
     }, []);
 
+    /**
+     * Normalize URL field on blur - removes trailing slashes for visual feedback.
+     * Backend also normalizes when writing .env files (safety net).
+     */
+    const normalizeUrlField = useCallback((field: UniqueField) => {
+        if (field.type !== 'url') return;
+
+        // Find current value
+        let currentValue: string | undefined;
+        for (const componentId of field.componentIds) {
+            const value = componentConfigs[componentId]?.[field.key];
+            if (value !== undefined && value !== '' && typeof value === 'string') {
+                currentValue = value;
+                break;
+            }
+        }
+
+        if (!currentValue) return;
+
+        // Normalize and update if changed
+        const normalized = normalizeUrl(currentValue);
+        if (normalized !== currentValue) {
+            setComponentConfigs(prev => {
+                const newConfigs = { ...prev };
+                field.componentIds.forEach(componentId => {
+                    if (!newConfigs[componentId]) newConfigs[componentId] = {};
+                    newConfigs[componentId][field.key] = normalized;
+                });
+                return newConfigs;
+            });
+        }
+    }, [componentConfigs]);
+
     const getFieldValue = useCallback((field: UniqueField): string | boolean | undefined => {
         // Special handling for MESH_ENDPOINT - read from meshState (authoritative)
         // with fallback to componentInstance for backward compatibility
@@ -666,6 +701,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                                     validationErrors,
                                                     touchedFields,
                                                     updateField,
+                                                    normalizeUrlField,
                                                     selectableDefaultProps,
                                                 }),
                                             )}

@@ -216,14 +216,16 @@ export class CommandManager {
         this.registerCommand('demoBuilder.setRecommendedZoom', async () => {
             const config = vscode.workspace.getConfiguration('window');
             await config.update('zoomLevel', 1, vscode.ConfigurationTarget.Global);
-            vscode.window.showInformationMessage('Zoom set to 120% for optimal demo visibility.');
+            // Use status bar message for auto-dismiss (3 seconds)
+            vscode.window.setStatusBarMessage('$(check) Zoom set to 120% for optimal demo visibility', 3000);
         });
 
         // Reset Zoom (back to 100%)
         this.registerCommand('demoBuilder.resetZoom', async () => {
             const config = vscode.workspace.getConfiguration('window');
             await config.update('zoomLevel', 0, vscode.ConfigurationTarget.Global);
-            vscode.window.showInformationMessage('Zoom reset to 100%.');
+            // Use status bar message for auto-dismiss (3 seconds)
+            vscode.window.setStatusBarMessage('$(check) Zoom reset to 100%', 3000);
         });
 
         // Toggle Sidebar (show/hide Demo Builder sidebar)

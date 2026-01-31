@@ -5,6 +5,7 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { formatGroupName } from './formatters';
+import { normalizeIfUrl } from '@/core/validation/Validator';
 import { generateConfigFile } from '@/core/config/configFileGenerator';
 import { TransformedComponentDefinition, EnvVarDefinition, ConfigFileDefinition, ComponentRegistry } from '@/types/components';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
@@ -216,7 +217,9 @@ export async function generateComponentEnvFile(
                     lines.push(`# ${envVar.description}`);
                 }
 
-                lines.push(`${key}=${value || ''}`);
+                // Normalize URL values (remove trailing slashes)
+                const normalizedValue = normalizeIfUrl(value);
+                lines.push(`${key}=${normalizedValue || ''}`);
             }
 
             lines.push('');

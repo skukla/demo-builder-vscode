@@ -24,6 +24,8 @@ export interface FormFieldProps {
     value: string;
     /** Change handler */
     onChange: (value: string) => void;
+    /** Blur handler (e.g., for URL normalization) */
+    onBlur?: () => void;
     /** Placeholder text */
     placeholder?: string;
     /** Description text */
@@ -72,6 +74,7 @@ export const FormField = React.memo<FormFieldProps>(({
     type,
     value,
     onChange,
+    onBlur,
     placeholder,
     description,
     required = false,
@@ -120,6 +123,7 @@ export const FormField = React.memo<FormFieldProps>(({
                         label={renderLabel()}
                         value={String(value)}
                         onChange={handleChange}
+                        onBlur={type === 'url' && onBlur ? onBlur : undefined}
                         description={description || placeholder}
                         isRequired={required}
                         validationState={showError ? 'invalid' : undefined}

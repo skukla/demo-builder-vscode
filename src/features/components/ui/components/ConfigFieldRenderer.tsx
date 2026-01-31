@@ -17,11 +17,13 @@ interface ConfigFieldRendererProps {
     error: string | undefined;
     isTouched: boolean;
     onUpdate: (field: UniqueField, value: string | boolean) => void;
+    /** Normalize URL field on blur (removes trailing slashes) */
+    onNormalizeUrl?: (field: UniqueField) => void;
     /** Base URI for resolving help screenshot paths */
     baseUri?: string;
 }
 
-export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, baseUri }: ConfigFieldRendererProps) {
+export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, onNormalizeUrl, baseUri }: ConfigFieldRendererProps) {
     const selectableDefaultProps = useSelectableDefault();
     const showError = error && isTouched;
 
@@ -63,6 +65,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
                         label={renderLabel()}
                         value={value as string}
                         onChange={(val) => onUpdate(field, val)}
+                        onBlur={field.type === 'url' && onNormalizeUrl ? () => onNormalizeUrl(field) : undefined}
                         placeholder={field.placeholder}
                         description={field.description}
                         isRequired={isFieldRequired}

@@ -12,6 +12,7 @@ import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
+import { normalizeIfUrl } from '@/core/validation/Validator';
 
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;
@@ -394,11 +395,12 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
      */
     private async regenerateEnvFiles(project: Project, componentConfigs: ComponentConfigs): Promise<void> {
         // Merge all values once (cross-boundary: backend values go to frontend .env files)
+        // Normalize URL values (remove trailing slashes) for consistent handling
         const allValues: Record<string, string> = {};
         for (const config of Object.values(componentConfigs)) {
             for (const [key, value] of Object.entries(config)) {
                 if (value !== undefined && value !== null && value !== '') {
-                    allValues[key] = String(value);
+                    allValues[key] = normalizeIfUrl(String(value));
                 }
             }
         }

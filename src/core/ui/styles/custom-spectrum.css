@@ -2483,6 +2483,34 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* ===========================================
+   ClickableUrl Component Styles
+   URLs in help text that open in browser
+   =========================================== */
+.clickable-url {
+    font-family: var(--spectrum-alias-body-text-font-family, monospace) !important;
+    font-size: 0.9em !important;
+    background-color: var(--db-code-background) !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    cursor: pointer !important;
+    text-decoration: underline !important;
+    color: var(--spectrum-global-color-blue-600) !important;
+    transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+.clickable-url:hover {
+    background-color: var(--spectrum-global-color-gray-200) !important;
+    color: var(--spectrum-global-color-blue-700) !important;
+}
+
+.clickable-url:focus {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+/* ===========================================
    LoadingOverlay Component Styles
    SOP §11: Extracted from inline style objects
    =========================================== */

@@ -423,11 +423,6 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
                                         <Text UNSAFE_className="text-sm text-gray-600">{progress.error}</Text>
                                     )}
                                 </Flex>
-
-                                {/* Buttons centered with error content */}
-                                <Flex gap="size-150" marginTop="size-300">
-                                    <Button variant="secondary" onPress={onBack}>Back</Button>
-                                </Flex>
                             </Flex>
                         </CenteredFeedbackContainer>
                     )}
@@ -496,6 +491,31 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
                                 View Projects
                             </Button>
                         )
+                    }
+                    constrainWidth={true}
+                />
+            )}
+
+            {/* Show Back and Logs buttons on error/cancelled */}
+            {showGenericError && (
+                <PageFooter
+                    leftContent={
+                        <Button
+                            variant="secondary"
+                            onPress={onBack}
+                            isQuiet
+                        >
+                            Back
+                        </Button>
+                    }
+                    centerContent={
+                        <Button
+                            variant="secondary"
+                            onPress={handleShowLogs}
+                            isQuiet
+                        >
+                            Logs
+                        </Button>
                     }
                     constrainWidth={true}
                 />

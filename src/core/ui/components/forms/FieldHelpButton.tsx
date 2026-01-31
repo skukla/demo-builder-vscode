@@ -17,6 +17,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { getBaseUri } from '@/core/ui/utils/baseUri';
+import { vscode } from '@/core/ui/utils/vscode-api';
 import { FieldHelp, FieldHelpStep } from '@/types/webview';
 
 // Re-export types for convenience
@@ -113,8 +114,42 @@ function ImageZoom({
 }
 
 /**
- * Parses text with backtick-wrapped segments into copyable components
- * Example: "Go to `account.magento.com` and click" renders the URL as copyable
+ * Check if a string looks like a URL
+ */
+function isUrl(text: string): boolean {
+    return text.startsWith('http://') || text.startsWith('https://');
+}
+
+/**
+ * ClickableUrl - Opens URL in browser when clicked
+ */
+function ClickableUrl({ url }: { url: string }) {
+    const handleClick = () => {
+        vscode.postMessage('openExternal', { url });
+    };
+
+    return (
+        <span
+            onClick={handleClick}
+            className="clickable-url"
+            role="link"
+            tabIndex={0}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    handleClick();
+                }
+            }}
+        >
+            {url}
+        </span>
+    );
+}
+
+/**
+ * Parses text with backtick-wrapped segments into copyable or clickable components
+ * - URLs (http://, https://) open in browser when clicked
+ * - Other text is copyable on click
+ * Example: "Go to `https://account.magento.com` and click" renders the URL as clickable
  */
 function renderTextWithCopyable(text: string): React.ReactNode {
     // Split by backticks to find copyable segments
@@ -128,10 +163,14 @@ function renderTextWithCopyable(text: string): React.ReactNode {
     return (
         <>
             {parts.map((part, i) => {
-                // If the part starts and ends with backticks, it's copyable
+                // If the part starts and ends with backticks, it's interactive
                 if (part.startsWith('`') && part.endsWith('`')) {
-                    const copyText = part.slice(1, -1);
-                    return <CopyableText key={i}>{copyText}</CopyableText>;
+                    const content = part.slice(1, -1);
+                    // URLs open in browser, other text is copyable
+                    if (isUrl(content)) {
+                        return <ClickableUrl key={i} url={content} />;
+                    }
+                    return <CopyableText key={i}>{content}</CopyableText>;
                 }
                 return <span key={i}>{part}</span>;
             })}

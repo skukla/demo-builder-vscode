@@ -4,7 +4,7 @@ import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { toServiceGroupWithSortedFields, ServiceGroupDef } from '@/features/components/services/serviceGroupTransforms';
 import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
 import { ComponentEnvVar, ComponentConfigs, WizardState } from '@/types/webview';
-import { url, pattern } from '@/core/validation/Validator';
+import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 
 const log = webviewLogger('useComponentConfig');
 
@@ -70,6 +70,8 @@ interface UseComponentConfigReturn {
     updateField: (field: UniqueField, value: string | boolean) => void;
     getFieldValue: (field: UniqueField) => string | boolean | undefined;
     markFieldTouched: (fieldKey: string) => void;
+    /** Normalize URL field on blur (removes trailing slashes for visual feedback) */
+    normalizeUrlField: (field: UniqueField) => void;
 }
 
 // Service group definitions with order
@@ -402,6 +404,39 @@ export function useComponentConfig({
         setTouchedFields(prev => new Set(prev).add(fieldKey));
     }, []);
 
+    /**
+     * Normalize URL field on blur - removes trailing slashes for visual feedback.
+     * Called when user leaves a URL field to show normalized value.
+     */
+    const normalizeUrlField = useCallback((field: UniqueField) => {
+        if (field.type !== 'url') return;
+
+        // Find current value
+        let currentValue: string | undefined;
+        for (const componentId of field.componentIds) {
+            const value = componentConfigs[componentId]?.[field.key];
+            if (value !== undefined && value !== '' && typeof value === 'string') {
+                currentValue = value;
+                break;
+            }
+        }
+
+        if (!currentValue) return;
+
+        // Normalize and update if changed
+        const normalized = normalizeUrl(currentValue);
+        if (normalized !== currentValue) {
+            setComponentConfigs(prev => {
+                const newConfigs = { ...prev };
+                field.componentIds.forEach(componentId => {
+                    if (!newConfigs[componentId]) newConfigs[componentId] = {};
+                    newConfigs[componentId][field.key] = normalized;
+                });
+                return newConfigs;
+            });
+        }
+    }, [componentConfigs]);
+
     return {
         componentConfigs,
         isLoading,
@@ -412,5 +447,6 @@ export function useComponentConfig({
         updateField,
         getFieldValue,
         markFieldTouched,
+        normalizeUrlField,
     };
 }

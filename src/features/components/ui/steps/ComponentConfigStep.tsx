@@ -28,6 +28,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         touchedFields,
         updateField,
         getFieldValue,
+        normalizeUrlField,
     } = useComponentConfig({ state, updateState, setCanProceed });
 
     const {
@@ -102,6 +103,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                         error={validationErrors[field.key]}
                                         isTouched={touchedFields.has(field.key)}
                                         onUpdate={updateField}
+                                        onNormalizeUrl={normalizeUrlField}
                                     />
                                 ))}
                             </Flex>

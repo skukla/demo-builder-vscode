@@ -232,3 +232,49 @@ export const email = (message?: string): Validator => {
         return valid();
     };
 };
+
+/**
+ * Normalize a URL by removing trailing slashes
+ *
+ * Users often paste URLs with trailing slashes (e.g., from browser address bar).
+ * This function strips trailing slashes to ensure consistent URL handling.
+ *
+ * @param value - URL string to normalize
+ * @returns Normalized URL without trailing slashes
+ *
+ * @example
+ * ```typescript
+ * normalizeUrl('https://example.com/'); // 'https://example.com'
+ * normalizeUrl('https://example.com/path/'); // 'https://example.com/path'
+ * normalizeUrl('https://example.com'); // 'https://example.com' (unchanged)
+ * normalizeUrl(''); // '' (unchanged)
+ * ```
+ */
+export const normalizeUrl = (value: string): string => {
+    if (!value) return value;
+    // Remove trailing slashes but preserve the rest of the URL
+    return value.replace(/\/+$/, '');
+};
+
+/**
+ * Check if a string looks like a URL (starts with http:// or https://)
+ */
+export const isUrlValue = (value: string): boolean => {
+    if (!value || typeof value !== 'string') return false;
+    return value.startsWith('http://') || value.startsWith('https://');
+};
+
+/**
+ * Normalize a value if it's a URL, otherwise return unchanged
+ *
+ * Useful for normalizing config values without needing field type metadata.
+ *
+ * @param value - Any string value
+ * @returns Normalized URL if value is URL-like, otherwise original value
+ */
+export const normalizeIfUrl = (value: string): string => {
+    if (isUrlValue(value)) {
+        return normalizeUrl(value);
+    }
+    return value;
+};
