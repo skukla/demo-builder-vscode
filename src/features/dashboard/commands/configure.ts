@@ -289,6 +289,14 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             }
             return componentsData;
         });
+
+        // Handle open external URL (for help links)
+        comm.onStreaming('openExternal', async (data: { url: string }) => {
+            if (data.url) {
+                await vscode.env.openExternal(vscode.Uri.parse(data.url));
+            }
+            return { success: true };
+        });
     }
 
     /**
