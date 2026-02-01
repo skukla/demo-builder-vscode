@@ -20,20 +20,18 @@ export { GitHubOAuthService } from './services/githubOAuthService';
 export { DaLiveOrgOperations, type TokenProvider } from './services/daLiveOrgOperations';
 export { DaLiveContentOperations, type DaLiveContentSource } from './services/daLiveContentOperations';
 export { DaLiveAuthService } from './services/daLiveAuthService';
+export {
+    DaLiveConfigService,
+    type PermissionRow,
+    type MultiSheetConfig,
+    type GrantAccessResult,
+    type HasAccessResult,
+} from './services/daLiveConfigService';
 
 // Project Orchestration Services
 export { ToolManager } from './services/toolManager';
 export { HelixService, type UnpublishResult } from './services/helixService';
 export { CleanupService } from './services/cleanupService';
-
-// Template Patch Registry
-export {
-    applyTemplatePatches,
-    getPatchById,
-    getAllPatches,
-    TEMPLATE_PATCHES,
-} from './services/templatePatchRegistry';
-export type { TemplatePatch, PatchResult } from './services/templatePatchRegistry';
 
 // Config Generator (for EDS Reset)
 export {

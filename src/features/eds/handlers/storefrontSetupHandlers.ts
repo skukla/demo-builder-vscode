@@ -25,7 +25,7 @@ import { DaLiveAuthService } from '../services/daLiveAuthService';
 import { HelixService } from '../services/helixService';
 import { ToolManager } from '../services/toolManager';
 import { generateFstabContent } from '../services/fstabGenerator';
-import { bulkPreviewAndPublish } from './edsHelpers';
+import { bulkPreviewAndPublish, configureDaLivePermissions } from './edsHelpers';
 
 // ==========================================================
 // Types
@@ -716,67 +716,6 @@ async function executeStorefrontSetupPhases(
             logger.info(`[Storefront Setup] GitHub App verified for existing repo (code.status: ${codeStatus})`);
         }
 
-        // ============================================
-        // Phase 2b: Apply Template Patches
-        // ============================================
-        // Apply patches from demo-packages.json (e.g., header-nav-tools-defensive)
-        // These fix issues with the template code for specific configurations
-        // Track patched code paths for later publish to live CDN (declared outside if block)
-        let patchedCodePaths: string[] = [];
-
-        if (edsConfig.patches && edsConfig.patches.length > 0) {
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'helix-config',
-                message: 'Applying template patches...',
-                progress: 30,
-            });
-
-            const { applyTemplatePatches } = await import('../services/templatePatchRegistry');
-
-            // Create fileOverrides map to collect patched content
-            const fileOverrides = new Map<string, string>();
-
-            const patchResults = await applyTemplatePatches(
-                templateOwner,
-                templateRepo,
-                edsConfig.patches,
-                fileOverrides,
-                logger,
-            );
-
-            // Log patch results and collect patched file paths for later publish
-            const { getAppliedPatchPaths } = await import('./edsHelpers');
-            patchedCodePaths = getAppliedPatchPaths(patchResults);
-
-            for (const result of patchResults) {
-                if (result.applied) {
-                    logger.info(`[Storefront Setup] Patch '${result.patchId}' applied to ${result.filePath}`);
-                } else {
-                    logger.warn(`[Storefront Setup] Patch '${result.patchId}' not applied: ${result.reason}`);
-                }
-            }
-
-            // Push patched files to GitHub
-            for (const [filePath, content] of fileOverrides) {
-                // Check if file already exists (to get SHA for update)
-                const existingFile = await githubFileOps.getFileContent(repoOwner, repoName, filePath);
-                const fileSha = existingFile?.sha;
-
-                await githubFileOps.createOrUpdateFile(
-                    repoOwner,
-                    repoName,
-                    filePath,
-                    content,
-                    `chore: apply template patch for ${filePath}`,
-                    fileSha,
-                );
-
-                logger.info(`[Storefront Setup] Pushed patched file: ${filePath}`);
-            }
-
-            logger.info(`[Storefront Setup] Template patches applied: ${patchResults.filter((r: { applied: boolean }) => r.applied).length}/${patchResults.length}`);
-        }
-
         // NOTE: config.json generation moved to executor Phase 4/5
         // Phase 4 generates config.json locally with mesh endpoint (via generateEdsConfigJson)
         // Phase 5 syncs config.json to GitHub and publishes to CDN (via syncConfigToRemote)
@@ -903,6 +842,41 @@ async function executeStorefrontSetupPhases(
         });
 
         // ============================================
+        // Phase 3c: Configure Admin Access
+        // ============================================
+        // Grant the user admin/author/publish access to the site via DA.live Config API
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'code-sync',
+            message: 'Configuring site permissions...',
+            progress: 47,
+        });
+
+        // Get user email (fallback to GitHub if DA.live email not available)
+        const daLiveEmail = await daLiveAuthService.getUserEmail();
+        const userEmail = daLiveEmail || edsConfig.githubAuth?.user?.email;
+
+        if (userEmail) {
+            const adminResult = await configureDaLivePermissions(
+                daLiveTokenProvider,
+                edsConfig.daLiveOrg,
+                edsConfig.daLiveSite,
+                userEmail,
+                logger,
+            );
+
+            if (!adminResult.success) {
+                // Non-fatal - surface error in UI for troubleshooting
+                await context.sendMessage('storefront-setup-progress', {
+                    phase: 'code-sync',
+                    message: `⚠️ Permissions partially configured: ${adminResult.error}`,
+                    progress: 47,
+                });
+            }
+        } else {
+            logger.warn('[Storefront Setup] No user email available for permissions');
+        }
+
+        // ============================================
         // Phase 4: DA.live Content Population
         // ============================================
         // Check for cancellation before continuing
@@ -1001,6 +975,25 @@ async function executeStorefrontSetupPhases(
         }
 
         // ============================================
+        // Phase 4c: Apply EDS Settings (AEM Assets, Universal Editor)
+        // ============================================
+        // Apply extension settings for AEM Assets Delivery and Universal Editor
+        // These are configured in VS Code Settings under demoBuilder.daLive.*
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'content-copy',
+            message: 'Applying EDS configuration...',
+            progress: 63,
+        });
+
+        const { applyDaLiveOrgConfigSettings } = await import('./edsHelpers');
+        await applyDaLiveOrgConfigSettings(
+            daLiveContentOps,
+            edsConfig.daLiveOrg,
+            edsConfig.daLiveSite,
+            logger,
+        );
+
+        // ============================================
         // Phase 5: Publish Content to CDN
         // ============================================
         // Check for cancellation before continuing
@@ -1070,10 +1063,6 @@ async function executeStorefrontSetupPhases(
                 }
 
                 logger.info('[Storefront Setup] Content published to CDN successfully');
-
-                // Publish patched code files to live CDN
-                const { publishPatchedCodeToLive } = await import('./edsHelpers');
-                await publishPatchedCodeToLive(helixService, repoOwner, repoName, patchedCodePaths, logger);
             } catch (error) {
                 throw new Error(`Failed to publish content to CDN: ${(error as Error).message}`);
             }

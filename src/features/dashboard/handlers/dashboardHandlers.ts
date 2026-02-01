@@ -29,7 +29,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { generateFstabContent } from '@/features/eds/services/fstabGenerator';
 import { HelixService } from '@/features/eds/services/helixService';
-import { getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
+import { getGitHubServices, showDaLiveAuthQuickPick, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
@@ -687,7 +687,7 @@ export const handleResetEds: MessageHandler = async (context) => {
                 // Step 1: Reset repo to template (bulk operation)
                 // ============================================
                 // Uses Git Tree API for efficiency: 4 API calls instead of 2*N for N files
-                progress.report({ message: 'Step 1/5: Resetting repository to template...' });
+                progress.report({ message: 'Step 1/6: Resetting repository to template...' });
                 context.logger.info(`[Dashboard] Resetting repo using bulk tree operations`);
 
                 // Build fstab.yaml content using centralized generator (single source of truth)
@@ -699,27 +699,6 @@ export const handleResetEds: MessageHandler = async (context) => {
                 // Create file overrides map (files with custom content)
                 const fileOverrides = new Map<string, string>();
                 fileOverrides.set('fstab.yaml', fstabContent);
-
-                // Apply template patches from centralized registry
-                // Patches to apply are specified in the project's EDS metadata (from demo-packages.json)
-                const { applyTemplatePatches } = await import('@/features/eds/services/templatePatchRegistry');
-                const patchResults = await applyTemplatePatches(
-                    templateOwner,
-                    templateRepo,
-                    patches || [],
-                    fileOverrides,
-                    context.logger,
-                );
-
-                // Log patch results and collect patched file paths for later publish
-                const { getAppliedPatchPaths } = await import('@/features/eds/handlers/edsHelpers');
-                const patchedCodePaths = getAppliedPatchPaths(patchResults);
-
-                for (const result of patchResults) {
-                    if (!result.applied) {
-                        context.logger.warn(`[Dashboard] Patch '${result.patchId}' not applied: ${result.reason}`);
-                    }
-                }
 
                 // Generate demo-config.json with Commerce configuration
                 // This ensures the storefront has proper Commerce backend settings after reset
@@ -755,14 +734,14 @@ export const handleResetEds: MessageHandler = async (context) => {
                 );
 
                 context.logger.info(`[Dashboard] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
-                progress.report({ message: `Step 1/5: Reset ${resetResult.fileCount} files` });
+                progress.report({ message: `Step 1/6: Reset ${resetResult.fileCount} files` });
 
                 // ============================================
                 // Step 2: Sync code to CDN
                 // ============================================
                 // Actively trigger code sync via Helix Admin API (POST /code/*)
                 // This is more reliable than passive polling - the POST completes when sync is done
-                progress.report({ message: 'Step 2/5: Syncing code to CDN...' });
+                progress.report({ message: 'Step 2/6: Syncing code to CDN...' });
 
                 // Create HelixService for code sync (need GitHub token for Admin API)
                 const helixServiceForCodeSync = new HelixService(context.logger, githubTokenService, tokenProvider);
@@ -770,11 +749,20 @@ export const handleResetEds: MessageHandler = async (context) => {
                 try {
                     await helixServiceForCodeSync.previewCode(repoOwner, repoName, '/*');
                     context.logger.info('[Dashboard] Code synced to CDN');
-                    progress.report({ message: 'Step 2/5: Code synchronized' });
+                    progress.report({ message: 'Step 2/6: Code synchronized' });
                 } catch (codeSyncError) {
                     // Log warning but continue - the GitHub App may also trigger sync
                     context.logger.warn(`[Dashboard] Code sync request failed: ${(codeSyncError as Error).message}, continuing anyway`);
-                    progress.report({ message: 'Step 2/5: Code sync pending...' });
+                    progress.report({ message: 'Step 2/6: Code sync pending...' });
+                }
+
+                // Configure permissions via DA.live Config API (part of Step 2)
+                progress.report({ message: 'Step 2/6: Configuring site permissions...' });
+                const userEmail = await daLiveAuthService.getUserEmail();
+                if (userEmail) {
+                    await configureDaLivePermissions(tokenProvider, daLiveOrg, daLiveSite, userEmail, context.logger);
+                } else {
+                    context.logger.warn('[Dashboard] No user email available for permissions');
                 }
 
                 // ============================================
@@ -782,7 +770,7 @@ export const handleResetEds: MessageHandler = async (context) => {
                 // ============================================
                 // After code sync, explicitly publish config.json to CDN
                 // This ensures the Commerce configuration is available on the live site
-                progress.report({ message: 'Step 3/5: Publishing config.json to CDN...' });
+                progress.report({ message: 'Step 3/6: Publishing config.json to CDN...' });
                 context.logger.info(`[Dashboard] Publishing config.json to CDN for ${repoOwner}/${repoName}`);
 
                 // Create HelixService for code publish (only needs GitHub token)
@@ -791,11 +779,11 @@ export const handleResetEds: MessageHandler = async (context) => {
                 try {
                     await helixServiceForCode.previewCode(repoOwner, repoName, '/config.json');
                     context.logger.info('[Dashboard] config.json published to CDN');
-                    progress.report({ message: 'Step 3/5: config.json published' });
+                    progress.report({ message: 'Step 3/6: config.json published' });
                 } catch (configError) {
                     // Log warning but continue - site may work without config.json if template has defaults
                     context.logger.warn(`[Dashboard] Failed to publish config.json: ${(configError as Error).message}`);
-                    progress.report({ message: 'Step 3/5: config.json publish failed, continuing...' });
+                    progress.report({ message: 'Step 3/6: config.json publish failed, continuing...' });
                 }
 
                 // Build full content source with index URL from explicit config
@@ -811,7 +799,7 @@ export const handleResetEds: MessageHandler = async (context) => {
                 // ============================================
                 // Content HTML is uploaded with absolute image URLs pointing to source CDN.
                 // The Admin API will download images during preview and store in Media Bus.
-                progress.report({ message: 'Step 4/5: Copying demo content to DA.live...' });
+                progress.report({ message: 'Step 4/6: Copying demo content to DA.live...' });
 
                 context.logger.info(`[Dashboard] Copying content from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
 
@@ -819,7 +807,7 @@ export const handleResetEds: MessageHandler = async (context) => {
                 const onContentProgress = (info: { processed: number; total: number; currentFile?: string; message?: string }) => {
                     // Use custom message if provided (during initialization), otherwise show file count
                     const statusMessage = info.message || `Copying content (${info.processed}/${info.total})`;
-                    progress.report({ message: `Step 4/5: ${statusMessage}` });
+                    progress.report({ message: `Step 4/6: ${statusMessage}` });
                 };
 
                 const contentResult = await daLiveContentOps.copyContentFromSource(
@@ -833,13 +821,21 @@ export const handleResetEds: MessageHandler = async (context) => {
                     throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
                 }
 
-                progress.report({ message: `Step 4/5: Copied ${contentResult.totalFiles} content files` });
+                progress.report({ message: `Step 4/6: Copied ${contentResult.totalFiles} content files` });
                 context.logger.info(`[Dashboard] DA.live content populated: ${contentResult.totalFiles} files`);
 
                 // ============================================
-                // Step 5: Publish all content to CDN
+                // Step 5: Apply EDS Settings (AEM Assets, Universal Editor)
                 // ============================================
-                progress.report({ message: 'Step 5/5: Publishing content to CDN...' });
+                progress.report({ message: 'Step 5/6: Applying EDS configuration...' });
+
+                const { applyDaLiveOrgConfigSettings } = await import('@/features/eds/handlers/edsHelpers');
+                await applyDaLiveOrgConfigSettings(daLiveContentOps, daLiveOrg, daLiveSite, context.logger);
+
+                // ============================================
+                // Step 6: Publish all content to CDN
+                // ============================================
+                progress.report({ message: 'Step 6/6: Publishing content to CDN...' });
                 context.logger.info(`[Dashboard] Publishing content to CDN for ${repoOwner}/${repoName}`);
 
                 // IMPORTANT: Pass DA.live token provider to HelixService for x-content-source-authorization
@@ -854,22 +850,17 @@ export const handleResetEds: MessageHandler = async (context) => {
                     total?: number;
                     currentPath?: string;
                 }) => {
-                    // Format: "Step 5/5: Publishing (15/42 pages)"
+                    // Format: "Step 6/6: Publishing (15/42 pages)"
                     if (info.current !== undefined && info.total !== undefined) {
-                        progress.report({ message: `Step 5/5: Publishing to CDN (${info.current}/${info.total} pages)` });
+                        progress.report({ message: `Step 6/6: Publishing to CDN (${info.current}/${info.total} pages)` });
                     } else {
-                        progress.report({ message: `Step 5/5: ${info.message}` });
+                        progress.report({ message: `Step 6/6: ${info.message}` });
                     }
                 };
 
                 await helixService.publishAllSiteContent(`${repoOwner}/${repoName}`, 'main', undefined, undefined, onPublishProgress);
 
                 context.logger.info('[Dashboard] Content published to CDN successfully');
-
-                // Publish patched code files to live CDN
-                const { publishPatchedCodeToLive } = await import('@/features/eds/handlers/edsHelpers');
-                await publishPatchedCodeToLive(helixService, repoOwner, repoName, patchedCodePaths, context.logger);
-
                 context.logger.info('[Dashboard] EDS project reset successfully');
 
                 // Show auto-dismissing success notification (2 seconds)

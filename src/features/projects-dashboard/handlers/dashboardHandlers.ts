@@ -29,7 +29,7 @@ import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboa
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { generateFstabContent } from '@/features/eds/services/fstabGenerator';
-import { showDaLiveAuthQuickPick, bulkPreviewAndPublish } from '@/features/eds/handlers/edsHelpers';
+import { showDaLiveAuthQuickPick, bulkPreviewAndPublish, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import { verifyCdnResources } from '@/features/eds/services/configSyncService';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
@@ -794,22 +794,46 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                 // Create HelixService with GitHub token for Admin API and DA.live token for content operations
                 const helixService = new HelixService(context.logger, githubTokenService, daLiveTokenProvider);
 
-                // Step 1: Sync all code files (includes config.json, patches, scripts)
-                progress.report({ message: 'Step 1/2: Syncing code to CDN...' });
+                // Step 1: Apply EDS org config (AEM Assets, Universal Editor)
+                progress.report({ message: 'Step 1/4: Applying EDS configuration...' });
+                const { DaLiveContentOperations } = await import('@/features/eds/services/daLiveContentOperations');
+                const { applyDaLiveOrgConfigSettings } = await import('@/features/eds/handlers/edsHelpers');
+                const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, context.logger);
+                await applyDaLiveOrgConfigSettings(daLiveContentOps, effectiveDaLiveOrg, effectiveDaLiveSite, context.logger);
+
+                // Step 2: Sync all code files (includes config.json, patches, scripts)
+                progress.report({ message: 'Step 2/4: Syncing code to CDN...' });
                 await helixService.previewCode(repoOwner, repoName, '/*');
                 context.logger.debug('[ProjectsList] Code synced to CDN');
 
-                // Step 2: Publish all content
-                progress.report({ message: 'Step 2/2: Publishing content to CDN...' });
+                // Configure permissions via DA.live Config API (part of Step 2)
+                progress.report({ message: 'Step 2/4: Configuring site permissions...' });
+                const userEmail = await daLiveAuthService.getUserEmail();
+                if (userEmail) {
+                    await configureDaLivePermissions(daLiveTokenProvider, effectiveDaLiveOrg, effectiveDaLiveSite, userEmail, context.logger);
+                } else {
+                    context.logger.warn('[ProjectsList] No user email available for permissions');
+                }
+
+                // Step 3: Publish all content
+                progress.report({ message: 'Step 3/4: Publishing content to CDN...' });
                 await helixService.publishAllSiteContent(
                     repoFullName,
                     'main',
                     effectiveDaLiveOrg,
                     effectiveDaLiveSite,
                     (info) => {
-                        progress.report({ message: `Step 2/2: ${info.message}` });
+                        progress.report({ message: `Step 3/4: ${info.message}` });
                     },
                 );
+
+                // Step 4: Verify CDN accessibility
+                progress.report({ message: 'Step 4/4: Verifying CDN...' });
+                const { verifyConfigOnCdn } = await import('@/features/eds/services/configSyncService');
+                const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, context.logger);
+                if (!cdnVerified) {
+                    context.logger.warn('[ProjectsList] CDN verification timed out - content may still be propagating');
+                }
 
                 context.logger.info(`[ProjectsList] Content republished for ${repoFullName}`);
 
@@ -952,6 +976,46 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         }
     }
 
+    // Pre-check Adobe I/O authentication (if project has mesh)
+    // Mesh redeployment requires valid Adobe I/O credentials
+    const meshComponent = getMeshComponentInstance(project);
+    const hasMesh = !!meshComponent?.path;
+
+    if (hasMesh) {
+        const authService = ServiceLocator.getAuthenticationService();
+        const isAdobeAuthenticated = await authService.isAuthenticated();
+
+        if (!isAdobeAuthenticated) {
+            context.logger.info('[ProjectsList] resetEds: Adobe I/O token expired or missing');
+
+            const signInButton = 'Sign In';
+            const selection = await vscode.window.showWarningMessage(
+                'Your Adobe I/O session has expired. Please sign in to continue.',
+                signInButton,
+            );
+
+            if (selection === signInButton) {
+                const loginSuccess = await authService.login();
+                if (!loginSuccess) {
+                    return {
+                        success: false,
+                        error: 'Adobe I/O authentication required',
+                        errorType: 'ADOBE_AUTH_REQUIRED',
+                        cancelled: true,
+                    };
+                }
+                // Token is now valid - continue to confirmation dialog below
+            } else {
+                // User dismissed notification - abort operation
+                return {
+                    success: false,
+                    error: 'Adobe I/O authentication required',
+                    errorType: 'ADOBE_AUTH_REQUIRED',
+                };
+            }
+        }
+    }
+
     // Show confirmation dialog
     const confirmButton = 'Reset Project';
     const confirmation = await vscode.window.showWarningMessage(
@@ -1044,10 +1108,10 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
 
                 const daLiveContentOps = new DaLiveContentOperations(tokenProvider, context.logger);
 
-                // Determine total steps (5 base + 1 if mesh needs redeployment)
+                // Determine total steps (6 base + 1 if mesh needs redeployment)
                 const meshComponent = getMeshComponentInstance(project);
                 const hasMesh = !!meshComponent?.path;
-                const totalSteps = hasMesh ? 6 : 5;
+                const totalSteps = hasMesh ? 7 : 6;
 
                 // ============================================
                 // Step 1: Reset repo to template (bulk operation)
@@ -1065,27 +1129,6 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 // Create file overrides map (files with custom content)
                 const fileOverrides = new Map<string, string>();
                 fileOverrides.set('fstab.yaml', fstabContent);
-
-                // Apply template patches from centralized registry
-                // Patches to apply are specified in the project's EDS metadata (from demo-packages.json)
-                const { applyTemplatePatches } = await import('@/features/eds/services/templatePatchRegistry');
-                const patchResults = await applyTemplatePatches(
-                    templateOwner,
-                    templateRepo,
-                    patches || [],
-                    fileOverrides,
-                    context.logger,
-                );
-
-                // Log patch results and collect patched file paths for later publish
-                const { getAppliedPatchPaths } = await import('@/features/eds/handlers/edsHelpers');
-                const patchedCodePaths = getAppliedPatchPaths(patchResults);
-
-                for (const result of patchResults) {
-                    if (!result.applied) {
-                        context.logger.warn(`[ProjectsList] Patch '${result.patchId}' not applied: ${result.reason}`);
-                    }
-                }
 
                 // Generate demo-config.json with Commerce configuration
                 // This ensures the storefront has proper Commerce backend settings after reset
@@ -1176,6 +1219,15 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     progress.report({ message: `Step 2/${totalSteps}: Code sync pending...` });
                 }
 
+                // Configure permissions via DA.live Config API (part of Step 2)
+                progress.report({ message: `Step 2/${totalSteps}: Configuring site permissions...` });
+                const userEmail = await daLiveAuthService.getUserEmail();
+                if (userEmail) {
+                    await configureDaLivePermissions(tokenProvider, daLiveOrg, daLiveSite, userEmail, context.logger);
+                } else {
+                    context.logger.warn('[ProjectsList] No user email available for permissions');
+                }
+
                 // Build full content source with index URL from explicit config
                 const indexPath = contentSourceConfig.indexPath || '/full-index.json';
                 const contentSource = {
@@ -1230,9 +1282,17 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 }
 
                 // ============================================
-                // Step 4: Publish all content to CDN
+                // Step 4: Apply EDS Settings (AEM Assets, Universal Editor)
                 // ============================================
-                progress.report({ message: `Step 4/${totalSteps}: Publishing to CDN...` });
+                progress.report({ message: `Step 4/${totalSteps}: Applying EDS configuration...` });
+
+                const { applyDaLiveOrgConfigSettings } = await import('@/features/eds/handlers/edsHelpers');
+                await applyDaLiveOrgConfigSettings(daLiveContentOps, daLiveOrg, daLiveSite, context.logger);
+
+                // ============================================
+                // Step 5: Publish all content to CDN
+                // ============================================
+                progress.report({ message: `Step 5/${totalSteps}: Publishing to CDN...` });
                 context.logger.info(`[ProjectsList] Publishing content to CDN for ${repoOwner}/${repoName}`);
 
                 // IMPORTANT: Pass DA.live token provider to HelixService for x-content-source-authorization
@@ -1248,9 +1308,9 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     currentPath?: string;
                 }) => {
                     if (info.current !== undefined && info.total !== undefined) {
-                        progress.report({ message: `Step 4/${totalSteps}: Publishing (${info.current}/${info.total} pages)` });
+                        progress.report({ message: `Step 5/${totalSteps}: Publishing (${info.current}/${info.total} pages)` });
                     } else {
-                        progress.report({ message: `Step 4/${totalSteps}: ${info.message}` });
+                        progress.report({ message: `Step 5/${totalSteps}: ${info.message}` });
                     }
                 };
 
@@ -1258,7 +1318,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
 
                 // Bulk publish block library paths (may be missed by publishAllSiteContent due to .da folder)
                 if (libResult.paths.length > 0) {
-                    progress.report({ message: `Step 4/${totalSteps}: Publishing block library...` });
+                    progress.report({ message: `Step 5/${totalSteps}: Publishing block library...` });
                     try {
                         await bulkPreviewAndPublish(helixService, repoOwner, repoName, libResult.paths, context.logger);
                     } catch (libPublishError) {
@@ -1269,77 +1329,36 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
 
                 context.logger.info('[ProjectsList] Content published to CDN successfully');
 
-                // Publish patched code files to live CDN
-                const { publishPatchedCodeToLive } = await import('@/features/eds/handlers/edsHelpers');
-                await publishPatchedCodeToLive(helixService, repoOwner, repoName, patchedCodePaths, context.logger);
-
                 // ============================================
-                // Step 5: Verify config.json and block library on CDN (parallel)
+                // Step 6: Verify config.json on CDN
                 // ============================================
-                progress.report({ message: `Step 5/${totalSteps}: Verifying configuration...` });
-                const includeBlockLibrary = libResult.paths.length > 0;
+                // Note: Block library verification removed - library is served from content.da.live,
+                // not the public CDN, so CDN verification is not applicable.
+                progress.report({ message: `Step 6/${totalSteps}: Verifying configuration...` });
                 const verification = await verifyCdnResources(
                     repoOwner,
                     repoName,
                     context.logger,
-                    includeBlockLibrary,
                 );
 
                 if (verification.configVerified) {
-                    progress.report({ message: `Step 5/${totalSteps}: Configuration verified` });
+                    progress.report({ message: `Step 6/${totalSteps}: Configuration verified` });
                     context.logger.info('[ProjectsList] config.json verified on CDN');
                 } else {
-                    progress.report({ message: `Step 5/${totalSteps}: Configuration propagating...` });
-                    context.logger.warn('[ProjectsList] config.json CDN verification timed out - may need more time to propagate');
-                }
-
-                if (includeBlockLibrary) {
-                    if (verification.blockLibraryVerified) {
-                        context.logger.info('[ProjectsList] Block library verified on CDN');
-                    } else {
-                        context.logger.debug('[ProjectsList] Block library CDN verification timed out (non-fatal)');
-                    }
+                    progress.report({ message: `Step 6/${totalSteps}: Configuration propagating...` });
+                    context.logger.warn('[ProjectsList] config.json CDN verification timed out - may need more time to propagate')
                 }
 
                 // ============================================
-                // Step 6: Redeploy API Mesh (if project has mesh component)
+                // Step 7: Redeploy API Mesh (if project has mesh component)
                 // ============================================
                 // Redeploy mesh to refresh GraphQL schema. The existing .env file
                 // in the local mesh directory is reused (not regenerated).
 
                 if (hasMesh) {
-                    // Pre-check Adobe I/O authentication before mesh deployment
-                    // Mesh deployment requires valid Adobe I/O credentials
-                    const isAdobeAuthenticated = await authService.isAuthenticated();
-
-                    if (!isAdobeAuthenticated) {
-                        context.logger.info('[ProjectsList] resetEds: Adobe I/O token expired or missing');
-
-                        // Show notification with Sign In action
-                        const signInButton = 'Sign In';
-                        const selection = await vscode.window.showWarningMessage(
-                            'Your Adobe I/O session has expired. Please sign in to continue.',
-                            signInButton,
-                        );
-
-                        if (selection === signInButton) {
-                            progress.report({ message: `Step 6/${totalSteps}: Opening browser for authentication...` });
-                            const loginSuccess = await authService.login();
-
-                            if (!loginSuccess) {
-                                context.logger.error('[ProjectsList] Adobe I/O login failed or cancelled');
-                                vscode.window.showErrorMessage('Reset failed: Adobe I/O authentication is required for mesh deployment.');
-                                return { success: false, error: 'Adobe I/O authentication required' };
-                            }
-                        } else {
-                            // User dismissed notification
-                            context.logger.info('[ProjectsList] User cancelled Adobe I/O authentication');
-                            return { success: false, error: 'Adobe I/O authentication required', cancelled: true };
-                        }
-                    }
-
                     // Set Adobe CLI context before mesh deployment
-                    progress.report({ message: `Step 6/${totalSteps}: Setting Adobe context...` });
+                    // (Adobe I/O auth already verified in pre-flight check)
+                    progress.report({ message: `Step 7/${totalSteps}: Setting Adobe context...` });
 
                     if (project.adobe?.organization) {
                         await authService.selectOrganization(project.adobe.organization);
@@ -1351,7 +1370,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                         await authService.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
                     }
 
-                    progress.report({ message: `Step 6/${totalSteps}: Redeploying API Mesh...` });
+                    progress.report({ message: `Step 7/${totalSteps}: Redeploying API Mesh...` });
                     context.logger.info(`[ProjectsList] Redeploying mesh for ${repoFullName}`);
 
                     try {
@@ -1363,7 +1382,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                             meshComponent.path!, // hasMesh guarantees path exists
                             commandManager,
                             context.logger,
-                            (msg, sub) => progress.report({ message: `Step 6/${totalSteps}: ${sub || msg}` }),
+                            (msg, sub) => progress.report({ message: `Step 7/${totalSteps}: ${sub || msg}` }),
                             existingMeshId,
                         );
 
@@ -1422,7 +1441,6 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     };
                 }
 
-                const errorMessage = (error as Error).message;
                 context.logger.error('[ProjectsList] resetEds failed', error as Error);
                 vscode.window.showErrorMessage(
                     `Failed to reset EDS project: ${errorMessage}`,

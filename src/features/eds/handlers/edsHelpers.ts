@@ -22,6 +22,7 @@ import { GitHubOAuthService } from '../services/githubOAuthService';
 import { DaLiveOrgOperations, type TokenProvider } from '../services/daLiveOrgOperations';
 import { DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { DaLiveAuthService } from '../services/daLiveAuthService';
+import { DaLiveConfigService } from '../services/daLiveConfigService';
 import { HelixService } from '../services/helixService';
 import { getLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
@@ -516,59 +517,97 @@ export async function bulkPreviewAndPublish(
     }
 }
 
-// ==========================================================
-// Template Patch Helpers
-// ==========================================================
-
-import type { PatchResult } from '../services/templatePatchRegistry';
-
 /**
- * Extract unique file paths from applied patches.
- * Multiple patches may target the same file - this deduplicates them.
+ * Apply DA.live org config settings from extension settings.
  *
- * @param patchResults - Results from applyTemplatePatches
- * @returns Array of unique file paths (with leading /) for applied patches
+ * Reads the AEM Repository ID and IMS Org ID from VS Code settings
+ * (demoBuilder.daLive.AEMRepositoryId and demoBuilder.daLive.IMSOrgId)
+ * and applies them to the DA.live site config sheet.
+ *
+ * This should be called from all EDS flows: creation, reset, edit, import, copy.
+ * Non-fatal: logs warnings on failure but does not throw.
  */
-export function getAppliedPatchPaths(patchResults: PatchResult[]): string[] {
-    const paths: string[] = [];
-    for (const result of patchResults) {
-        if (result.applied) {
-            const path = `/${result.filePath}`;
-            if (!paths.includes(path)) {
-                paths.push(path);
-            }
+export async function applyDaLiveOrgConfigSettings(
+    daLiveContentOps: DaLiveContentOperations,
+    daLiveOrg: string,
+    daLiveSite: string,
+    logger: Logger,
+): Promise<void> {
+    try {
+        const edsSettings = vscode.workspace.getConfiguration('demoBuilder.daLive');
+        const aemRepositoryId = edsSettings.get<string>('AEMRepositoryId');
+        const imsOrgId = edsSettings.get<string>('IMSOrgId');
+        const editorPathPrefix = edsSettings.get<string>('editorPathPrefix') || 'site/to/path/content';
+
+        // Nothing configured - skip silently
+        if (!aemRepositoryId && !imsOrgId) {
+            return;
         }
+
+        const configUpdates: Record<string, string> = {};
+
+        if (aemRepositoryId) {
+            configUpdates['aem.repositoryId'] = aemRepositoryId;
+        }
+
+        if (imsOrgId) {
+            // Dummy path prefix prevents auto-redirect to UE (no real content matches it)
+            // Full UE URL enables punch-out option from doc-based editing
+            const editorPath = `${editorPathPrefix}=https://experience.adobe.com/#/@${imsOrgId}/aem/editor/canvas/main--${daLiveSite}--${daLiveOrg}.ue.da.live`;
+            configUpdates['editor.path'] = editorPath;
+        }
+
+        const result = await daLiveContentOps.applyOrgConfig(daLiveOrg, configUpdates);
+
+        if (result.success) {
+            logger.info(`[EDS Config] Applied: ${Object.keys(configUpdates).join(', ')}`);
+        } else {
+            logger.warn(`[EDS Config] Failed to apply settings: ${result.error}`);
+        }
+    } catch (error) {
+        logger.warn(`[EDS Config] Error: ${(error as Error).message}`);
     }
-    return paths;
 }
 
 /**
- * Publish patched code files to live CDN.
+ * Configure DA.live site permissions for the user.
  *
- * Code preview (previewCode) only syncs to the preview domain (.aem.page).
- * This function explicitly publishes patched code files to the live domain (.aem.live).
+ * Grants the user CONFIG and content write permissions via DA.live Config API.
+ * This enables Universal Editor access and site management capabilities.
  *
- * @param helixService - HelixService instance
- * @param owner - Repository owner
- * @param repo - Repository name
- * @param patchedPaths - Paths to patched code files (from getAppliedPatchPaths)
+ * This should be called from all EDS flows: creation, reset, republish.
+ * Non-fatal: logs warnings on failure but does not throw.
+ *
+ * @param tokenProvider - Token provider for DA.live API authentication
+ * @param daLiveOrg - DA.live organization name
+ * @param daLiveSite - DA.live site name
+ * @param userEmail - User email to grant permissions to
  * @param logger - Logger instance
+ * @returns Result with success status and optional error message
  */
-export async function publishPatchedCodeToLive(
-    helixService: HelixService,
-    owner: string,
-    repo: string,
-    patchedPaths: string[],
+export async function configureDaLivePermissions(
+    tokenProvider: TokenProvider,
+    daLiveOrg: string,
+    daLiveSite: string,
+    userEmail: string,
     logger: Logger,
-): Promise<void> {
-    if (patchedPaths.length === 0) return;
-
-    logger.debug(`[EDS] Publishing ${patchedPaths.length} patched code files to live CDN`);
+): Promise<{ success: boolean; error?: string }> {
     try {
-        await bulkPreviewAndPublish(helixService, owner, repo, patchedPaths, logger);
-        logger.info('[EDS] Patched code published to live CDN');
+        const daLiveConfigService = new DaLiveConfigService(tokenProvider, logger);
+        const result = await daLiveConfigService.grantUserAccess(
+            daLiveOrg,
+            daLiveSite,
+            userEmail,
+        );
+        if (result.success) {
+            logger.info(`[DaLivePermissions] Configured for ${userEmail}`);
+        } else {
+            logger.warn(`[DaLivePermissions] Warning: ${result.error}`);
+        }
+        return result;
     } catch (error) {
-        // Non-fatal - code was synced to preview, live publish can be retried
-        logger.warn(`[EDS] Code publish to live failed: ${(error as Error).message}`);
+        const errorMessage = (error as Error).message;
+        logger.warn(`[DaLivePermissions] Error: ${errorMessage}`);
+        return { success: false, error: errorMessage };
     }
 }
