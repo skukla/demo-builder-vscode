@@ -118,6 +118,64 @@ export class DaLiveAuthService {
     }
 
     /**
+     * Fetch user email from Adobe IMS profile API
+     *
+     * The DA.live token is an Adobe IMS token. The user's email is not reliably
+     * in the JWT claims, so we fetch it from the IMS profile endpoint.
+     *
+     * @param token - Optional token to use (defaults to stored token)
+     * @returns User email or null if fetch fails
+     */
+    async fetchUserEmail(token?: string): Promise<string | null> {
+        const accessToken = token || (await this.getAccessToken());
+        if (!accessToken) {
+            return null;
+        }
+
+        try {
+            const IMS_PROFILE_URL = 'https://ims-na1.adobelogin.com/ims/profile/v1';
+            const response = await fetch(IMS_PROFILE_URL, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+
+            if (response.ok) {
+                const profile = await response.json();
+                const email = profile.email;
+                if (email) {
+                    // Cache the email for future use
+                    await this.context.globalState.update(STATE_KEYS.userEmail, email);
+                    this.logger.debug(`[DA.live Auth] Fetched user email from IMS profile: ${email}`);
+                    return email;
+                }
+            } else {
+                this.logger.warn(`[DA.live Auth] IMS profile fetch failed: ${response.status}`);
+            }
+        } catch (error) {
+            this.logger.warn(`[DA.live Auth] Failed to fetch user email from IMS: ${(error as Error).message}`);
+        }
+
+        return null;
+    }
+
+    /**
+     * Get user email, fetching from IMS if not cached
+     *
+     * First checks cached email, then fetches from IMS profile API if needed.
+     *
+     * @returns User email or null if unavailable
+     */
+    async getUserEmail(): Promise<string | null> {
+        // Try cached email first
+        const cachedEmail = this.context.globalState.get<string>(STATE_KEYS.userEmail);
+        if (cachedEmail) {
+            return cachedEmail;
+        }
+
+        // Fetch from IMS profile API
+        return this.fetchUserEmail();
+    }
+
+    /**
      * Store a manually-provided token (from bookmarklet/QuickPick flow)
      *
      * Used when token is obtained via DA.live bookmarklet and pasted by user.
