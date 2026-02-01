@@ -181,7 +181,7 @@ export async function deleteProject(
                 if (selection === 'Open Settings') {
                     vscode.commands.executeCommand(
                         'workbench.action.openSettings',
-                        'demoBuilder.edsCleanup.behavior',
+                        'demoBuilder.cleanupBehavior',
                     );
                 }
             });
@@ -237,7 +237,7 @@ async function showCleanupConfirmation(
 ): Promise<CleanupOptions | null> {
     // Check cleanup behavior configuration setting
     const config = vscode.workspace.getConfiguration('demoBuilder');
-    const behavior = config.get<string>('edsCleanup.behavior', 'ask');
+    const behavior = config.get<string>('cleanupBehavior', 'ask');
 
     if (behavior === 'deleteAll') {
         // Auto-delete all: return all available options without showing QuickPick

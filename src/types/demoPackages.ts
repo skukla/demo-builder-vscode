@@ -101,8 +101,6 @@ export interface Storefront {
     templateOwner?: string;
     /** GitHub repository name of the template (for reset-to-template operations) */
     templateRepo?: string;
-    /** Patch IDs to apply during reset (defined in templatePatchRegistry) */
-    patches?: string[];
     /** Content patch IDs to apply during DA.live content copy */
     contentPatches?: string[];
     /** External repository for content patches (if not using bundled patches) */

@@ -60,7 +60,6 @@
             "org": "demo-system-stores",
             "site": "accs-citisignal"
           },
-          "patches": [],
           "contentPatches": ["index-product-teaser-sku", "phones-product-teaser-sku", "phones-heading-reorder", "smart-watches-category-id", "smart-watches-url-path"],
           "contentPatchSource": {
             "owner": "skukla",
@@ -89,7 +88,6 @@
             "org": "demo-system-stores",
             "site": "accs-citisignal"
           },
-          "patches": [],
           "contentPatches": ["index-product-teaser-sku", "phones-product-teaser-sku", "phones-heading-reorder", "smart-watches-category-id", "smart-watches-url-path"],
           "contentPatchSource": {
             "owner": "skukla",
