@@ -4,6 +4,8 @@ import {
     Form,
     Button,
     View,
+    Link,
+    Flex,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { FormField, ConfigSection } from '@/core/ui/components/forms';
@@ -694,6 +696,19 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                             id={group.id}
                                             label={group.label}
                                             showDivider={index > 0}
+                                            footer={group.id === 'adobe-assets' ? (
+                                                <Flex marginTop="size-200">
+                                                    <Text UNSAFE_className="text-gray-600 text-sm">
+                                                        Universal Editor settings are configured in{' '}
+                                                        <Link
+                                                            onPress={() => webviewClient.postMessage('open-eds-settings')}
+                                                            UNSAFE_className="cursor-pointer"
+                                                        >
+                                                            Extension Settings
+                                                        </Link>
+                                                    </Text>
+                                                </Flex>
+                                            ) : undefined}
                                         >
                                             {group.fields.map(field =>
                                                 renderFormField(field, {

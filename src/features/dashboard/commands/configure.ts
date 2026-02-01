@@ -297,6 +297,12 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             }
             return { success: true };
         });
+
+        // Handle open EDS extension settings
+        comm.onStreaming('open-eds-settings', async () => {
+            await vscode.commands.executeCommand('workbench.action.openSettings', 'demoBuilder.daLive');
+            return { success: true };
+        });
     }
 
     /**

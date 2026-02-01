@@ -10,6 +10,8 @@ export interface ConfigSectionProps {
     children: React.ReactNode;
     /** Whether to show divider before section */
     showDivider?: boolean;
+    /** Optional footer content (e.g., links, notes) */
+    footer?: React.ReactNode;
 }
 
 /**
@@ -31,6 +33,7 @@ export const ConfigSection = React.memo<ConfigSectionProps>(({
     label,
     children,
     showDivider = false,
+    footer,
 }) => {
     return (
         <>
@@ -53,6 +56,12 @@ export const ConfigSection = React.memo<ConfigSectionProps>(({
                 <Flex direction="column" marginBottom="size-100">
                     {children}
                 </Flex>
+
+                {footer && (
+                    <div className="config-section-footer">
+                        {footer}
+                    </div>
+                )}
             </div>
         </>
     );

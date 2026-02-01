@@ -50,6 +50,9 @@ export function DaLiveSetupStep({
     const [tokenInput, setTokenInput] = useState('');
     const [showTokenInput, setShowTokenInput] = useState(false);
 
+    // Get the verified org name from wizard state
+    const verifiedOrg = state.edsConfig?.daLiveOrg;
+
     // Update canProceed based on authentication status
     useCanProceed(isAuthenticated, setCanProceed);
 
@@ -134,7 +137,7 @@ export function DaLiveSetupStep({
                     <StatusDisplay
                         variant="success"
                         title="Connected to DA.live"
-                        message="You can proceed to configure your content source."
+                        message={verifiedOrg ? `Organization: ${verifiedOrg}` : 'You can proceed to configure your content source.'}
                         actions={[
                             { label: 'Reconnect', variant: 'secondary', onPress: handleSignIn },
                         ]}
