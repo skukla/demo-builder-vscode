@@ -1247,7 +1247,6 @@ export class HelixService {
 
         this.logger.debug(`[Helix] Successfully previewed code: ${normalizedPath}`);
     }
-
     // ==========================================================
     // Helpers
     // ==========================================================
