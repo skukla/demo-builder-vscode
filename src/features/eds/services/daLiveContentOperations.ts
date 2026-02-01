@@ -1597,6 +1597,111 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Apply org-level configuration settings
+     *
+     * Updates the org's config sheet with settings like:
+     * - aem.repositoryId: AEM Assets Delivery instance
+     * - editor.path: Universal Editor path mapping
+     *
+     * Config sheet format uses key/value columns:
+     * | key              | value                        |
+     * | aem.repositoryId | author-p123-e456.adobeaem... |
+     * | editor.path      | /org/site=https://...        |
+     *
+     * IMPORTANT: Preserves all existing sheets (permissions, etc.) - only updates the data sheet.
+     *
+     * @param org - DA.live organization name
+     * @param configUpdates - Key-value pairs to update in the config
+     * @returns Success status with optional error message
+     */
+    async applyOrgConfig(
+        org: string,
+        configUpdates: Record<string, string>,
+    ): Promise<{ success: boolean; error?: string }> {
+        const token = await this.getImsToken();
+        const configUrl = `${DA_LIVE_BASE_URL}/config/${org}`;
+
+        // First, get existing config to preserve ALL sheets (data, permissions, etc.)
+        let existingConfig: Record<string, unknown> = {
+            ':version': 3,
+            ':names': ['data'],
+            ':type': 'multi-sheet',
+        };
+        let existingRows: Array<{ key: string; value: string }> = [];
+
+        try {
+            const getResponse = await fetch(configUrl, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+            if (getResponse.ok) {
+                existingConfig = await getResponse.json();
+                // Extract existing rows from data sheet
+                const dataSheet = existingConfig.data as { data?: Array<{ key: string; value: string }> } | undefined;
+                existingRows = dataSheet?.data || [];
+            }
+        } catch {
+            // No existing config, start fresh
+        }
+
+        // Convert existing rows to map for easy merging
+        const configMap = new Map<string, string>();
+        for (const row of existingRows) {
+            if (row.key) {
+                configMap.set(row.key, row.value);
+            }
+        }
+
+        // Apply updates
+        for (const [key, value] of Object.entries(configUpdates)) {
+            configMap.set(key, value);
+        }
+
+        // Convert back to rows format (key/value columns)
+        const rows = Array.from(configMap.entries()).map(([key, value]) => ({ key, value }));
+
+        // Update ONLY the data sheet, preserving all other sheets (permissions, etc.)
+        const configData = {
+            ...existingConfig,
+            data: {
+                total: rows.length,
+                offset: 0,
+                limit: rows.length,
+                data: rows,
+            },
+        };
+
+        // POST to /config/{org} API endpoint using FormData
+        const formData = new FormData();
+        formData.append('config', JSON.stringify(configData));
+
+        try {
+            const response = await fetch(configUrl, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                body: formData,
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+
+            if (response.ok) {
+                this.logger.info(`[DA.live] Org config applied for ${org}: ${Object.keys(configUpdates).join(', ')}`);
+                return { success: true };
+            }
+
+            const errorText = await response.text().catch(() => '');
+            return {
+                success: false,
+                error: `Failed to apply org config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
+            };
+        } catch (error) {
+            return { success: false, error: `Config API error: ${(error as Error).message}` };
+        }
+    }
+
+    /**
      * Create user-friendly error from HTTP response
      */
     private createErrorFromResponse(response: Response, operation: string): DaLiveError {
