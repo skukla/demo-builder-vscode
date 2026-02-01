@@ -144,26 +144,22 @@ export class AdobeEntitySelector {
                 },
             );
 
-            if (result.code === 0) {
+            // Accept exit code 0 or 2 - Adobe CLI uses exit code 2 for warnings, not errors
+            if (result.code === 0 || result.code === 2) {
                 // Clear validation failure flag since new org was successfully selected
                 this.cacheManager.setOrgClearedDueToValidation(false);
 
                 // Smart caching: populate org cache directly and get name for logging
                 let orgName = orgId; // Fallback to ID if name lookup fails
-                try {
-                    const orgs = await this.fetcher.getOrganizations();
-                    const selectedOrg = orgs.find(o => o.id === orgId);
+                const orgs = await this.fetcher.getOrganizations();
+                const selectedOrg = orgs.find(o => o.id === orgId);
 
-                    if (selectedOrg) {
-                        this.cacheManager.setCachedOrganization(selectedOrg);
-                        orgName = selectedOrg.name;
-                    } else {
-                        this.cacheManager.setCachedOrganization(undefined);
-                        this.debugLogger.warn(`[Entity Selector] Could not find org ${orgId} in list`);
-                    }
-                } catch (error) {
-                    this.debugLogger.debug('[Entity Selector] Failed to cache org after selection:', error);
+                if (selectedOrg) {
+                    this.cacheManager.setCachedOrganization(selectedOrg);
+                    orgName = selectedOrg.name;
+                } else {
                     this.cacheManager.setCachedOrganization(undefined);
+                    this.debugLogger.warn(`[Entity Selector] Could not find org ${orgId} in list`);
                 }
 
                 // Log with org name (or ID as fallback)
@@ -192,9 +188,13 @@ export class AdobeEntitySelector {
                 return true;
             }
 
-            this.debugLogger.debug(`[Entity Selector] Organization select failed with code: ${result.code}`);
+            this.debugLogger.debug(`[Entity Selector] Organization select failed with code: ${result.code}, stdout: ${result.stdout?.substring(0, 100)}`);
             return false;
         } catch (error) {
+            // Propagate AUTH_EXPIRED so callers can show re-login prompt
+            if ((error as Error).message?.includes('AUTH_EXPIRED')) {
+                throw error;
+            }
             this.debugLogger.error('[Entity Selector] Failed to select organization', error as Error);
             return false;
         }
@@ -237,23 +237,19 @@ export class AdobeEntitySelector {
                 },
             );
 
-            if (result.code === 0) {
+            // Accept exit code 0 or 2 - Adobe CLI uses exit code 2 for warnings, not errors
+            if (result.code === 0 || result.code === 2) {
                 // Smart caching - use silent mode to avoid duplicate log messages
                 let projectName = projectId; // Fallback to ID if name lookup fails
-                try {
-                    const projects = await this.fetcher.getProjects({ silent: true });
-                    const selectedProject = projects.find(p => p.id === projectId);
+                const projects = await this.fetcher.getProjects({ silent: true });
+                const selectedProject = projects.find(p => p.id === projectId);
 
-                    if (selectedProject) {
-                        this.cacheManager.setCachedProject(selectedProject);
-                        projectName = selectedProject.title || selectedProject.name || projectId;
-                    } else {
-                        this.cacheManager.setCachedProject(undefined);
-                        this.debugLogger.warn(`[Entity Selector] Could not find project ${projectId} in list`);
-                    }
-                } catch (error) {
-                    this.debugLogger.debug('[Entity Selector] Failed to cache project after selection:', error);
+                if (selectedProject) {
+                    this.cacheManager.setCachedProject(selectedProject);
+                    projectName = selectedProject.title || selectedProject.name || projectId;
+                } else {
                     this.cacheManager.setCachedProject(undefined);
+                    this.debugLogger.warn(`[Entity Selector] Could not find project ${projectId} in list`);
                 }
 
                 // Log with project name (or ID as fallback)
@@ -276,17 +272,12 @@ export class AdobeEntitySelector {
 
                 // Smart caching even on timeout success - use silent mode
                 let projectName = projectId; // Fallback to ID if name lookup fails
-                try {
-                    const projects = await this.fetcher.getProjects({ silent: true });
-                    const selectedProject = projects.find(p => p.id === projectId);
+                const projects = await this.fetcher.getProjects({ silent: true });
+                const selectedProject = projects.find(p => p.id === projectId);
 
-                    if (selectedProject) {
-                        this.cacheManager.setCachedProject(selectedProject);
-                        projectName = selectedProject.title || selectedProject.name || projectId;
-                    }
-                } catch (cacheError) {
-                    this.debugLogger.debug('[Entity Selector] Failed to cache project after timeout success:', cacheError);
-                    this.cacheManager.setCachedProject(undefined);
+                if (selectedProject) {
+                    this.cacheManager.setCachedProject(selectedProject);
+                    projectName = selectedProject.title || selectedProject.name || projectId;
                 }
 
                 // Log with project name (or ID as fallback)
@@ -299,6 +290,10 @@ export class AdobeEntitySelector {
                 return true;
             }
 
+            // Propagate AUTH_EXPIRED so callers can show re-login prompt
+            if ((error as Error).message?.includes('AUTH_EXPIRED')) {
+                throw error;
+            }
             this.debugLogger.error('[Entity Selector] Failed to select project', error as Error);
             return false;
         }
@@ -341,23 +336,19 @@ export class AdobeEntitySelector {
                 },
             );
 
-            if (result.code === 0) {
+            // Accept exit code 0 or 2 - Adobe CLI uses exit code 2 for warnings
+            if (result.code === 0 || result.code === 2) {
                 // Smart caching and get name for logging
                 let workspaceName = workspaceId; // Fallback to ID if name lookup fails
-                try {
-                    const workspaces = await this.fetcher.getWorkspaces();
-                    const selectedWorkspace = workspaces.find(w => w.id === workspaceId);
+                const workspaces = await this.fetcher.getWorkspaces();
+                const selectedWorkspace = workspaces.find(w => w.id === workspaceId);
 
-                    if (selectedWorkspace) {
-                        this.cacheManager.setCachedWorkspace(selectedWorkspace);
-                        workspaceName = selectedWorkspace.name || workspaceId;
-                    } else {
-                        this.cacheManager.setCachedWorkspace(undefined);
-                        this.debugLogger.warn(`[Entity Selector] Could not find workspace ${workspaceId} in list`);
-                    }
-                } catch (error) {
-                    this.debugLogger.debug('[Entity Selector] Failed to cache workspace after selection:', error);
+                if (selectedWorkspace) {
+                    this.cacheManager.setCachedWorkspace(selectedWorkspace);
+                    workspaceName = selectedWorkspace.name || workspaceId;
+                } else {
                     this.cacheManager.setCachedWorkspace(undefined);
+                    this.debugLogger.warn(`[Entity Selector] Could not find workspace ${workspaceId} in list`);
                 }
 
                 // Log with workspace name (or ID as fallback)
@@ -369,9 +360,13 @@ export class AdobeEntitySelector {
                 return true;
             }
 
-            this.debugLogger.debug(`[Entity Selector] Workspace select failed with code: ${result.code}`);
+            this.debugLogger.debug(`[Entity Selector] Workspace select failed with code: ${result.code}, stdout: ${result.stdout?.substring(0, 100)}`);
             return false;
         } catch (error) {
+            // Propagate AUTH_EXPIRED so callers can show re-login prompt
+            if ((error as Error).message?.includes('AUTH_EXPIRED')) {
+                throw error;
+            }
             this.debugLogger.error('[Entity Selector] Failed to select workspace', error as Error);
             return false;
         }

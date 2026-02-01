@@ -112,7 +112,8 @@ export class AdobeEntityFetcher {
 
                 const cliDuration = Date.now() - startTime;
 
-                if (result.code !== 0) {
+                // Accept exit code 0 or 2 - Adobe CLI uses exit code 2 for warnings
+                if (result.code !== 0 && result.code !== 2) {
                     throw new Error(`Failed to get organizations: ${result.stderr}`);
                 }
 
@@ -120,6 +121,10 @@ export class AdobeEntityFetcher {
                 const orgs = parseJSON<RawAdobeOrg[]>(result.stdout);
 
                 if (!orgs || !Array.isArray(orgs)) {
+                    // Check if this is an auth error (401 in stderr)
+                    if (result.stderr?.includes('401') || result.stderr?.toLowerCase().includes('unauthorized')) {
+                        throw new Error('AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.');
+                    }
                     throw new Error('Invalid organizations response format');
                 }
 
@@ -209,7 +214,8 @@ export class AdobeEntityFetcher {
 
                 const cliDuration = Date.now() - startTime;
 
-                if (result.code !== 0) {
+                // Accept exit code 0 or 2 - Adobe CLI uses exit code 2 for warnings
+                if (result.code !== 0 && result.code !== 2) {
                     // Check if it's just no projects
                     if (result.stderr?.includes('does not have any projects')) {
                         this.debugLogger.debug('[Entity Fetcher] No projects found for organization');
@@ -222,6 +228,10 @@ export class AdobeEntityFetcher {
                 const projects = parseJSON<RawAdobeProject[]>(result.stdout);
 
                 if (!projects || !Array.isArray(projects)) {
+                    // Check if this is an auth error (401 in stderr)
+                    if (result.stderr?.includes('401') || result.stderr?.toLowerCase().includes('unauthorized')) {
+                        throw new Error('AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.');
+                    }
                     throw new Error('Invalid projects response format');
                 }
 
@@ -301,7 +311,8 @@ export class AdobeEntityFetcher {
 
                 const cliDuration = Date.now() - startTime;
 
-                if (result.code !== 0) {
+                // Accept exit code 0 or 2 - Adobe CLI uses exit code 2 for warnings
+                if (result.code !== 0 && result.code !== 2) {
                     throw new Error(`Failed to get workspaces: ${result.stderr}`);
                 }
 
@@ -309,6 +320,10 @@ export class AdobeEntityFetcher {
                 const workspaces = parseJSON<RawAdobeWorkspace[]>(result.stdout);
 
                 if (!workspaces || !Array.isArray(workspaces)) {
+                    // Check if this is an auth error (401 in stderr)
+                    if (result.stderr?.includes('401') || result.stderr?.toLowerCase().includes('unauthorized')) {
+                        throw new Error('AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.');
+                    }
                     throw new Error('Invalid workspaces response format');
                 }
 
