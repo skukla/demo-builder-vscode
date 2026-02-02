@@ -605,6 +605,12 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     `[Phase 5] Config synced: GitHub=${syncResult.githubPushed}, CDN=${syncResult.cdnPublished}, ` +
                     `BlockLibrary=${syncResult.blockLibraryVerified ?? 'n/a'}`,
                 );
+
+                // Update storefront state to track the published config baseline
+                const { updateStorefrontState } = await import('@/features/eds/services/storefrontStalenessDetector');
+                updateStorefrontState(project, project.componentConfigs || {});
+                project.edsStorefrontStatusSummary = 'published';
+                await context.stateManager.saveProject(project);
             } else {
                 context.logger.warn('[Phase 5] Could not parse repo URL, skipping config sync');
             }

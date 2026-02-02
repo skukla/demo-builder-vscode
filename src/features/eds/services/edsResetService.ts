@@ -551,6 +551,12 @@ export async function executeEdsReset(
             }
         }
 
+        // Update storefront state to track the published config
+        const { updateStorefrontState } = await import('./storefrontStalenessDetector');
+        updateStorefrontState(project, project.componentConfigs || {});
+        project.edsStorefrontStatusSummary = 'published';
+        await context.stateManager.saveProject(project);
+
         context.logger.info('[EdsReset] EDS project reset successfully');
 
         return {
