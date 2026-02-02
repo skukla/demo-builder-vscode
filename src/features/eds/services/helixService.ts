@@ -1193,6 +1193,66 @@ export class HelixService {
     }
 
     // ==========================================================
+    // Cache Operations
+    // ==========================================================
+
+    /**
+     * Purge all cached content from the live CDN
+     *
+     * Use this before publishing when recreating a site with the same name,
+     * or when resetting/republishing to ensure stale content is cleared.
+     *
+     * This is especially important when:
+     * - A site was deleted and recreated with the same name
+     * - Reset to template operations
+     * - Republishing after content source changes
+     *
+     * The purge request is sent to all CDN edge nodes, but propagation
+     * may take a few seconds to complete globally.
+     *
+     * @param org - Organization/owner name
+     * @param site - Site/repository name
+     * @param branch - Branch name (default: main)
+     * @throws Error on access denied (403) or network error
+     */
+    async purgeCacheAll(org: string, site: string, branch: string = DEFAULT_BRANCH): Promise<void> {
+        const token = await this.getGitHubToken();
+        const url = `${HELIX_ADMIN_URL}/cache/${org}/${site}/${branch}/*`;
+
+        this.logger.debug(`[Helix] Purging all cached content: ${url}`);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'x-auth-token': token,
+            },
+            signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+        });
+
+        // 404 is acceptable (nothing cached yet)
+        if (response.status === 404) {
+            this.logger.debug('[Helix] No cached content to purge (404)');
+            return;
+        }
+
+        // 401 is authentication failure
+        if (response.status === 401) {
+            throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
+        }
+
+        // 403 is access denied
+        if (response.status === 403) {
+            throw new Error('Access denied. You do not have permission to purge this site cache.');
+        }
+
+        if (!response.ok) {
+            throw new Error(`Failed to purge cache: ${response.status} ${response.statusText}`);
+        }
+
+        this.logger.debug('[Helix] Successfully purged all cached content');
+    }
+
+    // ==========================================================
     // Code Preview Operations
     // ==========================================================
 

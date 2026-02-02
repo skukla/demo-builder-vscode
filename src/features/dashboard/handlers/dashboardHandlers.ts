@@ -842,6 +842,10 @@ export const handleResetEds: MessageHandler = async (context) => {
                 // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
                 const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
 
+                // Purge stale cache before publishing (critical for reset scenarios)
+                progress.report({ message: 'Step 6/6: Purging stale cache...' });
+                await helixService.purgeCacheAll(repoOwner, repoName, 'main');
+
                 // Progress callback to update notification with publish details
                 const onPublishProgress = (info: {
                     phase: string;

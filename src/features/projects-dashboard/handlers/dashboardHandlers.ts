@@ -815,7 +815,10 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                     context.logger.warn('[ProjectsList] No user email available for permissions');
                 }
 
-                // Step 3: Publish all content
+                // Step 3: Publish all content (with cache purge for republish scenarios)
+                progress.report({ message: 'Step 3/4: Purging stale cache...' });
+                await helixService.purgeCacheAll(repoOwner, repoName, 'main');
+
                 progress.report({ message: 'Step 3/4: Publishing content to CDN...' });
                 await helixService.publishAllSiteContent(
                     repoFullName,
@@ -1298,6 +1301,11 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 // IMPORTANT: Pass DA.live token provider to HelixService for x-content-source-authorization
                 // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
                 const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
+
+                // Purge stale cache before publishing (critical for reset scenarios)
+                // This ensures old cached content is cleared before new content is published
+                progress.report({ message: `Step 5/${totalSteps}: Purging stale cache...` });
+                await helixService.purgeCacheAll(repoOwner, repoName, 'main');
 
                 // Progress callback to update notification with publish details
                 const onPublishProgress = (info: {

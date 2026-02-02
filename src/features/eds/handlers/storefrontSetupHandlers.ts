@@ -1012,6 +1012,19 @@ async function executeStorefrontSetupPhases(
             logger.info(`[Storefront Setup] Publishing content to CDN for ${repoOwner}/${repoName}`);
 
             try {
+                // Purge stale cache before publishing for reset scenarios
+                // This ensures old cached content is cleared before new content is published
+                const isResetScenario = Boolean(edsConfig.resetToTemplate || wantsToResetContent);
+                if (isResetScenario) {
+                    await context.sendMessage('storefront-setup-progress', {
+                        phase: 'content-publish',
+                        message: 'Purging stale cache...',
+                        progress: 66,
+                    });
+                    await helixService.purgeCacheAll(repoOwner, repoName, 'main');
+                    logger.info('[Storefront Setup] Stale cache purged');
+                }
+
                 // Progress callback to report publish status to UI
                 // Scale from 65% (start) to 90% (end) of overall progress
                 const onPublishProgress = (info: {
@@ -1022,9 +1035,9 @@ async function executeStorefrontSetupPhases(
                     currentPath?: string;
                 }) => {
                     // Calculate progress within the 65-90% range
-                    let progressValue = 65;
+                    let progressValue = isResetScenario ? 67 : 65;
                     if (info.total && info.current) {
-                        progressValue = 65 + Math.round((info.current / info.total) * 25);
+                        progressValue = (isResetScenario ? 67 : 65) + Math.round((info.current / info.total) * (isResetScenario ? 23 : 25));
                     }
 
                     context.sendMessage('storefront-setup-progress', {

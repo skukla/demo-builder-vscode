@@ -492,6 +492,9 @@ export async function showDaLiveAuthQuickPick(
  * Use this for publishing multiple paths efficiently instead of looping
  * through individual previewAndPublishPage calls.
  *
+ * Note: Cache purging should be done BEFORE calling this function via
+ * helixService.purgeCacheAll() for reset/republish scenarios.
+ *
  * @param helixService - HelixService instance
  * @param owner - Repository owner
  * @param repo - Repository name
