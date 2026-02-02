@@ -17,7 +17,6 @@ import * as vscode from 'vscode';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import { getGitHubServices } from './edsHelpers';
 import { GITHUB_SCOPES } from '../services/types';
-import { normalizeRepositoryName } from '@/core/validation/normalizers';
 
 // ==========================================================
 // Payload Types
@@ -370,16 +369,13 @@ export async function handleCreateGitHubRepo(
     context: HandlerContext,
     payload?: CreateGitHubRepoPayload,
 ): Promise<HandlerResponse> {
-    const { repoName: rawRepoName, templateOwner, templateRepo, isPrivate } = payload || {};
+    const { repoName, templateOwner, templateRepo, isPrivate } = payload || {};
 
-    if (!rawRepoName || !templateOwner || !templateRepo) {
+    if (!repoName || !templateOwner || !templateRepo) {
         const error = 'Missing required parameters: repoName, templateOwner, templateRepo';
         context.logger.error('[EDS] handleCreateGitHubRepo:', error);
         return { success: false, error };
     }
-
-    // Defense-in-depth: Normalize repo name in case UI didn't (spaces → dashes, lowercase, etc.)
-    const repoName = normalizeRepositoryName(rawRepoName);
 
     try {
         context.logger.info(`[EDS] Creating GitHub repository: ${repoName} from ${templateOwner}/${templateRepo}`);

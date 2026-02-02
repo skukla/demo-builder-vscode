@@ -26,7 +26,6 @@ import { HelixService } from '../services/helixService';
 import { ToolManager } from '../services/toolManager';
 import { generateFstabContent } from '../services/fstabGenerator';
 import { bulkPreviewAndPublish, configureDaLivePermissions } from './edsHelpers';
-import { normalizeRepositoryName, normalizeIdentifierName } from '@/core/validation/normalizers';
 
 // ==========================================================
 // Types
@@ -269,13 +268,11 @@ export async function handleStartStorefrontSetup(
         );
 
         if (result.success) {
-            // Normalize site name for display URL (defense-in-depth)
-            const normalizedSiteName = normalizeIdentifierName(edsConfig.daLiveSite);
             context.logger.info(`[Storefront Setup] Complete: ${result.repoUrl}`);
             await context.sendMessage('storefront-setup-complete', {
                 message: 'Storefront setup completed successfully!',
                 githubRepo: result.repoUrl,
-                daLiveSite: `https://da.live/${edsConfig.daLiveOrg}/${normalizedSiteName}`,
+                daLiveSite: `https://da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
                 repoOwner: result.repoOwner,
                 repoName: result.repoName,
                 // Note: previewUrl/liveUrl not sent - derived from githubRepo by typeGuards
@@ -497,15 +494,7 @@ async function executeStorefrontSetupPhases(
 
     let repoUrl: string | undefined;
     let repoOwner: string = githubOwner;
-    // Defense-in-depth: Normalize repo name in case UI didn't (spaces → dashes, lowercase)
-    let repoName: string = normalizeRepositoryName(edsConfig.repoName);
-
-    // Defense-in-depth: Normalize DA.live site name in case UI didn't (spaces → dashes, lowercase)
-    // Create a normalized version of the edsConfig with the sanitized site name
-    const normalizedEdsConfig = {
-        ...edsConfig,
-        daLiveSite: normalizeIdentifierName(edsConfig.daLiveSite),
-    };
+    let repoName: string = edsConfig.repoName;
 
     // Determine if using existing repo
     const repoMode = edsConfig.repoMode || 'new';
@@ -660,7 +649,7 @@ async function executeStorefrontSetupPhases(
         // Generate fstab.yaml content using centralized generator (single source of truth)
         const fstabContent = generateFstabContent({
             daLiveOrg: edsConfig.daLiveOrg,
-            daLiveSite: normalizedEdsConfig.daLiveSite,
+            daLiveSite: edsConfig.daLiveSite,
         });
 
         // Push fstab.yaml to GitHub
@@ -870,7 +859,7 @@ async function executeStorefrontSetupPhases(
             const adminResult = await configureDaLivePermissions(
                 daLiveTokenProvider,
                 edsConfig.daLiveOrg,
-                normalizedEdsConfig.daLiveSite,
+                edsConfig.daLiveSite,
                 userEmail,
                 logger,
             );
@@ -913,7 +902,7 @@ async function executeStorefrontSetupPhases(
                 progress: 50,
             });
 
-            logger.info(`[Storefront Setup] Copying content from ${contentSource!.org}/${contentSource!.site} to ${edsConfig.daLiveOrg}/${normalizedEdsConfig.daLiveSite}`);
+            logger.info(`[Storefront Setup] Copying content from ${contentSource!.org}/${contentSource!.site} to ${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`);
 
             // Build full content source with index URL from explicit config
             const indexPath = contentSource!.indexPath || '/full-index.json';
@@ -926,7 +915,7 @@ async function executeStorefrontSetupPhases(
             const contentResult = await daLiveContentOps.copyContentFromSource(
                 fullContentSource,
                 edsConfig.daLiveOrg,
-                normalizedEdsConfig.daLiveSite,
+                edsConfig.daLiveSite,
                 (progress) => {
 
                     // Scale progress from 50% to 60% during content copy
@@ -967,7 +956,7 @@ async function executeStorefrontSetupPhases(
 
             const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
                 edsConfig.daLiveOrg,
-                normalizedEdsConfig.daLiveSite,
+                edsConfig.daLiveSite,
                 templateOwner,
                 templateRepo,
                 (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
@@ -1000,7 +989,7 @@ async function executeStorefrontSetupPhases(
         await applyDaLiveOrgConfigSettings(
             daLiveContentOps,
             edsConfig.daLiveOrg,
-            normalizedEdsConfig.daLiveSite,
+            edsConfig.daLiveSite,
             logger,
         );
 
