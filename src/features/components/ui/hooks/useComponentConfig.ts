@@ -396,9 +396,14 @@ export function useComponentConfig({
                 return typeof value === 'number' ? String(value) : value;
             }
         }
+        // If user explicitly cleared this field (touched + empty), respect their intent
+        // Don't fall back to default when user deliberately cleared the value
+        if (touchedFields.has(field.key)) {
+            return '';
+        }
         if (field.default !== undefined && field.default !== '') return field.default;
         return '';
-    }, [componentConfigs]);
+    }, [componentConfigs, touchedFields]);
 
     const markFieldTouched = useCallback((fieldKey: string) => {
         setTouchedFields(prev => new Set(prev).add(fieldKey));

@@ -70,6 +70,9 @@ jest.mock('@/core/ui/components/navigation', () => ({
     NavigationField: ({ children }: any) => <div>{children}</div>,
 }));
 
+// Mock scrollIntoView for JSDOM
+Element.prototype.scrollIntoView = jest.fn();
+
 // Helper to wrap component in Provider
 const renderWithProvider = (component: React.ReactElement) => {
     return render(
@@ -224,6 +227,82 @@ describe('ConfigureScreen - Operations', () => {
             await user.click(closeButton);
 
             expect(mockPostMessage).toHaveBeenCalledWith('cancel');
+        });
+    });
+
+    describe('Field Clearing Behavior', () => {
+        it('should allow clearing a field with a default value (not auto-fill)', async () => {
+            // Given: A field with a default value that has an existing value
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const existingValues = {
+                headless: {
+                    ADOBE_COMMERCE_URL: 'https://example.com',
+                    ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                    OPTIONAL_WITH_DEFAULT: 'user-entered-value',
+                },
+                'adobe-commerce-paas': {
+                    ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
+                },
+                'catalog-service': {
+                    ADOBE_CATALOG_API_KEY: 'test-key-123',
+                },
+            };
+
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                    existingEnvValues={existingValues}
+                />
+            );
+
+            // When: User clears the optional field
+            const optionalField = await screen.findByLabelText(/Optional Field with Default/i);
+            expect(optionalField).toHaveValue('user-entered-value');
+
+            await user.clear(optionalField);
+
+            // Then: The field should remain empty (not auto-fill with default)
+            await waitFor(() => {
+                expect(optionalField).toHaveValue('');
+            });
+        });
+
+        it('should allow user to type after clearing a field', async () => {
+            // Given: A field with an existing value
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const existingValues = {
+                headless: {
+                    ADOBE_COMMERCE_URL: 'https://old-url.com',
+                    ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                },
+                'adobe-commerce-paas': {
+                    ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
+                },
+                'catalog-service': {
+                    ADOBE_CATALOG_API_KEY: 'test-key-123',
+                },
+            };
+
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                    existingEnvValues={existingValues}
+                />
+            );
+
+            // When: User clears and types new value
+            const urlField = await screen.findByLabelText(/Commerce URL/i);
+            expect(urlField).toHaveValue('https://old-url.com');
+
+            await user.clear(urlField);
+            await user.type(urlField, 'https://new-url.com');
+
+            // Then: The field should have the new value
+            await waitFor(() => {
+                expect(urlField).toHaveValue('https://new-url.com');
+            });
         });
     });
 });

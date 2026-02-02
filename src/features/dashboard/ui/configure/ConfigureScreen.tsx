@@ -579,20 +579,33 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             }
         }
 
-        // Use shared lookup logic for componentConfigs
+        // If user explicitly touched this field, only look in the field's componentIds
+        // This ensures user edits (including clearing) are respected over values in other components
+        if (touchedFields.has(field.key)) {
+            for (const componentId of field.componentIds) {
+                const value = componentConfigs[componentId]?.[field.key];
+                if (value !== undefined && value !== '') {
+                    return typeof value === 'number' ? String(value) : value;
+                }
+            }
+            // User cleared the field - respect their intent, don't fall back to defaults
+            return '';
+        }
+
+        // For untouched fields, use shared lookup logic (includes other components)
         const value = getValueFromConfigs(field);
         if (value !== undefined && value !== '') {
             // Convert numbers to strings for display
             return typeof value === 'number' ? String(value) : value;
         }
 
-        // Fall back to field default
+        // Fall back to field default only for untouched fields
         if (field.default !== undefined && field.default !== '') {
             return field.default;
         }
 
         return '';
-    }, [getValueFromConfigs, project]);
+    }, [componentConfigs, getValueFromConfigs, project, touchedFields]);
 
     const isFieldComplete = useCallback((field: UniqueField): boolean => {
         const value = getFieldValue(field);

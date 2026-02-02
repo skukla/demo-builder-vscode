@@ -27,7 +27,7 @@ export const mockComponentsData = {
             name: 'Headless Storefront',
             configuration: {
                 requiredEnvVars: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT'],
-                optionalEnvVars: [],
+                optionalEnvVars: ['OPTIONAL_WITH_DEFAULT'],
             },
         },
     ],
@@ -81,6 +81,14 @@ export const mockComponentsData = {
             type: 'text' as const,
             required: true,
             group: 'catalog-service',
+        },
+        OPTIONAL_WITH_DEFAULT: {
+            key: 'OPTIONAL_WITH_DEFAULT',
+            label: 'Optional Field with Default',
+            type: 'text' as const,
+            required: false,
+            group: 'adobe-commerce',
+            default: 'default-value',
         },
     },
 };

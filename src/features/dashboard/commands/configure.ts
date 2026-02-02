@@ -9,6 +9,7 @@ import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
+import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
 import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
@@ -151,11 +152,18 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 // Detect if mesh configuration changed BEFORE saving
                 const meshChanges = await detectMeshChanges(project, data.componentConfigs);
 
+                // Detect if storefront configuration changed (EDS projects only)
+                const storefrontChanges = detectStorefrontChanges(project, data.componentConfigs);
+
                 // Update project state
                 project.componentConfigs = data.componentConfigs;
                 // Persist mesh staleness for card grid (only mark stale; don't overwrite with deployed)
                 if (meshChanges.hasChanges) {
                     project.meshStatusSummary = 'stale';
+                }
+                // Persist storefront staleness for EDS projects
+                if (storefrontChanges.hasChanges) {
+                    project.edsStorefrontStatusSummary = 'stale';
                 }
                 await this.stateManager.saveProject(project);
 
@@ -178,7 +186,83 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                     // Only show generic success if no contextual notification is shown
                     let contextualNotificationShown = false;
 
-                    if (meshChanges.hasChanges && project.status === 'running') {
+                    // Check if this is an EDS project for combined notifications
+                    const isEds = isEdsProject(project);
+
+                    // Scenario: Both mesh AND storefront changed (EDS projects with mesh)
+                    if (meshChanges.hasChanges && storefrontChanges.hasChanges && isEds) {
+                        const shouldShowMesh = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
+                        const shouldShowStorefront = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowStorefrontNotification');
+
+                        if (shouldShowMesh || shouldShowStorefront) {
+                            contextualNotificationShown = true;
+                            await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
+                            await vscode.commands.executeCommand('demoBuilder._internal.markStorefrontNotificationShown');
+
+                            vscode.window.showWarningMessage(
+                                'Configuration saved. Apply changes to mesh and storefront?',
+                                'Apply Changes',
+                                'Later',
+                            ).then(async selection => {
+                                if (selection === 'Apply Changes') {
+                                    // Deploy mesh first, then republish storefront
+                                    try {
+                                        await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                        // After mesh deployment, republish storefront
+                                        await this.republishStorefront(project);
+                                    } catch (error) {
+                                        this.logger.error('[Configure] Failed to apply changes:', error as Error);
+                                    }
+                                } else if (selection === 'Later') {
+                                    // Track that user declined both updates
+                                    if (project.meshState) {
+                                        project.meshState.userDeclinedUpdate = true;
+                                        project.meshState.declinedAt = new Date().toISOString();
+                                    }
+                                    if (project.edsStorefrontState) {
+                                        project.edsStorefrontState.userDeclinedUpdate = true;
+                                        project.edsStorefrontState.declinedAt = new Date().toISOString();
+                                        project.edsStorefrontStatusSummary = 'update-declined';
+                                    }
+                                    await this.stateManager.saveProject(project);
+                                    await ProjectDashboardWebviewCommand.refreshStatus();
+                                }
+                            });
+                        } else {
+                            this.logger.debug('[Configure] Combined notification already shown this session, suppressing');
+                        }
+                    }
+                    // Scenario: Only storefront changed (EDS projects without mesh changes)
+                    else if (storefrontChanges.hasChanges && isEds) {
+                        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowStorefrontNotification');
+                        if (shouldShow) {
+                            contextualNotificationShown = true;
+                            await vscode.commands.executeCommand('demoBuilder._internal.markStorefrontNotificationShown');
+
+                            vscode.window.showInformationMessage(
+                                'Configuration saved. Republish storefront to apply changes.',
+                                'Republish',
+                                'Later',
+                            ).then(async selection => {
+                                if (selection === 'Republish') {
+                                    await this.republishStorefront(project);
+                                } else if (selection === 'Later') {
+                                    // Track that user declined the update
+                                    if (project.edsStorefrontState) {
+                                        project.edsStorefrontState.userDeclinedUpdate = true;
+                                        project.edsStorefrontState.declinedAt = new Date().toISOString();
+                                    }
+                                    project.edsStorefrontStatusSummary = 'update-declined';
+                                    await this.stateManager.saveProject(project);
+                                    await ProjectDashboardWebviewCommand.refreshStatus();
+                                }
+                            });
+                        } else {
+                            this.logger.debug('[Configure] Storefront notification already shown this session, suppressing');
+                        }
+                    }
+                    // Scenario: Mesh changed (with or without demo running)
+                    else if (meshChanges.hasChanges && project.status === 'running') {
                         // Check if mesh notification already shown this session
                         const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
                         if (shouldShow) {
@@ -439,5 +523,43 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         return Object.entries(values).map(([k, v]) => `${k}=${v}`).join('\n');
     }
 
+    /**
+     * Republish storefront config.json for EDS projects.
+     * Shows progress notification and handles errors.
+     */
+    private async republishStorefront(project: Project): Promise<void> {
+        try {
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'Republishing storefront configuration...',
+                    cancellable: false,
+                },
+                async (progress) => {
+                    const result = await republishStorefrontConfig({
+                        project,
+                        secrets: this.context.secrets,
+                        logger: this.logger,
+                        onProgress: (message) => {
+                            progress.report({ message });
+                        },
+                    });
+
+                    if (result.success) {
+                        // Save updated project state
+                        await this.stateManager.saveProject(project);
+                        await ProjectDashboardWebviewCommand.refreshStatus();
+                        vscode.window.showInformationMessage('Storefront configuration republished successfully');
+                    } else {
+                        vscode.window.showErrorMessage(`Failed to republish storefront: ${result.error}`);
+                    }
+                },
+            );
+        } catch (error) {
+            this.logger.error('[Configure] Failed to republish storefront:', error as Error);
+            vscode.window.showErrorMessage(`Failed to republish storefront: ${(error as Error).message}`);
+        }
+    }
 }
+
 

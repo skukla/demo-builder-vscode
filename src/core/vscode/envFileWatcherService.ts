@@ -58,6 +58,7 @@ export class EnvFileWatcherService implements vscode.Disposable {
     private demoStartTime: number | null = null;
     private restartNotificationShown = false;
     private meshNotificationShown = false;
+    private storefrontNotificationShown = false;
     private programmaticWrites = new Set<string>();
     private fileContentHashes = new Map<string, string>();
     private activeTimeouts = new Set<NodeJS.Timeout>();
@@ -260,17 +261,20 @@ export class EnvFileWatcherService implements vscode.Disposable {
     /**
      * Register internal commands for state coordination
      *
-     * Registers 10 internal commands:
+     * Registers 13 internal commands:
      * 1. demoBuilder._internal.demoStarted - Set grace period and reset restart flag
      * 2. demoBuilder._internal.demoStopped - Clear grace period and hashes
      * 3. demoBuilder._internal.registerProgrammaticWrites - Register programmatic writes
      * 4. demoBuilder._internal.initializeFileHashes - Initialize file hashes
      * 5. demoBuilder._internal.restartActionTaken - Reset restart notification flag
      * 6. demoBuilder._internal.meshActionTaken - Reset mesh notification flag
-     * 7. demoBuilder._internal.shouldShowRestartNotification - Query restart notification state
-     * 8. demoBuilder._internal.shouldShowMeshNotification - Query mesh notification state
-     * 9. demoBuilder._internal.markRestartNotificationShown - Mark restart notification shown
-     * 10. demoBuilder._internal.markMeshNotificationShown - Mark mesh notification shown
+     * 7. demoBuilder._internal.storefrontActionTaken - Reset storefront notification flag
+     * 8. demoBuilder._internal.shouldShowRestartNotification - Query restart notification state
+     * 9. demoBuilder._internal.shouldShowMeshNotification - Query mesh notification state
+     * 10. demoBuilder._internal.shouldShowStorefrontNotification - Query storefront notification state
+     * 11. demoBuilder._internal.markRestartNotificationShown - Mark restart notification shown
+     * 12. demoBuilder._internal.markMeshNotificationShown - Mark mesh notification shown
+     * 13. demoBuilder._internal.markStorefrontNotificationShown - Mark storefront notification shown
      *
      * @private
      */
@@ -346,6 +350,13 @@ export class EnvFileWatcherService implements vscode.Disposable {
             }),
         );
 
+        this.disposables.add(
+            vscode.commands.registerCommand('demoBuilder._internal.storefrontActionTaken', () => {
+                this.storefrontNotificationShown = false;
+                this.logger.debug('[Notification] Storefront republish action taken, flag reset');
+            }),
+        );
+
         // Query notification state (for Configure UI)
         this.disposables.add(
             vscode.commands.registerCommand('demoBuilder._internal.shouldShowRestartNotification', () => {
@@ -359,6 +370,12 @@ export class EnvFileWatcherService implements vscode.Disposable {
             }),
         );
 
+        this.disposables.add(
+            vscode.commands.registerCommand('demoBuilder._internal.shouldShowStorefrontNotification', () => {
+                return !this.storefrontNotificationShown;
+            }),
+        );
+
         // Mark notifications shown (for Configure UI)
         this.disposables.add(
             vscode.commands.registerCommand('demoBuilder._internal.markRestartNotificationShown', () => {
@@ -369,6 +386,12 @@ export class EnvFileWatcherService implements vscode.Disposable {
         this.disposables.add(
             vscode.commands.registerCommand('demoBuilder._internal.markMeshNotificationShown', () => {
                 this.meshNotificationShown = true;
+            }),
+        );
+
+        this.disposables.add(
+            vscode.commands.registerCommand('demoBuilder._internal.markStorefrontNotificationShown', () => {
+                this.storefrontNotificationShown = true;
             }),
         );
     }
