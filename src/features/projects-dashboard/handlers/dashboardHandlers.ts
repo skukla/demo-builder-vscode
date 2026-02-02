@@ -726,43 +726,6 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
     const effectiveDaLiveOrg = daLiveOrg || repoOwner;
     const effectiveDaLiveSite = daLiveSite || repoName;
 
-    // Pre-check DA.live authentication
-    // Token must be valid to list and publish content from DA.live
-    const daLiveAuthService = new DaLiveAuthService(context.context);
-    const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
-
-    if (!isDaLiveAuthenticated) {
-        context.logger.info('[ProjectsList] republishContent: DA.live token expired or missing');
-
-        // Show notification with Sign In action
-        const signInButton = 'Sign In';
-        const selection = await vscode.window.showWarningMessage(
-            'Your DA.live session has expired. Please sign in to continue.',
-            signInButton,
-        );
-
-        if (selection === signInButton) {
-            // User clicked "Sign In" - invoke QuickPick auth flow
-            const authResult = await showDaLiveAuthQuickPick(context);
-            if (authResult.cancelled || !authResult.success) {
-                return {
-                    success: false,
-                    error: authResult.error || 'DA.live authentication required',
-                    errorType: 'DALIVE_AUTH_REQUIRED',
-                    cancelled: authResult.cancelled,
-                };
-            }
-            // Token is now valid - continue with republish
-        } else {
-            // User dismissed notification - abort operation
-            return {
-                success: false,
-                error: 'DA.live authentication required',
-                errorType: 'DALIVE_AUTH_REQUIRED',
-            };
-        }
-    }
-
     // Set project status to 'republishing' so UI shows transitional state
     const originalStatus = project.status;
     project.status = 'republishing';
@@ -778,6 +741,43 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
         async (progress) => {
             try {
                 context.logger.info(`[ProjectsList] Republishing content for ${repoFullName}`);
+
+                // Check DA.live authentication (inside progress for immediate feedback)
+                progress.report({ message: 'Checking authentication...' });
+                const daLiveAuthService = new DaLiveAuthService(context.context);
+                const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
+
+                if (!isDaLiveAuthenticated) {
+                    context.logger.info('[ProjectsList] republishContent: DA.live token expired or missing');
+
+                    // Show notification with Sign In action
+                    const signInButton = 'Sign In';
+                    const selection = await vscode.window.showWarningMessage(
+                        'Your DA.live session has expired. Please sign in to continue.',
+                        signInButton,
+                    );
+
+                    if (selection === signInButton) {
+                        // User clicked "Sign In" - invoke QuickPick auth flow
+                        const authResult = await showDaLiveAuthQuickPick(context);
+                        if (authResult.cancelled || !authResult.success) {
+                            return {
+                                success: false,
+                                error: authResult.error || 'DA.live authentication required',
+                                errorType: 'DALIVE_AUTH_REQUIRED',
+                                cancelled: authResult.cancelled,
+                            };
+                        }
+                        // Token is now valid - continue with republish
+                    } else {
+                        // User dismissed notification - abort operation
+                        return {
+                            success: false,
+                            error: 'DA.live authentication required',
+                            errorType: 'DALIVE_AUTH_REQUIRED',
+                        };
+                    }
+                }
 
                 // Initialize services
                 const { HelixService } = await import('@/features/eds/services/helixService');
@@ -882,6 +882,12 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
     }
 };
 
+/**
+ * Handle 'resetEds' message - Reset EDS project to template state
+ *
+ * Delegates to the consolidated resetEdsProjectWithUI function in edsResetService.
+ * This eliminates code duplication between dashboard and projects-dashboard handlers.
+ */
 export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
     payload?: { projectPath: string },
@@ -905,222 +911,15 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project not found' };
     }
 
-    // Extract reset parameters from project
-    const { extractResetParams, executeEdsReset } =
-        await import('@/features/eds/services/edsResetService');
-    const paramsResult = extractResetParams(project);
-
-    if (!paramsResult.success) {
-        const errorMsg = paramsResult.error;
-        context.logger.error(`[ProjectsList] resetEds: ${errorMsg}`);
-        vscode.window.showErrorMessage(`Cannot reset: ${errorMsg}`);
-        return { success: false, error: errorMsg };
-    }
-
-    const { repoOwner, repoName } = paramsResult.params;
-    const repoFullName = `${repoOwner}/${repoName}`;
-
-    // Pre-check DA.live authentication
-    const daLiveAuthService = new DaLiveAuthService(context.context);
-    const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
-
-    if (!isDaLiveAuthenticated) {
-        context.logger.info('[ProjectsList] resetEds: DA.live token expired or missing');
-
-        const signInButton = 'Sign In';
-        const selection = await vscode.window.showWarningMessage(
-            'Your DA.live session has expired. Please sign in to continue.',
-            signInButton,
-        );
-
-        if (selection === signInButton) {
-            const authResult = await showDaLiveAuthQuickPick(context);
-            if (authResult.cancelled || !authResult.success) {
-                return {
-                    success: false,
-                    error: authResult.error || 'DA.live authentication required',
-                    errorType: 'DALIVE_AUTH_REQUIRED',
-                    cancelled: authResult.cancelled,
-                };
-            }
-        } else {
-            return {
-                success: false,
-                error: 'DA.live authentication required',
-                errorType: 'DALIVE_AUTH_REQUIRED',
-            };
-        }
-    }
-
-    // Pre-check Adobe I/O authentication (if project has mesh)
-    const meshComponent = getMeshComponentInstance(project);
-    const hasMesh = !!meshComponent?.path;
-
-    if (hasMesh) {
-        const authService = ServiceLocator.getAuthenticationService();
-        const isAdobeAuthenticated = await authService.isAuthenticated();
-
-        if (!isAdobeAuthenticated) {
-            context.logger.info('[ProjectsList] resetEds: Adobe I/O token expired or missing');
-
-            const signInButton = 'Sign In';
-            const selection = await vscode.window.showWarningMessage(
-                'Your Adobe I/O session has expired. Please sign in to continue.',
-                signInButton,
-            );
-
-            if (selection === signInButton) {
-                const loginSuccess = await authService.login();
-                if (!loginSuccess) {
-                    return {
-                        success: false,
-                        error: 'Adobe I/O authentication required',
-                        errorType: 'ADOBE_AUTH_REQUIRED',
-                        cancelled: true,
-                    };
-                }
-            } else {
-                return {
-                    success: false,
-                    error: 'Adobe I/O authentication required',
-                    errorType: 'ADOBE_AUTH_REQUIRED',
-                };
-            }
-        }
-    }
-
-    // Show confirmation dialog
-    const confirmButton = 'Reset Project';
-    const confirmation = await vscode.window.showWarningMessage(
-        `Are you sure you want to reset "${project.name}"? This will reset all code to the template state and re-copy demo content.`,
-        { modal: true },
-        confirmButton,
-    );
-
-    if (confirmation !== confirmButton) {
-        context.logger.info('[ProjectsList] resetEds: User cancelled reset');
-        return { success: false, cancelled: true };
-    }
-
-    // Check if AEM Code Sync app is installed
-    const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-    const { tokenService: preCheckTokenService } = getGitHubServices(context);
-    const { GitHubAppService } = await import('@/features/eds/services/githubAppService');
-    const appService = new GitHubAppService(preCheckTokenService, context.logger);
-    const appCheck = await appService.isAppInstalled(repoOwner, repoName);
-
-    if (!appCheck.isInstalled) {
-        context.logger.warn(`[ProjectsList] AEM Code Sync app not installed on ${repoFullName}`);
-
-        const installButton = 'Install App';
-        const continueButton = 'Continue Anyway';
-        const appWarning = await vscode.window.showWarningMessage(
-            'The AEM Code Sync GitHub App is not installed on this repository. ' +
-            'Without it, code changes will not sync to the CDN and the site may not work correctly.',
-            installButton,
-            continueButton,
-        );
-
-        if (appWarning === installButton) {
-            const installUrl = appService.getInstallUrl(repoOwner, repoName);
-            await vscode.env.openExternal(vscode.Uri.parse(installUrl));
-
-            const afterInstall = await vscode.window.showInformationMessage(
-                'After installing the app, click Continue to proceed with the reset.',
-                'Continue',
-                'Cancel',
-            );
-
-            if (afterInstall !== 'Continue') {
-                context.logger.info('[ProjectsList] resetEds: User cancelled after app installation prompt');
-                return { success: false, cancelled: true };
-            }
-        } else if (appWarning !== continueButton) {
-            context.logger.info('[ProjectsList] resetEds: User cancelled at app check');
-            return { success: false, cancelled: true };
-        }
-    }
-
-    // Set project status to 'resetting' so UI shows transitional state
-    const originalStatus = project.status;
-    project.status = 'resetting';
-    await context.stateManager.saveProject(project);
-
-    // Create token provider for DA.live operations
-    const tokenProvider = {
-        getAccessToken: async () => {
-            return await daLiveAuthService.getAccessToken();
-        },
-    };
-
-    // Execute reset with progress notification
-    try {
-        return await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: 'Resetting EDS Project',
-                cancellable: false,
-            },
-            async (progress) => {
-                context.logger.info(`[ProjectsList] Resetting EDS project: ${repoFullName}`);
-
-                // Enable all projects-dashboard specific features
-                const resetParams = {
-                    ...paramsResult.params,
-                    includeBlockLibrary: true,
-                    verifyCdn: true,
-                    redeployMesh: hasMesh,
-                };
-
-                const result = await executeEdsReset(
-                    resetParams,
-                    context,
-                    tokenProvider,
-                    (p) => {
-                        progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` });
-                    },
-                );
-
-                if (result.success) {
-                    // Show auto-dismissing success notification
-                    void vscode.window.withProgress(
-                        { location: vscode.ProgressLocation.Notification, title: `"${project.name}" reset successfully` },
-                        async () => new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION)),
-                    );
-
-                    // Handle partial success (reset worked but mesh failed)
-                    if (result.errorType === 'MESH_REDEPLOY_FAILED') {
-                        vscode.window.showWarningMessage(
-                            `${result.error} Commerce features may not work until mesh is manually redeployed.`,
-                        );
-                    }
-                } else if (result.errorType === 'GITHUB_APP_NOT_INSTALLED') {
-                    const installButton = 'Install GitHub App';
-                    const selection = await vscode.window.showErrorMessage(
-                        `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${result.errorDetails?.owner}/${result.errorDetails?.repo}. ` +
-                        `Please install the app and try again.`,
-                        installButton,
-                    );
-                    if (selection === installButton && result.errorDetails?.installUrl) {
-                        await vscode.env.openExternal(vscode.Uri.parse(result.errorDetails.installUrl as string));
-                    }
-                } else if (result.error) {
-                    vscode.window.showErrorMessage(
-                        `Failed to reset EDS project: ${result.error}`,
-                        'Show Logs',
-                    ).then(selection => {
-                        if (selection === 'Show Logs') {
-                            getLogger().show(false);
-                        }
-                    });
-                }
-
-                return result;
-            },
-        );
-    } finally {
-        // Reset status back to original
-        project.status = originalStatus;
-        await context.stateManager.saveProject(project);
-    }
+    const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetService');
+    return resetEdsProjectWithUI({
+        project,
+        context,
+        logPrefix: '[ProjectsList]',
+        // Projects dashboard enables all features
+        includeBlockLibrary: true,
+        verifyCdn: true,
+        // redeployMesh auto-detects based on project
+        showLogsOnError: true,
+    });
 };

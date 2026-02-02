@@ -591,3 +591,303 @@ export async function executeEdsReset(
     }
 }
 
+// ==========================================================
+// Full Reset with UI (Consolidated Handler Logic)
+// ==========================================================
+
+/**
+ * Options for the full reset UI flow
+ */
+export interface ResetWithUIOptions {
+    /** Project to reset */
+    project: Project;
+    /** Handler context */
+    context: HandlerContext;
+    /** Log prefix for messages (e.g., '[Dashboard]' or '[ProjectsList]') */
+    logPrefix?: string;
+    /** Include block library configuration (default: false) */
+    includeBlockLibrary?: boolean;
+    /** Verify CDN resources after publish (default: false) */
+    verifyCdn?: boolean;
+    /** Redeploy API Mesh after reset (default: auto-detect based on project) */
+    redeployMesh?: boolean;
+    /** Show "Show Logs" button in error messages (default: false) */
+    showLogsOnError?: boolean;
+}
+
+/**
+ * Reset an EDS project with full UI flow
+ *
+ * This is the consolidated entry point for resetting EDS projects.
+ * It handles:
+ * 1. Parameter extraction and validation
+ * 2. Confirmation dialog (shown immediately)
+ * 3. Progress notification (shown immediately after confirmation)
+ * 4. Auth checks inside progress (DA.live, Adobe I/O if mesh exists)
+ * 5. GitHub App check inside progress
+ * 6. Actual reset via executeEdsReset
+ * 7. Success/error notifications
+ *
+ * Both dashboard and projects-dashboard handlers should use this function
+ * to eliminate code duplication.
+ *
+ * @param options - Reset options
+ * @returns Reset result
+ */
+export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promise<EdsResetResult> {
+    const {
+        project,
+        context,
+        logPrefix = '[EdsReset]',
+        includeBlockLibrary = false,
+        verifyCdn = false,
+        redeployMesh,
+        showLogsOnError = false,
+    } = options;
+
+    // Dynamic imports to avoid circular dependencies
+    const vscode = await import('vscode');
+    const { DaLiveAuthService } = await import('./daLiveAuthService');
+    const { showDaLiveAuthQuickPick, getGitHubServices } = await import('../handlers/edsHelpers');
+    const { ServiceLocator } = await import('@/core/di');
+    const { getMeshComponentInstance } = await import('@/types/typeGuards');
+
+    // Extract reset parameters
+    const paramsResult = extractResetParams(project);
+    if (!paramsResult.success) {
+        context.logger.error(`${logPrefix} resetEds: ${paramsResult.error}`);
+        return { success: false, error: paramsResult.error };
+    }
+
+    const { repoOwner, repoName } = paramsResult.params;
+    const repoFullName = `${repoOwner}/${repoName}`;
+
+    // Show confirmation dialog FIRST (immediate UX feedback)
+    const confirmButton = 'Reset Project';
+    const confirmation = await vscode.window.showWarningMessage(
+        `Are you sure you want to reset "${project.name}"? This will reset all code to the template state and re-copy demo content.`,
+        { modal: true },
+        confirmButton,
+    );
+
+    if (confirmation !== confirmButton) {
+        context.logger.info(`${logPrefix} resetEds: User cancelled reset`);
+        return { success: false, cancelled: true };
+    }
+
+    // Set project status to 'resetting' so UI shows transitional state
+    const originalStatus = project.status;
+    project.status = 'resetting';
+    await context.stateManager.saveProject(project);
+
+    // Execute reset with progress notification - shown IMMEDIATELY after confirmation
+    try {
+        return await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: 'Resetting EDS Project',
+                cancellable: false,
+            },
+            async (progress) => {
+                context.logger.info(`${logPrefix} Resetting EDS project: ${repoFullName}`);
+
+                // Check DA.live authentication (inside progress for immediate feedback)
+                progress.report({ message: 'Checking authentication...' });
+                const daLiveAuthService = new DaLiveAuthService(context.context);
+                const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
+
+                if (!isDaLiveAuthenticated) {
+                    context.logger.info(`${logPrefix} resetEds: DA.live token expired or missing`);
+
+                    const signInButton = 'Sign In';
+                    const selection = await vscode.window.showWarningMessage(
+                        'Your DA.live session has expired. Please sign in to continue.',
+                        signInButton,
+                    );
+
+                    if (selection === signInButton) {
+                        const authResult = await showDaLiveAuthQuickPick(context);
+                        if (authResult.cancelled || !authResult.success) {
+                            project.status = originalStatus;
+                            await context.stateManager.saveProject(project);
+                            return {
+                                success: false,
+                                error: authResult.error || 'DA.live authentication required',
+                                errorType: 'DALIVE_AUTH_REQUIRED',
+                                cancelled: authResult.cancelled,
+                            };
+                        }
+                    } else {
+                        project.status = originalStatus;
+                        await context.stateManager.saveProject(project);
+                        return {
+                            success: false,
+                            error: 'DA.live authentication required',
+                            errorType: 'DALIVE_AUTH_REQUIRED',
+                        };
+                    }
+                }
+
+                // Check Adobe I/O authentication (if project has mesh)
+                const meshComponent = getMeshComponentInstance(project);
+                const hasMesh = !!meshComponent?.path;
+
+                if (hasMesh) {
+                    progress.report({ message: 'Checking Adobe I/O authentication...' });
+                    const authService = ServiceLocator.getAuthenticationService();
+                    const isAdobeAuthenticated = await authService.isAuthenticated();
+
+                    if (!isAdobeAuthenticated) {
+                        context.logger.info(`${logPrefix} resetEds: Adobe I/O token expired or missing`);
+
+                        const signInButton = 'Sign In';
+                        const selection = await vscode.window.showWarningMessage(
+                            'Your Adobe I/O session has expired. Please sign in to continue.',
+                            signInButton,
+                        );
+
+                        if (selection === signInButton) {
+                            const loginSuccess = await authService.login();
+                            if (!loginSuccess) {
+                                project.status = originalStatus;
+                                await context.stateManager.saveProject(project);
+                                return {
+                                    success: false,
+                                    error: 'Adobe I/O authentication required',
+                                    errorType: 'ADOBE_AUTH_REQUIRED',
+                                    cancelled: true,
+                                };
+                            }
+                        } else {
+                            project.status = originalStatus;
+                            await context.stateManager.saveProject(project);
+                            return {
+                                success: false,
+                                error: 'Adobe I/O authentication required',
+                                errorType: 'ADOBE_AUTH_REQUIRED',
+                            };
+                        }
+                    }
+                }
+
+                // Check if AEM Code Sync app is installed
+                progress.report({ message: 'Checking GitHub App...' });
+                const { tokenService: preCheckTokenService } = getGitHubServices(context);
+                const { GitHubAppService } = await import('./githubAppService');
+                const appService = new GitHubAppService(preCheckTokenService, context.logger);
+                const appCheck = await appService.isAppInstalled(repoOwner, repoName);
+
+                if (!appCheck.isInstalled) {
+                    context.logger.warn(`${logPrefix} AEM Code Sync app not installed on ${repoFullName}`);
+
+                    const installButton = 'Install App';
+                    const continueButton = 'Continue Anyway';
+                    const appWarning = await vscode.window.showWarningMessage(
+                        'The AEM Code Sync GitHub App is not installed on this repository. ' +
+                        'Without it, code changes will not sync to the CDN and the site may not work correctly.',
+                        installButton,
+                        continueButton,
+                    );
+
+                    if (appWarning === installButton) {
+                        const installUrl = appService.getInstallUrl(repoOwner, repoName);
+                        await vscode.env.openExternal(vscode.Uri.parse(installUrl));
+
+                        const afterInstall = await vscode.window.showInformationMessage(
+                            'After installing the app, click Continue to proceed with the reset.',
+                            'Continue',
+                            'Cancel',
+                        );
+
+                        if (afterInstall !== 'Continue') {
+                            context.logger.info(`${logPrefix} resetEds: User cancelled after app installation prompt`);
+                            project.status = originalStatus;
+                            await context.stateManager.saveProject(project);
+                            return { success: false, cancelled: true };
+                        }
+                    } else if (appWarning !== continueButton) {
+                        context.logger.info(`${logPrefix} resetEds: User cancelled at app check`);
+                        project.status = originalStatus;
+                        await context.stateManager.saveProject(project);
+                        return { success: false, cancelled: true };
+                    }
+                }
+
+                // Create token provider for DA.live operations
+                const tokenProvider = {
+                    getAccessToken: async () => {
+                        return await daLiveAuthService.getAccessToken();
+                    },
+                };
+
+                // Determine if we should redeploy mesh (auto-detect if not specified)
+                const shouldRedeployMesh = redeployMesh ?? hasMesh;
+
+                // Build reset params with options
+                const resetParams: EdsResetParams = {
+                    ...paramsResult.params,
+                    includeBlockLibrary,
+                    verifyCdn,
+                    redeployMesh: shouldRedeployMesh,
+                };
+
+                // Execute the actual reset
+                const result = await executeEdsReset(
+                    resetParams,
+                    context,
+                    tokenProvider,
+                    (p) => {
+                        progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` });
+                    },
+                );
+
+                if (result.success) {
+                    // Show auto-dismissing success notification
+                    void vscode.window.withProgress(
+                        { location: vscode.ProgressLocation.Notification, title: `"${project.name}" reset successfully` },
+                        async () => new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION)),
+                    );
+
+                    // Handle partial success (reset worked but mesh failed)
+                    if (result.errorType === 'MESH_REDEPLOY_FAILED') {
+                        vscode.window.showWarningMessage(
+                            `${result.error} Commerce features may not work until mesh is manually redeployed.`,
+                        );
+                    }
+                } else if (result.errorType === 'GITHUB_APP_NOT_INSTALLED') {
+                    const installButton = 'Install GitHub App';
+                    const selection = await vscode.window.showErrorMessage(
+                        `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${result.errorDetails?.owner}/${result.errorDetails?.repo}. ` +
+                        `Please install the app and try again.`,
+                        installButton,
+                    );
+                    if (selection === installButton && result.errorDetails?.installUrl) {
+                        await vscode.env.openExternal(vscode.Uri.parse(result.errorDetails.installUrl as string));
+                    }
+                } else if (result.error) {
+                    // Show error with optional "Show Logs" button
+                    if (showLogsOnError) {
+                        const { getLogger } = await import('@/core/logging');
+                        vscode.window.showErrorMessage(
+                            `Failed to reset EDS project: ${result.error}`,
+                            'Show Logs',
+                        ).then(selection => {
+                            if (selection === 'Show Logs') {
+                                getLogger().show(false);
+                            }
+                        });
+                    } else {
+                        vscode.window.showErrorMessage(`Failed to reset EDS project: ${result.error}`);
+                    }
+                }
+
+                return result;
+            },
+        );
+    } finally {
+        // Reset status back to original
+        project.status = originalStatus;
+        await context.stateManager.saveProject(project);
+    }
+}
+
