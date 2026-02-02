@@ -23,6 +23,8 @@ export interface ProjectManifest {
     componentConfigs?: Project['componentConfigs'];
     componentVersions?: Project['componentVersions'];
     meshState?: Project['meshState'];
+    edsStorefrontState?: Project['edsStorefrontState'];
+    edsStorefrontStatusSummary?: Project['edsStorefrontStatusSummary'];
     selectedPackage?: string;
     selectedStack?: string;
     selectedAddons?: string[];
@@ -79,6 +81,8 @@ export class ProjectFileLoader {
                 componentConfigs: manifest.componentConfigs,
                 componentVersions,
                 meshState: manifest.meshState,
+                edsStorefrontState: manifest.edsStorefrontState,
+                edsStorefrontStatusSummary: manifest.edsStorefrontStatusSummary,
                 selectedPackage: manifest.selectedPackage,
                 selectedStack: manifest.selectedStack,
                 selectedAddons: manifest.selectedAddons,

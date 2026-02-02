@@ -52,6 +52,32 @@ export type {
     ExtractParamsResult,
 } from './services/edsResetService';
 
+// Storefront Staleness Detection (config.json republish tracking)
+export {
+    detectStorefrontChanges,
+    updateStorefrontState,
+    getCurrentStorefrontState,
+    getStorefrontEnvVars,
+} from './services/storefrontStalenessDetector';
+
+// EDS Project Detection (single source of truth from typeGuards)
+export { isEdsProject } from '@/types/typeGuards';
+export type {
+    StorefrontState,
+    StorefrontChanges,
+} from './services/storefrontStalenessDetector';
+
+// Storefront Republish Service
+export {
+    republishStorefrontConfig,
+    extractRepublishParams,
+    needsStorefrontRepublish,
+} from './services/storefrontRepublishService';
+export type {
+    RepublishParams,
+    RepublishResult,
+} from './services/storefrontRepublishService';
+
 // Fstab Generator (single source of truth for fstab.yaml)
 export { generateFstabContent } from './services/fstabGenerator';
 export type { FstabConfig } from './services/fstabGenerator';

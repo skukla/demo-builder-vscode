@@ -51,6 +51,15 @@ export interface Project {
         userDeclinedUpdate?: boolean; // User clicked "Later" on redeploy prompt
         declinedAt?: string; // ISO date string when user declined
     };
+    // EDS Storefront config.json state (tracks changes that require republishing)
+    edsStorefrontState?: {
+        envVars: Record<string, string>; // Env vars at last publish
+        lastPublished: string; // ISO date string
+        userDeclinedUpdate?: boolean; // User clicked "Later" on republish prompt
+        declinedAt?: string; // ISO date string when user declined
+    };
+    // EDS Storefront status summary for card grid display
+    edsStorefrontStatusSummary?: 'published' | 'stale' | 'update-declined' | 'not-published';
     // Frontend config state (tracks changes since demo started)
     frontendEnvState?: {
         envVars: Record<string, string>;

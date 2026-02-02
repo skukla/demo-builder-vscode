@@ -92,6 +92,8 @@ export class ProjectConfigWriter {
                 componentConfigs: project.componentConfigs,
                 componentVersions: project.componentVersions,
                 meshState: project.meshState,
+                edsStorefrontState: project.edsStorefrontState,
+                edsStorefrontStatusSummary: project.edsStorefrontStatusSummary,
                 components: getComponentIds(project.componentInstances),
             };
 
