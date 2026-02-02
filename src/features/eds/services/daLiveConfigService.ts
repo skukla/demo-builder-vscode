@@ -38,7 +38,7 @@ const DA_ADMIN_URL = 'https://admin.da.live';
  * Permission row in the permissions sheet
  *
  * From storefront-tools permissions.js:
- * - path: 'CONFIG' for admin, '/ + **' for recursive access
+ * - path: 'CONFIG' for admin, '/**' for recursive access to all content
  * - groups: User email or org ID (comma-separated for multiple)
  * - actions: 'write' or 'read'
  * - comments: Optional description
@@ -250,7 +250,7 @@ export class DaLiveConfigService {
 
             // Check if user already has content permission
             const hasContentPermission = permissionsData.some(
-                (row) => row.groups === userEmail && row.path === '/ + **',
+                (row) => row.groups === userEmail && row.path === '/**',
             );
 
             // Check if user already has CONFIG permission
@@ -272,7 +272,7 @@ export class DaLiveConfigService {
             // Add content permission with recursive access
             if (!hasContentPermission) {
                 permissionsData.push({
-                    path: '/ + **',
+                    path: '/**',
                     groups: userEmail,
                     actions: 'write',
                     comments: 'Demo Builder - content access',
