@@ -65,7 +65,7 @@ describe('DaLiveOrgConfigService', () => {
             // Given: Config stored in globalState
             const config: DaLiveOrgConfig = {
                 editorPath: '/test-org/site=https://example.com',
-                aemRepositoryId: 'author-p12345-e67890.adobeaemcloud.com',
+                aemAuthorUrl: 'author-p12345-e67890.adobeaemcloud.com',
                 updatedAt: '2025-01-01T00:00:00.000Z',
             };
             globalStateStore.set('daLive.orgConfig.test-org', config);
@@ -97,7 +97,7 @@ describe('DaLiveOrgConfigService', () => {
             // Given: Config to store
             const config: DaLiveOrgConfig = {
                 editorPath: '/test-org/site=https://example.com',
-                aemRepositoryId: 'author-p12345-e67890.adobeaemcloud.com',
+                aemAuthorUrl: 'author-p12345-e67890.adobeaemcloud.com',
             };
 
             // When: setOrgConfig() called
@@ -106,7 +106,7 @@ describe('DaLiveOrgConfigService', () => {
             // Then: Config stored with updatedAt timestamp
             const stored = globalStateStore.get('daLive.orgConfig.test-org') as DaLiveOrgConfig;
             expect(stored.editorPath).toBe(config.editorPath);
-            expect(stored.aemRepositoryId).toBe(config.aemRepositoryId);
+            expect(stored.aemAuthorUrl).toBe(config.aemAuthorUrl);
             expect(stored.updatedAt).toBeDefined();
             expect(new Date(stored.updatedAt!).getTime()).toBeGreaterThan(0);
         });
@@ -120,14 +120,14 @@ describe('DaLiveOrgConfigService', () => {
             // When: setOrgConfig() called with new config
             const newConfig: DaLiveOrgConfig = {
                 editorPath: '/new/path=...',
-                aemRepositoryId: 'author-p99999-e88888.adobeaemcloud.com',
+                aemAuthorUrl: 'author-p99999-e88888.adobeaemcloud.com',
             };
             await service.setOrgConfig('test-org', newConfig);
 
             // Then: New config replaces old
             const stored = globalStateStore.get('daLive.orgConfig.test-org') as DaLiveOrgConfig;
             expect(stored.editorPath).toBe('/new/path=...');
-            expect(stored.aemRepositoryId).toBe('author-p99999-e88888.adobeaemcloud.com');
+            expect(stored.aemAuthorUrl).toBe('author-p99999-e88888.adobeaemcloud.com');
         });
     });
 
@@ -138,15 +138,15 @@ describe('DaLiveOrgConfigService', () => {
                 editorPath: '/existing/path=...',
             });
 
-            // When: updateOrgConfig() called with aemRepositoryId only
+            // When: updateOrgConfig() called with aemAuthorUrl only
             await service.updateOrgConfig('test-org', {
-                aemRepositoryId: 'author-p12345-e67890.adobeaemcloud.com',
+                aemAuthorUrl: 'author-p12345-e67890.adobeaemcloud.com',
             });
 
             // Then: Both fields preserved
             const stored = globalStateStore.get('daLive.orgConfig.test-org') as DaLiveOrgConfig;
             expect(stored.editorPath).toBe('/existing/path=...');
-            expect(stored.aemRepositoryId).toBe('author-p12345-e67890.adobeaemcloud.com');
+            expect(stored.aemAuthorUrl).toBe('author-p12345-e67890.adobeaemcloud.com');
         });
 
         it('should create config if none exists', async () => {
@@ -166,7 +166,7 @@ describe('DaLiveOrgConfigService', () => {
             // Given: Config with both fields
             globalStateStore.set('daLive.orgConfig.test-org', {
                 editorPath: '/old/path=...',
-                aemRepositoryId: 'author-p11111-e22222.adobeaemcloud.com',
+                aemAuthorUrl: 'author-p11111-e22222.adobeaemcloud.com',
             });
 
             // When: updateOrgConfig() called to change editorPath only
@@ -174,10 +174,10 @@ describe('DaLiveOrgConfigService', () => {
                 editorPath: '/new/path=...',
             });
 
-            // Then: editorPath updated, aemRepositoryId preserved
+            // Then: editorPath updated, aemAuthorUrl preserved
             const stored = globalStateStore.get('daLive.orgConfig.test-org') as DaLiveOrgConfig;
             expect(stored.editorPath).toBe('/new/path=...');
-            expect(stored.aemRepositoryId).toBe('author-p11111-e22222.adobeaemcloud.com');
+            expect(stored.aemAuthorUrl).toBe('author-p11111-e22222.adobeaemcloud.com');
         });
     });
 
@@ -251,10 +251,10 @@ describe('DaLiveOrgConfigService', () => {
             expect(result).toBe(true);
         });
 
-        it('should return true when aemRepositoryId is set', async () => {
-            // Given: Config with aemRepositoryId only
+        it('should return true when aemAuthorUrl is set', async () => {
+            // Given: Config with aemAuthorUrl only
             globalStateStore.set('daLive.orgConfig.test-org', {
-                aemRepositoryId: 'author-p12345-e67890.adobeaemcloud.com',
+                aemAuthorUrl: 'author-p12345-e67890.adobeaemcloud.com',
             });
 
             // When: hasOrgConfig() called
@@ -346,13 +346,13 @@ describe('DaLiveOrgConfigService', () => {
         });
     });
 
-    describe('validateAemRepositoryId', () => {
+    describe('validateAemAuthorUrl', () => {
         it('should validate author environment format', () => {
             // Given: Valid author environment ID
             const id = 'author-p158081-e1683323.adobeaemcloud.com';
 
-            // When: validateAemRepositoryId() called
-            const result = service.validateAemRepositoryId(id);
+            // When: validateAemAuthorUrl() called
+            const result = service.validateAemAuthorUrl(id);
 
             // Then: Returns true
             expect(result).toBe(true);
@@ -362,8 +362,8 @@ describe('DaLiveOrgConfigService', () => {
             // Given: Valid delivery environment ID
             const id = 'delivery-p12345-e67890.adobeaemcloud.com';
 
-            // When: validateAemRepositoryId() called
-            const result = service.validateAemRepositoryId(id);
+            // When: validateAemAuthorUrl() called
+            const result = service.validateAemAuthorUrl(id);
 
             // Then: Returns true
             expect(result).toBe(true);
@@ -382,7 +382,7 @@ describe('DaLiveOrgConfigService', () => {
 
             // When/Then: Each returns false
             for (const id of invalidIds) {
-                expect(service.validateAemRepositoryId(id)).toBe(false);
+                expect(service.validateAemAuthorUrl(id)).toBe(false);
             }
         });
     });

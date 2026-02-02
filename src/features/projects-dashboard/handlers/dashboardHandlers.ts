@@ -18,7 +18,6 @@ import {
     deleteProject,
 } from '../services';
 import { BaseWebviewCommand } from '@/core/base';
-import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { executeCommandForProject } from '@/core/handlers';
 import { getLogger } from '@/core/logging';
@@ -28,11 +27,7 @@ import { validateProjectPath } from '@/core/validation';
 import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
-import { generateFstabContent } from '@/features/eds/services/fstabGenerator';
-import { showDaLiveAuthQuickPick, bulkPreviewAndPublish, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
-import { verifyCdnResources } from '@/features/eds/services/configSyncService';
-import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
-import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
+import { showDaLiveAuthQuickPick, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import { getMeshComponentInstance, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
@@ -885,72 +880,28 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project not found' };
     }
 
-    // Get EDS metadata from component instance (project-specific data)
-    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
-    const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
-    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+    // Extract reset parameters from project
+    const { extractResetParams, executeEdsReset } =
+        await import('@/features/eds/services/edsResetService');
+    const paramsResult = extractResetParams(project);
 
-    // Derive template config from brand+stack (source of truth)
-    const pkg = demoPackagesConfig.packages.find((p: { id: string }) => p.id === project.selectedPackage);
-    const storefronts = pkg?.storefronts as Record<string, {
-        templateOwner?: string;
-        templateRepo?: string;
-        contentSource?: { org: string; site: string; indexPath?: string };
-        patches?: string[];
-        contentPatches?: string[];
-    }> | undefined;
-    const storefront = project.selectedStack ? storefronts?.[project.selectedStack] : undefined;
-    const templateOwner = storefront?.templateOwner;
-    const templateRepo = storefront?.templateRepo;
-    const contentSourceConfig = storefront?.contentSource;
-    const patches = storefront?.patches;
-    const contentPatches = storefront?.contentPatches;
-
-    if (!repoFullName) {
-        const errorMsg = 'EDS metadata missing - no GitHub repository configured';
+    if (!paramsResult.success) {
+        const errorMsg = paramsResult.error;
         context.logger.error(`[ProjectsList] resetEds: ${errorMsg}`);
         vscode.window.showErrorMessage(`Cannot reset: ${errorMsg}`);
         return { success: false, error: errorMsg };
     }
 
-    const [repoOwner, repoName] = repoFullName.split('/');
-    if (!repoOwner || !repoName) {
-        const errorMsg = 'Invalid repository format';
-        context.logger.error(`[ProjectsList] resetEds: ${errorMsg}`);
-        return { success: false, error: errorMsg };
-    }
-
-    if (!daLiveOrg || !daLiveSite) {
-        const errorMsg = 'DA.live configuration missing';
-        context.logger.error(`[ProjectsList] resetEds: ${errorMsg}`);
-        vscode.window.showErrorMessage(`Cannot reset: ${errorMsg}`);
-        return { success: false, error: errorMsg };
-    }
-
-    if (!templateOwner || !templateRepo) {
-        const errorMsg = 'Template configuration missing. Cannot reset without knowing the template repository.';
-        context.logger.error(`[ProjectsList] resetEds: ${errorMsg}`);
-        vscode.window.showErrorMessage(`Cannot reset: ${errorMsg}`);
-        return { success: false, error: errorMsg };
-    }
-
-    if (!contentSourceConfig) {
-        const errorMsg = 'Content source configuration missing. Cannot reset without knowing where demo content comes from.';
-        context.logger.error(`[ProjectsList] resetEds: ${errorMsg}`);
-        vscode.window.showErrorMessage(`Cannot reset: ${errorMsg}`);
-        return { success: false, error: errorMsg };
-    }
+    const { repoOwner, repoName } = paramsResult.params;
+    const repoFullName = `${repoOwner}/${repoName}`;
 
     // Pre-check DA.live authentication
-    // Token must be valid to copy demo content during reset
     const daLiveAuthService = new DaLiveAuthService(context.context);
     const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
 
     if (!isDaLiveAuthenticated) {
         context.logger.info('[ProjectsList] resetEds: DA.live token expired or missing');
 
-        // Show notification with Sign In action (follows GitHubAppNotInstalledError pattern)
         const signInButton = 'Sign In';
         const selection = await vscode.window.showWarningMessage(
             'Your DA.live session has expired. Please sign in to continue.',
@@ -958,7 +909,6 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         );
 
         if (selection === signInButton) {
-            // User clicked "Sign In" - invoke QuickPick auth flow
             const authResult = await showDaLiveAuthQuickPick(context);
             if (authResult.cancelled || !authResult.success) {
                 return {
@@ -968,9 +918,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                     cancelled: authResult.cancelled,
                 };
             }
-            // Token is now valid - continue to confirmation dialog below
         } else {
-            // User dismissed notification - abort operation
             return {
                 success: false,
                 error: 'DA.live authentication required',
@@ -980,7 +928,6 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
     }
 
     // Pre-check Adobe I/O authentication (if project has mesh)
-    // Mesh redeployment requires valid Adobe I/O credentials
     const meshComponent = getMeshComponentInstance(project);
     const hasMesh = !!meshComponent?.path;
 
@@ -1007,9 +954,7 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                         cancelled: true,
                     };
                 }
-                // Token is now valid - continue to confirmation dialog below
             } else {
-                // User dismissed notification - abort operation
                 return {
                     success: false,
                     error: 'Adobe I/O authentication required',
@@ -1033,7 +978,6 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
     }
 
     // Check if AEM Code Sync app is installed
-    // This is required for Helix to sync code changes from GitHub
     const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
     const { tokenService: preCheckTokenService } = getGitHubServices(context);
     const { GitHubAppService } = await import('@/features/eds/services/githubAppService');
@@ -1053,11 +997,9 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         );
 
         if (appWarning === installButton) {
-            // Open the GitHub app installation page
             const installUrl = appService.getInstallUrl(repoOwner, repoName);
             await vscode.env.openExternal(vscode.Uri.parse(installUrl));
 
-            // Wait for user to install and continue
             const afterInstall = await vscode.window.showInformationMessage(
                 'After installing the app, click Continue to proceed with the reset.',
                 'Continue',
@@ -1069,7 +1011,6 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 return { success: false, cancelled: true };
             }
         } else if (appWarning !== continueButton) {
-            // User dismissed the dialog
             context.logger.info('[ProjectsList] resetEds: User cancelled at app check');
             return { success: false, cancelled: true };
         }
@@ -1080,7 +1021,14 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
     project.status = 'resetting';
     await context.stateManager.saveProject(project);
 
-    // Show progress notification
+    // Create token provider for DA.live operations
+    const tokenProvider = {
+        getAccessToken: async () => {
+            return await daLiveAuthService.getAccessToken();
+        },
+    };
+
+    // Execute reset with progress notification
     try {
         return await vscode.window.withProgress(
             {
@@ -1089,381 +1037,64 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
                 cancellable: false,
             },
             async (progress) => {
-                try {
-                    context.logger.info(`[ProjectsList] Resetting EDS project: ${repoFullName}`);
+                context.logger.info(`[ProjectsList] Resetting EDS project: ${repoFullName}`);
 
-                // Create service dependencies
-                // Note: ServiceLocator is statically imported at top of file
-                const { HelixService } = await import('@/features/eds/services/helixService');
-                const { DaLiveContentOperations } = await import('@/features/eds/services/daLiveContentOperations');
-                const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
+                // Enable all projects-dashboard specific features
+                const resetParams = {
+                    ...paramsResult.params,
+                    includeBlockLibrary: true,
+                    verifyCdn: true,
+                    redeployMesh: hasMesh,
+                };
 
-                const { tokenService: githubTokenService, fileOperations: githubFileOps } = getGitHubServices(context);
-                const authService = ServiceLocator.getAuthenticationService();
-
-                // Create TokenProvider adapter for DA.live operations
-                // IMPORTANT: Use DA.live token (not Adobe IMS token) for content operations
-                const tokenProvider = {
-                    getAccessToken: async () => {
-                        return await daLiveAuthService.getAccessToken();
+                const result = await executeEdsReset(
+                    resetParams,
+                    context,
+                    tokenProvider,
+                    (p) => {
+                        progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` });
                     },
-                };
-
-                const daLiveContentOps = new DaLiveContentOperations(tokenProvider, context.logger);
-
-                // Determine total steps (6 base + 1 if mesh needs redeployment)
-                const meshComponent = getMeshComponentInstance(project);
-                const hasMesh = !!meshComponent?.path;
-                const totalSteps = hasMesh ? 7 : 6;
-
-                // ============================================
-                // Step 1: Reset repo to template (bulk operation)
-                // ============================================
-                // Uses Git Tree API for efficiency: 4 API calls instead of 2*N for N files
-                progress.report({ message: `Step 1/${totalSteps}: Resetting code repository...` });
-                context.logger.info(`[ProjectsList] Resetting repo using bulk tree operations`);
-
-                // Build fstab.yaml content using centralized generator (single source of truth)
-                const fstabContent = generateFstabContent({
-                    daLiveOrg,
-                    daLiveSite,
-                });
-
-                // Create file overrides map (files with custom content)
-                const fileOverrides = new Map<string, string>();
-                fileOverrides.set('fstab.yaml', fstabContent);
-
-                // Generate demo-config.json with Commerce configuration
-                // This ensures the storefront has proper Commerce backend settings after reset
-                const { generateConfigJson, extractConfigParams } = await import('@/features/eds/services/configGenerator');
-                const configParams = {
-                    githubOwner: repoOwner,
-                    repoName,
-                    daLiveOrg,
-                    daLiveSite,
-                    ...extractConfigParams(project),
-                };
-
-                const configResult = generateConfigJson(
-                    configParams as import('@/features/eds/services/configGenerator').ConfigGeneratorParams,
-                    context.logger,
                 );
 
-                if (configResult.success && configResult.content) {
-                    // Generate both config.json (used by storefront) and demo-config.json (template default)
-                    fileOverrides.set('config.json', configResult.content);
-                    fileOverrides.set('demo-config.json', configResult.content);
-                    context.logger.info('[ProjectsList] Generated config.json for reset');
-                } else {
-                    context.logger.warn(`[ProjectsList] Failed to generate demo-config.json: ${configResult.error}`);
-                    // Continue without demo-config.json - site will show configuration error but can be manually fixed
-                }
+                if (result.success) {
+                    // Show auto-dismissing success notification
+                    void vscode.window.withProgress(
+                        { location: vscode.ProgressLocation.Notification, title: `"${project.name}" reset successfully` },
+                        async () => new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION)),
+                    );
 
-                // Copy placeholder JSON files from source to GitHub as code files
-                // DA.live's source API doesn't support programmatic spreadsheet creation,
-                // so we commit placeholders as JSON code files that Helix serves directly.
-                // Authors can later create DA.live spreadsheets to override (Content > Code).
-                const placeholderPaths = [
-                    'placeholders/global',
-                    'placeholders/auth',
-                    'placeholders/cart',
-                    'placeholders/recommendations',
-                    'placeholders/wishlist',
-                ];
-
-                for (const placeholderPath of placeholderPaths) {
-                    try {
-                        const sourceUrl = `https://main--${templateRepo}--${templateOwner}.aem.live/${placeholderPath}.json`;
-                        const response = await fetch(sourceUrl, {
-                            signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
-                        });
-
-                        if (response.ok) {
-                            const jsonContent = await response.text();
-                            fileOverrides.set(`${placeholderPath}.json`, jsonContent);
-                            context.logger.info(`[ProjectsList] Added ${placeholderPath}.json to code files`);
-                        }
-                    } catch {
-                        context.logger.warn(`[ProjectsList] Failed to fetch ${placeholderPath}.json from source`);
-                    }
-                }
-
-                // Perform bulk reset
-                const resetResult = await githubFileOps.resetRepoToTemplate(
-                    templateOwner,
-                    templateRepo,
-                    repoOwner,
-                    repoName,
-                    fileOverrides,
-                    'main',
-                );
-
-                context.logger.info(`[ProjectsList] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
-                progress.report({ message: `Step 1/${totalSteps}: Reset ${resetResult.fileCount} files` });
-
-                // ============================================
-                // Step 2: Sync code to CDN
-                // ============================================
-                // Actively trigger code sync via Helix Admin API (POST /code/*)
-                // This is more reliable than passive polling - the POST completes when sync is done
-                progress.report({ message: `Step 2/${totalSteps}: Syncing code to CDN...` });
-
-                // Create HelixService for code sync (need GitHub token for Admin API)
-                const helixServiceForCodeSync = new HelixService(context.logger, githubTokenService, tokenProvider);
-
-                try {
-                    // Preview code (syncs from GitHub to preview CDN)
-                    await helixServiceForCodeSync.previewCode(repoOwner, repoName, '/*');
-                    context.logger.info('[ProjectsList] Code synced to CDN');
-                    progress.report({ message: `Step 2/${totalSteps}: Code synchronized` });
-                } catch (codeSyncError) {
-                    // Log warning but continue - the GitHub App may also trigger sync
-                    context.logger.warn(`[ProjectsList] Code sync request failed: ${(codeSyncError as Error).message}, continuing anyway`);
-                    progress.report({ message: `Step 2/${totalSteps}: Code sync pending...` });
-                }
-
-                // Configure permissions via DA.live Config API (part of Step 2)
-                progress.report({ message: `Step 2/${totalSteps}: Configuring site permissions...` });
-                const userEmail = await daLiveAuthService.getUserEmail();
-                if (userEmail) {
-                    await configureDaLivePermissions(tokenProvider, daLiveOrg, daLiveSite, userEmail, context.logger);
-                } else {
-                    context.logger.warn('[ProjectsList] No user email available for permissions');
-                }
-
-                // Build full content source with index URL from explicit config
-                const indexPath = contentSourceConfig.indexPath || '/full-index.json';
-                const contentSource = {
-                    org: contentSourceConfig.org,
-                    site: contentSourceConfig.site,
-                    indexUrl: `https://main--${contentSourceConfig.site}--${contentSourceConfig.org}.aem.live${indexPath}`,
-                };
-
-                // ============================================
-                // Step 3: Copy demo content to DA.live
-                // ============================================
-                // Content HTML is uploaded with absolute image URLs pointing to source CDN.
-                // The Admin API will download images during preview and store in Media Bus.
-                progress.report({ message: `Step 3/${totalSteps}: Copying demo content...` });
-
-                context.logger.info(`[ProjectsList] Copying content from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
-
-                // Progress callback to show per-file progress (with support for init messages)
-                const onContentProgress = (info: { processed: number; total: number; currentFile?: string; message?: string }) => {
-                    // Use custom message if provided (during initialization), otherwise show file count
-                    const statusMessage = info.message || `Copying content (${info.processed}/${info.total})`;
-                    progress.report({ message: `Step 3/${totalSteps}: ${statusMessage}` });
-                };
-
-                const contentResult = await daLiveContentOps.copyContentFromSource(
-                    contentSource,
-                    daLiveOrg,
-                    daLiveSite,
-                    onContentProgress,
-                    contentPatches,
-                );
-
-                if (!contentResult.success) {
-                    throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
-                }
-
-                progress.report({ message: `Step 3/${totalSteps}: Copied ${contentResult.totalFiles} content files` });
-                context.logger.info(`[ProjectsList] DA.live content populated: ${contentResult.totalFiles} files`);
-
-                // Configure Block Library (part of content step)
-                progress.report({ message: `Step 3/${totalSteps}: Configuring block library...` });
-                const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
-                    daLiveOrg,
-                    daLiveSite,
-                    templateOwner,
-                    templateRepo,
-                    (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
-                );
-                if (libResult.blocksCount > 0) {
-                    progress.report({ message: `Step 3/${totalSteps}: Configured ${libResult.blocksCount} blocks` });
-                    context.logger.info(`[ProjectsList] Block library: ${libResult.blocksCount} blocks configured`);
-                }
-
-                // ============================================
-                // Step 4: Apply EDS Settings (AEM Assets, Universal Editor)
-                // ============================================
-                progress.report({ message: `Step 4/${totalSteps}: Applying EDS configuration...` });
-
-                const { applyDaLiveOrgConfigSettings } = await import('@/features/eds/handlers/edsHelpers');
-                await applyDaLiveOrgConfigSettings(daLiveContentOps, daLiveOrg, daLiveSite, context.logger);
-
-                // ============================================
-                // Step 5: Publish all content to CDN
-                // ============================================
-                progress.report({ message: `Step 5/${totalSteps}: Publishing to CDN...` });
-                context.logger.info(`[ProjectsList] Publishing content to CDN for ${repoOwner}/${repoName}`);
-
-                // IMPORTANT: Pass DA.live token provider to HelixService for x-content-source-authorization
-                // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
-                const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
-
-                // Purge stale cache before publishing (critical for reset scenarios)
-                // This ensures old cached content is cleared before new content is published
-                progress.report({ message: `Step 5/${totalSteps}: Purging stale cache...` });
-                await helixService.purgeCacheAll(repoOwner, repoName, 'main');
-
-                // Progress callback to update notification with publish details
-                const onPublishProgress = (info: {
-                    phase: string;
-                    message: string;
-                    current?: number;
-                    total?: number;
-                    currentPath?: string;
-                }) => {
-                    if (info.current !== undefined && info.total !== undefined) {
-                        progress.report({ message: `Step 5/${totalSteps}: Publishing (${info.current}/${info.total} pages)` });
-                    } else {
-                        progress.report({ message: `Step 5/${totalSteps}: ${info.message}` });
-                    }
-                };
-
-                await helixService.publishAllSiteContent(`${repoOwner}/${repoName}`, 'main', undefined, undefined, onPublishProgress);
-
-                // Bulk publish block library paths (may be missed by publishAllSiteContent due to .da folder)
-                if (libResult.paths.length > 0) {
-                    progress.report({ message: `Step 5/${totalSteps}: Publishing block library...` });
-                    try {
-                        await bulkPreviewAndPublish(helixService, repoOwner, repoName, libResult.paths, context.logger);
-                    } catch (libPublishError) {
-                        // Non-fatal - library config was created, publishing can be retried
-                        context.logger.debug(`[ProjectsList] Block library publish failed: ${(libPublishError as Error).message}`);
-                    }
-                }
-
-                context.logger.info('[ProjectsList] Content published to CDN successfully');
-
-                // ============================================
-                // Step 6: Verify config.json on CDN
-                // ============================================
-                // Note: Block library verification removed - library is served from content.da.live,
-                // not the public CDN, so CDN verification is not applicable.
-                progress.report({ message: `Step 6/${totalSteps}: Verifying configuration...` });
-                const verification = await verifyCdnResources(
-                    repoOwner,
-                    repoName,
-                    context.logger,
-                );
-
-                if (verification.configVerified) {
-                    progress.report({ message: `Step 6/${totalSteps}: Configuration verified` });
-                    context.logger.info('[ProjectsList] config.json verified on CDN');
-                } else {
-                    progress.report({ message: `Step 6/${totalSteps}: Configuration propagating...` });
-                    context.logger.warn('[ProjectsList] config.json CDN verification timed out - may need more time to propagate')
-                }
-
-                // ============================================
-                // Step 7: Redeploy API Mesh (if project has mesh component)
-                // ============================================
-                // Redeploy mesh to refresh GraphQL schema. The existing .env file
-                // in the local mesh directory is reused (not regenerated).
-
-                if (hasMesh) {
-                    // Set Adobe CLI context before mesh deployment
-                    // (Adobe I/O auth already verified in pre-flight check)
-                    progress.report({ message: `Step 7/${totalSteps}: Setting Adobe context...` });
-
-                    if (project.adobe?.organization) {
-                        await authService.selectOrganization(project.adobe.organization);
-                    }
-                    if (project.adobe?.projectId && project.adobe?.organization) {
-                        await authService.selectProject(project.adobe.projectId, project.adobe.organization);
-                    }
-                    if (project.adobe?.workspace && project.adobe?.projectId) {
-                        await authService.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
-                    }
-
-                    progress.report({ message: `Step 7/${totalSteps}: Redeploying API Mesh...` });
-                    context.logger.info(`[ProjectsList] Redeploying mesh for ${repoFullName}`);
-
-                    try {
-                        const { deployMeshComponent } = await import('@/features/mesh/services/meshDeployment');
-                        const existingMeshId = (meshComponent.metadata?.meshId as string) || '';
-                        const commandManager = ServiceLocator.getCommandExecutor();
-
-                        const meshDeployResult = await deployMeshComponent(
-                            meshComponent.path!, // hasMesh guarantees path exists
-                            commandManager,
-                            context.logger,
-                            (msg, sub) => progress.report({ message: `Step 7/${totalSteps}: ${sub || msg}` }),
-                            existingMeshId,
-                        );
-
-                        if (meshDeployResult.success && meshDeployResult.data?.endpoint) {
-                            const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
-                            await updateMeshState(project, meshDeployResult.data.endpoint);
-                            await context.stateManager.saveProject(project);
-                            context.logger.info(`[ProjectsList] Mesh redeployed: ${meshDeployResult.data.endpoint}`);
-                        } else {
-                            throw new Error(meshDeployResult.error || 'Mesh deployment failed');
-                        }
-                    } catch (meshError) {
-                        context.logger.error('[ProjectsList] Mesh redeployment error', meshError as Error);
+                    // Handle partial success (reset worked but mesh failed)
+                    if (result.errorType === 'MESH_REDEPLOY_FAILED') {
                         vscode.window.showWarningMessage(
-                            `Reset completed but mesh redeployment failed: ${(meshError as Error).message}. ` +
-                            `Commerce features may not work until mesh is manually redeployed.`
+                            `${result.error} Commerce features may not work until mesh is manually redeployed.`,
                         );
                     }
-                }
-
-                context.logger.info('[ProjectsList] EDS project reset successfully');
-
-                // Show auto-dismissing success notification (2 seconds)
-                void vscode.window.withProgress(
-                    { location: vscode.ProgressLocation.Notification, title: `"${project.name}" reset successfully` },
-                    async () => new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION)),
-                );
-
-                return { success: true };
-            } catch (error) {
-                // Handle GitHub App not installed error specifically
-                if (error instanceof GitHubAppNotInstalledError) {
-                    context.logger.info(`[ProjectsList] GitHub App not installed: ${error.message}`);
-
-                    // Show error message with button to install GitHub App
+                } else if (result.errorType === 'GITHUB_APP_NOT_INSTALLED') {
                     const installButton = 'Install GitHub App';
                     const selection = await vscode.window.showErrorMessage(
-                        `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${error.owner}/${error.repo}. ` +
+                        `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${result.errorDetails?.owner}/${result.errorDetails?.repo}. ` +
                         `Please install the app and try again.`,
                         installButton,
                     );
-
-                    if (selection === installButton) {
-                        await vscode.env.openExternal(vscode.Uri.parse(error.installUrl));
+                    if (selection === installButton && result.errorDetails?.installUrl) {
+                        await vscode.env.openExternal(vscode.Uri.parse(result.errorDetails.installUrl as string));
                     }
-
-                    return {
-                        success: false,
-                        error: error.message,
-                        errorType: 'GITHUB_APP_NOT_INSTALLED',
-                        errorDetails: {
-                            owner: error.owner,
-                            repo: error.repo,
-                            installUrl: error.installUrl,
-                        },
-                    };
+                } else if (result.error) {
+                    vscode.window.showErrorMessage(
+                        `Failed to reset EDS project: ${result.error}`,
+                        'Show Logs',
+                    ).then(selection => {
+                        if (selection === 'Show Logs') {
+                            getLogger().show(false);
+                        }
+                    });
                 }
 
-                context.logger.error('[ProjectsList] resetEds failed', error as Error);
-                vscode.window.showErrorMessage(
-                    `Failed to reset EDS project: ${errorMessage}`,
-                    'Show Logs',
-                ).then(selection => {
-                    if (selection === 'Show Logs') {
-                        getLogger().show(false);
-                    }
-                });
-                return { success: false, error: errorMessage };
-            }
-        },
-    );
+                return result;
+            },
+        );
     } finally {
-        // Reset status back to original (typically 'ready' for EDS projects, shown as "Published")
+        // Reset status back to original
         project.status = originalStatus;
         await context.stateManager.saveProject(project);
     }

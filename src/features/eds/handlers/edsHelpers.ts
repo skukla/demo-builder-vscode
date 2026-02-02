@@ -523,8 +523,8 @@ export async function bulkPreviewAndPublish(
 /**
  * Apply DA.live org config settings from extension settings.
  *
- * Reads the AEM Repository ID and IMS Org ID from VS Code settings
- * (demoBuilder.daLive.AEMRepositoryId and demoBuilder.daLive.IMSOrgId)
+ * Reads the AEM Author URL and IMS Org ID from VS Code settings
+ * (demoBuilder.daLive.aemAuthorUrl and demoBuilder.daLive.IMSOrgId)
  * and applies them to the DA.live site config sheet.
  *
  * This should be called from all EDS flows: creation, reset, edit, import, copy.
@@ -538,19 +538,19 @@ export async function applyDaLiveOrgConfigSettings(
 ): Promise<void> {
     try {
         const edsSettings = vscode.workspace.getConfiguration('demoBuilder.daLive');
-        const aemRepositoryId = edsSettings.get<string>('AEMRepositoryId');
+        const aemAuthorUrl = edsSettings.get<string>('aemAuthorUrl');
         const imsOrgId = edsSettings.get<string>('IMSOrgId');
         const editorPathPrefix = edsSettings.get<string>('editorPathPrefix') || 'site/to/path/content';
 
         // Nothing configured - skip silently
-        if (!aemRepositoryId && !imsOrgId) {
+        if (!aemAuthorUrl && !imsOrgId) {
             return;
         }
 
         const configUpdates: Record<string, string> = {};
 
-        if (aemRepositoryId) {
-            configUpdates['aem.repositoryId'] = aemRepositoryId;
+        if (aemAuthorUrl) {
+            configUpdates['aem.repositoryId'] = aemAuthorUrl;
         }
 
         if (imsOrgId) {

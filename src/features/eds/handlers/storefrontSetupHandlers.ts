@@ -1035,9 +1035,11 @@ async function executeStorefrontSetupPhases(
                     currentPath?: string;
                 }) => {
                     // Calculate progress within the 65-90% range
-                    let progressValue = isResetScenario ? 67 : 65;
+                    const progressBase = isResetScenario ? 67 : 65;
+                    const progressRange = isResetScenario ? 23 : 25;
+                    let progressValue = progressBase;
                     if (info.total && info.current) {
-                        progressValue = (isResetScenario ? 67 : 65) + Math.round((info.current / info.total) * (isResetScenario ? 23 : 25));
+                        progressValue = progressBase + Math.round((info.current / info.total) * progressRange);
                     }
 
                     context.sendMessage('storefront-setup-progress', {

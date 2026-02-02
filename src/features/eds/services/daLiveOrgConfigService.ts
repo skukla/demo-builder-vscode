@@ -42,14 +42,14 @@ export interface DaLiveOrgConfig {
     editorPath?: string;
 
     /**
-     * AEM Assets Delivery repository ID
+     * AEM Author environment URL for DA.live content authoring
      *
-     * The AEM Cloud Service environment to use for asset browsing.
+     * The AEM Cloud Service author environment for asset browsing.
      * Format: author-pXXXXX-eYYYYY.adobeaemcloud.com
      *
      * Example: author-p158081-e1683323.adobeaemcloud.com
      */
-    aemRepositoryId?: string;
+    aemAuthorUrl?: string;
 
     /** Timestamp when config was last updated */
     updatedAt?: string;
@@ -118,7 +118,9 @@ export class DaLiveOrgConfigService {
         await this.context.globalState.update(key, configWithTimestamp);
 
         this.logger.info(`[DA.live] Organization config saved for ${org}`);
-        this.logger.debug(`[DA.live] Config: editorPath=${config.editorPath ? 'set' : 'unset'}, aemRepositoryId=${config.aemRepositoryId ? 'set' : 'unset'}`);
+        const editorStatus = config.editorPath ? 'set' : 'unset';
+        const authorStatus = config.aemAuthorUrl ? 'set' : 'unset';
+        this.logger.debug(`[DA.live] Config: editorPath=${editorStatus}, aemAuthorUrl=${authorStatus}`);
     }
 
     /**
@@ -166,7 +168,7 @@ export class DaLiveOrgConfigService {
         }
 
         // Check if any meaningful config is set
-        return !!(config.editorPath || config.aemRepositoryId);
+        return !!(config.editorPath || config.aemAuthorUrl);
     }
 
     /**
@@ -221,16 +223,16 @@ export class DaLiveOrgConfigService {
     }
 
     /**
-     * Validate aem.repositoryId format
+     * Validate AEM Author URL format
      *
-     * @param repositoryId - Repository ID to validate
+     * @param authorUrl - AEM Author URL to validate
      * @returns True if format is valid
      */
-    validateAemRepositoryId(repositoryId: string): boolean {
+    validateAemAuthorUrl(authorUrl: string): boolean {
         // Format: author-pXXXXX-eYYYYY.adobeaemcloud.com
         //     or: delivery-pXXXXX-eYYYYY.adobeaemcloud.com
         const pattern = /^(author|delivery)-p\d+-e\d+\.adobeaemcloud\.com$/;
-        return pattern.test(repositoryId);
+        return pattern.test(authorUrl);
     }
 
     /**

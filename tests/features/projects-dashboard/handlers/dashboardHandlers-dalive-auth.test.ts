@@ -165,13 +165,6 @@ jest.mock('@/features/eds/services/githubAppService', () => ({
     })),
 }));
 
-// Mock templatePatchRegistry (dynamically imported for template patches)
-jest.mock('@/features/eds/services/templatePatchRegistry', () => ({
-    applyTemplatePatches: jest.fn().mockResolvedValue([
-        { patchId: 'header-nav-tools-defensive', applied: true },
-    ]),
-}));
-
 // Mock configGenerator (dynamically imported for config.json generation)
 jest.mock('@/features/eds/services/configGenerator', () => ({
     generateConfigJson: jest.fn().mockResolvedValue({
@@ -191,6 +184,16 @@ jest.mock('@/features/eds/services/configSyncService', () => ({
 
 // Mock global fetch for code sync verification
 global.fetch = jest.fn();
+
+// Mock edsResetService (dynamically imported) - the shared service for EDS resets
+// extractResetParams is called to validate project has required EDS metadata
+// executeEdsReset is called to perform the actual reset
+const mockExtractResetParams = jest.fn();
+const mockExecuteEdsReset = jest.fn();
+jest.mock('@/features/eds/services/edsResetService', () => ({
+    extractResetParams: (...args: unknown[]) => mockExtractResetParams(...args),
+    executeEdsReset: (...args: unknown[]) => mockExecuteEdsReset(...args),
+}));
 
 // =============================================================================
 // Now import the modules under test (after all mocks are set up)
@@ -342,6 +345,53 @@ describe('handleResetEds DA.live auth pre-check', () => {
         mockQuickPick.onDidAccept.mockClear();
         mockQuickPick.onDidHide.mockClear();
         mockQuickPick.selectedItems = [];
+
+        // Setup edsResetService mocks
+        // Default: extractResetParams returns success with valid params
+        mockExtractResetParams.mockImplementation((project: Project) => {
+            const edsInstance = project?.componentInstances?.['eds-storefront'];
+            const metadata = edsInstance?.metadata || {};
+
+            // Validate required fields (mirrors real implementation)
+            if (!metadata.githubRepo) {
+                return {
+                    success: false,
+                    error: 'Missing EDS metadata: GitHub repository not configured',
+                };
+            }
+            if (!metadata.daLiveOrg || !metadata.daLiveSite) {
+                return {
+                    success: false,
+                    error: 'Missing DA.live configuration: org and site are required',
+                };
+            }
+
+            const [repoOwner, repoName] = (metadata.githubRepo as string).split('/');
+            return {
+                success: true,
+                params: {
+                    repoOwner,
+                    repoName,
+                    daLiveOrg: metadata.daLiveOrg,
+                    daLiveSite: metadata.daLiveSite,
+                    templateOwner: 'skukla',
+                    templateRepo: 'citisignal-eds-boilerplate',
+                    contentSource: {
+                        org: 'demo-system-stores',
+                        site: 'accs-citisignal',
+                        indexPath: 'full-index.json',
+                    },
+                    project,
+                },
+            };
+        });
+
+        // Default: executeEdsReset returns success
+        mockExecuteEdsReset.mockResolvedValue({
+            success: true,
+            filesReset: 100,
+            contentCopied: 10,
+        });
     });
 
     // =========================================================================
@@ -519,19 +569,13 @@ describe('handleResetEds DA.live auth pre-check', () => {
     });
 
     // =========================================================================
-    // Test 8: Should copy content with absolute media URLs for Admin API image handling
+    // Test 8: Should delegate reset to executeEdsReset with content source info
     // =========================================================================
-    it('should copy content with absolute media URLs for Admin API image handling', async () => {
+    it('should delegate reset to executeEdsReset with content source info', async () => {
         // Given: Valid DA.live token
         mockIsAuthenticated.mockResolvedValue(true);
         const project = createMockEdsProject();
         const context = createMockContext(project);
-
-        // Get the mocked class to access instances later
-        const { DaLiveContentOperations } = require('@/features/eds/services/daLiveContentOperations');
-
-        // Clear any previous instances
-        (DaLiveContentOperations as jest.Mock).mockClear();
 
         // And: User confirms the reset (modal confirmation dialog)
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
@@ -542,25 +586,23 @@ describe('handleResetEds DA.live auth pre-check', () => {
         // Then: Should have succeeded
         expect(result.success).toBe(true);
 
-        // And: Should have created a DaLiveContentOperations instance
-        expect(DaLiveContentOperations).toHaveBeenCalled();
-
-        const instance = (DaLiveContentOperations as jest.Mock).mock.results[0]?.value;
-        expect(instance).toBeDefined();
-
-        // Content is copied with source info (absolute URLs handled internally)
-        // The transformHtmlForDaLive method converts relative media URLs to absolute URLs
-        // pointing to the source CDN, allowing Admin API to download images during preview
-        expect(instance.copyContentFromSource).toHaveBeenCalledWith(
+        // And: Should have delegated to executeEdsReset with correct params
+        // (actual content copying is handled internally by the reset service)
+        expect(mockExecuteEdsReset).toHaveBeenCalledWith(
             expect.objectContaining({
-                org: 'demo-system-stores',
-                site: 'accs-citisignal',
-                indexUrl: expect.stringContaining('full-index.json'),
+                daLiveOrg: 'test-org',
+                daLiveSite: 'test-site',
+                contentSource: expect.objectContaining({
+                    org: 'demo-system-stores',
+                    site: 'accs-citisignal',
+                    indexPath: 'full-index.json',
+                }),
             }),
-            'test-org', // daLiveOrg
-            'test-site', // daLiveSite
+            expect.anything(), // context
+            expect.objectContaining({
+                getAccessToken: expect.any(Function), // tokenProvider
+            }),
             expect.any(Function), // progressCallback
-            expect.any(Array), // contentPatches
         );
     });
 });

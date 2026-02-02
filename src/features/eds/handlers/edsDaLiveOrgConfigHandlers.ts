@@ -34,8 +34,8 @@ interface SaveDaLiveOrgConfigPayload {
     orgName: string;
     /** Configuration to save */
     config: {
-        /** AEM Assets Delivery repository ID */
-        aemRepositoryId?: string;
+        /** AEM Author environment URL for DA.live content authoring */
+        aemAuthorUrl?: string;
         /** IMS Organization ID for Universal Editor */
         imsOrgId?: string;
     };
@@ -59,7 +59,7 @@ function getOrgConfigService(context: HandlerContext): DaLiveOrgConfigService {
 /**
  * Get DA.live organization configuration
  *
- * Retrieves stored org-level configuration (aemRepositoryId, imsOrgId).
+ * Retrieves stored org-level configuration (aemAuthorUrl, imsOrgId).
  *
  * @param context - Handler context with logging and messaging
  * @param payload - Contains the organization name
@@ -106,7 +106,7 @@ export async function handleGetDaLiveOrgConfig(
 /**
  * Save DA.live organization configuration
  *
- * Stores org-level configuration (aemRepositoryId, imsOrgId).
+ * Stores org-level configuration (aemAuthorUrl, imsOrgId).
  * Also generates and stores editor.path from the IMS org ID.
  *
  * @param context - Handler context with logging and messaging
@@ -141,20 +141,20 @@ export async function handleSaveDaLiveOrgConfig(
         context.logger.debug('[EDS] Saving org config for:', orgName);
         const service = getOrgConfigService(context);
 
-        // Validate aemRepositoryId format if provided
-        if (config.aemRepositoryId && !service.validateAemRepositoryId(config.aemRepositoryId)) {
+        // Validate aemAuthorUrl format if provided
+        if (config.aemAuthorUrl && !service.validateAemAuthorUrl(config.aemAuthorUrl)) {
             await context.sendMessage('dalive-org-config-saved', {
                 success: false,
-                error: 'Invalid AEM Repository ID format. Expected: author-pXXXXX-eYYYYY.adobeaemcloud.com',
+                error: 'Invalid AEM Author URL format. Expected: author-pXXXXX-eYYYYY.adobeaemcloud.com',
             });
-            return { success: false, error: 'Invalid AEM Repository ID format' };
+            return { success: false, error: 'Invalid AEM Author URL format' };
         }
 
         // Build the config to save
         const orgConfig: DaLiveOrgConfig = {};
 
-        if (config.aemRepositoryId) {
-            orgConfig.aemRepositoryId = config.aemRepositoryId;
+        if (config.aemAuthorUrl) {
+            orgConfig.aemAuthorUrl = config.aemAuthorUrl;
         }
 
         // Store IMS org ID - editor.path will be generated per-site during project creation

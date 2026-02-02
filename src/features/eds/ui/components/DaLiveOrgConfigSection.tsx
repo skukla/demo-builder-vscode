@@ -4,7 +4,7 @@
  * Optional configuration section for DA.live organization settings.
  * These settings are stored per-org and apply to all EDS projects.
  *
- * - AEM Repository ID: For AEM Assets Delivery integration
+ * - AEM Author URL: For DA.live content authoring with AEM Assets
  * - IMS Org ID: For Universal Editor path generation
  *
  * Settings are optional and can be configured later via the Configure UI.
@@ -22,8 +22,8 @@ import ChevronUp from '@spectrum-icons/workflow/ChevronUp';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 
 export interface DaLiveOrgConfigData {
-    /** AEM Assets Delivery repository ID (e.g., author-p12345-e67890.adobeaemcloud.com) */
-    aemRepositoryId?: string;
+    /** AEM Author environment URL for DA.live content authoring (e.g., author-p12345-e67890.adobeaemcloud.com) */
+    aemAuthorUrl?: string;
     /** IMS Organization ID for Universal Editor (e.g., demosystem) */
     imsOrgId?: string;
 }
@@ -42,9 +42,9 @@ interface DaLiveOrgConfigSectionProps {
 }
 
 /**
- * Validates AEM Repository ID format
+ * Validates AEM Author URL format
  */
-function validateAemRepositoryId(value: string): string | undefined {
+function validateAemAuthorUrl(value: string): string | undefined {
     if (!value) return undefined; // Optional field
     const pattern = /^(author|delivery)-p\d+-e\d+\.adobeaemcloud\.com$/;
     if (!pattern.test(value)) {
@@ -78,10 +78,10 @@ export function DaLiveOrgConfigSection({
     onToggleExpanded,
     isDisabled = false,
 }: DaLiveOrgConfigSectionProps): React.ReactElement {
-    const aemError = validateAemRepositoryId(config.aemRepositoryId || '');
+    const aemError = validateAemAuthorUrl(config.aemAuthorUrl || '');
     const imsError = validateImsOrgId(config.imsOrgId || '');
 
-    const hasValues = config.aemRepositoryId || config.imsOrgId;
+    const hasValues = config.aemAuthorUrl || config.imsOrgId;
 
     return (
         <Flex direction="column" gap="size-200" width="100%">
@@ -115,16 +115,16 @@ export function DaLiveOrgConfigSection({
                         </Text>
                     </Flex>
 
-                    {/* AEM Repository ID */}
+                    {/* AEM Author URL */}
                     <TextField
-                        label="AEM Repository ID"
-                        value={config.aemRepositoryId || ''}
-                        onChange={(value) => onChange({ ...config, aemRepositoryId: value })}
+                        label="AEM Author URL"
+                        value={config.aemAuthorUrl || ''}
+                        onChange={(value) => onChange({ ...config, aemAuthorUrl: value })}
                         placeholder="author-p12345-e67890.adobeaemcloud.com"
                         width="100%"
                         isDisabled={isDisabled}
                         validationState={aemError ? 'invalid' : undefined}
-                        description="AEM Cloud Service environment for asset browsing"
+                        description="AEM Author environment URL for DA.live content authoring"
                     />
                     {aemError && (
                         <Text UNSAFE_className="text-red-600 text-sm -mt-2">

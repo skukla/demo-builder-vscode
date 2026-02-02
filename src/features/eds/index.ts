@@ -40,6 +40,18 @@ export {
 } from './services/configGenerator';
 export type { ConfigGeneratorParams, ConfigGeneratorResult } from './services/configGenerator';
 
+// EDS Reset Service (shared by dashboard and projects-dashboard)
+export {
+    executeEdsReset,
+    extractResetParams,
+} from './services/edsResetService';
+export type {
+    EdsResetParams,
+    EdsResetProgress,
+    EdsResetResult,
+    ExtractParamsResult,
+} from './services/edsResetService';
+
 // Fstab Generator (single source of truth for fstab.yaml)
 export { generateFstabContent } from './services/fstabGenerator';
 export type { FstabConfig } from './services/fstabGenerator';

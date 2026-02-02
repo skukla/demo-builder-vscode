@@ -152,10 +152,10 @@
             "default": "",
             "description": "Default DA.live organization name. Auto-fills the organization field during authentication."
           },
-          "demoBuilder.daLive.AEMRepositoryId": {
+          "demoBuilder.daLive.aemAuthorUrl": {
             "type": "string",
             "default": "author-p158081-e1683323.adobeaemcloud.com",
-            "description": "AEM Cloud Service environment for asset browsing in Universal Editor. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com"
+            "description": "AEM Author environment URL for DA.live content authoring with AEM Assets. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com"
           },
           "demoBuilder.daLive.IMSOrgId": {
             "type": "string",

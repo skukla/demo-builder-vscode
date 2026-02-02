@@ -129,13 +129,6 @@ jest.mock('@/features/eds/services/githubAppService', () => ({
     })),
 }));
 
-// Mock templatePatchRegistry (dynamically imported for template patches)
-jest.mock('@/features/eds/services/templatePatchRegistry', () => ({
-    applyTemplatePatches: jest.fn().mockResolvedValue([
-        { patchId: 'header-nav-tools-defensive', applied: true },
-    ]),
-}));
-
 // Mock configGenerator (dynamically imported for config.json generation)
 jest.mock('@/features/eds/services/configGenerator', () => ({
     generateConfigJson: jest.fn().mockResolvedValue({
@@ -147,6 +140,16 @@ jest.mock('@/features/eds/services/configGenerator', () => ({
 
 // Mock global fetch for code sync verification
 global.fetch = jest.fn();
+
+// Mock edsResetService (dynamically imported) - the shared service for EDS resets
+// extractResetParams is called to validate project has required EDS metadata
+// executeEdsReset is called to perform the actual reset
+const mockExtractResetParams = jest.fn();
+const mockExecuteEdsReset = jest.fn();
+jest.mock('@/features/eds/services/edsResetService', () => ({
+    extractResetParams: (...args: unknown[]) => mockExtractResetParams(...args),
+    executeEdsReset: (...args: unknown[]) => mockExecuteEdsReset(...args),
+}));
 
 // =============================================================================
 // Now import the modules under test (after all mocks are set up)
@@ -287,6 +290,53 @@ describe('handleResetEds', () => {
             const progressReporter = { report: jest.fn() };
             return callback(progressReporter);
         });
+
+        // Setup edsResetService mocks
+        // Default: extractResetParams returns success with valid params
+        mockExtractResetParams.mockImplementation((project: Project) => {
+            const edsInstance = project?.componentInstances?.['eds-storefront'];
+            const metadata = edsInstance?.metadata || {};
+
+            // Validate required fields (mirrors real implementation)
+            if (!metadata.githubRepo) {
+                return {
+                    success: false,
+                    error: 'Missing EDS metadata: GitHub repository not configured',
+                };
+            }
+            if (!metadata.daLiveOrg || !metadata.daLiveSite) {
+                return {
+                    success: false,
+                    error: 'Missing DA.live configuration: org and site are required',
+                };
+            }
+
+            const [repoOwner, repoName] = (metadata.githubRepo as string).split('/');
+            return {
+                success: true,
+                params: {
+                    repoOwner,
+                    repoName,
+                    daLiveOrg: metadata.daLiveOrg,
+                    daLiveSite: metadata.daLiveSite,
+                    templateOwner: 'skukla',
+                    templateRepo: 'citisignal-eds-boilerplate',
+                    contentSource: {
+                        org: 'demo-system-stores',
+                        site: 'accs-citisignal',
+                        indexPath: 'full-index.json',
+                    },
+                    project,
+                },
+            };
+        });
+
+        // Default: executeEdsReset returns success
+        mockExecuteEdsReset.mockResolvedValue({
+            success: true,
+            filesReset: 100,
+            contentCopied: 10,
+        });
     });
 
     it('should show confirmation dialog before reset', async () => {
@@ -327,7 +377,7 @@ describe('handleResetEds', () => {
         expect(mockFileOps.resetRepoToTemplate).not.toHaveBeenCalled();
     });
 
-    it('should call bulk resetRepoToTemplate with correct parameters', async () => {
+    it('should call executeEdsReset with correct parameters', async () => {
         // Given: Valid EDS project with metadata
         const project = createMockEdsProject();
         const context = createMockContext(project);
@@ -338,24 +388,29 @@ describe('handleResetEds', () => {
         // When: handleResetEds is called
         await handleResetEds(context);
 
-        // Then: Should call bulk reset with template and target repos
-        // Template values derived from demo-packages.json: citisignal package + eds-paas stack
-        expect(mockFileOps.resetRepoToTemplate).toHaveBeenCalledWith(
-            'skukla',                       // templateOwner (from demo-packages.json)
-            'citisignal-eds-boilerplate',   // templateRepo (from demo-packages.json)
-            'test-org',                     // targetOwner
-            'test-repo',                    // targetRepo
-            expect.any(Map),                // fileOverrides (contains fstab.yaml)
-            'main',                         // branch
+        // Then: Should call executeEdsReset with extracted params
+        expect(mockExecuteEdsReset).toHaveBeenCalledWith(
+            expect.objectContaining({
+                repoOwner: 'test-org',
+                repoName: 'test-repo',
+                daLiveOrg: 'test-org',
+                daLiveSite: 'test-site',
+                templateOwner: 'skukla',
+                templateRepo: 'citisignal-eds-boilerplate',
+                contentSource: expect.objectContaining({
+                    org: 'demo-system-stores',
+                    site: 'accs-citisignal',
+                }),
+            }),
+            context,
+            expect.objectContaining({
+                getAccessToken: expect.any(Function), // tokenProvider object
+            }),
+            expect.any(Function), // progressCallback
         );
-
-        // And: fileOverrides should contain fstab.yaml with DA.live path
-        const fileOverrides = mockFileOps.resetRepoToTemplate.mock.calls[0][4] as Map<string, string>;
-        expect(fileOverrides.has('fstab.yaml')).toBe(true);
-        expect(fileOverrides.get('fstab.yaml')).toContain('https://content.da.live/test-org/test-site/');
     });
 
-    it('should use bulk operation instead of file-by-file copying', async () => {
+    it('should delegate reset to executeEdsReset service', async () => {
         // Given: Valid EDS project with metadata
         const project = createMockEdsProject();
         const context = createMockContext(project);
@@ -366,14 +421,8 @@ describe('handleResetEds', () => {
         // When: handleResetEds is called
         await handleResetEds(context);
 
-        // Then: Bulk operation should be used (not individual file operations)
-        expect(mockFileOps.resetRepoToTemplate).toHaveBeenCalledTimes(1);
-
-        // And: Individual file operations should NOT be used for the reset
-        // (only for content copying which is handled separately by DA.live)
-        expect(mockFileOps.listRepoFiles).not.toHaveBeenCalled();
-        expect(mockFileOps.deleteFile).not.toHaveBeenCalled();
-        expect(mockFileOps.createOrUpdateFile).not.toHaveBeenCalled();
+        // Then: Should delegate to executeEdsReset (shared service handles bulk operations)
+        expect(mockExecuteEdsReset).toHaveBeenCalledTimes(1);
     });
 
     it('should return success when reset completes', async () => {
@@ -397,7 +446,7 @@ describe('handleResetEds', () => {
         );
     });
 
-    it('should return error when bulk reset fails', async () => {
+    it('should return error when executeEdsReset fails', async () => {
         // Given: Valid EDS project with metadata
         const project = createMockEdsProject();
         const context = createMockContext(project);
@@ -405,14 +454,16 @@ describe('handleResetEds', () => {
         // And: User confirms the reset
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
 
-        // And: Bulk reset fails
-        const resetError = new Error('Failed to reset repo: permission denied');
-        mockFileOps.resetRepoToTemplate.mockRejectedValue(resetError);
+        // And: executeEdsReset returns failure
+        mockExecuteEdsReset.mockResolvedValue({
+            success: false,
+            error: 'Failed to reset repo: permission denied',
+        });
 
         // When: handleResetEds is called
         const result = await handleResetEds(context);
 
-        // Then: Should return error
+        // Then: Should return error from the reset service
         expect(result.success).toBe(false);
         expect(result.error).toContain('permission denied');
 
@@ -420,8 +471,8 @@ describe('handleResetEds', () => {
         expect(vscode.window.showErrorMessage).toHaveBeenCalled();
     });
 
-    it('should include fstab.yaml override in bulk reset', async () => {
-        // Given: Valid EDS project with metadata
+    it('should extract DA.live paths for reset params', async () => {
+        // Given: Valid EDS project with DA.live metadata
         const project = createMockEdsProject();
         const context = createMockContext(project);
 
@@ -431,13 +482,19 @@ describe('handleResetEds', () => {
         // When: handleResetEds is called
         await handleResetEds(context);
 
-        // Then: Bulk reset should be called with fstab.yaml in file overrides
-        expect(mockFileOps.resetRepoToTemplate).toHaveBeenCalled();
-        const fileOverrides = mockFileOps.resetRepoToTemplate.mock.calls[0][4] as Map<string, string>;
+        // Then: extractResetParams should be called with the project
+        expect(mockExtractResetParams).toHaveBeenCalledWith(project);
 
-        // And: fstab.yaml should have DA.live content source path
-        expect(fileOverrides.get('fstab.yaml')).toContain('https://content.da.live/test-org/test-site/');
-        expect(fileOverrides.get('fstab.yaml')).toContain('mountpoints:');
+        // And: executeEdsReset should receive DA.live params for fstab.yaml generation
+        expect(mockExecuteEdsReset).toHaveBeenCalledWith(
+            expect.objectContaining({
+                daLiveOrg: 'test-org',
+                daLiveSite: 'test-site',
+            }),
+            expect.anything(),
+            expect.anything(),
+            expect.anything(),
+        );
     });
 
     it('should return error when project has no EDS metadata', async () => {
@@ -502,7 +559,7 @@ describe('handleResetEds', () => {
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
 
-    it('should publish content to CDN after reset', async () => {
+    it('should include content source info for CDN publishing', async () => {
         // Given: Valid EDS project with metadata
         const project = createMockEdsProject();
         const context = createMockContext(project);
@@ -513,17 +570,22 @@ describe('handleResetEds', () => {
         // When: handleResetEds is called
         await handleResetEds(context);
 
-        // Then: Should publish content to CDN with progress callback
-        expect(mockHelixService.publishAllSiteContent).toHaveBeenCalledWith(
-            'test-org/test-repo',
-            'main',
-            undefined,
-            undefined,
-            expect.any(Function),
+        // Then: executeEdsReset should receive content source info
+        // (actual CDN publishing is handled by the reset service)
+        expect(mockExecuteEdsReset).toHaveBeenCalledWith(
+            expect.objectContaining({
+                contentSource: expect.objectContaining({
+                    org: 'demo-system-stores',
+                    site: 'accs-citisignal',
+                }),
+            }),
+            expect.anything(),
+            expect.anything(),
+            expect.anything(),
         );
     });
 
-    it('should copy content with absolute media URLs for Admin API image handling', async () => {
+    it('should pass progress callback to executeEdsReset', async () => {
         // Given: Valid EDS project with metadata
         const project = createMockEdsProject();
         const context = createMockContext(project);
@@ -534,21 +596,14 @@ describe('handleResetEds', () => {
         // When: handleResetEds is called
         await handleResetEds(context);
 
-        // Then: Content should be copied to DA.live
-        // The transformHtmlForDaLive method converts relative media URLs to absolute URLs
-        // pointing to the source CDN, allowing Admin API to download images during preview
-        const { DaLiveContentOperations } = require('@/features/eds/services/daLiveContentOperations');
-        const mockInstance = DaLiveContentOperations.mock.results[0]?.value;
-
-        // Content is copied with source info (absolute URLs handled internally)
-        expect(mockInstance.copyContentFromSource).toHaveBeenCalledWith(
+        // Then: executeEdsReset should receive a progress callback
+        // (internal operations like content copying report progress through this callback)
+        expect(mockExecuteEdsReset).toHaveBeenCalledWith(
+            expect.anything(),
+            context,
             expect.objectContaining({
-                org: 'demo-system-stores',
-                site: 'accs-citisignal',
-                indexUrl: expect.stringContaining('full-index.json'),
+                getAccessToken: expect.any(Function), // tokenProvider object
             }),
-            'test-org', // daLiveOrg
-            'test-site', // daLiveSite
             expect.any(Function), // progressCallback
         );
     });

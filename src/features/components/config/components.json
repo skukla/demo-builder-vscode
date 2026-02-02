@@ -447,15 +447,15 @@
             "group": "mesh"
         },
         "ADOBE_ASSETS_URL": {
-            "label": "Adobe Assets URL",
+            "label": "Assets Delivery URL (Headless)",
             "type": "url",
             "required": false,
             "placeholder": "https://delivery-p57319-e1619941.adobeaemcloud.com",
-            "description": "Supply if the storefront should load assets from AEM",
+            "description": "AEM Assets delivery URL for headless storefronts to load images. Not used for EDS storefronts.",
             "group": "adobe-assets"
         },
         "AEM_ASSETS_ENABLED": {
-            "label": "AEM Assets Integration",
+            "label": "Product Images from AEM Assets",
             "type": "select",
             "required": false,
             "default": "false",
@@ -463,7 +463,7 @@
                 { "value": "false", "label": "Disabled" },
                 { "value": "true", "label": "Enabled" }
             ],
-            "description": "Enable AEM Assets for product images (requires backend AEM Assets integration)",
+            "description": "When enabled, product images load from AEM Assets instead of the Commerce catalog. Requires your Commerce backend to have AEM Assets integration configured.",
             "group": "adobe-assets"
         },
         "ADOBE_CATALOG_API_KEY": {
