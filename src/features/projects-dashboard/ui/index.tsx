@@ -277,11 +277,18 @@ const ProjectsDashboardApp: React.FC = () => {
     // Handle republish content (EDS projects)
     const handleRepublishContent = useCallback(async (project: Project) => {
         try {
-            await webviewClient.request('republishContent', { projectPath: project.path });
+            const response = await webviewClient.request<{
+                success: boolean;
+            }>('republishContent', { projectPath: project.path });
+
+            // Refresh projects list if republish was successful
+            if (response?.success) {
+                fetchProjects(true);
+            }
         } catch (error) {
             console.error('Failed to republish content:', error);
         }
-    }, []);
+    }, [fetchProjects]);
 
     // Handle edit project
     const handleEditProject = useCallback(async (project: Project) => {

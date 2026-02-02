@@ -18,6 +18,7 @@ import {
     deleteProject,
 } from '../services';
 import { BaseWebviewCommand } from '@/core/base';
+import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { executeCommandForProject } from '@/core/handlers';
 import { getLogger } from '@/core/logging';
@@ -28,6 +29,7 @@ import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboa
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { showDaLiveAuthQuickPick, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
+import { republishStorefrontConfig, needsStorefrontRepublish } from '@/features/eds';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import { getMeshComponentInstance, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
@@ -682,12 +684,14 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
     payload?: { projectPath: string },
 ): Promise<HandlerResponse> => {
     if (!payload?.projectPath) {
+        vscode.window.showErrorMessage('Project path is required');
         return { success: false, error: 'Project path is required' };
     }
 
     try {
         validateProjectPath(payload.projectPath);
     } catch {
+        vscode.window.showErrorMessage('Invalid project path');
         return { success: false, error: 'Invalid project path' };
     }
 
@@ -697,6 +701,7 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
         { persistAfterLoad: false },
     );
     if (!project) {
+        vscode.window.showErrorMessage('Project not found');
         return { success: false, error: 'Project not found' };
     }
 
@@ -707,11 +712,13 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
     const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
 
     if (!repoFullName) {
+        vscode.window.showErrorMessage('Repository information not found. Republish is only available for EDS projects.');
         return { success: false, error: 'Repository information not found. Republish is only available for EDS projects.' };
     }
 
     const [repoOwner, repoName] = repoFullName.split('/');
     if (!repoOwner || !repoName) {
+        vscode.window.showErrorMessage('Invalid repository format');
         return { success: false, error: 'Invalid repository format' };
     }
 
@@ -790,19 +797,34 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                 const helixService = new HelixService(context.logger, githubTokenService, daLiveTokenProvider);
 
                 // Step 1: Apply EDS org config (AEM Assets, Universal Editor)
-                progress.report({ message: 'Step 1/4: Applying EDS configuration...' });
+                progress.report({ message: 'Step 1/5: Applying EDS configuration...' });
                 const { DaLiveContentOperations } = await import('@/features/eds/services/daLiveContentOperations');
                 const { applyDaLiveOrgConfigSettings } = await import('@/features/eds/handlers/edsHelpers');
                 const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, context.logger);
                 await applyDaLiveOrgConfigSettings(daLiveContentOps, effectiveDaLiveOrg, effectiveDaLiveSite, context.logger);
 
-                // Step 2: Sync all code files (includes config.json, patches, scripts)
-                progress.report({ message: 'Step 2/4: Syncing code to CDN...' });
+                // Step 2: Regenerate and sync config.json (picks up env var changes)
+                progress.report({ message: 'Step 2/5: Regenerating storefront configuration...' });
+                const configResult = await republishStorefrontConfig({
+                    project,
+                    secrets: context.context.secrets,
+                    logger: context.logger,
+                    onProgress: (message) => progress.report({ message: `Step 2/5: ${message}` }),
+                });
+                if (!configResult.success) {
+                    context.logger.warn(`[ProjectsList] Config regeneration warning: ${configResult.error}`);
+                    // Continue with republish even if config regeneration has issues
+                } else {
+                    context.logger.debug('[ProjectsList] Config.json regenerated and synced');
+                }
+
+                // Step 3: Sync all code files to CDN
+                progress.report({ message: 'Step 3/5: Syncing code to CDN...' });
                 await helixService.previewCode(repoOwner, repoName, '/*');
                 context.logger.debug('[ProjectsList] Code synced to CDN');
 
-                // Configure permissions via DA.live Config API (part of Step 2)
-                progress.report({ message: 'Step 2/4: Configuring site permissions...' });
+                // Configure permissions via DA.live Config API (part of Step 3)
+                progress.report({ message: 'Step 3/5: Configuring site permissions...' });
                 const userEmail = await daLiveAuthService.getUserEmail();
                 if (userEmail) {
                     await configureDaLivePermissions(daLiveTokenProvider, effectiveDaLiveOrg, effectiveDaLiveSite, userEmail, context.logger);
@@ -810,23 +832,23 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                     context.logger.warn('[ProjectsList] No user email available for permissions');
                 }
 
-                // Step 3: Publish all content (with cache purge for republish scenarios)
-                progress.report({ message: 'Step 3/4: Purging stale cache...' });
+                // Step 4: Publish all content (with cache purge for republish scenarios)
+                progress.report({ message: 'Step 4/5: Purging stale cache...' });
                 await helixService.purgeCacheAll(repoOwner, repoName, 'main');
 
-                progress.report({ message: 'Step 3/4: Publishing content to CDN...' });
+                progress.report({ message: 'Step 4/5: Publishing content to CDN...' });
                 await helixService.publishAllSiteContent(
                     repoFullName,
                     'main',
                     effectiveDaLiveOrg,
                     effectiveDaLiveSite,
                     (info) => {
-                        progress.report({ message: `Step 3/4: ${info.message}` });
+                        progress.report({ message: `Step 4/5: ${info.message}` });
                     },
                 );
 
-                // Step 4: Verify CDN accessibility
-                progress.report({ message: 'Step 4/4: Verifying CDN...' });
+                // Step 5: Verify CDN accessibility
+                progress.report({ message: 'Step 5/5: Verifying CDN...' });
                 const { verifyConfigOnCdn } = await import('@/features/eds/services/configSyncService');
                 const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, context.logger);
                 if (!cdnVerified) {
@@ -834,6 +856,9 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                 }
 
                 context.logger.info(`[ProjectsList] Content republished for ${repoFullName}`);
+
+                // Update storefront status to published (config.json was regenerated)
+                project.edsStorefrontStatusSummary = 'published';
 
                 // Show auto-dismissing success notification (2 seconds)
                 void vscode.window.withProgress(
