@@ -1,8 +1,9 @@
 /**
- * Dashboard Handlers - DA.live Auth Pre-check Tests
+ * Dashboard Handlers - DA.live Auth Tests
  *
- * Tests for DA.live authentication pre-check in handleResetEds:
- * - Token validity check before confirmation dialog
+ * Tests for DA.live authentication in handleResetEds:
+ * - Confirmation dialog shown first (immediate UX feedback)
+ * - Auth check happens inside progress notification
  * - Sign-in notification when token is expired/expiring
  * - User response handling (Sign In vs dismiss)
  */
@@ -186,11 +187,13 @@ jest.mock('@/features/eds/services/configSyncService', () => ({
 global.fetch = jest.fn();
 
 // Mock edsResetService (dynamically imported) - the shared service for EDS resets
-// extractResetParams is called to validate project has required EDS metadata
-// executeEdsReset is called to perform the actual reset
+// resetEdsProjectWithUI is the consolidated entry point used by handlers
+// extractResetParams and executeEdsReset are internal to the service
+const mockResetEdsProjectWithUI = jest.fn();
 const mockExtractResetParams = jest.fn();
 const mockExecuteEdsReset = jest.fn();
 jest.mock('@/features/eds/services/edsResetService', () => ({
+    resetEdsProjectWithUI: (...args: unknown[]) => mockResetEdsProjectWithUI(...args),
     extractResetParams: (...args: unknown[]) => mockExtractResetParams(...args),
     executeEdsReset: (...args: unknown[]) => mockExecuteEdsReset(...args),
 }));
@@ -283,7 +286,7 @@ function createMockContext(project: Project | undefined): HandlerContext {
 // Tests - DA.live Auth Pre-check in handleResetEds
 // =============================================================================
 
-describe('handleResetEds DA.live auth pre-check', () => {
+describe('handleResetEds DA.live auth (confirmation-first flow)', () => {
     let mockHelixService: jest.Mocked<HelixService>;
     let mockAuthService: { getTokenManager: jest.Mock };
     let mockFileOps: {
@@ -392,217 +395,163 @@ describe('handleResetEds DA.live auth pre-check', () => {
             filesReset: 100,
             contentCopied: 10,
         });
-    });
 
-    // =========================================================================
-    // Test 1: Valid token proceeds to confirmation dialog (happy path)
-    // =========================================================================
-    it('should proceed to confirmation dialog when DA.live token is valid', async () => {
-        // Given: Valid DA.live token
-        mockIsAuthenticated.mockResolvedValue(true);
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User cancels at confirmation dialog
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
-
-        // When: handleResetEds is called
-        const result = await handleResetEds(context, { projectPath: project.path });
-
-        // Then: Should reach confirmation dialog
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            expect.stringContaining('reset'),
-            expect.objectContaining({ modal: true }),
-            'Reset Project',
-        );
-
-        // And: Should return cancelled (user didn't confirm)
-        expect(result.success).toBe(false);
-        expect(result.cancelled).toBe(true);
-    });
-
-    // =========================================================================
-    // Test 2: Expired token shows notification with "Sign In" button
-    // =========================================================================
-    it('should show sign-in notification when DA.live token is expired', async () => {
-        // Given: Expired DA.live token
-        mockIsAuthenticated.mockResolvedValue(false);
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User dismisses the notification
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
-
-        // When: handleResetEds is called
-        const result = await handleResetEds(context, { projectPath: project.path });
-
-        // Then: Should show warning notification with Sign In button
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'Your DA.live session has expired. Please sign in to continue.',
-            'Sign In',
-        );
-
-        // And: Should return error with DALIVE_AUTH_REQUIRED type
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('DA.live authentication required');
-        expect(result.errorType).toBe('DALIVE_AUTH_REQUIRED');
-    });
-
-    // =========================================================================
-    // Test 3: User clicks "Sign In" invokes QuickPick authentication flow
-    // =========================================================================
-    it('should invoke QuickPick auth flow when user clicks Sign In', async () => {
-        // Given: Expired DA.live token
-        mockIsAuthenticated.mockResolvedValue(false);
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User clicks "Sign In" button, then cancels QuickPick
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Sign In');
-
-        // Setup QuickPick mock to return cancelled
-        const { showDaLiveAuthQuickPick } = require('@/features/eds/handlers/edsHelpers');
-        (showDaLiveAuthQuickPick as jest.Mock).mockResolvedValue({ success: false, cancelled: true });
-
-        // When: handleResetEds is called
-        const result = await handleResetEds(context, { projectPath: project.path });
-
-        // Then: QuickPick should be invoked
-        expect(showDaLiveAuthQuickPick).toHaveBeenCalledWith(context);
-
-        // And: Should return cancelled
-        expect(result.success).toBe(false);
-        expect(result.cancelled).toBe(true);
-    });
-
-    // =========================================================================
-    // Test 4: User dismisses notification returns error without authRequired
-    // =========================================================================
-    it('should return error without authRequired when user dismisses notification', async () => {
-        // Given: Expired DA.live token
-        mockIsAuthenticated.mockResolvedValue(false);
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User dismisses notification (returns undefined)
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
-
-        // When: handleResetEds is called
-        const result = await handleResetEds(context, { projectPath: project.path });
-
-        // Then: Should return error without authRequired flag
-        expect(result.success).toBe(false);
-        expect(result.errorType).toBe('DALIVE_AUTH_REQUIRED');
-        expect(result.authRequired).toBeUndefined();
-    });
-
-    // =========================================================================
-    // Test 5: Pre-check happens BEFORE confirmation dialog (order verification)
-    // =========================================================================
-    it('should check DA.live auth BEFORE showing confirmation dialog', async () => {
-        // Given: Expired DA.live token
-        mockIsAuthenticated.mockResolvedValue(false);
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: Track showWarningMessage call order
-        const callOrder: string[] = [];
-        mockIsAuthenticated.mockImplementation(async () => {
-            callOrder.push('isAuthenticated');
-            return false;
+        // Default: resetEdsProjectWithUI returns success
+        // This is the consolidated function that the handler delegates to
+        mockResetEdsProjectWithUI.mockResolvedValue({
+            success: true,
+            filesReset: 100,
+            contentCopied: 10,
         });
-        (vscode.window.showWarningMessage as jest.Mock).mockImplementation(async (message: string) => {
-            if (message.includes('DA.live')) {
-                callOrder.push('daLiveNotification');
-            } else if (message.includes('reset')) {
-                callOrder.push('confirmationDialog');
-            }
-            return undefined;
+    });
+
+    // =================================================================
+    // Handler Delegation Tests
+    // The projects-dashboard handler delegates to resetEdsProjectWithUI
+    // Detailed auth behavior tests should be in edsResetService tests
+    // =================================================================
+
+    it('should return error when project path is missing', async () => {
+        // Given: No project path
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // When: handleResetEds is called without project path
+        const result = await handleResetEds(context, undefined);
+
+        // Then: Should return error
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Project path is required');
+    });
+
+    it('should return error when project is not found', async () => {
+        // Given: Project path that doesn't exist
+        const context = createMockContext(undefined); // loadProjectFromPath returns undefined
+
+        // When: handleResetEds is called
+        const result = await handleResetEds(context, { projectPath: '/nonexistent/path' });
+
+        // Then: Should return error
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Project not found');
+    });
+
+    it('should delegate to resetEdsProjectWithUI with correct options', async () => {
+        // Given: Valid EDS project
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // When: handleResetEds is called
+        await handleResetEds(context, { projectPath: project.path });
+
+        // Then: Should delegate to resetEdsProjectWithUI
+        expect(mockResetEdsProjectWithUI).toHaveBeenCalledWith({
+            project,
+            context,
+            logPrefix: '[ProjectsList]',
+            includeBlockLibrary: true,
+            verifyCdn: true,
+            showLogsOnError: true,
+        });
+    });
+
+    it('should return success from resetEdsProjectWithUI', async () => {
+        // Given: Valid EDS project
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // And: resetEdsProjectWithUI returns success
+        mockResetEdsProjectWithUI.mockResolvedValue({
+            success: true,
+            filesReset: 100,
+            contentCopied: 10,
         });
 
         // When: handleResetEds is called
-        await handleResetEds(context, { projectPath: project.path });
-
-        // Then: DA.live auth check should happen BEFORE any dialog
-        expect(callOrder[0]).toBe('isAuthenticated');
-        expect(callOrder[1]).toBe('daLiveNotification');
-
-        // And: Confirmation dialog should NOT be shown (we returned early)
-        expect(callOrder).not.toContain('confirmationDialog');
-    });
-
-    // =========================================================================
-    // Test 6: Pre-check uses DaLiveAuthService instance with context
-    // =========================================================================
-    it('should instantiate DaLiveAuthService with context', async () => {
-        // Given: Expired DA.live token
-        mockIsAuthenticated.mockResolvedValue(false);
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
-
-        // When: handleResetEds is called
-        await handleResetEds(context, { projectPath: project.path });
-
-        // Then: DaLiveAuthService should be instantiated with vscode.ExtensionContext
-        const { DaLiveAuthService } = require('@/features/eds/services/daLiveAuthService');
-        expect(DaLiveAuthService).toHaveBeenCalledWith(context.context);
-    });
-
-    // =========================================================================
-    // Test 7: Logs message when DA.live token is expired
-    // =========================================================================
-    it('should log when DA.live token is expired', async () => {
-        // Given: Expired DA.live token
-        mockIsAuthenticated.mockResolvedValue(false);
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
-
-        // When: handleResetEds is called
-        await handleResetEds(context, { projectPath: project.path });
-
-        // Then: Should log the expired token message
-        expect(context.logger.info).toHaveBeenCalledWith(
-            expect.stringContaining('DA.live token expired'),
-        );
-    });
-
-    // =========================================================================
-    // Test 8: Should delegate reset to executeEdsReset with content source info
-    // =========================================================================
-    it('should delegate reset to executeEdsReset with content source info', async () => {
-        // Given: Valid DA.live token
-        mockIsAuthenticated.mockResolvedValue(true);
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User confirms the reset (modal confirmation dialog)
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // When: handleResetEds is called
         const result = await handleResetEds(context, { projectPath: project.path });
 
-        // Then: Should have succeeded
+        // Then: Should return success
         expect(result.success).toBe(true);
+    });
 
-        // And: Should have delegated to executeEdsReset with correct params
-        // (actual content copying is handled internally by the reset service)
-        expect(mockExecuteEdsReset).toHaveBeenCalledWith(
-            expect.objectContaining({
-                daLiveOrg: 'test-org',
-                daLiveSite: 'test-site',
-                contentSource: expect.objectContaining({
-                    org: 'demo-system-stores',
-                    site: 'accs-citisignal',
-                    indexPath: 'full-index.json',
-                }),
-            }),
-            expect.anything(), // context
-            expect.objectContaining({
-                getAccessToken: expect.any(Function), // tokenProvider
-            }),
-            expect.any(Function), // progressCallback
-        );
+    it('should return cancelled from resetEdsProjectWithUI', async () => {
+        // Given: Valid EDS project
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // And: resetEdsProjectWithUI returns cancelled
+        mockResetEdsProjectWithUI.mockResolvedValue({
+            success: false,
+            cancelled: true,
+        });
+
+        // When: handleResetEds is called
+        const result = await handleResetEds(context, { projectPath: project.path });
+
+        // Then: Should return cancelled
+        expect(result.success).toBe(false);
+        expect(result.cancelled).toBe(true);
+    });
+
+    it('should return auth error from resetEdsProjectWithUI', async () => {
+        // Given: Valid EDS project
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // And: resetEdsProjectWithUI returns auth error
+        mockResetEdsProjectWithUI.mockResolvedValue({
+            success: false,
+            error: 'DA.live authentication required',
+            errorType: 'DALIVE_AUTH_REQUIRED',
+        });
+
+        // When: handleResetEds is called
+        const result = await handleResetEds(context, { projectPath: project.path });
+
+        // Then: Should return the auth error
+        expect(result.success).toBe(false);
+        expect(result.errorType).toBe('DALIVE_AUTH_REQUIRED');
+    });
+
+    it('should return error from resetEdsProjectWithUI', async () => {
+        // Given: Valid EDS project
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // And: resetEdsProjectWithUI returns error
+        mockResetEdsProjectWithUI.mockResolvedValue({
+            success: false,
+            error: 'EDS metadata missing',
+        });
+
+        // When: handleResetEds is called
+        const result = await handleResetEds(context, { projectPath: project.path });
+
+        // Then: Should return the error
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('EDS metadata missing');
+    });
+
+    it('should pass result with extra fields from resetEdsProjectWithUI', async () => {
+        // Given: Valid EDS project
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // And: resetEdsProjectWithUI returns success with extra fields
+        mockResetEdsProjectWithUI.mockResolvedValue({
+            success: true,
+            filesReset: 150,
+            contentCopied: 25,
+            meshRedeployed: true,
+        });
+
+        // When: handleResetEds is called
+        const result = await handleResetEds(context, { projectPath: project.path });
+
+        // Then: Should return success with extra fields
+        expect(result.success).toBe(true);
+        expect(result.filesReset).toBe(150);
+        expect(result.contentCopied).toBe(25);
+        expect(result.meshRedeployed).toBe(true);
     });
 });

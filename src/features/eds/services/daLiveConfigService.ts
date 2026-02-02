@@ -38,7 +38,7 @@ const DA_ADMIN_URL = 'https://admin.da.live';
  * Permission row in the permissions sheet
  *
  * From storefront-tools permissions.js:
- * - path: 'CONFIG' for admin, '/ + **' for recursive access
+ * - path: 'CONFIG' for admin, '/**' for recursive access to all content
  * - groups: User email or org ID (comma-separated for multiple)
  * - actions: 'write' or 'read'
  * - comments: Optional description
@@ -126,6 +126,94 @@ export class DaLiveConfigService {
         }
 
         return token;
+    }
+
+    /**
+     * Read current org config from DA.live
+     *
+     * Permissions are stored at the ORG level, not site level.
+     * See: https://da.live/docs/administration/permissions
+     *
+     * @param org - DA.live organization name
+     * @returns Org config or null if not found
+     */
+    async getOrgConfig(org: string): Promise<MultiSheetConfig | null> {
+        const token = await this.getDaLiveToken();
+        const url = `${DA_ADMIN_URL}/config/${org}/`;
+
+        this.logger.debug(`[DaLiveConfig] Getting org config for ${org}`);
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+
+            if (response.status === 404) {
+                this.logger.debug(`[DaLiveConfig] No config exists for org ${org}`);
+                return null;
+            }
+
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => '');
+                throw new Error(
+                    `Failed to read org config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
+                );
+            }
+
+            return await response.json();
+        } catch (error) {
+            if ((error as Error).message.includes('Failed to read')) {
+                throw error;
+            }
+            throw new Error(`Config API error: ${(error as Error).message}`);
+        }
+    }
+
+    /**
+     * Update org config (merges with existing)
+     *
+     * Permissions are stored at the ORG level, not site level.
+     *
+     * @param org - DA.live organization name
+     * @param config - Config to update
+     */
+    async updateOrgConfig(org: string, config: MultiSheetConfig): Promise<void> {
+        const token = await this.getDaLiveToken();
+        const url = `${DA_ADMIN_URL}/config/${org}/`;
+
+        this.logger.debug(`[DaLiveConfig] Updating org config for ${org}`);
+
+        const formData = new FormData();
+        formData.set('config', JSON.stringify(config));
+
+        try {
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                body: formData,
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => '');
+                throw new Error(
+                    `Failed to update org config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
+                );
+            }
+
+            this.logger.debug(`[DaLiveConfig] Org config updated for ${org}`);
+        } catch (error) {
+            if ((error as Error).message.includes('Failed to update')) {
+                throw error;
+            }
+            throw new Error(`Config API error: ${(error as Error).message}`);
+        }
     }
 
     /**
@@ -219,10 +307,13 @@ export class DaLiveConfigService {
      * Grant user write access to a site
      *
      * This is the main entry point for configuring permissions.
-     * Follows the storefront-tools pattern:
-     * 1. Read existing config (preserve other settings)
-     * 2. Merge user into permissions sheet
-     * 3. Update config
+     * IMPORTANT: Permissions are stored at the ORG level, not site level.
+     * See: https://da.live/docs/administration/permissions
+     *
+     * Follows the pattern:
+     * 1. Read existing ORG config (preserve other settings)
+     * 2. Merge user into permissions sheet with site-specific path
+     * 3. Update ORG config
      *
      * @param org - DA.live organization name
      * @param site - DA.live site name
@@ -237,8 +328,8 @@ export class DaLiveConfigService {
         try {
             this.logger.info(`[DaLiveConfig] Granting access to ${userEmail} for ${org}/${site}`);
 
-            // Step 1: Read existing config
-            const existing = await this.getConfig(org, site);
+            // Step 1: Read existing ORG config (permissions are at org level)
+            const existing = await this.getOrgConfig(org);
 
             // Step 2: Build permissions data
             const permissionsData: PermissionRow[] = [];
@@ -248,9 +339,12 @@ export class DaLiveConfigService {
                 permissionsData.push(...existing.permissions.data);
             }
 
-            // Check if user already has content permission
+            // Site-specific content path (e.g., /citisignal-eds/**)
+            const sitePath = `/${site}/**`;
+
+            // Check if user already has site content permission
             const hasContentPermission = permissionsData.some(
-                (row) => row.groups === userEmail && row.path === '/ + **',
+                (row) => row.groups === userEmail && row.path === sitePath,
             );
 
             // Check if user already has CONFIG permission
@@ -269,18 +363,18 @@ export class DaLiveConfigService {
                 });
             }
 
-            // Add content permission with recursive access
+            // Add site-specific content permission with recursive access
             if (!hasContentPermission) {
                 permissionsData.push({
-                    path: '/ + **',
+                    path: sitePath,
                     groups: userEmail,
                     actions: 'write',
-                    comments: 'Demo Builder - content access',
+                    comments: `Demo Builder - ${site} content access`,
                 });
             }
 
             if (hasContentPermission && hasConfigPermission) {
-                this.logger.debug(`[DaLiveConfig] User ${userEmail} already has full access`);
+                this.logger.debug(`[DaLiveConfig] User ${userEmail} already has full access to ${site}`);
             }
 
             // Step 3: Build updated config
@@ -303,8 +397,8 @@ export class DaLiveConfigService {
                 },
             };
 
-            // Step 4: Update config
-            await this.updateConfig(org, site, updatedConfig);
+            // Step 4: Update ORG config (permissions are at org level)
+            await this.updateOrgConfig(org, updatedConfig);
 
             this.logger.info(`[DaLiveConfig] Access granted to ${userEmail} for ${org}/${site}`);
             return { success: true };

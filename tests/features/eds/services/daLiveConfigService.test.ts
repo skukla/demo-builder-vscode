@@ -99,7 +99,7 @@ describe('DaLiveConfigService', () => {
                     limit: 1,
                     offset: 0,
                     data: [
-                        { path: '/ + **', groups: testEmail, actions: 'write' },
+                        { path: '/test-site/**', groups: testEmail, actions: 'write' },
                     ],
                 },
             };
@@ -160,7 +160,7 @@ describe('DaLiveConfigService', () => {
                     limit: 1,
                     offset: 0,
                     data: [
-                        { path: '/ + **', groups: testEmail, actions: 'write' },
+                        { path: '/test-site/**', groups: testEmail, actions: 'write' },
                     ],
                 },
             };
@@ -246,7 +246,7 @@ describe('DaLiveConfigService', () => {
                     offset: 0,
                     data: [
                         {
-                            path: '/ + **',
+                            path: '/test-site/**',
                             groups: 'other@example.com',
                             actions: 'write',
                         },
@@ -292,7 +292,7 @@ describe('DaLiveConfigService', () => {
                 expect.objectContaining({ groups: testEmail, path: 'CONFIG' }),
             );
             expect(config.permissions.data).toContainEqual(
-                expect.objectContaining({ groups: testEmail, path: '/ + **' }),
+                expect.objectContaining({ groups: testEmail, path: '/test-site/**' }),
             );
         });
 
@@ -308,7 +308,7 @@ describe('DaLiveConfigService', () => {
                     offset: 0,
                     data: [
                         { path: 'CONFIG', groups: testEmail, actions: 'write' },
-                        { path: '/ + **', groups: testEmail, actions: 'write' },
+                        { path: '/test-site/**', groups: testEmail, actions: 'write' },
                     ],
                 },
             };
@@ -366,7 +366,7 @@ describe('DaLiveConfigService', () => {
 
             // Then: Returns error
             expect(result.success).toBe(false);
-            expect(result.error).toContain('Failed to update config');
+            expect(result.error).toContain('Failed to update org config');
         });
     });
 
@@ -400,7 +400,7 @@ describe('DaLiveConfigService', () => {
                     limit: 1,
                     offset: 0,
                     data: [
-                        { path: '/ + **', groups: testEmail, actions: 'write' },
+                        { path: '/test-site/**', groups: testEmail, actions: 'write' },
                     ],
                 },
             };
@@ -433,7 +433,7 @@ describe('DaLiveConfigService', () => {
                     total: 1,
                     limit: 1,
                     offset: 0,
-                    data: [{ path: '/ + **', groups: '*', actions: 'read' }],
+                    data: [{ path: '/test-site/**', groups: '*', actions: 'read' }],
                 },
             };
 
@@ -467,7 +467,7 @@ describe('DaLiveConfigService', () => {
                     offset: 0,
                     data: [
                         {
-                            path: '/ + **',
+                            path: '/test-site/**',
                             groups: 'other@example.com',
                             actions: 'write',
                         },
@@ -521,8 +521,8 @@ describe('DaLiveConfigService', () => {
                     limit: 2,
                     offset: 0,
                     data: [
-                        { path: '/ + **', groups: 'user1@example.com', actions: 'write' },
-                        { path: '/ + **', groups: 'user2@example.com', actions: 'read' },
+                        { path: '/test-site/**', groups: 'user1@example.com', actions: 'write' },
+                        { path: '/test-site/**', groups: 'user2@example.com', actions: 'read' },
                     ],
                 },
             };
@@ -556,9 +556,9 @@ describe('DaLiveConfigService', () => {
                     limit: 2,
                     offset: 0,
                     data: [
-                        { path: '/ + **', groups: testEmail, actions: 'write' },
+                        { path: '/test-site/**', groups: testEmail, actions: 'write' },
                         {
-                            path: '/ + **',
+                            path: '/test-site/**',
                             groups: 'other@example.com',
                             actions: 'write',
                         },
@@ -609,7 +609,7 @@ describe('DaLiveConfigService', () => {
                     offset: 0,
                     data: [
                         {
-                            path: '/ + **',
+                            path: '/test-site/**',
                             groups: 'other@example.com',
                             actions: 'write',
                         },

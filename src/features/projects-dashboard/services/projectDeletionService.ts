@@ -70,11 +70,18 @@ export async function deleteProject(
     const isEds = isEdsProject(project);
     const edsMetadata = isEds ? extractEdsMetadata(project) : null;
 
-    // For EDS projects, check auth and offer cleanup options
+    // For EDS projects, offer cleanup options
+    // Auth is checked lazily in performEdsCleanup when user actually selects an option
+    // This avoids slow auth checks before showing the confirmation dialog
     let cleanupOptions: CleanupOptions | null = null;
     if (isEds && edsMetadata) {
-        const authStatus = await checkCleanupAuth(context);
-        cleanupOptions = await showCleanupConfirmation(project, edsMetadata, authStatus);
+        // Pass default auth status showing "Sign-in required" hints
+        // Actual auth prompting happens in performEdsCleanup if needed
+        const defaultAuthStatus: CleanupAuthStatus = {
+            gitHubAuthenticated: false,
+            daLiveAuthenticated: false,
+        };
+        cleanupOptions = await showCleanupConfirmation(project, edsMetadata, defaultAuthStatus);
 
         // User cancelled the cleanup dialog
         if (cleanupOptions === null) {

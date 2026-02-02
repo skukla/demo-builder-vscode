@@ -142,11 +142,13 @@ jest.mock('@/features/eds/services/configGenerator', () => ({
 global.fetch = jest.fn();
 
 // Mock edsResetService (dynamically imported) - the shared service for EDS resets
-// extractResetParams is called to validate project has required EDS metadata
-// executeEdsReset is called to perform the actual reset
+// resetEdsProjectWithUI is the consolidated entry point for EDS reset
+// extractResetParams and executeEdsReset are internal to the service
+const mockResetEdsProjectWithUI = jest.fn();
 const mockExtractResetParams = jest.fn();
 const mockExecuteEdsReset = jest.fn();
 jest.mock('@/features/eds/services/edsResetService', () => ({
+    resetEdsProjectWithUI: (...args: unknown[]) => mockResetEdsProjectWithUI(...args),
     extractResetParams: (...args: unknown[]) => mockExtractResetParams(...args),
     executeEdsReset: (...args: unknown[]) => mockExecuteEdsReset(...args),
 }));
@@ -337,274 +339,108 @@ describe('handleResetEds', () => {
             filesReset: 100,
             contentCopied: 10,
         });
+
+        // Default: resetEdsProjectWithUI returns success
+        // This is the consolidated function that handles confirmation, auth, and progress
+        mockResetEdsProjectWithUI.mockResolvedValue({
+            success: true,
+            filesReset: 100,
+            contentCopied: 10,
+        });
     });
 
-    it('should show confirmation dialog before reset', async () => {
-        // Given: Valid EDS project with metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
+    // =================================================================
+    // Handler Delegation Tests
+    // The dashboard handler delegates to resetEdsProjectWithUI
+    // Detailed behavior tests are in edsResetService tests
+    // =================================================================
 
-        // And: User confirms the reset
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // When: handleResetEds is called
-        await handleResetEds(context);
-
-        // Then: Confirmation dialog should be shown with modal:true
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            expect.stringContaining('reset'),
-            expect.objectContaining({ modal: true }),
-            'Reset Project',
-        );
-    });
-
-    it('should return cancelled when user declines', async () => {
-        // Given: Valid EDS project with metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User clicks Cancel (returns undefined)
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
+    it('should return error when no current project', async () => {
+        // Given: No current project
+        const context = createMockContext(undefined);
 
         // When: handleResetEds is called
         const result = await handleResetEds(context);
 
-        // Then: Should return cancelled result
+        // Then: Should return error
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('No project found');
+
+        // And: resetEdsProjectWithUI should not be called
+        expect(mockResetEdsProjectWithUI).not.toHaveBeenCalled();
+    });
+
+    it('should delegate to resetEdsProjectWithUI with correct options', async () => {
+        // Given: Valid EDS project
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // When: handleResetEds is called
+        await handleResetEds(context);
+
+        // Then: Should delegate to resetEdsProjectWithUI
+        expect(mockResetEdsProjectWithUI).toHaveBeenCalledWith({
+            project,
+            context,
+            logPrefix: '[Dashboard]',
+        });
+    });
+
+    it('should return success from resetEdsProjectWithUI', async () => {
+        // Given: Valid EDS project
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // And: resetEdsProjectWithUI returns success
+        mockResetEdsProjectWithUI.mockResolvedValue({
+            success: true,
+            filesReset: 100,
+            contentCopied: 10,
+        });
+
+        // When: handleResetEds is called
+        const result = await handleResetEds(context);
+
+        // Then: Should return the success result
+        expect(result.success).toBe(true);
+        expect(result.filesReset).toBe(100);
+    });
+
+    it('should return cancelled from resetEdsProjectWithUI', async () => {
+        // Given: Valid EDS project
+        const project = createMockEdsProject();
+        const context = createMockContext(project);
+
+        // And: resetEdsProjectWithUI returns cancelled
+        mockResetEdsProjectWithUI.mockResolvedValue({
+            success: false,
+            cancelled: true,
+        });
+
+        // When: handleResetEds is called
+        const result = await handleResetEds(context);
+
+        // Then: Should return cancelled
         expect(result.success).toBe(false);
         expect(result.cancelled).toBe(true);
-
-        // And: No GitHub operations should be called
-        expect(mockFileOps.resetRepoToTemplate).not.toHaveBeenCalled();
     });
 
-    it('should call executeEdsReset with correct parameters', async () => {
-        // Given: Valid EDS project with metadata
+    it('should return error from resetEdsProjectWithUI', async () => {
+        // Given: Valid EDS project
         const project = createMockEdsProject();
         const context = createMockContext(project);
 
-        // And: User confirms the reset
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // When: handleResetEds is called
-        await handleResetEds(context);
-
-        // Then: Should call executeEdsReset with extracted params
-        expect(mockExecuteEdsReset).toHaveBeenCalledWith(
-            expect.objectContaining({
-                repoOwner: 'test-org',
-                repoName: 'test-repo',
-                daLiveOrg: 'test-org',
-                daLiveSite: 'test-site',
-                templateOwner: 'skukla',
-                templateRepo: 'citisignal-eds-boilerplate',
-                contentSource: expect.objectContaining({
-                    org: 'demo-system-stores',
-                    site: 'accs-citisignal',
-                }),
-            }),
-            context,
-            expect.objectContaining({
-                getAccessToken: expect.any(Function), // tokenProvider object
-            }),
-            expect.any(Function), // progressCallback
-        );
-    });
-
-    it('should delegate reset to executeEdsReset service', async () => {
-        // Given: Valid EDS project with metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User confirms the reset
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // When: handleResetEds is called
-        await handleResetEds(context);
-
-        // Then: Should delegate to executeEdsReset (shared service handles bulk operations)
-        expect(mockExecuteEdsReset).toHaveBeenCalledTimes(1);
-    });
-
-    it('should return success when reset completes', async () => {
-        // Given: Valid EDS project with metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User confirms the reset
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // When: handleResetEds is called
-        const result = await handleResetEds(context);
-
-        // Then: Should return success
-        expect(result.success).toBe(true);
-
-        // And: Should show auto-dismissing success notification
-        expect(vscode.window.withProgress).toHaveBeenCalledWith(
-            { location: vscode.ProgressLocation.Notification, title: '"test-eds-project" reset successfully' },
-            expect.any(Function),
-        );
-    });
-
-    it('should return error when executeEdsReset fails', async () => {
-        // Given: Valid EDS project with metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User confirms the reset
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // And: executeEdsReset returns failure
-        mockExecuteEdsReset.mockResolvedValue({
+        // And: resetEdsProjectWithUI returns error
+        mockResetEdsProjectWithUI.mockResolvedValue({
             success: false,
-            error: 'Failed to reset repo: permission denied',
+            error: 'EDS metadata missing',
         });
 
         // When: handleResetEds is called
         const result = await handleResetEds(context);
 
-        // Then: Should return error from the reset service
+        // Then: Should return the error
         expect(result.success).toBe(false);
-        expect(result.error).toContain('permission denied');
-
-        // And: Should show error message
-        expect(vscode.window.showErrorMessage).toHaveBeenCalled();
-    });
-
-    it('should extract DA.live paths for reset params', async () => {
-        // Given: Valid EDS project with DA.live metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User confirms the reset
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // When: handleResetEds is called
-        await handleResetEds(context);
-
-        // Then: extractResetParams should be called with the project
-        expect(mockExtractResetParams).toHaveBeenCalledWith(project);
-
-        // And: executeEdsReset should receive DA.live params for fstab.yaml generation
-        expect(mockExecuteEdsReset).toHaveBeenCalledWith(
-            expect.objectContaining({
-                daLiveOrg: 'test-org',
-                daLiveSite: 'test-site',
-            }),
-            expect.anything(),
-            expect.anything(),
-            expect.anything(),
-        );
-    });
-
-    it('should return error when project has no EDS metadata', async () => {
-        // Given: Project without EDS metadata (no githubRepo)
-        const project = createMockEdsProject({
-            componentInstances: {
-                'eds-storefront': {
-                    id: 'eds-storefront',
-                    name: 'EDS Storefront',
-                    type: 'frontend',
-                    status: 'ready',
-                    metadata: {
-                        // No githubRepo - missing EDS metadata
-                        daLiveOrg: 'test-org',
-                        daLiveSite: 'test-site',
-                    },
-                },
-            },
-        });
-        const context = createMockContext(project);
-
-        // When: handleResetEds is called
-        const result = await handleResetEds(context);
-
-        // Then: Should return error about missing metadata
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('metadata');
-
-        // And: No confirmation dialog should be shown
-        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
-
-        // And: No GitHub operations should be called
-        expect(mockFileOps.resetRepoToTemplate).not.toHaveBeenCalled();
-    });
-
-    it('should return error when DA.live config is missing', async () => {
-        // Given: Project without DA.live metadata
-        const project = createMockEdsProject({
-            componentInstances: {
-                'eds-storefront': {
-                    id: 'eds-storefront',
-                    name: 'EDS Storefront',
-                    type: 'frontend',
-                    status: 'ready',
-                    metadata: {
-                        githubRepo: 'test-org/test-repo',
-                        // No daLiveOrg/daLiveSite
-                    },
-                },
-            },
-        });
-        const context = createMockContext(project);
-
-        // When: handleResetEds is called
-        const result = await handleResetEds(context);
-
-        // Then: Should return error about missing DA.live config
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('DA.live');
-
-        // And: No confirmation dialog should be shown
-        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
-    });
-
-    it('should include content source info for CDN publishing', async () => {
-        // Given: Valid EDS project with metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User confirms the reset
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // When: handleResetEds is called
-        await handleResetEds(context);
-
-        // Then: executeEdsReset should receive content source info
-        // (actual CDN publishing is handled by the reset service)
-        expect(mockExecuteEdsReset).toHaveBeenCalledWith(
-            expect.objectContaining({
-                contentSource: expect.objectContaining({
-                    org: 'demo-system-stores',
-                    site: 'accs-citisignal',
-                }),
-            }),
-            expect.anything(),
-            expect.anything(),
-            expect.anything(),
-        );
-    });
-
-    it('should pass progress callback to executeEdsReset', async () => {
-        // Given: Valid EDS project with metadata
-        const project = createMockEdsProject();
-        const context = createMockContext(project);
-
-        // And: User confirms the reset
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
-
-        // When: handleResetEds is called
-        await handleResetEds(context);
-
-        // Then: executeEdsReset should receive a progress callback
-        // (internal operations like content copying report progress through this callback)
-        expect(mockExecuteEdsReset).toHaveBeenCalledWith(
-            expect.anything(),
-            context,
-            expect.objectContaining({
-                getAccessToken: expect.any(Function), // tokenProvider object
-            }),
-            expect.any(Function), // progressCallback
-        );
+        expect(result.error).toBe('EDS metadata missing');
     });
 });

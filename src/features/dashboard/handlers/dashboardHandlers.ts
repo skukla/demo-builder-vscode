@@ -496,16 +496,8 @@ export const handleNavigateBack: MessageHandler = async (context) => {
 /**
  * Handle 'resetEds' message - Reset EDS project to template state
  *
- * Resets the repository contents to match the template without deleting the repo.
- * This preserves the repo URL, settings, webhooks, and GitHub App installation.
- *
- * Delegates to shared EdsResetService for the core workflow.
- *
- * Steps:
- * 1. Reset repo to template using bulk tree operations
- * 2. Waits for code sync
- * 3. Copies demo content to DA.live
- * 4. Publishes all content to CDN
+ * Delegates to the consolidated resetEdsProjectWithUI function in edsResetService.
+ * This eliminates code duplication between dashboard and projects-dashboard handlers.
  */
 export const handleResetEds: MessageHandler = async (context) => {
     const project = await context.stateManager.getCurrentProject();
@@ -515,151 +507,12 @@ export const handleResetEds: MessageHandler = async (context) => {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    // Extract reset parameters from project
-    const { extractResetParams, executeEdsReset } =
-        await import('@/features/eds/services/edsResetService');
-    const paramsResult = extractResetParams(project);
-
-    if (!paramsResult.success) {
-        context.logger.error(`[Dashboard] resetEds: ${paramsResult.error}`);
-        return { success: false, error: paramsResult.error, code: ErrorCode.CONFIG_INVALID };
-    }
-
-    const { repoOwner, repoName } = paramsResult.params;
-    const repoFullName = `${repoOwner}/${repoName}`;
-
-    // Pre-check DA.live authentication
-    const daLiveAuthService = new DaLiveAuthService(context.context);
-    const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
-
-    if (!isDaLiveAuthenticated) {
-        context.logger.info('[Dashboard] resetEds: DA.live token expired or missing');
-
-        const signInButton = 'Sign In';
-        const selection = await vscode.window.showWarningMessage(
-            'Your DA.live session has expired. Please sign in to continue.',
-            signInButton,
-        );
-
-        if (selection === signInButton) {
-            const authResult = await showDaLiveAuthQuickPick(context);
-            if (authResult.cancelled || !authResult.success) {
-                return {
-                    success: false,
-                    error: authResult.error || 'DA.live authentication required',
-                    errorType: 'DALIVE_AUTH_REQUIRED',
-                    cancelled: authResult.cancelled,
-                };
-            }
-        } else {
-            return {
-                success: false,
-                error: 'DA.live authentication required',
-                errorType: 'DALIVE_AUTH_REQUIRED',
-            };
-        }
-    }
-
-    // Show confirmation dialog
-    const confirmButton = 'Reset Project';
-    const confirmation = await vscode.window.showWarningMessage(
-        `Are you sure you want to reset this EDS project? This will reset all code to the template state and re-copy demo content.`,
-        { modal: true },
-        confirmButton,
-    );
-
-    if (confirmation !== confirmButton) {
-        context.logger.info('[Dashboard] resetEds: User cancelled reset');
-        return { success: false, cancelled: true };
-    }
-
-    // Check if AEM Code Sync app is installed
-    const { tokenService: preCheckTokenService } = getGitHubServices(context);
-    const { GitHubAppService } = await import('@/features/eds/services/githubAppService');
-    const appService = new GitHubAppService(preCheckTokenService, context.logger);
-    const appCheck = await appService.isAppInstalled(repoOwner, repoName);
-
-    if (!appCheck.isInstalled) {
-        context.logger.warn(`[Dashboard] AEM Code Sync app not installed on ${repoFullName}`);
-
-        const installButton = 'Install App';
-        const continueButton = 'Continue Anyway';
-        const appWarning = await vscode.window.showWarningMessage(
-            'The AEM Code Sync GitHub App is not installed on this repository. ' +
-            'Without it, code changes will not sync to the CDN and the site may not work correctly.',
-            installButton,
-            continueButton,
-        );
-
-        if (appWarning === installButton) {
-            const installUrl = appService.getInstallUrl(repoOwner, repoName);
-            await vscode.env.openExternal(vscode.Uri.parse(installUrl));
-
-            const afterInstall = await vscode.window.showInformationMessage(
-                'After installing the app, click Continue to proceed with the reset.',
-                'Continue',
-                'Cancel',
-            );
-
-            if (afterInstall !== 'Continue') {
-                context.logger.info('[Dashboard] resetEds: User cancelled after app installation prompt');
-                return { success: false, cancelled: true };
-            }
-        } else if (appWarning !== continueButton) {
-            context.logger.info('[Dashboard] resetEds: User cancelled at app check');
-            return { success: false, cancelled: true };
-        }
-    }
-
-    // Create token provider for DA.live operations
-    const tokenProvider = {
-        getAccessToken: async () => {
-            return await daLiveAuthService.getAccessToken();
-        },
-    };
-
-    // Execute reset with progress notification
-    return vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Resetting EDS Project',
-            cancellable: false,
-        },
-        async (progress) => {
-            context.logger.info(`[Dashboard] Resetting EDS project: ${repoFullName}`);
-
-            const result = await executeEdsReset(
-                paramsResult.params,
-                context,
-                tokenProvider,
-                (p) => {
-                    progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` });
-                },
-            );
-
-            if (result.success) {
-                // Show auto-dismissing success notification
-                void vscode.window.withProgress(
-                    { location: vscode.ProgressLocation.Notification, title: `"${project.name}" reset successfully` },
-                    async () => new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION)),
-                );
-            } else if (result.errorType === 'GITHUB_APP_NOT_INSTALLED') {
-                const installButton = 'Install GitHub App';
-                const selection = await vscode.window.showErrorMessage(
-                    `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${result.errorDetails?.owner}/${result.errorDetails?.repo}. ` +
-                    `Please install the app and try again.`,
-                    installButton,
-                );
-                if (selection === installButton && result.errorDetails?.installUrl) {
-                    await vscode.env.openExternal(vscode.Uri.parse(result.errorDetails.installUrl as string));
-                }
-            } else if (result.error) {
-                vscode.window.showErrorMessage(`Failed to reset EDS project: ${result.error}`);
-            }
-
-            return result;
-        },
-    );
+    const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetService');
+    return resetEdsProjectWithUI({
+        project,
+        context,
+        logPrefix: '[Dashboard]',
+    });
 };
 
 // ============================================================================
