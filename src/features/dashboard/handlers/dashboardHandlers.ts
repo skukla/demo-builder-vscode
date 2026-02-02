@@ -50,6 +50,7 @@ export const handleReady: MessageHandler = async (context) => {
                 path: project.path,
             },
             initialMeshStatus: project.meshStatusSummary,
+            initialEdsStorefrontStatus: project.edsStorefrontStatusSummary,
         },
     });
 

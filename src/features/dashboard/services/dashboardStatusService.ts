@@ -34,6 +34,7 @@ export interface StatusPayload {
     adobeProject: string | undefined;
     frontendConfigChanged: boolean;
     mesh?: MeshStatusInfo;
+    edsStorefrontStatus?: 'published' | 'stale' | 'update-declined' | 'not-published';
 }
 
 /**
@@ -58,6 +59,7 @@ export function buildStatusPayload(
         adobeProject: project.adobe?.projectName,
         frontendConfigChanged,
         mesh,
+        edsStorefrontStatus: project.edsStorefrontStatusSummary,
     };
 }
 

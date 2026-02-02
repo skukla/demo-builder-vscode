@@ -42,6 +42,7 @@ export interface ProjectStatus {
         endpoint?: string;
         message?: string;
     };
+    edsStorefrontStatus?: EdsStorefrontStatus;
 }
 
 /**
@@ -58,6 +59,11 @@ export interface StatusDisplay {
 }
 
 /**
+ * EDS storefront status values
+ */
+export type EdsStorefrontStatus = 'published' | 'stale' | 'update-declined' | 'not-published';
+
+/**
  * Props for the useDashboardStatus hook
  */
 export interface UseDashboardStatusProps {
@@ -65,6 +71,8 @@ export interface UseDashboardStatusProps {
     hasMesh?: boolean;
     /** Initial mesh status from card grid (avoids loading flash) */
     initialMeshStatus?: string;
+    /** Initial EDS storefront status from initial data */
+    initialEdsStorefrontStatus?: EdsStorefrontStatus;
 }
 
 /**
@@ -109,7 +117,7 @@ export const isMeshBusy = (status: MeshStatus | undefined): boolean =>
  * @returns Object containing status state and computed displays
  */
 export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = false): UseDashboardStatusReturn {
-    const { hasMesh, initialMeshStatus } = props;
+    const { hasMesh, initialMeshStatus, initialEdsStorefrontStatus } = props;
 
     const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
     const [isRunning, setIsRunning] = useState(false);
@@ -177,9 +185,22 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
 
     // Memoize status displays for performance
     const demoStatusDisplay = useMemo((): StatusDisplay => {
-        // EDS projects are always published/live
+        // EDS projects show dynamic status based on storefront config state
+        // Use updated value from projectStatus (via statusUpdate) or fall back to initial prop
         if (isEds) {
-            return { color: 'green', text: 'Published' };
+            const storefrontStatus = projectStatus?.edsStorefrontStatus || initialEdsStorefrontStatus || 'published';
+            switch (storefrontStatus) {
+                case 'published':
+                    return { color: 'green', text: 'Published' };
+                case 'stale':
+                    return { color: 'yellow', text: 'Republish Needed' };
+                case 'update-declined':
+                    return { color: 'orange', text: 'Republish Needed' };
+                case 'not-published':
+                    return { color: 'gray', text: 'Not Published' };
+                default:
+                    return { color: 'green', text: 'Published' };
+            }
         }
 
         switch (status) {
@@ -202,7 +223,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             default:
                 return { color: 'gray', text: 'Ready' };
         }
-    }, [isEds, status, frontendConfigChanged, port]);
+    }, [isEds, status, frontendConfigChanged, port, initialEdsStorefrontStatus, projectStatus?.edsStorefrontStatus]);
 
     const meshStatusDisplay = useMemo((): StatusDisplay | null => {
         // Use initialMeshStatus from init payload to avoid loading flash

@@ -74,6 +74,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         isEds: boolean;
         edsLiveUrl?: string;
         edsDaLiveUrl?: string;
+        initialEdsStorefrontStatus?: string;
     }> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
@@ -96,6 +97,9 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         const edsLiveUrl = getEdsLiveUrl(project);
         const edsDaLiveUrl = getEdsDaLiveUrl(project);
 
+        // Get EDS storefront status for dynamic display
+        const initialEdsStorefrontStatus = project?.edsStorefrontStatusSummary;
+
         return {
             theme,
             project: project ? {
@@ -108,6 +112,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             isEds,
             edsLiveUrl,
             edsDaLiveUrl,
+            initialEdsStorefrontStatus,
         };
     }
 

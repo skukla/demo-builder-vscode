@@ -17,6 +17,8 @@ import {
     getFrontendPort,
     getMeshStatusText,
     getMeshStatusVariant,
+    getStorefrontStatusText,
+    getStorefrontStatusVariant,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import { isEdsProject } from '@/types/typeGuards';
 import { ProjectActionsMenu } from './ProjectActionsMenu';
@@ -91,8 +93,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 
     const isEds = isEdsProject(project);
     const port = getFrontendPort(project);
-    const statusText = getStatusText(project.status, port, isEds);
-    const statusVariant = getStatusVariant(project.status, isEds);
+    // EDS projects use storefront status; non-EDS use demo running status
+    const statusText = isEds ? getStorefrontStatusText(project) : getStatusText(project.status, port, false);
+    const statusVariant = isEds ? getStorefrontStatusVariant(project) : getStatusVariant(project.status, false);
     const brandStackSummary = useMemo(() => getBrandStackSummary(project), [project]);
     const meshText = getMeshStatusText(project);
     const meshVariant = getMeshStatusVariant(project);

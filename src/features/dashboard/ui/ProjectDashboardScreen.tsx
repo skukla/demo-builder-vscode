@@ -44,6 +44,8 @@ interface ProjectDashboardScreenProps {
     edsDaLiveUrl?: string;
     /** Initial mesh status from card grid computation (avoids loading flash) */
     initialMeshStatus?: string;
+    /** Initial EDS storefront status (for dynamic status display) */
+    initialEdsStorefrontStatus?: 'published' | 'stale' | 'update-declined' | 'not-published';
 }
 
 /**
@@ -57,7 +59,7 @@ interface ProjectDashboardScreenProps {
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, initialMeshStatus }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
@@ -92,7 +94,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         displayName: statusDisplayName,
         status,
         meshStatus,
-    } = useDashboardStatus({ hasMesh, initialMeshStatus }, isEdsStable);
+    } = useDashboardStatus({ hasMesh, initialMeshStatus, initialEdsStorefrontStatus }, isEdsStable);
 
     // Action handlers via extracted hook
     const {

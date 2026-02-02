@@ -14,7 +14,10 @@ import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
+    getStorefrontStatusText,
+    getStorefrontStatusVariant,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
+import { isEdsProject } from '@/types/typeGuards';
 import { ProjectActionsMenu } from './ProjectActionsMenu';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import type { Project } from '@/types/base';
@@ -83,9 +86,11 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
         [project, onSelect],
     );
 
+    const isEds = isEdsProject(project);
     const port = getFrontendPort(project);
-    const statusText = getStatusText(project.status, port);
-    const statusVariant = getStatusVariant(project.status);
+    // EDS projects use storefront status; non-EDS use demo running status
+    const statusText = isEds ? getStorefrontStatusText(project) : getStatusText(project.status, port, false);
+    const statusVariant = isEds ? getStorefrontStatusVariant(project) : getStatusVariant(project.status, false);
     const componentSummary = useMemo(() => getComponentSummary(project), [project]);
 
     const ariaLabel = `${project.name}, ${statusText}${componentSummary ? `, ${componentSummary}` : ''}`;

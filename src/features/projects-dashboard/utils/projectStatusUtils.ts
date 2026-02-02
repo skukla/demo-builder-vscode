@@ -108,6 +108,45 @@ export function getMeshStatusVariant(project: Project): StatusVariant | null {
 }
 
 /**
+ * Gets the storefront status display text for EDS project cards
+ *
+ * @returns Display text based on edsStorefrontStatusSummary
+ */
+export function getStorefrontStatusText(project: Project): string {
+    const status = project.edsStorefrontStatusSummary;
+    switch (status) {
+        case 'stale':
+        case 'update-declined':
+            return 'Republish Needed';
+        case 'not-published':
+            return 'Not Published';
+        case 'published':
+        default:
+            return 'Published';
+    }
+}
+
+/**
+ * Gets the StatusDot variant for storefront status display
+ *
+ * @returns StatusDot variant based on edsStorefrontStatusSummary
+ */
+export function getStorefrontStatusVariant(project: Project): StatusVariant {
+    const status = project.edsStorefrontStatusSummary;
+    switch (status) {
+        case 'stale':
+            return 'warning';  // Yellow
+        case 'update-declined':
+            return 'warning';  // Orange (same variant, different context)
+        case 'not-published':
+            return 'neutral';  // Gray
+        case 'published':
+        default:
+            return 'success';  // Green
+    }
+}
+
+/**
  * Gets the frontend port from a running project
  *
  * Searches component instances for the first one with a port defined.

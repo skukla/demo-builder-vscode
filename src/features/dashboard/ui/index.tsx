@@ -28,6 +28,7 @@ root.render(
                 edsLiveUrl={data?.edsLiveUrl}
                 edsDaLiveUrl={data?.edsDaLiveUrl}
                 initialMeshStatus={data?.initialMeshStatus}
+                initialEdsStorefrontStatus={data?.initialEdsStorefrontStatus}
             />
         )}
     </WebviewApp>,
