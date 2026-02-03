@@ -1053,8 +1053,8 @@ async function executeStorefrontSetupPhases(
                 await helixService.publishAllSiteContent(
                     `${repoOwner}/${repoName}`,
                     'main',
-                    undefined,
-                    undefined,
+                    edsConfig.daLiveOrg,
+                    edsConfig.daLiveSite,
                     onPublishProgress,
                 );
 
