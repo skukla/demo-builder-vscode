@@ -9,6 +9,8 @@
  * - projectDeletionService: Project deletion with retry logic
  */
 
+import * as fsPromises from 'fs/promises';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     extractSettingsFromProject,
@@ -24,7 +26,7 @@ import { executeCommandForProject } from '@/core/handlers';
 import { getLogger } from '@/core/logging';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito, TIMEOUTS } from '@/core/utils';
-import { validateProjectPath } from '@/core/validation';
+import { validateProjectPath, validateProjectNameSecurity } from '@/core/validation';
 import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
@@ -518,19 +520,73 @@ export const handleRenameProject: MessageHandler<{ projectPath: string; newName:
             };
         }
 
+        // Check if demo is running - cannot rename while running
+        if (project.status === 'running') {
+            return {
+                success: false,
+                error: 'Cannot rename project while demo is running. Stop the demo first.',
+            };
+        }
+
+        // Validate new name (same rules as project creation)
+        try {
+            validateProjectNameSecurity(newName);
+        } catch (validationError) {
+            return {
+                success: false,
+                error: validationError instanceof Error ? validationError.message : 'Invalid project name',
+            };
+        }
+
         const oldName = project.name;
+        const oldPath = project.path;
+
+        // Use name directly as folder (consistent with project creation)
+        const projectsRoot = path.dirname(oldPath);
+        const newPath = path.join(projectsRoot, newName);
+
+        // Rename folder if path changes
+        if (newPath !== oldPath) {
+            // Check if new folder already exists
+            try {
+                await fsPromises.access(newPath);
+                return {
+                    success: false,
+                    error: `A project folder named "${newName}" already exists`,
+                };
+            } catch {
+                // Folder doesn't exist, which is what we want
+            }
+
+            // Rename the folder on disk
+            await fsPromises.rename(oldPath, newPath);
+
+            // Update project.path and componentInstances paths
+            project.path = newPath;
+            if (project.componentInstances) {
+                for (const componentId of Object.keys(project.componentInstances)) {
+                    const component = project.componentInstances[componentId];
+                    if (component.path?.startsWith(oldPath)) {
+                        component.path = component.path.replace(oldPath, newPath);
+                    }
+                }
+            }
+
+            // Update recent projects list
+            await context.stateManager.removeFromRecentProjects(oldPath);
+        }
 
         // Update the name
         project.name = newName;
 
-        // Save the updated project
+        // Save the updated project (at the new location)
         await context.stateManager.saveProject(project);
 
         context.logger.info(`Renamed project: "${oldName}" → "${newName}"`);
 
         return {
             success: true,
-            data: { success: true, newName },
+            data: { success: true, newName, newPath },
         };
     } catch (error) {
         context.logger.error('Failed to rename project', error instanceof Error ? error : undefined);
