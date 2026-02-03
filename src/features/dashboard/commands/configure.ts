@@ -208,8 +208,12 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                     // Deploy mesh first, then republish storefront
                                     try {
                                         await vscode.commands.executeCommand('demoBuilder.deployMesh');
-                                        // After mesh deployment, republish storefront
-                                        await this.republishStorefront(project);
+                                        // Reload project after mesh deployment to get updated meshState
+                                        // (deployMesh saves its own state, so 'project' is now stale)
+                                        const freshProject = await this.stateManager.getCurrentProject();
+                                        if (freshProject) {
+                                            await this.republishStorefront(freshProject);
+                                        }
                                     } catch (error) {
                                         this.logger.error('[Configure] Failed to apply changes:', error as Error);
                                     }
@@ -549,7 +553,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                         // Save updated project state
                         await this.stateManager.saveProject(project);
                         await ProjectDashboardWebviewCommand.refreshStatus();
-                        vscode.window.showInformationMessage('Storefront configuration republished successfully');
+                        this.showSuccessMessage('Storefront configuration republished successfully');
                     } else {
                         vscode.window.showErrorMessage(`Failed to republish storefront: ${result.error}`);
                     }
