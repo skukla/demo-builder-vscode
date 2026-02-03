@@ -113,6 +113,7 @@ interface StorefrontSetupStartPayload {
                 login: string;
                 name?: string;
                 avatarUrl?: string;
+                email?: string;
             };
         };
     };

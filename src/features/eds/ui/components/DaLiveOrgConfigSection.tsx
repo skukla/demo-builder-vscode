@@ -107,7 +107,7 @@ export function DaLiveOrgConfigSection({
             {isExpanded && (
                 <Flex direction="column" gap="size-300" marginStart="size-300">
                     {/* Info text */}
-                    <Flex alignItems="flex-start" gap="size-100">
+                    <Flex alignItems="start" gap="size-100">
                         <InfoOutline size="S" UNSAFE_style={{ marginTop: '2px', flexShrink: 0 }} />
                         <Text UNSAFE_className="text-sm text-gray-600">
                             Optional settings for AEM Assets and Universal Editor integration.

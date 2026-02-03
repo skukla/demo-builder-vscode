@@ -43,6 +43,8 @@ export interface ConfigSyncParams {
     authManager?: AuthenticationService;
     /** Optional progress callback for UI updates during CDN verification */
     onProgress?: PhaseProgressCallback;
+    /** Whether to verify block library CDN availability in parallel */
+    verifyBlockLibrary?: boolean;
 }
 
 /**
@@ -59,6 +61,8 @@ export interface ConfigSyncResult {
     cdnPublished: boolean;
     /** Whether config.json was verified accessible on CDN */
     cdnVerified: boolean;
+    /** Whether block library CDN was verified (if verifyBlockLibrary was true) */
+    blockLibraryVerified?: boolean;
 }
 
 // ==========================================================
