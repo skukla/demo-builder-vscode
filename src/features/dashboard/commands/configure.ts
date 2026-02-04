@@ -585,7 +585,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             await vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: 'Republishing storefront configuration...',
+                    title: 'Republishing storefront:',
                     cancellable: false,
                 },
                 async (progress) => {
