@@ -214,7 +214,7 @@ export async function handleCheckApiMesh(
                     };
 
                 case 'error':
-                    context.logger.warn('[API Mesh] Mesh exists but is in error state');
+                    context.logger.warn('[API Mesh] Existing mesh is in error state - will attempt recovery via update');
                     if (meshCheck.error) {
                         context.debugLogger.trace('[API Mesh] Error details:', meshCheck.error.substring(0, 500));
                     }
@@ -225,7 +225,7 @@ export async function handleCheckApiMesh(
                         meshId: meshCheck.meshId,
                         meshStatus: 'error',
                         endpoint,
-                        error: 'Mesh exists but deployment failed. Click "Recreate Mesh" to delete and redeploy it.',
+                        error: 'Mesh is in error state from a previous deployment. Deployment will attempt automatic recovery.',
                     };
 
                 case 'pending':
