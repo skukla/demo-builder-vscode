@@ -35,6 +35,7 @@ export function useSelectedComponents({
             return componentsData.frontends?.find(c => c.id === componentId) ||
                    componentsData.backends?.find(c => c.id === componentId) ||
                    componentsData.dependencies?.find(c => c.id === componentId) ||
+                   componentsData.mesh?.find(c => c.id === componentId) ||
                    componentsData.integrations?.find(c => c.id === componentId) ||
                    componentsData.appBuilder?.find(c => c.id === componentId);
         };
@@ -72,7 +73,9 @@ export function useSelectedComponents({
 
         project.componentSelections?.dependencies?.forEach((depId: string) => {
             if (!components.some(c => c.id === depId)) {
-                const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId);
+                // Search in both dependencies and mesh sections
+                const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId) ||
+                            componentsData.mesh?.find((d: ComponentData) => d.id === depId);
                 if (dep && hasComponentEnvVars(dep)) {
                     components.push({ id: dep.id, data: dep, type: 'Dependency' });
                 }

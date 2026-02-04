@@ -22,11 +22,8 @@ import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelp
 import type { Project } from '@/types/base';
 import { getMeshComponentInstance, hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
-import {
-    getAllComponentDefinitions,
-    hasComponentEnvVars,
-    discoverComponentsFromInstances,
-} from './configureHelpers';
+import { getAllComponentDefinitions } from './configureHelpers';
+import { useSelectedComponents } from './hooks/useSelectedComponents';
 import {
     normalizeProjectName,
     getProjectNameError,
@@ -39,6 +36,7 @@ export interface ComponentsData {
     frontends?: ComponentData[];
     backends?: ComponentData[];
     dependencies?: ComponentData[];
+    mesh?: ComponentData[];
     integrations?: ComponentData[];
     appBuilder?: ComponentData[];
     envVars?: Record<string, ComponentEnvVar>;
@@ -217,79 +215,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
         setProjectNameTouched(true);
     }, []);
 
-    // Get all selected components with their data
-    const selectedComponents = useMemo(() => {
-        const components: Array<{ id: string; data: ComponentData; type: string }> = [];
-
-        const findComponent = (componentId: string): ComponentData | undefined => {
-            return componentsData.frontends?.find(c => c.id === componentId) ||
-                   componentsData.backends?.find(c => c.id === componentId) ||
-                   componentsData.dependencies?.find(c => c.id === componentId) ||
-                   componentsData.integrations?.find(c => c.id === componentId) ||
-                   componentsData.appBuilder?.find(c => c.id === componentId);
-        };
-
-        const addComponentWithDeps = (comp: ComponentData, type: string) => {
-            components.push({ id: comp.id, data: comp, type });
-
-            comp.dependencies?.required?.forEach(depId => {
-                const dep = findComponent(depId);
-                if (dep && !components.some(c => c.id === depId) && hasComponentEnvVars(dep)) {
-                    components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                }
-            });
-
-            comp.dependencies?.optional?.forEach(depId => {
-                const dep = findComponent(depId);
-                if (dep && !components.some(c => c.id === depId)) {
-                    const isSelected = project.componentSelections?.dependencies?.includes(depId);
-                    if (isSelected && hasComponentEnvVars(dep)) {
-                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                    }
-                }
-            });
-        };
-
-        if (project.componentSelections?.frontend) {
-            const frontend = componentsData.frontends?.find((f: ComponentData) => f.id === project.componentSelections?.frontend);
-            if (frontend) addComponentWithDeps(frontend, 'Frontend');
-        }
-
-        if (project.componentSelections?.backend) {
-            const backend = componentsData.backends?.find((b: ComponentData) => b.id === project.componentSelections?.backend);
-            if (backend) addComponentWithDeps(backend, 'Backend');
-        }
-
-        project.componentSelections?.dependencies?.forEach((depId: string) => {
-            if (!components.some(c => c.id === depId)) {
-                const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId);
-                if (dep && hasComponentEnvVars(dep)) {
-                    components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                }
-            }
-        });
-
-        project.componentSelections?.integrations?.forEach((sysId: string) => {
-            const sys = componentsData.integrations?.find((s: ComponentData) => s.id === sysId);
-            if (sys) components.push({ id: sys.id, data: sys, type: 'External System' });
-        });
-
-        project.componentSelections?.appBuilder?.forEach((appId: string) => {
-            const app = componentsData.appBuilder?.find((a: ComponentData) => a.id === appId);
-            if (app) addComponentWithDeps(app, 'App Builder');
-        });
-
-        // Fallback: discover components from componentInstances if no selections
-        if (components.length === 0 && project.componentInstances) {
-            const discovered = discoverComponentsFromInstances(
-                project.componentInstances,
-                getAllComponentDefinitions(componentsData),
-            );
-            components.push(...discovered);
-        }
-
-        return components;
-    }, [project.componentSelections, project.componentInstances, componentsData]);
+    // Get all selected components with their data (using extracted hook)
+    const selectedComponents = useSelectedComponents({ project, componentsData });
 
     // Deduplicate fields and organize by service
     const serviceGroups = useMemo(() => {
