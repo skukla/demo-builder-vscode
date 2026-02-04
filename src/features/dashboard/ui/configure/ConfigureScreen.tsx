@@ -18,6 +18,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
+import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import type { Project } from '@/types/base';
 import { getMeshComponentInstance, hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
@@ -559,9 +560,23 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
                 newConfigs[componentId][field.key] = value;
             });
 
+            // Linked field: ADOBE_COMMERCE_URL → ADOBE_COMMERCE_GRAPHQL_ENDPOINT
+            // Only auto-derive if GraphQL hasn't been manually touched
+            if (field.key === 'ADOBE_COMMERCE_URL' && typeof value === 'string') {
+                const graphqlKey = 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT';
+                if (!touchedFields.has(graphqlKey)) {
+                    const derivedGraphql = deriveGraphqlEndpoint(value);
+                    field.componentIds.forEach(componentId => {
+                        if (newConfigs[componentId]) {
+                            newConfigs[componentId][graphqlKey] = derivedGraphql;
+                        }
+                    });
+                }
+            }
+
             return newConfigs;
         });
-    }, []);
+    }, [touchedFields]);
 
     /**
      * Normalize URL field on blur - removes trailing slashes for visual feedback.

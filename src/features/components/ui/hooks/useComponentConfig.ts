@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { toServiceGroupWithSortedFields, ServiceGroupDef } from '@/features/components/services/serviceGroupTransforms';
+import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
 import { ComponentEnvVar, ComponentConfigs, WizardState } from '@/types/webview';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
@@ -385,9 +386,24 @@ export function useComponentConfig({
                 if (!newConfigs[componentId]) newConfigs[componentId] = {};
                 newConfigs[componentId][field.key] = value;
             });
+
+            // Linked field: ADOBE_COMMERCE_URL → ADOBE_COMMERCE_GRAPHQL_ENDPOINT
+            // Only auto-derive if GraphQL hasn't been manually touched
+            if (field.key === 'ADOBE_COMMERCE_URL' && typeof value === 'string') {
+                const graphqlKey = 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT';
+                if (!touchedFields.has(graphqlKey)) {
+                    const derivedGraphql = deriveGraphqlEndpoint(value);
+                    field.componentIds.forEach(componentId => {
+                        if (newConfigs[componentId]) {
+                            newConfigs[componentId][graphqlKey] = derivedGraphql;
+                        }
+                    });
+                }
+            }
+
             return newConfigs;
         });
-    }, []);
+    }, [touchedFields]);
 
     const getFieldValue = useCallback((field: UniqueField): string | boolean | undefined => {
         for (const componentId of field.componentIds) {
