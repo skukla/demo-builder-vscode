@@ -185,22 +185,21 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
 
                                 {/* Mesh Status */}
                                 {meshStatusDisplay && (
-                                    <Flex alignItems="center" gap="size-100">
-                                        <StatusCard
-                                            label="API Mesh"
-                                            status={meshStatusDisplay.text}
-                                            color={meshStatusDisplay.color}
-                                            size="S"
-                                            className="dashboard-status-badge"
-                                        />
-                                        {meshStatus === 'needs-auth' && (
-                                            <Link onPress={handleReAuthenticate} isQuiet>
-                                                Sign in
-                                            </Link>
-                                        )}
-                                    </Flex>
+                                    <StatusCard
+                                        label="API Mesh"
+                                        status={meshStatusDisplay.text}
+                                        color={meshStatusDisplay.color}
+                                        size="S"
+                                        className="dashboard-status-badge"
+                                    />
                                 )}
                                 </div>
+                                {/* Sign in link - outside grid to avoid disrupting layout */}
+                                {meshStatus === 'needs-auth' && (
+                                    <Link onPress={handleReAuthenticate} isQuiet UNSAFE_style={{ marginLeft: '8px' }}>
+                                        Sign in
+                                    </Link>
+                                )}
                             </View>
                                 {/* All Projects button */}
                                 <Button variant="secondary" onPress={handleNavigateBack}>
