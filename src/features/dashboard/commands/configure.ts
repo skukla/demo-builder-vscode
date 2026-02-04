@@ -29,6 +29,7 @@ interface ConfigureInitialData {
         frontends?: unknown[];
         backends?: unknown[];
         dependencies?: unknown[];
+        mesh?: unknown[];
         integrations?: unknown[];
         appBuilder?: unknown[];
         envVars: Record<string, unknown>;
@@ -125,6 +126,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             frontends: registry.components.frontends,
             backends: registry.components.backends,
             dependencies: registry.components.dependencies,
+            mesh: registry.components.mesh,
             integrations: registry.components.integrations,
             appBuilder: registry.components.appBuilder,
             envVars: registry.envVars || {},
@@ -585,7 +587,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             await vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: 'Republishing storefront:',
+                    title: 'Republishing storefront',
                     cancellable: false,
                 },
                 async (progress) => {
