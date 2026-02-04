@@ -71,6 +71,9 @@ jest.mock('@adobe/react-spectrum', () => ({
     ),
     Divider: () => <hr />,
     ProgressCircle: () => <div data-testid="progress-circle" />,
+    Link: ({ children, onPress, isQuiet, ...props }: any) => (
+        <a onClick={onPress} data-testid="sign-in-link" {...props}>{children}</a>
+    ),
 }));
 
 // Mock Spectrum icons

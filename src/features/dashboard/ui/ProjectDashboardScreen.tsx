@@ -11,7 +11,7 @@ import {
     View,
     Flex,
     Button,
-    ProgressCircle,
+    Link,
 } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useRef } from 'react';
 import { isStartActionDisabled } from './dashboardPredicates';
@@ -100,7 +100,6 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
     const {
         handleStartDemo,
         handleStopDemo,
-        handleReAuthenticate,
         handleViewLogs,
         handleDeployMesh,
         handleOpenBrowser,
@@ -111,6 +110,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         handleDeleteProject,
         handleNavigateBack,
         handleViewComponents,
+        handleReAuthenticate,
     } = useDashboardActions({
         isOpeningBrowser,
         setIsTransitioning,
@@ -185,34 +185,22 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
 
                                 {/* Mesh Status */}
                                 {meshStatusDisplay && (
-                                    <StatusCard
-                                        label="API Mesh"
-                                        status={meshStatusDisplay.text}
-                                        color={meshStatusDisplay.color}
-                                        size="S"
-                                        className="dashboard-status-badge"
-                                    />
-                                )}
-                                </div>
-
-                                {/* Mesh action buttons */}
-                                {meshStatusDisplay && (
-                                    <Flex direction="row" alignItems="center" gap="size-100" marginTop="size-50">
-
+                                    <Flex alignItems="center" gap="size-100">
+                                        <StatusCard
+                                            label="API Mesh"
+                                            status={meshStatusDisplay.text}
+                                            color={meshStatusDisplay.color}
+                                            size="S"
+                                            className="dashboard-status-badge"
+                                        />
                                         {meshStatus === 'needs-auth' && (
-                                            <button
-                                                onClick={handleReAuthenticate}
-                                                className="action-pill"
-                                            >
+                                            <Link onPress={handleReAuthenticate} isQuiet>
                                                 Sign in
-                                            </button>
-                                        )}
-
-                                        {meshStatus === 'authenticating' && (
-                                            <ProgressCircle size="S" isIndeterminate UNSAFE_className="loading-spinner-small" />
+                                            </Link>
                                         )}
                                     </Flex>
                                 )}
+                                </div>
                             </View>
                                 {/* All Projects button */}
                                 <Button variant="secondary" onPress={handleNavigateBack}>

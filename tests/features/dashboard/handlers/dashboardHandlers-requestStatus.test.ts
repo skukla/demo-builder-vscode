@@ -24,7 +24,10 @@ jest.mock('@/core/validation', () => ({
     validateURL: jest.fn(),
 }));
 jest.mock('vscode', () => ({
-    window: { activeColorTheme: { kind: 1 } },
+    window: {
+        activeColorTheme: { kind: 1 },
+        showWarningMessage: jest.fn().mockResolvedValue('Cancel'), // Default: user cancels
+    },
     ColorThemeKind: { Dark: 2, Light: 1 },
     commands: { executeCommand: jest.fn() },
     env: { openExternal: jest.fn() },
@@ -163,7 +166,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         });
     });
 
-    it('should return needs-auth when not authenticated', async () => {
+    it('should return needs-auth when not authenticated and user cancels sign-in', async () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
@@ -173,7 +176,12 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { ServiceLocator } = require('@/core/di');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(false),
+            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(false),
         });
+
+        // Mock user clicking "Cancel" on the sign-in prompt
+        const vscode = require('vscode');
+        vscode.window.showWarningMessage.mockResolvedValue('Cancel');
 
         const result = await handleRequestStatus(mockContext);
 
@@ -183,5 +191,45 @@ describe('dashboardHandlers - handleRequestStatus', () => {
                 status: 'needs-auth',
             },
         });
+
+        // Verify sign-in prompt was shown
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+            'Adobe sign-in required to check mesh status.',
+            'Sign In',
+            'Cancel',
+        );
+    });
+
+    it('should check mesh status after successful sign-in', async () => {
+        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        detectFrontendChanges.mockReturnValue(false);
+
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
+
+        // Auth returns false initially, then true after login
+        const { ServiceLocator } = require('@/core/di');
+        const mockAuthManager = {
+            isAuthenticated: jest.fn()
+                .mockResolvedValueOnce(false)  // Initial check
+                .mockResolvedValueOnce(true),  // After login
+            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
+        };
+        ServiceLocator.getAuthenticationService.mockReturnValue(mockAuthManager);
+
+        // Mock user clicking "Sign In"
+        const vscode = require('vscode');
+        vscode.window.showWarningMessage.mockResolvedValue('Sign In');
+
+        const result = await handleRequestStatus(mockContext);
+
+        expect(result.success).toBe(true);
+        expect(result.data).toMatchObject({
+            mesh: {
+                status: 'deployed',
+            },
+        });
+
+        // Verify login was called
+        expect(mockAuthManager.loginAndRestoreProjectContext).toHaveBeenCalled();
     });
 });

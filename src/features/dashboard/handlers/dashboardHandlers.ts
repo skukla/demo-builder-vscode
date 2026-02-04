@@ -84,27 +84,60 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         if (meshComponent.status === 'deploying') {
             meshStatus = 'deploying';
         } else {
-            // Auth check — override with 'needs-auth' if not authenticated
+            // Auth check — prompt for inline sign-in if not authenticated
             const authManager = ServiceLocator.getAuthenticationService();
-            const isAuthenticated = await authManager.isAuthenticated();
+            let isAuthenticated = await authManager.isAuthenticated();
 
             if (!isAuthenticated) {
-                meshStatus = 'needs-auth';
-                context.logger.debug('[Dashboard] Auth check failed, showing needs-auth');
-            } else if (hasMeshDeploymentRecord(project)) {
-                // Read persisted status — card grid already computed full fidelity
-                const summary = project.meshStatusSummary;
-                meshStatus = summary === 'stale' ? 'config-changed'
-                    : (summary === 'unknown' || !summary) ? 'deployed'
-                    : summary;
+                context.logger.debug('[Dashboard] Auth check failed, prompting for sign-in');
 
-                // Lightweight background verification (is the mesh still there?)
-                verifyMeshDeployment(context, project).catch(err => {
-                    context.logger.debug('[Dashboard] Background mesh verification failed', err);
-                });
-            } else {
-                meshStatus = 'not-deployed';
+                // Prompt for inline sign-in (same pattern as Deploy Mesh)
+                const selection = await vscode.window.showWarningMessage(
+                    'Adobe sign-in required to check mesh status.',
+                    'Sign In',
+                    'Cancel',
+                );
+
+                if (selection === 'Sign In') {
+                    context.logger.info('[Dashboard] Starting Adobe sign-in for status check');
+                    const loginSuccess = await authManager.loginAndRestoreProjectContext({
+                        organization: project.adobe?.organization,
+                        projectId: project.adobe?.projectId,
+                        workspace: project.adobe?.workspace,
+                    });
+
+                    if (loginSuccess) {
+                        isAuthenticated = await authManager.isAuthenticated();
+                        context.logger.info('[Dashboard] Sign-in successful');
+                    } else {
+                        context.logger.warn('[Dashboard] Sign-in failed or cancelled');
+                    }
+                }
+
+                // If still not authenticated after prompt, show needs-auth status
+                if (!isAuthenticated) {
+                    meshStatus = 'needs-auth';
+                }
             }
+
+            // Only check deployment status if authenticated
+            if (isAuthenticated) {
+                if (hasMeshDeploymentRecord(project)) {
+                    // Read persisted status — card grid already computed full fidelity
+                    const summary = project.meshStatusSummary;
+                    meshStatus = summary === 'stale' ? 'config-changed'
+                        : (summary === 'unknown' || !summary) ? 'deployed'
+                        : summary;
+
+                    // Lightweight background verification (is the mesh still there?)
+                    verifyMeshDeployment(context, project).catch(err => {
+                        context.logger.debug('[Dashboard] Background mesh verification failed', err);
+                    });
+                } else {
+                    meshStatus = 'not-deployed';
+                }
+            }
+            // If not authenticated, meshStatus remains 'needs-auth' from above
         }
     }
 
@@ -121,103 +154,6 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     });
 
     return { success: true, data: statusData };
-};
-
-/**
- * Handle 're-authenticate' message - Trigger browser authentication flow
- */
-export const handleReAuthenticate: MessageHandler = async (context) => {
-    try {
-        const project = await context.stateManager.getCurrentProject();
-        if (!project) {
-            context.logger.error('[Dashboard] No current project for re-authentication');
-            return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-        }
-
-        // Helper to send progress updates to UI
-        const sendAuthProgress = (message: string) => {
-            context.panel?.webview.postMessage({
-                type: 'meshStatusUpdate',
-                payload: {
-                    status: 'authenticating',
-                    message,
-                },
-            });
-        };
-
-        // Update UI to 'authenticating' state
-        sendAuthProgress('Opening browser for authentication...');
-
-        context.logger.debug('[Dashboard] Starting re-authentication flow');
-
-        const authManager = ServiceLocator.getAuthenticationService();
-
-        // Trigger browser auth
-        await authManager.login();
-
-        context.logger.debug('[Dashboard] Browser authentication completed');
-        sendAuthProgress('Restoring Adobe context...');
-
-        // Auto-select project's Adobe context (org → project → workspace)
-        // This ensures mesh commands have the required context and don't prompt interactively
-        if (project.adobe?.organization) {
-            context.logger.debug(`[Dashboard] Auto-selecting project org: ${project.adobe.organization}`);
-            sendAuthProgress('Selecting organization...');
-
-            try {
-                await authManager.selectOrganization(project.adobe.organization);
-                context.logger.debug('[Dashboard] Organization selected successfully');
-            } catch (orgError) {
-                context.logger.warn('[Dashboard] Could not select project organization', orgError as Error);
-            }
-        }
-
-        // Auto-select project (requires org context)
-        if (project.adobe?.projectId && project.adobe?.organization) {
-            context.logger.debug(`[Dashboard] Auto-selecting project: ${project.adobe.projectId}`);
-            sendAuthProgress('Selecting project...');
-
-            try {
-                await authManager.selectProject(project.adobe.projectId, project.adobe.organization);
-                context.logger.debug('[Dashboard] Project selected successfully');
-            } catch (projectError) {
-                context.logger.warn('[Dashboard] Could not select project', projectError as Error);
-            }
-        }
-
-        // Auto-select workspace (requires project context)
-        if (project.adobe?.workspace && project.adobe?.projectId) {
-            context.logger.debug(`[Dashboard] Auto-selecting workspace: ${project.adobe.workspace}`);
-            sendAuthProgress('Selecting workspace...');
-
-            try {
-                await authManager.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
-                context.logger.debug('[Dashboard] Workspace selected successfully');
-            } catch (workspaceError) {
-                context.logger.warn('[Dashboard] Could not select workspace', workspaceError as Error);
-            }
-        }
-
-        // Re-check mesh status with fresh authentication
-        context.logger.debug('[Dashboard] Re-checking mesh status after authentication');
-        sendAuthProgress('Checking mesh status...');
-        await handleRequestStatus(context);
-
-        return { success: true };
-    } catch (error) {
-        context.logger.error('[Dashboard] Re-authentication failed', error as Error);
-
-        // Send error status to UI
-        context.panel?.webview.postMessage({
-            type: 'meshStatusUpdate',
-            payload: {
-                status: 'error',
-                message: 'Authentication failed. Please try again.',
-            },
-        });
-
-        return { success: false, error: 'Authentication failed', code: ErrorCode.AUTH_REQUIRED };
-    }
 };
 
 /**
@@ -515,6 +451,41 @@ export const handleResetEds: MessageHandler = async (context) => {
     });
 };
 
+/**
+ * Handle 'reAuthenticate' message - Re-authenticate with Adobe
+ *
+ * Called when user clicks "Sign in" link after session expired (needs-auth status).
+ * Uses loginAndRestoreProjectContext to restore full project context after login,
+ * then requests a status refresh to update the mesh status display.
+ */
+export const handleReAuthenticate: MessageHandler = async (context) => {
+    context.logger.debug('[Dashboard] handleReAuthenticate called');
+
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const authManager = ServiceLocator.getAuthenticationService();
+
+    context.logger.info('[Dashboard] Starting Adobe sign-in from re-authenticate link');
+    const loginSuccess = await authManager.loginAndRestoreProjectContext({
+        organization: project.adobe?.organization,
+        projectId: project.adobe?.projectId,
+        workspace: project.adobe?.workspace,
+    });
+
+    if (!loginSuccess) {
+        context.logger.warn('[Dashboard] Sign-in failed or cancelled');
+        return { success: false, error: 'Sign-in failed or cancelled' };
+    }
+
+    context.logger.info('[Dashboard] Sign-in successful, refreshing status');
+
+    // Trigger status refresh by calling handleRequestStatus
+    return handleRequestStatus(context);
+};
+
 // ============================================================================
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
@@ -531,9 +502,6 @@ export const dashboardHandlers = defineHandlers({
     // Initialization handlers
     'ready': handleReady,
     'requestStatus': handleRequestStatus,
-
-    // Authentication handlers
-    're-authenticate': handleReAuthenticate,
 
     // Demo lifecycle handlers
     'startDemo': handleStartDemo,
@@ -552,6 +520,9 @@ export const dashboardHandlers = defineHandlers({
 
     // Mesh handlers
     'deployMesh': handleDeployMesh,
+
+    // Authentication handlers
+    'reAuthenticate': handleReAuthenticate,
 
     // Project management handlers
     'deleteProject': handleDeleteProject,

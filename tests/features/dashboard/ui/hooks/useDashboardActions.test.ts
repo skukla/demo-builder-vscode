@@ -73,7 +73,6 @@ describe('useDashboardActions', () => {
 
             expect(result.current.handleStartDemo).toBeDefined();
             expect(result.current.handleStopDemo).toBeDefined();
-            expect(result.current.handleReAuthenticate).toBeDefined();
             expect(result.current.handleViewLogs).toBeDefined();
             expect(result.current.handleDeployMesh).toBeDefined();
             expect(result.current.handleOpenBrowser).toBeDefined();
@@ -82,6 +81,7 @@ describe('useDashboardActions', () => {
             expect(result.current.handleDeleteProject).toBeDefined();
             expect(result.current.handleNavigateBack).toBeDefined();
             expect(result.current.handleViewComponents).toBeDefined();
+            expect(result.current.handleReAuthenticate).toBeDefined();
         });
 
         it('should return functions for all handlers', () => {
@@ -89,7 +89,6 @@ describe('useDashboardActions', () => {
 
             expect(typeof result.current.handleStartDemo).toBe('function');
             expect(typeof result.current.handleStopDemo).toBe('function');
-            expect(typeof result.current.handleReAuthenticate).toBe('function');
             expect(typeof result.current.handleViewLogs).toBe('function');
             expect(typeof result.current.handleDeployMesh).toBe('function');
             expect(typeof result.current.handleOpenBrowser).toBe('function');
@@ -98,6 +97,7 @@ describe('useDashboardActions', () => {
             expect(typeof result.current.handleDeleteProject).toBe('function');
             expect(typeof result.current.handleNavigateBack).toBe('function');
             expect(typeof result.current.handleViewComponents).toBe('function');
+            expect(typeof result.current.handleReAuthenticate).toBe('function');
         });
     });
 
@@ -217,16 +217,6 @@ describe('useDashboardActions', () => {
     });
 
     describe('Simple Message Actions', () => {
-        it('should send re-authenticate message', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleReAuthenticate();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('re-authenticate');
-        });
-
         it('should send configure message', () => {
             const { result } = renderActionsHook();
 
@@ -276,6 +266,16 @@ describe('useDashboardActions', () => {
 
             expect(mockPostMessage).toHaveBeenCalledWith('viewComponents');
         });
+
+        it('should send reAuthenticate message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleReAuthenticate();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('reAuthenticate');
+        });
     });
 
     describe('Handler Stability', () => {
@@ -289,13 +289,13 @@ describe('useDashboardActions', () => {
             // All handlers should be stable (same reference)
             expect(result.current.handleStartDemo).toBe(initialHandlers.handleStartDemo);
             expect(result.current.handleStopDemo).toBe(initialHandlers.handleStopDemo);
-            expect(result.current.handleReAuthenticate).toBe(initialHandlers.handleReAuthenticate);
             expect(result.current.handleDeployMesh).toBe(initialHandlers.handleDeployMesh);
             expect(result.current.handleConfigure).toBe(initialHandlers.handleConfigure);
             expect(result.current.handleOpenDevConsole).toBe(initialHandlers.handleOpenDevConsole);
             expect(result.current.handleDeleteProject).toBe(initialHandlers.handleDeleteProject);
             expect(result.current.handleNavigateBack).toBe(initialHandlers.handleNavigateBack);
             expect(result.current.handleViewComponents).toBe(initialHandlers.handleViewComponents);
+            expect(result.current.handleReAuthenticate).toBe(initialHandlers.handleReAuthenticate);
         });
     });
 

@@ -17,7 +17,6 @@ import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 export type MeshStatus =
     | 'checking'
     | 'needs-auth'
-    | 'authenticating'
     | 'not-deployed'
     | 'deploying'
     | 'deployed'
@@ -101,11 +100,11 @@ export interface UseDashboardStatusReturn {
 
 /** Mesh statuses that indicate a user-initiated operation is in progress (preserve during updates) */
 const isMeshDeploying = (status: MeshStatus | undefined): boolean =>
-    status === 'deploying' || status === 'authenticating';
+    status === 'deploying';
 
 /** Mesh statuses that indicate any operation is in progress (disable UI actions) */
 export const isMeshBusy = (status: MeshStatus | undefined): boolean =>
-    status === 'deploying' || status === 'checking' || status === 'authenticating';
+    status === 'deploying' || status === 'checking';
 
 /**
  * Hook to manage dashboard status state and computed displays
@@ -246,8 +245,6 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
                 return { color: 'blue', text: 'Checking status...' };
             case 'needs-auth':
                 return { color: 'yellow', text: 'Session expired' };
-            case 'authenticating':
-                return { color: 'blue', text: meshMessage || 'Signing in...' };
             case 'deploying':
                 return { color: 'blue', text: meshMessage || 'Deploying...' };
         }

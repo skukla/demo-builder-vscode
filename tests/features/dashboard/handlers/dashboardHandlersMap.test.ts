@@ -29,12 +29,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'requestStatus')).toBe(true);
         });
 
-        it('should include authentication handlers', () => {
-            // Given: dashboardHandlers object
-            // When: Checking for authentication message types
-            // Then: Authentication handlers present
-            expect(hasHandler(dashboardHandlers, 're-authenticate')).toBe(true);
-        });
+        // Note: Authentication handlers removed - inline auth via loginAndRestoreProjectContext
 
         it('should include demo lifecycle handlers', () => {
             // Given: dashboardHandlers object
@@ -65,6 +60,13 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'deployMesh')).toBe(true);
         });
 
+        it('should include authentication handlers', () => {
+            // Given: dashboardHandlers object
+            // When: Checking for auth message types
+            // Then: Authentication handlers present
+            expect(hasHandler(dashboardHandlers, 'reAuthenticate')).toBe(true);
+        });
+
         it('should include project management handlers', () => {
             // Given: dashboardHandlers object
             // When: Checking for project management message types
@@ -85,7 +87,7 @@ describe('dashboardHandlers', () => {
             const types = getRegisteredTypes(dashboardHandlers);
 
             // Then: Exactly 17 handlers
-            // 2 init + 1 auth + 2 lifecycle + 9 navigation + 1 mesh + 1 project + 1 EDS = 17
+            // 2 init + 2 lifecycle + 9 navigation + 1 mesh + 1 auth + 1 project + 1 EDS = 17
             expect(types).toHaveLength(17);
         });
 
