@@ -293,6 +293,10 @@ export async function executeEdsReset(
                 'placeholders/global',
                 'placeholders/auth',
                 'placeholders/cart',
+                'placeholders/checkout',
+                'placeholders/order',
+                'placeholders/account',
+                'placeholders/payment-services',
                 'placeholders/recommendations',
                 'placeholders/wishlist',
             ];
