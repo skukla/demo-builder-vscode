@@ -310,9 +310,9 @@ export function generateConfigJson(
             const assetsEnabled = finalConfig.public.default['commerce-assets-enabled'];
             if (assetsEnabled === 'true') {
                 finalConfig.public.default['commerce-assets-enabled'] = true;
-            } else if (assetsEnabled === 'false') {
-                // Remove the field entirely if disabled (cleaner config)
-                delete finalConfig.public.default['commerce-assets-enabled'];
+            } else {
+                // Set to false explicitly - storefront code expects this property to exist
+                finalConfig.public.default['commerce-assets-enabled'] = false;
             }
 
             // For non-PaaS environments, remove commerce-core-endpoint if it equals commerce-endpoint
