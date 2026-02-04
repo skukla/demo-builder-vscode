@@ -12,6 +12,7 @@ interface ConfigureInitData extends WebviewInitData {
     project?: Project;
     componentsData?: ComponentsData;
     existingEnvValues?: Record<string, Record<string, string>>;
+    existingProjectNames?: string[];
 }
 
 // Get root element
@@ -32,6 +33,7 @@ root.render(
                     project={data.project}
                     componentsData={data.componentsData}
                     existingEnvValues={data.existingEnvValues}
+                    existingProjectNames={data.existingProjectNames}
                 />
             ) : null;
         }}

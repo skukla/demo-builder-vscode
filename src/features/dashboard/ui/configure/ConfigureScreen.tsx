@@ -6,6 +6,7 @@ import {
     View,
     Link,
     Flex,
+    TextField,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { FormField, ConfigSection } from '@/core/ui/components/forms';
@@ -25,6 +26,10 @@ import {
     hasComponentEnvVars,
     discoverComponentsFromInstances,
 } from './configureHelpers';
+import {
+    normalizeProjectName,
+    getProjectNameError,
+} from '@/core/validation/normalizers';
 
 // Create validators with consistent error messages
 const urlValidator = url('Please enter a valid URL');
@@ -42,6 +47,7 @@ interface ConfigureScreenProps {
     project: Project;
     componentsData: ComponentsData;
     existingEnvValues?: Record<string, Record<string, string>>;
+    existingProjectNames?: string[];
 }
 
 interface ComponentData {
@@ -155,16 +161,19 @@ function renderFormField(
     );
 }
 
-export function ConfigureScreen({ project, componentsData, existingEnvValues }: ConfigureScreenProps) {
+export function ConfigureScreen({ project, componentsData, existingEnvValues, existingProjectNames = [] }: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeploying, setIsDeploying] = useState(false);
     const [expandedNavSections, setExpandedNavSections] = useState<Set<string>>(new Set());
     const [activeSection, setActiveSection] = useState<string | null>(null);
     const [activeField, setActiveField] = useState<string | null>(null);
     const lastFocusedSectionRef = useRef<string | null>(null);
     const fieldCountInSectionRef = useRef<number>(0);
+    const [projectName, setProjectName] = useState(project.name);
+    const [projectNameTouched, setProjectNameTouched] = useState(false);
 
     const selectableDefaultProps = useSelectableDefault();
 
@@ -183,6 +192,29 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             setComponentConfigs(project.componentConfigs);
         }
     }, [existingEnvValues, project.componentConfigs]);
+
+    // Listen for deployment status updates from backend
+    // This keeps the Save button disabled during mesh/storefront deployment
+    useEffect(() => {
+        const unsubscribe = webviewClient.onMessage('deployment-status', (data) => {
+            const payload = data as { isDeploying: boolean };
+            setIsDeploying(payload.isDeploying);
+        });
+        return unsubscribe;
+    }, []);
+
+    // Validate project name
+    const projectNameError = useMemo(() => {
+        if (!projectNameTouched) return undefined;
+        return getProjectNameError(projectName, existingProjectNames, project.name);
+    }, [projectName, existingProjectNames, project.name, projectNameTouched]);
+
+    // Handle project name change with normalization
+    const handleProjectNameChange = useCallback((value: string) => {
+        const normalized = normalizeProjectName(value);
+        setProjectName(normalized);
+        setProjectNameTouched(true);
+    }, []);
 
     // Get all selected components with their data
     const selectedComponents = useMemo(() => {
@@ -651,10 +683,13 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     const handleSave = useCallback(async () => {
         setIsSaving(true);
         try {
-            const result = await webviewClient.request<SaveConfigurationResponse>('save-configuration', { componentConfigs });
-            if (result.success) {
-                // Configuration saved successfully
-            } else {
+            // Include projectName if it changed
+            const newProjectName = projectName.trim() !== project.name ? projectName.trim() : undefined;
+            const result = await webviewClient.request<SaveConfigurationResponse>('save-configuration', {
+                componentConfigs,
+                newProjectName,
+            });
+            if (!result.success) {
                 throw new Error(result.error || 'Failed to save configuration');
             }
         } catch {
@@ -663,13 +698,14 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         } finally {
             setIsSaving(false);
         }
-    }, [componentConfigs]);
+    }, [componentConfigs, projectName, project.name]);
 
     const handleCancel = useCallback(() => {
         webviewClient.postMessage('cancel');
     }, []);
 
-    const canSave = !hasEntries(validationErrors);
+    // Can save if no validation errors (env vars and project name)
+    const canSave = !hasEntries(validationErrors) && !projectNameError;
 
     return (
         <div
@@ -681,7 +717,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 {/* Header */}
                 <PageHeader
                     title="Configure Project"
-                    subtitle={project.name}
+                    subtitle={projectName}
                 />
 
                 {/* Content */}
@@ -697,12 +733,31 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                 Update the settings for your project components. Required fields are marked with an asterisk.
                             </Text>
 
+                            <Form UNSAFE_className="container-form">
+                                {/* Project Name Field */}
+                                <ConfigSection
+                                    id="project-info"
+                                    label="Project"
+                                    showDivider={false}
+                                >
+                                    <TextField
+                                        label="Project Name"
+                                        value={projectName}
+                                        onChange={handleProjectNameChange}
+                                        isRequired
+                                        width="100%"
+                                        validationState={projectNameError ? 'invalid' : (projectNameTouched ? 'valid' : undefined)}
+                                        errorMessage={projectNameError}
+                                        description="Lowercase letters, numbers, and hyphens only. Must start with a letter."
+                                    />
+                                </ConfigSection>
+
                             {serviceGroups.length === 0 ? (
                                 <Text UNSAFE_className="text-gray-600">
                                     No components requiring configuration were found.
                                 </Text>
                             ) : (
-                                <Form UNSAFE_className="container-form">
+                                <>
                                     {serviceGroups.map((group, index) => (
                                         <ConfigSection
                                             key={group.id}
@@ -735,8 +790,9 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                             )}
                                         </ConfigSection>
                                     ))}
-                                </Form>
+                                </>
                             )}
+                            </Form>
                         </div>
                     }
                     rightContent={
@@ -758,7 +814,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                             variant="secondary"
                             onPress={handleCancel}
                             isQuiet
-                            isDisabled={isSaving}
+                            isDisabled={isSaving || isDeploying}
                         >
                             Close
                         </Button>
@@ -767,9 +823,9 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         <Button
                             variant="accent"
                             onPress={handleSave}
-                            isDisabled={!canSave || isSaving}
+                            isDisabled={!canSave || isSaving || isDeploying}
                         >
-                            {isSaving ? 'Saving...' : 'Save Changes'}
+                            {isSaving ? 'Saving...' : isDeploying ? 'Deploying...' : 'Save Changes'}
                         </Button>
                     }
                 />
