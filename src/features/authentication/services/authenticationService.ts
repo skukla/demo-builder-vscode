@@ -597,6 +597,94 @@ export class AuthenticationService {
     }
 
     /**
+     * Login and restore full Adobe project context (org/project/workspace).
+     *
+     * Canonical helper for inline authentication flows where we need to:
+     * 1. Perform browser-based login
+     * 2. Restore the user's project context after successful login
+     *
+     * Use this when a user action requires authentication and should continue
+     * automatically after sign-in (e.g., Deploy Mesh, Apply Configuration).
+     *
+     * @param adobeContext - The Adobe context to restore after login
+     * @returns true if login and context restoration succeeded, false otherwise
+     *
+     * @example
+     * ```typescript
+     * const success = await authManager.loginAndRestoreProjectContext({
+     *     organization: project.adobe?.organization,
+     *     projectId: project.adobe?.projectId,
+     *     workspace: project.adobe?.workspace,
+     * });
+     * if (success) {
+     *     // Continue with authenticated operation
+     * }
+     * ```
+     */
+    async loginAndRestoreProjectContext(adobeContext: {
+        organization?: string;
+        projectId?: string;
+        workspace?: string;
+    }): Promise<boolean> {
+        this.performanceTracker.startTiming('loginAndRestoreProjectContext');
+        const debugLogger = getLogger();
+
+        try {
+            // Step 1: Browser login
+            debugLogger.debug('[Auth] Starting login and context restoration');
+            const loginSuccess = await this.login();
+            if (!loginSuccess) {
+                debugLogger.warn('[Auth] Login failed or was cancelled');
+                return false;
+            }
+
+            // Step 2: Restore organization context
+            if (adobeContext.organization) {
+                debugLogger.debug(`[Auth] Restoring org context: ${adobeContext.organization}`);
+                const orgSuccess = await this.selectOrganization(adobeContext.organization);
+                if (!orgSuccess) {
+                    debugLogger.warn('[Auth] Failed to restore organization context');
+                    // Continue anyway - user may have lost access to this org
+                }
+            }
+
+            // Step 3: Restore project context
+            if (adobeContext.projectId && adobeContext.organization) {
+                debugLogger.debug(`[Auth] Restoring project context: ${adobeContext.projectId}`);
+                const projectSuccess = await this.selectProject(
+                    adobeContext.projectId,
+                    adobeContext.organization,
+                );
+                if (!projectSuccess) {
+                    debugLogger.warn('[Auth] Failed to restore project context');
+                    // Continue anyway - project selection is best-effort
+                }
+            }
+
+            // Step 4: Restore workspace context
+            if (adobeContext.workspace && adobeContext.projectId) {
+                debugLogger.debug(`[Auth] Restoring workspace context: ${adobeContext.workspace}`);
+                const workspaceSuccess = await this.selectWorkspace(
+                    adobeContext.workspace,
+                    adobeContext.projectId,
+                );
+                if (!workspaceSuccess) {
+                    debugLogger.warn('[Auth] Failed to restore workspace context');
+                    // Continue anyway - workspace selection is best-effort
+                }
+            }
+
+            debugLogger.debug('[Auth] Login and context restoration completed');
+            return true;
+        } catch (error) {
+            debugLogger.error('[Auth] Login and context restoration failed', error as Error);
+            return false;
+        } finally {
+            this.performanceTracker.endTiming('loginAndRestoreProjectContext');
+        }
+    }
+
+    /**
      * Auto-select organization if only one available
      */
     async autoSelectOrganizationIfNeeded(skipCurrentCheck = false): Promise<AdobeOrg | undefined> {

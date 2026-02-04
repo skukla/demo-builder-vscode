@@ -11,6 +11,7 @@ export interface ComponentsData {
     frontends?: ComponentData[];
     backends?: ComponentData[];
     dependencies?: ComponentData[];
+    mesh?: ComponentData[];
     integrations?: ComponentData[];
     appBuilder?: ComponentData[];
     envVars?: Record<string, ComponentEnvVar>;

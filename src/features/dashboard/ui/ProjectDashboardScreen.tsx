@@ -11,7 +11,7 @@ import {
     View,
     Flex,
     Button,
-    ProgressCircle,
+    Link,
 } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useRef } from 'react';
 import { isStartActionDisabled } from './dashboardPredicates';
@@ -100,7 +100,6 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
     const {
         handleStartDemo,
         handleStopDemo,
-        handleReAuthenticate,
         handleViewLogs,
         handleDeployMesh,
         handleOpenBrowser,
@@ -111,6 +110,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         handleDeleteProject,
         handleNavigateBack,
         handleViewComponents,
+        handleReAuthenticate,
     } = useDashboardActions({
         isOpeningBrowser,
         setIsTransitioning,
@@ -194,24 +194,11 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                                     />
                                 )}
                                 </div>
-
-                                {/* Mesh action buttons */}
-                                {meshStatusDisplay && (
-                                    <Flex direction="row" alignItems="center" gap="size-100" marginTop="size-50">
-
-                                        {meshStatus === 'needs-auth' && (
-                                            <button
-                                                onClick={handleReAuthenticate}
-                                                className="action-pill"
-                                            >
-                                                Sign in
-                                            </button>
-                                        )}
-
-                                        {meshStatus === 'authenticating' && (
-                                            <ProgressCircle size="S" isIndeterminate UNSAFE_className="loading-spinner-small" />
-                                        )}
-                                    </Flex>
+                                {/* Sign in link - outside grid to avoid disrupting layout */}
+                                {meshStatus === 'needs-auth' && (
+                                    <Link onPress={handleReAuthenticate} isQuiet UNSAFE_style={{ marginLeft: '8px' }}>
+                                        Sign in
+                                    </Link>
                                 )}
                             </View>
                                 {/* All Projects button */}

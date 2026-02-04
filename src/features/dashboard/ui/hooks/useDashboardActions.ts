@@ -38,8 +38,6 @@ export interface UseDashboardActionsReturn {
     handleStartDemo: () => void;
     /** Stop the demo server */
     handleStopDemo: () => void;
-    /** Re-authenticate with Adobe */
-    handleReAuthenticate: () => void;
     /** View logs in output channel */
     handleViewLogs: () => void;
     /** Deploy API Mesh */
@@ -60,6 +58,8 @@ export interface UseDashboardActionsReturn {
     handleNavigateBack: () => void;
     /** View components in file browser */
     handleViewComponents: () => void;
+    /** Re-authenticate with Adobe (after session expired) */
+    handleReAuthenticate: () => void;
 }
 
 /**
@@ -88,10 +88,6 @@ export function useDashboardActions({
         setIsTransitioning(true);
         webviewClient.postMessage('stopDemo');
     }, [setIsTransitioning]);
-
-    const handleReAuthenticate = useCallback(() => {
-        webviewClient.postMessage('re-authenticate');
-    }, []);
 
     const handleViewLogs = useCallback(() => {
         // Suppress hover styles during layout shift
@@ -151,10 +147,13 @@ export function useDashboardActions({
         webviewClient.postMessage('viewComponents');
     }, []);
 
+    const handleReAuthenticate = useCallback(() => {
+        webviewClient.postMessage('reAuthenticate');
+    }, []);
+
     return {
         handleStartDemo,
         handleStopDemo,
-        handleReAuthenticate,
         handleViewLogs,
         handleDeployMesh,
         handleOpenBrowser,
@@ -165,5 +164,6 @@ export function useDashboardActions({
         handleDeleteProject,
         handleNavigateBack,
         handleViewComponents,
+        handleReAuthenticate,
     };
 }

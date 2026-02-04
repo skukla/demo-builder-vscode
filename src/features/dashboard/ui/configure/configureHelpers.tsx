@@ -29,6 +29,7 @@ export function getAllComponentDefinitions(data: ComponentsData): ComponentData[
         data.frontends,
         data.backends,
         data.dependencies,
+        data.mesh,
         data.integrations,
         data.appBuilder,
     ];

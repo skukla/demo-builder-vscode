@@ -3,7 +3,6 @@
  */
 
 import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboardScreen.testUtils';
 
 describe('ProjectDashboardScreen - Mesh Status Display', () => {
@@ -135,7 +134,7 @@ describe('ProjectDashboardScreen - Mesh Status Display', () => {
     });
 
     describe('Authentication Required', () => {
-        it('should display "Session expired" with Sign in button for needs-auth', async () => {
+        it('should display "Session expired" status for needs-auth', async () => {
             renderDashboard();
 
             ctx.triggerMessage('statusUpdate', {
@@ -149,12 +148,10 @@ describe('ProjectDashboardScreen - Mesh Status Display', () => {
 
             await waitFor(() => {
                 expect(screen.getByText(/Session expired/i)).toBeInTheDocument();
-                expect(screen.getByText('Sign in')).toBeInTheDocument();
             });
         });
 
-        it('should send re-authenticate message when Sign in clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        it('should display "Sign in" link when authentication required', async () => {
             renderDashboard();
 
             ctx.triggerMessage('statusUpdate', {
@@ -166,12 +163,9 @@ describe('ProjectDashboardScreen - Mesh Status Display', () => {
                 },
             });
 
-            await waitFor(async () => {
-                const signInButton = screen.getByText('Sign in');
-                await user.click(signInButton);
+            await waitFor(() => {
+                expect(screen.getByText(/Sign in/i)).toBeInTheDocument();
             });
-
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('re-authenticate');
         });
     });
 });

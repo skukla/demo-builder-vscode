@@ -4,14 +4,17 @@ import * as vscode from 'vscode';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
+import { ServiceLocator } from '@/core/di';
 import { createBundleUris } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
+import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
+import type { HandlerContext, SharedState } from '@/types/handlers';
 import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
 import { normalizeIfUrl } from '@/core/validation/Validator';
 
@@ -26,11 +29,13 @@ interface ConfigureInitialData {
         frontends?: unknown[];
         backends?: unknown[];
         dependencies?: unknown[];
+        mesh?: unknown[];
         integrations?: unknown[];
         appBuilder?: unknown[];
         envVars: Record<string, unknown>;
     };
     existingEnvValues: Record<string, Record<string, string>>;
+    existingProjectNames: string[];
 }
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
@@ -115,12 +120,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         // Load and transform components data using ComponentRegistryManager
         const registryManager = new ComponentRegistryManager(this.context.extensionPath);
         const registry = await registryManager.loadRegistry();
-        
+
         // Send both the categorized components structure AND the top-level envVars
         const componentsData = {
             frontends: registry.components.frontends,
             backends: registry.components.backends,
             dependencies: registry.components.dependencies,
+            mesh: registry.components.mesh,
             integrations: registry.components.integrations,
             appBuilder: registry.components.appBuilder,
             envVars: registry.envVars || {},
@@ -128,6 +134,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         // Load existing env values from component .env files
         const existingEnvValues = await this.loadExistingEnvValues(project);
+
+        // Get existing project names for rename validation
+        const allProjects = await this.stateManager.getAllProjects();
+        const existingProjectNames = allProjects.map(p => p.name);
 
         // Get current theme
         const theme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
@@ -137,16 +147,35 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             project,
             componentsData,
             existingEnvValues,
+            existingProjectNames,
         };
     }
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
         // Handle save configuration
-        comm.onStreaming('save-configuration', async (data: { componentConfigs: ComponentConfigs }) => {
+        comm.onStreaming('save-configuration', async (data: { componentConfigs: ComponentConfigs; newProjectName?: string }) => {
             try {
-                const project = await this.stateManager.getCurrentProject();
+                let project = await this.stateManager.getCurrentProject();
                 if (!project) {
                     throw new Error('No project found');
+                }
+
+                // Handle project rename if name changed
+                if (data.newProjectName && data.newProjectName !== project.name) {
+                    const renameResult = await handleRenameProject(this.createHandlerContext(), {
+                        projectPath: project.path,
+                        newName: data.newProjectName,
+                    });
+
+                    if (!renameResult.success) {
+                        throw new Error(renameResult.error || 'Failed to rename project');
+                    }
+
+                    // Reload project after rename (path may have changed)
+                    project = await this.stateManager.getCurrentProject();
+                    if (!project) {
+                        throw new Error('Project not found after rename');
+                    }
                 }
 
                 // Detect if mesh configuration changed BEFORE saving
@@ -205,14 +234,21 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 'Later',
                             ).then(async selection => {
                                 if (selection === 'Apply Changes') {
-                                    // Deploy mesh first, then republish storefront
-                                    try {
-                                        await vscode.commands.executeCommand('demoBuilder.deployMesh');
-                                        // After mesh deployment, republish storefront
-                                        await this.republishStorefront(project);
-                                    } catch (error) {
-                                        this.logger.error('[Configure] Failed to apply changes:', error as Error);
-                                    }
+                                    // Use ensureAuthAndApply to handle inline sign-in if needed
+                                    await this.ensureAuthAndApply(
+                                        async () => {
+                                            await this.withDeploymentStatus(async () => {
+                                                // Deploy mesh first, then republish storefront
+                                                await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                                // Reload project after mesh deployment to get updated meshState
+                                                const freshProject = await this.stateManager.getCurrentProject();
+                                                if (freshProject) {
+                                                    await this.republishStorefront(freshProject);
+                                                }
+                                            });
+                                        },
+                                        'apply changes to mesh and storefront',
+                                    );
                                 } else if (selection === 'Later') {
                                     // Track that user declined both updates
                                     if (project.meshState) {
@@ -245,7 +281,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 'Later',
                             ).then(async selection => {
                                 if (selection === 'Republish') {
-                                    await this.republishStorefront(project);
+                                    await this.withDeploymentStatus(() => this.republishStorefront(project));
                                 } else if (selection === 'Later') {
                                     // Track that user declined the update
                                     if (project.edsStorefrontState) {
@@ -274,8 +310,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 'Later',
                             ).then(async selection => {
                                 if (selection === 'Redeploy Mesh') {
-                                    // deployMesh command handles its own errors
-                                    await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                    // Use ensureAuthAndApply to handle inline sign-in if needed
+                                    await this.ensureAuthAndApply(
+                                        () => this.withDeploymentStatus(() => vscode.commands.executeCommand('demoBuilder.deployMesh')),
+                                        'redeploy mesh',
+                                    );
                                 } else if (selection === 'Later') {
                                     // Track that user declined the update
                                     if (project.meshState) {
@@ -302,8 +341,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 'Later',
                             ).then(async selection => {
                                 if (selection === 'Redeploy Mesh') {
-                                    // deployMesh command handles its own errors
-                                    await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                    // Use ensureAuthAndApply to handle inline sign-in if needed
+                                    await this.ensureAuthAndApply(
+                                        () => this.withDeploymentStatus(() => vscode.commands.executeCommand('demoBuilder.deployMesh')),
+                                        'redeploy mesh',
+                                    );
                                 } else if (selection === 'Later') {
                                     // Track that user declined the update
                                     if (project.meshState) {
@@ -524,6 +566,19 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     /**
+     * Run an operation while notifying the frontend that deployment is in progress.
+     * This keeps the Save button disabled during the operation.
+     */
+    private async withDeploymentStatus<T>(operation: () => Promise<T>): Promise<T> {
+        await this.communicationManager?.sendMessage('deployment-status', { isDeploying: true });
+        try {
+            return await operation();
+        } finally {
+            await this.communicationManager?.sendMessage('deployment-status', { isDeploying: false });
+        }
+    }
+
+    /**
      * Republish storefront config.json for EDS projects.
      * Shows progress notification and handles errors.
      */
@@ -532,7 +587,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             await vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: 'Republishing storefront configuration...',
+                    title: 'Republishing storefront',
                     cancellable: false,
                 },
                 async (progress) => {
@@ -549,7 +604,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                         // Save updated project state
                         await this.stateManager.saveProject(project);
                         await ProjectDashboardWebviewCommand.refreshStatus();
-                        vscode.window.showInformationMessage('Storefront configuration republished successfully');
+                        this.showSuccessMessage('Storefront configuration republished successfully');
                     } else {
                         vscode.window.showErrorMessage(`Failed to republish storefront: ${result.error}`);
                     }
@@ -558,6 +613,100 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         } catch (error) {
             this.logger.error('[Configure] Failed to republish storefront:', error as Error);
             vscode.window.showErrorMessage(`Failed to republish storefront: ${(error as Error).message}`);
+        }
+    }
+
+    /**
+     * Create handler context for message handlers
+     */
+    private createHandlerContext(): HandlerContext {
+        return {
+            // Managers (Configure doesn't use all managers, but context requires them)
+            prereqManager: undefined as unknown as HandlerContext['prereqManager'],
+            authManager: undefined as unknown as HandlerContext['authManager'],
+            errorLogger: undefined as unknown as HandlerContext['errorLogger'],
+            progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
+            stepLogger: undefined as unknown as HandlerContext['stepLogger'],
+
+            // Loggers
+            logger: this.logger,
+            debugLogger: this.logger,
+
+            // VS Code integration
+            context: this.context,
+            panel: this.panel,
+            stateManager: this.stateManager,
+            communicationManager: this.communicationManager,
+            sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
+
+            // Shared state (Configure doesn't use shared state)
+            sharedState: {
+                isAuthenticating: false,
+            } as SharedState,
+        };
+    }
+
+    /**
+     * Ensure Adobe authentication before applying changes.
+     * If not authenticated, prompts the user to sign in inline and restores project context.
+     * After successful sign-in, continues with the provided operation.
+     *
+     * @param operation - The async operation to run after auth is confirmed
+     * @param operationDescription - Description for the notification (e.g., "deploy mesh")
+     * @returns true if operation completed, false if cancelled or auth failed
+     */
+    private async ensureAuthAndApply(
+        operation: () => Promise<void>,
+        operationDescription: string,
+    ): Promise<boolean> {
+        const authManager = ServiceLocator.getAuthenticationService();
+        let isAuthenticated = await authManager.isAuthenticated();
+
+        if (!isAuthenticated) {
+            // Prompt for inline sign-in
+            const selection = await vscode.window.showWarningMessage(
+                `Adobe sign-in required to ${operationDescription}.`,
+                'Sign In',
+                'Cancel',
+            );
+
+            if (selection !== 'Sign In') {
+                return false;
+            }
+
+            // Get project context for restoration after login
+            const project = await this.stateManager.getCurrentProject();
+
+            // Perform inline login and restore project context
+            this.logger.info(`[Configure] Starting Adobe sign-in to ${operationDescription}`);
+            const loginSuccess = await authManager.loginAndRestoreProjectContext({
+                organization: project?.adobe?.organization,
+                projectId: project?.adobe?.projectId,
+                workspace: project?.adobe?.workspace,
+            });
+
+            if (!loginSuccess) {
+                vscode.window.showErrorMessage('Sign-in failed or was cancelled. Please try again.');
+                return false;
+            }
+
+            // Verify auth after login
+            isAuthenticated = await authManager.isAuthenticated();
+            if (!isAuthenticated) {
+                vscode.window.showErrorMessage('Sign-in completed but authentication check failed. Please try again.');
+                return false;
+            }
+
+            this.logger.info('[Configure] Adobe sign-in successful, continuing with operation');
+        }
+
+        // Auth confirmed, run the operation
+        try {
+            await operation();
+            return true;
+        } catch (error) {
+            this.logger.error(`[Configure] Failed to ${operationDescription}:`, error as Error);
+            return false;
         }
     }
 }

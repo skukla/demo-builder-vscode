@@ -6,6 +6,7 @@ import {
     View,
     Link,
     Flex,
+    TextField,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { FormField, ConfigSection } from '@/core/ui/components/forms';
@@ -17,14 +18,16 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
+import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import type { Project } from '@/types/base';
 import { getMeshComponentInstance, hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
+import { getAllComponentDefinitions } from './configureHelpers';
+import { useSelectedComponents } from './hooks/useSelectedComponents';
 import {
-    getAllComponentDefinitions,
-    hasComponentEnvVars,
-    discoverComponentsFromInstances,
-} from './configureHelpers';
+    normalizeProjectName,
+    getProjectNameError,
+} from '@/core/validation/normalizers';
 
 // Create validators with consistent error messages
 const urlValidator = url('Please enter a valid URL');
@@ -33,6 +36,7 @@ export interface ComponentsData {
     frontends?: ComponentData[];
     backends?: ComponentData[];
     dependencies?: ComponentData[];
+    mesh?: ComponentData[];
     integrations?: ComponentData[];
     appBuilder?: ComponentData[];
     envVars?: Record<string, ComponentEnvVar>;
@@ -42,6 +46,7 @@ interface ConfigureScreenProps {
     project: Project;
     componentsData: ComponentsData;
     existingEnvValues?: Record<string, Record<string, string>>;
+    existingProjectNames?: string[];
 }
 
 interface ComponentData {
@@ -155,16 +160,19 @@ function renderFormField(
     );
 }
 
-export function ConfigureScreen({ project, componentsData, existingEnvValues }: ConfigureScreenProps) {
+export function ConfigureScreen({ project, componentsData, existingEnvValues, existingProjectNames = [] }: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeploying, setIsDeploying] = useState(false);
     const [expandedNavSections, setExpandedNavSections] = useState<Set<string>>(new Set());
     const [activeSection, setActiveSection] = useState<string | null>(null);
     const [activeField, setActiveField] = useState<string | null>(null);
     const lastFocusedSectionRef = useRef<string | null>(null);
     const fieldCountInSectionRef = useRef<number>(0);
+    const [projectName, setProjectName] = useState(project.name);
+    const [projectNameTouched, setProjectNameTouched] = useState(false);
 
     const selectableDefaultProps = useSelectableDefault();
 
@@ -184,79 +192,31 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         }
     }, [existingEnvValues, project.componentConfigs]);
 
-    // Get all selected components with their data
-    const selectedComponents = useMemo(() => {
-        const components: Array<{ id: string; data: ComponentData; type: string }> = [];
-
-        const findComponent = (componentId: string): ComponentData | undefined => {
-            return componentsData.frontends?.find(c => c.id === componentId) ||
-                   componentsData.backends?.find(c => c.id === componentId) ||
-                   componentsData.dependencies?.find(c => c.id === componentId) ||
-                   componentsData.integrations?.find(c => c.id === componentId) ||
-                   componentsData.appBuilder?.find(c => c.id === componentId);
-        };
-
-        const addComponentWithDeps = (comp: ComponentData, type: string) => {
-            components.push({ id: comp.id, data: comp, type });
-
-            comp.dependencies?.required?.forEach(depId => {
-                const dep = findComponent(depId);
-                if (dep && !components.some(c => c.id === depId) && hasComponentEnvVars(dep)) {
-                    components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                }
-            });
-
-            comp.dependencies?.optional?.forEach(depId => {
-                const dep = findComponent(depId);
-                if (dep && !components.some(c => c.id === depId)) {
-                    const isSelected = project.componentSelections?.dependencies?.includes(depId);
-                    if (isSelected && hasComponentEnvVars(dep)) {
-                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                    }
-                }
-            });
-        };
-
-        if (project.componentSelections?.frontend) {
-            const frontend = componentsData.frontends?.find((f: ComponentData) => f.id === project.componentSelections?.frontend);
-            if (frontend) addComponentWithDeps(frontend, 'Frontend');
-        }
-
-        if (project.componentSelections?.backend) {
-            const backend = componentsData.backends?.find((b: ComponentData) => b.id === project.componentSelections?.backend);
-            if (backend) addComponentWithDeps(backend, 'Backend');
-        }
-
-        project.componentSelections?.dependencies?.forEach((depId: string) => {
-            if (!components.some(c => c.id === depId)) {
-                const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId);
-                if (dep && hasComponentEnvVars(dep)) {
-                    components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                }
-            }
+    // Listen for deployment status updates from backend
+    // This keeps the Save button disabled during mesh/storefront deployment
+    useEffect(() => {
+        const unsubscribe = webviewClient.onMessage('deployment-status', (data) => {
+            const payload = data as { isDeploying: boolean };
+            setIsDeploying(payload.isDeploying);
         });
+        return unsubscribe;
+    }, []);
 
-        project.componentSelections?.integrations?.forEach((sysId: string) => {
-            const sys = componentsData.integrations?.find((s: ComponentData) => s.id === sysId);
-            if (sys) components.push({ id: sys.id, data: sys, type: 'External System' });
-        });
+    // Validate project name
+    const projectNameError = useMemo(() => {
+        if (!projectNameTouched) return undefined;
+        return getProjectNameError(projectName, existingProjectNames, project.name);
+    }, [projectName, existingProjectNames, project.name, projectNameTouched]);
 
-        project.componentSelections?.appBuilder?.forEach((appId: string) => {
-            const app = componentsData.appBuilder?.find((a: ComponentData) => a.id === appId);
-            if (app) addComponentWithDeps(app, 'App Builder');
-        });
+    // Handle project name change with normalization
+    const handleProjectNameChange = useCallback((value: string) => {
+        const normalized = normalizeProjectName(value);
+        setProjectName(normalized);
+        setProjectNameTouched(true);
+    }, []);
 
-        // Fallback: discover components from componentInstances if no selections
-        if (components.length === 0 && project.componentInstances) {
-            const discovered = discoverComponentsFromInstances(
-                project.componentInstances,
-                getAllComponentDefinitions(componentsData),
-            );
-            components.push(...discovered);
-        }
-
-        return components;
-    }, [project.componentSelections, project.componentInstances, componentsData]);
+    // Get all selected components with their data (using extracted hook)
+    const selectedComponents = useSelectedComponents({ project, componentsData });
 
     // Deduplicate fields and organize by service
     const serviceGroups = useMemo(() => {
@@ -527,9 +487,23 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 newConfigs[componentId][field.key] = value;
             });
 
+            // Linked field: ADOBE_COMMERCE_URL → ADOBE_COMMERCE_GRAPHQL_ENDPOINT
+            // Only auto-derive if GraphQL hasn't been manually touched
+            if (field.key === 'ADOBE_COMMERCE_URL' && typeof value === 'string') {
+                const graphqlKey = 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT';
+                if (!touchedFields.has(graphqlKey)) {
+                    const derivedGraphql = deriveGraphqlEndpoint(value);
+                    field.componentIds.forEach(componentId => {
+                        if (newConfigs[componentId]) {
+                            newConfigs[componentId][graphqlKey] = derivedGraphql;
+                        }
+                    });
+                }
+            }
+
             return newConfigs;
         });
-    }, []);
+    }, [touchedFields]);
 
     /**
      * Normalize URL field on blur - removes trailing slashes for visual feedback.
@@ -651,10 +625,13 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     const handleSave = useCallback(async () => {
         setIsSaving(true);
         try {
-            const result = await webviewClient.request<SaveConfigurationResponse>('save-configuration', { componentConfigs });
-            if (result.success) {
-                // Configuration saved successfully
-            } else {
+            // Include projectName if it changed
+            const newProjectName = projectName.trim() !== project.name ? projectName.trim() : undefined;
+            const result = await webviewClient.request<SaveConfigurationResponse>('save-configuration', {
+                componentConfigs,
+                newProjectName,
+            });
+            if (!result.success) {
                 throw new Error(result.error || 'Failed to save configuration');
             }
         } catch {
@@ -663,13 +640,14 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         } finally {
             setIsSaving(false);
         }
-    }, [componentConfigs]);
+    }, [componentConfigs, projectName, project.name]);
 
     const handleCancel = useCallback(() => {
         webviewClient.postMessage('cancel');
     }, []);
 
-    const canSave = !hasEntries(validationErrors);
+    // Can save if no validation errors (env vars and project name)
+    const canSave = !hasEntries(validationErrors) && !projectNameError;
 
     return (
         <div
@@ -681,7 +659,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 {/* Header */}
                 <PageHeader
                     title="Configure Project"
-                    subtitle={project.name}
+                    subtitle={projectName}
                 />
 
                 {/* Content */}
@@ -697,12 +675,31 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                 Update the settings for your project components. Required fields are marked with an asterisk.
                             </Text>
 
+                            <Form UNSAFE_className="container-form">
+                                {/* Project Name Field */}
+                                <ConfigSection
+                                    id="project-info"
+                                    label="Project"
+                                    showDivider={false}
+                                >
+                                    <TextField
+                                        label="Project Name"
+                                        value={projectName}
+                                        onChange={handleProjectNameChange}
+                                        isRequired
+                                        width="100%"
+                                        validationState={projectNameError ? 'invalid' : (projectNameTouched ? 'valid' : undefined)}
+                                        errorMessage={projectNameError}
+                                        description="Lowercase letters, numbers, and hyphens only. Must start with a letter."
+                                    />
+                                </ConfigSection>
+
                             {serviceGroups.length === 0 ? (
                                 <Text UNSAFE_className="text-gray-600">
                                     No components requiring configuration were found.
                                 </Text>
                             ) : (
-                                <Form UNSAFE_className="container-form">
+                                <>
                                     {serviceGroups.map((group, index) => (
                                         <ConfigSection
                                             key={group.id}
@@ -735,8 +732,9 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                             )}
                                         </ConfigSection>
                                     ))}
-                                </Form>
+                                </>
                             )}
+                            </Form>
                         </div>
                     }
                     rightContent={
@@ -758,7 +756,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                             variant="secondary"
                             onPress={handleCancel}
                             isQuiet
-                            isDisabled={isSaving}
+                            isDisabled={isSaving || isDeploying}
                         >
                             Close
                         </Button>
@@ -767,9 +765,9 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         <Button
                             variant="accent"
                             onPress={handleSave}
-                            isDisabled={!canSave || isSaving}
+                            isDisabled={!canSave || isSaving || isDeploying}
                         >
-                            {isSaving ? 'Saving...' : 'Save Changes'}
+                            {isSaving ? 'Saving...' : isDeploying ? 'Deploying...' : 'Save Changes'}
                         </Button>
                     }
                 />

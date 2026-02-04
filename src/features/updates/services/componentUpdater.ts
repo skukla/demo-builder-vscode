@@ -103,6 +103,12 @@ export class ComponentUpdater {
                     lastUpdated: new Date().toISOString(),
                 };
 
+                // Also update componentInstances.version to stay in sync
+                // (projectFileLoader.discoverComponents prefers this over componentVersions)
+                if (project.componentInstances?.[componentId]) {
+                    project.componentInstances[componentId].version = newVersion;
+                }
+
                 this.logger.info(`[Updates] Successfully updated ${componentId} to ${newVersion}`);
 
                 // 8. Cleanup snapshot on success
