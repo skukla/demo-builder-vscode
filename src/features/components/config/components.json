@@ -135,7 +135,7 @@
                 "url": "https://github.com/skukla/commerce-eds-mesh",
                 "gitOptions": {
                     "shallow": true,
-                    "tag": "v1.0.0-beta.1"
+                    "tag": "stable"
                 }
             },
             "configuration": {
@@ -169,7 +169,7 @@
                 "url": "https://github.com/skukla/eds-accs-mesh",
                 "gitOptions": {
                     "shallow": true,
-                    "tag": "v1.0.0-beta.1"
+                    "tag": "stable"
                 }
             },
             "configuration": {
@@ -200,7 +200,7 @@
                 "url": "https://github.com/skukla/headless-commerce-mesh",
                 "gitOptions": {
                     "shallow": true,
-                    "tag": "v1.0.0-beta.3"
+                    "tag": "stable"
                 }
             },
             "configuration": {
@@ -317,7 +317,7 @@
                 "url": "https://github.com/skukla/kukla-integration-service",
                 "gitOptions": {
                     "shallow": true,
-                    "tag": "v1.0.0"
+                    "tag": "stable"
                 }
             },
             "requiresDeployment": true,
