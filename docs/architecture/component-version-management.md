@@ -2,239 +2,244 @@
 
 ## Overview
 
-The Demo Builder has **two separate version tracking systems** that need to stay synchronized:
+Demo Builder uses a **floating stable tag** pattern for component versioning. This decouples component updates from extension releases, allowing mesh fixes and improvements to ship without requiring extension updates.
 
-1. **Global Template** (`components.json`) - Default version for NEW projects
-2. **Per-Project Tracking** (`project.componentVersions`) - Installed version in EXISTING projects
+## Architecture
 
-## Current Workflow (Existing Projects)
+### Floating Stable Tags
 
-### When You Update Components
+All skukla-controlled component repositories use a floating `stable` tag instead of hardcoded version tags:
 
-The update system:
-- ✅ Checks GitHub Releases for new versions
-- ✅ Downloads the new tagged release
-- ✅ Updates `project.componentVersions[componentId].version`
-- ❌ **Does NOT update** the tag in `components.json`
+| Repository | Tag | Purpose |
+|------------|-----|---------|
+| skukla/commerce-eds-mesh | `stable` | EDS PaaS API Mesh |
+| skukla/eds-accs-mesh | `stable` | EDS ACCS API Mesh |
+| skukla/headless-commerce-mesh | `stable` | Headless API Mesh |
+| skukla/kukla-integration-service | `stable` | App Builder integration |
 
-### Problem
+Third-party repositories (PMET-public) retain versioned tags since they're not under direct control.
+
+### How It Works
 
 ```
-┌─────────────────────────────────────────────────┐
-│ components.json                                 │
-│ commerce-mesh: { tag: "v1.0.0-beta.3" }        │ ← OLD projects clone this
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ components.json                                          │
+│ eds-commerce-mesh: { tag: "stable" }                    │
+└─────────────────────────────────────────────────────────┘
                     ↓
-            [Update Released]
+            [User Creates Project]
                     ↓
-┌─────────────────────────────────────────────────┐
-│ GitHub Releases                                 │
-│ v1.0.0-beta.4 (new)                            │ ← Update system uses this
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ git clone --branch stable                                │
+│ → Clones whatever commit "stable" points to             │
+└─────────────────────────────────────────────────────────┘
                     ↓
-            [User Updates Existing Projects]
+            [Mesh Team Releases Fix]
                     ↓
-┌─────────────────────────────────────────────────┐
-│ project.componentVersions                       │
-│ commerce-mesh: { version: "1.0.0-beta.4" }     │ ← Updated projects have this
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ git tag -f stable && git push -f origin stable          │
+│ → "stable" now points to new commit                     │
+└─────────────────────────────────────────────────────────┘
                     ↓
-            [User Creates NEW Project]
+            [User Creates Another Project]
                     ↓
-┌─────────────────────────────────────────────────┐
-│ NEW project clones from components.json         │
-│ commerce-mesh: v1.0.0-beta.3                   │ ← OLD VERSION! ❌
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ git clone --branch stable                                │
+│ → Automatically gets the fixed version ✅               │
+└─────────────────────────────────────────────────────────┘
 ```
 
-**Result:** New projects get outdated components, even though updates exist!
+**Key benefit**: No extension release needed for component updates.
 
-## The Solution: Manual Tag Updates
+## Releasing Component Updates
 
-### When to Update Tags
-
-Update `components.json` tags when:
-1. A new component release is published to GitHub
-2. The new version has been tested and validated
-3. You want NEW projects to use the updated version
-
-### How to Update Tags
-
-**Step 1: Check for New Releases**
+### Step 1: Make Changes
 
 ```bash
-# Check what's available
-curl -s https://api.github.com/repos/skukla/headless-citisignal-mesh/releases/latest | jq '.tag_name'
-# Output: "v1.0.0-beta.4"
+cd eds-commerce-mesh/
+# Make your changes
+git add .
+git commit -m "fix: resolve grand_total_excl_tax resolver"
+git push origin main
 ```
 
-**Step 2: Update `components.json`**
-
-```json
-{
-  "mesh": {
-    "commerce-mesh": {
-      "source": {
-        "gitOptions": {
-          "tag": "v1.0.0-beta.4"  // ← Update this
-        }
-      }
-    }
-  }
-}
-```
-
-**Step 3: Test with a New Project**
-
-Create a test project to verify the new version works correctly.
-
-**Step 4: Commit the Change**
+### Step 2: Update Stable Tag
 
 ```bash
-git add src/features/components/config/components.json
-git commit -m "chore: update commerce-mesh to v1.0.0-beta.4"
+# Move stable tag to current HEAD
+git tag -f stable
+git push -f origin stable
 ```
 
-### For All Components
-
-Update tags for each component type:
-
-```json
-{
-  "mesh": {
-    "commerce-mesh": {
-      "gitOptions": { "tag": "v1.0.0-beta.4" }
-    }
-  },
-  "appBuilderApps": {
-    "integration-service": {
-      "gitOptions": { "tag": "v1.1.0" }
-    }
-  },
-  "tools": {
-    "commerce-demo-ingestion": {
-      "gitOptions": { "tag": "v1.1.0" }
-    }
-  }
-}
-```
-
-## Recommended Workflow
-
-### 1. Component Release Process
-
-When releasing a new component version:
+### Step 3: Verify (Optional)
 
 ```bash
-# In the component repository
-cd commerce-mesh/
+# Verify the tag points to the right commit
+git rev-parse stable
+git rev-parse HEAD
+# Should match
+```
 
-# Create and push tag
-git tag -a v1.0.0-beta.4 -m "Release v1.0.0-beta.4: Fix catalog endpoint"
+That's it. All new projects will automatically use the updated component.
+
+### Step 4: Create Versioned Release (Optional)
+
+For tracking purposes, you may also want to create a versioned release:
+
+```bash
+git tag v1.0.0-beta.4
 git push origin v1.0.0-beta.4
 
-# Create GitHub Release from tag
 gh release create v1.0.0-beta.4 \
   --title "v1.0.0-beta.4" \
   --notes "**Changes:**
-- Fixed catalog service endpoint variable name
-- Improved error handling
+- Fixed grand_total_excl_tax resolver
+- Added share_active_segments resolver
 "
 ```
 
-### 2. Demo Builder Update Process
+This provides a historical record of releases while `stable` always points to the current recommended version.
 
-After the component release:
+## Version Tracking
 
-```bash
-# In demo-builder-vscode repository
-cd demo-builder-vscode/
+### Project-Level Tracking
 
-# Update the tag in components.json
-# Edit: src/features/components/config/components.json
+Each project tracks its installed component versions in `project.componentVersions`:
 
-# Test with a new project
-# ...create test project, verify it works...
-
-# Commit the change
-git add src/features/components/config/components.json
-git commit -m "chore: update commerce-mesh to v1.0.0-beta.4"
-git push
+```typescript
+{
+  componentVersions: {
+    'eds-commerce-mesh': {
+      version: '1.0.0-beta.4',  // Resolved version at clone time
+      installedAt: '2025-02-05T10:30:00Z'
+    }
+  }
+}
 ```
 
-### 3. Extension Release Process
+This enables:
+- Update detection (compare project version to latest release)
+- Rollback capabilities (know what version was installed)
+- Debugging (identify which version a user has)
 
-Finally, release the updated Demo Builder:
+### Resolving Stable to Version
 
-```bash
-# Create extension release with updated component versions
-npm version patch  # or minor/major
-git push --follow-tags
+When cloning a `stable` tag, the actual version is resolved from:
+1. Package.json `version` field (if present)
+2. Git describe (`git describe --tags`)
+3. Commit SHA (fallback)
+
+## Update System Integration
+
+The auto-update system works independently:
+
+1. **Check for Updates**: Queries GitHub Releases API for latest version
+2. **Compare**: Project version vs latest release
+3. **Update Available**: If latest > project version
+4. **Apply Update**: Downloads release, applies with rollback safety
+
+The `stable` tag doesn't affect the update system - it only affects initial project creation.
+
+## Migration from Versioned Tags
+
+### Why We Changed
+
+Previously, `components.json` used hardcoded version tags:
+
+```json
+{
+  "gitOptions": {
+    "tag": "v1.0.0-beta.3"  // Had to update extension to change this
+  }
+}
 ```
 
-## Automation Opportunities (Future)
+**Problems:**
+- Mesh bug fix required extension release
+- Version drift between extension and components
+- Manual tag updates in components.json
+- New projects could get outdated components
 
-### Option 1: Automated Tag Updates
+### Current Pattern
 
-Create a GitHub Action that:
-1. Monitors component repositories for new releases
-2. Automatically updates `components.json` tags
-3. Creates a PR for review
+```json
+{
+  "gitOptions": {
+    "tag": "stable"  // Always gets current recommended version
+  }
+}
+```
 
-### Option 2: Dynamic Version Resolution
+**Benefits:**
+- Component updates ship immediately
+- No extension release needed for fixes
+- Single source of truth (stable tag)
+- Consistent experience for all users
 
-Update the clone logic to:
-1. Check GitHub API for latest release at clone time
-2. Use that version unless a specific tag is pinned
-3. Cache the resolved version in project state
+## Repository Setup
 
-### Option 3: Version Sync Command
+### Creating Stable Tag for New Repos
 
-Add a command: `Demo Builder: Sync Component Versions`
-- Checks latest releases for all components
-- Updates `components.json` with latest stable tags
-- Shows a diff for review before applying
+```bash
+cd my-new-component/
 
-## Version Tracking Comparison
+# Tag initial release
+git tag v1.0.0-beta.1
+git push origin v1.0.0-beta.1
 
-| Aspect | `components.json` | `project.componentVersions` |
-|--------|-------------------|------------------------------|
-| **Scope** | Global (all new projects) | Per-project (existing) |
-| **Updated By** | Manual edit | Update system |
-| **Used For** | Initial clone | Version tracking |
-| **Format** | `tag: "v1.0.0-beta.3"` | `version: "1.0.0-beta.3"` |
-| **When Changed** | Component release | User updates project |
+# Create stable pointing to same commit
+git tag stable
+git push origin stable
+
+# Create GitHub release for tracking
+gh release create v1.0.0-beta.1 --title "v1.0.0-beta.1" --notes "Initial release"
+```
+
+### Moving Stable Tag
+
+```bash
+# After making fixes
+git tag -f stable          # Force update local tag
+git push -f origin stable  # Force push to remote
+```
+
+The `-f` (force) flag is required because the tag already exists.
 
 ## Best Practices
 
-1. **Keep Tags in Sync**: Regularly update `components.json` tags to match latest releases
-2. **Test Before Updating**: Always test new versions in a disposable project first
-3. **Document Changes**: Add release notes when updating component tags
-4. **Version Consistently**: Use semantic versioning for all components
-5. **Communicate Updates**: Notify users when component defaults change
+### DO
 
-## Example: Complete Update Cycle
+- Keep `stable` pointing to a tested, working version
+- Create versioned tags for release tracking
+- Test changes before moving `stable` tag
+- Document breaking changes in release notes
+
+### DON'T
+
+- Move `stable` to untested code
+- Delete the `stable` tag
+- Use `stable` for experimental features
+- Forget to push the tag (`git push -f origin stable`)
+
+## Rollback Procedure
+
+If a `stable` update breaks something:
 
 ```bash
-# 1. Component team releases new version
-cd commerce-mesh/
-git tag v1.0.0-beta.4
-git push origin v1.0.0-beta.4
-gh release create v1.0.0-beta.4
+cd eds-commerce-mesh/
 
-# 2. Demo Builder team updates default
-cd demo-builder-vscode/
-# Edit components.json: tag → v1.0.0-beta.4
-git commit -m "chore: update commerce-mesh default to v1.0.0-beta.4"
-git push
+# Find the previous good commit
+git log --oneline
 
-# 3. Users with existing projects update via UI
-# Demo Builder > Check for Updates > Update Components
-
-# 4. New projects automatically get v1.0.0-beta.4 ✅
+# Move stable back to that commit
+git tag -f stable <good-commit-sha>
+git push -f origin stable
 ```
+
+New project creations will immediately use the rolled-back version.
 
 ## Related Documentation
 
 - `src/features/updates/README.md` - Update system architecture
 - `src/features/components/config/components.json` - Component definitions
+- `docs/architecture/component-system.md` - Component system overview
