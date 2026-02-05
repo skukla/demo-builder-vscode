@@ -50,7 +50,7 @@
       "icon": "eds",
       "frontend": "eds-storefront",
       "backend": "adobe-commerce-accs",
-      "dependencies": ["eds-commerce-mesh"],
+      "dependencies": ["eds-accs-mesh"],
       "optionalAddons": [
         { "id": "adobe-commerce-aco" }
       ],
