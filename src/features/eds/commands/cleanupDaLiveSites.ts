@@ -37,10 +37,13 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
     const logger = getLogger();
 
     try {
-        // Step 1: Prompt for org name
+        // Step 1: Prompt for org name (pre-filled from settings if configured)
+        const defaultOrg = vscode.workspace.getConfiguration('demoBuilder').get<string>('daLive.defaultOrg', '');
+
         const orgName = await vscode.window.showInputBox({
             prompt: 'Enter DA.live organization name',
             placeHolder: 'e.g., skukla',
+            value: defaultOrg,
             validateInput: (value) => {
                 if (!value?.trim()) {
                     return 'Organization name is required';
@@ -85,7 +88,7 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: `Loading sites from ${orgName}...`,
+                title: `Loading DA.live sites from ${orgName}:`,
                 cancellable: false,
             },
             async () => {
@@ -193,7 +196,7 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Deleting sites...',
+                title: 'Deleting DA.live sites:',
                 cancellable: false,
             },
             async (progress) => {
