@@ -136,7 +136,7 @@
                 "url": "https://github.com/skukla/commerce-eds-mesh",
                 "gitOptions": {
                     "shallow": true,
-                    "tag": "v1.0.0-beta.1"
+                    "tag": "v1.0.0-beta.3"
                 }
             },
             "configuration": {
