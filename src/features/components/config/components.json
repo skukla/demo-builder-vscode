@@ -18,16 +18,10 @@
                 "dark": "adobe-file-icon-dark.svg"
             },
             "configuration": {
-                "requiredEnvVars": [
-                    "MESH_ENDPOINT",
-                    "ADOBE_COMMERCE_STORE_CODE",
-                    "ADOBE_COMMERCE_STORE_VIEW_CODE",
-                    "ADOBE_COMMERCE_WEBSITE_CODE",
-                    "ADOBE_CATALOG_API_KEY",
-                    "ADOBE_COMMERCE_ENVIRONMENT_ID"
-                ],
+                "requiredEnvVars": ["MESH_ENDPOINT"],
                 "optionalEnvVars": [
                     "ADOBE_COMMERCE_CUSTOMER_GROUP",
+                    "ACCS_CUSTOMER_GROUP",
                     "AEM_ASSETS_ENABLED"
                 ],
                 "configFiles": {
@@ -116,7 +110,12 @@
             "description": "Adobe's managed SaaS commerce backend",
             "configuration": {
                 "providesServices": ["catalog-service", "live-search"],
-                "requiredEnvVars": ["ACCS_HOST", "ACCS_STORE_VIEW_CODE"],
+                "requiredEnvVars": [
+                    "ACCS_GRAPHQL_ENDPOINT",
+                    "ACCS_WEBSITE_CODE",
+                    "ACCS_STORE_CODE",
+                    "ACCS_STORE_VIEW_CODE"
+                ],
                 "optionalEnvVars": ["ACCS_CUSTOMER_GROUP"]
             }
         }
@@ -154,6 +153,37 @@
                     "ADOBE_CATALOG_API_KEY",
                     "ADOBE_CATALOG_SERVICE_ENDPOINT"
                 ],
+                "providesEnvVars": ["MESH_ENDPOINT"]
+            }
+        },
+        "eds-accs-mesh": {
+            "name": "EDS ACCS API Mesh",
+            "subType": "mesh",
+            "description": "GraphQL mesh for EDS storefronts with ACCS backend (single source passthrough)",
+            "icon": {
+                "light": "adobe-file-icon-light.svg",
+                "dark": "adobe-file-icon-dark.svg"
+            },
+            "source": {
+                "type": "git",
+                "url": "https://github.com/skukla/eds-accs-mesh",
+                "gitOptions": {
+                    "shallow": true,
+                    "tag": "stable"
+                }
+            },
+            "configuration": {
+                "nodeVersion": "20",
+                "buildScript": "build",
+                "requiresDeployment": true,
+                "deploymentTarget": "adobe-io",
+                "requiredEnvVars": [
+                    "ACCS_GRAPHQL_ENDPOINT",
+                    "ACCS_WEBSITE_CODE",
+                    "ACCS_STORE_CODE",
+                    "ACCS_STORE_VIEW_CODE"
+                ],
+                "optionalEnvVars": ["ACCS_CUSTOMER_GROUP"],
                 "providesEnvVars": ["MESH_ENDPOINT"]
             }
         },
@@ -252,7 +282,7 @@
             "description": "Edge Delivery Services with Adobe Commerce Cloud Service backend",
             "frontend": "eds-storefront",
             "backend": "adobe-commerce-accs",
-            "requiredComponents": [],
+            "requiredComponents": ["eds-accs-mesh"],
             "optionalComponents": ["demo-inspector"]
         },
         "headless-paas": {
@@ -387,11 +417,7 @@
                     "ADOBE_COMMERCE_ENVIRONMENT_ID",
                     "ADOBE_CATALOG_API_KEY"
                 ],
-                "adobe-commerce-accs": [
-                    "ACCS_CATALOG_SERVICE_ENDPOINT",
-                    "ADOBE_COMMERCE_ENVIRONMENT_ID",
-                    "ADOBE_CATALOG_API_KEY"
-                ]
+                "adobe-commerce-accs": []
             }
         },
         "live-search": {
@@ -404,22 +430,36 @@
                     "ADOBE_COMMERCE_ENVIRONMENT_ID",
                     "ADOBE_CATALOG_API_KEY"
                 ],
-                "adobe-commerce-accs": [
-                    "ACCS_CATALOG_SERVICE_ENDPOINT",
-                    "ADOBE_COMMERCE_ENVIRONMENT_ID",
-                    "ADOBE_CATALOG_API_KEY"
-                ]
+                "adobe-commerce-accs": []
             }
         }
     },
 
     "envVars": {
-        "ACCS_HOST": {
-            "label": "ACCS Host URL",
+        "ACCS_GRAPHQL_ENDPOINT": {
+            "label": "ACCS GraphQL Endpoint",
             "type": "url",
             "required": true,
-            "placeholder": "https://your-instance.adobecommerce.com",
-            "description": "The base URL of your Adobe Commerce Cloud Service instance",
+            "placeholder": "https://na1-sandbox.api.commerce.adobe.com/{env-id}/graphql",
+            "description": "Full GraphQL endpoint URL for your ACCS instance",
+            "group": "accs"
+        },
+        "ACCS_WEBSITE_CODE": {
+            "label": "Website Code",
+            "type": "text",
+            "required": true,
+            "default": "base",
+            "placeholder": "base",
+            "description": "Website code for ACCS store",
+            "group": "accs"
+        },
+        "ACCS_STORE_CODE": {
+            "label": "Store Code",
+            "type": "text",
+            "required": true,
+            "default": "main_website_store",
+            "placeholder": "main_website_store",
+            "description": "Store code for ACCS store",
             "group": "accs"
         },
         "ACCS_STORE_VIEW_CODE": {
