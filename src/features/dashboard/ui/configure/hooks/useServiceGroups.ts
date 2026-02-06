@@ -135,8 +135,8 @@ export function useServiceGroups({
             .map(def => toServiceGroupWithSortedFields(def, groups))
             .filter(group => group.fields.length > 0)
             .sort((a, b) => {
-                const aOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === a.id)?.order || 99;
-                const bOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === b.id)?.order || 99;
+                const aOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === a.id)?.order ?? 99;
+                const bOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === b.id)?.order ?? 99;
                 return aOrder - bOrder;
             });
 
