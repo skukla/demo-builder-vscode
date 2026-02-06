@@ -5,7 +5,6 @@ import {
     initializeAdobeContextFromImport,
     initializeProjectName,
     getFirstEnabledStep,
-    isStepSatisfied,
     ImportedSettings,
     EditProjectConfig,
     WizardStepConfigWithRequirements,
@@ -65,10 +64,6 @@ interface UseWizardStateReturn {
     isConfirmingSelection: boolean;
     /** Set confirming selection state */
     setIsConfirmingSelection: React.Dispatch<React.SetStateAction<boolean>>;
-    /** Whether preparing review step (import mode) */
-    isPreparingReview: boolean;
-    /** Set preparing review state */
-    setIsPreparingReview: React.Dispatch<React.SetStateAction<boolean>>;
     /** Full component data with envVars from backend */
     componentsData: { success: boolean; type: string; data: ComponentsData } | null;
     /** Set components data */
@@ -356,37 +351,21 @@ export function useWizardState({
         if (orgActuallyChanged) {
             const isReviewMode = state.wizardMode && state.wizardMode !== 'create';
             if (isReviewMode) {
-                // Recompute which steps are still satisfied with the new state
-                // IMPORTANT: Preserve any steps that were manually completed by user actions
                 // Reset all org-dependent steps (project → workspace → mesh → settings)
                 // These form a cascade: org owns projects, projects own workspaces,
                 // workspaces own meshes, and settings may reference org credentials
-                setCompletedSteps(prev => {
-                    const orgDependentSteps: WizardStep[] = [
-                        'adobe-project',
-                        'adobe-workspace',
-                        'settings',
-                    ];
-                    // Remove org-dependent steps that are no longer satisfied
-                    const preserved = prev.filter(stepId => !orgDependentSteps.includes(stepId));
-                    // Re-add org-dependent steps if still satisfied
-                    const satisfiedOrgSteps = orgDependentSteps.filter(stepId =>
-                        isStepSatisfied(stepId, state),
-                    );
-                    return [...preserved, ...satisfiedOrgSteps];
-                });
-                setConfirmedSteps(prev => {
-                    const orgDependentSteps: WizardStep[] = [
-                        'adobe-project',
-                        'adobe-workspace',
-                        'settings',
-                    ];
-                    const preserved = prev.filter(stepId => !orgDependentSteps.includes(stepId));
-                    const satisfiedOrgSteps = orgDependentSteps.filter(stepId =>
-                        isStepSatisfied(stepId, state),
-                    );
-                    return [...preserved, ...satisfiedOrgSteps];
-                });
+                // Remove org-dependent steps - user must re-traverse them
+                const orgDependentSteps: WizardStep[] = [
+                    'adobe-project',
+                    'adobe-workspace',
+                    'settings',
+                ];
+                setCompletedSteps(prev =>
+                    prev.filter(stepId => !orgDependentSteps.includes(stepId)),
+                );
+                setConfirmedSteps(prev =>
+                    prev.filter(stepId => !orgDependentSteps.includes(stepId)),
+                );
                 log.info(`Org changed (${prevOrgId} → ${currentOrgId}), updated org-dependent steps`);
             }
         }
@@ -406,7 +385,6 @@ export function useWizardState({
     // UI loading states
     const [canProceed, setCanProceed] = useState(false);
     const [isConfirmingSelection, setIsConfirmingSelection] = useState(false);
-    const [isPreparingReview, setIsPreparingReview] = useState(false);
 
     // Component data from backend
     const [componentsData, setComponentsData] = useState<{
@@ -441,8 +419,6 @@ export function useWizardState({
         setIsTransitioning,
         isConfirmingSelection,
         setIsConfirmingSelection,
-        isPreparingReview,
-        setIsPreparingReview,
         componentsData,
         setComponentsData,
     };

@@ -312,7 +312,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 if (selection === 'Redeploy Mesh') {
                                     // Use ensureAuthAndApply to handle inline sign-in if needed
                                     await this.ensureAuthAndApply(
-                                        () => this.withDeploymentStatus(() => vscode.commands.executeCommand('demoBuilder.deployMesh')),
+                                        () => this.withDeploymentStatus(async () => { await vscode.commands.executeCommand('demoBuilder.deployMesh'); }),
                                         'redeploy mesh',
                                     );
                                 } else if (selection === 'Later') {
@@ -343,7 +343,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 if (selection === 'Redeploy Mesh') {
                                     // Use ensureAuthAndApply to handle inline sign-in if needed
                                     await this.ensureAuthAndApply(
-                                        () => this.withDeploymentStatus(() => vscode.commands.executeCommand('demoBuilder.deployMesh')),
+                                        () => this.withDeploymentStatus(async () => { await vscode.commands.executeCommand('demoBuilder.deployMesh'); }),
                                         'redeploy mesh',
                                     );
                                 } else if (selection === 'Later') {

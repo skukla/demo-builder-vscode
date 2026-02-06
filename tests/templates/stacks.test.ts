@@ -89,12 +89,12 @@ describe('stacks.json', () => {
             expect(eds?.backend).toBe('adobe-commerce-accs');
         });
 
-        it('should include eds-commerce-mesh dependency for Drop-ins integration', () => {
+        it('should include eds-accs-mesh dependency for Drop-ins integration', () => {
             const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;
             const eds = stacks.find(s => s.id === 'eds-accs');
             const deps = eds?.dependencies as string[];
-            // EDS stacks use eds-commerce-mesh (passthrough GraphQL mesh for drop-in components)
-            expect(deps).toContain('eds-commerce-mesh');
+            // EDS ACCS stacks use eds-accs-mesh (ACCS-specific passthrough GraphQL mesh)
+            expect(deps).toContain('eds-accs-mesh');
         });
 
         it('should require GitHub OAuth', () => {

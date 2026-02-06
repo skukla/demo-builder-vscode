@@ -14,7 +14,10 @@
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
         "ADOBE_COMMERCE_STORE_CODE": "citisignal_store",
-        "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us"
+        "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us",
+        "ACCS_WEBSITE_CODE": "citisignal",
+        "ACCS_STORE_CODE": "citisignal_store",
+        "ACCS_STORE_VIEW_CODE": "citisignal_us"
       },
       "storefronts": {
         "headless-paas": {
@@ -87,12 +90,6 @@
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
-          },
-          "contentPatches": ["index-product-teaser-sku", "phones-product-teaser-sku", "phones-heading-reorder", "smart-watches-category-id", "smart-watches-url-path"],
-          "contentPatchSource": {
-            "owner": "skukla",
-            "repo": "eds-demo-content-patches",
-            "path": "citisignal"
           }
         }
       }

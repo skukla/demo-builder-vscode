@@ -11,6 +11,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { COMPONENT_IDS } from '@/core/constants';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { Project, ComponentInstance } from '@/types';
 import { HandlerContext } from '@/types/handlers';
@@ -86,7 +87,7 @@ export function hasAdobeProjectContext(project: Project | null | undefined): pro
  * not an input. The mesh endpoint is stored in componentInstances['commerce-mesh'].endpoint
  * and is checked separately.
  */
-const REQUIRED_MESH_ENV_VARS = [
+const REQUIRED_PAAS_MESH_ENV_VARS = [
     'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
     'ADOBE_CATALOG_SERVICE_ENDPOINT',
     'ADOBE_COMMERCE_URL',
@@ -97,28 +98,46 @@ const REQUIRED_MESH_ENV_VARS = [
     'ADOBE_CATALOG_API_KEY',
 ];
 
+const REQUIRED_ACCS_MESH_ENV_VARS = [
+    'ACCS_GRAPHQL_ENDPOINT',
+    'ACCS_WEBSITE_CODE',
+    'ACCS_STORE_CODE',
+    'ACCS_STORE_VIEW_CODE',
+];
+
+/** Get required env vars based on mesh component type */
+function getRequiredMeshEnvVars(meshComponentId?: string): string[] {
+    if (meshComponentId === COMPONENT_IDS.EDS_ACCS_MESH) {
+        return REQUIRED_ACCS_MESH_ENV_VARS;
+    }
+    return REQUIRED_PAAS_MESH_ENV_VARS;
+}
+
 /**
  * Check if all required mesh configuration fields are populated
  *
  * Checks both:
- * 1. The .env file for INPUT variables (commerce URLs, credentials)
+ * 1. The .env file for INPUT variables (backend-specific: PaaS or ACCS)
  * 2. The mesh endpoint (OUTPUT of deployment) from componentInstances
  *
  * @param meshPath - Path to the mesh component directory
- * @param meshEndpoint - Mesh endpoint from componentInstances['commerce-mesh'].endpoint
+ * @param meshEndpoint - Mesh endpoint from componentInstances
+ * @param meshComponentId - The mesh component ID (e.g., 'eds-accs-mesh', 'eds-commerce-mesh')
  * @returns Object with isComplete flag and list of missing fields
  */
 export async function checkMeshConfigCompleteness(
     meshPath: string | undefined,
     meshEndpointFromConfigs?: string,
+    meshComponentId?: string,
 ): Promise<{
     isComplete: boolean;
     missingFields: string[];
 }> {
+    const requiredVars = getRequiredMeshEnvVars(meshComponentId);
     const missingFields: string[] = [];
 
     if (!meshPath) {
-        return { isComplete: false, missingFields: [...REQUIRED_MESH_ENV_VARS, 'MESH_ENDPOINT'] };
+        return { isComplete: false, missingFields: [...requiredVars, 'MESH_ENDPOINT'] };
     }
 
     // Read the .env file from the mesh component directory
@@ -130,11 +149,11 @@ export async function checkMeshConfigCompleteness(
         envConfig = parseEnvFile(content);
     } catch {
         // .env file doesn't exist or can't be read - all fields are missing
-        return { isComplete: false, missingFields: [...REQUIRED_MESH_ENV_VARS, 'MESH_ENDPOINT'] };
+        return { isComplete: false, missingFields: [...requiredVars, 'MESH_ENDPOINT'] };
     }
 
-    // Check INPUT variables from .env file
-    for (const field of REQUIRED_MESH_ENV_VARS) {
+    // Check INPUT variables from .env file (backend-specific)
+    for (const field of requiredVars) {
         const value = envConfig[field];
         if (value === undefined || value === null || value === '') {
             missingFields.push(field);
@@ -164,7 +183,7 @@ export async function determineMeshStatus(
     const meshEndpointFromConfigs = getMeshEndpoint(project);
 
     // Check if configuration is complete (both .env INPUT vars and mesh endpoint)
-    const configCheck = await checkMeshConfigCompleteness(meshComponent.path, meshEndpointFromConfigs);
+    const configCheck = await checkMeshConfigCompleteness(meshComponent.path, meshEndpointFromConfigs, meshComponent.id);
     if (!configCheck.isComplete) {
         return 'config-incomplete';
     }

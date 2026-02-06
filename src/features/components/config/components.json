@@ -20,8 +20,6 @@
             "configuration": {
                 "requiredEnvVars": ["MESH_ENDPOINT"],
                 "optionalEnvVars": [
-                    "ADOBE_COMMERCE_CUSTOMER_GROUP",
-                    "ACCS_CUSTOMER_GROUP",
                     "AEM_ASSETS_ENABLED"
                 ],
                 "configFiles": {
@@ -231,7 +229,10 @@
             "configDefaults": {
                 "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
                 "ADOBE_COMMERCE_STORE_CODE": "citisignal_store",
-                "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us"
+                "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us",
+                "ACCS_WEBSITE_CODE": "citisignal",
+                "ACCS_STORE_CODE": "citisignal_store",
+                "ACCS_STORE_VIEW_CODE": "citisignal_us"
             },
             "contentSource": {
                 "github": {
@@ -448,8 +449,8 @@
             "label": "Website Code",
             "type": "text",
             "required": true,
-            "default": "base",
-            "placeholder": "base",
+            "default": "citisignal",
+            "placeholder": "citisignal",
             "description": "Website code for ACCS store",
             "group": "accs"
         },
@@ -457,8 +458,8 @@
             "label": "Store Code",
             "type": "text",
             "required": true,
-            "default": "main_website_store",
-            "placeholder": "main_website_store",
+            "default": "citisignal_store",
+            "placeholder": "citisignal_store",
             "description": "Store code for ACCS store",
             "group": "accs"
         },
@@ -466,7 +467,8 @@
             "label": "Store View Code",
             "type": "text",
             "required": true,
-            "placeholder": "default",
+            "default": "citisignal_us",
+            "placeholder": "citisignal_us",
             "description": "The store view code for your ACCS instance",
             "group": "accs"
         },

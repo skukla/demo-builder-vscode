@@ -41,12 +41,13 @@ describe('COMPONENT_IDS', () => {
                 'EDS_STOREFRONT',
                 'DEMO_INSPECTOR',
                 'EDS_COMMERCE_MESH',
+                'EDS_ACCS_MESH',
                 'HEADLESS_COMMERCE_MESH',
             ]);
         });
 
-        it('should have exactly 4 component IDs', () => {
-            expect(Object.keys(COMPONENT_IDS).length).toBe(4);
+        it('should have exactly 5 component IDs', () => {
+            expect(Object.keys(COMPONENT_IDS).length).toBe(5);
         });
     });
 
@@ -57,6 +58,7 @@ describe('COMPONENT_IDS', () => {
                 'eds-storefront',
                 'demo-inspector',
                 'eds-commerce-mesh',
+                'eds-accs-mesh',
                 'headless-commerce-mesh',
             ];
 
@@ -71,11 +73,13 @@ describe('COMPONENT_IDS', () => {
             const edsStorefront: ComponentId = COMPONENT_IDS.EDS_STOREFRONT;
             const demoInspector: ComponentId = COMPONENT_IDS.DEMO_INSPECTOR;
             const edsCommerceMesh: ComponentId = COMPONENT_IDS.EDS_COMMERCE_MESH;
+            const edsAccsMesh: ComponentId = COMPONENT_IDS.EDS_ACCS_MESH;
             const headlessCommerceMesh: ComponentId = COMPONENT_IDS.HEADLESS_COMMERCE_MESH;
 
             expect(edsStorefront).toBe('eds-storefront');
             expect(demoInspector).toBe('demo-inspector');
             expect(edsCommerceMesh).toBe('eds-commerce-mesh');
+            expect(edsAccsMesh).toBe('eds-accs-mesh');
             expect(headlessCommerceMesh).toBe('headless-commerce-mesh');
         });
     });

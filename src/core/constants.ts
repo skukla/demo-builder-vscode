@@ -18,8 +18,10 @@ export const COMPONENT_IDS = {
     EDS_STOREFRONT: 'eds-storefront',
     /** Demo inspector overlay component */
     DEMO_INSPECTOR: 'demo-inspector',
-    /** EDS-specific API Mesh (for EDS storefronts) */
+    /** EDS-specific API Mesh (for EDS PaaS storefronts) */
     EDS_COMMERCE_MESH: 'eds-commerce-mesh',
+    /** EDS-specific API Mesh (for EDS ACCS storefronts) */
+    EDS_ACCS_MESH: 'eds-accs-mesh',
     /** Headless-specific API Mesh (for Next.js storefronts) */
     HEADLESS_COMMERCE_MESH: 'headless-commerce-mesh',
 } as const;
@@ -34,6 +36,7 @@ export type ComponentId = (typeof COMPONENT_IDS)[keyof typeof COMPONENT_IDS];
  */
 export const MESH_COMPONENT_IDS = [
     COMPONENT_IDS.EDS_COMMERCE_MESH,
+    COMPONENT_IDS.EDS_ACCS_MESH,
     COMPONENT_IDS.HEADLESS_COMMERCE_MESH,
 ] as const;
 

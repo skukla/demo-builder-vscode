@@ -22,6 +22,18 @@ interface ServiceGroupDefinition {
  */
 const SERVICE_GROUP_DEFINITIONS: ServiceGroupDefinition[] = [
     {
+        id: 'accs',
+        label: 'Adobe Commerce Cloud Service',
+        order: 0,
+        fieldOrder: [
+            'ACCS_GRAPHQL_ENDPOINT',
+            'ACCS_WEBSITE_CODE',
+            'ACCS_STORE_CODE',
+            'ACCS_STORE_VIEW_CODE',
+            'ACCS_CUSTOMER_GROUP',
+        ],
+    },
+    {
         id: 'adobe-commerce',
         label: 'Adobe Commerce',
         order: 1,
@@ -123,8 +135,8 @@ export function useServiceGroups({
             .map(def => toServiceGroupWithSortedFields(def, groups))
             .filter(group => group.fields.length > 0)
             .sort((a, b) => {
-                const aOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === a.id)?.order || 99;
-                const bOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === b.id)?.order || 99;
+                const aOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === a.id)?.order ?? 99;
+                const bOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === b.id)?.order ?? 99;
                 return aOrder - bOrder;
             });
 

@@ -39,6 +39,7 @@ interface ComponentsData {
     frontends?: ComponentData[];
     backends?: ComponentData[];
     dependencies?: ComponentData[];
+    mesh?: ComponentData[];
     integrations?: ComponentData[];
     appBuilder?: ComponentData[];
     envVars?: Record<string, ComponentEnvVar>;
@@ -79,7 +80,7 @@ interface UseComponentConfigReturn {
 // Note: 'mesh' group removed - MESH_ENDPOINT is auto-configured during project creation
 // Note: 'eds-commerce' group removed - env vars standardized to ADOBE_COMMERCE_* naming (v3.0.0)
 const SERVICE_GROUP_DEFS: ServiceGroupDef[] = [
-    { id: 'accs', label: 'Adobe Commerce Cloud Service', order: 1, fieldOrder: ['ACCS_HOST', 'ACCS_STORE_VIEW_CODE', 'ACCS_CUSTOMER_GROUP'] },
+    { id: 'accs', label: 'Adobe Commerce Cloud Service', order: 1, fieldOrder: ['ACCS_GRAPHQL_ENDPOINT', 'ACCS_WEBSITE_CODE', 'ACCS_STORE_CODE', 'ACCS_STORE_VIEW_CODE', 'ACCS_CUSTOMER_GROUP'] },
     { id: 'adobe-commerce', label: 'Adobe Commerce', order: 2, fieldOrder: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT', 'ADOBE_COMMERCE_WEBSITE_CODE', 'ADOBE_COMMERCE_STORE_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE', 'ADOBE_COMMERCE_CUSTOMER_GROUP', 'ADOBE_COMMERCE_ADMIN_USERNAME', 'ADOBE_COMMERCE_ADMIN_PASSWORD'] },
     { id: 'catalog-service', label: 'Catalog Service', order: 3, fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_API_KEY'] },
     { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
@@ -153,6 +154,7 @@ export function useComponentConfig({
             return componentsData.frontends?.find(c => c.id === componentId) ||
                    componentsData.backends?.find(c => c.id === componentId) ||
                    componentsData.dependencies?.find(c => c.id === componentId) ||
+                   componentsData.mesh?.find(c => c.id === componentId) ||
                    componentsData.integrations?.find(c => c.id === componentId) ||
                    componentsData.appBuilder?.find(c => c.id === componentId);
         };

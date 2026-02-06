@@ -41,6 +41,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             getIntegrations: jest.fn(),
             getAppBuilder: jest.fn(),
             getDependencies: jest.fn(),
+            getMesh: jest.fn(),
             loadRegistry: jest.fn(),
         } as any;
 
@@ -102,6 +103,15 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                     configuration: {},
                 },
             ];
+            const mockMesh = [
+                {
+                    id: 'eds-accs-mesh',
+                    name: 'EDS ACCS API Mesh',
+                    description: 'GraphQL mesh for ACCS',
+                    dependencies: { required: [], optional: [] },
+                    configuration: { nodeVersion: '20' },
+                },
+            ];
             const mockRegistry = {
                 version: '1.0.0',
                 components: {
@@ -123,6 +133,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             mockRegistryManager.getIntegrations.mockResolvedValue(mockIntegrations);
             mockRegistryManager.getAppBuilder.mockResolvedValue(mockAppBuilder);
             mockRegistryManager.getDependencies.mockResolvedValue(mockDependencies);
+            mockRegistryManager.getMesh.mockResolvedValue(mockMesh);
             mockRegistryManager.loadRegistry.mockResolvedValue(mockRegistry);
 
             // Act: Call handler
@@ -178,6 +189,15 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                             configuration: {},
                         },
                     ],
+                    mesh: [
+                        {
+                            id: 'eds-accs-mesh',
+                            name: 'EDS ACCS API Mesh',
+                            description: 'GraphQL mesh for ACCS',
+                            dependencies: { required: [], optional: [] },
+                            configuration: { nodeVersion: '20' },
+                        },
+                    ],
                     envVars: {
                         NEXT_PUBLIC_API_URL: {
                             label: 'API URL',
@@ -226,6 +246,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             mockRegistryManager.getIntegrations.mockResolvedValue([]);
             mockRegistryManager.getAppBuilder.mockResolvedValue([]);
             mockRegistryManager.getDependencies.mockResolvedValue([]);
+            mockRegistryManager.getMesh.mockResolvedValue([]);
             mockRegistryManager.loadRegistry.mockResolvedValue({
                 version: '1.0.0',
                 components: {
@@ -249,6 +270,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                     integrations: [],
                     appBuilder: [],
                     dependencies: [],
+                    mesh: [],
                     envVars: {},
                     services: {},
                 },
@@ -274,6 +296,9 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             ]);
             mockRegistryManager.getDependencies.mockResolvedValue([
                 { id: 'd1', name: 'Dependency', description: 'desc', dependencies: { required: [], optional: [] }, configuration: {} },
+            ]);
+            mockRegistryManager.getMesh.mockResolvedValue([
+                { id: 'm1', name: 'Mesh', description: 'desc', dependencies: { required: [], optional: [] }, configuration: {} },
             ]);
             mockRegistryManager.loadRegistry.mockResolvedValue({
                 version: '1.0.0',
@@ -305,6 +330,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             expect(data).toHaveProperty('integrations');
             expect(data).toHaveProperty('appBuilder');
             expect(data).toHaveProperty('dependencies');
+            expect(data).toHaveProperty('mesh');
             expect(data).toHaveProperty('envVars');
 
             // Verify each array has expected structure

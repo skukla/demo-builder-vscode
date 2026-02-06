@@ -605,12 +605,76 @@ describe('HelixService', () => {
 
             // Then: Should log fallback message
             expect(mockLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('Bulk API not available, falling back to page-by-page'),
+                expect.stringContaining('falling back to page-by-page'),
             );
 
             // Then: Should log success with page count
             expect(mockLogger.info).toHaveBeenCalledWith(
                 expect.stringContaining('Successfully published 2/2'),
+            );
+        });
+
+        it('should succeed synchronously when bulk preview returns 200 (small batch)', async () => {
+            // Given: Bulk preview returns 200 (synchronous success for small path count)
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // When: Previewing all content
+            await service.previewAllContent('testuser', 'my-site');
+
+            // Then: Should succeed without error
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                expect.stringContaining('completed synchronously'),
+            );
+        });
+
+        it('should succeed synchronously when bulk publish returns 200 (small batch)', async () => {
+            // Given: Bulk publish returns 200 (synchronous success for small path count)
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // When: Publishing all content
+            await service.publishAllContent('testuser', 'my-site');
+
+            // Then: Should succeed without error
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                expect.stringContaining('completed synchronously'),
+            );
+        });
+
+        it('should fall back to page-by-page on any bulk error (not just 404)', async () => {
+            // Given: DA.live content
+            mockListDirectory.mockResolvedValueOnce([
+                { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' },
+            ]);
+
+            // Readiness check succeeds
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // Bulk preview returns 500 (server error)
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error',
+            });
+
+            // Fallback: page-by-page preview + publish
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // preview /
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 }); // publish /
+
+            // When: Publishing all site content
+            await service.publishAllSiteContent('testuser/my-site');
+
+            // Then: Should fall back to page-by-page (not throw)
+            expect(mockFetch).toHaveBeenCalledTimes(4);
+
+            // Then: Should log fallback
+            expect(mockLogger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('falling back to page-by-page'),
             );
         });
     });

@@ -136,6 +136,59 @@ ADOBE_CATALOG_API_KEY=api-key-123
             expect(result.isComplete).toBe(false);
             expect(result.missingFields).toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
         });
+
+        describe('ACCS mesh', () => {
+            const accsMeshComponentId = 'eds-accs-mesh';
+
+            it('returns complete when all ACCS required fields are present', async () => {
+                mockFs.readFile.mockResolvedValue(`
+ACCS_GRAPHQL_ENDPOINT=https://na1-sandbox.api.commerce.adobe.com/abc123/graphql
+ACCS_WEBSITE_CODE=citisignal
+ACCS_STORE_CODE=citisignal_store
+ACCS_STORE_VIEW_CODE=citisignal_us
+`);
+
+                const result = await checkMeshConfigCompleteness(
+                    mockMeshPath, mockMeshEndpoint, accsMeshComponentId,
+                );
+
+                expect(result.isComplete).toBe(true);
+                expect(result.missingFields).toHaveLength(0);
+            });
+
+            it('returns incomplete when ACCS fields are missing', async () => {
+                mockFs.readFile.mockResolvedValue(`
+ACCS_GRAPHQL_ENDPOINT=https://na1-sandbox.api.commerce.adobe.com/abc123/graphql
+`);
+
+                const result = await checkMeshConfigCompleteness(
+                    mockMeshPath, mockMeshEndpoint, accsMeshComponentId,
+                );
+
+                expect(result.isComplete).toBe(false);
+                expect(result.missingFields).toContain('ACCS_WEBSITE_CODE');
+                expect(result.missingFields).toContain('ACCS_STORE_CODE');
+                expect(result.missingFields).toContain('ACCS_STORE_VIEW_CODE');
+            });
+
+            it('does not require PaaS fields for ACCS mesh', async () => {
+                mockFs.readFile.mockResolvedValue(`
+ACCS_GRAPHQL_ENDPOINT=https://na1-sandbox.api.commerce.adobe.com/abc123/graphql
+ACCS_WEBSITE_CODE=citisignal
+ACCS_STORE_CODE=citisignal_store
+ACCS_STORE_VIEW_CODE=citisignal_us
+`);
+
+                const result = await checkMeshConfigCompleteness(
+                    mockMeshPath, mockMeshEndpoint, accsMeshComponentId,
+                );
+
+                // Should NOT require PaaS-specific vars
+                expect(result.missingFields).not.toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
+                expect(result.missingFields).not.toContain('ADOBE_CATALOG_API_KEY');
+                expect(result.isComplete).toBe(true);
+            });
+        });
     });
 
     describe('determineMeshStatus', () => {
@@ -277,6 +330,52 @@ ADOBE_CATALOG_API_KEY=api-key-123
             );
 
             expect(result).toBe('config-changed');
+        });
+
+        it('returns deployed for ACCS mesh when ACCS config is complete', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ACCS_GRAPHQL_ENDPOINT=https://na1-sandbox.api.commerce.adobe.com/abc123/graphql
+ACCS_WEBSITE_CODE=citisignal
+ACCS_STORE_CODE=citisignal_store
+ACCS_STORE_VIEW_CODE=citisignal_us
+`);
+
+            const accsMeshComponent: ComponentInstance = {
+                id: 'eds-accs-mesh',
+                name: 'EDS ACCS Mesh',
+                type: 'dependency',
+                subType: 'mesh',
+                path: mockMeshPath,
+                status: 'deployed',
+                endpoint: mockMeshEndpoint,
+                lastUpdated: new Date(),
+            };
+
+            const projectWithAccsMesh: Project = {
+                name: 'ACCS Test Project',
+                path: '/projects/demo',
+                createdAt: new Date(),
+                status: 'ready',
+                componentInstances: {
+                    'eds-accs-mesh': {
+                        id: 'eds-accs-mesh',
+                        name: 'EDS ACCS Mesh',
+                        type: 'dependency',
+                        subType: 'mesh',
+                        path: mockMeshPath,
+                        status: 'deployed',
+                        endpoint: mockMeshEndpoint,
+                    },
+                },
+            };
+
+            const result = await determineMeshStatus(
+                { hasChanges: false },
+                accsMeshComponent,
+                projectWithAccsMesh,
+            );
+
+            expect(result).toBe('deployed');
         });
 
         it('returns error when component status is error and config complete', async () => {

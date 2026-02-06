@@ -17,7 +17,6 @@ import {
     getNavigationDirection,
     shouldShowWizardFooter,
     getWizardTitle,
-    isStepSatisfied,
     ImportedSettings,
     EditProjectConfig,
     WizardStepConfigWithRequirements,
@@ -28,8 +27,8 @@ import { filterComponentConfigsForStackChange } from '../helpers/stackHelpers';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
-import { LoadingOverlay, LoadingDisplay } from '@/core/ui/components/feedback';
-import { PageHeader, PageFooter, CenteredFeedbackContainer, SingleColumnLayout } from '@/core/ui/components/layout';
+import { LoadingOverlay } from '@/core/ui/components/feedback';
+import { PageHeader, PageFooter } from '@/core/ui/components/layout';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
@@ -107,8 +106,6 @@ export function WizardContainer({
         setIsTransitioning,
         isConfirmingSelection,
         setIsConfirmingSelection,
-        isPreparingReview,
-        setIsPreparingReview,
         componentsData,
         setComponentsData,
     } = useWizardState({
@@ -140,7 +137,6 @@ export function WizardContainer({
         setAnimationDirection,
         setIsTransitioning,
         setIsConfirmingSelection,
-        setIsPreparingReview,
         importedSettings,
         packages,
     });
@@ -229,28 +225,9 @@ export function WizardContainer({
             edsContentSource: undefined,
         };
 
-        // In review mode, recompute which steps are still satisfied with the new state
-        // This preserves green checkmarks for steps that still have valid data
-        // IMPORTANT: Stack changes mean brand changes which mean different mesh code
-        // Force user to re-confirm project/workspace selection even if state is preserved
-        const isReviewMode = state.wizardMode && state.wizardMode !== 'create';
-        if (isReviewMode) {
-            // Steps that require re-confirmation on stack change
-            // (stack/brand affects mesh code, so deployment target must be verified)
-            const stackDependentSteps = ['adobe-project', 'adobe-workspace'];
-            
-            const satisfiedSteps = WIZARD_STEPS
-                .filter(step => step.id !== 'deploy-mesh' && step.id !== 'review')
-                .filter(step => isStepSatisfied(step.id, newState))
-                .filter(step => !stackDependentSteps.includes(step.id)) // Force re-confirmation
-                .map(step => step.id);
-            log.info(`Recomputed satisfied steps after stack change: ${satisfiedSteps.join(', ') || 'none'}`);
-            log.info(`Requiring re-confirmation for: ${stackDependentSteps.join(', ')}`);
-            setCompletedSteps(satisfiedSteps);
-        } else {
-            // In create mode, reset to just 'welcome'
-            setCompletedSteps(['welcome']);
-        }
+        // Stack change resets all steps except welcome (user must re-traverse)
+        // Consistent behavior across all wizard modes (create, import, edit)
+        setCompletedSteps(['welcome']);
 
         // Update state with filtered configs
         // Clear EDS-specific state (GitHub, repository, etc.) since it's architecture-dependent
@@ -269,25 +246,6 @@ export function WizardContainer({
     };
 
     const renderStep = () => {
-        // Import mode: Show loading view during transition to review
-        // Uses same UI pattern as project/workspace loading states
-        if (isPreparingReview) {
-            return (
-                <SingleColumnLayout>
-                    <Heading level={2} marginBottom="size-300">
-                        Preparing Review
-                    </Heading>
-                    <CenteredFeedbackContainer>
-                        <LoadingDisplay
-                            size="L"
-                            message="Preparing your project review..."
-                            subMessage="Loading your imported settings"
-                        />
-                    </CenteredFeedbackContainer>
-                </SingleColumnLayout>
-            );
-        }
-
         const props = {
             state,
             updateState,
@@ -393,7 +351,7 @@ export function WizardContainer({
                     </div>
 
                     {/* Footer - hidden on project-creation, mesh-deployment (own buttons) */}
-                    {shouldShowWizardFooter(isLastStep, state.currentStep, isPreparingReview) && (
+                    {shouldShowWizardFooter(isLastStep, state.currentStep) && (
                         <PageFooter
                             leftContent={
                                 <Button
@@ -439,10 +397,6 @@ export function WizardContainer({
                         />
                     )}
 
-                    {/* Empty footer during preparing review transition for visual consistency */}
-                    {isPreparingReview && (
-                        <PageFooter constrainWidth={true} />
-                    )}
                 </div>
             </div>
 

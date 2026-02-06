@@ -4,8 +4,6 @@ import {
     filterCompletedStepsForBackwardNav,
     getAdobeStepIndices,
     computeStateUpdatesForBackwardNav,
-    findFirstIncompleteStep,
-    REQUIRED_REVIEW_STEPS,
     ImportedSettings,
 } from '../wizardHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
@@ -30,7 +28,6 @@ interface UseWizardNavigationProps {
     setAnimationDirection: React.Dispatch<React.SetStateAction<'forward' | 'backward'>>;
     setIsTransitioning: React.Dispatch<React.SetStateAction<boolean>>;
     setIsConfirmingSelection: React.Dispatch<React.SetStateAction<boolean>>;
-    setIsPreparingReview: React.Dispatch<React.SetStateAction<boolean>>;
     importedSettings?: ImportedSettings | null;
     /** Demo packages for resolving frontend source from storefronts */
     packages?: DemoPackage[];
@@ -103,29 +100,18 @@ export function useWizardNavigation({
     setAnimationDirection,
     setIsTransitioning,
     setIsConfirmingSelection,
-    setIsPreparingReview,
     importedSettings,
     packages,
 }: UseWizardNavigationProps): UseWizardNavigationReturn {
     // Refs for tracking navigation transition timeout (prevents race conditions)
     const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const importNavTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const importNavClearTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Cleanup all timers on unmount
+    // Cleanup timer on unmount
     useEffect(() => {
         return () => {
             if (transitionTimerRef.current) {
                 clearTimeout(transitionTimerRef.current);
                 transitionTimerRef.current = null;
-            }
-            if (importNavTimerRef.current) {
-                clearTimeout(importNavTimerRef.current);
-                importNavTimerRef.current = null;
-            }
-            if (importNavClearTimerRef.current) {
-                clearTimeout(importNavClearTimerRef.current);
-                importNavClearTimerRef.current = null;
             }
         };
     }, []);
@@ -191,80 +177,8 @@ export function useWizardNavigation({
     const goNext = useCallback(async () => {
         const currentIndex = getCurrentStepIndex();
         const isReviewMode = state.wizardMode && state.wizardMode !== 'create';
-        const reviewIndex = WIZARD_STEPS.findIndex(step => step.id === 'review');
 
-        // SMART SKIP: After required steps, skip to first incomplete step or review
-        // Required steps (welcome, prerequisites, adobe-auth, settings) always go sequentially
-        // After completing a required step OR any satisfied step, skip to first incomplete
-        const isLeavingRequiredStep = REQUIRED_REVIEW_STEPS.includes(state.currentStep as WizardStep);
-        const shouldSmartSkip = isReviewMode && (
-            isLeavingRequiredStep ||  // Just finished a required step
-            completedSteps.includes(state.currentStep)  // Current step was already satisfied
-        );
-
-        if (shouldSmartSkip) {
-            // Find first incomplete step after current, before review
-            // Pass completedSteps to ensure steps removed from completedSteps
-            // (e.g., after stack change) are not skipped
-            const firstIncomplete = findFirstIncompleteStep(
-                state,
-                WIZARD_STEPS as Array<{ id: WizardStep; name: string }>,
-                currentIndex,
-                reviewIndex,
-                completedSteps,
-            );
-
-            if (firstIncomplete === -1) {
-                // All steps complete → skip to review
-                log.info('Review mode: all steps satisfied, navigating to review');
-                setIsPreparingReview(true);
-
-                importNavTimerRef.current = setTimeout(() => {
-                    // Mark current step as completed and confirmed
-                    if (!completedSteps.includes(state.currentStep)) {
-                        setCompletedSteps(prev => [...prev, state.currentStep]);
-                    }
-                    if (!confirmedSteps.includes(state.currentStep)) {
-                        setConfirmedSteps(prev => [...prev, state.currentStep]);
-                    }
-                    setHighestCompletedStepIndex(reviewIndex - 1);
-
-                    navigateToStep('review', reviewIndex, currentIndex);
-
-                    importNavClearTimerRef.current = setTimeout(() => {
-                        setIsPreparingReview(false);
-                    }, TIMEOUTS.STEP_TRANSITION);
-                }, TIMEOUTS.IMPORT_TRANSITION_FEEDBACK);
-
-                return;
-            } else {
-                // Jump to first incomplete step
-                const targetStep = WIZARD_STEPS[firstIncomplete];
-                log.info(`Review mode: jumping to first incomplete step: ${targetStep.id}`);
-
-                try {
-                    setIsConfirmingSelection(true);
-                    await handleStepBackendCalls(state.currentStep, targetStep.id, state, importedSettings, packages);
-
-                    // Mark current step as completed and confirmed
-                    if (!completedSteps.includes(state.currentStep)) {
-                        setCompletedSteps(prev => [...prev, state.currentStep]);
-                    }
-                    if (!confirmedSteps.includes(state.currentStep)) {
-                        setConfirmedSteps(prev => [...prev, state.currentStep]);
-                    }
-
-                    setIsConfirmingSelection(false);
-                    navigateToStep(targetStep.id, firstIncomplete, currentIndex);
-                } catch (error) {
-                    log.error('Failed to skip to incomplete step', error instanceof Error ? error : undefined);
-                    setIsConfirmingSelection(false);
-                }
-                return;
-            }
-        }
-
-        // Standard navigation: go to next step
+        // Standard navigation: go to next step sequentially
         if (currentIndex < WIZARD_STEPS.length - 1) {
             const nextStep = WIZARD_STEPS[currentIndex + 1];
 
@@ -304,7 +218,6 @@ export function useWizardNavigation({
         setConfirmedSteps,
         setHighestCompletedStepIndex,
         setIsConfirmingSelection,
-        setIsPreparingReview,
     ]);
 
     const goBack = useCallback(() => {

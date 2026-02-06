@@ -164,9 +164,6 @@ export const TIMEOUTS = {
     /** Second progress message update timing (2 seconds) */
     PROGRESS_MESSAGE_DELAY_LONG: 2000,
 
-    /** Import transition feedback delay (600ms) */
-    IMPORT_TRANSITION_FEEDBACK: 600,
-
     /** Status bar success message duration (5 seconds) */
     STATUS_BAR_SUCCESS: 5000,
 
