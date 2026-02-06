@@ -192,6 +192,102 @@ describe('StalenessDetector - Edge Cases', () => {
             expect(result.envVarsChanged).toBe(false);
             expect(result.sourceFilesChanged).toBe(false);
         });
+
+        it('should ignore PaaS vars from eds-storefront when mesh is ACCS type', async () => {
+            // Bug fix: ACCS projects have PaaS vars (ADOBE_CATALOG_API_KEY, etc.)
+            // in eds-storefront componentConfigs. The staleness detector must only
+            // compare ACCS-relevant env vars for eds-accs-mesh, ignoring PaaS vars.
+            const project = createMockProject({
+                componentInstances: {
+                    'eds-accs-mesh': {
+                        id: 'eds-accs-mesh',
+                        name: 'ACCS API Mesh',
+                        subType: 'mesh',
+                        path: '/test/mesh',
+                        status: 'deployed',
+                    },
+                },
+                meshState: {
+                    envVars: {
+                        ACCS_GRAPHQL_ENDPOINT: 'https://accs.example.com/graphql',
+                        ACCS_WEBSITE_CODE: 'base',
+                        ACCS_STORE_CODE: 'main_store',
+                        ACCS_STORE_VIEW_CODE: 'default',
+                        ACCS_CUSTOMER_GROUP: 'abc123',
+                    },
+                    sourceHash: 'abc123',
+                    lastDeployed: '2024-01-01T00:00:00Z',
+                },
+            });
+
+            // componentConfigs include PaaS vars from eds-storefront (should be ignored)
+            const newConfig = {
+                'eds-storefront': {
+                    ADOBE_CATALOG_API_KEY: 'some-api-key',
+                    ADOBE_COMMERCE_ENVIRONMENT_ID: 'some-env-id',
+                    ADOBE_COMMERCE_WEBSITE_CODE: 'citisignal',
+                    ADOBE_COMMERCE_STORE_VIEW_CODE: 'citisignal_us',
+                    ADOBE_COMMERCE_STORE_CODE: 'citisignal_store',
+                },
+                'eds-accs-mesh': {
+                    ACCS_GRAPHQL_ENDPOINT: 'https://accs.example.com/graphql',
+                    ACCS_WEBSITE_CODE: 'base',
+                    ACCS_STORE_CODE: 'main_store',
+                    ACCS_STORE_VIEW_CODE: 'default',
+                    ACCS_CUSTOMER_GROUP: 'abc123',
+                },
+            };
+
+            setupMockFileSystemWithHash('abc123');
+
+            const result = await detectMeshChanges(project, newConfig);
+
+            expect(result.hasChanges).toBe(false);
+            expect(result.envVarsChanged).toBe(false);
+            expect(result.changedEnvVars).toEqual([]);
+        });
+
+        it('should detect ACCS env var changes for eds-accs-mesh', async () => {
+            const project = createMockProject({
+                componentInstances: {
+                    'eds-accs-mesh': {
+                        id: 'eds-accs-mesh',
+                        name: 'ACCS API Mesh',
+                        subType: 'mesh',
+                        path: '/test/mesh',
+                        status: 'deployed',
+                    },
+                },
+                meshState: {
+                    envVars: {
+                        ACCS_GRAPHQL_ENDPOINT: 'https://old.accs.example.com/graphql',
+                        ACCS_WEBSITE_CODE: 'base',
+                        ACCS_STORE_CODE: 'main_store',
+                        ACCS_STORE_VIEW_CODE: 'default',
+                    },
+                    sourceHash: 'abc123',
+                    lastDeployed: '2024-01-01T00:00:00Z',
+                },
+            });
+
+            const newConfig = {
+                'eds-accs-mesh': {
+                    ACCS_GRAPHQL_ENDPOINT: 'https://new.accs.example.com/graphql',
+                    ACCS_WEBSITE_CODE: 'base',
+                    ACCS_STORE_CODE: 'main_store',
+                    ACCS_STORE_VIEW_CODE: 'default',
+                },
+            };
+
+            setupMockFileSystemWithHash('abc123');
+
+            const result = await detectMeshChanges(project, newConfig);
+
+            expect(result.hasChanges).toBe(true);
+            expect(result.envVarsChanged).toBe(true);
+            expect(result.changedEnvVars).toContain('ACCS_GRAPHQL_ENDPOINT');
+            expect(result.changedEnvVars).not.toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
+        });
     });
 
     describe('updateMeshState', () => {

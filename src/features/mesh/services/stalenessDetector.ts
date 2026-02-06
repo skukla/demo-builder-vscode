@@ -12,6 +12,7 @@
 import * as crypto from 'crypto';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
 import { getFrontendEnvVars } from '@/core/state';
 import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
@@ -22,11 +23,9 @@ import { getMeshComponentInstance, parseJSON, hasEntries, getComponentInstancesB
 export type { MeshState, MeshChanges };
 
 /**
- * Environment variables that affect mesh deployment
- * These are used in mesh.json configuration
+ * PaaS-specific mesh env vars (used in eds-commerce-mesh)
  */
-const MESH_ENV_VARS = [
-    // PaaS mesh env vars
+const PAAS_MESH_ENV_VARS = [
     'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
     'ADOBE_CATALOG_SERVICE_ENDPOINT',
     'ADOBE_CATALOG_API_KEY',
@@ -34,13 +33,35 @@ const MESH_ENV_VARS = [
     'ADOBE_COMMERCE_WEBSITE_CODE',
     'ADOBE_COMMERCE_STORE_VIEW_CODE',
     'ADOBE_COMMERCE_STORE_CODE',
-    // ACCS mesh env vars
+];
+
+/**
+ * ACCS-specific mesh env vars (used in eds-accs-mesh)
+ */
+const ACCS_MESH_ENV_VARS = [
     'ACCS_GRAPHQL_ENDPOINT',
     'ACCS_WEBSITE_CODE',
     'ACCS_STORE_CODE',
     'ACCS_STORE_VIEW_CODE',
     'ACCS_CUSTOMER_GROUP',
 ];
+
+/**
+ * All environment variables that affect mesh deployment (union of PaaS + ACCS).
+ * Used for extraction and .env file parsing where we need to handle both types.
+ */
+const MESH_ENV_VARS = [...PAAS_MESH_ENV_VARS, ...ACCS_MESH_ENV_VARS];
+
+/**
+ * Get the relevant mesh env vars for a specific mesh component type.
+ * ACCS mesh only uses ACCS vars; PaaS mesh only uses PaaS vars.
+ */
+function getRelevantMeshEnvVars(meshComponentId: string): string[] {
+    if (meshComponentId === COMPONENT_IDS.EDS_ACCS_MESH) {
+        return ACCS_MESH_ENV_VARS;
+    }
+    return PAAS_MESH_ENV_VARS;
+}
 
 /**
  * Lazy-loaded default logger for backward-compatible function exports.
@@ -412,13 +433,16 @@ async function detectMeshChangesImpl(
     // Get current deployed state
     const currentState = getCurrentMeshStateImpl(project);
 
+    // Determine which env vars are relevant for this mesh type
+    const relevantEnvVars = getRelevantMeshEnvVars(meshInstance.id);
+
     if (!currentState) {
         // No previous state, assume fresh deployment needed
         return {
             hasChanges: true,
             envVarsChanged: true,
             sourceFilesChanged: true,
-            changedEnvVars: MESH_ENV_VARS,
+            changedEnvVars: relevantEnvVars,
         };
     }
 
@@ -467,8 +491,10 @@ async function detectMeshChangesImpl(
     }
     const newEnvVars = getMeshEnvVarsImpl(allConfigs);
 
+    // Compare only the env vars relevant to this mesh type (PaaS or ACCS)
+    // This prevents false mismatches from cross-backend vars in componentConfigs
     const changedEnvVars: string[] = [];
-    MESH_ENV_VARS.forEach(key => {
+    relevantEnvVars.forEach(key => {
         // Normalize: treat missing keys as empty strings for robust comparison
         const oldValue = currentState.envVars[key] || '';
         const newValue = newEnvVars[key] || '';
@@ -496,6 +522,16 @@ async function detectMeshChangesImpl(
     } else {
         sourceFilesChanged = newSourceHash !== null && newSourceHash !== currentState.sourceHash;
     }
+
+    if (sourceFilesChanged) {
+        logger.debug(`[Mesh Staleness] Source hash changed: "${currentState.sourceHash}" -> "${newSourceHash}"`);
+    }
+
+    logger.debug('[Mesh Staleness] Result:', {
+        envVarsChanged,
+        sourceFilesChanged,
+        hasChanges: envVarsChanged || sourceFilesChanged,
+    });
 
     return {
         hasChanges: envVarsChanged || sourceFilesChanged,
