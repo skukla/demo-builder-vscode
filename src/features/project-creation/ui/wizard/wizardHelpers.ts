@@ -414,19 +414,17 @@ export function getFirstEnabledStep(
  * Determine whether to show wizard footer (SOP §10 compliance)
  *
  * Extracts long validation chain to named helper for readability.
- * Footer is hidden on final step, mesh-deployment (has own buttons), and during review preparation.
+ * Footer is hidden on final step and mesh-deployment (has own buttons).
  *
  * @param isLastStep - Whether current step is the final step
  * @param currentStep - Current step ID
- * @param isPreparingReview - Whether review preparation is in progress
  * @returns true if footer should be shown
  */
 export function shouldShowWizardFooter(
     isLastStep: boolean,
     currentStep: string,
-    isPreparingReview: boolean,
 ): boolean {
-    return !isLastStep && currentStep !== 'mesh-deployment' && !isPreparingReview;
+    return !isLastStep && currentStep !== 'mesh-deployment';
 }
 
 /**
@@ -442,114 +440,6 @@ export function getWizardTitle(wizardMode?: WizardMode): string {
         case 'import': return 'Import Project';
         default: return 'Create Demo Project';
     }
-}
-
-/**
- * Required steps that must always be visited in review mode (edit/import)
- * These steps are never auto-skipped because they require fresh validation:
- * - welcome: User may want to change project name or stack
- * - prerequisites: Runtime checks that may have changed
- * - adobe-auth: Token validation required
- * - settings: User should verify component configuration values
- */
-export const REQUIRED_REVIEW_STEPS: WizardStep[] = ['welcome', 'prerequisites', 'adobe-auth', 'settings'];
-
-/**
- * Check if a step is "satisfied" (has data from import/edit)
- *
- * A step is satisfied if it has the necessary data filled in from
- * imported settings or an edited project. This is used to determine
- * which steps can be auto-completed vs which need user input.
- *
- * Note: Required review steps (welcome, prerequisites, adobe-auth)
- * should always be visited regardless of satisfaction.
- */
-export function isStepSatisfied(stepId: WizardStep, state: WizardState): boolean {
-    // Required review steps NEVER start as satisfied
-    // These always need fresh validation/action regardless of imported data
-    if (REQUIRED_REVIEW_STEPS.includes(stepId)) {
-        return false;
-    }
-
-    switch (stepId) {
-        // Component selection - check for stack selection (source of truth)
-        case 'component-selection':
-            return Boolean(state.selectedStack);
-
-        // Adobe I/O context (after auth is validated, these can be satisfied)
-        case 'adobe-org':
-            return Boolean(state.adobeOrg?.id);
-
-        case 'adobe-project':
-            return Boolean(state.adobeProject?.id);
-
-        case 'adobe-workspace':
-            return Boolean(state.adobeWorkspace?.id);
-
-        // EDS configuration
-        case 'eds-repository-config':
-            return Boolean(state.edsConfig?.repoName || state.edsConfig?.selectedRepo);
-
-        case 'eds-data-source':
-        case 'data-source-config':  // Legacy ID for backward compatibility
-            return Boolean(state.edsConfig?.daLiveSite || state.edsConfig?.selectedSite);
-
-        case 'eds-connect-services':
-        case 'connect-services':  // Legacy ID for backward compatibility
-            // Both GitHub AND DA.live must be authenticated
-            return Boolean(
-                state.edsConfig?.githubAuth?.isAuthenticated &&
-                state.edsConfig?.daLiveAuth?.isAuthenticated
-            );
-
-        // Component configuration (step ID can be 'settings' or 'component-config')
-        case 'settings':
-        case 'component-config':
-            return Boolean(state.componentConfigs && Object.keys(state.componentConfigs).length > 0);
-
-        // Terminal steps - never satisfied (need user action)
-        case 'review':
-        case 'deploy-mesh':
-            return false;
-
-        default:
-            return false;
-    }
-}
-
-/**
- * Find the first incomplete step after a given index
- *
- * Used for smart navigation in review mode - skips satisfied steps
- * to jump directly to steps that need user input.
- *
- * A step is considered "complete" only if BOTH:
- * 1. isStepSatisfied() returns true (has valid data)
- * 2. Step is in completedSteps (user has confirmed it)
- *
- * This ensures steps removed from completedSteps (e.g., after stack change)
- * will not be skipped even if they still have data.
- *
- * @returns The index of the first incomplete step, or -1 if all complete
- */
-export function findFirstIncompleteStep(
-    state: WizardState,
-    steps: Array<{ id: WizardStep; name: string }>,
-    afterIndex: number,
-    beforeIndex: number,
-    completedSteps?: WizardStep[],
-): number {
-    for (let i = afterIndex + 1; i < beforeIndex; i++) {
-        const step = steps[i];
-        const isSatisfied = isStepSatisfied(step.id, state);
-        const isConfirmed = completedSteps?.includes(step.id) ?? false;
-        
-        // Step is incomplete if either: no data OR not confirmed by user
-        if (!isSatisfied || !isConfirmed) {
-            return i;
-        }
-    }
-    return -1; // All steps complete
 }
 
 /**

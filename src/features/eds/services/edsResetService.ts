@@ -460,7 +460,7 @@ export async function executeEdsReset(
             }
         };
 
-        await helixService.publishAllSiteContent(`${repoOwner}/${repoName}`, 'main', undefined, undefined, onPublishProgress);
+        await helixService.publishAllSiteContent(`${repoOwner}/${repoName}`, 'main', daLiveOrg, daLiveSite, onPublishProgress);
 
         // Bulk publish block library paths if included
         if (includeBlockLibrary && libResult.paths.length > 0) {
