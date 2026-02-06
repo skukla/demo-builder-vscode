@@ -144,6 +144,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 contentSource: storefront.contentSource,
                 patches: storefront.patches,
                 contentPatches: storefront.contentPatches,
+                contentPatchSource: storefront.contentPatchSource,
             } : state.edsConfig;
 
             // Only set selectedStack - stack config is the source of truth for components
@@ -230,6 +231,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 contentSource: storefront.contentSource,
                 patches: storefront.patches,
                 contentPatches: storefront.contentPatches,
+                contentPatchSource: storefront.contentPatchSource,
             },
         });
     }, [state.selectedStack, state.selectedPackage, packages, updateState, state.edsConfig]);

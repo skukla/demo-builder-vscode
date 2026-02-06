@@ -665,6 +665,7 @@ export function buildProjectConfig(
             contentSource: wizardState.edsConfig.contentSource,
             patches: wizardState.edsConfig.patches,
             contentPatches: wizardState.edsConfig.contentPatches,
+            contentPatchSource: wizardState.edsConfig.contentPatchSource,
             // Results from StorefrontSetupStep (wizard handles all remote setup)
             repoUrl: wizardState.edsConfig.repoUrl,
             // Indicates StorefrontSetupStep completed successfully (enables Phase 5 config sync)

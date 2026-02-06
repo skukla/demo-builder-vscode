@@ -22,6 +22,7 @@ import {
     generateEnvironmentFiles,
     finalizeProject,
     sendCompletionAndCleanup,
+    ensureEdsContent,
     type ComponentDefinitionEntry,
 } from '../services';
 import { ProgressTracker } from './shared';
@@ -129,6 +130,12 @@ interface ProjectCreationConfig {
         patches?: string[];
         // Content patch IDs to apply during DA.live content copy
         contentPatches?: string[];
+        // External source for content patches (from demo-packages.json)
+        contentPatchSource?: {
+            owner: string;
+            repo: string;
+            path: string;
+        };
     };
 }
 
@@ -627,6 +634,45 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             context.logger.debug('[Phase 5] Skipped - preflight not completed');
         } else if (!project.meshState?.endpoint) {
             context.logger.debug('[Phase 5] Skipped - meshState.endpoint not set');
+        }
+    }
+
+    // ========================================================================
+    // PHASE 5b: EDS CONTENT SETUP
+    // ========================================================================
+    // During import, the StorefrontSetupStep is skipped (preflightComplete=true
+    // from the export file), so DA.live content (placeholders, enrichment) may
+    // not exist on the CDN. Verify and populate if missing.
+    // For fresh creations where StorefrontSetupStep already copied content,
+    // the CDN check passes and this phase is a no-op.
+
+    if (isEdsStack && typedConfig.edsConfig?.contentSource && typedConfig.edsConfig?.repoUrl) {
+        try {
+            const contentCopied = await ensureEdsContent(
+                {
+                    repoUrl: typedConfig.edsConfig.repoUrl,
+                    daLiveOrg: typedConfig.edsConfig.daLiveOrg,
+                    daLiveSite: typedConfig.edsConfig.daLiveSite,
+                    contentSource: typedConfig.edsConfig.contentSource,
+                    contentPatches: typedConfig.edsConfig.contentPatches,
+                    contentPatchSource: typedConfig.edsConfig.contentPatchSource,
+                },
+                {
+                    logger: context.logger,
+                    secrets: context.context.secrets,
+                    authManager: context.authManager,
+                    extensionContext: context.context,
+                },
+                (message, subMessage) => progressTracker('Setting Up Content', 95, subMessage || message),
+            );
+
+            if (contentCopied) {
+                context.logger.info('[Phase 5b] Storefront content populated and published');
+            }
+        } catch (error) {
+            // Non-fatal: storefront works without content, user can run Reset later
+            context.logger.warn(`[Phase 5b] Content setup failed: ${(error as Error).message}`);
+            context.logger.warn('[Phase 5b] Run EDS Reset from the dashboard to populate content');
         }
     }
 

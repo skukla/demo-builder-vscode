@@ -412,6 +412,12 @@ export interface EDSConfig {
     patches?: string[];
     /** Content patch IDs to apply during DA.live content copy */
     contentPatches?: string[];
+    /** External source for content patches (from demo-packages.json storefronts) */
+    contentPatchSource?: {
+        owner: string;
+        repo: string;
+        path: string;
+    };
 
     // Repository creation state (set by GitHubRepoSelectionStep when creating new repo)
     /** Created repository info - set when repo is created in selection step, before proceeding */

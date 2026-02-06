@@ -14,8 +14,78 @@ import { parseJSON, toError } from '@/types/typeGuards';
 export type { MeshDeploymentResult };
 
 /**
+ * Build mesh component if it has a build script in package.json
+ *
+ * Mesh repos use a build step (node scripts/build-mesh.js) that:
+ * - Combines schema/*.graphql into additionalTypeDefs
+ * - Processes resolvers-src/*.js into build/resolvers/
+ * - Generates the final mesh.json from mesh.config.js
+ *
+ * Without this step, mesh.json references files in build/ that don't exist.
+ */
+async function buildMeshComponent(
+    componentPath: string,
+    commandManager: CommandExecutor,
+    logger: Logger,
+    onProgress?: (message: string, subMessage?: string) => void,
+): Promise<void> {
+    const packageJsonPath = path.join(componentPath, 'package.json');
+
+    try {
+        await fsPromises.access(packageJsonPath);
+    } catch {
+        return; // No package.json — nothing to build
+    }
+
+    const packageJson = parseJSON<{ scripts?: Record<string, string> }>(
+        await fsPromises.readFile(packageJsonPath, 'utf-8'),
+    );
+    if (!packageJson?.scripts?.build) {
+        return; // No build script defined
+    }
+
+    logger.debug('[Mesh Deployment] Building mesh component...');
+    onProgress?.('Building mesh configuration...', 'Installing dependencies');
+
+    const installResult = await commandManager.execute(
+        'npm install --production --no-fund --prefer-offline --ignore-scripts',
+        {
+            cwd: componentPath,
+            timeout: TIMEOUTS.LONG,
+            shell: true,
+            useNodeVersion: getMeshNodeVersion(),
+            enhancePath: true,
+        },
+    );
+
+    if (installResult.code !== 0) {
+        logger.warn('[Mesh Deployment] npm install had warnings:', installResult.stderr?.substring(0, 300));
+    }
+
+    onProgress?.('Building mesh configuration...', 'Generating mesh.json');
+
+    const buildResult = await commandManager.execute(
+        'npm run build -- --force',
+        {
+            cwd: componentPath,
+            timeout: TIMEOUTS.LONG,
+            shell: true,
+            useNodeVersion: getMeshNodeVersion(),
+            enhancePath: true,
+        },
+    );
+
+    if (buildResult.code !== 0) {
+        const errorMsg = buildResult.stderr?.trim() || buildResult.stdout?.trim() || 'Build failed';
+        throw new Error(`Mesh build failed: ${errorMsg}`);
+    }
+
+    logger.debug('[Mesh Deployment] Mesh component built successfully');
+}
+
+/**
  * Deploy mesh component from cloned repository
- * Reads mesh.json from component path and deploys it to Adobe I/O
+ * Builds mesh.json (if needed), then deploys it to Adobe I/O
  *
  * @param componentPath - Path to the component directory containing mesh.json
  * @param commandManager - ExternalCommandManager instance for executing commands
@@ -31,6 +101,9 @@ export async function deployMeshComponent(
     existingMeshId?: string,
 ): Promise<MeshDeploymentResult> {
     try {
+        // Build mesh component (installs deps, generates mesh.json + resolvers)
+        await buildMeshComponent(componentPath, commandManager, logger, onProgress);
+
         // Check for mesh.json in component directory
         const meshConfigPath = path.join(componentPath, 'mesh.json');
         await fsPromises.access(meshConfigPath);

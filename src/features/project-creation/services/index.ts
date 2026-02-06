@@ -26,3 +26,5 @@ export {
     sendCompletionAndCleanup,
     type FinalizationContext,
 } from './projectFinalizationService';
+
+export { ensureEdsContent } from './edsContentSetup';
