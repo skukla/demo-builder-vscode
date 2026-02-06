@@ -253,7 +253,7 @@ describe('configGenerator', () => {
             expect(config.public.default['commerce-assets-enabled']).toBe(true);
         });
 
-        it('should remove commerce-assets-enabled when false', () => {
+        it('should set commerce-assets-enabled to false when disabled', () => {
             const params: ConfigGeneratorParams = {
                 ...baseParams,
                 environmentType: 'paas',
@@ -264,7 +264,7 @@ describe('configGenerator', () => {
 
             expect(result.success).toBe(true);
             const config = JSON.parse(result.content!);
-            expect(config.public.default['commerce-assets-enabled']).toBeUndefined();
+            expect(config.public.default['commerce-assets-enabled']).toBe(false);
         });
 
         it('should set correct content source URL', () => {
@@ -304,7 +304,8 @@ describe('configGenerator', () => {
             const result = extractConfigParamsFromConfigs(componentConfigs, undefined, 'adobe-commerce-accs');
 
             expect(result.environmentType).toBe('accs');
-            expect(result.commerceApiKey).toBe('api-key-123');
+            // ACCS doesn't use API keys — commerceApiKey should be undefined
+            expect(result.commerceApiKey).toBeUndefined();
         });
 
         it('should default to paas when backendComponentId not provided', () => {

@@ -20,8 +20,6 @@
             "configuration": {
                 "requiredEnvVars": ["MESH_ENDPOINT"],
                 "optionalEnvVars": [
-                    "ADOBE_COMMERCE_CUSTOMER_GROUP",
-                    "ACCS_CUSTOMER_GROUP",
                     "AEM_ASSETS_ENABLED"
                 ],
                 "configFiles": {

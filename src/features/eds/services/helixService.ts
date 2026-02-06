@@ -524,17 +524,9 @@ export class HelixService {
         }
 
         if (response.ok) {
-            // 200 OK is unexpected for bulk operations - should be 202
-            // Log the response body for debugging
-            let responseBody: string | undefined;
-            try {
-                responseBody = await response.text();
-            } catch {
-                // Ignore parse errors
-            }
-            this.logger.warn(
-                `[Helix] Bulk preview returned 200 (expected 202). This may indicate the bulk operation was not processed correctly. Response: ${responseBody?.substring(0, 500) || 'empty'}`
-            );
+            // 200 OK = synchronous success (small path count processed immediately)
+            // The Admin API returns 200 for small batches and 202 for large ones
+            this.logger.debug('[Helix] Bulk preview completed synchronously (200)');
             return;
         }
 
@@ -646,17 +638,9 @@ export class HelixService {
         }
 
         if (response.ok) {
-            // 200 OK is unexpected for bulk operations - should be 202
-            // Log the response body for debugging
-            let responseBody: string | undefined;
-            try {
-                responseBody = await response.text();
-            } catch {
-                // Ignore parse errors
-            }
-            this.logger.warn(
-                `[Helix] Bulk publish returned 200 (expected 202). This may indicate the bulk operation was not processed correctly. Response: ${responseBody?.substring(0, 500) || 'empty'}`
-            );
+            // 200 OK = synchronous success (small path count processed immediately)
+            // The Admin API returns 200 for small batches and 202 for large ones
+            this.logger.debug('[Helix] Bulk publish completed synchronously (200)');
             return;
         }
 
@@ -838,16 +822,9 @@ export class HelixService {
         try {
             await this.publishAllSiteContentBulk(githubOrg, githubSite, branch, pages, onProgress);
         } catch (error) {
-            const errorMessage = (error as Error).message;
-
-            // 404 means bulk endpoint not available for this site - fall back to page-by-page
-            if (errorMessage.includes('404')) {
-                this.logger.warn('[Helix] Bulk API not available, falling back to page-by-page publishing');
-                await this.publishAllSiteContentPageByPage(githubOrg, githubSite, branch, pages, onProgress);
-            } else {
-                // Other errors should propagate
-                throw error;
-            }
+            // Bulk API is a fast path — any failure falls back to reliable page-by-page
+            this.logger.warn(`[Helix] Bulk publish failed: ${(error as Error).message}, falling back to page-by-page`);
+            await this.publishAllSiteContentPageByPage(githubOrg, githubSite, branch, pages, onProgress);
         }
     }
 

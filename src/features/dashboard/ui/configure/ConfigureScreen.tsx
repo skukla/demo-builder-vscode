@@ -109,6 +109,23 @@ function toNavigationSection(
     };
 }
 
+/** Derive validation state from error/touched flags */
+function getValidationState(
+    hasError: boolean,
+    isTouched: boolean,
+): 'invalid' | 'valid' | undefined {
+    if (hasError) return 'invalid';
+    if (isTouched) return 'valid';
+    return undefined;
+}
+
+/** Derive save button label from saving/deploying state */
+function getSaveButtonLabel(isSaving: boolean, isDeploying: boolean): string {
+    if (isSaving) return 'Saving...';
+    if (isDeploying) return 'Deploying...';
+    return 'Save Changes';
+}
+
 /**
  * Context for rendering form fields
  */
@@ -591,7 +608,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
                                         onChange={handleProjectNameChange}
                                         isRequired
                                         width="100%"
-                                        validationState={projectNameError ? 'invalid' : (projectNameTouched ? 'valid' : undefined)}
+                                        validationState={getValidationState(!!projectNameError, projectNameTouched)}
                                         errorMessage={projectNameError}
                                         description="Lowercase letters, numbers, and hyphens only. Must start with a letter."
                                     />
@@ -670,7 +687,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
                             onPress={handleSave}
                             isDisabled={!canSave || isSaving || isDeploying}
                         >
-                            {isSaving ? 'Saving...' : isDeploying ? 'Deploying...' : 'Save Changes'}
+                            {getSaveButtonLabel(isSaving, isDeploying)}
                         </Button>
                     }
                 />
