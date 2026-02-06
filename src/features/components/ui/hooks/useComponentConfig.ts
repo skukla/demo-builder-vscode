@@ -39,6 +39,7 @@ interface ComponentsData {
     frontends?: ComponentData[];
     backends?: ComponentData[];
     dependencies?: ComponentData[];
+    mesh?: ComponentData[];
     integrations?: ComponentData[];
     appBuilder?: ComponentData[];
     envVars?: Record<string, ComponentEnvVar>;
@@ -153,6 +154,7 @@ export function useComponentConfig({
             return componentsData.frontends?.find(c => c.id === componentId) ||
                    componentsData.backends?.find(c => c.id === componentId) ||
                    componentsData.dependencies?.find(c => c.id === componentId) ||
+                   componentsData.mesh?.find(c => c.id === componentId) ||
                    componentsData.integrations?.find(c => c.id === componentId) ||
                    componentsData.appBuilder?.find(c => c.id === componentId);
         };

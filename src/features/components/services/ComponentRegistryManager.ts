@@ -315,6 +315,11 @@ export class ComponentRegistryManager {
         return registry.components.appBuilder || [];
     }
 
+    async getMesh(): Promise<TransformedComponentDefinition[]> {
+        const registry = await this.loadRegistry();
+        return registry.components.mesh || [];
+    }
+
     async getServices(): Promise<Record<string, ServiceDefinition>> {
         const registry = await this.loadRegistry();
         return registry.services || {};

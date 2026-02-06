@@ -124,6 +124,7 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
         const integrations = await registryManager.getIntegrations();
         const appBuilder = await registryManager.getAppBuilder();
         const dependencies = await registryManager.getDependencies();
+        const mesh = await registryManager.getMesh();
         const registry = await registryManager.loadRegistry();
 
         const componentsData = {
@@ -132,12 +133,13 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             integrations: toComponentDataArray(integrations, { includeDependencies: true }),
             appBuilder: toComponentDataArray(appBuilder, { includeDependencies: true }),
             dependencies: toComponentDataArray(dependencies, { includeDependencies: true }),
+            mesh: toComponentDataArray(mesh, { includeDependencies: true }),
             envVars: registry.envVars || {},
             services: registry.services || {},
         };
 
         // Log summary at debug level (concise)
-        context.logger.debug(`[Components] Sending components-data: ${frontends.length} frontends, ${backends.length} backends, ${dependencies.length} deps, ${getEntryCount(registry.envVars)} envVars`);
+        context.logger.debug(`[Components] Sending components-data: ${frontends.length} frontends, ${backends.length} backends, ${dependencies.length} deps, ${mesh.length} mesh, ${getEntryCount(registry.envVars)} envVars`);
 
         return {
             success: true,

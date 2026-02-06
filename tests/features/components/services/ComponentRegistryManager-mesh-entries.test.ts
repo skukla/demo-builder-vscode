@@ -70,11 +70,13 @@ describe('ComponentRegistryManager - Mesh Entries', () => {
             expect(stack.requiredComponents).not.toContain('headless-commerce-mesh');
         });
 
-        it('eds-accs stack should require no mesh (ACCS has built-in catalog)', () => {
+        it('eds-accs stack should require eds-accs-mesh', () => {
             const stack = componentsJson.stacks['eds-accs'];
 
             expect(stack).toBeDefined();
-            expect(stack.requiredComponents).toEqual([]);
+            expect(stack.requiredComponents).toContain('eds-accs-mesh');
+            expect(stack.requiredComponents).not.toContain('eds-commerce-mesh');
+            expect(stack.requiredComponents).not.toContain('headless-commerce-mesh');
         });
 
         it('headless-paas stack should require headless-commerce-mesh', () => {
