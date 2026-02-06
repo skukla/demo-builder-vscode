@@ -448,8 +448,8 @@
             "label": "Website Code",
             "type": "text",
             "required": true,
-            "default": "base",
-            "placeholder": "base",
+            "default": "citisignal",
+            "placeholder": "citisignal",
             "description": "Website code for ACCS store",
             "group": "accs"
         },
@@ -457,8 +457,8 @@
             "label": "Store Code",
             "type": "text",
             "required": true,
-            "default": "main_website_store",
-            "placeholder": "main_website_store",
+            "default": "citisignal_store",
+            "placeholder": "citisignal_store",
             "description": "Store code for ACCS store",
             "group": "accs"
         },
@@ -466,7 +466,8 @@
             "label": "Store View Code",
             "type": "text",
             "required": true,
-            "placeholder": "default",
+            "default": "citisignal_us",
+            "placeholder": "citisignal_us",
             "description": "The store view code for your ACCS instance",
             "group": "accs"
         },

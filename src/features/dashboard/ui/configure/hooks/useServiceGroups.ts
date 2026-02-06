@@ -22,6 +22,18 @@ interface ServiceGroupDefinition {
  */
 const SERVICE_GROUP_DEFINITIONS: ServiceGroupDefinition[] = [
     {
+        id: 'accs',
+        label: 'Adobe Commerce Cloud Service',
+        order: 0,
+        fieldOrder: [
+            'ACCS_GRAPHQL_ENDPOINT',
+            'ACCS_WEBSITE_CODE',
+            'ACCS_STORE_CODE',
+            'ACCS_STORE_VIEW_CODE',
+            'ACCS_CUSTOMER_GROUP',
+        ],
+    },
+    {
         id: 'adobe-commerce',
         label: 'Adobe Commerce',
         order: 1,

@@ -17,13 +17,13 @@ import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
-import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import type { Project } from '@/types/base';
 import { getMeshComponentInstance, hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
 import { getAllComponentDefinitions } from './configureHelpers';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
+import { useServiceGroups } from './hooks/useServiceGroups';
 import {
     normalizeProjectName,
     getProjectNameError,
@@ -218,105 +218,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
     // Get all selected components with their data (using extracted hook)
     const selectedComponents = useSelectedComponents({ project, componentsData });
 
-    // Deduplicate fields and organize by service
-    const serviceGroups = useMemo(() => {
-        const fieldMap = new Map<string, UniqueField>();
-        const envVarDefs = componentsData.envVars || {};
-
-        selectedComponents.forEach(({ id, data }) => {
-            data.configuration?.requiredEnvVars?.forEach(envVarKey => {
-                const envVarDef = envVarDefs[envVarKey];
-                if (envVarDef) {
-                    if (!fieldMap.has(envVarKey)) {
-                        fieldMap.set(envVarKey, {
-                            ...envVarDef,
-                            key: envVarKey,
-                            componentIds: [id],
-                        });
-                    } else {
-                        const existing = fieldMap.get(envVarKey)!;
-                        if (!existing.componentIds.includes(id)) {
-                            existing.componentIds.push(id);
-                        }
-                    }
-                }
-            });
-
-            data.configuration?.optionalEnvVars?.forEach(envVarKey => {
-                const envVarDef = envVarDefs[envVarKey];
-                if (envVarDef) {
-                    if (!fieldMap.has(envVarKey)) {
-                        fieldMap.set(envVarKey, {
-                            ...envVarDef,
-                            key: envVarKey,
-                            componentIds: [id],
-                        });
-                    } else {
-                        const existing = fieldMap.get(envVarKey)!;
-                        if (!existing.componentIds.includes(id)) {
-                            existing.componentIds.push(id);
-                        }
-                    }
-                }
-            });
-        });
-
-        const groups: Record<string, UniqueField[]> = {};
-
-        fieldMap.forEach((field) => {
-            const metadata = field as UniqueField & { group?: string };
-            const groupKey = metadata.group || 'other';
-
-            if (!groups[groupKey]) {
-                groups[groupKey] = [];
-            }
-            groups[groupKey].push(field);
-        });
-
-        const serviceGroupDefs: Array<{ id: string; label: string; order: number; fieldOrder?: string[] }> = [
-            {
-                id: 'adobe-commerce',
-                label: 'Adobe Commerce',
-                order: 1,
-                fieldOrder: [
-                    'ADOBE_COMMERCE_URL',
-                    'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
-                    'ADOBE_COMMERCE_WEBSITE_CODE',
-                    'ADOBE_COMMERCE_STORE_CODE',
-                    'ADOBE_COMMERCE_STORE_VIEW_CODE',
-                    'ADOBE_COMMERCE_CUSTOMER_GROUP',
-                    'ADOBE_COMMERCE_ADMIN_USERNAME',
-                    'ADOBE_COMMERCE_ADMIN_PASSWORD',
-                ],
-            },
-            {
-                id: 'catalog-service',
-                label: 'Catalog Service',
-                order: 2,
-                fieldOrder: [
-                    'ADOBE_CATALOG_SERVICE_ENDPOINT',
-                    'ADOBE_COMMERCE_ENVIRONMENT_ID',
-                    'ADOBE_CATALOG_API_KEY',
-                ],
-            },
-            { id: 'mesh', label: 'API Mesh', order: 3 },
-            { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
-            { id: 'integration-service', label: 'Kukla Integration Service', order: 5 },
-            { id: 'experience-platform', label: 'Experience Platform', order: 6 },
-            { id: 'other', label: 'Additional Settings', order: 99 },
-        ];
-
-        const orderedGroups = serviceGroupDefs
-            .map(def => toServiceGroupWithSortedFields(def, groups))
-            .filter(group => group.fields.length > 0)
-            .sort((a, b) => {
-                const aOrder = serviceGroupDefs.find(d => d.id === a.id)?.order || 99;
-                const bOrder = serviceGroupDefs.find(d => d.id === b.id)?.order || 99;
-                return aOrder - bOrder;
-            });
-
-        return orderedGroups;
-    }, [selectedComponents, componentsData.envVars]);
+    // Deduplicate fields and organize by service group
+    const serviceGroups = useServiceGroups({ selectedComponents, componentsData });
 
     // Handle field focus to scroll section header into view
     useEffect(() => {

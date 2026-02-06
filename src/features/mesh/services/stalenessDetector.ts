@@ -26,6 +26,7 @@ export type { MeshState, MeshChanges };
  * These are used in mesh.json configuration
  */
 const MESH_ENV_VARS = [
+    // PaaS mesh env vars
     'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
     'ADOBE_CATALOG_SERVICE_ENDPOINT',
     'ADOBE_CATALOG_API_KEY',
@@ -33,6 +34,12 @@ const MESH_ENV_VARS = [
     'ADOBE_COMMERCE_WEBSITE_CODE',
     'ADOBE_COMMERCE_STORE_VIEW_CODE',
     'ADOBE_COMMERCE_STORE_CODE',
+    // ACCS mesh env vars
+    'ACCS_GRAPHQL_ENDPOINT',
+    'ACCS_WEBSITE_CODE',
+    'ACCS_STORE_CODE',
+    'ACCS_STORE_VIEW_CODE',
+    'ACCS_CUSTOMER_GROUP',
 ];
 
 /**
