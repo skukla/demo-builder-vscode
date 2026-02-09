@@ -187,7 +187,7 @@ export interface RawComponentRegistry {
     frontends?: Record<string, RawComponentDefinition>;
     /** v3.0.0: Backend components (e.g., adobe-commerce-paas) */
     backends?: Record<string, RawComponentDefinition>;
-    /** v3.0.0: Mesh components (e.g., commerce-mesh) */
+    /** v3.0.0: Mesh components (e.g., eds-commerce-mesh, headless-commerce-mesh) */
     mesh?: Record<string, RawComponentDefinition>;
     /** v3.0.0: Dependencies (e.g., demo-inspector) */
     dependencies?: Record<string, RawComponentDefinition>;

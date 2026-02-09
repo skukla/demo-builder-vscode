@@ -112,8 +112,8 @@ export function renderAioCliErrorVersions(message: string): React.ReactNode {
  * Render prerequisite message content based on check state
  */
 export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.ReactNode {
-    // Case 1: nodeVersionStatus exists - render structured version items
-    if (check.nodeVersionStatus) {
+    // Case 1: nodeVersionStatus exists with entries - render structured version items
+    if (check.nodeVersionStatus && check.nodeVersionStatus.length > 0) {
         return (
             <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
                 {check.nodeVersionStatus.map((item, idx) => (

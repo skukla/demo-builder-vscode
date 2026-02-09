@@ -160,7 +160,7 @@
               }
             ]
           },
-          "requiredFor": ["commerce-mesh", "adobe-commerce-paas", "adobe-commerce-saas"]
+          "requiredFor": ["headless-commerce-mesh", "eds-commerce-mesh", "eds-accs-mesh"]
         }
       ]
     },
@@ -194,15 +194,15 @@
     }
   ],
   "componentRequirements": {
-    "adobe-commerce-paas": {
+    "headless-commerce-mesh": {
       "prerequisites": ["aio-cli"],
       "plugins": ["api-mesh"]
     },
-    "adobe-commerce-saas": {
+    "eds-commerce-mesh": {
       "prerequisites": ["aio-cli"],
       "plugins": ["api-mesh"]
     },
-    "commerce-mesh": {
+    "eds-accs-mesh": {
       "prerequisites": ["aio-cli"],
       "plugins": ["api-mesh"]
     },

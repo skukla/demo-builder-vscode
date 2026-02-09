@@ -196,7 +196,7 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Deleting DA.live sites:',
+                title: 'Deleting DA.live sites',
                 cancellable: false,
             },
             async (progress) => {
