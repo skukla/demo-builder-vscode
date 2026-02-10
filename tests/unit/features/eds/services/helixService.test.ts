@@ -8,7 +8,7 @@
  * to verify the user has write access to the GitHub repository. For DA.live content
  * sources, it also requires x-content-source-authorization header with IMS token.
  *
- * Coverage: 25 tests
+ * Coverage: 24 tests
  * - Preview page via POST /preview/{org}/{site}/main/{path}
  * - Publish page via POST /live/{org}/{site}/main/{path}
  * - Preview and publish single page
@@ -16,7 +16,8 @@
  * - Bulk publish via POST /live/{org}/{site}/main/* with JSON body containing paths
  * - Job polling for bulk operations (GET /jobs/{topic}/{jobName})
  * - Bulk publish all site content with job completion tracking
- * - Fallback to page-by-page when bulk API returns 404
+ * - Fallback to page-by-page when bulk API fails (404, 500, etc.)
+ * - HTTP 200 synchronous success for small batches
  * - Unpublish from live via DELETE /live/{org}/{site}/main/*
  * - Delete from preview via DELETE /preview/{org}/{site}/main/*
  * - Require GitHub token for authentication
@@ -310,9 +311,6 @@ describe('HelixService', () => {
                     { name: 'index', ext: 'html', path: '/dalive-org/dalive-site/products/index.html' },
                 ]); // products folder contents
 
-            // Readiness check succeeds
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-
             // Bulk preview returns 202 with job info
             mockFetch.mockResolvedValueOnce({
                 ok: true,
@@ -348,15 +346,15 @@ describe('HelixService', () => {
             expect(mockListDirectory).toHaveBeenCalledWith('dalive-org', 'dalive-site', '/');
 
             // Then: Should use bulk API (not per-page)
-            // 1 readiness check + 1 bulk preview + 1 job poll + 1 bulk publish + 1 job poll = 5 calls
-            expect(mockFetch).toHaveBeenCalledTimes(5);
+            // 1 bulk preview + 1 job poll + 1 bulk publish + 1 job poll = 4 calls
+            expect(mockFetch).toHaveBeenCalledTimes(4);
 
-            // Verify GitHub org/site used for Helix API calls (not DA.live org/site)
+            // Verify Helix API calls use GitHub org/site (not DA.live org/site)
             const calls = mockFetch.mock.calls;
             expect(calls.every((c: any[]) => c[0].includes('github-owner/github-repo'))).toBe(true);
 
             // Verify bulk preview call has correct URL (with /*) and JSON body with discovered paths
-            const bulkPreviewCall = calls[1];
+            const bulkPreviewCall = calls[0];
             expect(bulkPreviewCall[0]).toContain('/preview/github-owner/github-repo/main/*');
             // The paths should be the discovered pages from DA.live (index->/, about->/about, nav->/nav, products/index->/products)
             const previewBody = JSON.parse(bulkPreviewCall[1].body);
@@ -368,7 +366,7 @@ describe('HelixService', () => {
             expect(previewBody.paths.length).toBe(4);
 
             // Verify bulk publish call has correct URL (with /*) and JSON body with discovered paths
-            const bulkPublishCall = calls[3];
+            const bulkPublishCall = calls[2];
             expect(bulkPublishCall[0]).toContain('/live/github-owner/github-repo/main/*');
             const publishBody = JSON.parse(bulkPublishCall[1].body);
             expect(publishBody.forceUpdate).toBe(true);
@@ -385,9 +383,6 @@ describe('HelixService', () => {
             mockListDirectory.mockResolvedValueOnce([
                 { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' },
             ]);
-
-            // Readiness check succeeds
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
 
             // Bulk preview returns 202 with job info
             mockFetch.mockResolvedValueOnce({
@@ -434,9 +429,6 @@ describe('HelixService', () => {
                 { name: 'about', ext: 'html', path: '/testuser/my-site/about.html' }, // HTML content
             ]);
 
-            // Readiness check succeeds
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-
             // Bulk preview returns 202 with job info
             mockFetch.mockResolvedValueOnce({
                 ok: true,
@@ -469,9 +461,8 @@ describe('HelixService', () => {
             await service.publishAllSiteContent('testuser/my-site');
 
             // Then: Should use bulk API (not per-page)
-            // 1 readiness check + 1 bulk preview + 1 job poll + 1 bulk publish + 1 job poll = 5 calls
-            // Note: Non-HTML files are filtered during listing, bulk API publishes all discovered HTML
-            expect(mockFetch).toHaveBeenCalledTimes(5);
+            // 1 bulk preview + 1 job poll + 1 bulk publish + 1 job poll = 4 calls
+            expect(mockFetch).toHaveBeenCalledTimes(4);
         });
 
         it('should throw error when no publishable pages found', async () => {
@@ -520,9 +511,6 @@ describe('HelixService', () => {
                 { name: 'confirm', ext: 'html', path: '/testuser/my-site/customer/account/confirm.html' }, // may 404
             ]);
 
-            // Readiness check succeeds
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-
             // Bulk preview returns 202 with job info
             mockFetch.mockResolvedValueOnce({
                 ok: true,
@@ -537,7 +525,6 @@ describe('HelixService', () => {
                 json: () => Promise.resolve({
                     state: 'stopped',
                     progress: { processed: 3, total: 3 },
-                    // Helix may include per-resource errors in data.resources
                 }),
             });
 
@@ -562,8 +549,8 @@ describe('HelixService', () => {
             await service.publishAllSiteContent('testuser/my-site');
 
             // Then: Should use bulk API
-            // 1 readiness check + 1 bulk preview + 1 job poll + 1 bulk publish + 1 job poll = 5 calls
-            expect(mockFetch).toHaveBeenCalledTimes(5);
+            // 1 bulk preview + 1 job poll + 1 bulk publish + 1 job poll = 4 calls
+            expect(mockFetch).toHaveBeenCalledTimes(4);
 
             // Then: Should log success message for bulk operation
             expect(mockLogger.info).toHaveBeenCalledWith(
@@ -577,9 +564,6 @@ describe('HelixService', () => {
                 { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' },
                 { name: 'about', ext: 'html', path: '/testuser/my-site/about.html' },
             ]);
-
-            // Readiness check succeeds
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
 
             // Bulk preview returns 404 (site not configured for bulk)
             mockFetch.mockResolvedValueOnce({
@@ -600,8 +584,8 @@ describe('HelixService', () => {
             await service.publishAllSiteContent('testuser/my-site');
 
             // Then: Should fall back to page-by-page
-            // 1 readiness + 1 failed bulk + 2 pages × 2 calls = 6 total
-            expect(mockFetch).toHaveBeenCalledTimes(6);
+            // 1 failed bulk + 2 pages × 2 calls = 5 total
+            expect(mockFetch).toHaveBeenCalledTimes(5);
 
             // Then: Should log fallback message
             expect(mockLogger.warn).toHaveBeenCalledWith(
@@ -652,9 +636,6 @@ describe('HelixService', () => {
                 { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' },
             ]);
 
-            // Readiness check succeeds
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-
             // Bulk preview returns 500 (server error)
             mockFetch.mockResolvedValueOnce({
                 ok: false,
@@ -670,13 +651,14 @@ describe('HelixService', () => {
             await service.publishAllSiteContent('testuser/my-site');
 
             // Then: Should fall back to page-by-page (not throw)
-            expect(mockFetch).toHaveBeenCalledTimes(4);
+            expect(mockFetch).toHaveBeenCalledTimes(3);
 
             // Then: Should log fallback
             expect(mockLogger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('falling back to page-by-page'),
             );
         });
+
     });
 
     // ==========================================================

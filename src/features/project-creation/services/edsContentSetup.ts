@@ -42,11 +42,13 @@ interface EdsContentDeps {
 }
 
 /**
- * Verify that DA.live content is published to the CDN and populate if missing.
+ * Verify that DA.live content exists and is published to the CDN.
+ * Populates from the template source if missing.
  *
- * Checks whether `/placeholders/global.json` is accessible on the preview CDN.
- * If not, copies content from the template source and publishes to both
- * preview and live CDN.
+ * Checks the DA.live source API directly (not the CDN) because:
+ * - The preview CDN returns 404 for recently-published content due to edge caching
+ * - HelixService excludes placeholders from publishing, so CDN checks for
+ *   common resources like /placeholders.json always fail
  *
  * @returns true if content was copied, false if it already existed
  */
@@ -63,23 +65,28 @@ export async function ensureEdsContent(
         return false;
     }
 
-    // Quick check: does content already exist on the preview CDN?
-    const checkUrl = `https://main--${repoInfo.repo}--${repoInfo.owner}.aem.page/placeholders/global.json`;
+    // Quick check: does content already exist in DA.live?
+    // Check DA.live source API directly — it's the source of truth and avoids CDN caching issues.
+    const token = await deps.authManager?.getTokenManager().getAccessToken();
+    const checkUrl = `https://admin.da.live/source/${config.daLiveOrg}/${config.daLiveSite}/index.html`;
+    logger.debug(`[EDS Content] Checking DA.live: ${checkUrl}`);
 
     try {
         const response = await fetch(checkUrl, {
             method: 'HEAD',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
             signal: AbortSignal.timeout(TIMEOUTS.QUICK),
         });
+        logger.debug(`[EDS Content] DA.live check response: ${response.status}`);
         if (response.ok) {
-            logger.debug('[EDS Content] Content already exists on CDN, skipping copy');
+            logger.debug('[EDS Content] Content already exists in DA.live, skipping copy');
             return false;
         }
-    } catch {
-        // Network error or timeout — proceed with content copy
+    } catch (error) {
+        logger.debug(`[EDS Content] DA.live check failed: ${(error as Error).message}`);
     }
 
-    logger.info('[EDS Content] Content not found on CDN, copying from template source...');
+    logger.info('[EDS Content] Content not found in DA.live, copying from template source...');
     onProgress?.('Setting up storefront content...', 'Copying content from template');
 
     // Copy content from template source

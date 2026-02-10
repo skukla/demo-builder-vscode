@@ -754,7 +754,6 @@ export class HelixService {
      */
     public static readonly PublishPhases = {
         DISCOVERING: 'discovering',
-        VERIFYING: 'verifying',
         PUBLISHING: 'publishing',
         COMPLETE: 'complete',
     } as const;
@@ -806,16 +805,6 @@ export class HelixService {
         }
 
         this.logger.info(`[Helix] Found ${pages.length} pages to publish`);
-
-        // Report: Found pages, now verifying
-        onProgress?.({
-            phase: HelixService.PublishPhases.VERIFYING,
-            message: 'Verifying CDN connection...',
-            total: pages.length,
-        });
-
-        // Verify Helix is ready to accept publish requests
-        await this.waitForPublishReadiness(githubOrg, githubSite, branch);
 
         // Try bulk APIs first for better performance
         // If bulk fails (404 = site not configured), fall back to page-by-page
@@ -961,83 +950,6 @@ export class HelixService {
             current: pages.length,
             total: pages.length,
         });
-    }
-
-    /**
-     * Wait for Helix to be ready to accept preview/publish requests
-     *
-     * After fstab.yaml is pushed to GitHub, there can be a delay before Helix
-     * processes the configuration and is ready to serve content. This method
-     * attempts to preview the homepage with retries to ensure readiness.
-     *
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @param branch - Branch name
-     * @param maxAttempts - Maximum number of retry attempts (default: 5)
-     * @param delayMs - Delay between attempts in milliseconds (default: 3000)
-     */
-    private async waitForPublishReadiness(
-        org: string,
-        site: string,
-        branch: string,
-        maxAttempts: number = 5,
-        delayMs: number = TIMEOUTS.UPDATE_RESULT_DISPLAY,
-    ): Promise<void> {
-        this.logger.info('[Helix] Verifying publish readiness...');
-
-        const githubToken = await this.getGitHubToken();
-        const imsToken = await this.getDaLiveToken();
-        const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}/`;
-
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-                // Quick check with short timeout - we're just testing if Helix is ready
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'x-auth-token': githubToken,
-                        'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
-                    },
-                    signal: AbortSignal.timeout(TIMEOUTS.QUICK), // 5 second timeout
-                });
-
-                // Auth errors should fail immediately
-                if (response.status === 401) {
-                    throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
-                }
-                if (response.status === 403) {
-                    throw new Error('Access denied. You do not have permission to preview this content.');
-                }
-
-                if (response.ok) {
-                    this.logger.info('[Helix] Publish readiness verified - Helix is ready');
-                    return;
-                }
-
-                // Non-OK response - will retry
-                throw new Error(`Preview returned ${response.status} ${response.statusText}`);
-            } catch (error) {
-                const errorMessage = (error as Error).message;
-
-                // Auth errors should fail immediately, don't retry
-                if (errorMessage.includes('authentication') || errorMessage.includes('Access denied')) {
-                    throw error;
-                }
-
-                if (attempt < maxAttempts) {
-                    this.logger.warn(
-                        `[Helix] Readiness check attempt ${attempt}/${maxAttempts} failed: ${errorMessage}. Retrying in ${delayMs / 1000}s...`
-                    );
-                    await new Promise(resolve => setTimeout(resolve, delayMs));
-                } else {
-                    this.logger.warn(
-                        `[Helix] Readiness check failed after ${maxAttempts} attempts. Proceeding anyway...`
-                    );
-                    // Don't throw - let the bulk publish proceed and report individual failures
-                    // This allows partial success if some pages work
-                }
-            }
-        }
     }
 
     // ==========================================================
