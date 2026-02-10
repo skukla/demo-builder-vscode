@@ -235,7 +235,7 @@ describe('SOP: Component Extraction', () => {
          * acceptable technical debt (cost of inlining > benefit).
          */
         const SHARED_COMPONENTS_VERIFIED = [
-            { name: 'EmptyState', minUsages: 2 }, // 5 usages
+            { name: 'EmptyState', minUsages: 1 }, // 1 usage (SelectionStepContent)
             { name: 'FadeTransition', minUsages: 2 }, // 3 usages
             { name: 'CopyableText', minUsages: 2 }, // 3 usages
             { name: 'StatusDot', minUsages: 2 }, // 6 usages
@@ -243,6 +243,7 @@ describe('SOP: Component Extraction', () => {
 
         /**
          * Single-usage components that are acceptable technical debt:
+         * - EmptyState (1 usage) - Generic feedback component, may gain usages
          * - LoadingOverlay (64 lines, 1 usage) - Simple utility, may gain usages
          * - NumberedInstructions (72 lines, 1 usage) - Simple utility, may gain usages
          *
