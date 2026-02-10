@@ -650,7 +650,7 @@ export function buildProjectConfig(
             existingRepo: wizardState.edsConfig.selectedRepo?.fullName || wizardState.edsConfig.existingRepo,
             resetToTemplate: wizardState.edsConfig.resetToTemplate,
             daLiveOrg: wizardState.edsConfig.daLiveOrg || '',
-            daLiveSite: wizardState.edsConfig.selectedSite?.name || wizardState.edsConfig.daLiveSite || '',
+            daLiveSite: wizardState.edsConfig.repoName || '',
             accsEndpoint: wizardState.edsConfig.accsHost,
             githubOwner: wizardState.edsConfig.githubAuth?.user?.login || '',
             isPrivate: wizardState.edsConfig.selectedRepo?.isPrivate,
