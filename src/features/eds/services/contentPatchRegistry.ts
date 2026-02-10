@@ -52,13 +52,24 @@ export function getContentPatchById(id: string): ContentPatch | undefined {
     return CONTENT_PATCHES.find((p) => p.id === id);
 }
 
+// Cache external patches per source to avoid redundant HTTP requests during batch operations
+const externalPatchCache = new Map<string, ContentPatch[]>();
+
 /**
- * Fetch patches.json from external repository
+ * Fetch patches.json from external repository (with per-source caching)
  *
  * @param source - External patch source configuration
+ * @param logger - Logger instance
  * @returns Array of all patches from the external file
  */
-async function fetchExternalPatches(source: ContentPatchSource): Promise<ContentPatch[]> {
+async function fetchExternalPatches(source: ContentPatchSource, logger: Logger): Promise<ContentPatch[]> {
+    const cacheKey = `${source.owner}/${source.repo}/${source.path}`;
+    const cached = externalPatchCache.get(cacheKey);
+    if (cached) {
+        return cached;
+    }
+
+    logger.info(`[ContentPatch] Fetching patches from ${source.owner}/${source.repo}`);
     const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/main/${source.path}/patches.json`;
 
     const response = await fetch(url, {
@@ -70,7 +81,9 @@ async function fetchExternalPatches(source: ContentPatchSource): Promise<Content
     }
 
     const data = await response.json();
-    return data.patches || [];
+    const patches = data.patches || [];
+    externalPatchCache.set(cacheKey, patches);
+    return patches;
 }
 
 /**
@@ -90,8 +103,7 @@ export async function getContentPatches(
 
     if (source) {
         try {
-            logger.info(`[ContentPatch] Fetching patches from ${source.owner}/${source.repo}`);
-            allPatches = await fetchExternalPatches(source);
+            allPatches = await fetchExternalPatches(source, logger);
         } catch (error) {
             logger.warn(`[ContentPatch] External fetch failed, falling back to local: ${(error as Error).message}`);
             allPatches = CONTENT_PATCHES;

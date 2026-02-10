@@ -281,70 +281,6 @@ async function publishPage(org: string, site: string, path: string, branch: stri
 }
 
 /**
- * Wait for Helix to be ready (readiness check)
- */
-async function waitForPublishReadiness(
-    org: string,
-    site: string,
-    branch: string,
-    maxAttempts: number = 5,
-    delayMs: number = 3000,
-): Promise<void> {
-    logger.info('Verifying publish readiness...');
-
-    const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}/`;
-    logger.debug(`Readiness check URL: ${url}`);
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'x-auth-token': GITHUB_TOKEN!,
-                    'x-content-source-authorization': `Bearer ${IMS_TOKEN}`, // For DA.live content source
-                },
-                signal: AbortSignal.timeout(TIMEOUTS.QUICK),
-            });
-
-            // Log response details for debugging
-            const responseBody = await response.text();
-            logger.debug(`Response: ${response.status} ${response.statusText}`);
-            if (responseBody) {
-                logger.debug(`Response body: ${responseBody.slice(0, 500)}`);
-            }
-
-            if (response.status === 401) {
-                throw new Error(`GitHub authentication failed (401). Response: ${responseBody}`);
-            }
-
-            if (response.status === 403) {
-                throw new Error(`Access denied (403). Response: ${responseBody}`);
-            }
-
-            if (response.ok) {
-                logger.info('✅ Publish readiness verified - Helix is ready');
-                return;
-            }
-
-            throw new Error(`Preview returned ${response.status} ${response.statusText}. Response: ${responseBody}`);
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-
-            if (errorMessage.includes('401') || errorMessage.includes('403')) {
-                throw error;
-            }
-
-            if (attempt < maxAttempts) {
-                logger.warn(`Readiness check attempt ${attempt}/${maxAttempts} failed: ${errorMessage}. Retrying in ${delayMs / 1000}s...`);
-                await new Promise(resolve => setTimeout(resolve, delayMs));
-            } else {
-                logger.warn(`Readiness check failed after ${maxAttempts} attempts. Proceeding anyway...`);
-            }
-        }
-    }
-}
-
-/**
  * Main test function
  */
 async function main() {
@@ -381,10 +317,7 @@ async function main() {
         }
         console.log('');
 
-        // Step 2: Verify Helix readiness
-        await waitForPublishReadiness(githubOrg, githubSite, CONFIG.branch);
-
-        // Step 3: Publish each page
+        // Step 2: Publish each page
         logger.info(`Publishing ${pages.length} pages to ${CONFIG.githubRepo}...`);
 
         const results: { path: string; success: boolean; error?: string }[] = [];
