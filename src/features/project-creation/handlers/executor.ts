@@ -656,6 +656,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     contentSource: typedConfig.edsConfig.contentSource,
                     contentPatches: typedConfig.edsConfig.contentPatches,
                     contentPatchSource: typedConfig.edsConfig.contentPatchSource,
+                    templateOwner: typedConfig.edsConfig.templateOwner,
+                    templateRepo: typedConfig.edsConfig.templateRepo,
                 },
                 {
                     logger: context.logger,

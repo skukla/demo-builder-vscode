@@ -8,9 +8,10 @@
  * from the export file), so DA.live content may not exist. This service
  * verifies content availability and copies from the template source if missing.
  *
- * Reuses the same services as StorefrontSetupStep and EDS Reset:
- * - DaLiveContentOperations for content copy
- * - HelixService for CDN publishing
+ * Reuses the same services and helpers as StorefrontSetupStep and EDS Reset:
+ * - DaLiveContentOperations for content copy and block library
+ * - HelixService for cache purge and CDN publishing
+ * - configureDaLivePermissions / applyDaLiveOrgConfigSettings from edsHelpers
  */
 
 import { parseGitHubUrl } from '@/core/utils';
@@ -32,6 +33,8 @@ interface EdsContentConfig {
         repo: string;
         path: string;
     };
+    templateOwner?: string;
+    templateRepo?: string;
 }
 
 interface EdsContentDeps {
@@ -121,12 +124,12 @@ export async function ensureEdsContent(
         logger.info(`[EDS Content] Content copied: ${contentResult.totalFiles} files`);
     }
 
-    // Publish content to CDN (preview + live)
-    onProgress?.('Publishing storefront content...', 'Making content available on CDN');
-
+    // Service dependencies shared by remaining operations
     const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
     const { DaLiveAuthService } = await import('@/features/eds/services/daLiveAuthService');
     const { HelixService } = await import('@/features/eds/services/helixService');
+    const { configureDaLivePermissions, applyDaLiveOrgConfigSettings, bulkPreviewAndPublish } =
+        await import('@/features/eds/handlers/edsHelpers');
 
     const githubTokenService = new GitHubTokenService(deps.secrets, logger);
     const daLiveAuthService = new DaLiveAuthService(deps.extensionContext);
@@ -135,12 +138,76 @@ export async function ensureEdsContent(
     };
     const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
 
+    // DA.live permissions (non-fatal)
+    onProgress?.('Configuring site permissions...', 'Granting DA.live access');
+    try {
+        const userEmail = await daLiveAuthService.getUserEmail();
+        if (userEmail) {
+            await configureDaLivePermissions(tokenProvider, config.daLiveOrg, config.daLiveSite, userEmail, logger);
+        } else {
+            logger.warn('[EDS Content] No user email available for permissions');
+        }
+    } catch (error) {
+        logger.warn(`[EDS Content] Permissions setup failed: ${(error as Error).message}`);
+    }
+
+    // Block library from template (non-fatal, skip if no template info)
+    let libraryPaths: string[] = [];
+    if (config.templateOwner && config.templateRepo) {
+        onProgress?.('Configuring block library...', 'Setting up block library from template');
+        try {
+            const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
+            const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
+            const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
+                config.daLiveOrg,
+                config.daLiveSite,
+                config.templateOwner,
+                config.templateRepo,
+                (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
+            );
+            if (libResult.blocksCount > 0) {
+                logger.info(`[EDS Content] Block library: ${libResult.blocksCount} blocks configured`);
+                libraryPaths = libResult.paths;
+            }
+        } catch (error) {
+            logger.warn(`[EDS Content] Block library setup failed: ${(error as Error).message}`);
+        }
+    }
+
+    // EDS settings — AEM Assets / Universal Editor (non-fatal)
+    onProgress?.('Applying EDS settings...', 'Configuring AEM Assets and Universal Editor');
+    try {
+        await applyDaLiveOrgConfigSettings(daLiveContentOps, config.daLiveOrg, config.daLiveSite, logger);
+    } catch (error) {
+        logger.warn(`[EDS Content] EDS settings failed: ${(error as Error).message}`);
+    }
+
+    // Cache purge before publishing (non-fatal)
+    onProgress?.('Publishing storefront content...', 'Purging stale cache');
+    try {
+        await helixService.purgeCacheAll(repoInfo.owner, repoInfo.repo, 'main');
+    } catch (error) {
+        logger.warn(`[EDS Content] Cache purge failed: ${(error as Error).message}`);
+    }
+
+    // Publish content to CDN (preview + live)
+    onProgress?.('Publishing storefront content...', 'Making content available on CDN');
+
     await helixService.publishAllSiteContent(
         `${repoInfo.owner}/${repoInfo.repo}`,
         'main',
         config.daLiveOrg,
         config.daLiveSite,
     );
+
+    // Publish block library paths (non-fatal, may be missed by publishAllSiteContent)
+    if (libraryPaths.length > 0) {
+        try {
+            await bulkPreviewAndPublish(helixService, repoInfo.owner, repoInfo.repo, libraryPaths, logger);
+        } catch (error) {
+            logger.warn(`[EDS Content] Block library publish failed: ${(error as Error).message}`);
+        }
+    }
 
     logger.info('[EDS Content] Content published to CDN');
     return true;
