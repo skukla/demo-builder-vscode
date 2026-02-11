@@ -635,7 +635,10 @@ export function GitHubRepoSelectionStep({
                     <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
                         <Heading level={3} margin={0}>Create New Repository</Heading>
                         <Flex gap="size-100">
-                            {/* Create button */}
+                            <Button variant="secondary" onPress={handleUseExisting}>
+                                Browse
+                            </Button>
+                            {/* Create button — primary action on the right per Spectrum convention */}
                             {!repoCreationState.isCreated && (
                                 <Button
                                     variant="accent"
@@ -651,9 +654,6 @@ export function GitHubRepoSelectionStep({
                                     Create
                                 </Button>
                             )}
-                            <Button variant="secondary" onPress={handleUseExisting}>
-                                Browse
-                            </Button>
                         </Flex>
                     </Flex>
 
