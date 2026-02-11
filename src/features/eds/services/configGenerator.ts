@@ -349,15 +349,9 @@ export function generateConfigJson(
                 finalConfig.public.default['commerce-assets-enabled'] = false;
             }
 
-            // For non-PaaS environments, remove commerce-core-endpoint if it equals commerce-endpoint
-            // (cleaner config - no need for redundant endpoints)
-            if (environmentType !== 'paas') {
-                const coreEndpoint = finalConfig.public.default['commerce-core-endpoint'];
-                const endpoint = finalConfig.public.default['commerce-endpoint'];
-                if (coreEndpoint === endpoint) {
-                    delete finalConfig.public.default['commerce-core-endpoint'];
-                }
-            }
+            // Note: commerce-core-endpoint is preserved for ALL environment types,
+            // even when it equals commerce-endpoint. The storefront uses its existence
+            // to route cs headers (Magento-Website-Code, etc.) to catalog queries.
         }
 
         // Serialize with proper formatting
