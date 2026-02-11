@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
+import { findComponentById } from '@/core/ui/utils/componentDataHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { toServiceGroupWithSortedFields, ServiceGroupDef } from '@/features/components/services/serviceGroupTransforms';
@@ -150,20 +151,11 @@ export function useComponentConfig({
         const stack = state.selectedStack ? getStackById(state.selectedStack) : undefined;
         if (!stack) return components;
 
-        const findComponent = (componentId: string): ComponentData | undefined => {
-            return componentsData.frontends?.find(c => c.id === componentId) ||
-                   componentsData.backends?.find(c => c.id === componentId) ||
-                   componentsData.dependencies?.find(c => c.id === componentId) ||
-                   componentsData.mesh?.find(c => c.id === componentId) ||
-                   componentsData.integrations?.find(c => c.id === componentId) ||
-                   componentsData.appBuilder?.find(c => c.id === componentId);
-        };
-
         const addComponentWithDeps = (comp: ComponentData, type: string) => {
             components.push({ id: comp.id, data: comp, type });
 
             comp.dependencies?.required?.forEach(depId => {
-                const dep = findComponent(depId);
+                const dep = findComponentById(componentsData, depId);
                 if (dep && !components.some(c => c.id === depId)) {
                     const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
                                        (dep.configuration?.optionalEnvVars?.length || 0) > 0;
@@ -174,7 +166,7 @@ export function useComponentConfig({
             });
 
             comp.dependencies?.optional?.forEach(depId => {
-                const dep = findComponent(depId);
+                const dep = findComponentById(componentsData, depId);
                 if (dep && !components.some(c => c.id === depId)) {
                     // Check if optional dep is in stack dependencies
                     const isSelected = stack.dependencies?.includes(depId);
@@ -201,10 +193,11 @@ export function useComponentConfig({
             if (backend) addComponentWithDeps(backend, 'Backend');
         }
 
-        // Use stack.dependencies directly
+        // Use stack.dependencies — search all component sections (not just dependencies)
+        // so mesh components (eds-accs-mesh, eds-commerce-mesh) are included
         stack.dependencies?.forEach(depId => {
             if (!components.some(c => c.id === depId)) {
-                const dep = componentsData.dependencies?.find(d => d.id === depId);
+                const dep = findComponentById(componentsData, depId);
                 if (dep) {
                     const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
                                        (dep.configuration?.optionalEnvVars?.length || 0) > 0;

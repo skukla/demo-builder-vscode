@@ -21,6 +21,7 @@ export interface ComponentsData {
     frontends?: ComponentData[];
     backends?: ComponentData[];
     dependencies?: ComponentData[];
+    mesh?: ComponentData[];
     integrations?: ComponentData[];
     appBuilder?: ComponentData[];
     /** Raw services from registry for name resolution */
