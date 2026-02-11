@@ -23,10 +23,11 @@ import { getMeshComponentInstance, parseJSON, hasEntries, getComponentInstancesB
 export type { MeshState, MeshChanges };
 
 /**
- * PaaS-specific mesh env vars (used in eds-commerce-mesh)
+ * PaaS-specific mesh env vars (matches eds-commerce-mesh in components.json)
  */
 const PAAS_MESH_ENV_VARS = [
     'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
+    'ADOBE_COMMERCE_URL',
     'ADOBE_CATALOG_SERVICE_ENDPOINT',
     'ADOBE_CATALOG_API_KEY',
     'ADOBE_COMMERCE_ENVIRONMENT_ID',
@@ -36,7 +37,7 @@ const PAAS_MESH_ENV_VARS = [
 ];
 
 /**
- * ACCS-specific mesh env vars (used in eds-accs-mesh)
+ * ACCS-specific mesh env vars (matches eds-accs-mesh in components.json)
  */
 const ACCS_MESH_ENV_VARS = [
     'ACCS_GRAPHQL_ENDPOINT',
@@ -611,7 +612,6 @@ function detectFrontendChangesImpl(project: Project): boolean {
     const currentEnvVars = getFrontendEnvVars(currentConfig);
     const deployedEnvVars = project.frontendEnvState.envVars;
 
-    // Get the keys from currentEnvVars (since FRONTEND_ENV_VARS is now in shared)
     for (const key of Object.keys(currentEnvVars)) {
         const oldValue = deployedEnvVars[key];
         const newValue = currentEnvVars[key];

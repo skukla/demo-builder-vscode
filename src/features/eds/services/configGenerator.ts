@@ -20,6 +20,7 @@
  * @module features/eds/services/configGenerator
  */
 
+import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types';
 import type { Project } from '@/types';
 
@@ -201,10 +202,10 @@ export function extractConfigParamsFromConfigs(
     meshEndpoint?: string,
     backendComponentId?: string,
 ): Partial<ConfigGeneratorParams> {
-    const edsConfig = componentConfigs?.['eds-storefront'] || {};
+    const edsConfig = componentConfigs?.[COMPONENT_IDS.EDS_STOREFRONT] || {};
     // Check both mesh configs - only one will be present depending on backend
-    const paasMeshConfig = componentConfigs?.['eds-commerce-mesh'] || {};
-    const accsMeshConfig = componentConfigs?.['eds-accs-mesh'] || {};
+    const paasMeshConfig = componentConfigs?.[COMPONENT_IDS.EDS_COMMERCE_MESH] || {};
+    const accsMeshConfig = componentConfigs?.[COMPONENT_IDS.EDS_ACCS_MESH] || {};
 
     // Map backend component ID to environment type (defaults to 'paas' if not provided)
     const environmentType = mapBackendToEnvironmentType(backendComponentId);

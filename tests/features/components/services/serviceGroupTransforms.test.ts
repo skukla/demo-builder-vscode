@@ -1,7 +1,7 @@
 /**
  * Tests for service group transformation helpers (SOP §6 compliance)
  */
-import { toServiceGroupWithSortedFields, ServiceGroupDef, ServiceGroup } from '@/features/components/services/serviceGroupTransforms';
+import { toServiceGroupWithSortedFields, ServiceGroupDef, ServiceGroup, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
 
 describe('toServiceGroupWithSortedFields', () => {
     // Mock field type for testing
@@ -100,5 +100,38 @@ describe('toServiceGroupWithSortedFields', () => {
         // Original array should not be mutated
         expect(originalFields[0].key).toBe('b');
         expect(originalFields[1].key).toBe('a');
+    });
+});
+
+describe('SERVICE_GROUP_DEFINITIONS', () => {
+    it('contains all expected group ids', () => {
+        const ids = SERVICE_GROUP_DEFINITIONS.map(d => d.id);
+        expect(ids).toContain('accs');
+        expect(ids).toContain('adobe-commerce');
+        expect(ids).toContain('catalog-service');
+        expect(ids).toContain('mesh');
+        expect(ids).toContain('adobe-assets');
+        expect(ids).toContain('adobe-commerce-aco');
+        expect(ids).toContain('integration-service');
+        expect(ids).toContain('experience-platform');
+        expect(ids).toContain('other');
+    });
+
+    it('has unique ids', () => {
+        const ids = SERVICE_GROUP_DEFINITIONS.map(d => d.id);
+        expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it('has unique order values', () => {
+        const orders = SERVICE_GROUP_DEFINITIONS.map(d => d.order).filter((o): o is number => o !== undefined);
+        expect(new Set(orders).size).toBe(orders.length);
+    });
+
+    it('has "other" group with highest order', () => {
+        const otherGroup = SERVICE_GROUP_DEFINITIONS.find(d => d.id === 'other');
+        const maxNonOtherOrder = Math.max(
+            ...SERVICE_GROUP_DEFINITIONS.filter(d => d.id !== 'other').map(d => d.order ?? 0),
+        );
+        expect(otherGroup?.order).toBeGreaterThan(maxNonOtherOrder);
     });
 });

@@ -8,62 +8,7 @@
 import { useMemo } from 'react';
 import type { ComponentsData, UniqueField, ServiceGroup } from '../configureTypes';
 import type { SelectedComponent } from './useSelectedComponents';
-import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
-
-interface ServiceGroupDefinition {
-    id: string;
-    label: string;
-    order: number;
-    fieldOrder?: string[];
-}
-
-/**
- * Service group definitions with field ordering
- */
-const SERVICE_GROUP_DEFINITIONS: ServiceGroupDefinition[] = [
-    {
-        id: 'accs',
-        label: 'Adobe Commerce Cloud Service',
-        order: 0,
-        fieldOrder: [
-            'ACCS_GRAPHQL_ENDPOINT',
-            'ACCS_WEBSITE_CODE',
-            'ACCS_STORE_CODE',
-            'ACCS_STORE_VIEW_CODE',
-            'ACCS_CUSTOMER_GROUP',
-        ],
-    },
-    {
-        id: 'adobe-commerce',
-        label: 'Adobe Commerce',
-        order: 1,
-        fieldOrder: [
-            'ADOBE_COMMERCE_URL',
-            'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
-            'ADOBE_COMMERCE_WEBSITE_CODE',
-            'ADOBE_COMMERCE_STORE_CODE',
-            'ADOBE_COMMERCE_STORE_VIEW_CODE',
-            'ADOBE_COMMERCE_CUSTOMER_GROUP',
-            'ADOBE_COMMERCE_ADMIN_USERNAME',
-            'ADOBE_COMMERCE_ADMIN_PASSWORD',
-        ],
-    },
-    {
-        id: 'catalog-service',
-        label: 'Catalog Service',
-        order: 2,
-        fieldOrder: [
-            'ADOBE_CATALOG_SERVICE_ENDPOINT',
-            'ADOBE_COMMERCE_ENVIRONMENT_ID',
-            'ADOBE_CATALOG_API_KEY',
-        ],
-    },
-    { id: 'mesh', label: 'API Mesh', order: 3 },
-    { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
-    { id: 'integration-service', label: 'Kukla Integration Service', order: 5 },
-    { id: 'experience-platform', label: 'Experience Platform', order: 6 },
-    { id: 'other', label: 'Additional Settings', order: 99 },
-];
+import { toServiceGroupWithSortedFields, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
 
 interface UseServiceGroupsProps {
     selectedComponents: SelectedComponent[];

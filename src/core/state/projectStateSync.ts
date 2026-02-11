@@ -9,8 +9,8 @@ import { Project } from '@/types';
 import { getComponentInstancesByType } from '@/types/typeGuards';
 
 /**
- * Frontend environment variables that affect runtime
- * These are read by the Next.js frontend at runtime
+ * Frontend env vars tracked for change detection.
+ * Matches the headless component's requiredEnvVars + optionalEnvVars in components.json.
  */
 const FRONTEND_ENV_VARS = [
     'MESH_ENDPOINT',
@@ -25,9 +25,13 @@ const FRONTEND_ENV_VARS = [
 ];
 
 /**
- * Get frontend-related environment variables from component config
+ * Get frontend-related environment variables from component config.
+ *
+ * @param componentConfig - The component configuration to extract env vars from
  */
-export function getFrontendEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
+export function getFrontendEnvVars(
+    componentConfig: Record<string, unknown>,
+): Record<string, string> {
     const envVars: Record<string, string> = {};
 
     FRONTEND_ENV_VARS.forEach(key => {
@@ -41,8 +45,8 @@ export function getFrontendEnvVars(componentConfig: Record<string, unknown>): Re
 }
 
 /**
- * Update frontend state after demo starts
- * Captures the env vars that were active when demo started
+ * Update frontend state after demo starts.
+ * Captures the env vars that were active when demo started.
  */
 export function updateFrontendState(project: Project): void {
     const frontendInstance = getComponentInstancesByType(project, 'frontend')[0];
