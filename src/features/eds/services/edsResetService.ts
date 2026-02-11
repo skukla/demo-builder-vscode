@@ -751,7 +751,11 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                         );
 
                         if (selection === signInButton) {
-                            const loginSuccess = await authService.login();
+                            const loginSuccess = await authService.loginAndRestoreProjectContext({
+                                organization: project.adobe?.organization,
+                                projectId: project.adobe?.projectId,
+                                workspace: project.adobe?.workspace,
+                            });
                             if (!loginSuccess) {
                                 project.status = originalStatus;
                                 await context.stateManager.saveProject(project);
