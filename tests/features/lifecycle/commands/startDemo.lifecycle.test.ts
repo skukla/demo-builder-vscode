@@ -302,4 +302,49 @@ describe('StartDemoCommand - Lifecycle', () => {
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.createProject');
         });
     });
+
+    describe('Test 1.5: fnm env initialization', () => {
+        it('should prepend eval "$(fnm env)" before fnm use in terminal command', async () => {
+            // Given: Project with Node 24 requirement
+            mockStateManager.getCurrentProject.mockResolvedValue({
+                name: 'test-project',
+                path: '/test/path',
+                status: 'ready',
+                created: new Date(),
+                lastModified: new Date(),
+                componentInstances: {
+                    'headless': {
+                        id: 'headless',
+                        name: 'CitiSignal Frontend',
+                        type: 'frontend',
+                        status: 'ready',
+                        path: '/test/path/frontend',
+                        port: 3000,
+                        metadata: { nodeVersion: '24' },
+                    },
+                },
+            });
+
+            // Port becomes in use quickly
+            let portCheckCount = 0;
+            mockCommandExecutor.isPortAvailable.mockImplementation(async () => {
+                portCheckCount++;
+                return portCheckCount < 2;
+            });
+
+            // When: startDemo command executes
+            const executePromise = command.execute();
+            await jest.advanceTimersByTimeAsync(3000);
+            await executePromise;
+
+            // Then: terminal sendText includes fnm env initialization
+            const sendTextCalls = mockTerminal.sendText.mock.calls.map((c: string[]) => c[0]);
+            const fnmCommand = sendTextCalls.find((cmd: string) => cmd.includes('fnm'));
+
+            expect(fnmCommand).toBeDefined();
+            expect(fnmCommand).toContain('eval "$(fnm env)"');
+            expect(fnmCommand).toContain('fnm use 24');
+            expect(fnmCommand).toContain('npm run dev');
+        });
+    });
 });

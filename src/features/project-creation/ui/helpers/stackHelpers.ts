@@ -68,5 +68,23 @@ export function filterComponentConfigsForStackChange<T extends Record<string, un
         }
     }
 
+    // Migrate configs from role-equivalent components (same structural role, different ID)
+    // Handles mesh/frontend swaps (e.g., eds-commerce-mesh → headless-commerce-mesh)
+    // Backend is excluded: switching backends (PaaS→ACCS) means a different service with different config
+    if (oldStack.frontend !== newStack.frontend && oldStack.frontend in currentConfigs) {
+        filteredConfigs[newStack.frontend] = currentConfigs[oldStack.frontend];
+    }
+    // Dependencies: migrate by position when arrays have the same length
+    // Position-based: stacks.json dependency ordering is significant (e.g., index 0 = mesh in all stacks)
+    if (oldStack.dependencies.length === newStack.dependencies.length) {
+        for (let i = 0; i < oldStack.dependencies.length; i++) {
+            const oldDep = oldStack.dependencies[i];
+            const newDep = newStack.dependencies[i];
+            if (oldDep !== newDep && oldDep in currentConfigs) {
+                filteredConfigs[newDep] = currentConfigs[oldDep];
+            }
+        }
+    }
+
     return filteredConfigs as T;
 }

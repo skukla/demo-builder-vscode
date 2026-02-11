@@ -128,10 +128,10 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
             const pkg = packages?.find(p => p.id === state.selectedPackage);
             const storefront = pkg?.storefronts?.[stackId];
 
-            // Build edsConfig update with template/content source info
-            // These values are needed by StorefrontSetupStep for GitHub reset and DA.live copy
-            // All values are explicit configuration - no URL parsing
-            const edsConfigUpdate = storefront ? {
+            // Build edsConfig only for EDS stacks (requiresGitHub/requiresDaLive)
+            // Non-EDS stacks (headless) clear edsConfig to prevent stale data
+            const isEdsStack = stack.requiresGitHub || stack.requiresDaLive;
+            const edsConfigUpdate = isEdsStack && storefront ? {
                 ...state.edsConfig,
                 accsHost: state.edsConfig?.accsHost || '',
                 storeViewCode: state.edsConfig?.storeViewCode || '',
@@ -145,7 +145,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 patches: storefront.patches,
                 contentPatches: storefront.contentPatches,
                 contentPatchSource: storefront.contentPatchSource,
-            } : state.edsConfig;
+            } : undefined;
 
             // Only set selectedStack - stack config is the source of truth for components
             // No need to derive and store components separately

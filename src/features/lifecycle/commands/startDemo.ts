@@ -293,7 +293,7 @@ export class StartDemoCommand extends BaseCommand {
                 
                 // Navigate to frontend directory and start
                 terminal.sendText(`cd "${frontendPath}"`);
-                terminal.sendText(`fnm use ${nodeVersion} && npm run dev`);
+                terminal.sendText(`eval "$(fnm env)" && fnm use ${nodeVersion} && npm run dev`);
 
                 // Wait for demo to actually start (poll until port is in use)
                 const started = await this.waitForPortInUse(port);

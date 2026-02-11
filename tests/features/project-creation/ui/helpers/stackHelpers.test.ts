@@ -390,6 +390,96 @@ describe('stackHelpers', () => {
             });
         });
 
+        describe('config migration for role-equivalent components', () => {
+            // Fixtures matching REAL stacks.json (distinct mesh components per architecture)
+            const realEdsPaasStack: Stack = {
+                id: 'eds-paas',
+                name: 'Edge Delivery + PaaS',
+                description: 'EDS storefront with Commerce Drop-ins and PaaS',
+                frontend: 'eds-storefront',
+                backend: 'adobe-commerce-paas',
+                dependencies: ['eds-commerce-mesh'],
+                optionalAddons: [{ id: 'adobe-commerce-aco' }],
+                requiresGitHub: true,
+                requiresDaLive: true,
+            };
+
+            const realHeadlessPaasStack: Stack = {
+                id: 'headless-paas',
+                name: 'Headless + PaaS',
+                description: 'NextJS storefront with API Mesh and Commerce PaaS',
+                frontend: 'headless',
+                backend: 'adobe-commerce-paas',
+                dependencies: ['headless-commerce-mesh'],
+                optionalAddons: [{ id: 'demo-inspector', default: true }],
+            };
+
+            it('should migrate mesh config when switching eds-paas → headless-paas', () => {
+                const currentConfigs = {
+                    'eds-storefront': { PORT: 3000 },
+                    'adobe-commerce-paas': { STORE_URL: 'https://store.com' },
+                    'eds-commerce-mesh': {
+                        ADOBE_CATALOG_SERVICE_ENDPOINT: 'https://catalog.adobe.io',
+                        MESH_ID: 'mesh-123',
+                    },
+                };
+
+                const result = filterComponentConfigsForStackChange(
+                    realEdsPaasStack,
+                    realHeadlessPaasStack,
+                    currentConfigs,
+                );
+
+                // Backend retained (shared between stacks)
+                expect(result['adobe-commerce-paas']).toEqual({ STORE_URL: 'https://store.com' });
+                // Mesh config migrated from eds-commerce-mesh → headless-commerce-mesh
+                expect(result['headless-commerce-mesh']).toEqual({
+                    ADOBE_CATALOG_SERVICE_ENDPOINT: 'https://catalog.adobe.io',
+                    MESH_ID: 'mesh-123',
+                });
+                // Old mesh component gone
+                expect(result['eds-commerce-mesh']).toBeUndefined();
+            });
+
+            it('should migrate frontend config when switching eds-paas → headless-paas', () => {
+                const currentConfigs = {
+                    'eds-storefront': { PORT: 3000, CUSTOM_VAR: 'value' },
+                    'adobe-commerce-paas': { STORE_URL: 'https://store.com' },
+                };
+
+                const result = filterComponentConfigsForStackChange(
+                    realEdsPaasStack,
+                    realHeadlessPaasStack,
+                    currentConfigs,
+                );
+
+                // Frontend config migrated to new frontend component
+                expect(result['headless']).toEqual({ PORT: 3000, CUSTOM_VAR: 'value' });
+                expect(result['eds-storefront']).toBeUndefined();
+            });
+
+            it('should not migrate when deps have different lengths', () => {
+                const stackWithTwoDeps: Stack = {
+                    ...realEdsPaasStack,
+                    dependencies: ['eds-commerce-mesh', 'extra-dep'],
+                };
+
+                const currentConfigs = {
+                    'eds-commerce-mesh': { MESH_ID: 'mesh-123' },
+                    'extra-dep': { EXTRA: 'val' },
+                };
+
+                const result = filterComponentConfigsForStackChange(
+                    stackWithTwoDeps,
+                    realHeadlessPaasStack,
+                    currentConfigs,
+                );
+
+                // No migration when dep arrays have different lengths (ambiguous pairing)
+                expect(result['headless-commerce-mesh']).toBeUndefined();
+            });
+        });
+
         describe('real-world scenarios', () => {
             it('should preserve user work when switching from PaaS to ACCS (same frontend)', () => {
                 // User has spent time configuring their headless storefront
