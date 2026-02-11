@@ -7,8 +7,9 @@
  * Follows TDD methodology - tests written BEFORE implementation.
  */
 
-import { filterPackagesBySearchQuery } from '@/features/project-creation/ui/components/brandGalleryHelpers';
+import { filterPackagesBySearchQuery, filterAddonsByPackage } from '@/features/project-creation/ui/components/brandGalleryHelpers';
 import type { DemoPackage } from '@/types/demoPackages';
+import type { OptionalAddon } from '@/types/stacks';
 
 describe('brandGalleryHelpers', () => {
     // Test fixtures - realistic package data
@@ -232,6 +233,86 @@ describe('brandGalleryHelpers', () => {
                 // Then: Original array should be unchanged
                 expect(mockPackages).toEqual(originalPackages);
             });
+        });
+    });
+
+    describe('filterAddonsByPackage', () => {
+        const stackAddons: OptionalAddon[] = [
+            { id: 'demo-inspector' },
+            { id: 'adobe-commerce-aco' },
+        ];
+
+        it('should return only addons declared in the package', () => {
+            // Given: A package that only declares demo-inspector
+            const pkg: DemoPackage = {
+                id: 'citisignal',
+                name: 'CitiSignal',
+                description: 'Telecom demo',
+                configDefaults: {},
+                storefronts: {},
+                addons: { 'demo-inspector': 'optional' },
+            };
+
+            // When: Filtering stack addons by package
+            const result = filterAddonsByPackage(stackAddons, pkg);
+
+            // Then: Only demo-inspector returned, ACO excluded
+            expect(result).toHaveLength(1);
+            expect(result[0].id).toBe('demo-inspector');
+        });
+
+        it('should return all addons when package declares all of them', () => {
+            // Given: A package that declares both addons
+            const pkg: DemoPackage = {
+                id: 'buildright',
+                name: 'BuildRight',
+                description: 'Hardware demo',
+                configDefaults: {},
+                storefronts: {},
+                addons: { 'demo-inspector': 'optional', 'adobe-commerce-aco': 'required' },
+            };
+
+            // When: Filtering stack addons by package
+            const result = filterAddonsByPackage(stackAddons, pkg);
+
+            // Then: Both addons returned
+            expect(result).toHaveLength(2);
+            expect(result.map(a => a.id)).toEqual(['demo-inspector', 'adobe-commerce-aco']);
+        });
+
+        it('should return all stack addons when package has no addons map', () => {
+            // Given: A package without an addons field
+            const pkg: DemoPackage = {
+                id: 'generic',
+                name: 'Generic',
+                description: 'No addons specified',
+                configDefaults: {},
+                storefronts: {},
+            };
+
+            // When: Filtering stack addons by package
+            const result = filterAddonsByPackage(stackAddons, pkg);
+
+            // Then: All stack addons returned (no restriction)
+            expect(result).toHaveLength(2);
+        });
+
+        it('should return empty array when stack has no addons', () => {
+            // Given: No stack addons
+            const pkg: DemoPackage = {
+                id: 'citisignal',
+                name: 'CitiSignal',
+                description: 'Telecom',
+                configDefaults: {},
+                storefronts: {},
+                addons: { 'demo-inspector': 'optional' },
+            };
+
+            // When: Filtering empty addons
+            const result = filterAddonsByPackage([], pkg);
+
+            // Then: Empty result
+            expect(result).toHaveLength(0);
         });
     });
 });

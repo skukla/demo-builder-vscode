@@ -9,7 +9,7 @@
 
 import { Text, DialogContainer, Checkbox, Divider } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { DemoPackage } from '@/types/demoPackages';
 import { Stack } from '@/types/stacks';
 import { cn } from '@/core/ui/utils/classNames';
@@ -17,7 +17,7 @@ import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
-import { filterPackagesBySearchQuery } from './brandGalleryHelpers';
+import { filterPackagesBySearchQuery, filterAddonsByPackage } from './brandGalleryHelpers';
 
 /** Addon metadata for display */
 const ADDON_METADATA: Record<string, { name: string; description: string }> = {
@@ -206,11 +206,19 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         return stacks.find(s => s.id === selectedStackId) || null;
     }, [stacks, selectedStackId]);
 
-    // Get available addons from selected stack's optionalAddons (stack-driven)
+    // Get available addons: stack defines possible addons, package restricts by brand
     const availableAddons = useMemo(() => {
         if (!selectedStack) return [];
-        return (selectedStack.optionalAddons || []).filter(addon => ADDON_METADATA[addon.id]);
-    }, [selectedStack]);
+        const stackAddons = (selectedStack.optionalAddons || []).filter(addon => ADDON_METADATA[addon.id]);
+        return filterAddonsByPackage(stackAddons, pkg);
+    }, [selectedStack, pkg]);
+
+    // Cache last non-empty addons so content stays rendered during exit animation
+    const lastAddonsRef = useRef(availableAddons);
+    if (availableAddons.length > 0) {
+        lastAddonsRef.current = availableAddons;
+    }
+    const displayAddons = availableAddons.length > 0 ? availableAddons : lastAddonsRef.current;
 
     // Build action buttons - only show Done when a stack is selected
     const actionButtons = selectedStackId
@@ -262,36 +270,34 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                 })}
             </div>
 
-            {/* Services Section - only shown if package supports addons */}
-            {availableAddons.length > 0 && (
-                <div className="animate-fade-in">
-                    <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-                    <Text UNSAFE_className="description-block-sm">
-                        Optional Services
-                    </Text>
-                    <div className="architecture-addons">
-                        {availableAddons.map((optionalAddon) => {
-                            const addonMeta = ADDON_METADATA[optionalAddon.id];
-                            if (!addonMeta) return null;
-                            const isRequired = pkg.addons?.[optionalAddon.id] === 'required';
-                            const isChecked = isRequired || selectedAddons.includes(optionalAddon.id);
-                            return (
-                                <Checkbox
-                                    key={optionalAddon.id}
-                                    isSelected={isChecked}
-                                    isDisabled={isRequired}
-                                    onChange={(isSelected) => handleAddonToggle(optionalAddon.id, isSelected)}
-                                >
-                                    <span className="addon-label">
-                                        <span className="addon-name">{addonMeta.name}</span>
-                                        <span className="addon-description">{addonMeta.description}</span>
-                                    </span>
-                                </Checkbox>
-                            );
-                        })}
-                    </div>
+            {/* Services Section - always rendered, animated in/out via CSS */}
+            <div className={cn('addons-section', availableAddons.length > 0 && 'addons-visible')}>
+                <Divider size="S" marginTop="size-300" marginBottom="size-200" />
+                <Text UNSAFE_className="description-block-sm">
+                    Optional Services
+                </Text>
+                <div className="architecture-addons">
+                    {displayAddons.map((optionalAddon) => {
+                        const addonMeta = ADDON_METADATA[optionalAddon.id];
+                        if (!addonMeta) return null;
+                        const isRequired = pkg.addons?.[optionalAddon.id] === 'required';
+                        const isChecked = isRequired || selectedAddons.includes(optionalAddon.id);
+                        return (
+                            <Checkbox
+                                key={optionalAddon.id}
+                                isSelected={isChecked}
+                                isDisabled={isRequired}
+                                onChange={(isSelected) => handleAddonToggle(optionalAddon.id, isSelected)}
+                            >
+                                <span className="addon-label">
+                                    <span className="addon-name">{addonMeta.name}</span>
+                                    <span className="addon-description">{addonMeta.description}</span>
+                                </span>
+                            </Checkbox>
+                        );
+                    })}
                 </div>
-            )}
+            </div>
         </Modal>
     );
 };

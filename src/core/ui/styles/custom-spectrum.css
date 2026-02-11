@@ -1164,6 +1164,19 @@ button[class*="spectrum-Button"][disabled],
     opacity: 1 !important;
 }
 
+/* Addons section wrapper - animated show/hide */
+.addons-section {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    transition: max-height 0.3s ease, opacity 0.3s ease !important;
+}
+
+.addons-section.addons-visible {
+    max-height: 200px !important;
+    opacity: 1 !important;
+}
+
 /* Optional addons section in architecture modal */
 .architecture-addons {
     display: flex !important;
