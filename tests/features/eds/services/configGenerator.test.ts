@@ -213,8 +213,8 @@ describe('configGenerator', () => {
             expect(config.public.default.headers.cs['AC-Price-Book-ID']).toBe('{{AC_PRICE_BOOK_ID}}');
         });
 
-        it('should set commerce-core-endpoint only for PaaS', () => {
-            // For PaaS, both endpoints should be set
+        it('should set separate commerce-core-endpoint for PaaS catalog service', () => {
+            // PaaS has a separate catalog service endpoint
             const paasParams: ConfigGeneratorParams = {
                 ...baseParams,
                 environmentType: 'paas',
@@ -225,8 +225,12 @@ describe('configGenerator', () => {
             const paasConfig = JSON.parse(paasResult.content!);
             expect(paasConfig.public.default['commerce-core-endpoint']).toBe('https://catalog.example.com/graphql');
             expect(paasConfig.public.default['commerce-endpoint']).toBe('https://commerce.example.com/graphql');
+        });
 
-            // For ACCS, commerce-core-endpoint should be removed if same as commerce-endpoint
+        it('should preserve commerce-core-endpoint for ACCS even when equal to commerce-endpoint', () => {
+            // The storefront uses the *existence* of commerce-core-endpoint to determine
+            // which requests get cs headers (Magento-Website-Code, etc.). ACCS backends
+            // require these headers — removing the property breaks catalog queries.
             const accsParams: ConfigGeneratorParams = {
                 ...baseParams,
                 environmentType: 'accs',
@@ -235,8 +239,20 @@ describe('configGenerator', () => {
             const accsResult = generateConfigJson(accsParams, mockLogger);
             const accsConfig = JSON.parse(accsResult.content!);
             expect(accsConfig.public.default['commerce-endpoint']).toBe('https://commerce.example.com/graphql');
-            // commerce-core-endpoint should be removed for non-PaaS when redundant
-            expect(accsConfig.public.default['commerce-core-endpoint']).toBeUndefined();
+            expect(accsConfig.public.default['commerce-core-endpoint']).toBe('https://commerce.example.com/graphql');
+        });
+
+        it('should preserve commerce-core-endpoint for ACO even when equal to commerce-endpoint', () => {
+            // ACO also uses cs headers (AC-View-ID, AC-Price-Book-ID) — same reasoning
+            const acoParams: ConfigGeneratorParams = {
+                ...baseParams,
+                environmentType: 'aco',
+            };
+
+            const acoResult = generateConfigJson(acoParams, mockLogger);
+            const acoConfig = JSON.parse(acoResult.content!);
+            expect(acoConfig.public.default['commerce-endpoint']).toBe('https://commerce.example.com/graphql');
+            expect(acoConfig.public.default['commerce-core-endpoint']).toBe('https://commerce.example.com/graphql');
         });
 
         it('should handle AEM Assets enabled flag', () => {
@@ -363,6 +379,86 @@ describe('configGenerator', () => {
             const result = extractConfigParamsFromConfigs(componentConfigs, undefined, 'adobe-commerce-paas');
 
             expect(result.aemAssetsEnabled).toBe(true);
+        });
+
+        it('should extract ACCS store codes from eds-accs-mesh config', () => {
+            // Regression: When the wizard populates componentConfigs, ACCS store codes
+            // live under 'eds-accs-mesh' (not 'eds-storefront'). The extraction function
+            // must fall back to the mesh config for these values.
+            const componentConfigs = {
+                'eds-storefront': {
+                    AEM_ASSETS_ENABLED: 'true',
+                },
+                'eds-accs-mesh': {
+                    ACCS_STORE_VIEW_CODE: 'citisignal_us',
+                    ACCS_STORE_CODE: 'citisignal_store',
+                    ACCS_WEBSITE_CODE: 'citisignal',
+                    ACCS_CUSTOMER_GROUP: 'b6589fc6ab0dc82cf12099d1c2d40ab994e8410c',
+                    ACCS_GRAPHQL_ENDPOINT: 'https://accs.example.com/graphql',
+                },
+            };
+
+            const result = extractConfigParamsFromConfigs(componentConfigs, undefined, 'adobe-commerce-accs');
+
+            expect(result.environmentType).toBe('accs');
+            expect(result.storeViewCode).toBe('citisignal_us');
+            expect(result.storeCode).toBe('citisignal_store');
+            expect(result.websiteCode).toBe('citisignal');
+            expect(result.customerGroup).toBe('b6589fc6ab0dc82cf12099d1c2d40ab994e8410c');
+            expect(result.commerceEndpoint).toBe('https://accs.example.com/graphql');
+        });
+
+        it('should extract PaaS store codes from eds-commerce-mesh config', () => {
+            // Same fallback pattern for PaaS: store codes in mesh config, not storefront
+            const componentConfigs = {
+                'eds-storefront': {
+                    AEM_ASSETS_ENABLED: 'false',
+                },
+                'eds-commerce-mesh': {
+                    ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
+                    ADOBE_COMMERCE_STORE_CODE: 'main_website_store',
+                    ADOBE_COMMERCE_WEBSITE_CODE: 'base',
+                    ADOBE_COMMERCE_CUSTOMER_GROUP: 'hash123',
+                },
+            };
+
+            const result = extractConfigParamsFromConfigs(componentConfigs, undefined, 'adobe-commerce-paas');
+
+            expect(result.environmentType).toBe('paas');
+            expect(result.storeViewCode).toBe('default');
+            expect(result.storeCode).toBe('main_website_store');
+            expect(result.websiteCode).toBe('base');
+            expect(result.customerGroup).toBe('hash123');
+        });
+
+        it('should generate correct ACCS headers in config.json when store codes come from mesh config', () => {
+            // End-to-end: eds-accs-mesh provides store codes → config.json has correct headers
+            const componentConfigs = {
+                'eds-storefront': { AEM_ASSETS_ENABLED: 'true' },
+                'eds-accs-mesh': {
+                    ACCS_STORE_VIEW_CODE: 'citisignal_us',
+                    ACCS_STORE_CODE: 'citisignal_store',
+                    ACCS_WEBSITE_CODE: 'citisignal',
+                    ACCS_CUSTOMER_GROUP: 'b6589fc6ab0dc82cf12099d1c2d40ab994e8410c',
+                },
+            };
+
+            const params = extractConfigParamsFromConfigs(componentConfigs, 'https://mesh.example.com/graphql', 'adobe-commerce-accs');
+
+            const result = generateConfigJson(
+                { githubOwner: 'testuser', repoName: 'test-repo', daLiveOrg: 'testorg', daLiveSite: 'test-site', ...params },
+                mockLogger,
+            );
+
+            expect(result.success).toBe(true);
+            const config = JSON.parse(result.content!);
+            const headers = config.public.default.headers;
+
+            // ACCS headers should use store codes from mesh config, not defaults
+            expect(headers.cs['Magento-Store-View-Code']).toBe('citisignal_us');
+            expect(headers.cs['Magento-Store-Code']).toBe('citisignal_store');
+            expect(headers.cs['Magento-Website-Code']).toBe('citisignal');
+            expect(headers.cs['Magento-Customer-Group']).toBe('b6589fc6ab0dc82cf12099d1c2d40ab994e8410c');
         });
     });
 });

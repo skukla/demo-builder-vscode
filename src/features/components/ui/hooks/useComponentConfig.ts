@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
+import { findComponentById } from '@/core/ui/utils/componentDataHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
-import { toServiceGroupWithSortedFields, ServiceGroupDef } from '@/features/components/services/serviceGroupTransforms';
+import { toServiceGroupWithSortedFields, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
 import { ComponentEnvVar, ComponentConfigs, WizardState } from '@/types/webview';
@@ -76,19 +77,9 @@ interface UseComponentConfigReturn {
     normalizeUrlField: (field: UniqueField) => void;
 }
 
-// Service group definitions with order
-// Note: 'mesh' group removed - MESH_ENDPOINT is auto-configured during project creation
-// Note: 'eds-commerce' group removed - env vars standardized to ADOBE_COMMERCE_* naming (v3.0.0)
-const SERVICE_GROUP_DEFS: ServiceGroupDef[] = [
-    { id: 'accs', label: 'Adobe Commerce Cloud Service', order: 1, fieldOrder: ['ACCS_GRAPHQL_ENDPOINT', 'ACCS_WEBSITE_CODE', 'ACCS_STORE_CODE', 'ACCS_STORE_VIEW_CODE', 'ACCS_CUSTOMER_GROUP'] },
-    { id: 'adobe-commerce', label: 'Adobe Commerce', order: 2, fieldOrder: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT', 'ADOBE_COMMERCE_WEBSITE_CODE', 'ADOBE_COMMERCE_STORE_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE', 'ADOBE_COMMERCE_CUSTOMER_GROUP', 'ADOBE_COMMERCE_ADMIN_USERNAME', 'ADOBE_COMMERCE_ADMIN_PASSWORD'] },
-    { id: 'catalog-service', label: 'Catalog Service', order: 3, fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_API_KEY'] },
-    { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
-    { id: 'adobe-commerce-aco', label: 'Adobe Commerce Optimizer', order: 5, fieldOrder: ['ACO_API_URL', 'ACO_API_KEY', 'ACO_TENANT_ID', 'ACO_ENVIRONMENT_ID'] },
-    { id: 'integration-service', label: 'Kukla Integration Service', order: 6 },
-    { id: 'experience-platform', label: 'Experience Platform', order: 7 },
-    { id: 'other', label: 'Additional Settings', order: 99 },
-];
+// Service group definitions imported from shared source (serviceGroupTransforms.ts)
+// Note: 'mesh' group exists in shared list for Configure screen; wizard filters MESH_ENDPOINT
+// so the mesh group will be empty and hidden via `.filter(group => group.fields.length > 0)`
 
 export function useComponentConfig({
     state,
@@ -150,20 +141,11 @@ export function useComponentConfig({
         const stack = state.selectedStack ? getStackById(state.selectedStack) : undefined;
         if (!stack) return components;
 
-        const findComponent = (componentId: string): ComponentData | undefined => {
-            return componentsData.frontends?.find(c => c.id === componentId) ||
-                   componentsData.backends?.find(c => c.id === componentId) ||
-                   componentsData.dependencies?.find(c => c.id === componentId) ||
-                   componentsData.mesh?.find(c => c.id === componentId) ||
-                   componentsData.integrations?.find(c => c.id === componentId) ||
-                   componentsData.appBuilder?.find(c => c.id === componentId);
-        };
-
         const addComponentWithDeps = (comp: ComponentData, type: string) => {
             components.push({ id: comp.id, data: comp, type });
 
             comp.dependencies?.required?.forEach(depId => {
-                const dep = findComponent(depId);
+                const dep = findComponentById(componentsData, depId);
                 if (dep && !components.some(c => c.id === depId)) {
                     const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
                                        (dep.configuration?.optionalEnvVars?.length || 0) > 0;
@@ -174,7 +156,7 @@ export function useComponentConfig({
             });
 
             comp.dependencies?.optional?.forEach(depId => {
-                const dep = findComponent(depId);
+                const dep = findComponentById(componentsData, depId);
                 if (dep && !components.some(c => c.id === depId)) {
                     // Check if optional dep is in stack dependencies
                     const isSelected = stack.dependencies?.includes(depId);
@@ -201,10 +183,11 @@ export function useComponentConfig({
             if (backend) addComponentWithDeps(backend, 'Backend');
         }
 
-        // Use stack.dependencies directly
+        // Use stack.dependencies — search all component sections (not just dependencies)
+        // so mesh components (eds-accs-mesh, eds-commerce-mesh) are included
         stack.dependencies?.forEach(depId => {
             if (!components.some(c => c.id === depId)) {
-                const dep = componentsData.dependencies?.find(d => d.id === depId);
+                const dep = findComponentById(componentsData, depId);
                 if (dep) {
                     const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
                                        (dep.configuration?.optionalEnvVars?.length || 0) > 0;
@@ -277,12 +260,12 @@ export function useComponentConfig({
             groups[groupKey].push(field);
         });
 
-            return SERVICE_GROUP_DEFS
+            return SERVICE_GROUP_DEFINITIONS
             .map(def => toServiceGroupWithSortedFields(def, groups))
             .filter(group => group.fields.length > 0)
             .sort((a, b) => {
-                const aOrder = SERVICE_GROUP_DEFS.find(d => d.id === a.id)?.order || 99;
-                const bOrder = SERVICE_GROUP_DEFS.find(d => d.id === b.id)?.order || 99;
+                const aOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === a.id)?.order || 99;
+                const bOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === b.id)?.order || 99;
                 return aOrder - bOrder;
             });
     }, [selectedComponents, componentsData.envVars, componentsData.services, state.selectedStack]);

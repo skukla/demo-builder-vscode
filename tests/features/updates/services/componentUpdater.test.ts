@@ -262,7 +262,7 @@ describe('ComponentUpdater (Step 1)', () => {
 
             // Verify npm install was called
             expect(mockExecutor.execute).toHaveBeenCalledWith(
-                'npm install --no-fund --prefer-offline',
+                'npm install --no-fund',
                 expect.objectContaining({
                     cwd: '/path/to/project/components/commerce-mesh',
                     useNodeVersion: '20'

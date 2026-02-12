@@ -119,7 +119,7 @@
           {
             "name": "Install Adobe I/O CLI (Node {version})",
             "message": "Installing Adobe I/O CLI for Node {version}",
-            "commands": ["npm install -g @adobe/aio-cli --no-fund --prefer-offline --verbose"],
+            "commands": ["npm install -g @adobe/aio-cli --no-fund --verbose"],
             "estimatedDuration": 60000,
             "progressStrategy": "milestones",
             "milestones": [

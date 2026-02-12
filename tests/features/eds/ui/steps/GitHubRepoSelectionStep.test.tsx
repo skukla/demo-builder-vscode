@@ -150,6 +150,34 @@ describe('GitHubRepoSelectionStep', () => {
         });
     });
 
+    describe('Button Order', () => {
+        it('should place Browse (secondary) before Create (primary) in new mode', async () => {
+            // Given: New mode — both buttons visible
+            const state = createDefaultState({ repoMode: 'new' });
+
+            // When: Component renders
+            const { GitHubRepoSelectionStep } = await import('@/features/eds/ui/steps/GitHubRepoSelectionStep');
+            render(
+                <TestWrapper>
+                    <GitHubRepoSelectionStep
+                        state={state}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                    />
+                </TestWrapper>
+            );
+
+            // Then: Browse (secondary) should appear before Create (primary)
+            // per Adobe Spectrum convention: primary action on the right
+            const buttons = screen.getAllByRole('button');
+            const browseIndex = buttons.findIndex(b => b.textContent?.includes('Browse'));
+            const createIndex = buttons.findIndex(b => b.textContent === 'Create');
+            expect(browseIndex).toBeGreaterThan(-1);
+            expect(createIndex).toBeGreaterThan(-1);
+            expect(browseIndex).toBeLessThan(createIndex);
+        });
+    });
+
     describe('Existing Repository Mode', () => {
         it('should show Use Existing button in new mode', async () => {
             // Given: New mode selected

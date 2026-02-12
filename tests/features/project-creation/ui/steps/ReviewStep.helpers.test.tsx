@@ -111,9 +111,11 @@ describe('reviewStepHelpers', () => {
             ],
             backends: mockBackends,
             dependencies: [
-                { id: 'eds-commerce-mesh', name: 'EDS Commerce API Mesh' },
                 { id: 'demo-inspector', name: 'Demo Inspector' },
                 { id: 'other-dep', name: 'Other Dependency' },
+            ],
+            mesh: [
+                { id: 'eds-commerce-mesh', name: 'EDS Commerce API Mesh' },
             ],
             integrations: [
                 { id: 'analytics', name: 'Adobe Analytics' },

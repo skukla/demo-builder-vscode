@@ -110,8 +110,9 @@ export function buildComponentInfoList(
     }
 
     // Middleware (API Mesh) - check if any mesh component is selected
-    if (hasMeshInDependencies(components.dependencies) && componentsData.dependencies) {
-        const mesh = componentsData.dependencies.find((d) => isMeshComponentId(d.id));
+    // Search componentsData.mesh (not dependencies) since mesh components live there
+    if (hasMeshInDependencies(components.dependencies) && componentsData.mesh) {
+        const mesh = componentsData.mesh.find((d) => isMeshComponentId(d.id));
         if (mesh) {
             const isDeployed = meshStatus === 'deployed';
             info.push({

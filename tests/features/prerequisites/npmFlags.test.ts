@@ -45,7 +45,7 @@ describe('npm Performance Flags', () => {
             expect(command).toContain('--no-fund');
         });
 
-        it('should include --prefer-offline flag in npm install command', () => {
+        it('should NOT include --prefer-offline flag (causes ETARGET on stale caches)', () => {
             const aioCliPrereq = prerequisitesConfig.prerequisites.find(
                 (p: any) => p.id === 'aio-cli'
             );
@@ -53,7 +53,7 @@ describe('npm Performance Flags', () => {
             const installStep = aioCliPrereq.install.steps[0];
             const command = installStep.commands[0];
 
-            expect(command).toContain('--prefer-offline');
+            expect(command).not.toContain('--prefer-offline');
         });
 
         it('should maintain --verbose flag for progress tracking', () => {
@@ -76,8 +76,9 @@ describe('npm Performance Flags', () => {
             const installStep = aioCliPrereq.install.steps[0];
             const command = installStep.commands[0];
 
-            // Verify the complete command structure (without --no-audit for security)
-            expect(command).toMatch(/npm install -g @adobe\/aio-cli.*--no-fund.*--prefer-offline.*--verbose/);
+            // Verify the complete command structure (without --no-audit for security, without --prefer-offline for reliability)
+            expect(command).toMatch(/npm install -g @adobe\/aio-cli.*--no-fund.*--verbose/);
+            expect(command).not.toContain('--prefer-offline');
         });
     });
 });

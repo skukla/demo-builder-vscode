@@ -21,8 +21,10 @@ describe('ReviewStep', () => {
             { id: 'adobe-commerce-paas', name: 'Commerce PaaS', description: 'Commerce backend' }
         ],
         dependencies: [
-            { id: 'headless-commerce-mesh', name: 'Headless Commerce API Mesh', description: 'GraphQL mesh', subType: 'mesh' },
             { id: 'demo-inspector', name: 'Demo Inspector', description: 'Inspector tool' }
+        ],
+        mesh: [
+            { id: 'headless-commerce-mesh', name: 'Headless Commerce API Mesh', description: 'GraphQL mesh', subType: 'mesh' },
         ],
         integrations: [
             { id: 'aem', name: 'Adobe Experience Manager', description: 'AEM integration' },
@@ -286,8 +288,10 @@ describe('ReviewStep', () => {
                 ...mockComponentsData,
                 frontends: [{ id: 'eds-storefront', name: 'Edge Delivery Storefront', description: 'EDS frontend' }],
                 dependencies: [
-                    { id: 'eds-commerce-mesh', name: 'EDS Commerce API Mesh', description: 'GraphQL mesh', subType: 'mesh' },
                     { id: 'demo-inspector', name: 'Demo Inspector', description: 'Inspector tool' }
+                ],
+                mesh: [
+                    { id: 'eds-commerce-mesh', name: 'EDS Commerce API Mesh', description: 'GraphQL mesh', subType: 'mesh' },
                 ],
             };
 

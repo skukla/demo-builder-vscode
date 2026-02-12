@@ -6,6 +6,7 @@
  */
 
 import { useMemo } from 'react';
+import { findComponentById } from '@/core/ui/utils/componentDataHelpers';
 import { getAllComponentDefinitions, discoverComponentsFromInstances, hasComponentEnvVars } from '../configureHelpers';
 import type { ComponentsData, ComponentData } from '../configureTypes';
 import type { Project } from '@/types/base';
@@ -31,27 +32,18 @@ export function useSelectedComponents({
     return useMemo(() => {
         const components: SelectedComponent[] = [];
 
-        const findComponent = (componentId: string): ComponentData | undefined => {
-            return componentsData.frontends?.find(c => c.id === componentId) ||
-                   componentsData.backends?.find(c => c.id === componentId) ||
-                   componentsData.dependencies?.find(c => c.id === componentId) ||
-                   componentsData.mesh?.find(c => c.id === componentId) ||
-                   componentsData.integrations?.find(c => c.id === componentId) ||
-                   componentsData.appBuilder?.find(c => c.id === componentId);
-        };
-
         const addComponentWithDeps = (comp: ComponentData, type: string) => {
             components.push({ id: comp.id, data: comp, type });
 
             comp.dependencies?.required?.forEach(depId => {
-                const dep = findComponent(depId);
+                const dep = findComponentById(componentsData, depId);
                 if (dep && !components.some(c => c.id === depId) && hasComponentEnvVars(dep)) {
                     components.push({ id: dep.id, data: dep, type: 'Dependency' });
                 }
             });
 
             comp.dependencies?.optional?.forEach(depId => {
-                const dep = findComponent(depId);
+                const dep = findComponentById(componentsData, depId);
                 if (dep && !components.some(c => c.id === depId)) {
                     const isSelected = project.componentSelections?.dependencies?.includes(depId);
                     if (isSelected && hasComponentEnvVars(dep)) {
@@ -73,9 +65,7 @@ export function useSelectedComponents({
 
         project.componentSelections?.dependencies?.forEach((depId: string) => {
             if (!components.some(c => c.id === depId)) {
-                // Search in both dependencies and mesh sections
-                const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId) ||
-                            componentsData.mesh?.find((d: ComponentData) => d.id === depId);
+                const dep = findComponentById(componentsData, depId);
                 if (dep && hasComponentEnvVars(dep)) {
                     components.push({ id: dep.id, data: dep, type: 'Dependency' });
                 }

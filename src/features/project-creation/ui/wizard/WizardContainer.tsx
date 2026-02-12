@@ -211,37 +211,22 @@ export function WizardContainer({
 
         log.info(`Retained configs for components: ${Object.keys(filteredConfigs).join(', ') || 'none'}`);
 
-        // Build the new state after stack change
-        const newState = {
-            ...state,
-            componentConfigs: filteredConfigs,
-            selectedStack: newStackId,
-            // Clear EDS state (architecture-dependent)
-            githubAuth: undefined,
-            githubUser: undefined,
-            selectedRepository: undefined,
-            repositoryName: undefined,
-            repositoryVisibility: undefined,
-            edsContentSource: undefined,
-        };
-
         // Stack change resets all steps except welcome (user must re-traverse)
         // Consistent behavior across all wizard modes (create, import, edit)
         setCompletedSteps(['welcome']);
 
         // Update state with filtered configs
-        // Clear EDS-specific state (GitHub, repository, etc.) since it's architecture-dependent
+        // Clear EDS-specific state since it's architecture-dependent
         // Preserve: projectName, selectedBrand, Adobe auth/org (still valid)
         setState(prev => ({
             ...prev,
             componentConfigs: filteredConfigs,
-            // Clear EDS state
-            githubAuth: undefined,
-            githubUser: undefined,
-            selectedRepository: undefined,
-            repositoryName: undefined,
-            repositoryVisibility: undefined,
-            edsContentSource: undefined,
+            // Clear EDS state (consolidated in edsConfig)
+            edsConfig: undefined,
+            githubReposCache: undefined,
+            daLiveSitesCache: undefined,
+            githubRepoSearchFilter: undefined,
+            daLiveSiteSearchFilter: undefined,
         }));
     };
 

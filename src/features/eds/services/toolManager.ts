@@ -50,7 +50,7 @@ const DATA_REPO_CONFIG = {
 const NODE_VERSION = '18';
 
 /** npm install flags for faster installation */
-const NPM_INSTALL_FLAGS = '--no-fund --prefer-offline';
+const NPM_INSTALL_FLAGS = '--no-fund';
 
 // ==========================================================
 // Tool Manager Service

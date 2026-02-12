@@ -669,10 +669,10 @@ const results = await Promise.all(
 
 **Flags Used:**
 - `--no-fund`: Skips funding messages (reduces output noise)
-- `--prefer-offline`: Uses local cache when available (40-60% faster)
 
 **Flags Removed:**
 - `--no-audit`: Removed for security (vulnerability scanning still runs)
+- `--prefer-offline`: Removed — causes ETARGET failures when npm cache has stale registry metadata (e.g., `open@^10.2.0` not found). Global installs have no lockfile, so semver resolution depends on fresh metadata.
 
 **Performance Impact:**
 ```bash
@@ -681,12 +681,9 @@ npm install -g @adobe/aio-cli
 # Time: 60-90 seconds
 
 # After (optimized flags)
-npm install -g @adobe/aio-cli --no-fund --prefer-offline
-# Time: 25-45 seconds (40-60% faster)
+npm install -g @adobe/aio-cli --no-fund
+# Time: 30-50 seconds
 ```
-
-**Why `--no-audit` Removed:**
-- Security-first principle
 - Vulnerability scanning catches critical issues
 - Slight performance trade-off acceptable for security
 

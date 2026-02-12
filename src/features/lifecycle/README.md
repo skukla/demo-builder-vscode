@@ -392,8 +392,8 @@ terminal.show();
 // Navigate to frontend directory
 terminal.sendText(`cd "${frontendPath}"`);
 
-// Use fnm to switch Node version and run dev server
-terminal.sendText(`fnm use ${nodeVersion} && npm run dev`);
+// Initialize fnm environment, switch Node version, and run dev server
+terminal.sendText(`eval "$(fnm env)" && fnm use ${nodeVersion} && npm run dev`);
 ```
 
 ### Terminal Cleanup
