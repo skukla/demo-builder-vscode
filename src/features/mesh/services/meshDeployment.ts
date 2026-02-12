@@ -48,7 +48,7 @@ async function buildMeshComponent(
     onProgress?.('Building mesh configuration...', 'Installing dependencies');
 
     const installResult = await commandManager.execute(
-        'npm install --production --no-fund --prefer-offline --ignore-scripts',
+        'npm install --production --no-fund --ignore-scripts',
         {
             cwd: componentPath,
             timeout: TIMEOUTS.LONG,

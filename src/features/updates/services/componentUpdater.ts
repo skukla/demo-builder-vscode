@@ -155,7 +155,7 @@ export class ComponentUpdater {
                         this.logger.debug('[Updates] Could not determine node version from registry, using default');
                     }
                     
-                    const installResult = await commandManager.execute('npm install --no-fund --prefer-offline', {
+                    const installResult = await commandManager.execute('npm install --no-fund', {
                         cwd: component.path,
                         timeout: TIMEOUTS.VERY_LONG,
                         shell: DEFAULT_SHELL,
@@ -294,7 +294,7 @@ export class ComponentUpdater {
         try {
             // 1. Install dependencies (build scripts may require dev dependencies)
             this.logger.debug('[Updates] Installing dependencies...');
-            const installResult = await commandManager.execute('npm install --no-fund --prefer-offline', {
+            const installResult = await commandManager.execute('npm install --no-fund', {
                 cwd: componentPath,
                 timeout: TIMEOUTS.VERY_LONG,
                 shell: DEFAULT_SHELL,

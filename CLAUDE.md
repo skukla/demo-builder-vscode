@@ -235,7 +235,7 @@ demo-builder-vscode/
 - **Prerequisite Performance**: Adobe AIO CLI prerequisite optimization
   - In-memory caching with 5-minute TTL reduces checks from 3-6s to <1s (95% faster)
   - Parallel execution for per-Node-version checks (3x faster for multi-version scenarios)
-  - Optimized npm flags (`--no-fund --prefer-offline`) reduce installation time by 40-60%
+  - Optimized npm flags (`--no-fund`) reduce installation noise; `--prefer-offline` removed from global installs (caused ETARGET on stale caches)
   - Smart cache invalidation on configuration changes and manual rechecks
   - Cache security features: size limits (100 entries), LRU eviction, TTL jitter (±10%)
   - Enhanced progress visibility with elapsed time tracking for long operations

@@ -848,10 +848,9 @@ After 5min:   3-6 seconds (cache expired, re-validation)
 ### Optimized npm Flags
 
 **Installation Performance:**
-- npm flags: `--no-fund --prefer-offline`
-- Installation time reduction: 40-60% compared to default flags
+- npm flags: `--no-fund` (global installs), `--no-fund --prefer-offline` (local installs with lockfiles)
 - Removed `--no-audit` flag for security (vulnerability scanning still runs)
-- Cache validation ensures offline cache integrity
+- Removed `--prefer-offline` from global installs — causes ETARGET on stale npm caches
 
 ### Smart Version Satisfaction
 
