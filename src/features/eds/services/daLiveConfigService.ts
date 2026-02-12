@@ -339,8 +339,11 @@ export class DaLiveConfigService {
                 permissionsData.push(...existing.permissions.data);
             }
 
-            // Site-specific content path (e.g., /citisignal-eds/**)
-            const sitePath = `/${site}/**`;
+            // Site-specific content path — /+** matches the site root AND all children
+            // /**  only matches children (sub-paths), not the root itself
+            // /+** matches the root path AND everything underneath it
+            // Without +, listing the site root returns 403 even though sub-path writes succeed
+            const sitePath = `/${site}/+**`;
 
             // Check if user already has site content permission
             const hasContentPermission = permissionsData.some(
