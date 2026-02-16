@@ -665,7 +665,7 @@ describe('HelixService', () => {
     // Helix Unpublish Tests (5 tests)
     // ==========================================================
     describe('Helix Unpublish Operations', () => {
-        it('should unpublish from live via bulk POST with both GitHub and IMS tokens', async () => {
+        it('should unpublish from live via bulk POST with only GitHub token', async () => {
             // Given: Published site
             mockFetch.mockResolvedValueOnce({
                 ok: true,
@@ -675,23 +675,25 @@ describe('HelixService', () => {
             // When: Unpublishing from live
             await service.unpublishFromLive('testuser', 'my-site');
 
-            // Then: Should call POST with delete:true body and both auth tokens
-            // (same pattern as bulk publish: x-auth-token + x-content-source-authorization)
+            // Then: Should call POST with delete:true body and only x-auth-token
+            // Delete operations don't read from DA.live, so no x-content-source-authorization
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://admin.hlx.page/live/testuser/my-site/main/*',
                 expect.objectContaining({
                     method: 'POST',
                     headers: expect.objectContaining({
                         'x-auth-token': 'valid-github-token',
-                        'x-content-source-authorization': 'Bearer valid-dalive-ims-token',
                         'Content-Type': 'application/json',
                     }),
                     body: JSON.stringify({ paths: ['/**'], delete: true }),
                 }),
             );
+            // Verify x-content-source-authorization is NOT sent
+            const callHeaders = mockFetch.mock.calls[0][1].headers;
+            expect(callHeaders).not.toHaveProperty('x-content-source-authorization');
         });
 
-        it('should delete from preview via bulk POST with both GitHub and IMS tokens', async () => {
+        it('should delete from preview via bulk POST with only GitHub token', async () => {
             // Given: Site with preview content
             mockFetch.mockResolvedValueOnce({
                 ok: true,
@@ -701,30 +703,37 @@ describe('HelixService', () => {
             // When: Deleting from preview
             await service.deleteFromPreview('testuser', 'my-site');
 
-            // Then: Should call POST with delete:true body and both auth tokens
+            // Then: Should call POST with delete:true body and only x-auth-token
+            // Delete operations don't read from DA.live, so no x-content-source-authorization
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://admin.hlx.page/preview/testuser/my-site/main/*',
                 expect.objectContaining({
                     method: 'POST',
                     headers: expect.objectContaining({
                         'x-auth-token': 'valid-github-token',
-                        'x-content-source-authorization': 'Bearer valid-dalive-ims-token',
                         'Content-Type': 'application/json',
                     }),
                     body: JSON.stringify({ paths: ['/**'], delete: true }),
                 }),
             );
+            // Verify x-content-source-authorization is NOT sent
+            const callHeaders = mockFetch.mock.calls[0][1].headers;
+            expect(callHeaders).not.toHaveProperty('x-content-source-authorization');
         });
 
-        it('should require both GitHub and DA.live tokens for authentication', async () => {
-            // Given: No valid DA.live token
+        it('should only require GitHub token for delete operations', async () => {
+            // Given: No DA.live token (expired/unavailable)
             mockDaLiveTokenProvider.getAccessToken.mockResolvedValue(null);
 
+            // Given: Valid fetch response
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
             // When: Attempting to unpublish
-            // Then: Should throw authentication error
-            await expect(service.unpublishFromLive('testuser', 'my-site')).rejects.toThrow(
-                /expired|sign in|da\.live/i,
-            );
+            // Then: Should succeed — delete operations don't need DA.live token
+            await expect(service.unpublishFromLive('testuser', 'my-site')).resolves.not.toThrow();
         });
 
         it('should handle 202 as success (bulk job scheduled)', async () => {

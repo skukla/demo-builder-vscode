@@ -970,7 +970,8 @@ export class HelixService {
      */
     async unpublishFromLive(org: string, site: string, branch: string = DEFAULT_BRANCH): Promise<void> {
         const githubToken = await this.getGitHubToken();
-        const imsToken = await this.getDaLiveToken();
+        // Delete operations don't read from DA.live — only x-auth-token needed
+        // (same pattern as purgeCacheAll)
         const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}/*`;
 
         this.logger.debug(`[Helix] Unpublishing from live: ${url}`);
@@ -979,7 +980,6 @@ export class HelixService {
             method: 'POST',
             headers: {
                 'x-auth-token': githubToken,
-                'x-content-source-authorization': `Bearer ${imsToken}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -995,19 +995,13 @@ export class HelixService {
             return;
         }
 
-        // 401 is authentication failure — log response body for diagnostics
+        // 401 = auth failure or repo does not exist (Helix returns 401 for both)
         if (response.status === 401) {
-            let body = '';
-            try { body = await response.text(); } catch { /* ignore */ }
-            this.logger.warn(`[Helix] Unpublish from live 401 response: ${body}`);
-            throw new Error(`Authentication failed for Helix unpublish (401). Response: ${body || 'empty'}`);
+            throw new Error('Helix unpublish failed (401). The repository may not exist or the GitHub token may be invalid.');
         }
 
         // 403 is access denied
         if (response.status === 403) {
-            let body = '';
-            try { body = await response.text(); } catch { /* ignore */ }
-            this.logger.warn(`[Helix] Unpublish from live 403 response: ${body}`);
             throw new Error('Access denied. You do not have permission to unpublish this site.');
         }
 
@@ -1018,9 +1012,6 @@ export class HelixService {
         }
 
         if (!response.ok) {
-            let body = '';
-            try { body = await response.text(); } catch { /* ignore */ }
-            this.logger.warn(`[Helix] Unpublish from live ${response.status} response: ${body}`);
             throw new Error(`Failed to unpublish from live: ${response.status} ${response.statusText}`);
         }
 
@@ -1041,7 +1032,8 @@ export class HelixService {
      */
     async deleteFromPreview(org: string, site: string, branch: string = DEFAULT_BRANCH): Promise<void> {
         const githubToken = await this.getGitHubToken();
-        const imsToken = await this.getDaLiveToken();
+        // Delete operations don't read from DA.live — only x-auth-token needed
+        // (same pattern as purgeCacheAll)
         const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}/*`;
 
         this.logger.debug(`[Helix] Deleting from preview: ${url}`);
@@ -1050,7 +1042,6 @@ export class HelixService {
             method: 'POST',
             headers: {
                 'x-auth-token': githubToken,
-                'x-content-source-authorization': `Bearer ${imsToken}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -1066,19 +1057,13 @@ export class HelixService {
             return;
         }
 
-        // 401 is authentication failure — log response body for diagnostics
+        // 401 = auth failure or repo does not exist (Helix returns 401 for both)
         if (response.status === 401) {
-            let body = '';
-            try { body = await response.text(); } catch { /* ignore */ }
-            this.logger.warn(`[Helix] Delete from preview 401 response: ${body}`);
-            throw new Error(`Authentication failed for Helix preview delete (401). Response: ${body || 'empty'}`);
+            throw new Error('Helix preview delete failed (401). The repository may not exist or the GitHub token may be invalid.');
         }
 
         // 403 is access denied
         if (response.status === 403) {
-            let body = '';
-            try { body = await response.text(); } catch { /* ignore */ }
-            this.logger.warn(`[Helix] Delete from preview 403 response: ${body}`);
             throw new Error('Access denied. You do not have permission to delete preview content.');
         }
 
@@ -1089,9 +1074,6 @@ export class HelixService {
         }
 
         if (!response.ok) {
-            let body = '';
-            try { body = await response.text(); } catch { /* ignore */ }
-            this.logger.warn(`[Helix] Delete from preview ${response.status} response: ${body}`);
             throw new Error(`Failed to delete from preview: ${response.status} ${response.statusText}`);
         }
 
