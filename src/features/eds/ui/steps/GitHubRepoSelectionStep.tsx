@@ -597,6 +597,17 @@ export function GitHubRepoSelectionStep({
         lastCheckedRepo.current = null;
     }, [repoMode, selectedRepo]);
 
+    // Re-check GitHub App when returning to this step with an already-created repo.
+    // githubAppStatus resets to null on mount, but createdRepo persists — re-verify so Continue enables.
+    useEffect(() => {
+        if (repoMode === 'new' && edsConfig?.createdRepo && githubAppStatus.isInstalled === null) {
+            const { owner, name } = edsConfig.createdRepo;
+            if (owner && name) {
+                checkGitHubApp(owner, name, true);
+            }
+        }
+    }, [repoMode, edsConfig?.createdRepo, githubAppStatus.isInstalled, checkGitHubApp]);
+
     // Update canProceed based on selection and repo mode
     // - NEW repos: require repo created AND app verified (check happens here)
     // - EXISTING repos: only require repo selection (app check deferred to StorefrontSetup)
