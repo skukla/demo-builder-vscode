@@ -17,6 +17,7 @@ import type { Logger } from '@/types/logger';
 import type { GitHubRepoOperations } from './githubRepoOperations';
 import type { DaLiveOrgOperations } from './daLiveOrgOperations';
 import type { HelixService } from './helixService';
+import type { ConfigurationService } from './configurationService';
 import type { ToolManager } from './toolManager';
 import type {
     EdsMetadata,
@@ -37,6 +38,7 @@ export class CleanupService {
     private githubRepoOps: GitHubRepoOperations;
     private daLiveOrgOps: DaLiveOrgOperations;
     private helixService: HelixService;
+    private configurationService?: ConfigurationService;
     private toolManager: ToolManager;
 
     /**
@@ -46,6 +48,7 @@ export class CleanupService {
      * @param helixService - Helix service for site unpublishing
      * @param toolManager - Tool manager for backend cleanup
      * @param logger - Optional logger for dependency injection (defaults to getLogger())
+     * @param configurationService - Optional Configuration Service for site config deletion
      */
     constructor(
         githubRepoOps: GitHubRepoOperations,
@@ -53,10 +56,12 @@ export class CleanupService {
         helixService: HelixService,
         toolManager: ToolManager,
         logger?: Logger,
+        configurationService?: ConfigurationService,
     ) {
         this.githubRepoOps = githubRepoOps;
         this.daLiveOrgOps = daLiveOrgOps;
         this.helixService = helixService;
+        this.configurationService = configurationService;
         this.toolManager = toolManager;
         this.logger = logger ?? getLogger();
     }
@@ -83,6 +88,7 @@ export class CleanupService {
         const result: EdsCleanupResult = {
             backendData: this.createSkippedResult(),
             helix: this.createSkippedResult(),
+            configService: this.createSkippedResult(),
             daLive: this.createSkippedResult(),
             github: this.createSkippedResult(),
         };
@@ -97,12 +103,17 @@ export class CleanupService {
             result.helix = await this.cleanupHelix(metadata);
         }
 
-        // 3. DA.live Content Deletion
+        // 3. Configuration Service Deletion (requires repo info for org/site)
+        if (options.deleteConfigService && metadata.githubRepo) {
+            result.configService = await this.cleanupConfigService(metadata);
+        }
+
+        // 4. DA.live Content Deletion
         if (options.deleteDaLive && metadata.daLiveOrg && metadata.daLiveSite) {
             result.daLive = await this.cleanupDaLive(metadata);
         }
 
-        // 4. GitHub Repository (LAST - most destructive)
+        // 5. GitHub Repository (LAST - most destructive)
         if (options.deleteGitHub && metadata.githubRepo) {
             result.github = await this.cleanupGitHub(metadata, options);
         }
@@ -183,6 +194,45 @@ export class CleanupService {
         } catch (error) {
             const errorMessage = (error as Error).message;
             this.logger.error('[Cleanup] Helix unpublish failed', error as Error);
+            return {
+                success: false,
+                skipped: false,
+                error: errorMessage,
+            };
+        }
+    }
+
+    /**
+     * Delete site configuration from the AEM Configuration Service
+     */
+    private async cleanupConfigService(metadata: EdsMetadata): Promise<CleanupOperationResult> {
+        if (!metadata.githubRepo || !this.configurationService) {
+            return this.createSkippedResult();
+        }
+
+        const [owner, repo] = metadata.githubRepo.split('/');
+        if (!owner || !repo) {
+            return this.createSkippedResult();
+        }
+
+        this.logger.debug(`[Cleanup] Deleting Configuration Service site: ${owner}/${repo}`);
+
+        try {
+            const result = await this.configurationService.deleteSiteConfig(owner, repo);
+
+            if (result.success) {
+                this.logger.debug('[Cleanup] Configuration Service site deleted');
+                return { success: true, skipped: false };
+            } else {
+                return {
+                    success: false,
+                    skipped: false,
+                    error: result.error || 'Configuration Service deletion failed',
+                };
+            }
+        } catch (error) {
+            const errorMessage = (error as Error).message;
+            this.logger.error('[Cleanup] Configuration Service deletion failed', error as Error);
             return {
                 success: false,
                 skipped: false,

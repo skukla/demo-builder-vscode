@@ -597,6 +597,8 @@ export interface EdsCleanupOptions {
     deleteDaLive?: boolean;
     /** Unpublish from Helix (live and preview) */
     unpublishHelix?: boolean;
+    /** Delete site configuration from AEM Configuration Service */
+    deleteConfigService?: boolean;
 }
 
 /**
@@ -619,6 +621,8 @@ export interface EdsCleanupResult {
     backendData: CleanupOperationResult;
     /** Helix unpublish result */
     helix: CleanupOperationResult;
+    /** Configuration Service site deletion result */
+    configService: CleanupOperationResult;
     /** DA.live content deletion result */
     daLive: CleanupOperationResult;
     /** GitHub repository deletion/archive result */
