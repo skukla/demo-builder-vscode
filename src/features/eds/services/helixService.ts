@@ -957,23 +957,35 @@ export class HelixService {
     // ==========================================================
 
     /**
-     * Unpublish content from live
+     * Unpublish content from live using bulk POST with delete flag.
+     *
+     * The Helix Admin API has no bulk DELETE endpoint — DELETE only works on
+     * individual resources. Bulk operations use POST with `"delete": true`
+     * in the JSON body, same URL pattern as bulk publish.
+     *
      * @param org - Organization/owner name
      * @param site - Site/repository name
      * @param branch - Branch name (default: main)
      * @throws Error on access denied (403) or network error
      */
     async unpublishFromLive(org: string, site: string, branch: string = DEFAULT_BRANCH): Promise<void> {
-        const token = await this.getGitHubToken();
+        const githubToken = await this.getGitHubToken();
+        const imsToken = await this.getDaLiveToken();
         const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}/*`;
 
         this.logger.debug(`[Helix] Unpublishing from live: ${url}`);
 
         const response = await fetch(url, {
-            method: 'DELETE',
+            method: 'POST',
             headers: {
-                'x-auth-token': token,
+                'x-auth-token': githubToken,
+                'x-content-source-authorization': `Bearer ${imsToken}`,
+                'Content-Type': 'application/json',
             },
+            body: JSON.stringify({
+                paths: ['/**'],
+                delete: true,
+            }),
             signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
         });
 
@@ -985,12 +997,18 @@ export class HelixService {
 
         // 401 is authentication failure
         if (response.status === 401) {
-            throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
+            throw new Error('Authentication failed for Helix unpublish. Please ensure you are signed in to both GitHub and DA.live.');
         }
 
         // 403 is access denied
         if (response.status === 403) {
             throw new Error('Access denied. You do not have permission to unpublish this site.');
+        }
+
+        // 202 = Bulk job scheduled (expected for bulk operations)
+        if (response.status === 202) {
+            this.logger.debug('[Helix] Bulk unpublish job scheduled');
+            return;
         }
 
         if (!response.ok) {
@@ -1001,23 +1019,35 @@ export class HelixService {
     }
 
     /**
-     * Delete content from preview
+     * Delete content from preview using bulk POST with delete flag.
+     *
+     * The Helix Admin API has no bulk DELETE endpoint — DELETE only works on
+     * individual resources. Bulk operations use POST with `"delete": true`
+     * in the JSON body, same URL pattern as bulk preview.
+     *
      * @param org - Organization/owner name
      * @param site - Site/repository name
      * @param branch - Branch name (default: main)
      * @throws Error on access denied (403) or network error
      */
     async deleteFromPreview(org: string, site: string, branch: string = DEFAULT_BRANCH): Promise<void> {
-        const token = await this.getGitHubToken();
+        const githubToken = await this.getGitHubToken();
+        const imsToken = await this.getDaLiveToken();
         const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}/*`;
 
         this.logger.debug(`[Helix] Deleting from preview: ${url}`);
 
         const response = await fetch(url, {
-            method: 'DELETE',
+            method: 'POST',
             headers: {
-                'x-auth-token': token,
+                'x-auth-token': githubToken,
+                'x-content-source-authorization': `Bearer ${imsToken}`,
+                'Content-Type': 'application/json',
             },
+            body: JSON.stringify({
+                paths: ['/**'],
+                delete: true,
+            }),
             signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
         });
 
@@ -1029,12 +1059,18 @@ export class HelixService {
 
         // 401 is authentication failure
         if (response.status === 401) {
-            throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
+            throw new Error('Authentication failed for Helix preview delete. Please ensure you are signed in to both GitHub and DA.live.');
         }
 
         // 403 is access denied
         if (response.status === 403) {
             throw new Error('Access denied. You do not have permission to delete preview content.');
+        }
+
+        // 202 = Bulk job scheduled (expected for bulk operations)
+        if (response.status === 202) {
+            this.logger.debug('[Helix] Bulk preview delete job scheduled');
+            return;
         }
 
         if (!response.ok) {

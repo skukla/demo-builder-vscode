@@ -18,8 +18,8 @@
  * - Bulk publish all site content with job completion tracking
  * - Fallback to page-by-page when bulk API fails (404, 500, etc.)
  * - HTTP 200 synchronous success for small batches
- * - Unpublish from live via DELETE /live/{org}/{site}/main/*
- * - Delete from preview via DELETE /preview/{org}/{site}/main/*
+ * - Unpublish from live via bulk POST /live/{org}/{site}/main/* with delete:true
+ * - Delete from preview via bulk POST /preview/{org}/{site}/main/* with delete:true
  * - Require GitHub token for authentication
  * - Handle 404 as success (never published)
  * - Parse repo fullName to extract org and site
@@ -665,7 +665,7 @@ describe('HelixService', () => {
     // Helix Unpublish Tests (5 tests)
     // ==========================================================
     describe('Helix Unpublish Operations', () => {
-        it('should unpublish from live via DELETE /live/{org}/{site}/main/*', async () => {
+        it('should unpublish from live via bulk POST with both GitHub and IMS tokens', async () => {
             // Given: Published site
             mockFetch.mockResolvedValueOnce({
                 ok: true,
@@ -675,19 +675,23 @@ describe('HelixService', () => {
             // When: Unpublishing from live
             await service.unpublishFromLive('testuser', 'my-site');
 
-            // Then: Should call DELETE on /live endpoint
+            // Then: Should call POST with delete:true body and both auth tokens
+            // (same pattern as bulk publish: x-auth-token + x-content-source-authorization)
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://admin.hlx.page/live/testuser/my-site/main/*',
                 expect.objectContaining({
-                    method: 'DELETE',
+                    method: 'POST',
                     headers: expect.objectContaining({
                         'x-auth-token': 'valid-github-token',
+                        'x-content-source-authorization': 'Bearer valid-dalive-ims-token',
+                        'Content-Type': 'application/json',
                     }),
+                    body: JSON.stringify({ paths: ['/**'], delete: true }),
                 }),
             );
         });
 
-        it('should delete from preview via DELETE /preview/{org}/{site}/main/*', async () => {
+        it('should delete from preview via bulk POST with both GitHub and IMS tokens', async () => {
             // Given: Site with preview content
             mockFetch.mockResolvedValueOnce({
                 ok: true,
@@ -697,27 +701,43 @@ describe('HelixService', () => {
             // When: Deleting from preview
             await service.deleteFromPreview('testuser', 'my-site');
 
-            // Then: Should call DELETE on /preview endpoint
+            // Then: Should call POST with delete:true body and both auth tokens
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://admin.hlx.page/preview/testuser/my-site/main/*',
                 expect.objectContaining({
-                    method: 'DELETE',
+                    method: 'POST',
                     headers: expect.objectContaining({
                         'x-auth-token': 'valid-github-token',
+                        'x-content-source-authorization': 'Bearer valid-dalive-ims-token',
+                        'Content-Type': 'application/json',
                     }),
+                    body: JSON.stringify({ paths: ['/**'], delete: true }),
                 }),
             );
         });
 
-        it('should require GitHub token for authentication', async () => {
-            // Given: No valid GitHub token
-            mockGitHubTokenService.getToken.mockResolvedValue(undefined);
+        it('should require both GitHub and DA.live tokens for authentication', async () => {
+            // Given: No valid DA.live token
+            mockDaLiveTokenProvider.getAccessToken.mockResolvedValue(null);
 
             // When: Attempting to unpublish
             // Then: Should throw authentication error
             await expect(service.unpublishFromLive('testuser', 'my-site')).rejects.toThrow(
-                /not found|authentication|github/i,
+                /expired|sign in|da\.live/i,
             );
+        });
+
+        it('should handle 202 as success (bulk job scheduled)', async () => {
+            // Given: Bulk delete job scheduled (202)
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 202,
+                statusText: 'Accepted',
+            });
+
+            // When: Unpublishing from live
+            // Then: Should NOT throw (202 = job scheduled successfully)
+            await expect(service.unpublishFromLive('testuser', 'my-site')).resolves.not.toThrow();
         });
 
         it('should handle 404 as success (never published)', async () => {
@@ -766,7 +786,7 @@ describe('HelixService', () => {
             // When: Fully unpublishing site
             await service.unpublishSite('testuser/my-site');
 
-            // Then: Should call both live and preview DELETE
+            // Then: Should call both live and preview bulk POST (with delete flag)
             const calls = mockFetch.mock.calls;
             const liveCall = calls.find((c: any[]) => c[0].includes('/live/'));
             const previewCall = calls.find((c: any[]) => c[0].includes('/preview/'));
