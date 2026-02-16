@@ -995,13 +995,19 @@ export class HelixService {
             return;
         }
 
-        // 401 is authentication failure
+        // 401 is authentication failure — log response body for diagnostics
         if (response.status === 401) {
-            throw new Error('Authentication failed for Helix unpublish. Please ensure you are signed in to both GitHub and DA.live.');
+            let body = '';
+            try { body = await response.text(); } catch { /* ignore */ }
+            this.logger.warn(`[Helix] Unpublish from live 401 response: ${body}`);
+            throw new Error(`Authentication failed for Helix unpublish (401). Response: ${body || 'empty'}`);
         }
 
         // 403 is access denied
         if (response.status === 403) {
+            let body = '';
+            try { body = await response.text(); } catch { /* ignore */ }
+            this.logger.warn(`[Helix] Unpublish from live 403 response: ${body}`);
             throw new Error('Access denied. You do not have permission to unpublish this site.');
         }
 
@@ -1012,6 +1018,9 @@ export class HelixService {
         }
 
         if (!response.ok) {
+            let body = '';
+            try { body = await response.text(); } catch { /* ignore */ }
+            this.logger.warn(`[Helix] Unpublish from live ${response.status} response: ${body}`);
             throw new Error(`Failed to unpublish from live: ${response.status} ${response.statusText}`);
         }
 
@@ -1057,13 +1066,19 @@ export class HelixService {
             return;
         }
 
-        // 401 is authentication failure
+        // 401 is authentication failure — log response body for diagnostics
         if (response.status === 401) {
-            throw new Error('Authentication failed for Helix preview delete. Please ensure you are signed in to both GitHub and DA.live.');
+            let body = '';
+            try { body = await response.text(); } catch { /* ignore */ }
+            this.logger.warn(`[Helix] Delete from preview 401 response: ${body}`);
+            throw new Error(`Authentication failed for Helix preview delete (401). Response: ${body || 'empty'}`);
         }
 
         // 403 is access denied
         if (response.status === 403) {
+            let body = '';
+            try { body = await response.text(); } catch { /* ignore */ }
+            this.logger.warn(`[Helix] Delete from preview 403 response: ${body}`);
             throw new Error('Access denied. You do not have permission to delete preview content.');
         }
 
@@ -1074,6 +1089,9 @@ export class HelixService {
         }
 
         if (!response.ok) {
+            let body = '';
+            try { body = await response.text(); } catch { /* ignore */ }
+            this.logger.warn(`[Helix] Delete from preview ${response.status} response: ${body}`);
             throw new Error(`Failed to delete from preview: ${response.status} ${response.statusText}`);
         }
 
