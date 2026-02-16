@@ -1,31 +1,4 @@
 {
-  "version": 1,
-  "code": {
-    "owner": "{ORG}",
-    "repo": "{REPO}",
-    "source": {
-      "type": "github",
-      "url": "https://github.com/{ORG}/{REPO}"
-    }
-  },
-  "content": {
-    "source": {
-      "url": "{CONTENT_SOURCE}",
-      "type": "markup"
-    }
-  },
-  "folders": {
-    "/products/": "/products/default"
-  },
-  "cdn": {
-    "live": {
-      "host": "main--{REPO}--{ORG}.aem.live"
-    },
-    "preview": {
-      "host": "main--{REPO}--{ORG}.aem.page"
-    }
-  },
-  "headers": {},
   "public": {
     "default": {
       "commerce-core-endpoint": "{CS_ENDPOINT}",

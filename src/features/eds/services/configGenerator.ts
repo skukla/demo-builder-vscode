@@ -296,7 +296,6 @@ export function generateConfigJson(
         const config = JSON.parse(JSON.stringify(configTemplate));
 
         // Build replacement map for placeholders
-        const contentSourceUrl = `https://content.da.live/${params.daLiveOrg}/${params.daLiveSite}`;
         const storeUrl = `https://main--${params.repoName}--${params.githubOwner}.aem.live/`;
 
         // Determine commerce endpoints based on environment type
@@ -308,11 +307,11 @@ export function generateConfigJson(
             : commerceEndpoint;
 
         // Replace placeholders throughout the config
+        // Note: {ORG} and {REPO} are used in analytics.store-url, robots.txt, and sidekick plugin URLs.
+        // Site-level config (code, content, folders, cdn) lives in fstab.yaml, not config.json.
         const replacements: Record<string, string> = {
             '{ORG}': params.githubOwner,
             '{REPO}': params.repoName,
-            '{SITE}': params.daLiveSite,
-            '{CONTENT_SOURCE}': contentSourceUrl,
             '{COMMERCE_ENDPOINT}': commerceEndpoint,
             '{CS_ENDPOINT}': catalogServiceEndpoint,
             '{STORE_VIEW_CODE}': params.storeViewCode || 'default',

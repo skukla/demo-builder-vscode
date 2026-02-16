@@ -6,7 +6,11 @@
  *
  * fstab.yaml configures Helix 5:
  * - mountpoints: Maps URL paths to DA.live content sources
- * - folders: Routes URL prefixes to template pages (e.g., PDP routing)
+ *
+ * Note: Folder mapping (e.g., /products/ -> /products/default for PDP routing)
+ * is configured via the AEM Configuration Service API, not fstab.yaml.
+ * The Helix 5 pipeline does not process the fstab.yaml folders section.
+ * See configurationService.ts for folder mapping implementation.
  */
 
 /**
@@ -38,23 +42,15 @@ export interface FstabConfig {
  * //   /:
  * //     url: https://content.da.live/my-org/my-site/
  * //     type: markup
- * //
- * // folders:
- * //   /products/: /products/default
  */
 export function generateFstabContent(config: FstabConfig): string {
     const { daLiveOrg, daLiveSite } = config;
 
     // fstab.yaml format for Helix 5
     // - mountpoints: Maps root path to DA.live content source
-    // - folders: Routes /products/* URLs to /products/default template page
-    //   This enables PDP (Product Detail Page) functionality
     return `mountpoints:
   /:
     url: https://content.da.live/${daLiveOrg}/${daLiveSite}/
     type: markup
-
-folders:
-  /products/: /products/default
 `;
 }
