@@ -197,6 +197,53 @@ describe('demo-packages.json', () => {
         });
     });
 
+    describe('EDS storefronts - contentPatches', () => {
+        it('should have ACCS-specific content patches for eds-accs storefront', () => {
+            const citisignal = packagesConfig.packages.find(p => p.id === 'citisignal');
+            expect(citisignal).toBeDefined();
+
+            const edsAccs = citisignal!.storefronts['eds-accs'] as Record<string, unknown>;
+            expect(edsAccs).toBeDefined();
+
+            // ACCS should have heading reorder and ACCS-specific category ID patch
+            const patches = edsAccs.contentPatches as string[];
+            expect(patches).toBeDefined();
+            expect(patches).toContain('phones-heading-reorder');
+            expect(patches).toContain('smart-watches-category-id-accs');
+
+            // ACCS should NOT have PaaS-specific patches
+            expect(patches).not.toContain('index-product-teaser-sku');
+            expect(patches).not.toContain('phones-product-teaser-sku');
+            expect(patches).not.toContain('smart-watches-category-id');
+            expect(patches).not.toContain('smart-watches-url-path');
+        });
+
+        it('should have contentPatchSource for eds-accs storefront', () => {
+            const citisignal = packagesConfig.packages.find(p => p.id === 'citisignal');
+            const edsAccs = citisignal!.storefronts['eds-accs'] as Record<string, unknown>;
+
+            const patchSource = edsAccs.contentPatchSource as { owner: string; repo: string; path: string };
+            expect(patchSource).toBeDefined();
+            expect(patchSource.owner).toBe('skukla');
+            expect(patchSource.repo).toBe('eds-demo-content-patches');
+            expect(patchSource.path).toBe('citisignal');
+        });
+
+        it('should have all 5 content patches for eds-paas storefront', () => {
+            const citisignal = packagesConfig.packages.find(p => p.id === 'citisignal');
+            const edsPaas = citisignal!.storefronts['eds-paas'] as Record<string, unknown>;
+
+            const patches = edsPaas.contentPatches as string[];
+            expect(patches).toBeDefined();
+            expect(patches).toHaveLength(5);
+            expect(patches).toContain('index-product-teaser-sku');
+            expect(patches).toContain('phones-product-teaser-sku');
+            expect(patches).toContain('phones-heading-reorder');
+            expect(patches).toContain('smart-watches-category-id');
+            expect(patches).toContain('smart-watches-url-path');
+        });
+    });
+
     describe('all storefronts - required fields', () => {
         it('should have required fields (name, description, source)', () => {
             packagesConfig.packages.forEach(pkg => {

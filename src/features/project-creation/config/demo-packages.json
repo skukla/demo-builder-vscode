@@ -90,6 +90,12 @@
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
+          },
+          "contentPatches": ["phones-heading-reorder", "smart-watches-category-id-accs"],
+          "contentPatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-content-patches",
+            "path": "citisignal"
           }
         }
       }
