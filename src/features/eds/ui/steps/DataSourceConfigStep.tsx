@@ -435,12 +435,7 @@ export function DataSourceConfigStep({
                     borderRadius="medium"
                     padding="size-300"
                 >
-                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-                        <Heading level={3} margin={0}>Create New Site</Heading>
-                        <Button variant="secondary" onPress={handleCancelNew}>
-                            Browse
-                        </Button>
-                    </Flex>
+                    <Heading level={3} margin={0} marginBottom="size-200">Create New Site</Heading>
 
                     <TextField
                         label="Site Name"
@@ -456,6 +451,11 @@ export function DataSourceConfigStep({
                         autoFocus
                     />
 
+                    <Flex justifyContent="end" marginTop="size-200">
+                        <Button variant="secondary" onPress={handleCancelNew}>
+                            Browse
+                        </Button>
+                    </Flex>
                 </View>
             )}
             </>}

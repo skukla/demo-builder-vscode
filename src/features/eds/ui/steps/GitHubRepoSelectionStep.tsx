@@ -643,30 +643,7 @@ export function GitHubRepoSelectionStep({
                     borderRadius="medium"
                     padding="size-300"
                 >
-                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-                        <Heading level={3} margin={0}>Create New Repository</Heading>
-                        <Flex gap="size-100">
-                            <Button variant="secondary" onPress={handleUseExisting}>
-                                Browse
-                            </Button>
-                            {/* Create button — primary action on the right per Spectrum convention */}
-                            {!repoCreationState.isCreated && (
-                                <Button
-                                    variant="accent"
-                                    onPress={handleCreateRepository}
-                                    isDisabled={
-                                        !repoName ||
-                                        !isValidRepositoryName(repoName) ||
-                                        repoCreationState.isCreating ||
-                                        !edsConfig?.templateOwner ||
-                                        !edsConfig?.templateRepo
-                                    }
-                                >
-                                    Create
-                                </Button>
-                            )}
-                        </Flex>
-                    </Flex>
+                    <Heading level={3} margin={0} marginBottom="size-200">Create New Repository</Heading>
 
                     <TextField
                         label="Repository Name"
@@ -682,6 +659,28 @@ export function GitHubRepoSelectionStep({
                         autoFocus
                         isDisabled={repoCreationState.isCreated || repoCreationState.isCreating}
                     />
+
+                    <Flex justifyContent="end" gap="size-100" marginTop="size-200">
+                        <Button variant="secondary" onPress={handleUseExisting}>
+                            Browse
+                        </Button>
+                        {/* Create button — primary action on the right per Spectrum convention */}
+                        {!repoCreationState.isCreated && (
+                            <Button
+                                variant="accent"
+                                onPress={handleCreateRepository}
+                                isDisabled={
+                                    !repoName ||
+                                    !isValidRepositoryName(repoName) ||
+                                    repoCreationState.isCreating ||
+                                    !edsConfig?.templateOwner ||
+                                    !edsConfig?.templateRepo
+                                }
+                            >
+                                Create
+                            </Button>
+                        )}
+                    </Flex>
 
                     {/* Loading overlay while creating */}
                     <LoadingOverlay isVisible={repoCreationState.isCreating} />
