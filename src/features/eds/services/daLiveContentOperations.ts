@@ -801,14 +801,24 @@ export class DaLiveContentOperations {
             await this.deleteSource(org, site, '.da/library/blocks.html');
             await this.deleteSource(org, site, '.da/library/blocks.xlsx');
 
-            // Step 3: Create /.da/library/blocks.json spreadsheet
-            // Block paths point to /.da/library/blocks/{id} where template docs are copied
+            // Step 3: Check which blocks have documentation pages
+            // Not all blocks in component-definition.json have docs (sub-blocks, etc.)
+            // Only include blocks with docs in the library to avoid empty entries
+            const existingBlockIds = await this.getBlocksWithDocs(org, site, blocks);
+            const verifiedBlocks = blocks.filter(b => existingBlockIds.includes(b.id));
+
+            if (verifiedBlocks.length === 0) {
+                this.logger.info(`[DA.live] No blocks with documentation pages found in ${org}/${site}`);
+                return { success: true, blocksCount: 0, paths: [] };
+            }
+
+            // Step 4: Create /.da/library/blocks.json spreadsheet with verified blocks only
             const blocksResult = await this.createJsonSpreadsheet(
                 org,
                 site,
                 '.da/library/blocks',
                 ['name', 'path'],
-                blocks.map((b) => ({
+                verifiedBlocks.map((b) => ({
                     name: b.title,
                     path: `https://content.da.live/${org}/${site}/.da/library/blocks/${b.id}`,
                 })),
@@ -818,26 +828,17 @@ export class DaLiveContentOperations {
                 return { success: false, blocksCount: 0, paths: [], error: 'Failed to create /.da/library/blocks.json' };
             }
 
-            this.logger.info(`[DA.live] Block library created: ${blocks.length} blocks in ${org}/${site}`);
-
-            // Verify all library files and get list of blocks with documentation pages
-            const existingBlockIds = await this.verifyBlockLibrary(org, site, blocks);
+            this.logger.info(`[DA.live] Block library created: ${verifiedBlocks.length}/${blocks.length} blocks with docs in ${org}/${site}`);
 
             // Return paths for preview/publish
-            // - Config: handled by /config/ API, no preview/publish needed
-            // - Blocks spreadsheet: needs preview/publish with .json extension
-            // - Block docs: only include blocks that have documentation pages
             const paths: string[] = [
                 '.da/library/blocks.json', // Spreadsheet - use .json extension for Helix
             ];
-
-            // Add block document paths only for blocks that have docs
-            // (not all blocks in component-definition.json have documentation pages)
             for (const blockId of existingBlockIds) {
                 paths.push(`.da/library/blocks/${blockId}`);
             }
 
-            return { success: true, blocksCount: blocks.length, paths };
+            return { success: true, blocksCount: verifiedBlocks.length, paths };
         } catch (error) {
             this.logger.error(`[DA.live] Block library creation failed: ${(error as Error).message}`);
             return { success: false, blocksCount: 0, paths: [], error: (error as Error).message };
@@ -845,120 +846,41 @@ export class DaLiveContentOperations {
     }
 
     /**
-     * Verify block library files were created correctly
+     * Check which blocks have documentation pages on DA.live
      *
-     * Checks that all expected files exist:
-     * 1. Config has library entry (via /config/ API)
-     * 2. Blocks spreadsheet exists at /.da/library/blocks.json
-     * 3. Block documentation pages exist at /.da/library/blocks/{id}
-     *
-     * Logs detailed results to debug channel for troubleshooting.
+     * Performs HEAD requests to determine which blocks have doc pages.
+     * Used to filter the block library to only include usable blocks.
      *
      * @param org - Organization name
      * @param site - Site name
-     * @param blocks - Array of block definitions that should have been created
-     * @returns Array of block IDs that have documentation pages (for filtering publish paths)
+     * @param blocks - Array of block definitions to check
+     * @returns Array of block IDs that have documentation pages
      */
-    private async verifyBlockLibrary(
+    private async getBlocksWithDocs(
         org: string,
         site: string,
-        blocks: Array<{ title: string; id: string; exampleHtml?: string }>,
+        blocks: Array<{ title: string; id: string }>,
     ): Promise<string[]> {
         const token = await this.getImsToken();
-        const verificationResults: {
-            config: { exists: boolean; hasLibrary: boolean; error?: string };
-            blocksSheet: { exists: boolean; error?: string };
-            blockDocs: Array<{ id: string; exists: boolean; error?: string }>;
-        } = {
-            config: { exists: false, hasLibrary: false },
-            blocksSheet: { exists: false },
-            blockDocs: [],
-        };
+        const existingIds: string[] = [];
 
-        // 1. Verify config has library entry
-        try {
-            const configResponse = await fetch(`${DA_LIVE_BASE_URL}/config/${org}/${site}`, {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${token}` },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-
-            if (configResponse.ok) {
-                verificationResults.config.exists = true;
-                const configData = await configResponse.json();
-                // Check if library sheet exists and has entries
-                const hasLibrary = configData.library?.data?.length > 0;
-                verificationResults.config.hasLibrary = hasLibrary;
-            } else {
-                verificationResults.config.error = `HTTP ${configResponse.status}`;
-            }
-        } catch (error) {
-            verificationResults.config.error = (error as Error).message;
-        }
-
-        // 2. Verify blocks spreadsheet exists
-        try {
-            const blocksSheetUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/.da/library/blocks.json`;
-            const blocksResponse = await fetch(blocksSheetUrl, {
-                method: 'HEAD',
-                headers: { Authorization: `Bearer ${token}` },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-
-            verificationResults.blocksSheet.exists = blocksResponse.ok;
-            if (!blocksResponse.ok) {
-                verificationResults.blocksSheet.error = `HTTP ${blocksResponse.status}`;
-            }
-        } catch (error) {
-            verificationResults.blocksSheet.error = (error as Error).message;
-        }
-
-        // 3. Verify block documentation pages exist
-        // Note: Block docs are copied from template during content copy phase,
-        // so they may not exist yet if this is called before content copy completes.
-        // We check them anyway for completeness.
         for (const block of blocks) {
             try {
                 const blockDocUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/.da/library/blocks/${block.id}.html`;
-                const blockResponse = await fetch(blockDocUrl, {
+                const response = await fetch(blockDocUrl, {
                     method: 'HEAD',
                     headers: { Authorization: `Bearer ${token}` },
                     signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
                 });
-
-                verificationResults.blockDocs.push({
-                    id: block.id,
-                    exists: blockResponse.ok,
-                    error: blockResponse.ok ? undefined : `HTTP ${blockResponse.status}`,
-                });
-            } catch (error) {
-                verificationResults.blockDocs.push({
-                    id: block.id,
-                    exists: false,
-                    error: (error as Error).message,
-                });
+                if (response.ok) {
+                    existingIds.push(block.id);
+                }
+            } catch {
+                // Block doc doesn't exist or network error — skip this block
             }
         }
 
-        // Log detailed verification results to debug channel
-        this.logger.debug(`[DA.live] Block Library Verification for ${org}/${site}:`);
-        this.logger.debug(`  Config: exists=${verificationResults.config.exists}, hasLibrary=${verificationResults.config.hasLibrary}${verificationResults.config.error ? `, error=${verificationResults.config.error}` : ''}`);
-        this.logger.debug(`  Blocks Sheet (.da/library/blocks.json): exists=${verificationResults.blocksSheet.exists}${verificationResults.blocksSheet.error ? `, error=${verificationResults.blocksSheet.error}` : ''}`);
-
-        const existingDocs = verificationResults.blockDocs.filter(d => d.exists);
-        const missingDocs = verificationResults.blockDocs.filter(d => !d.exists);
-
-        this.logger.debug(`  Block Docs: ${existingDocs.length}/${blocks.length} found`);
-        if (existingDocs.length > 0) {
-            this.logger.debug(`    Found: ${existingDocs.map(d => d.id).join(', ')}`);
-        }
-        if (missingDocs.length > 0) {
-            // Note: Missing docs are expected - not all blocks in component-definition.json have docs
-            this.logger.debug(`    No docs (normal for sub-blocks): ${missingDocs.map(d => d.id).join(', ')}`);
-        }
-
-        // Return IDs of blocks that have documentation pages
-        return existingDocs.map(d => d.id);
+        return existingIds;
     }
 
     /**
