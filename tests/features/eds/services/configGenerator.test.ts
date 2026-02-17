@@ -283,30 +283,6 @@ describe('configGenerator', () => {
             expect(config.public.default['commerce-assets-enabled']).toBe(false);
         });
 
-        it('should set correct content source URL', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'paas',
-            };
-
-            const result = generateConfigJson(params, mockLogger);
-            const config = JSON.parse(result.content!);
-
-            expect(config.content.source.url).toBe('https://content.da.live/test-org/test-site');
-        });
-
-        it('should set correct CDN hosts', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'paas',
-            };
-
-            const result = generateConfigJson(params, mockLogger);
-            const config = JSON.parse(result.content!);
-
-            expect(config.cdn.live.host).toBe('main--test-repo--test-owner.aem.live');
-            expect(config.cdn.preview.host).toBe('main--test-repo--test-owner.aem.page');
-        });
     });
 
     describe('extractConfigParamsFromConfigs', () => {

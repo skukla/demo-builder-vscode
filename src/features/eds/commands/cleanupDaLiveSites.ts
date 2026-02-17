@@ -7,7 +7,7 @@
  * - Organization selection with input box
  * - Fetches and displays all sites in the org
  * - Multi-select QuickPick with filtering
- * - Batch deletion with Helix CDN unpublish
+ * - Batch deletion with permission cleanup
  * - Cross-references Demo Builder projects for repo metadata
  */
 
@@ -16,21 +16,13 @@ import { getLogger } from '@/core/logging';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
-import { HelixService } from '../services/helixService';
-import { getLinkedEdsProjects, deleteDaLiveSiteWithUnpublish } from '../services/resourceCleanupHelpers';
+import { DaLiveConfigService } from '../services/daLiveConfigService';
+import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 
 interface SiteQuickPickItem extends vscode.QuickPickItem {
     siteName: string;
     lastModified?: number;
-    linkedRepo?: string; // GitHub repo if site is linked to a Demo Builder project
-}
-
-/**
- * Map of DA.live sites to their linked GitHub repos
- * Key: "org/site", Value: "owner/repo"
- */
-interface SiteRepoMap {
-    [key: string]: string | undefined;
+    isLinked?: boolean; // Whether site is linked to a Demo Builder project
 }
 
 export async function cleanupDaLiveSitesCommand(): Promise<void> {
@@ -80,10 +72,10 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
         };
 
         const daLiveOps = new DaLiveOrgOperations(tokenProvider, logger);
-        const helixService = new HelixService(logger, undefined, tokenProvider);
+        const configService = new DaLiveConfigService(tokenProvider, logger);
 
         let allSites: Array<{ name: string; lastModified?: number }> = [];
-        let siteRepoMap: SiteRepoMap = {};
+        const linkedSiteKeys = new Set<string>();
 
         await vscode.window.withProgress(
             {
@@ -97,15 +89,15 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
                     allSites = await daLiveOps.listOrgSites(orgName);
                     logger.debug(`[DA.live Manage] Found ${allSites.length} sites`);
 
-                    // Cross-reference with Demo Builder projects to find linked repos
+                    // Cross-reference with Demo Builder projects to identify linked sites
                     const stateManager = ServiceLocator.getStateManager();
                     if (stateManager) {
                         const edsProjects = await getLinkedEdsProjects(stateManager);
                         for (const project of edsProjects) {
-                            if (project.metadata.daLiveOrg === orgName && project.metadata.daLiveSite && project.metadata.githubRepo) {
+                            if (project.metadata.daLiveOrg === orgName && project.metadata.daLiveSite) {
                                 const key = `${orgName}/${project.metadata.daLiveSite}`;
-                                siteRepoMap[key] = project.metadata.githubRepo;
-                                logger.debug(`[DA.live Manage] Found linked repo for ${key}: ${project.metadata.githubRepo}`);
+                                linkedSiteKeys.add(key);
+                                logger.debug(`[DA.live Manage] Found linked project for ${key}`);
                             }
                         }
                     }
@@ -135,18 +127,17 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
         // Step 3: Create QuickPick items
         const quickPickItems: SiteQuickPickItem[] = allSites.map(site => {
             const key = `${orgName}/${site.name}`;
-            const linkedRepo = siteRepoMap[key];
+            const isLinked = linkedSiteKeys.has(key);
             return {
                 label: site.name,
-                description: linkedRepo
-                    ? `$(link) Linked to ${linkedRepo}`
+                description: isLinked
+                    ? '$(link) Linked to Demo Builder project'
                     : site.lastModified
                         ? `Modified: ${new Date(site.lastModified).toLocaleDateString()}`
                         : undefined,
-                detail: linkedRepo ? 'Will unpublish from Helix CDN first' : undefined,
                 siteName: site.name,
                 lastModified: site.lastModified,
-                linkedRepo,
+                isLinked,
             };
         });
 
@@ -163,20 +154,14 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
         }
 
         // Step 5: Confirm deletion
-        const sitesToDelete = selectedItems.map(item => ({
-            siteName: item.siteName,
-            linkedRepo: item.linkedRepo,
-        }));
+        const siteNames = selectedItems.map(item => item.siteName);
 
-        const hasLinkedSites = sitesToDelete.some(s => s.linkedRepo);
         const confirmMessage =
-            sitesToDelete.length === 1
-                ? `Delete "${sitesToDelete[0].siteName}"?`
-                : `Delete ${sitesToDelete.length} sites?`;
+            siteNames.length === 1
+                ? `Delete "${siteNames[0]}"?`
+                : `Delete ${siteNames.length} sites?`;
 
-        const confirmDetail = hasLinkedSites
-            ? 'Sites linked to Demo Builder projects will have their CDN content unpublished first. This action cannot be undone.'
-            : 'This action cannot be undone.';
+        const confirmDetail = 'Site content and permission rows will be removed. This action cannot be undone.';
 
         const confirmed = await vscode.window.showWarningMessage(
             confirmMessage,
@@ -188,10 +173,9 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
             return; // User cancelled
         }
 
-        // Step 6: Delete selected sites (with Helix unpublish for linked sites)
+        // Step 6: Delete selected sites with permission cleanup
         const deleted: string[] = [];
         const failed: Array<{ site: string; error: string }> = [];
-        const warnings: string[] = [];
 
         await vscode.window.withProgress(
             {
@@ -200,48 +184,23 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
                 cancellable: false,
             },
             async (progress) => {
-                for (let i = 0; i < sitesToDelete.length; i++) {
-                    const { siteName, linkedRepo } = sitesToDelete[i];
+                for (let i = 0; i < siteNames.length; i++) {
+                    const siteName = siteNames[i];
                     progress.report({
-                        message: `${i + 1}/${sitesToDelete.length}: ${siteName}`,
-                        increment: 100 / sitesToDelete.length,
+                        message: `${i + 1}/${siteNames.length}: ${siteName}`,
+                        increment: 100 / siteNames.length,
                     });
 
                     try {
-                        if (linkedRepo) {
-                            // Use combined cleanup: Helix unpublish + DA.live delete
-                            logger.debug(`[DA.live Manage] Deleting ${siteName} with Helix unpublish (repo: ${linkedRepo})`);
+                        logger.debug(`[DA.live Manage] Deleting ${siteName}`);
+                        await daLiveOps.deleteSite(orgName, siteName);
+                        deleted.push(siteName);
+                        logger.info(`[DA.live Manage] ✓ Deleted: ${siteName}`);
 
-                            const result = await deleteDaLiveSiteWithUnpublish(
-                                helixService,
-                                daLiveOps,
-                                linkedRepo,
-                                orgName,
-                                siteName,
-                                logger,
-                            );
-
-                            if (result.success) {
-                                deleted.push(siteName);
-                                logger.info(`[DA.live Manage] ✓ Deleted: ${siteName} (Helix: ${result.helixUnpublished ? 'unpublished' : 'skipped'})`);
-
-                                if (!result.helixUnpublished) {
-                                    warnings.push(`${siteName}: Helix unpublish incomplete`);
-                                }
-                            } else {
-                                failed.push({ site: siteName, error: result.error || 'Unknown error' });
-                                logger.error(`[DA.live Manage] ✗ Failed: ${siteName} - ${result.error}`);
-                            }
-                        } else {
-                            // Site not linked to Demo Builder project - direct DA.live delete
-                            // This is expected for sites created outside Demo Builder
-                            logger.debug(`[DA.live Manage] Deleting ${siteName} (external site - no linked repo for CDN cleanup)`);
-
-                            await daLiveOps.deleteSite(orgName, siteName);
-                            deleted.push(siteName);
-                            logger.info(`[DA.live Manage] ✓ Deleted: ${siteName} (external site - no CDN cleanup needed)`);
-                            // Only add warning if user might care about CDN content
-                            // For external sites, this is expected behavior - don't add to warnings
+                        // Clean up stale permission rows (best-effort, never throws)
+                        const permResult = await configService.removeSitePermissions(orgName, siteName);
+                        if (!permResult.success) {
+                            logger.warn(`[DA.live Manage] Permission cleanup failed for ${siteName}: ${permResult.error}`);
                         }
                     } catch (error) {
                         const errorMsg = (error as Error).message;
@@ -254,30 +213,17 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
 
         // Step 7: Show results
         if (deleted.length > 0 && failed.length === 0) {
-            let resultMessage = `Successfully deleted ${deleted.length} site${deleted.length !== 1 ? 's' : ''}.`;
-
-            if (warnings.length > 0) {
-                // Show warning with details
-                vscode.window.showWarningMessage(
-                    resultMessage + ' Some sites may have incomplete cleanup.',
-                    'View Details',
-                ).then(selection => {
-                    if (selection === 'View Details') {
-                        vscode.commands.executeCommand('demoBuilder.showDebugLogs');
-                    }
-                });
-            } else {
-                await vscode.window.withProgress(
-                    {
-                        location: vscode.ProgressLocation.Notification,
-                        title: resultMessage,
-                        cancellable: false,
-                    },
-                    async () => {
-                        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION));
-                    },
-                );
-            }
+            const resultMessage = `Successfully deleted ${deleted.length} site${deleted.length !== 1 ? 's' : ''}.`;
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: resultMessage,
+                    cancellable: false,
+                },
+                async () => {
+                    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION));
+                },
+            );
         } else if (deleted.length > 0 && failed.length > 0) {
             const failedList = failed.map(f => f.site).join(', ');
             vscode.window.showWarningMessage(
@@ -289,13 +235,8 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
             );
         }
 
-        // Log warnings
-        for (const warning of warnings) {
-            logger.warn(`[DA.live Manage] Warning: ${warning}`);
-        }
-
         logger.info(
-            `[DA.live Manage] Complete - Deleted: ${deleted.length}, Failed: ${failed.length}, Warnings: ${warnings.length}`,
+            `[DA.live Manage] Complete - Deleted: ${deleted.length}, Failed: ${failed.length}`,
         );
     } catch (error) {
         logger.error('[DA.live Manage Command] Error:', error as Error);

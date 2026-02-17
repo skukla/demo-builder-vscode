@@ -52,7 +52,7 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     'update-api-mesh': TIMEOUTS.LONG,                // 180s - update and deploy mesh
 
     // Project deletion (EDS cleanup involves multiple external APIs)
-    'deleteProject': TIMEOUTS.LONG,                  // 180s - helix unpublish + DA.live + GitHub + local
+    'deleteProject': TIMEOUTS.LONG,                  // 180s - DA.live + GitHub + local cleanup
 };
 
 /**

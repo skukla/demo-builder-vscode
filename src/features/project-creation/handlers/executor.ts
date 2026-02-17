@@ -33,6 +33,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
 import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
+import type { Logger } from '@/types/logger';
 import type { MeshPhaseState } from '@/types/webview';
 
 // EDS config.json sync to remote (Phase 5)
@@ -53,6 +54,57 @@ function getStackById(stackId: string): Stack | undefined {
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/**
+ * Pre-flight authentication check before mesh CLI operations.
+ *
+ * Adobe CLI commands (`aio api-mesh:*`, `aio console workspace select`) each
+ * independently open a browser window when the token is expired. This check
+ * ensures the token is valid before any CLI calls run, preventing multiple
+ * browser popups. Follows the pattern from DeployMeshCommand (deployMesh.ts:51-92).
+ *
+ * @param authManager - Authentication service (may be undefined)
+ * @param logger - Logger for diagnostics
+ * @param adobeConfig - Adobe org/project/workspace for context restoration after login
+ * @returns true if authenticated (or no authManager), false if re-auth failed
+ */
+export async function ensureMeshPreflightAuth(
+    authManager: HandlerContext['authManager'],
+    logger: Logger,
+    adobeConfig: { organization?: string; projectId?: string; workspace?: string },
+): Promise<boolean> {
+    if (!authManager) {
+        return true; // Graceful degradation
+    }
+
+    const isAuthenticated = await authManager.isAuthenticated();
+    if (isAuthenticated) {
+        return true;
+    }
+
+    // Token expired — attempt re-login with context restoration
+    logger.warn('[Mesh Setup] Adobe auth token expired before mesh deployment — attempting re-login');
+    const loginSuccess = await authManager.loginAndRestoreProjectContext({
+        organization: adobeConfig.organization,
+        projectId: adobeConfig.projectId,
+        workspace: adobeConfig.workspace,
+    });
+
+    if (!loginSuccess) {
+        logger.warn('[Mesh Setup] Re-login failed — mesh deployment will likely fail');
+        return false;
+    }
+
+    // Verify token is actually valid after login
+    const postLoginAuth = await authManager.isAuthenticated();
+    if (!postLoginAuth) {
+        logger.warn('[Mesh Setup] Re-login completed but token still invalid');
+        return false;
+    }
+
+    logger.info('[Mesh Setup] Re-login successful — continuing with mesh deployment');
+    return true;
+}
 
 /**
  * Frontend source from template (same shape as TemplateSource)
@@ -486,6 +538,25 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         if (typedConfig.importedWorkspaceId && typedConfig.importedWorkspaceId !== typedConfig.adobe?.workspace) {
             context.logger.debug(`[Mesh Setup] Imported workspace differs from selected - deploying new mesh`);
             context.logger.debug(`[Mesh Setup] Imported: ${typedConfig.importedWorkspaceId}, Selected: ${typedConfig.adobe?.workspace}`);
+        }
+
+        // PRE-FLIGHT: Ensure Adobe auth token is still valid before running CLI commands.
+        // Phases 1-2 (component install) can take minutes — token may have expired.
+        // Without this check, each aio command independently opens a browser for OAuth.
+        const authOk = await ensureMeshPreflightAuth(
+            context.authManager,
+            context.logger,
+            {
+                organization: typedConfig.adobe?.organization,
+                projectId: typedConfig.adobe?.projectId,
+                workspace: typedConfig.adobe?.workspace,
+            },
+        );
+        if (!authOk) {
+            throw new Error(
+                'Adobe authentication expired and re-login failed. ' +
+                'Please sign in again and retry.',
+            );
         }
 
         // CRITICAL: Ensure workspace context is correct before mesh deployment

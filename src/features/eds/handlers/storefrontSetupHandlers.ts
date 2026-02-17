@@ -23,6 +23,7 @@ import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
 import { DaLiveContentOperations, createDaLiveTokenProvider } from '../services/daLiveContentOperations';
 import { DaLiveAuthService } from '../services/daLiveAuthService';
 import { HelixService } from '../services/helixService';
+import { ConfigurationService } from '../services/configurationService';
 import { ToolManager } from '../services/toolManager';
 import { generateFstabContent } from '../services/fstabGenerator';
 import { bulkPreviewAndPublish, configureDaLivePermissions } from './edsHelpers';
@@ -322,6 +323,13 @@ export async function handleResumeStorefrontSetup(
 // Helper Functions
 // ==========================================================
 
+/** Sentinel to skip folder mapping when Config Service registration fails with 401 */
+class SkipConfigService extends Error {
+    constructor() {
+        super('Config Service skipped');
+    }
+}
+
 /**
  * Clean up resources created during storefront setup
  *
@@ -352,6 +360,7 @@ async function cleanupStorefrontSetupResources(
         const options: EdsCleanupOptions = {
             deleteGitHub: partialState.repoCreated,
             deleteDaLive: partialState.contentCopied,
+            deleteConfigService: partialState.repoCreated, // Clean up Config Service if repo was created
             archiveInsteadOfDelete: false, // Full delete for setup
         };
 
@@ -878,6 +887,81 @@ async function executeStorefrontSetupPhases(
         }
 
         // ============================================
+        // Phase 3d: Configuration Service Registration
+        // ============================================
+        // Register the site with the AEM Configuration Service and set folder mapping.
+        // The Config Service manages server-side site config in Helix 5.
+        // Folder mapping (e.g., /products/ -> /products/default) MUST be set via this
+        // API — the fstab.yaml folders section is not processed by the pipeline.
+        //
+        // Requires: GitHub App installed (admin role auto-assigned on install)
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'code-sync',
+            message: 'Registering site with Configuration Service...',
+            progress: 48,
+        });
+
+        const configurationService = new ConfigurationService(daLiveTokenProvider, logger);
+
+        try {
+            // Step 1: Register the site (code source + content source)
+            const contentSourceUrl = `https://content.da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}/`;
+            const registerResult = await configurationService.registerSite({
+                org: repoOwner,
+                site: repoName,
+                codeOwner: repoOwner,
+                codeRepo: repoName,
+                contentSourceUrl,
+            });
+
+            if (registerResult.success) {
+                logger.info('[Storefront Setup] Site registered with Configuration Service');
+            } else if (registerResult.statusCode === 409) {
+                // 409 = already exists, treat as non-fatal
+                logger.info('[Storefront Setup] Site config already exists (409), continuing');
+            } else if (registerResult.statusCode === 401) {
+                // 401 = org-level admin not set up yet — skip folder mapping too
+                logger.warn(`[Storefront Setup] Config Service requires org admin setup: ${registerResult.error}`);
+                await context.sendMessage('storefront-setup-progress', {
+                    phase: 'code-sync',
+                    message: 'Site config skipped (org admin setup needed)',
+                    progress: 49,
+                });
+                // Skip folder mapping — same auth will fail
+                throw new SkipConfigService();
+            } else {
+                logger.warn(`[Storefront Setup] Config Service registration warning: ${registerResult.error}`);
+            }
+
+            // Step 2: Set folder mapping for PDP routing
+            const folderResult = await configurationService.setFolderMapping(
+                repoOwner,
+                repoName,
+                { '/products/': '/products/default' },
+            );
+
+            if (folderResult.success) {
+                logger.info('[Storefront Setup] Folder mapping configured via Configuration Service');
+            } else {
+                logger.warn(`[Storefront Setup] Folder mapping warning: ${folderResult.error}`);
+            }
+        } catch (error) {
+            if (error instanceof SkipConfigService) {
+                // Expected — org admin not set up, already logged above
+            } else {
+                // Config Service failure is non-fatal: site works for everything except
+                // folder-mapped routes (PDP pages). Log and continue.
+                logger.warn(`[Storefront Setup] Configuration Service warning: ${(error as Error).message}`);
+            }
+        }
+
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'code-sync',
+            message: 'Site configuration complete',
+            progress: 49,
+        });
+
+        // ============================================
         // Phase 4: DA.live Content Population
         // ============================================
         // Check for cancellation before continuing
@@ -1158,6 +1242,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     const helixService = new HelixService(context.logger, githubTokenService, daLiveTokenProvider);
 
     const toolManager = new ToolManager(context.logger);
+    const configurationService = new ConfigurationService(daLiveTokenProvider, context.logger);
 
     return new CleanupService(
         githubRepoOps,
@@ -1165,6 +1250,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
         helixService,
         toolManager,
         context.logger,
+        configurationService,
     );
 }
 

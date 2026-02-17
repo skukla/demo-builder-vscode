@@ -191,7 +191,7 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
         if (!edsConfig) return null;
 
         const org = edsConfig.daLiveOrg || '';
-        const site = edsConfig.repoName || edsConfig.daLiveSite || '';
+        const site = edsConfig.selectedSite?.name || edsConfig.daLiveSite || '';
 
         if (!site) return null;
 

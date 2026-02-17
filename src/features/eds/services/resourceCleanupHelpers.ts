@@ -8,7 +8,7 @@
  * - isEdsProject: Check if a project has EDS component
  * - extractEdsMetadata: Extract EDS metadata from project
  * - getLinkedEdsProjects: Get all projects with EDS metadata
- * - deleteDaLiveSiteWithUnpublish: Combined Helix unpublish + DA.live delete
+ * - deleteDaLiveSite: DA.live site deletion
  * - formatCleanupResults: Human-readable cleanup summary
  */
 
@@ -16,7 +16,6 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 import type { DaLiveOrgOperations } from './daLiveOrgOperations';
-import type { HelixService, UnpublishResult } from './helixService';
 import type { StateManager } from '@/types/state';
 
 // ==========================================================
@@ -33,8 +32,6 @@ export interface EdsProjectMetadata {
     daLiveOrg: string | undefined;
     /** DA.live site name */
     daLiveSite: string | undefined;
-    /** Helix site URL for unpublishing */
-    helixSiteUrl?: string | undefined;
     /** Backend type for data cleanup */
     backendType?: 'commerce' | 'aco' | undefined;
 }
@@ -52,22 +49,17 @@ export interface EdsProjectInfo {
 }
 
 /**
- * Result of combined DA.live site deletion with Helix unpublish
+ * Result of DA.live site deletion
  */
 export interface DaLiveSiteCleanupResult {
     /** Overall success */
     success: boolean;
-    /** Whether Helix unpublish succeeded */
-    helixUnpublished: boolean;
     /** Whether DA.live site was deleted */
     daLiveDeleted: boolean;
     /** Error message if operation failed */
     error?: string;
-    /** Detailed results for each operation */
-    details?: {
-        helix?: UnpublishResult;
-        daLiveAlreadyDeleted?: boolean;
-    };
+    /** Whether the site was already deleted */
+    alreadyDeleted?: boolean;
 }
 
 /**
@@ -124,7 +116,6 @@ export function extractEdsMetadata(project: Project): EdsProjectMetadata | null 
         githubRepo: metadata?.githubRepo as string | undefined,
         daLiveOrg: metadata?.daLiveOrg as string | undefined,
         daLiveSite: metadata?.daLiveSite as string | undefined,
-        helixSiteUrl: metadata?.helixSiteUrl as string | undefined,
         backendType: metadata?.backendType as 'commerce' | 'aco' | undefined,
     };
 }
@@ -168,69 +159,35 @@ export async function getLinkedEdsProjects(
 // ==========================================================
 
 /**
- * Delete a DA.live site with Helix unpublish (recommended approach)
+ * Delete a DA.live site
  *
- * This function performs the cleanup in the correct order:
- * 1. Unpublish from Helix CDN (live + preview) to remove cached content
- * 2. Delete the DA.live site content
+ * Helix CDN content is NOT explicitly unpublished because the Helix Admin API
+ * requires browser-based auth (_AuthCookie_) for delete operations, which a
+ * VS Code extension cannot provide. Published CDN content expires naturally
+ * and becomes unreachable once the Helix site config is deleted.
  *
- * @param helixService - HelixService for CDN operations
  * @param daLiveOrgOps - DaLiveOrgOperations for site deletion
- * @param repoFullName - GitHub repo full name (owner/repo) for Helix unpublish
  * @param daLiveOrg - DA.live organization name
  * @param daLiveSite - DA.live site name
  * @param logger - Logger instance
- * @returns Cleanup result with details for each operation
+ * @returns Cleanup result
  */
-export async function deleteDaLiveSiteWithUnpublish(
-    helixService: HelixService,
+export async function deleteDaLiveSite(
     daLiveOrgOps: DaLiveOrgOperations,
-    repoFullName: string | undefined,
     daLiveOrg: string,
     daLiveSite: string,
     logger: Logger,
 ): Promise<DaLiveSiteCleanupResult> {
     const result: DaLiveSiteCleanupResult = {
         success: false,
-        helixUnpublished: false,
         daLiveDeleted: false,
-        details: {},
     };
 
-    // Step 1: Unpublish from Helix (if we have repo info)
-    if (repoFullName) {
-        try {
-            logger.debug(`[Cleanup] Unpublishing from Helix: ${repoFullName}`);
-            const helixResult = await helixService.unpublishSite(repoFullName);
-            result.details!.helix = helixResult;
-
-            // Consider success if either live or preview was unpublished
-            result.helixUnpublished = helixResult.liveUnpublished || helixResult.previewDeleted;
-
-            if (result.helixUnpublished) {
-                logger.debug('[Cleanup] Helix unpublished successfully');
-            } else {
-                const errors = [helixResult.liveError, helixResult.previewError].filter(Boolean).join('; ');
-                logger.warn(`[Cleanup] Helix unpublish partial/failed: ${errors}`);
-            }
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-            logger.warn(`[Cleanup] Helix unpublish failed: ${errorMessage}`);
-            // Continue with DA.live deletion even if Helix fails
-            // The CDN content will eventually expire
-        }
-    } else {
-        logger.debug('[Cleanup] Skipping Helix unpublish - no repo info available');
-        // Mark as "success" since there's nothing to unpublish
-        result.helixUnpublished = true;
-    }
-
-    // Step 2: Delete DA.live site
     try {
         logger.debug(`[Cleanup] Deleting DA.live site: ${daLiveOrg}/${daLiveSite}`);
         const daLiveResult = await daLiveOrgOps.deleteSite(daLiveOrg, daLiveSite);
         result.daLiveDeleted = daLiveResult.success;
-        result.details!.daLiveAlreadyDeleted = daLiveResult.alreadyDeleted;
+        result.alreadyDeleted = daLiveResult.alreadyDeleted;
 
         if (result.daLiveDeleted) {
             logger.debug(`[Cleanup] DA.live site deleted${daLiveResult.alreadyDeleted ? ' (was already deleted)' : ''}`);
@@ -241,9 +198,7 @@ export async function deleteDaLiveSiteWithUnpublish(
         result.error = `DA.live deletion failed: ${errorMessage}`;
     }
 
-    // Overall success: DA.live must be deleted (Helix is best-effort)
     result.success = result.daLiveDeleted;
-
     return result;
 }
 

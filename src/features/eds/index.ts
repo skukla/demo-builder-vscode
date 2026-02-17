@@ -30,8 +30,14 @@ export {
 
 // Project Orchestration Services
 export { ToolManager } from './services/toolManager';
-export { HelixService, type UnpublishResult } from './services/helixService';
+export { HelixService } from './services/helixService';
 export { CleanupService } from './services/cleanupService';
+export {
+    ConfigurationService,
+    type SiteRegistrationParams,
+    type FolderMapping,
+    type ConfigServiceResult,
+} from './services/configurationService';
 
 // Config Generator (for EDS Reset)
 export {

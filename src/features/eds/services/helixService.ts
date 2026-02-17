@@ -8,8 +8,6 @@
  * - DA.live token integration via DaLiveTokenProvider
  * - Preview content (POST /preview/{org}/{site}/main/{path})
  * - Publish content (POST /live/{org}/{site}/main/{path})
- * - Unpublish from live (DELETE /live/{org}/{site}/main/*)
- * - Delete from preview (DELETE /preview/{org}/{site}/main/*)
  * - 404 handling as success (site never published)
  * - Repo fullName parsing for org/site extraction
  */
@@ -29,20 +27,6 @@ const HELIX_ADMIN_URL = 'https://admin.hlx.page';
 
 /** Default branch for Helix operations */
 const DEFAULT_BRANCH = 'main';
-
-/**
- * Result of unpublishing a site
- */
-export interface UnpublishResult {
-    /** Whether live content was unpublished */
-    liveUnpublished: boolean;
-    /** Whether preview content was deleted */
-    previewDeleted: boolean;
-    /** Error message for live unpublish if failed */
-    liveError?: string;
-    /** Error message for preview delete if failed */
-    previewError?: string;
-}
 
 /**
  * Response from bulk preview/publish operations (202 Accepted)
@@ -953,135 +937,6 @@ export class HelixService {
     }
 
     // ==========================================================
-    // Unpublish Operations
-    // ==========================================================
-
-    /**
-     * Unpublish content from live
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @param branch - Branch name (default: main)
-     * @throws Error on access denied (403) or network error
-     */
-    async unpublishFromLive(org: string, site: string, branch: string = DEFAULT_BRANCH): Promise<void> {
-        const token = await this.getGitHubToken();
-        const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}/*`;
-
-        this.logger.debug(`[Helix] Unpublishing from live: ${url}`);
-
-        const response = await fetch(url, {
-            method: 'DELETE',
-            headers: {
-                'x-auth-token': token,
-            },
-            signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-        });
-
-        // 404 is acceptable (site was never published)
-        if (response.status === 404) {
-            this.logger.debug('[Helix] Site was never published (404)');
-            return;
-        }
-
-        // 401 is authentication failure
-        if (response.status === 401) {
-            throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
-        }
-
-        // 403 is access denied
-        if (response.status === 403) {
-            throw new Error('Access denied. You do not have permission to unpublish this site.');
-        }
-
-        if (!response.ok) {
-            throw new Error(`Failed to unpublish from live: ${response.status} ${response.statusText}`);
-        }
-
-        this.logger.debug('[Helix] Successfully unpublished from live');
-    }
-
-    /**
-     * Delete content from preview
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @param branch - Branch name (default: main)
-     * @throws Error on access denied (403) or network error
-     */
-    async deleteFromPreview(org: string, site: string, branch: string = DEFAULT_BRANCH): Promise<void> {
-        const token = await this.getGitHubToken();
-        const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}/*`;
-
-        this.logger.debug(`[Helix] Deleting from preview: ${url}`);
-
-        const response = await fetch(url, {
-            method: 'DELETE',
-            headers: {
-                'x-auth-token': token,
-            },
-            signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-        });
-
-        // 404 is acceptable (never previewed)
-        if (response.status === 404) {
-            this.logger.debug('[Helix] Site was never previewed (404)');
-            return;
-        }
-
-        // 401 is authentication failure
-        if (response.status === 401) {
-            throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
-        }
-
-        // 403 is access denied
-        if (response.status === 403) {
-            throw new Error('Access denied. You do not have permission to delete preview content.');
-        }
-
-        if (!response.ok) {
-            throw new Error(`Failed to delete from preview: ${response.status} ${response.statusText}`);
-        }
-
-        this.logger.debug('[Helix] Successfully deleted from preview');
-    }
-
-    /**
-     * Fully unpublish a site (both live and preview)
-     * Continues with preview deletion even if live unpublish fails.
-     *
-     * @param repoFullName - Full repository name (owner/repo)
-     * @param branch - Branch name (default: main)
-     * @returns Result with success status for both operations
-     */
-    async unpublishSite(repoFullName: string, branch: string = DEFAULT_BRANCH): Promise<UnpublishResult> {
-        const [org, site] = this.parseRepoFullName(repoFullName);
-
-        const result: UnpublishResult = {
-            liveUnpublished: false,
-            previewDeleted: false,
-        };
-
-        // Unpublish from live
-        try {
-            await this.unpublishFromLive(org, site, branch);
-            result.liveUnpublished = true;
-        } catch (error) {
-            result.liveError = (error as Error).message;
-            this.logger.warn(`[Helix] Failed to unpublish from live: ${result.liveError}`);
-        }
-
-        // Delete from preview (continue even if live failed)
-        try {
-            await this.deleteFromPreview(org, site, branch);
-            result.previewDeleted = true;
-        } catch (error) {
-            result.previewError = (error as Error).message;
-            this.logger.warn(`[Helix] Failed to delete from preview: ${result.previewError}`);
-        }
-
-        return result;
-    }
-
-    // ==========================================================
     // Cache Operations
     // ==========================================================
 
@@ -1110,6 +965,9 @@ export class HelixService {
 
         this.logger.debug(`[Helix] Purging all cached content: ${url}`);
 
+        // Cache purge only needs GitHub token (x-auth-token) for caller auth.
+        // No x-content-source-authorization needed — cache operations don't
+        // access DA.live content, they only invalidate the CDN cache layer.
         const response = await fetch(url, {
             method: 'POST',
             headers: {

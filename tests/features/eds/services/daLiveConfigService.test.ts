@@ -284,12 +284,15 @@ describe('DaLiveConfigService', () => {
             const configStr = formData.get('config') as string;
             const config = JSON.parse(configStr);
 
-            expect(config.permissions.data).toHaveLength(3);
+            expect(config.permissions.data).toHaveLength(4);
             expect(config.permissions.data).toContainEqual(
-                expect.objectContaining({ groups: 'other@example.com' }),
+                expect.objectContaining({ groups: 'other@example.com', path: '/test-site/+**' }),
             );
             expect(config.permissions.data).toContainEqual(
                 expect.objectContaining({ groups: testEmail, path: 'CONFIG' }),
+            );
+            expect(config.permissions.data).toContainEqual(
+                expect.objectContaining({ groups: testEmail, path: '/+**' }),
             );
             expect(config.permissions.data).toContainEqual(
                 expect.objectContaining({ groups: testEmail, path: '/test-site/+**' }),
@@ -297,17 +300,18 @@ describe('DaLiveConfigService', () => {
         });
 
         it('should not duplicate permission if user already has access', async () => {
-            // Given: Existing config with both CONFIG and content permissions for the same user
+            // Given: Existing config with all three permissions for the same user
             const existingConfig: MultiSheetConfig = {
                 ':names': ['permissions'],
                 ':version': 3,
                 ':type': 'multi-sheet',
                 permissions: {
-                    total: 2,
-                    limit: 2,
+                    total: 3,
+                    limit: 3,
                     offset: 0,
                     data: [
                         { path: 'CONFIG', groups: testEmail, actions: 'write' },
+                        { path: '/+**', groups: testEmail, actions: 'write' },
                         { path: '/test-site/+**', groups: testEmail, actions: 'write' },
                     ],
                 },
@@ -318,11 +322,11 @@ describe('DaLiveConfigService', () => {
                     ok: true,
                     status: 200,
                     json: jest.fn().mockResolvedValue(existingConfig),
-                }) // getConfig
+                }) // getOrgConfig
                 .mockResolvedValueOnce({
                     ok: true,
                     status: 200,
-                }); // updateConfig
+                }); // updateOrgConfig
 
             // When: grantUserAccess() called
             const result = await service.grantUserAccess(
@@ -334,13 +338,86 @@ describe('DaLiveConfigService', () => {
             // Then: Success
             expect(result.success).toBe(true);
 
-            // Verify PUT doesn't duplicate (still 2 entries - CONFIG and content)
+            // Verify PUT doesn't duplicate (still 3 entries)
             const putCall = mockFetch.mock.calls[1];
             const formData = putCall[1].body as FormData;
             const configStr = formData.get('config') as string;
             const config = JSON.parse(configStr);
 
-            expect(config.permissions.data).toHaveLength(2);
+            expect(config.permissions.data).toHaveLength(3);
+        });
+
+        it('should include root /+** permission for org-level listing', async () => {
+            // Given: No existing config
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: false,
+                    status: 404,
+                }) // getOrgConfig
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                }); // updateOrgConfig
+
+            // When: grantUserAccess() called
+            await service.grantUserAccess(testOrg, testSite, testEmail);
+
+            // Then: PUT should include /+** root permission
+            const putCall = mockFetch.mock.calls[1];
+            const formData = putCall[1].body as FormData;
+            const configStr = formData.get('config') as string;
+            const config = JSON.parse(configStr);
+
+            // Must have 3 rows: CONFIG, /+**, and /{site}/+**
+            expect(config.permissions.data).toContainEqual(
+                expect.objectContaining({
+                    path: '/+**',
+                    groups: testEmail,
+                    actions: 'write',
+                }),
+            );
+        });
+
+        it('should not duplicate /+** root permission if it already exists', async () => {
+            // Given: Existing config already has /+** root permission
+            const existingConfig: MultiSheetConfig = {
+                ':names': ['permissions'],
+                ':version': 3,
+                ':type': 'multi-sheet',
+                permissions: {
+                    total: 1,
+                    limit: 1,
+                    offset: 0,
+                    data: [
+                        { path: '/+**', groups: testEmail, actions: 'write' },
+                    ],
+                },
+            };
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: jest.fn().mockResolvedValue(existingConfig),
+                }) // getOrgConfig
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                }); // updateOrgConfig
+
+            // When: grantUserAccess() called
+            await service.grantUserAccess(testOrg, testSite, testEmail);
+
+            // Then: /+** should appear exactly once
+            const putCall = mockFetch.mock.calls[1];
+            const formData = putCall[1].body as FormData;
+            const configStr = formData.get('config') as string;
+            const config = JSON.parse(configStr);
+
+            const rootRows = config.permissions.data.filter(
+                (row: PermissionRow) => row.path === '/+**' && row.groups === testEmail,
+            );
+            expect(rootRows).toHaveLength(1);
         });
 
         it('should return error when API fails', async () => {
@@ -541,6 +618,214 @@ describe('DaLiveConfigService', () => {
             expect(result.userCount).toBe(2);
             expect(result.users).toContain('user1@example.com');
             expect(result.users).toContain('user2@example.com');
+        });
+    });
+
+    describe('removeSitePermissions', () => {
+        it('should return success when no config exists', async () => {
+            // Given: No org config (404)
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 404,
+            });
+
+            // When
+            const result = await service.removeSitePermissions(testOrg, testSite);
+
+            // Then
+            expect(result.success).toBe(true);
+            expect(mockFetch).toHaveBeenCalledTimes(1); // Only GET, no PUT
+        });
+
+        it('should return success when no permissions sheet', async () => {
+            // Given: Org config exists but has no permissions sheet
+            const existingConfig: MultiSheetConfig = {
+                ':names': ['data'],
+                ':version': 3,
+                ':type': 'multi-sheet',
+            };
+
+            mockFetch.mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: jest.fn().mockResolvedValue(existingConfig),
+            });
+
+            // When
+            const result = await service.removeSitePermissions(testOrg, testSite);
+
+            // Then
+            expect(result.success).toBe(true);
+            expect(mockFetch).toHaveBeenCalledTimes(1); // Only GET, no PUT
+        });
+
+        it('should remove site-specific permission rows for all users', async () => {
+            // Given: Org config with site permissions for two users
+            const existingConfig: MultiSheetConfig = {
+                ':names': ['permissions'],
+                ':version': 3,
+                ':type': 'multi-sheet',
+                permissions: {
+                    total: 5,
+                    limit: 5,
+                    offset: 0,
+                    data: [
+                        { path: 'CONFIG', groups: testEmail, actions: 'write' },
+                        { path: '/+**', groups: testEmail, actions: 'write' },
+                        { path: `/${testSite}/+**`, groups: testEmail, actions: 'write' },
+                        { path: `/${testSite}/+**`, groups: 'other@example.com', actions: 'write' },
+                        { path: '/other-site/+**', groups: testEmail, actions: 'write' },
+                    ],
+                },
+            };
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: jest.fn().mockResolvedValue(existingConfig),
+                }) // getOrgConfig
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                }); // updateOrgConfig
+
+            // When
+            const result = await service.removeSitePermissions(testOrg, testSite);
+
+            // Then: Both users' site-specific rows removed
+            expect(result.success).toBe(true);
+
+            // Verify PUT was called with filtered permissions
+            const putCall = mockFetch.mock.calls[1];
+            const formData = putCall[1].body as FormData;
+            const configStr = formData.get('config') as string;
+            const config = JSON.parse(configStr);
+
+            expect(config.permissions.data).toHaveLength(3);
+            expect(config.permissions.data).toContainEqual(
+                expect.objectContaining({ path: 'CONFIG' }),
+            );
+            expect(config.permissions.data).toContainEqual(
+                expect.objectContaining({ path: '/+**' }),
+            );
+            expect(config.permissions.data).toContainEqual(
+                expect.objectContaining({ path: '/other-site/+**' }),
+            );
+        });
+
+        it('should preserve CONFIG and /+** rows', async () => {
+            // Given: Config with only shared and site-specific rows
+            const existingConfig: MultiSheetConfig = {
+                ':names': ['permissions'],
+                ':version': 3,
+                ':type': 'multi-sheet',
+                permissions: {
+                    total: 3,
+                    limit: 3,
+                    offset: 0,
+                    data: [
+                        { path: 'CONFIG', groups: testEmail, actions: 'write' },
+                        { path: '/+**', groups: testEmail, actions: 'write' },
+                        { path: `/${testSite}/+**`, groups: testEmail, actions: 'write' },
+                    ],
+                },
+            };
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: jest.fn().mockResolvedValue(existingConfig),
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                });
+
+            // When
+            const result = await service.removeSitePermissions(testOrg, testSite);
+
+            // Then
+            expect(result.success).toBe(true);
+
+            const putCall = mockFetch.mock.calls[1];
+            const formData = putCall[1].body as FormData;
+            const config = JSON.parse(formData.get('config') as string);
+
+            expect(config.permissions.data).toHaveLength(2);
+            expect(config.permissions.data.map((r: PermissionRow) => r.path)).toEqual([
+                'CONFIG',
+                '/+**',
+            ]);
+        });
+
+        it('should skip PUT when no matching rows found', async () => {
+            // Given: Config with no rows for the target site
+            const existingConfig: MultiSheetConfig = {
+                ':names': ['permissions'],
+                ':version': 3,
+                ':type': 'multi-sheet',
+                permissions: {
+                    total: 2,
+                    limit: 2,
+                    offset: 0,
+                    data: [
+                        { path: 'CONFIG', groups: testEmail, actions: 'write' },
+                        { path: '/other-site/+**', groups: testEmail, actions: 'write' },
+                    ],
+                },
+            };
+
+            mockFetch.mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: jest.fn().mockResolvedValue(existingConfig),
+            });
+
+            // When
+            const result = await service.removeSitePermissions(testOrg, testSite);
+
+            // Then: No PUT call
+            expect(result.success).toBe(true);
+            expect(mockFetch).toHaveBeenCalledTimes(1); // Only GET
+        });
+
+        it('should return error when updateOrgConfig fails', async () => {
+            // Given: Config exists but PUT fails
+            const existingConfig: MultiSheetConfig = {
+                ':names': ['permissions'],
+                ':version': 3,
+                ':type': 'multi-sheet',
+                permissions: {
+                    total: 1,
+                    limit: 1,
+                    offset: 0,
+                    data: [
+                        { path: `/${testSite}/+**`, groups: testEmail, actions: 'write' },
+                    ],
+                },
+            };
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: jest.fn().mockResolvedValue(existingConfig),
+                })
+                .mockResolvedValueOnce({
+                    ok: false,
+                    status: 500,
+                    statusText: 'Internal Server Error',
+                    text: jest.fn().mockResolvedValue(''),
+                });
+
+            // When
+            const result = await service.removeSitePermissions(testOrg, testSite);
+
+            // Then
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('Failed to update org config');
         });
     });
 

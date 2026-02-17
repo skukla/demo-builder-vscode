@@ -899,21 +899,49 @@ describe('createBlockLibraryFromTemplate', () => {
     });
 
     it('should handle DA.live API errors gracefully', async () => {
-        // Given: Template with blocks but DA.live API fails
+        // Given: Template with blocks, docs exist but spreadsheet creation fails
         mockGetFileContent.mockResolvedValue({
             content: createComponentDef([{ title: 'Cards', id: 'cards' }]),
             sha: 'abc123',
         });
-        mockFetch.mockResolvedValue({ ok: false, status: 500 } as Response);
+        let callCount = 0;
+        mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
+            callCount++;
+            // HEAD check for block docs — return ok so block passes filter
+            if (url.includes('.da/library/blocks/') && options?.method === 'HEAD') {
+                return { ok: true, status: 200 } as Response;
+            }
+            // All other calls fail (config, spreadsheet creation, etc.)
+            return { ok: false, status: 500 } as Response;
+        });
 
         // When: createBlockLibraryFromTemplate is called
         const result = await service.createBlockLibraryFromTemplate(
             destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
         );
 
-        // Then: Should return failure
+        // Then: Should return failure (spreadsheet creation failed)
         expect(result.success).toBe(false);
         expect(result.blocksCount).toBe(0);
+    });
+
+    it('should return success with zero blocks when no block docs exist', async () => {
+        // Given: Template with blocks but no block documentation pages on DA.live
+        mockGetFileContent.mockResolvedValue({
+            content: createComponentDef([{ title: 'Cards', id: 'cards' }]),
+            sha: 'abc123',
+        });
+        mockFetch.mockResolvedValue({ ok: false, status: 404 } as Response);
+
+        // When: createBlockLibraryFromTemplate is called
+        const result = await service.createBlockLibraryFromTemplate(
+            destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+        );
+
+        // Then: Should return success with zero blocks (no docs = no library entries)
+        expect(result.success).toBe(true);
+        expect(result.blocksCount).toBe(0);
+        expect(result.paths).toEqual([]);
     });
 
     describe('verification logging', () => {
@@ -981,8 +1009,8 @@ describe('createBlockLibraryFromTemplate', () => {
             };
         }
 
-        it('should log verification results to debug channel after creating block library', async () => {
-            // Given: Template with blocks and successful DA.live API responses
+        it('should exclude blocks without docs and log info when no blocks qualify', async () => {
+            // Given: Template with blocks but no block docs exist on DA.live
             mockGetFileContent.mockResolvedValue({
                 content: createComponentDef([
                     { title: 'Cards', id: 'cards' },
@@ -994,46 +1022,35 @@ describe('createBlockLibraryFromTemplate', () => {
                 configExists: true,
                 configHasLibrary: true,
                 blocksSheetExists: true,
-                blockDocsExist: { cards: true, hero: true },
+                blockDocsExist: { cards: false, hero: false }, // No docs exist
             }));
 
             // When: createBlockLibraryFromTemplate is called
-            await service.createBlockLibraryFromTemplate(
+            const result = await service.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
-            // Then: Should log verification results to debug channel
-            const debugCalls = (mockLogger.debug as jest.Mock).mock.calls;
-            const verificationLogs = debugCalls.filter((call: string[]) =>
-                call[0].includes('Block Library Verification')
-            );
-            expect(verificationLogs.length).toBeGreaterThan(0);
+            // Then: Should return success with zero blocks (no docs = no library entries)
+            expect(result.success).toBe(true);
+            expect(result.blocksCount).toBe(0);
+            expect(result.paths).toEqual([]);
 
-            // Should log config status
-            const configLog = debugCalls.find((call: string[]) =>
-                call[0].includes('Config:')
+            // Should log that no blocks with docs were found
+            const infoCalls = (mockLogger.info as jest.Mock).mock.calls;
+            const noBlocksLog = infoCalls.find((call: string[]) =>
+                call[0].includes('No blocks with documentation pages')
             );
-            expect(configLog).toBeDefined();
-
-            // Should log blocks sheet status
-            const blocksSheetLog = debugCalls.find((call: string[]) =>
-                call[0].includes('Blocks Sheet')
-            );
-            expect(blocksSheetLog).toBeDefined();
-
-            // Should log block docs status
-            const blockDocsLog = debugCalls.find((call: string[]) =>
-                call[0].includes('Block Docs:')
-            );
-            expect(blockDocsLog).toBeDefined();
+            expect(noBlocksLog).toBeDefined();
         });
 
-        it('should log missing block docs when they do not exist yet', async () => {
-            // Given: Template with blocks but block docs haven't been copied yet
+        it('should only include blocks with documentation pages in the spreadsheet', async () => {
+            // Given: Template with 4 blocks, but only 2 have documentation pages
             mockGetFileContent.mockResolvedValue({
                 content: createComponentDef([
                     { title: 'Cards', id: 'cards' },
                     { title: 'Hero', id: 'hero' },
+                    { title: 'Accordion', id: 'accordion' },
+                    { title: 'Carousel', id: 'carousel' },
                 ]),
                 sha: 'abc123',
             });
@@ -1041,70 +1058,138 @@ describe('createBlockLibraryFromTemplate', () => {
                 configExists: true,
                 configHasLibrary: true,
                 blocksSheetExists: true,
-                blockDocsExist: { cards: false, hero: false }, // Docs not copied yet
+                blockDocsExist: { cards: true, hero: true, accordion: false, carousel: false },
             }));
 
             // When: createBlockLibraryFromTemplate is called
-            await service.createBlockLibraryFromTemplate(
+            const result = await service.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
-            // Then: Should log that block docs don't exist (normal for sub-blocks without docs)
-            const debugCalls = (mockLogger.debug as jest.Mock).mock.calls;
-            const missingLog = debugCalls.find((call: string[]) =>
-                call[0].includes('No docs (normal for sub-blocks)')
-            );
-            expect(missingLog).toBeDefined();
-            expect(missingLog[0]).toContain('cards');
-            expect(missingLog[0]).toContain('hero');
+            // Then: Should only include blocks with documentation pages
+            expect(result.success).toBe(true);
+
+            // blocksCount should reflect only blocks with docs, not all blocks
+            expect(result.blocksCount).toBe(2);
+
+            // Paths should only include verified blocks
+            expect(result.paths).toContain('.da/library/blocks.json');
+            expect(result.paths).toContain('.da/library/blocks/cards');
+            expect(result.paths).toContain('.da/library/blocks/hero');
+            expect(result.paths).not.toContain('.da/library/blocks/accordion');
+            expect(result.paths).not.toContain('.da/library/blocks/carousel');
         });
 
-        it('should log config errors when config verification fails', async () => {
-            // Given: Template with blocks but config verification fails
-            mockGetFileContent.mockResolvedValue({
-                content: createComponentDef([{ title: 'Cards', id: 'cards' }]),
-                sha: 'abc123',
-            });
+    });
+});
 
-            // Custom mock where config GET fails during verification
-            let verificationPhase = false;
-            mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
-                // First config GET succeeds (during updateSiteConfig)
-                if (url.includes('/config/') && options?.method === 'GET') {
-                    if (!verificationPhase) {
-                        return { ok: true, status: 200, json: async () => ({}) } as Response;
-                    }
-                    // During verification, simulate error
-                    throw new Error('Network timeout');
-                }
-                if (url.includes('/config/') && options?.method === 'POST') {
-                    verificationPhase = true; // Now entering verification phase
-                    return { ok: true, status: 200 } as Response;
-                }
-                if (options?.method === 'DELETE') {
-                    return { ok: true, status: 200 } as Response;
-                }
-                if (url.includes('.da/library/blocks.json')) {
-                    return { ok: true, status: 200 } as Response;
-                }
-                if (url.includes('.da/library/blocks/')) {
-                    return { ok: true, status: 200 } as Response;
-                }
-                return { ok: true, status: 200 } as Response;
-            });
+describe('applyOrgConfig', () => {
+    let service: DaLiveContentOperations;
+    let mockTokenProvider: TokenProvider;
+    let mockLogger: Logger;
 
-            // When: createBlockLibraryFromTemplate is called
-            await service.createBlockLibraryFromTemplate(
-                destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
-            );
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockFetch.mockReset();
 
-            // Then: Should still succeed (verification is non-blocking) and log the error
-            const debugCalls = (mockLogger.debug as jest.Mock).mock.calls;
-            const configLog = debugCalls.find((call: string[]) =>
-                call[0].includes('Config:') && call[0].includes('error=')
-            );
-            expect(configLog).toBeDefined();
+        mockTokenProvider = {
+            getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
+        };
+
+        mockLogger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        } as unknown as Logger;
+
+        service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
+    });
+
+    it('should preserve permissions sheet when updating data sheet', async () => {
+        // Given: Existing org config with permissions AND data sheets
+        const existingConfig = {
+            ':version': 3,
+            ':names': ['data', 'permissions'],
+            ':type': 'multi-sheet',
+            data: {
+                total: 1,
+                offset: 0,
+                limit: 1,
+                data: [{ key: 'old-key', value: 'old-value' }],
+            },
+            permissions: {
+                total: 2,
+                offset: 0,
+                limit: 2,
+                data: [
+                    { path: '/+**', groups: 'owner@example.com', actions: 'write' },
+                    { path: '/my-site/+**', groups: 'owner@example.com', actions: 'write' },
+                ],
+            },
+        };
+
+        // GET returns existing config
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: jest.fn().mockResolvedValue(existingConfig),
         });
+        // POST succeeds
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+        });
+
+        // When: applyOrgConfig updates the data sheet
+        await service.applyOrgConfig('test-org', { 'new-key': 'new-value' });
+
+        // Then: POST body should include the permissions sheet
+        const postCall = mockFetch.mock.calls[1];
+        const formData = postCall[1].body as FormData;
+        const configStr = formData.get('config') as string;
+        const config = JSON.parse(configStr);
+
+        expect(config.permissions).toBeDefined();
+        expect(config.permissions.data).toHaveLength(2);
+        expect(config.permissions.data).toContainEqual(
+            expect.objectContaining({ path: '/+**', groups: 'owner@example.com' }),
+        );
+    });
+
+    it('should return error when GET returns non-404 HTTP error', async () => {
+        // Given: GET returns 500 (server error), POST would succeed
+        mockFetch
+            .mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error',
+            }) // GET fails with HTTP error
+            .mockResolvedValueOnce({ ok: true, status: 200 }); // POST (should not be called)
+
+        // When: applyOrgConfig is called
+        const result = await service.applyOrgConfig('test-org', { key: 'value' });
+
+        // Then: Should fail without writing
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('500');
+        // POST should NOT have been called
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not write permissions-free config when GET fails', async () => {
+        // Given: GET fails (network error), but POST succeeds
+        mockFetch
+            .mockRejectedValueOnce(new Error('Network timeout')) // GET fails
+            .mockResolvedValueOnce({ ok: true, status: 200 }); // POST succeeds
+
+        // When: applyOrgConfig is called
+        const result = await service.applyOrgConfig('test-org', { key: 'value' });
+
+        // Then: Should either fail (not write), OR if it wrote, the config must
+        // not be a bare skeleton missing the permissions sheet.
+        // The correct behavior: return an error instead of overwriting.
+        expect(result.success).toBe(false);
     });
 });
 

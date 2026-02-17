@@ -28,7 +28,7 @@ beforeEach(() => {
 
 describe('CONTENT_PATCHES', () => {
     it('loads all patches from config', () => {
-        expect(CONTENT_PATCHES.length).toBe(5);
+        expect(CONTENT_PATCHES.length).toBe(6);
     });
 
     it('each patch has required fields', () => {
@@ -138,7 +138,7 @@ describe('applyContentPatches', () => {
         );
     });
 
-    it('applies smart-watches category patch', async () => {
+    it('applies smart-watches category patch (PaaS: 38 → 5)', async () => {
         const html = '<div class="product-list-page"><p>38</p></div>';
         const result = await applyContentPatches(
             html,
@@ -147,6 +147,18 @@ describe('applyContentPatches', () => {
             mockLogger,
         );
         expect(result.html).toBe('<div class="product-list-page"><p>5</p></div>');
+        expect(result.results[0].applied).toBe(true);
+    });
+
+    it('applies smart-watches category patch (ACCS: 38 → 9)', async () => {
+        const html = '<div class="product-list-page"><p>38</p></div>';
+        const result = await applyContentPatches(
+            html,
+            '/smart-watches',
+            ['smart-watches-category-id-accs'],
+            mockLogger,
+        );
+        expect(result.html).toBe('<div class="product-list-page"><p>9</p></div>');
         expect(result.results[0].applied).toBe(true);
     });
 

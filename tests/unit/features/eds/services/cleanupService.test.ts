@@ -2,16 +2,9 @@
  * Unit Tests: CleanupService
  *
  * Tests for EDS project cleanup orchestration including backend data cleanup,
- * Helix unpublishing, DA.live deletion, and GitHub repository deletion/archiving.
+ * DA.live deletion, and GitHub repository deletion/archiving.
  *
- * Coverage: 22 tests across 5 categories
- * - Cleanup Flow (10 tests)
- * - GitHub Operations (4 tests)
- * - DA.live Operations (3 tests)
- * - Backend Cleanup (3 tests)
- * - Error Handling (2 tests)
- *
- * CRITICAL: Cleanup order MUST be Backend -> Helix -> DA.live -> GitHub
+ * CRITICAL: Cleanup order MUST be Backend -> Config Service -> DA.live -> GitHub
  */
 
 // Mock vscode module
@@ -48,15 +41,13 @@ import type {
     EdsCleanupResult,
 } from '@/features/eds/services/types';
 
-// Type for the services we'll import dynamically
+// Type for the service we'll import dynamically
 type CleanupServiceType = import('@/features/eds/services/cleanupService').CleanupService;
-type HelixServiceType = import('@/features/eds/services/helixService').HelixService;
 
 describe('CleanupService', () => {
     let cleanupService: CleanupServiceType;
     let mockGitHubRepoOps: jest.Mocked<Partial<GitHubRepoOperations>>;
     let mockDaLiveOrgOps: jest.Mocked<Partial<DaLiveOrgOperations>>;
-    let mockHelixService: jest.Mocked<Partial<HelixServiceType>>;
     let mockToolManager: jest.Mocked<Partial<ToolManager>>;
 
     // Track operation order for verifying cleanup sequence
@@ -86,14 +77,6 @@ describe('CleanupService', () => {
             }),
         };
 
-        // Mock HelixService
-        mockHelixService = {
-            unpublishSite: jest.fn().mockImplementation(async () => {
-                operationOrder.push('helix');
-                return { liveUnpublished: true, previewDeleted: true };
-            }),
-        };
-
         // Mock ToolManager
         mockToolManager = {
             executeAcoCleanup: jest.fn().mockImplementation(async () => {
@@ -111,7 +94,6 @@ describe('CleanupService', () => {
         cleanupService = new module.CleanupService(
             mockGitHubRepoOps as unknown as GitHubRepoOperations,
             mockDaLiveOrgOps as unknown as DaLiveOrgOperations,
-            mockHelixService as unknown as HelixServiceType,
             mockToolManager as unknown as ToolManager,
         );
     });
@@ -127,7 +109,6 @@ describe('CleanupService', () => {
                 cleanupBackendData: true,
                 deleteGitHub: true,
                 deleteDaLive: true,
-                unpublishHelix: true,
             };
 
             // When: Running cleanup
@@ -135,14 +116,12 @@ describe('CleanupService', () => {
 
             // Then: All operations should be skipped
             expect(result.backendData.skipped).toBe(true);
-            expect(result.helix.skipped).toBe(true);
             expect(result.daLive.skipped).toBe(true);
             expect(result.github.skipped).toBe(true);
 
             // No actual cleanup should happen
             expect(mockToolManager.executeAcoCleanup).not.toHaveBeenCalled();
             expect(mockToolManager.executeCommerceCleanup).not.toHaveBeenCalled();
-            expect(mockHelixService.unpublishSite).not.toHaveBeenCalled();
             expect(mockDaLiveOrgOps.deleteSite).not.toHaveBeenCalled();
             expect(mockGitHubRepoOps.deleteRepository).not.toHaveBeenCalled();
             expect(mockGitHubRepoOps.archiveRepository).not.toHaveBeenCalled();
@@ -154,14 +133,12 @@ describe('CleanupService', () => {
                 githubRepo: 'testuser/my-site',
                 daLiveOrg: 'testorg',
                 daLiveSite: 'my-site',
-                helixSiteUrl: 'https://main--my-site--testuser.aem.live',
                 backendType: 'aco',
             };
             const options: EdsCleanupOptions = {
                 cleanupBackendData: true,
                 deleteGitHub: true,
                 deleteDaLive: true,
-                unpublishHelix: true,
             };
 
             // When: Running full cleanup
@@ -169,7 +146,6 @@ describe('CleanupService', () => {
 
             // Then: All operations should succeed
             expect(result.backendData.success).toBe(true);
-            expect(result.helix.success).toBe(true);
             expect(result.daLive.success).toBe(true);
             expect(result.github.success).toBe(true);
         });
@@ -215,27 +191,25 @@ describe('CleanupService', () => {
             expect(result.github.success).toBe(true);
         });
 
-        it('should cleanup in correct order (Backend -> Helix -> DA.live -> GitHub)', async () => {
+        it('should cleanup in correct order (Backend -> DA.live -> GitHub)', async () => {
             // Given: Full EDS metadata
             const metadata: EdsMetadata = {
                 githubRepo: 'testuser/my-site',
                 daLiveOrg: 'testorg',
                 daLiveSite: 'my-site',
-                helixSiteUrl: 'https://main--my-site--testuser.aem.live',
                 backendType: 'aco',
             };
             const options: EdsCleanupOptions = {
                 cleanupBackendData: true,
                 deleteGitHub: true,
                 deleteDaLive: true,
-                unpublishHelix: true,
             };
 
             // When: Running cleanup
             await cleanupService.cleanupEdsResources(metadata, options);
 
             // Then: Operations should be in correct order
-            expect(operationOrder).toEqual(['backend', 'helix', 'dalive', 'github']);
+            expect(operationOrder).toEqual(['backend', 'dalive', 'github']);
         });
 
         it('should use ACO cleanup for ACO backend type', async () => {
@@ -303,13 +277,12 @@ describe('CleanupService', () => {
             // Given: Partial metadata (only GitHub)
             const metadata: EdsMetadata = {
                 githubRepo: 'testuser/my-site',
-                // No DA.live or Helix metadata
+                // No DA.live metadata
             };
             const options: EdsCleanupOptions = {
                 cleanupBackendData: true,
                 deleteGitHub: true,
                 deleteDaLive: true,
-                unpublishHelix: true,
             };
 
             // When: Running cleanup
@@ -317,35 +290,31 @@ describe('CleanupService', () => {
 
             // Then: Only GitHub should run, others skipped
             expect(result.backendData.skipped).toBe(true);
-            expect(result.helix.skipped).toBe(true);
             expect(result.daLive.skipped).toBe(true);
             expect(result.github.success).toBe(true);
             expect(result.github.skipped).toBe(false);
         });
 
         it('should handle partial cleanup with detailed results', async () => {
-            // Given: Mixed success/failure scenario
-            mockHelixService.unpublishSite = jest.fn().mockRejectedValue(new Error('Helix timeout'));
+            // Given: Mixed success/failure scenario - DA.live fails
+            mockDaLiveOrgOps.deleteSite = jest.fn().mockRejectedValue(new Error('DA.live timeout'));
 
             const metadata: EdsMetadata = {
                 githubRepo: 'testuser/my-site',
                 daLiveOrg: 'testorg',
                 daLiveSite: 'my-site',
-                helixSiteUrl: 'https://main--my-site--testuser.aem.live',
             };
             const options: EdsCleanupOptions = {
                 deleteGitHub: true,
                 deleteDaLive: true,
-                unpublishHelix: true,
             };
 
             // When: Running cleanup
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
             // Then: Each result should have detailed status
-            expect(result.helix.success).toBe(false);
-            expect(result.helix.error).toContain('Helix timeout');
-            expect(result.daLive.success).toBe(true);
+            expect(result.daLive.success).toBe(false);
+            expect(result.daLive.error).toContain('DA.live timeout');
             expect(result.github.success).toBe(true);
         });
     });
@@ -582,7 +551,6 @@ describe('CleanupService', () => {
                 cleanupBackendData: false,
                 deleteGitHub: false,
                 deleteDaLive: false,
-                unpublishHelix: false,
             };
 
             // When: Running cleanup
@@ -590,7 +558,6 @@ describe('CleanupService', () => {
 
             // Then: All should be skipped
             expect(result.backendData.skipped).toBe(true);
-            expect(result.helix.skipped).toBe(true);
             expect(result.daLive.skipped).toBe(true);
             expect(result.github.skipped).toBe(true);
         });
@@ -598,7 +565,6 @@ describe('CleanupService', () => {
         it('should handle simultaneous failures gracefully', async () => {
             // Given: Multiple services fail
             mockToolManager.executeAcoCleanup = jest.fn().mockRejectedValue(new Error('Backend failed'));
-            mockHelixService.unpublishSite = jest.fn().mockRejectedValue(new Error('Helix failed'));
             mockDaLiveOrgOps.deleteSite = jest.fn().mockRejectedValue(new Error('DA.live failed'));
             mockGitHubRepoOps.deleteRepository = jest.fn().mockRejectedValue(new Error('GitHub failed'));
 
@@ -606,14 +572,12 @@ describe('CleanupService', () => {
                 githubRepo: 'testuser/my-site',
                 daLiveOrg: 'testorg',
                 daLiveSite: 'my-site',
-                helixSiteUrl: 'https://example.com',
                 backendType: 'aco',
             };
             const options: EdsCleanupOptions = {
                 cleanupBackendData: true,
                 deleteGitHub: true,
                 deleteDaLive: true,
-                unpublishHelix: true,
                 archiveInsteadOfDelete: false,
             };
 
@@ -623,8 +587,6 @@ describe('CleanupService', () => {
             // Then: All should have errors but not throw
             expect(result.backendData.success).toBe(false);
             expect(result.backendData.error).toContain('Backend failed');
-            expect(result.helix.success).toBe(false);
-            expect(result.helix.error).toContain('Helix failed');
             expect(result.daLive.success).toBe(false);
             expect(result.daLive.error).toContain('DA.live failed');
             expect(result.github.success).toBe(false);

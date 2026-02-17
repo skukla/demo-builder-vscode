@@ -6,7 +6,7 @@ import { generateFstabContent, FstabConfig } from '@/features/eds/services/fstab
 
 describe('fstabGenerator', () => {
     describe('generateFstabContent', () => {
-        it('should generate valid fstab.yaml content with mountpoints and folders', () => {
+        it('should generate valid fstab.yaml content with mountpoints', () => {
             const config: FstabConfig = {
                 daLiveOrg: 'my-org',
                 daLiveSite: 'my-site',
@@ -19,9 +19,8 @@ describe('fstabGenerator', () => {
             expect(content).toContain('url: https://content.da.live/my-org/my-site/');
             expect(content).toContain('type: markup');
 
-            // Verify folders section (critical for PDP routing)
-            expect(content).toContain('folders:');
-            expect(content).toContain('/products/: /products/default');
+            // Folder mapping is handled by Configuration Service API, not fstab.yaml
+            expect(content).not.toContain('folders:');
         });
 
         it('should use the correct DA.live URL format', () => {
@@ -66,9 +65,6 @@ describe('fstabGenerator', () => {
             // url and type are indented under /
             expect(lines[2]).toMatch(/^\s{4}url:/);
             expect(lines[3]).toMatch(/^\s{4}type:/);
-
-            // folders is root level
-            expect(content).toMatch(/^folders:/m);
         });
 
         it('should include trailing slash in DA.live URL', () => {

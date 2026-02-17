@@ -339,24 +339,24 @@ export class DaLiveConfigService {
                 permissionsData.push(...existing.permissions.data);
             }
 
-            // Site-specific content path — /+** matches the site root AND all children
-            // /**  only matches children (sub-paths), not the root itself
             // /+** matches the root path AND everything underneath it
-            // Without +, listing the site root returns 403 even though sub-path writes succeed
+            // /**  only matches children (sub-paths), not the root itself
+            // Without +, listing the org root returns 403 (can't list projects)
+            const rootPath = '/+**';
             const sitePath = `/${site}/+**`;
 
-            // Check if user already has site content permission
+            // Check existing permissions to avoid duplicates
+            const hasRootPermission = permissionsData.some(
+                (row) => row.groups === userEmail && row.path === rootPath,
+            );
             const hasContentPermission = permissionsData.some(
                 (row) => row.groups === userEmail && row.path === sitePath,
             );
-
-            // Check if user already has CONFIG permission
             const hasConfigPermission = permissionsData.some(
                 (row) => row.groups === userEmail && row.path === 'CONFIG',
             );
 
-            // Add CONFIG permission first (required by DA.live API)
-            // This allows the user to modify the config itself
+            // Add CONFIG permission (required by DA.live API for config modification)
             if (!hasConfigPermission) {
                 permissionsData.push({
                     path: 'CONFIG',
@@ -366,7 +366,17 @@ export class DaLiveConfigService {
                 });
             }
 
-            // Add site-specific content permission with recursive access
+            // Add root permission (required for org-level listing)
+            if (!hasRootPermission) {
+                permissionsData.push({
+                    path: rootPath,
+                    groups: userEmail,
+                    actions: 'write',
+                    comments: 'Demo Builder - org content access',
+                });
+            }
+
+            // Add site-specific content permission
             if (!hasContentPermission) {
                 permissionsData.push({
                     path: sitePath,
@@ -376,7 +386,7 @@ export class DaLiveConfigService {
                 });
             }
 
-            if (hasContentPermission && hasConfigPermission) {
+            if (hasRootPermission && hasContentPermission && hasConfigPermission) {
                 this.logger.debug(`[DaLiveConfig] User ${userEmail} already has full access to ${site}`);
             }
 
@@ -493,6 +503,74 @@ export class DaLiveConfigService {
                 userCount: 0,
                 users: [],
             };
+        }
+    }
+
+    /**
+     * Remove all site-specific permission rows from the org config
+     *
+     * When a site is deleted, its `/{site}/+**` permission rows become stale.
+     * This method removes them for ALL users, while preserving shared rows
+     * like `CONFIG` and `/+**`.
+     *
+     * @param org - DA.live organization name
+     * @param site - DA.live site name to clean up
+     * @returns Result with removed count
+     */
+    async removeSitePermissions(
+        org: string,
+        site: string,
+    ): Promise<GrantAccessResult> {
+        try {
+            this.logger.info(
+                `[DaLiveConfig] Removing permissions for site ${site} from org ${org}`,
+            );
+
+            const existing = await this.getOrgConfig(org);
+
+            if (!existing?.permissions?.data) {
+                this.logger.debug('[DaLiveConfig] No permissions to clean up');
+                return { success: true };
+            }
+
+            const sitePath = `/${site}/+**`;
+            const originalCount = existing.permissions.data.length;
+
+            const filteredPermissions = existing.permissions.data.filter(
+                (row) => row.path !== sitePath,
+            );
+
+            const removedCount = originalCount - filteredPermissions.length;
+
+            if (removedCount === 0) {
+                this.logger.debug(
+                    `[DaLiveConfig] No permission rows found for site ${site}`,
+                );
+                return { success: true };
+            }
+
+            const updatedConfig: MultiSheetConfig = {
+                ...existing,
+                permissions: {
+                    ...existing.permissions,
+                    total: filteredPermissions.length,
+                    limit: filteredPermissions.length,
+                    data: filteredPermissions,
+                },
+            };
+
+            await this.updateOrgConfig(org, updatedConfig);
+
+            this.logger.info(
+                `[DaLiveConfig] Removed ${removedCount} permission row(s) for site ${site}`,
+            );
+            return { success: true };
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.error(
+                `[DaLiveConfig] Failed to remove site permissions: ${message}`,
+            );
+            return { success: false, error: message };
         }
     }
 

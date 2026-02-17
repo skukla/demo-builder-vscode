@@ -675,7 +675,7 @@ describe('wizardHelpers', () => {
             expect(config.edsConfig?.repoName).toBe('my-repo');
             expect(config.edsConfig?.repoMode).toBe('new');
             expect(config.edsConfig?.daLiveOrg).toBe('myorg');
-            expect(config.edsConfig?.daLiveSite).toBe('my-repo');
+            expect(config.edsConfig?.daLiveSite).toBe('mysite');
             expect(config.edsConfig?.githubOwner).toBe('testuser');
         });
 

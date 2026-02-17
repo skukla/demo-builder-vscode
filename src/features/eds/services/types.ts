@@ -563,8 +563,6 @@ export interface EdsMetadata {
     daLiveOrg?: string;
     /** DA.live site name */
     daLiveSite?: string;
-    /** Helix site URL for unpublishing */
-    helixSiteUrl?: string;
     /** ISO timestamp of last publish */
     lastPublished?: string;
     /** Backend type for data cleanup */
@@ -595,8 +593,8 @@ export interface EdsCleanupOptions {
     archiveInsteadOfDelete?: boolean;
     /** Delete DA.live site content */
     deleteDaLive?: boolean;
-    /** Unpublish from Helix (live and preview) */
-    unpublishHelix?: boolean;
+    /** Delete site configuration from AEM Configuration Service */
+    deleteConfigService?: boolean;
 }
 
 /**
@@ -617,8 +615,8 @@ export interface CleanupOperationResult {
 export interface EdsCleanupResult {
     /** Backend data cleanup result */
     backendData: CleanupOperationResult;
-    /** Helix unpublish result */
-    helix: CleanupOperationResult;
+    /** Configuration Service site deletion result */
+    configService: CleanupOperationResult;
     /** DA.live content deletion result */
     daLive: CleanupOperationResult;
     /** GitHub repository deletion/archive result */

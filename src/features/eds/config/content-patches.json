@@ -25,9 +25,16 @@
         {
             "id": "smart-watches-category-id",
             "pagePath": "/smart-watches",
-            "description": "Replace category 38 with category 5 in the product-list-page block on the smart-watches page",
+            "description": "Replace category 38 with category 5 in the product-list-page block on the smart-watches page (PaaS)",
             "searchPattern": "38",
             "replacement": "5"
+        },
+        {
+            "id": "smart-watches-category-id-accs",
+            "pagePath": "/smart-watches",
+            "description": "Replace category 38 with category 9 in the product-list-page block on the smart-watches page (ACCS)",
+            "searchPattern": "38",
+            "replacement": "9"
         },
         {
             "id": "smart-watches-url-path",
