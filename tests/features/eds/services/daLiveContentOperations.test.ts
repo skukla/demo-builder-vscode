@@ -1108,6 +1108,116 @@ describe('createBlockLibraryFromTemplate', () => {
     });
 });
 
+describe('applyOrgConfig', () => {
+    let service: DaLiveContentOperations;
+    let mockTokenProvider: TokenProvider;
+    let mockLogger: Logger;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockFetch.mockReset();
+
+        mockTokenProvider = {
+            getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
+        };
+
+        mockLogger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        } as unknown as Logger;
+
+        service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
+    });
+
+    it('should preserve permissions sheet when updating data sheet', async () => {
+        // Given: Existing org config with permissions AND data sheets
+        const existingConfig = {
+            ':version': 3,
+            ':names': ['data', 'permissions'],
+            ':type': 'multi-sheet',
+            data: {
+                total: 1,
+                offset: 0,
+                limit: 1,
+                data: [{ key: 'old-key', value: 'old-value' }],
+            },
+            permissions: {
+                total: 2,
+                offset: 0,
+                limit: 2,
+                data: [
+                    { path: '/+**', groups: 'owner@example.com', actions: 'write' },
+                    { path: '/my-site/+**', groups: 'owner@example.com', actions: 'write' },
+                ],
+            },
+        };
+
+        // GET returns existing config
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: jest.fn().mockResolvedValue(existingConfig),
+        });
+        // POST succeeds
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+        });
+
+        // When: applyOrgConfig updates the data sheet
+        await service.applyOrgConfig('test-org', { 'new-key': 'new-value' });
+
+        // Then: POST body should include the permissions sheet
+        const postCall = mockFetch.mock.calls[1];
+        const formData = postCall[1].body as FormData;
+        const configStr = formData.get('config') as string;
+        const config = JSON.parse(configStr);
+
+        expect(config.permissions).toBeDefined();
+        expect(config.permissions.data).toHaveLength(2);
+        expect(config.permissions.data).toContainEqual(
+            expect.objectContaining({ path: '/+**', groups: 'owner@example.com' }),
+        );
+    });
+
+    it('should return error when GET returns non-404 HTTP error', async () => {
+        // Given: GET returns 500 (server error), POST would succeed
+        mockFetch
+            .mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error',
+            }) // GET fails with HTTP error
+            .mockResolvedValueOnce({ ok: true, status: 200 }); // POST (should not be called)
+
+        // When: applyOrgConfig is called
+        const result = await service.applyOrgConfig('test-org', { key: 'value' });
+
+        // Then: Should fail without writing
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('500');
+        // POST should NOT have been called
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not write permissions-free config when GET fails', async () => {
+        // Given: GET fails (network error), but POST succeeds
+        mockFetch
+            .mockRejectedValueOnce(new Error('Network timeout')) // GET fails
+            .mockResolvedValueOnce({ ok: true, status: 200 }); // POST succeeds
+
+        // When: applyOrgConfig is called
+        const result = await service.applyOrgConfig('test-org', { key: 'value' });
+
+        // Then: Should either fail (not write), OR if it wrote, the config must
+        // not be a bare skeleton missing the permissions sheet.
+        // The correct behavior: return an error instead of overwriting.
+        expect(result.success).toBe(false);
+    });
+});
+
 describe('filterProductOverlays', () => {
     it('should keep /products/default', () => {
         const paths = ['/about', '/products/default', '/contact'];

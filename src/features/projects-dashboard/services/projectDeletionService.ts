@@ -6,7 +6,7 @@
  *
  * For EDS projects, offers optional cleanup of external resources:
  * - GitHub repository deletion
- * - DA.live site deletion (with Helix CDN unpublish)
+ * - DA.live site deletion
  */
 
 import * as fs from 'fs/promises';
@@ -15,16 +15,14 @@ import { TIMEOUTS } from '@/core/utils';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
-import { ServiceLocator } from '@/core/di';
 import {
     isEdsProject,
     extractEdsMetadata,
-    deleteDaLiveSiteWithUnpublish,
+    deleteDaLiveSite,
     formatCleanupResults,
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
-import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
 import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 
 /**
@@ -43,7 +41,7 @@ const BASE_DELAY = TIMEOUTS.FILE_DELETE_RETRY_BASE;
  */
 interface CleanupOptions {
     deleteGitHubRepo: boolean;
-    deleteDaLiveSite: boolean; // Includes Helix unpublish
+    deleteDaLiveSite: boolean;
 }
 
 /**
@@ -388,9 +386,9 @@ async function performEdsCleanup(
     results: CleanupResultItem[],
     progress: vscode.Progress<{ message?: string }>,
 ): Promise<void> {
-    // 1. Delete DA.live site (with Helix unpublish first)
+    // 1. Delete DA.live site
     if (options.deleteDaLiveSite && edsMetadata?.daLiveOrg && edsMetadata?.daLiveSite) {
-        progress.report({ message: 'Unpublishing from Helix CDN...' });
+        progress.report({ message: 'Deleting DA.live site...' });
 
         try {
             // Check DA.live auth first - prompt if needed
@@ -429,32 +427,18 @@ async function performEdsCleanup(
                 }
             }
 
-            // Create services for cleanup
-            const { HelixService } = await import('@/features/eds/services/helixService');
             const { DaLiveOrgOperations } = await import('@/features/eds/services/daLiveOrgOperations');
-            const authenticationService = ServiceLocator.getAuthenticationService();
-            const tokenManager = authenticationService?.getTokenManager?.();
 
-            const tokenProvider = {
+            const daLiveTokenProvider = {
                 getAccessToken: async () => {
-                    const token = await tokenManager?.getAccessToken?.();
-                    return token ?? null;
+                    return await daLiveAuthService.getAccessToken();
                 },
             };
 
-            // Create GitHubTokenService for Helix Admin API authentication
-            const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
+            const daLiveOrgOps = new DaLiveOrgOperations(daLiveTokenProvider, context.logger);
 
-            // HelixService: (logger, githubTokenService, daLiveTokenProvider)
-            const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
-            const daLiveOrgOps = new DaLiveOrgOperations(tokenProvider, context.logger);
-
-            progress.report({ message: 'Deleting DA.live site...' });
-
-            const cleanupResult = await deleteDaLiveSiteWithUnpublish(
-                helixService,
+            const cleanupResult = await deleteDaLiveSite(
                 daLiveOrgOps,
-                edsMetadata.githubRepo,
                 edsMetadata.daLiveOrg,
                 edsMetadata.daLiveSite,
                 context.logger,
@@ -467,14 +451,23 @@ async function performEdsCleanup(
                 error: cleanupResult.error,
             });
 
-            // Also add Helix result if we attempted it
-            if (edsMetadata.githubRepo) {
-                results.push({
-                    type: 'helix',
-                    name: edsMetadata.githubRepo,
-                    success: cleanupResult.helixUnpublished,
-                    error: cleanupResult.details?.helix?.liveError || cleanupResult.details?.helix?.previewError,
-                });
+            // Clean up stale site-specific permission rows from org config
+            // Best-effort: removeSitePermissions never throws
+            const { DaLiveConfigService } = await import(
+                '@/features/eds/services/daLiveConfigService'
+            );
+            const configService = new DaLiveConfigService(
+                daLiveTokenProvider,
+                context.logger,
+            );
+            const permResult = await configService.removeSitePermissions(
+                edsMetadata.daLiveOrg,
+                edsMetadata.daLiveSite,
+            );
+            if (!permResult.success) {
+                context.logger.warn(
+                    `[Delete Project] Permission cleanup failed: ${permResult.error}`,
+                );
             }
         } catch (error) {
             context.logger.error('[Delete Project] DA.live cleanup failed', error as Error);

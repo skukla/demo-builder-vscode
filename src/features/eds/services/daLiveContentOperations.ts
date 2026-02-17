@@ -1622,11 +1622,9 @@ export class DaLiveContentOperations {
         const configUrl = `${DA_LIVE_BASE_URL}/config/${org}`;
 
         // First, get existing config to preserve ALL sheets (data, permissions, etc.)
-        let existingConfig: Record<string, unknown> = {
-            ':version': 3,
-            ':names': ['data'],
-            ':type': 'multi-sheet',
-        };
+        // CRITICAL: If the GET fails, we must NOT write a skeleton config that
+        // omits the permissions sheet — that would erase org-level permissions.
+        let existingConfig: Record<string, unknown>;
         let existingRows: Array<{ key: string; value: string }> = [];
 
         try {
@@ -1637,12 +1635,27 @@ export class DaLiveContentOperations {
             });
             if (getResponse.ok) {
                 existingConfig = await getResponse.json();
-                // Extract existing rows from data sheet
                 const dataSheet = existingConfig.data as { data?: Array<{ key: string; value: string }> } | undefined;
                 existingRows = dataSheet?.data || [];
+            } else if (getResponse.status === 404) {
+                // No existing config — safe to create fresh (no permissions to lose)
+                existingConfig = {
+                    ':version': 3,
+                    ':names': ['data'],
+                    ':type': 'multi-sheet',
+                };
+            } else {
+                return {
+                    success: false,
+                    error: `Failed to read existing org config: ${getResponse.status} ${getResponse.statusText}`,
+                };
             }
-        } catch {
-            // No existing config, start fresh
+        } catch (error) {
+            // Network/timeout error — cannot safely write without reading first
+            return {
+                success: false,
+                error: `Cannot read existing org config: ${(error as Error).message}`,
+            };
         }
 
         // Convert existing rows to map for easy merging

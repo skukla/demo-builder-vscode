@@ -7,12 +7,11 @@ import type { Project, ComponentInstance } from '@/types';
 import type { StateManager } from '@/types/state';
 import type { Logger } from '@/types/logger';
 import type { DaLiveOrgOperations } from '@/features/eds/services/daLiveOrgOperations';
-import type { HelixService, UnpublishResult } from '@/features/eds/services/helixService';
 import {
     isEdsProject,
     extractEdsMetadata,
     getLinkedEdsProjects,
-    deleteDaLiveSiteWithUnpublish,
+    deleteDaLiveSite,
     formatCleanupResults,
     summarizeCleanupResults,
     type EdsProjectMetadata,
@@ -109,7 +108,6 @@ describe('extractEdsMetadata', () => {
                     githubRepo: 'owner/repo',
                     daLiveOrg: 'test-org',
                     daLiveSite: 'test-site',
-                    helixSiteUrl: 'https://main--repo--owner.aem.live',
                     backendType: 'commerce',
                 }),
             },
@@ -121,7 +119,6 @@ describe('extractEdsMetadata', () => {
             githubRepo: 'owner/repo',
             daLiveOrg: 'test-org',
             daLiveSite: 'test-site',
-            helixSiteUrl: 'https://main--repo--owner.aem.live',
             backendType: 'commerce',
         });
     });
@@ -143,7 +140,6 @@ describe('extractEdsMetadata', () => {
             githubRepo: 'owner/repo',
             daLiveOrg: 'test-org',
             daLiveSite: undefined,
-            helixSiteUrl: undefined,
             backendType: undefined,
         });
     });
@@ -186,7 +182,6 @@ describe('extractEdsMetadata', () => {
             githubRepo: undefined,
             daLiveOrg: undefined,
             daLiveSite: undefined,
-            helixSiteUrl: undefined,
             backendType: undefined,
         });
     });
@@ -261,7 +256,6 @@ describe('getLinkedEdsProjects', () => {
                 githubRepo: 'owner/repo1',
                 daLiveOrg: 'org1',
                 daLiveSite: 'site1',
-                helixSiteUrl: undefined,
                 backendType: undefined,
             },
         });
@@ -336,21 +330,10 @@ describe('getLinkedEdsProjects', () => {
 });
 
 // ==========================================================
-// deleteDaLiveSiteWithUnpublish Tests
+// deleteDaLiveSite Tests
 // ==========================================================
 
-describe('deleteDaLiveSiteWithUnpublish', () => {
-    function createMockHelixService(unpublishResult: UnpublishResult | Error): HelixService {
-        return {
-            unpublishSite: jest.fn().mockImplementation(() => {
-                if (unpublishResult instanceof Error) {
-                    return Promise.reject(unpublishResult);
-                }
-                return Promise.resolve(unpublishResult);
-            }),
-        } as unknown as HelixService;
-    }
-
+describe('deleteDaLiveSite', () => {
     function createMockDaLiveOrgOps(deleteResult: { success: boolean; alreadyDeleted?: boolean } | Error): DaLiveOrgOperations {
         return {
             deleteSite: jest.fn().mockImplementation(() => {
@@ -362,138 +345,51 @@ describe('deleteDaLiveSiteWithUnpublish', () => {
         } as unknown as DaLiveOrgOperations;
     }
 
-    it('should successfully unpublish from Helix and delete DA.live site', async () => {
-        const helixService = createMockHelixService({
-            liveUnpublished: true,
-            previewDeleted: true,
-        });
+    it('should successfully delete DA.live site', async () => {
         const daLiveOps = createMockDaLiveOrgOps({ success: true });
         const logger = createMockLogger();
 
-        const result = await deleteDaLiveSiteWithUnpublish(
-            helixService,
+        const result = await deleteDaLiveSite(
             daLiveOps,
-            'owner/repo',
             'test-org',
             'test-site',
             logger,
         );
 
         expect(result.success).toBe(true);
-        expect(result.helixUnpublished).toBe(true);
         expect(result.daLiveDeleted).toBe(true);
-        expect(helixService.unpublishSite).toHaveBeenCalledWith('owner/repo');
         expect(daLiveOps.deleteSite).toHaveBeenCalledWith('test-org', 'test-site');
     });
 
-    it('should continue DA.live deletion even if Helix unpublish fails', async () => {
-        const helixService = createMockHelixService(new Error('Helix unavailable'));
-        const daLiveOps = createMockDaLiveOrgOps({ success: true });
-        const logger = createMockLogger();
-
-        const result = await deleteDaLiveSiteWithUnpublish(
-            helixService,
-            daLiveOps,
-            'owner/repo',
-            'test-org',
-            'test-site',
-            logger,
-        );
-
-        expect(result.success).toBe(true);
-        expect(result.helixUnpublished).toBe(false);
-        expect(result.daLiveDeleted).toBe(true);
-        expect(logger.warn).toHaveBeenCalled();
-    });
-
-    it('should skip Helix unpublish when no repo info provided', async () => {
-        const helixService = createMockHelixService({
-            liveUnpublished: true,
-            previewDeleted: true,
-        });
-        const daLiveOps = createMockDaLiveOrgOps({ success: true });
-        const logger = createMockLogger();
-
-        const result = await deleteDaLiveSiteWithUnpublish(
-            helixService,
-            daLiveOps,
-            undefined, // No repo info
-            'test-org',
-            'test-site',
-            logger,
-        );
-
-        expect(result.success).toBe(true);
-        expect(result.helixUnpublished).toBe(true); // Marked as success since nothing to unpublish
-        expect(result.daLiveDeleted).toBe(true);
-        expect(helixService.unpublishSite).not.toHaveBeenCalled();
-    });
-
-    it('should handle partial Helix unpublish success', async () => {
-        const helixService = createMockHelixService({
-            liveUnpublished: true,
-            previewDeleted: false,
-            previewError: 'Preview delete failed',
-        });
-        const daLiveOps = createMockDaLiveOrgOps({ success: true });
-        const logger = createMockLogger();
-
-        const result = await deleteDaLiveSiteWithUnpublish(
-            helixService,
-            daLiveOps,
-            'owner/repo',
-            'test-org',
-            'test-site',
-            logger,
-        );
-
-        expect(result.success).toBe(true);
-        expect(result.helixUnpublished).toBe(true); // Partial success is considered success
-        expect(result.daLiveDeleted).toBe(true);
-    });
-
     it('should fail when DA.live deletion fails', async () => {
-        const helixService = createMockHelixService({
-            liveUnpublished: true,
-            previewDeleted: true,
-        });
         const daLiveOps = createMockDaLiveOrgOps(new Error('Access denied'));
         const logger = createMockLogger();
 
-        const result = await deleteDaLiveSiteWithUnpublish(
-            helixService,
+        const result = await deleteDaLiveSite(
             daLiveOps,
-            'owner/repo',
             'test-org',
             'test-site',
             logger,
         );
 
         expect(result.success).toBe(false);
-        expect(result.helixUnpublished).toBe(true);
         expect(result.daLiveDeleted).toBe(false);
         expect(result.error).toContain('DA.live deletion failed');
     });
 
     it('should report when DA.live site was already deleted', async () => {
-        const helixService = createMockHelixService({
-            liveUnpublished: true,
-            previewDeleted: true,
-        });
         const daLiveOps = createMockDaLiveOrgOps({ success: true, alreadyDeleted: true });
         const logger = createMockLogger();
 
-        const result = await deleteDaLiveSiteWithUnpublish(
-            helixService,
+        const result = await deleteDaLiveSite(
             daLiveOps,
-            'owner/repo',
             'test-org',
             'test-site',
             logger,
         );
 
         expect(result.success).toBe(true);
-        expect(result.details?.daLiveAlreadyDeleted).toBe(true);
+        expect(result.alreadyDeleted).toBe(true);
     });
 });
 

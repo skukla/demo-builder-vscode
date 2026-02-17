@@ -5,9 +5,8 @@
  * Handles cleanup in the correct order to avoid orphaned resources:
  *
  * 1. Backend Data - Must clean up while tool config exists
- * 2. Helix - Unpublish while repo exists
- * 3. DA.live - Content can be removed independently
- * 4. GitHub - Most destructive, do last
+ * 2. DA.live - Content can be removed independently
+ * 3. GitHub - Most destructive, do last
  *
  * All operations continue even if one fails, with detailed results returned.
  */
@@ -16,7 +15,6 @@ import { getLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
 import type { GitHubRepoOperations } from './githubRepoOperations';
 import type { DaLiveOrgOperations } from './daLiveOrgOperations';
-import type { HelixService } from './helixService';
 import type { ConfigurationService } from './configurationService';
 import type { ToolManager } from './toolManager';
 import type {
@@ -37,7 +35,6 @@ export class CleanupService {
     private logger: Logger;
     private githubRepoOps: GitHubRepoOperations;
     private daLiveOrgOps: DaLiveOrgOperations;
-    private helixService: HelixService;
     private configurationService?: ConfigurationService;
     private toolManager: ToolManager;
 
@@ -45,7 +42,6 @@ export class CleanupService {
      * Create a CleanupService
      * @param githubRepoOps - GitHub repository operations for delete/archive
      * @param daLiveOrgOps - DA.live org operations for site deletion
-     * @param helixService - Helix service for site unpublishing
      * @param toolManager - Tool manager for backend cleanup
      * @param logger - Optional logger for dependency injection (defaults to getLogger())
      * @param configurationService - Optional Configuration Service for site config deletion
@@ -53,14 +49,12 @@ export class CleanupService {
     constructor(
         githubRepoOps: GitHubRepoOperations,
         daLiveOrgOps: DaLiveOrgOperations,
-        helixService: HelixService,
         toolManager: ToolManager,
         logger?: Logger,
         configurationService?: ConfigurationService,
     ) {
         this.githubRepoOps = githubRepoOps;
         this.daLiveOrgOps = daLiveOrgOps;
-        this.helixService = helixService;
         this.configurationService = configurationService;
         this.toolManager = toolManager;
         this.logger = logger ?? getLogger();
@@ -69,9 +63,8 @@ export class CleanupService {
     /**
      * Clean up EDS resources based on provided metadata and options.
      *
-     * CRITICAL: Cleanup order is Backend -> Helix -> DA.live -> GitHub
+     * CRITICAL: Cleanup order is Backend -> DA.live -> GitHub
      * - Backend data requires tool config (must be first)
-     * - Helix requires repo to exist for unpublishing
      * - DA.live can be done independently
      * - GitHub is most destructive (do last)
      *
@@ -87,7 +80,6 @@ export class CleanupService {
 
         const result: EdsCleanupResult = {
             backendData: this.createSkippedResult(),
-            helix: this.createSkippedResult(),
             configService: this.createSkippedResult(),
             daLive: this.createSkippedResult(),
             github: this.createSkippedResult(),
@@ -98,22 +90,17 @@ export class CleanupService {
             result.backendData = await this.cleanupBackendData(metadata);
         }
 
-        // 2. Helix Unpublish (requires repo to exist)
-        if (options.unpublishHelix && metadata.helixSiteUrl && metadata.githubRepo) {
-            result.helix = await this.cleanupHelix(metadata);
-        }
-
-        // 3. Configuration Service Deletion (requires repo info for org/site)
+        // 2. Configuration Service Deletion (requires repo info for org/site)
         if (options.deleteConfigService && metadata.githubRepo) {
             result.configService = await this.cleanupConfigService(metadata);
         }
 
-        // 4. DA.live Content Deletion
+        // 3. DA.live Content Deletion
         if (options.deleteDaLive && metadata.daLiveOrg && metadata.daLiveSite) {
             result.daLive = await this.cleanupDaLive(metadata);
         }
 
-        // 5. GitHub Repository (LAST - most destructive)
+        // 4. GitHub Repository (LAST - most destructive)
         if (options.deleteGitHub && metadata.githubRepo) {
             result.github = await this.cleanupGitHub(metadata, options);
         }
@@ -156,44 +143,6 @@ export class CleanupService {
         } catch (error) {
             const errorMessage = (error as Error).message;
             this.logger.error('[Cleanup] Backend data cleanup failed', error as Error);
-            return {
-                success: false,
-                skipped: false,
-                error: errorMessage,
-            };
-        }
-    }
-
-    /**
-     * Unpublish from Helix (live and preview)
-     */
-    private async cleanupHelix(metadata: EdsMetadata): Promise<CleanupOperationResult> {
-        if (!metadata.githubRepo) {
-            return this.createSkippedResult();
-        }
-
-        this.logger.debug(`[Cleanup] Unpublishing from Helix: ${metadata.githubRepo}`);
-
-        try {
-            const result = await this.helixService.unpublishSite(metadata.githubRepo);
-
-            // Consider it success if either live or preview was unpublished
-            const success = result.liveUnpublished || result.previewDeleted;
-
-            if (success) {
-                this.logger.debug('[Cleanup] Helix unpublished successfully');
-                return { success: true, skipped: false };
-            } else {
-                const errors = [result.liveError, result.previewError].filter(Boolean).join('; ');
-                return {
-                    success: false,
-                    skipped: false,
-                    error: errors || 'Helix unpublish failed',
-                };
-            }
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-            this.logger.error('[Cleanup] Helix unpublish failed', error as Error);
             return {
                 success: false,
                 skipped: false,

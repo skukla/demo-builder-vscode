@@ -1,14 +1,13 @@
 /**
  * Unit Tests: HelixService
  *
- * Tests for Helix Admin API operations including preview/publish
- * and unpublish operations.
+ * Tests for Helix Admin API operations including preview/publish.
  *
  * Note: The Helix Admin API uses GitHub-based authentication (x-auth-token header)
  * to verify the user has write access to the GitHub repository. For DA.live content
  * sources, it also requires x-content-source-authorization header with IMS token.
  *
- * Coverage: 24 tests
+ * Coverage:
  * - Preview page via POST /preview/{org}/{site}/main/{path}
  * - Publish page via POST /live/{org}/{site}/main/{path}
  * - Preview and publish single page
@@ -18,11 +17,7 @@
  * - Bulk publish all site content with job completion tracking
  * - Fallback to page-by-page when bulk API fails (404, 500, etc.)
  * - HTTP 200 synchronous success for small batches
- * - Unpublish from live via bulk POST /live/{org}/{site}/main/* with delete:true
- * - Delete from preview via bulk POST /preview/{org}/{site}/main/* with delete:true
- * - Require GitHub token for authentication
- * - Handle 404 as success (never published)
- * - Parse repo fullName to extract org and site
+ * - DA.live token provider integration
  */
 
 // Mock vscode module
@@ -659,204 +654,6 @@ describe('HelixService', () => {
             );
         });
 
-    });
-
-    // ==========================================================
-    // Helix Unpublish Tests (5 tests)
-    // ==========================================================
-    describe('Helix Unpublish Operations', () => {
-        it('should unpublish from live via bulk POST with only GitHub token', async () => {
-            // Given: Published site
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                status: 200,
-            });
-
-            // When: Unpublishing from live
-            await service.unpublishFromLive('testuser', 'my-site');
-
-            // Then: Should call POST with delete:true body and only x-auth-token
-            // Delete operations don't read from DA.live, so no x-content-source-authorization
-            expect(mockFetch).toHaveBeenCalledWith(
-                'https://admin.hlx.page/live/testuser/my-site/main/*',
-                expect.objectContaining({
-                    method: 'POST',
-                    headers: expect.objectContaining({
-                        'x-auth-token': 'valid-github-token',
-                        'Content-Type': 'application/json',
-                    }),
-                    body: JSON.stringify({ paths: ['/**'], delete: true }),
-                }),
-            );
-            // Verify x-content-source-authorization is NOT sent
-            const callHeaders = mockFetch.mock.calls[0][1].headers;
-            expect(callHeaders).not.toHaveProperty('x-content-source-authorization');
-        });
-
-        it('should delete from preview via bulk POST with only GitHub token', async () => {
-            // Given: Site with preview content
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                status: 200,
-            });
-
-            // When: Deleting from preview
-            await service.deleteFromPreview('testuser', 'my-site');
-
-            // Then: Should call POST with delete:true body and only x-auth-token
-            // Delete operations don't read from DA.live, so no x-content-source-authorization
-            expect(mockFetch).toHaveBeenCalledWith(
-                'https://admin.hlx.page/preview/testuser/my-site/main/*',
-                expect.objectContaining({
-                    method: 'POST',
-                    headers: expect.objectContaining({
-                        'x-auth-token': 'valid-github-token',
-                        'Content-Type': 'application/json',
-                    }),
-                    body: JSON.stringify({ paths: ['/**'], delete: true }),
-                }),
-            );
-            // Verify x-content-source-authorization is NOT sent
-            const callHeaders = mockFetch.mock.calls[0][1].headers;
-            expect(callHeaders).not.toHaveProperty('x-content-source-authorization');
-        });
-
-        it('should only require GitHub token for delete operations', async () => {
-            // Given: No DA.live token (expired/unavailable)
-            mockDaLiveTokenProvider.getAccessToken.mockResolvedValue(null);
-
-            // Given: Valid fetch response
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                status: 200,
-            });
-
-            // When: Attempting to unpublish
-            // Then: Should succeed — delete operations don't need DA.live token
-            await expect(service.unpublishFromLive('testuser', 'my-site')).resolves.not.toThrow();
-        });
-
-        it('should handle 202 as success (bulk job scheduled)', async () => {
-            // Given: Bulk delete job scheduled (202)
-            mockFetch.mockResolvedValueOnce({
-                ok: false,
-                status: 202,
-                statusText: 'Accepted',
-            });
-
-            // When: Unpublishing from live
-            // Then: Should NOT throw (202 = job scheduled successfully)
-            await expect(service.unpublishFromLive('testuser', 'my-site')).resolves.not.toThrow();
-        });
-
-        it('should handle 404 as success (never published)', async () => {
-            // Given: Site was never published (404)
-            mockFetch.mockResolvedValueOnce({
-                ok: false,
-                status: 404,
-                statusText: 'Not Found',
-            });
-
-            // When: Unpublishing from live
-            // Then: Should NOT throw (404 is acceptable)
-            await expect(service.unpublishFromLive('testuser', 'my-site')).resolves.not.toThrow();
-        });
-
-        it('should parse repo fullName to extract org and site', async () => {
-            // Given: Full repository name
-            const fullName = 'testuser/my-awesome-site';
-            mockFetch.mockResolvedValue({
-                ok: true,
-                status: 200,
-            });
-
-            // When: Unpublishing using full repo name
-            await service.unpublishSite(fullName);
-
-            // Then: Should correctly parse org and site
-            expect(mockFetch).toHaveBeenCalledWith(
-                expect.stringContaining('/testuser/my-awesome-site/'),
-                expect.any(Object),
-            );
-        });
-    });
-
-    // ==========================================================
-    // Full Unpublish Site Tests
-    // ==========================================================
-    describe('Full Site Unpublish', () => {
-        it('should unpublish from both live and preview', async () => {
-            // Given: Published site
-            mockFetch.mockResolvedValue({
-                ok: true,
-                status: 200,
-            });
-
-            // When: Fully unpublishing site
-            await service.unpublishSite('testuser/my-site');
-
-            // Then: Should call both live and preview bulk POST (with delete flag)
-            const calls = mockFetch.mock.calls;
-            const liveCall = calls.find((c: any[]) => c[0].includes('/live/'));
-            const previewCall = calls.find((c: any[]) => c[0].includes('/preview/'));
-
-            expect(liveCall).toBeDefined();
-            expect(previewCall).toBeDefined();
-        });
-
-        it('should continue with preview deletion even if live unpublish fails', async () => {
-            // Given: Live unpublish fails but preview should continue
-            mockFetch
-                .mockResolvedValueOnce({
-                    ok: false,
-                    status: 500,
-                    statusText: 'Internal Server Error',
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    status: 200,
-                });
-
-            // When: Unpublishing site
-            const result = await service.unpublishSite('testuser/my-site');
-
-            // Then: Should attempt both operations
-            expect(mockFetch).toHaveBeenCalledTimes(2);
-            // Result should indicate partial failure
-            expect(result.liveUnpublished).toBe(false);
-            expect(result.previewDeleted).toBe(true);
-        });
-    });
-
-    // ==========================================================
-    // Error Handling Tests
-    // ==========================================================
-    describe('Error Handling', () => {
-        it('should handle network errors gracefully', async () => {
-            // Given: Network error
-            mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-            // When: Attempting to unpublish
-            // Then: Should throw with descriptive message
-            await expect(service.unpublishFromLive('testuser', 'my-site')).rejects.toThrow(
-                /network|error/i,
-            );
-        });
-
-        it('should handle 403 access denied', async () => {
-            // Given: Access denied response
-            mockFetch.mockResolvedValueOnce({
-                ok: false,
-                status: 403,
-                statusText: 'Forbidden',
-            });
-
-            // When: Attempting to unpublish
-            // Then: Should throw access denied error
-            await expect(service.unpublishFromLive('testuser', 'my-site')).rejects.toThrow(
-                /access denied|permission|forbidden/i,
-            );
-        });
     });
 
     // ==========================================================

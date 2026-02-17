@@ -260,7 +260,6 @@ describe('Service Logger Injection', () => {
             // Mock dependencies
             const mockGithubService = { deleteRepository: jest.fn() };
             const mockDaLiveService = { deleteSite: jest.fn() };
-            const mockHelixService = { unpublishSite: jest.fn() };
             const mockToolManager = { executeAcoCleanup: jest.fn() };
 
             const { CleanupService } = require('@/features/eds/services/cleanupService');
@@ -269,7 +268,6 @@ describe('Service Logger Injection', () => {
             const service1 = new CleanupService(
                 mockGithubService,
                 mockDaLiveService,
-                mockHelixService,
                 mockToolManager,
             );
             expect(service1).toBeDefined();
@@ -278,7 +276,6 @@ describe('Service Logger Injection', () => {
             const service2 = new CleanupService(
                 mockGithubService,
                 mockDaLiveService,
-                mockHelixService,
                 mockToolManager,
                 mockLogger,
             );
