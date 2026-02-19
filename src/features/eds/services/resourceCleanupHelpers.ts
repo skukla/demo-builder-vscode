@@ -15,7 +15,7 @@
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
-import type { DaLiveOrgOperations } from './daLiveOrgOperations';
+import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { StateManager } from '@/types/state';
 
 // ==========================================================
@@ -159,20 +159,24 @@ export async function getLinkedEdsProjects(
 // ==========================================================
 
 /**
- * Delete a DA.live site
+ * Delete a DA.live site by recursively removing all content
+ *
+ * Uses DaLiveContentOperations.deleteAllSiteContent() to walk the tree,
+ * batch-delete files, then clean up directories deepest-first. A single
+ * non-recursive DELETE on the root (the old approach) leaves nested
+ * content intact and the site remains in the org listing.
  *
  * CDN unpublish is handled separately by the caller (projectDeletionService)
  * via HelixService.bulkUnpublish/bulkDeletePreview using an Admin API Key.
- * This function only handles the DA.live source content deletion.
  *
- * @param daLiveOrgOps - DaLiveOrgOperations for site deletion
+ * @param contentOps - DaLiveContentOperations for recursive content deletion
  * @param daLiveOrg - DA.live organization name
  * @param daLiveSite - DA.live site name
  * @param logger - Logger instance
  * @returns Cleanup result
  */
 export async function deleteDaLiveSite(
-    daLiveOrgOps: DaLiveOrgOperations,
+    contentOps: DaLiveContentOperations,
     daLiveOrg: string,
     daLiveSite: string,
     logger: Logger,
@@ -183,13 +187,13 @@ export async function deleteDaLiveSite(
     };
 
     try {
-        logger.debug(`[Cleanup] Deleting DA.live site: ${daLiveOrg}/${daLiveSite}`);
-        const daLiveResult = await daLiveOrgOps.deleteSite(daLiveOrg, daLiveSite);
-        result.daLiveDeleted = daLiveResult.success;
-        result.alreadyDeleted = daLiveResult.alreadyDeleted;
+        logger.debug(`[Cleanup] Deleting DA.live site content: ${daLiveOrg}/${daLiveSite}`);
+        const deleteResult = await contentOps.deleteAllSiteContent(daLiveOrg, daLiveSite);
+        result.daLiveDeleted = deleteResult.success;
+        result.alreadyDeleted = deleteResult.deletedCount === 0;
 
         if (result.daLiveDeleted) {
-            logger.debug(`[Cleanup] DA.live site deleted${daLiveResult.alreadyDeleted ? ' (was already deleted)' : ''}`);
+            logger.debug(`[Cleanup] DA.live site deleted (${deleteResult.deletedCount} files)${result.alreadyDeleted ? ' (was already empty)' : ''}`);
         }
     } catch (error) {
         const errorMessage = (error as Error).message;

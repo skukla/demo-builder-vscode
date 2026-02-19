@@ -621,6 +621,82 @@ describe('DaLiveConfigService', () => {
         });
     });
 
+    describe('deleteSiteConfig', () => {
+        it('should return success when DELETE succeeds (200)', async () => {
+            // Given: API accepts DELETE
+            mockFetch.mockResolvedValue({
+                ok: true,
+                status: 200,
+            });
+
+            // When
+            const result = await service.deleteSiteConfig(testOrg, testSite);
+
+            // Then
+            expect(result.success).toBe(true);
+            expect(mockFetch).toHaveBeenCalledWith(
+                `https://admin.da.live/config/${testOrg}/${testSite}/`,
+                expect.objectContaining({
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${testToken}` },
+                }),
+            );
+        });
+
+        it('should return success when config already gone (404)', async () => {
+            // Given: Config does not exist
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 404,
+            });
+
+            // When
+            const result = await service.deleteSiteConfig(testOrg, testSite);
+
+            // Then: 404 treated as success (already gone)
+            expect(result.success).toBe(true);
+        });
+
+        it('should return failure when API returns 405 (method not allowed)', async () => {
+            // Given: DELETE not supported
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 405,
+            });
+
+            // When
+            const result = await service.deleteSiteConfig(testOrg, testSite);
+
+            // Then: Graceful failure, not thrown
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('405');
+        });
+
+        it('should return failure on network error without throwing', async () => {
+            // Given: Network failure
+            mockFetch.mockRejectedValue(new Error('Network timeout'));
+
+            // When
+            const result = await service.deleteSiteConfig(testOrg, testSite);
+
+            // Then: Graceful failure
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('Network timeout');
+        });
+
+        it('should throw when not authenticated', async () => {
+            // Given: No token
+            mockTokenProvider.getAccessToken = jest.fn().mockResolvedValue(null);
+
+            // When
+            const result = await service.deleteSiteConfig(testOrg, testSite);
+
+            // Then: Auth errors are caught and returned as failure
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('authentication required');
+        });
+    });
+
     describe('removeSitePermissions', () => {
         it('should return success when no config exists', async () => {
             // Given: No org config (404)

@@ -637,11 +637,41 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Delete the site root entry so the site disappears from org listing.
+     *
+     * Sends `DELETE /source/{org}/{site}/` to remove the root directory marker.
+     * Best-effort: 404 means it was already gone; other errors are logged but
+     * don't fail the overall operation.
+     */
+    private async deleteSiteRoot(org: string, site: string): Promise<void> {
+        const token = await this.getImsToken();
+        const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+
+            if (response.ok || response.status === 404) {
+                this.logger.debug(`[DA.live] Site root deleted for ${org}/${site} (status=${response.status})`);
+            } else {
+                this.logger.debug(`[DA.live] Site root deletion returned ${response.status} for ${org}/${site}`);
+            }
+        } catch (error) {
+            this.logger.debug(`[DA.live] Site root deletion failed for ${org}/${site}: ${(error as Error).message}`);
+        }
+    }
+
+    /**
      * Delete all content from a DA.live site.
      *
      * Recursively walks the directory tree, collects all file paths,
      * then deletes them in parallel batches (same concurrency as content
      * copy) followed by directory cleanup in reverse-depth order.
+     * Finally deletes the site root entry so the site disappears from
+     * the org listing.
      *
      * Note: Only DA.live *source* content is deleted. Published CDN
      * content cannot be unpublished from a VS Code extension (the Helix
@@ -690,6 +720,8 @@ export class DaLiveContentOperations {
 
             if (filePaths.length === 0) {
                 this.logger.info(`[DA.live] Site ${org}/${site} is already empty`);
+                // Still delete the site root entry so it disappears from org listing
+                await this.deleteSiteRoot(org, site);
                 return { success: true, deletedCount: 0, deletedPaths: [] };
             }
 
@@ -712,6 +744,9 @@ export class DaLiveContentOperations {
             for (const dirPath of dirPaths) {
                 await this.deleteSource(org, site, dirPath);
             }
+
+            // Phase 4: Delete the site root entry so it disappears from org listing
+            await this.deleteSiteRoot(org, site);
 
             this.logger.info(`[DA.live] Deleted ${deletedCount} files from ${org}/${site}`);
             return { success: true, deletedCount, deletedPaths: filePaths };

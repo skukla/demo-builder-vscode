@@ -6,7 +6,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { Project, ComponentInstance } from '@/types';
 import type { StateManager } from '@/types/state';
 import type { Logger } from '@/types/logger';
-import type { DaLiveOrgOperations } from '@/features/eds/services/daLiveOrgOperations';
+import type { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
 import {
     isEdsProject,
     extractEdsMetadata,
@@ -334,23 +334,27 @@ describe('getLinkedEdsProjects', () => {
 // ==========================================================
 
 describe('deleteDaLiveSite', () => {
-    function createMockDaLiveOrgOps(deleteResult: { success: boolean; alreadyDeleted?: boolean } | Error): DaLiveOrgOperations {
+    function createMockContentOps(
+        deleteResult: { success: boolean; deletedCount: number; deletedPaths: string[]; error?: string } | Error,
+    ): DaLiveContentOperations {
         return {
-            deleteSite: jest.fn().mockImplementation(() => {
+            deleteAllSiteContent: jest.fn().mockImplementation(() => {
                 if (deleteResult instanceof Error) {
                     return Promise.reject(deleteResult);
                 }
                 return Promise.resolve(deleteResult);
             }),
-        } as unknown as DaLiveOrgOperations;
+        } as unknown as DaLiveContentOperations;
     }
 
-    it('should successfully delete DA.live site', async () => {
-        const daLiveOps = createMockDaLiveOrgOps({ success: true });
+    it('should successfully delete DA.live site content recursively', async () => {
+        const contentOps = createMockContentOps({
+            success: true, deletedCount: 35, deletedPaths: ['/page1.html', '/page2.html'],
+        });
         const logger = createMockLogger();
 
         const result = await deleteDaLiveSite(
-            daLiveOps,
+            contentOps,
             'test-org',
             'test-site',
             logger,
@@ -358,15 +362,16 @@ describe('deleteDaLiveSite', () => {
 
         expect(result.success).toBe(true);
         expect(result.daLiveDeleted).toBe(true);
-        expect(daLiveOps.deleteSite).toHaveBeenCalledWith('test-org', 'test-site');
+        expect(result.alreadyDeleted).toBe(false);
+        expect(contentOps.deleteAllSiteContent).toHaveBeenCalledWith('test-org', 'test-site');
     });
 
     it('should fail when DA.live deletion fails', async () => {
-        const daLiveOps = createMockDaLiveOrgOps(new Error('Access denied'));
+        const contentOps = createMockContentOps(new Error('Access denied'));
         const logger = createMockLogger();
 
         const result = await deleteDaLiveSite(
-            daLiveOps,
+            contentOps,
             'test-org',
             'test-site',
             logger,
@@ -377,12 +382,14 @@ describe('deleteDaLiveSite', () => {
         expect(result.error).toContain('DA.live deletion failed');
     });
 
-    it('should report when DA.live site was already deleted', async () => {
-        const daLiveOps = createMockDaLiveOrgOps({ success: true, alreadyDeleted: true });
+    it('should report site as already empty when deletedCount is 0', async () => {
+        const contentOps = createMockContentOps({
+            success: true, deletedCount: 0, deletedPaths: [],
+        });
         const logger = createMockLogger();
 
         const result = await deleteDaLiveSite(
-            daLiveOps,
+            contentOps,
             'test-org',
             'test-site',
             logger,
@@ -390,6 +397,23 @@ describe('deleteDaLiveSite', () => {
 
         expect(result.success).toBe(true);
         expect(result.alreadyDeleted).toBe(true);
+    });
+
+    it('should handle partial deletion failure', async () => {
+        const contentOps = createMockContentOps({
+            success: false, deletedCount: 10, deletedPaths: [], error: 'Some files failed',
+        });
+        const logger = createMockLogger();
+
+        const result = await deleteDaLiveSite(
+            contentOps,
+            'test-org',
+            'test-site',
+            logger,
+        );
+
+        expect(result.success).toBe(false);
+        expect(result.daLiveDeleted).toBe(false);
     });
 });
 

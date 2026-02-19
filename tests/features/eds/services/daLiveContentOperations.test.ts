@@ -1579,6 +1579,8 @@ describe('deleteAllSiteContent', () => {
             .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', headers: { get: () => null } } as unknown as Response)
             .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', headers: { get: () => null } } as unknown as Response)
             // Phase 3: delete directory (/pages)
+            .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', headers: { get: () => null } } as unknown as Response)
+            // Phase 4: delete site root
             .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', headers: { get: () => null } } as unknown as Response);
 
         const result = await service.deleteAllSiteContent('test-org', 'test-site');
@@ -1590,24 +1592,34 @@ describe('deleteAllSiteContent', () => {
         const deleteCalls = mockFetch.mock.calls.filter(
             (call: [string, RequestInit?]) => call[1]?.method === 'DELETE',
         );
-        expect(deleteCalls).toHaveLength(3); // 2 files + 1 directory
+        expect(deleteCalls).toHaveLength(4); // 2 files + 1 directory + 1 site root
         expect(deleteCalls[0][0]).toBe('https://admin.da.live/source/test-org/test-site/index.html');
         expect(deleteCalls[1][0]).toBe('https://admin.da.live/source/test-org/test-site/pages/about.html');
         expect(deleteCalls[2][0]).toBe('https://admin.da.live/source/test-org/test-site/pages');
+        expect(deleteCalls[3][0]).toBe('https://admin.da.live/source/test-org/test-site/');
     });
 
-    it('should return success with 0 deleted for empty site', async () => {
+    it('should return success with 0 deleted for empty site and delete site root', async () => {
         // Root returns empty
         mockFetch.mockResolvedValueOnce({
             ok: true, status: 200, statusText: 'OK',
             headers: { get: () => null } as unknown as Headers,
             json: jest.fn().mockResolvedValue([]),
-        } as unknown as Response);
+        } as unknown as Response)
+        // Site root deletion (best-effort)
+        .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', headers: { get: () => null } } as unknown as Response);
 
         const result = await service.deleteAllSiteContent('test-org', 'test-site');
 
         expect(result.success).toBe(true);
         expect(result.deletedCount).toBe(0);
+
+        // Should still delete the site root entry
+        const deleteCalls = mockFetch.mock.calls.filter(
+            (call: [string, RequestInit?]) => call[1]?.method === 'DELETE',
+        );
+        expect(deleteCalls).toHaveLength(1);
+        expect(deleteCalls[0][0]).toBe('https://admin.da.live/source/test-org/test-site/');
     });
 
     it('should report progress for each deleted file', async () => {
@@ -1621,6 +1633,8 @@ describe('deleteAllSiteContent', () => {
                 ]),
             } as unknown as Response)
             .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', headers: { get: () => null } } as unknown as Response)
+            .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', headers: { get: () => null } } as unknown as Response)
+            // Site root deletion
             .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', headers: { get: () => null } } as unknown as Response);
 
         const progress: Array<{ deleted: number; current: string }> = [];

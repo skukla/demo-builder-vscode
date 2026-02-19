@@ -23,6 +23,7 @@ import {
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
 import { HelixService } from '@/features/eds/services/helixService';
 import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 
@@ -428,15 +429,13 @@ async function performEdsCleanup(
                 }
             }
 
-            const { DaLiveOrgOperations } = await import('@/features/eds/services/daLiveOrgOperations');
-
             const daLiveTokenProvider = {
                 getAccessToken: async () => {
                     return await daLiveAuthService.getAccessToken();
                 },
             };
 
-            const daLiveOrgOps = new DaLiveOrgOperations(daLiveTokenProvider, context.logger);
+            const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, context.logger);
 
             // Bulk unpublish CDN content before deleting the site
             // (site must still exist so we can enumerate its pages)
@@ -445,6 +444,8 @@ async function performEdsCleanup(
                 if (githubOwner && githubRepo) {
                     try {
                         progress.report({ message: 'Unpublishing CDN content...' });
+                        // Initialize persistent key store so we reuse existing keys
+                        HelixService.initKeyStore(context.context.globalState);
                         const helixService = new HelixService(context.logger, undefined, daLiveTokenProvider);
                         const pages = await helixService.listAllPages(
                             edsMetadata.daLiveOrg!,
@@ -462,6 +463,17 @@ async function performEdsCleanup(
                                 success: true,
                             });
                         }
+
+                        // Clean up the Admin API key — site is being deleted
+                        const keyDeleteResult = await helixService.deleteAdminApiKey(
+                            edsMetadata.daLiveOrg!,
+                            edsMetadata.daLiveSite!,
+                        );
+                        if (!keyDeleteResult.success) {
+                            context.logger.debug(
+                                `[Delete Project] Admin API key cleanup skipped: ${keyDeleteResult.error}`,
+                            );
+                        }
                     } catch (unpublishError) {
                         // Non-fatal — site deletion proceeds regardless
                         context.logger.warn(`[Delete Project] CDN unpublish failed: ${(unpublishError as Error).message}`);
@@ -469,8 +481,9 @@ async function performEdsCleanup(
                 }
             }
 
+            progress.report({ message: 'Deleting DA.live site content...' });
             const cleanupResult = await deleteDaLiveSite(
-                daLiveOrgOps,
+                daLiveContentOps,
                 edsMetadata.daLiveOrg,
                 edsMetadata.daLiveSite,
                 context.logger,
@@ -499,6 +512,17 @@ async function performEdsCleanup(
             if (!permResult.success) {
                 context.logger.warn(
                     `[Delete Project] Permission cleanup failed: ${permResult.error}`,
+                );
+            }
+
+            // Best-effort: delete site-level config (block library entry)
+            const configDeleteResult = await configService.deleteSiteConfig(
+                edsMetadata.daLiveOrg,
+                edsMetadata.daLiveSite,
+            );
+            if (!configDeleteResult.success) {
+                context.logger.debug(
+                    `[Delete Project] Site config cleanup skipped: ${configDeleteResult.error}`,
                 );
             }
         } catch (error) {

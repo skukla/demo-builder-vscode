@@ -507,6 +507,61 @@ export class DaLiveConfigService {
     }
 
     /**
+     * Delete site-level config entry (best-effort)
+     *
+     * During site setup, `updateSiteConfig()` writes block library config to
+     * `/config/{org}/{site}`. This method attempts to remove it during deletion.
+     *
+     * The DA.live Config API does not officially support DELETE. This sends a
+     * DELETE request and treats both success and 404 as "cleaned up". Any other
+     * response (405, 500, etc.) is logged but not thrown — the config entry
+     * will simply be orphaned, which has no functional impact since `/list/`
+     * only shows source entries.
+     *
+     * @param org - DA.live organization name
+     * @param site - DA.live site name
+     * @returns Result indicating success or failure
+     */
+    async deleteSiteConfig(
+        org: string,
+        site: string,
+    ): Promise<GrantAccessResult> {
+        try {
+            const token = await this.getDaLiveToken();
+            const url = `${DA_ADMIN_URL}/config/${org}/${site}/`;
+
+            this.logger.debug(`[DaLiveConfig] Deleting site config for ${org}/${site}`);
+
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+
+            if (response.ok || response.status === 404) {
+                this.logger.debug(
+                    `[DaLiveConfig] Site config deleted for ${org}/${site} (status=${response.status})`,
+                );
+                return { success: true };
+            }
+
+            // DELETE not supported (405) or other error — log and continue
+            this.logger.debug(
+                `[DaLiveConfig] Site config deletion returned ${response.status} for ${org}/${site} (API may not support DELETE)`,
+            );
+            return { success: false, error: `Config DELETE returned ${response.status}` };
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.debug(
+                `[DaLiveConfig] Site config deletion failed for ${org}/${site}: ${message}`,
+            );
+            return { success: false, error: message };
+        }
+    }
+
+    /**
      * Remove all site-specific permission rows from the org config
      *
      * When a site is deleted, its `/{site}/+**` permission rows become stale.

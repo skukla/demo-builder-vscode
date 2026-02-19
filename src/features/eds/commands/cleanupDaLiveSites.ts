@@ -16,6 +16,7 @@ import { getLogger } from '@/core/logging';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
+import { DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { DaLiveConfigService } from '../services/daLiveConfigService';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 
@@ -66,12 +67,12 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
         const tokenProvider = {
             getAccessToken: async () => {
                 const token = await tokenManager.getAccessToken();
-                logger.debug(`[DA.live Manage] Token retrieved: ${token ? `${token.substring(0, 20)}...` : 'null'}`);
                 return token ?? null;
             },
         };
 
         const daLiveOps = new DaLiveOrgOperations(tokenProvider, logger);
+        const daLiveContentOps = new DaLiveContentOperations(tokenProvider, logger);
         const configService = new DaLiveConfigService(tokenProvider, logger);
 
         let allSites: Array<{ name: string; lastModified?: number }> = [];
@@ -192,15 +193,24 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
                     });
 
                     try {
-                        logger.debug(`[DA.live Manage] Deleting ${siteName}`);
-                        await daLiveOps.deleteSite(orgName, siteName);
+                        logger.debug(`[DA.live Manage] Deleting content from ${siteName}`);
+                        const deleteResult = await daLiveContentOps.deleteAllSiteContent(orgName, siteName);
+                        if (!deleteResult.success) {
+                            throw new Error(deleteResult.error || 'Content deletion failed');
+                        }
                         deleted.push(siteName);
-                        logger.info(`[DA.live Manage] ✓ Deleted: ${siteName}`);
+                        logger.info(`[DA.live Manage] ✓ Deleted: ${siteName} (${deleteResult.deletedCount} files)`);
 
                         // Clean up stale permission rows (best-effort, never throws)
                         const permResult = await configService.removeSitePermissions(orgName, siteName);
                         if (!permResult.success) {
                             logger.warn(`[DA.live Manage] Permission cleanup failed for ${siteName}: ${permResult.error}`);
+                        }
+
+                        // Best-effort: delete site-level config (block library entry)
+                        const configDeleteResult = await configService.deleteSiteConfig(orgName, siteName);
+                        if (!configDeleteResult.success) {
+                            logger.debug(`[DA.live Manage] Site config cleanup skipped for ${siteName}: ${configDeleteResult.error}`);
                         }
                     } catch (error) {
                         const errorMsg = (error as Error).message;

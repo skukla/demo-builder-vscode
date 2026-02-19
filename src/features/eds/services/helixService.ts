@@ -559,6 +559,57 @@ export class HelixService {
     }
 
     /**
+     * Delete the Admin API Key for a site (public).
+     *
+     * Use this when a site is being permanently deleted — it removes
+     * the server-side key to prevent orphaned keys accumulating.
+     * Clears both in-memory cache and persistent store.
+     * Best-effort: catches all errors and returns a result object.
+     *
+     * @param org - Organization/owner name
+     * @param site - Site/repository name
+     * @returns Result with success status
+     */
+    async deleteAdminApiKey(
+        org: string,
+        site: string,
+    ): Promise<{ success: boolean; error?: string }> {
+        const cacheKey = `${org}/${site}`;
+
+        // Look up persisted key for server-side ID
+        const persisted = HelixService.getPersistedKeyRaw(cacheKey);
+
+        // Clear both caches regardless
+        HelixService.apiKeyCache.delete(cacheKey);
+        HelixService.deletePersistedKey(cacheKey);
+
+        if (!persisted?.id) {
+            this.logger.debug(`[Helix] No persisted API key to delete for ${cacheKey}`);
+            return { success: true };
+        }
+
+        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${persisted.id}.json`;
+        try {
+            const imsToken = await this.getDaLiveToken();
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${imsToken}` },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+            if (response.ok || response.status === 404) {
+                this.logger.debug(`[Helix] Admin API key deleted for ${cacheKey} (id=${persisted.id}, status=${response.status})`);
+                return { success: true };
+            }
+            this.logger.debug(`[Helix] Admin API key deletion returned ${response.status} for ${cacheKey}`);
+            return { success: false, error: `DELETE returned ${response.status}` };
+        } catch (error) {
+            const message = (error as Error).message;
+            this.logger.debug(`[Helix] Admin API key deletion failed for ${cacheKey}: ${message}`);
+            return { success: false, error: message };
+        }
+    }
+
+    /**
      * Best-effort deletion of a previously persisted API key.
      * Removes from persistent store first, then attempts server-side deletion.
      * Catches all errors — old key will expire naturally (~1 year).

@@ -1501,6 +1501,111 @@ describe('HelixService', () => {
             expect(mockFetch).toHaveBeenCalledTimes(1);
         });
 
+        it('should delete admin API key and clear caches on deleteAdminApiKey', async () => {
+            // Given: A persisted key exists
+            stateStore['helix.apiKeys'] = {
+                'testorg/testsite': {
+                    value: 'key-to-delete',
+                    id: 'key-id-123',
+                    expiresAt: Date.now() + 3600000,
+                },
+            };
+            HelixServiceClass.initKeyStore(mockGlobalState as any);
+
+            // Restore to in-memory cache first
+            await service.createAdminApiKey('testorg', 'testsite');
+
+            // Server DELETE succeeds
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // When: Deleting the admin API key
+            const result = await service.deleteAdminApiKey('testorg', 'testsite');
+
+            // Then: Should succeed
+            expect(result.success).toBe(true);
+
+            // Should have called DELETE on the server
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/apiKeys/key-id-123.json'),
+                expect.objectContaining({ method: 'DELETE' }),
+            );
+
+            // Both caches should be cleared — next call must hit the API
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'new-key',
+                    value: 'new-key-value',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+            await service.createAdminApiKey('testorg', 'testsite');
+            // POST for new key = 1 additional call (no restore from cache/persist)
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/apiKeys.json'),
+                expect.objectContaining({ method: 'POST' }),
+            );
+        });
+
+        it('should succeed when no persisted key exists on deleteAdminApiKey', async () => {
+            // Given: No persisted key
+            HelixServiceClass.initKeyStore(mockGlobalState as any);
+
+            // When
+            const result = await service.deleteAdminApiKey('testorg', 'testsite');
+
+            // Then: Should succeed without any API call
+            expect(result.success).toBe(true);
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        it('should handle server error gracefully on deleteAdminApiKey', async () => {
+            // Given: A persisted key exists
+            stateStore['helix.apiKeys'] = {
+                'testorg/testsite': {
+                    value: 'key-value',
+                    id: 'key-id-456',
+                    expiresAt: Date.now() + 3600000,
+                },
+            };
+            HelixServiceClass.initKeyStore(mockGlobalState as any);
+
+            // Server DELETE fails with network error
+            mockFetch.mockRejectedValueOnce(new Error('Network timeout'));
+
+            // When
+            const result = await service.deleteAdminApiKey('testorg', 'testsite');
+
+            // Then: Should return failure but not throw
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('Network timeout');
+
+            // Caches should still be cleared (local cleanup done regardless)
+            expect(stateStore['helix.apiKeys']?.['testorg/testsite']).toBeUndefined();
+        });
+
+        it('should treat 404 as success on deleteAdminApiKey', async () => {
+            // Given: A persisted key exists but server already deleted it
+            stateStore['helix.apiKeys'] = {
+                'testorg/testsite': {
+                    value: 'key-value',
+                    id: 'key-id-gone',
+                    expiresAt: Date.now() + 3600000,
+                },
+            };
+            HelixServiceClass.initKeyStore(mockGlobalState as any);
+
+            // Server returns 404 (key already gone)
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+            // When
+            const result = await service.deleteAdminApiKey('testorg', 'testsite');
+
+            // Then: Should treat as success
+            expect(result.success).toBe(true);
+        });
+
         it('should be idempotent when initKeyStore called multiple times', async () => {
             // Given: First init with a store containing a key
             stateStore['helix.apiKeys'] = {
