@@ -1197,4 +1197,334 @@ describe('HelixService', () => {
             expect(mockFetch).toHaveBeenCalledTimes(2); // create key + failed unpublish only
         });
     });
+
+    // ==========================================================
+    // Persistent Key Store Tests
+    // ==========================================================
+    describe('Persistent Key Store', () => {
+        let HelixServiceClass: typeof import('@/features/eds/services/helixService').HelixService;
+        let mockGlobalState: {
+            get: jest.Mock;
+            update: jest.Mock;
+            keys: jest.Mock;
+            setKeysForSync: jest.Mock;
+        };
+        let stateStore: Record<string, any>;
+
+        beforeEach(async () => {
+            const module = await import('@/features/eds/services/helixService');
+            HelixServiceClass = module.HelixService;
+            HelixServiceClass.clearApiKeyCache();
+            HelixServiceClass.clearKeyStore();
+
+            // Create a mock globalState backed by an in-memory object
+            stateStore = {};
+            mockGlobalState = {
+                get: jest.fn(<T>(key: string, defaultValue?: T) => stateStore[key] ?? defaultValue),
+                update: jest.fn((key: string, value: any) => {
+                    stateStore[key] = value;
+                    return Promise.resolve();
+                }),
+                keys: jest.fn(() => Object.keys(stateStore)),
+                setKeysForSync: jest.fn(),
+            };
+        });
+
+        afterEach(() => {
+            HelixServiceClass.clearKeyStore();
+        });
+
+        it('should restore key from persistent store on cache miss', async () => {
+            // Given: Persistent store has a valid key (simulating restart)
+            stateStore['helix.apiKeys'] = {
+                'testorg/testsite': {
+                    value: 'persisted-key-value',
+                    id: 'persisted-key-id',
+                    expiresAt: Date.now() + 3600000, // 1 hour from now
+                },
+            };
+            HelixServiceClass.initKeyStore(mockGlobalState as any);
+
+            // When: Requesting key (in-memory cache is empty)
+            const key = await service.createAdminApiKey('testorg', 'testsite');
+
+            // Then: Should return persisted key without API call
+            expect(key).toBe('persisted-key-value');
+            expect(mockFetch).not.toHaveBeenCalled();
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                expect.stringContaining('Restoring persisted'),
+            );
+        });
+
+        it('should skip expired persistent keys', async () => {
+            // Given: Persistent store has an expired key
+            stateStore['helix.apiKeys'] = {
+                'testorg/testsite': {
+                    value: 'expired-key',
+                    id: 'expired-key-id',
+                    expiresAt: Date.now() - 1000, // Expired 1 second ago
+                },
+            };
+            HelixServiceClass.initKeyStore(mockGlobalState as any);
+
+            // DELETE old expired key (best-effort via getAny)
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // POST creates a new key
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'new-key-id',
+                    value: 'fresh-key-value',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // When: Requesting key
+            const key = await service.createAdminApiKey('testorg', 'testsite');
+
+            // Then: Should create new key via API (expired key skipped for reuse)
+            expect(key).toBe('fresh-key-value');
+            // DELETE old key + POST new key = 2 fetch calls
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+        });
+
+        it('should persist new keys with ID and expiry', async () => {
+            // Given: Persistent store is empty
+            HelixServiceClass.initKeyStore(mockGlobalState as any);
+
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'new-key-id',
+                    value: 'new-key-value',
+                    expiration: '2027-06-01T00:00:00Z',
+                }),
+            });
+
+            // When: Creating a key
+            await service.createAdminApiKey('testorg', 'testsite');
+
+            // Then: Key should be persisted to globalState
+            expect(mockGlobalState.update).toHaveBeenCalledWith(
+                'helix.apiKeys',
+                expect.objectContaining({
+                    'testorg/testsite': expect.objectContaining({
+                        value: 'new-key-value',
+                        id: 'new-key-id',
+                        expiresAt: expect.any(Number),
+                    }),
+                }),
+            );
+        });
+
+        it('should delete old key before creating new one', async () => {
+            // Given: Persistent store has an old key (but it's expired so won't be used)
+            const oldExpiresAt = Date.now() - 1000;
+            stateStore['helix.apiKeys'] = {
+                'testorg/testsite': {
+                    value: 'old-key-value',
+                    id: 'old-key-id',
+                    expiresAt: oldExpiresAt,
+                },
+            };
+            HelixServiceClass.initKeyStore(mockGlobalState as any);
+
+            // deleteOldApiKey's keyStore.get returns undefined for expired keys,
+            // so no DELETE call is made. Let's test with a valid but out-of-memory key.
+            // Reset store with a valid key and force cache miss by clearing in-memory cache
+            stateStore['helix.apiKeys'] = {
+                'testorg/testsite': {
+                    value: 'old-key-value',
+                    id: 'old-key-id',
+                    expiresAt: Date.now() + 3600000, // Valid
+                },
+            };
+
+            // First call restores from persistent store (puts in memory cache)
+            const restoredKey = await service.createAdminApiKey('testorg', 'testsite');
+            expect(restoredKey).toBe('old-key-value');
+
+            // Now expire the in-memory cache
+            const originalDateNow = Date.now;
+            Date.now = () => originalDateNow() + 2 * 60 * 60 * 1000; // +2 hours
+
+            // DELETE old key (best-effort)
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // POST create new key
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'new-key-id',
+                    value: 'new-key-value',
+                    expiration: '2027-06-01T00:00:00Z',
+                }),
+            });
+
+            try {
+                const key = await service.createAdminApiKey('testorg', 'testsite');
+                expect(key).toBe('new-key-value');
+
+                // Verify DELETE was called for old key
+                expect(mockFetch).toHaveBeenCalledWith(
+                    expect.stringContaining('/apiKeys/old-key-id.json'),
+                    expect.objectContaining({ method: 'DELETE' }),
+                );
+            } finally {
+                Date.now = originalDateNow;
+            }
+        });
+
+        it('should continue if old key deletion fails', async () => {
+            // Given: Persistent store has an old key
+            stateStore['helix.apiKeys'] = {
+                'testorg/testsite': {
+                    value: 'old-key-value',
+                    id: 'old-key-id',
+                    expiresAt: Date.now() + 3600000,
+                },
+            };
+            HelixServiceClass.initKeyStore(mockGlobalState as any);
+
+            // Restore key first, then expire in-memory cache
+            await service.createAdminApiKey('testorg', 'testsite');
+            const originalDateNow = Date.now;
+            Date.now = () => originalDateNow() + 2 * 60 * 60 * 1000;
+
+            // DELETE fails with network error
+            mockFetch.mockRejectedValueOnce(new Error('Network timeout'));
+
+            // POST create new key still succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'new-key-id',
+                    value: 'new-key-after-failed-delete',
+                    expiration: '2027-06-01T00:00:00Z',
+                }),
+            });
+
+            try {
+                const key = await service.createAdminApiKey('testorg', 'testsite');
+
+                // Then: New key should still be created despite failed deletion
+                expect(key).toBe('new-key-after-failed-delete');
+                expect(mockLogger.debug).toHaveBeenCalledWith(
+                    expect.stringContaining('deletion failed'),
+                );
+            } finally {
+                Date.now = originalDateNow;
+            }
+        });
+
+        it('should clear persistent store on auth failure retry', async () => {
+            // Given: Key store initialized and key created
+            HelixServiceClass.initKeyStore(mockGlobalState as any);
+
+            // First key creation
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-1',
+                    value: 'stale-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // bulkUnpublish fails with 401
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 401,
+                statusText: 'Unauthorized',
+            });
+
+            // Retry: new key creation (no DELETE call since store was cleared by retry logic)
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-2',
+                    value: 'fresh-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // Retry: bulkUnpublish succeeds
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // bulkDeletePreview succeeds
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+            // When
+            await service.unpublishPages('testorg', 'testsite', 'main', ['/page']);
+
+            // Then: Persistent store should have the fresh key, not the stale one
+            const persisted = stateStore['helix.apiKeys']?.['testorg/testsite'];
+            expect(persisted).toBeDefined();
+            expect(persisted.id).toBe('key-2');
+            expect(persisted.value).toBe('fresh-key');
+        });
+
+        it('should fall back to in-memory only when no store initialized', async () => {
+            // Given: No initKeyStore called (clearKeyStore was already called in beforeEach)
+
+            // API returns a key
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-1',
+                    value: 'memory-only-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // When: Creating a key without persistent store
+            const key = await service.createAdminApiKey('testorg', 'testsite');
+
+            // Then: Should work (in-memory cache only, no persistence)
+            expect(key).toBe('memory-only-key');
+            expect(mockGlobalState.update).not.toHaveBeenCalled();
+
+            // Second call should use in-memory cache
+            const key2 = await service.createAdminApiKey('testorg', 'testsite');
+            expect(key2).toBe('memory-only-key');
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+        });
+
+        it('should be idempotent when initKeyStore called multiple times', async () => {
+            // Given: First init with a store containing a key
+            stateStore['helix.apiKeys'] = {
+                'testorg/testsite': {
+                    value: 'persisted-key',
+                    id: 'key-id',
+                    expiresAt: Date.now() + 3600000,
+                },
+            };
+            HelixServiceClass.initKeyStore(mockGlobalState as any);
+
+            // When: Second init with a different mock (should be ignored)
+            const anotherMockState = {
+                get: jest.fn(() => ({})), // empty store
+                update: jest.fn(() => Promise.resolve()),
+                keys: jest.fn(() => []),
+                setKeysForSync: jest.fn(),
+            };
+            HelixServiceClass.initKeyStore(anotherMockState as any);
+
+            // Then: Should still use the first store (persisted key accessible)
+            const key = await service.createAdminApiKey('testorg', 'testsite');
+            expect(key).toBe('persisted-key');
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+    });
 });

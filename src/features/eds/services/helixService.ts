@@ -12,6 +12,7 @@
  * - Repo fullName parsing for org/site extraction
  */
 
+import * as vscode from 'vscode';
 import { getCacheTTLWithJitter, isExpired, createCacheEntry } from '@/core/cache/cacheUtils';
 import type { CacheEntry } from '@/core/cache/cacheUtils';
 import { getLogger } from '@/core/logging';
@@ -75,6 +76,23 @@ interface JobStatusResponse {
 /** Progress callback for bulk operations */
 type BulkProgressCallback = (processed: number, total: number) => void;
 
+// ==========================================================
+// Persistent API Key Storage
+// ==========================================================
+
+/** Persisted API key data for cross-restart reuse */
+interface PersistedHelixKey {
+    value: string;
+    id: string;
+    expiresAt: number;
+}
+
+/** globalState key for persisted Helix API keys */
+const HELIX_KEYS_STATE_KEY = 'helix.apiKeys';
+
+/** Persistence expiry: 7 days (keys have ~1 year server expiry) */
+const PERSIST_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 /**
  * Token provider interface for DA.live authentication
  */
@@ -101,6 +119,53 @@ export class HelixService {
     /** Clear all cached API keys */
     static clearApiKeyCache(): void {
         HelixService.apiKeyCache.clear();
+    }
+
+    /** Persistent storage (globalState). Null = in-memory only (backward compatible). */
+    private static globalState: vscode.Memento | null = null;
+
+    /** Initialize persistent key storage. Idempotent — safe to call multiple times. */
+    static initKeyStore(globalState: vscode.Memento): void {
+        if (!HelixService.globalState) {
+            HelixService.globalState = globalState;
+        }
+    }
+
+    /** Clear persistent key store (for testing). */
+    static clearKeyStore(): void {
+        HelixService.globalState = null;
+    }
+
+    /** Read a persisted key entry (returns undefined if missing or expired). */
+    private static getPersistedKey(cacheKey: string): PersistedHelixKey | undefined {
+        const keys = HelixService.globalState?.get<Record<string, PersistedHelixKey>>(HELIX_KEYS_STATE_KEY, {});
+        const entry = keys?.[cacheKey];
+        if (!entry || Date.now() >= entry.expiresAt) {
+            return undefined;
+        }
+        return entry;
+    }
+
+    /** Read a persisted key entry regardless of expiry (for old key deletion). */
+    private static getPersistedKeyRaw(cacheKey: string): PersistedHelixKey | undefined {
+        const keys = HelixService.globalState?.get<Record<string, PersistedHelixKey>>(HELIX_KEYS_STATE_KEY, {});
+        return keys?.[cacheKey];
+    }
+
+    /** Write a persisted key entry. */
+    private static setPersistedKey(cacheKey: string, key: PersistedHelixKey): void {
+        if (!HelixService.globalState) return;
+        const keys = HelixService.globalState.get<Record<string, PersistedHelixKey>>(HELIX_KEYS_STATE_KEY, {});
+        keys[cacheKey] = key;
+        void HelixService.globalState.update(HELIX_KEYS_STATE_KEY, keys);
+    }
+
+    /** Remove a persisted key entry. */
+    private static deletePersistedKey(cacheKey: string): void {
+        if (!HelixService.globalState) return;
+        const keys = HelixService.globalState.get<Record<string, PersistedHelixKey>>(HELIX_KEYS_STATE_KEY, {});
+        delete keys[cacheKey];
+        void HelixService.globalState.update(HELIX_KEYS_STATE_KEY, keys);
     }
 
     /**
@@ -405,9 +470,9 @@ export class HelixService {
      * Get or create an Admin API Key with publish role for a site.
      *
      * Returns a cached key if one exists and hasn't expired (CACHE_TTL.LONG).
+     * On cache miss, checks the persistent store (survives restarts).
      * Otherwise creates a new key via the Config Service API using the
-     * DA.live IMS token. The key can be used for DELETE operations (unpublish)
-     * that require higher privileges than the GitHub OAuth token provides.
+     * DA.live IMS token, deleting any previously persisted key first.
      *
      * @param org - Organization/owner name
      * @param site - Site/repository name
@@ -417,18 +482,32 @@ export class HelixService {
         org: string,
         site: string,
     ): Promise<string | null> {
-        // Check cache first — reuse existing key if still valid
         const cacheKey = `${org}/${site}`;
+
+        // 1. Check in-memory cache (fast path)
         const cached = HelixService.apiKeyCache.get(cacheKey);
         if (cached && !isExpired(cached)) {
-            this.logger.debug(`[Helix] Reusing cached Admin API Key for ${org}/${site}`);
+            this.logger.debug(`[Helix] Reusing cached Admin API Key for ${cacheKey}`);
             return cached.value;
         }
 
+        // 2. Check persistent store (survives restarts)
+        const persisted = HelixService.getPersistedKey(cacheKey);
+        if (persisted) {
+            this.logger.debug(`[Helix] Restoring persisted Admin API Key for ${cacheKey}`);
+            const jitteredTtl = getCacheTTLWithJitter(CACHE_TTL.LONG);
+            HelixService.apiKeyCache.set(cacheKey, createCacheEntry(persisted.value, jitteredTtl));
+            return persisted.value;
+        }
+
+        // 3. Delete old key before creating new one (best-effort)
+        await this.deleteOldApiKey(org, site, cacheKey);
+
+        // 4. Create new key via API
         const imsToken = await this.getDaLiveToken();
         const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys.json`;
 
-        this.logger.debug(`[Helix] Creating Admin API Key for ${org}/${site}`);
+        this.logger.debug(`[Helix] Creating Admin API Key for ${cacheKey}`);
 
         try {
             const response = await fetch(url, {
@@ -451,17 +530,63 @@ export class HelixService {
 
             const data = await response.json();
             const keyValue = data.value as string | undefined;
+            const keyId = data.id as string | undefined;
 
             if (keyValue) {
-                this.logger.info(`[Helix] Admin API Key created (id=${data.id}, expires=${data.expiration})`);
+                this.logger.info(`[Helix] Admin API Key created (id=${keyId}, expires=${data.expiration})`);
                 const jitteredTtl = getCacheTTLWithJitter(CACHE_TTL.LONG);
                 HelixService.apiKeyCache.set(cacheKey, createCacheEntry(keyValue, jitteredTtl));
+
+                // Persist for restart resilience (7 days or server expiry, whichever is shorter)
+                if (keyId) {
+                    const serverExpiry = data.expiration
+                        ? new Date(data.expiration).getTime()
+                        : Infinity;
+                    const persistExpiry = Math.min(Date.now() + PERSIST_TTL_MS, serverExpiry);
+                    HelixService.setPersistedKey(cacheKey, {
+                        value: keyValue,
+                        id: keyId,
+                        expiresAt: persistExpiry,
+                    });
+                }
             }
 
             return keyValue || null;
         } catch (error) {
             this.logger.warn(`[Helix] Admin API Key creation error: ${(error as Error).message}`);
             return null;
+        }
+    }
+
+    /**
+     * Best-effort deletion of a previously persisted API key.
+     * Removes from persistent store first, then attempts server-side deletion.
+     * Catches all errors — old key will expire naturally (~1 year).
+     */
+    private async deleteOldApiKey(org: string, site: string, cacheKey: string): Promise<void> {
+        const persisted = HelixService.getPersistedKeyRaw(cacheKey);
+        if (!persisted?.id) {
+            return;
+        }
+
+        // Remove from persistent store first (even if API call fails)
+        HelixService.deletePersistedKey(cacheKey);
+
+        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${persisted.id}.json`;
+        try {
+            const imsToken = await this.getDaLiveToken();
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${imsToken}` },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+            if (response.ok || response.status === 404) {
+                this.logger.debug(`[Helix] Old API key deleted (id=${persisted.id}, status=${response.status})`);
+            } else {
+                this.logger.debug(`[Helix] Old API key deletion returned ${response.status}, continuing`);
+            }
+        } catch (error) {
+            this.logger.debug(`[Helix] Old API key deletion failed: ${(error as Error).message}, continuing`);
         }
     }
 
@@ -740,6 +865,7 @@ export class HelixService {
                 this.logger.warn(`[Helix] API key rejected (${msg}), retrying with fresh key`);
                 const cacheKey = `${org}/${site}`;
                 HelixService.apiKeyCache.delete(cacheKey);
+                HelixService.deletePersistedKey(cacheKey);
 
                 apiKey = await this.createAdminApiKey(org, site);
                 if (!apiKey) {

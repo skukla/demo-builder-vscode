@@ -123,6 +123,8 @@ export function getDaLiveServices(context: HandlerContext): DaLiveServices {
  * Get or create DaLiveAuthService instance (for darkalley OAuth)
  */
 export function getDaLiveAuthService(context: HandlerContext): DaLiveAuthService {
+    // Initialize Helix key persistence alongside DA.live auth (idempotent)
+    HelixService.initKeyStore(context.context.globalState);
     if (!cachedDaLiveAuthService) {
         cachedDaLiveAuthService = new DaLiveAuthService(context.context);
     }
