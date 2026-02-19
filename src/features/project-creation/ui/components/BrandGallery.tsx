@@ -11,25 +11,17 @@ import { Text, DialogContainer, Checkbox, Divider } from '@adobe/react-spectrum'
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { DemoPackage } from '@/types/demoPackages';
-import { Stack } from '@/types/stacks';
+import type { Stack, StacksConfig } from '@/types/stacks';
 import { cn } from '@/core/ui/utils/classNames';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
-import { filterPackagesBySearchQuery, filterAddonsByPackage } from './brandGalleryHelpers';
+import { sortPackages, filterPackagesBySearchQuery, filterAddonsByPackage } from './brandGalleryHelpers';
+import stacksConfig from '../../config/stacks.json';
 
-/** Addon metadata for display */
-const ADDON_METADATA: Record<string, { name: string; description: string }> = {
-    'demo-inspector': {
-        name: 'Demo Inspector',
-        description: 'Interactive overlay for exploring demo components and features',
-    },
-    'adobe-commerce-aco': {
-        name: 'Adobe Commerce Optimizer',
-        description: 'Catalog optimization service for enhanced product discovery',
-    },
-};
+/** Addon display metadata from stacks.json */
+const ADDON_METADATA = (stacksConfig as StacksConfig).addonDefinitions ?? {};
 
 export interface BrandGalleryProps {
     /** Demo packages to display (renamed from brands) */
@@ -319,7 +311,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     const [modalAddons, setModalAddons] = useState<string[]>(selectedAddons);
 
     const filteredPackages = useMemo(
-        () => filterPackagesBySearchQuery(packages, searchQuery),
+        () => sortPackages(filterPackagesBySearchQuery(packages, searchQuery)),
         [packages, searchQuery]
     );
 

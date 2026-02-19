@@ -29,6 +29,18 @@ export function filterAddonsByPackage(stackAddons: OptionalAddon[], pkg: DemoPac
     return stackAddons.filter(addon => addon.id in pkg.addons!);
 }
 
+/**
+ * Sorts packages alphabetically by name, with "coming-soon" packages last.
+ */
+export function sortPackages(packages: DemoPackage[]): DemoPackage[] {
+    return [...packages].sort((a, b) => {
+        const aComingSoon = a.status === 'coming-soon';
+        const bComingSoon = b.status === 'coming-soon';
+        if (aComingSoon !== bComingSoon) return aComingSoon ? 1 : -1;
+        return a.name.localeCompare(b.name);
+    });
+}
+
 export function filterPackagesBySearchQuery(packages: DemoPackage[], searchQuery: string): DemoPackage[] {
     if (!searchQuery.trim()) {
         return packages;

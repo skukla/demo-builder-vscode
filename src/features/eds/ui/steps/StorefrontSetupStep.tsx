@@ -330,8 +330,9 @@ export function StorefrontSetupStep({
             edsConfig: state.edsConfig,
             componentConfigs: state.componentConfigs,
             backendComponentId: state.components?.backend,
+            selectedAddons: state.selectedAddons,
         });
-    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend]);
+    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.selectedAddons]);
 
     /**
      * Handle GitHub App installation detected
@@ -360,6 +361,7 @@ export function StorefrontSetupStep({
         edsConfig: state.edsConfig,
         componentConfigs: state.componentConfigs,
         backendComponentId: state.components?.backend,
+        selectedAddons: state.selectedAddons,
     });
 
     // Update running state when phase changes
@@ -438,6 +440,7 @@ export function StorefrontSetupStep({
             edsConfig: initialConfigRef.current.edsConfig,
             componentConfigs: initialConfigRef.current.componentConfigs,
             backendComponentId: initialConfigRef.current.backendComponentId,
+            selectedAddons: initialConfigRef.current.selectedAddons,
         });
     }, []);
 
