@@ -26,7 +26,8 @@ import { HelixService } from '../services/helixService';
 import { ConfigurationService } from '../services/configurationService';
 import { ToolManager } from '../services/toolManager';
 import { generateFstabContent } from '../services/fstabGenerator';
-import { bulkPreviewAndPublish, configureDaLivePermissions } from './edsHelpers';
+import { configureDaLivePermissions } from './edsHelpers';
+import { installBlockCollection } from '../services/blockCollectionHelpers';
 
 // ==========================================================
 // Types
@@ -54,6 +55,8 @@ interface StorefrontSetupStartPayload {
     componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
     /** Backend component ID for environment-aware config generation */
     backendComponentId?: string;
+    /** Selected addon IDs (e.g., ['commerce-block-collection']) */
+    selectedAddons?: string[];
     edsConfig: {
         repoName: string;
         repoMode?: 'new' | 'existing';
@@ -267,6 +270,7 @@ export async function handleStartStorefrontSetup(
             payload.componentConfigs,
             payload.backendComponentId,
             abortController.signal,
+            payload.selectedAddons,
         );
 
         if (result.success) {
@@ -422,6 +426,7 @@ async function executeStorefrontSetupPhases(
     _componentConfigs: StorefrontSetupStartPayload['componentConfigs'],
     _backendComponentId: string | undefined,
     signal: AbortSignal,
+    selectedAddons?: string[],
 ): Promise<StorefrontSetupResult> {
     const logger = context.logger;
 
@@ -448,11 +453,13 @@ async function executeStorefrontSetupPhases(
     const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
 
     // Derive skipContent from user selections:
+    // - If no content source configured (e.g., Custom package) → skip content copy
     // - If using an EXISTING site (selectedSite exists) AND not resetting content → skip content copy
     // - If creating a NEW site OR resetting existing site → copy content
+    const contentSource = edsConfig.contentSource;
     const isUsingExistingSite = Boolean(edsConfig.selectedSite);
     const wantsToResetContent = Boolean(edsConfig.resetSiteContent);
-    const skipContent = isUsingExistingSite && !wantsToResetContent;
+    const skipContent = !contentSource || (isUsingExistingSite && !wantsToResetContent);
 
     // Create a modified config with the derived skipContent value
     const resolvedEdsConfig = {
@@ -489,16 +496,6 @@ async function executeStorefrontSetupPhases(
         return {
             success: false,
             error: 'GitHub template not configured. Please check your stack configuration.',
-        };
-    }
-
-    // Validate content source if content copy is needed
-    const contentSource = edsConfig.contentSource;
-    if (!resolvedEdsConfig.skipContent && !contentSource) {
-        logger.error('[Storefront Setup] Content source not configured. edsConfig:', JSON.stringify(edsConfig, null, 2));
-        return {
-            success: false,
-            error: 'DA.live content source not configured. Please check your stack configuration.',
         };
     }
 
@@ -683,6 +680,29 @@ async function executeStorefrontSetupPhases(
         );
 
         logger.info('[Storefront Setup] fstab.yaml pushed to GitHub');
+
+        // ============================================
+        // Phase 2.1: Commerce Block Collection (if selected)
+        // ============================================
+        // Copy custom block dirs from isle5 before code sync so they're
+        // included when Helix picks up the repo contents.
+        let blockCollectionIds: string[] | undefined;
+        if (selectedAddons?.includes('commerce-block-collection')) {
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'helix-config',
+                message: 'Installing Commerce Block Collection...',
+                progress: 25,
+            });
+
+            const result = await installBlockCollection(githubFileOps, repoOwner, repoName, logger);
+            if (result.success) {
+                logger.info(`[Storefront Setup] Block collection: ${result.blocksCount} blocks installed`);
+                blockCollectionIds = result.blockIds;
+            } else {
+                // Non-blocking — continue setup without block collection
+                logger.warn(`[Storefront Setup] Block collection failed: ${result.error}`);
+            }
+        }
 
         // ============================================
         // Phase 2.5: GitHub App Check (EXISTING repos only)
@@ -962,225 +982,81 @@ async function executeStorefrontSetupPhases(
         });
 
         // ============================================
-        // Phase 4: DA.live Content Population
+        // Phase 4-5: Content Pipeline
         // ============================================
         // Check for cancellation before continuing
         if (signal.aborted) {
             throw new Error('Operation cancelled');
         }
 
-        // Track library paths for explicit publishing (may be missed by publishAllSiteContent)
-        let libraryPaths: string[] = [];
+        const { executeEdsPipeline } = await import('../services/edsPipeline');
 
-        if (resolvedEdsConfig.skipContent) {
-            // Skip content copy when using existing content
-            logger.info('[Storefront Setup] Skipping DA.live content copy (skipContent=true)');
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'content-copy',
-                message: 'Using existing DA.live content',
-                progress: 60,
-            });
-        } else {
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'content-copy',
-                message: 'Populating DA.live content...',
-                progress: 50,
-            });
-
-            logger.info(`[Storefront Setup] Copying content from ${contentSource!.org}/${contentSource!.site} to ${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`);
-
-            // Build full content source with index URL from explicit config
-            const indexPath = contentSource!.indexPath || '/full-index.json';
-            const fullContentSource = {
-                org: contentSource!.org,
-                site: contentSource!.site,
-                indexUrl: `https://main--${contentSource!.site}--${contentSource!.org}.aem.live${indexPath}`,
-            };
-
-            const contentResult = await daLiveContentOps.copyContentFromSource(
-                fullContentSource,
-                edsConfig.daLiveOrg,
-                edsConfig.daLiveSite,
-                (progress) => {
-
-                    // Scale progress from 50% to 60% during content copy
-                    const progressValue = 50 + Math.round(progress.percentage * 0.10);
-                    // Use custom message if provided (during initialization), otherwise show file count
-                    const statusMessage = progress.message || `Copying content (${progress.processed}/${progress.total})`;
-                    context.sendMessage('storefront-setup-progress', {
-                        phase: 'content-copy',
-                        message: statusMessage,
-                        subMessage: progress.currentFile,
-                        progress: progressValue,
-                    });
-                },
-                edsConfig.contentPatches,
-                edsConfig.contentPatchSource,
-            );
-
-            if (!contentResult.success) {
-                throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
-            }
-
-            logger.info(`[Storefront Setup] DA.live content populated: ${contentResult.totalFiles} files`);
-
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'content-copy',
-                message: 'Content populated',
-                progress: 60,
-            });
-
-            // ============================================
-            // Phase 4b: Configure Block Library (non-blocking)
-            // ============================================
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'content-copy',
-                message: 'Configuring block library...',
-                progress: 61,
-            });
-
-            const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
-                edsConfig.daLiveOrg,
-                edsConfig.daLiveSite,
+        const pipelineResult = await executeEdsPipeline(
+            {
+                repoOwner,
+                repoName,
+                daLiveOrg: edsConfig.daLiveOrg,
+                daLiveSite: edsConfig.daLiveSite,
                 templateOwner,
                 templateRepo,
-                (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
-            );
-            if (libResult.blocksCount > 0) {
-                logger.info(`[Storefront Setup] Block library: ${libResult.blocksCount} blocks configured`);
-                await context.sendMessage('storefront-setup-progress', {
-                    phase: 'content-copy',
-                    message: `Block library configured (${libResult.blocksCount} blocks)`,
-                    progress: 62,
+                clearExistingContent: wantsToResetContent,
+                skipContent: resolvedEdsConfig.skipContent,
+                contentSource,
+                contentPatches: edsConfig.contentPatches,
+                contentPatchSource: edsConfig.contentPatchSource,
+                includeBlockLibrary: true,
+                blockCollectionIds,
+                purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
+            },
+            { daLiveContentOps, githubFileOps, helixService, logger },
+            (info) => {
+                // Map pipeline operations → setup phase/progress percentages
+                const mapping: Record<string, { phase: string; progress: number }> = {
+                    'content-clear': { phase: 'content-copy', progress: 45 },
+                    'content-copy': { phase: 'content-copy', progress: 50 },
+                    'block-library': { phase: 'content-copy', progress: 61 },
+                    'eds-settings': { phase: 'content-copy', progress: 63 },
+                    'cache-purge': { phase: 'content-publish', progress: 66 },
+                    'content-publish': { phase: 'content-publish', progress: 67 },
+                    'library-publish': { phase: 'content-publish', progress: 91 },
+                };
+                const m = mapping[info.operation] ?? { phase: info.operation, progress: 50 };
+                let progress = m.progress;
+
+                // Scale content copy progress from 50% to 60%
+                if (info.operation === 'content-copy' && info.percentage !== undefined) {
+                    progress = 50 + Math.round(info.percentage * 0.1);
+                }
+                // Scale publish progress from 67% to 90%
+                if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
+                    progress = 67 + Math.round((info.current / info.total) * 23);
+                }
+
+                context.sendMessage('storefront-setup-progress', {
+                    phase: m.phase,
+                    message: info.message,
+                    subMessage: info.subMessage,
+                    progress,
                 });
-            }
-
-            // Store library paths for explicit publishing later
-            libraryPaths = libResult.paths;
-        }
-
-        // ============================================
-        // Phase 4c: Apply EDS Settings (AEM Assets, Universal Editor)
-        // ============================================
-        // Apply extension settings for AEM Assets Delivery and Universal Editor
-        // These are configured in VS Code Settings under demoBuilder.daLive.*
-        await context.sendMessage('storefront-setup-progress', {
-            phase: 'content-copy',
-            message: 'Applying EDS configuration...',
-            progress: 63,
-        });
-
-        const { applyDaLiveOrgConfigSettings } = await import('./edsHelpers');
-        await applyDaLiveOrgConfigSettings(
-            daLiveContentOps,
-            edsConfig.daLiveOrg,
-            edsConfig.daLiveSite,
-            logger,
+            },
         );
 
-        // ============================================
-        // Phase 5: Publish Content to CDN
-        // ============================================
-        // Check for cancellation before continuing
+        if (!pipelineResult.success) {
+            throw new Error(pipelineResult.error || 'Content pipeline failed');
+        }
+
+        const libraryPaths = pipelineResult.libraryPaths;
+
+        // Check for cancellation after pipeline
         if (signal.aborted) {
             throw new Error('Operation cancelled');
         }
 
-        // This makes the site LIVE and viewable
-        if (!resolvedEdsConfig.skipContent) {
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'content-publish',
-                message: 'Publishing content to CDN...',
-                progress: 65,
-            });
-
-            logger.info(`[Storefront Setup] Publishing content to CDN for ${repoOwner}/${repoName}`);
-
-            try {
-                // Purge stale cache before publishing for reset scenarios
-                // This ensures old cached content is cleared before new content is published
-                const isResetScenario = Boolean(edsConfig.resetToTemplate || wantsToResetContent);
-                if (isResetScenario) {
-                    await context.sendMessage('storefront-setup-progress', {
-                        phase: 'content-publish',
-                        message: 'Purging stale cache...',
-                        progress: 66,
-                    });
-                    await helixService.purgeCacheAll(repoOwner, repoName, 'main');
-                    logger.info('[Storefront Setup] Stale cache purged');
-                }
-
-                // Progress callback to report publish status to UI
-                // Scale from 65% (start) to 90% (end) of overall progress
-                const onPublishProgress = (info: {
-                    phase: string;
-                    message: string;
-                    current?: number;
-                    total?: number;
-                    currentPath?: string;
-                }) => {
-                    // Calculate progress within the 65-90% range
-                    const progressBase = isResetScenario ? 67 : 65;
-                    const progressRange = isResetScenario ? 23 : 25;
-                    let progressValue = progressBase;
-                    if (info.total && info.current) {
-                        progressValue = progressBase + Math.round((info.current / info.total) * progressRange);
-                    }
-
-                    context.sendMessage('storefront-setup-progress', {
-                        phase: 'content-publish',
-                        message: info.message,
-                        subMessage: info.currentPath,
-                        progress: progressValue,
-                    });
-                };
-
-                await helixService.publishAllSiteContent(
-                    `${repoOwner}/${repoName}`,
-                    'main',
-                    edsConfig.daLiveOrg,
-                    edsConfig.daLiveSite,
-                    onPublishProgress,
-                );
-
-                // Bulk publish block library paths (may be missed due to .da folder)
-                if (libraryPaths.length > 0) {
-                    await context.sendMessage('storefront-setup-progress', {
-                        phase: 'content-publish',
-                        message: 'Publishing block library...',
-                        progress: 88,
-                    });
-
-                    try {
-                        await bulkPreviewAndPublish(helixService, repoOwner, repoName, libraryPaths, logger);
-                        // Note: Block library CDN verification happens in Phase 5 (syncConfigToRemote)
-                        // alongside config.json verification for efficiency
-                    } catch (libPublishError) {
-                        // Non-fatal - library config was created, publishing can be retried
-                        // Log at WARN level so it's visible for troubleshooting
-                        logger.warn(`[Storefront Setup] Block library publish failed: ${(libPublishError as Error).message}`);
-                    }
-                }
-
-                logger.info('[Storefront Setup] Content published to CDN successfully');
-            } catch (error) {
-                throw new Error(`Failed to publish content to CDN: ${(error as Error).message}`);
-            }
-
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'content-publish',
-                message: 'Site is live!',
-                progress: 90,
-            });
-        } else {
-            // Skip publish when content was skipped
-            logger.info('[Storefront Setup] Skipping content publish (skipContent=true)');
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'content-publish',
-                message: 'Content publish skipped',
-                progress: 90,
-            });
-        }
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'content-publish',
+            message: libraryPaths.length > 0 ? 'Site is live!' : 'Content publish complete',
+            progress: 90,
+        });
 
         // NOTE: Frontend availability verification removed
         // The HTTP 200 check was misleading - site can return 200 but show
@@ -1247,7 +1123,6 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     return new CleanupService(
         githubRepoOps,
         daLiveOrgOps,
-        helixService,
         toolManager,
         context.logger,
         configurationService,

@@ -42,7 +42,7 @@ export interface EdsResetParams {
     // Template
     templateOwner: string;
     templateRepo: string;
-    contentSource: {
+    contentSource?: {
         org: string;
         site: string;
         indexPath?: string;
@@ -166,14 +166,6 @@ export function extractResetParams(project: Project): ExtractParamsResult {
         };
     }
 
-    if (!contentSourceConfig) {
-        return {
-            success: false,
-            error: 'Content source configuration missing. Cannot reset without knowing where demo content comes from.',
-            code: 'CONFIG_INVALID',
-        };
-    }
-
     return {
         success: true,
         params: {
@@ -183,7 +175,7 @@ export function extractResetParams(project: Project): ExtractParamsResult {
             daLiveSite,
             templateOwner,
             templateRepo,
-            contentSource: contentSourceConfig,
+            ...(contentSourceConfig && { contentSource: contentSourceConfig }),
             project,
             contentPatches,
         },
@@ -236,7 +228,7 @@ export async function executeEdsReset(
     };
 
     // Import dependencies
-    const { getGitHubServices, configureDaLivePermissions, applyDaLiveOrgConfigSettings, bulkPreviewAndPublish } =
+    const { getGitHubServices, configureDaLivePermissions } =
         await import('../handlers/edsHelpers');
     const { DaLiveContentOperations } = await import('./daLiveContentOperations');
     const { HelixService } = await import('./helixService');
@@ -334,6 +326,24 @@ export async function executeEdsReset(
         report(1, `Reset ${filesReset} files`);
 
         // ============================================
+        // Step 1b: Re-install block collection (if project had it)
+        // ============================================
+        // Template reset removes custom block code, so re-install before code sync
+        let blockCollectionIds: string[] | undefined;
+        if (project.selectedAddons?.includes('commerce-block-collection')) {
+            report(1, 'Re-installing Commerce Block Collection...');
+            const { installBlockCollection } = await import('./blockCollectionHelpers');
+            const blockResult = await installBlockCollection(githubFileOps, repoOwner, repoName, context.logger);
+            if (blockResult.success) {
+                blockCollectionIds = blockResult.blockIds;
+                context.logger.info(`[EdsReset] Block collection reinstalled: ${blockResult.blocksCount} blocks`);
+            } else {
+                // Non-blocking — continue without block collection
+                context.logger.warn(`[EdsReset] Block collection reinstall failed: ${blockResult.error}`);
+            }
+        }
+
+        // ============================================
         // Step 2: Sync code to CDN + configure permissions
         // ============================================
         report(2, 'Syncing code to CDN...');
@@ -378,101 +388,54 @@ export async function executeEdsReset(
         }
 
         // ============================================
-        // Step 4: Copy demo content to DA.live
+        // Steps 4-6: Content Pipeline
         // ============================================
-        const indexPath = contentSourceConfig.indexPath || '/full-index.json';
-        const contentSource = {
-            org: contentSourceConfig.org,
-            site: contentSourceConfig.site,
-            indexUrl: `https://main--${contentSourceConfig.site}--${contentSourceConfig.org}.aem.live${indexPath}`,
-        };
+        const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
 
-        report(4, 'Copying demo content to DA.live...');
-        context.logger.info(`[EdsReset] Copying content from ${contentSourceConfig.org}/${contentSourceConfig.site} to ${daLiveOrg}/${daLiveSite}`);
+        const { executeEdsPipeline } = await import('./edsPipeline');
 
-        const onContentProgress = (info: { processed: number; total: number; currentFile?: string; message?: string }) => {
-            const statusMessage = info.message || `Copying content (${info.processed}/${info.total})`;
-            report(4, statusMessage);
-        };
-
-        const contentResult = await daLiveContentOps.copyContentFromSource(
-            contentSource,
-            daLiveOrg,
-            daLiveSite,
-            onContentProgress,
-            contentPatches,
-        );
-
-        if (!contentResult.success) {
-            throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
-        }
-
-        contentCopied = contentResult.totalFiles;
-        report(4, `Copied ${contentCopied} content files`);
-        context.logger.info(`[EdsReset] DA.live content populated: ${contentCopied} files`);
-
-        // Configure Block Library if requested
-        let libResult = { blocksCount: 0, paths: [] as string[] };
-        if (includeBlockLibrary) {
-            report(4, 'Configuring block library...');
-            libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
+        const pipelineResult = await executeEdsPipeline(
+            {
+                repoOwner,
+                repoName,
                 daLiveOrg,
                 daLiveSite,
                 templateOwner,
                 templateRepo,
-                (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
-            );
-            if (libResult.blocksCount > 0) {
-                report(4, `Configured ${libResult.blocksCount} blocks`);
-                context.logger.info(`[EdsReset] Block library: ${libResult.blocksCount} blocks configured`);
-            }
+                clearExistingContent: true,
+                skipContent: !contentSourceConfig,
+                contentSource: contentSourceConfig,
+                contentPatches,
+                includeBlockLibrary,
+                blockCollectionIds,
+                purgeCache: true,
+                skipPublish: false,
+            },
+            { daLiveContentOps, githubFileOps, helixService, logger: context.logger },
+            (info) => {
+                const stepMap: Record<string, number> = {
+                    'content-clear': 4,
+                    'content-copy': 4,
+                    'block-library': 4,
+                    'eds-settings': 5,
+                    'cache-purge': 6,
+                    'content-publish': 6,
+                    'library-publish': 6,
+                };
+                let message = info.message;
+                if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
+                    message = `Publishing to CDN (${info.current}/${info.total} pages)`;
+                }
+                report(stepMap[info.operation] ?? 4, message);
+            },
+        );
+
+        if (!pipelineResult.success) {
+            throw new Error(pipelineResult.error || 'Content pipeline failed');
         }
 
-        // ============================================
-        // Step 5: Apply EDS Settings
-        // ============================================
-        report(5, 'Applying EDS configuration...');
-        await applyDaLiveOrgConfigSettings(daLiveContentOps, daLiveOrg, daLiveSite, context.logger);
-
-        // ============================================
-        // Step 6: Publish all content to CDN
-        // ============================================
-        report(6, 'Publishing content to CDN...');
-        context.logger.info(`[EdsReset] Publishing content to CDN for ${repoOwner}/${repoName}`);
-
-        const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
-
-        // Purge stale cache before publishing
-        report(6, 'Purging stale cache...');
-        await helixService.purgeCacheAll(repoOwner, repoName, 'main');
-
-        const onPublishProgress = (info: {
-            phase: string;
-            message: string;
-            current?: number;
-            total?: number;
-            currentPath?: string;
-        }) => {
-            if (info.current !== undefined && info.total !== undefined) {
-                report(6, `Publishing to CDN (${info.current}/${info.total} pages)`);
-            } else {
-                report(6, info.message);
-            }
-        };
-
-        await helixService.publishAllSiteContent(`${repoOwner}/${repoName}`, 'main', daLiveOrg, daLiveSite, onPublishProgress);
-
-        // Bulk publish block library paths if included
-        if (includeBlockLibrary && libResult.paths.length > 0) {
-            report(6, 'Publishing block library...');
-            try {
-                await bulkPreviewAndPublish(helixService, repoOwner, repoName, libResult.paths, context.logger);
-            } catch (libPublishError) {
-                context.logger.debug(`[EdsReset] Block library publish failed: ${(libPublishError as Error).message}`);
-            }
-        }
-
-        context.logger.info('[EdsReset] Content published to CDN successfully');
+        contentCopied = pipelineResult.contentFilesCopied;
+        context.logger.info('[EdsReset] Content pipeline completed successfully');
 
         // Verify CDN if requested
         if (verifyCdn) {
