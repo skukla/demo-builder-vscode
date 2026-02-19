@@ -327,6 +327,7 @@ export class GitHubFileOperations {
             sha?: string;      // Use existing blob SHA
             content?: string;  // Or provide content for new blob
         }>,
+        baseTree?: string,
     ): Promise<string> {
         const octokit = await this.ensureAuthenticated();
 
@@ -334,6 +335,7 @@ export class GitHubFileOperations {
             owner,
             repo,
             tree: treeEntries,
+            ...(baseTree && { base_tree: baseTree }),
         });
 
         return response.data.sha;

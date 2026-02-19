@@ -637,6 +637,91 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Delete all content from a DA.live site.
+     *
+     * Recursively walks the directory tree, collects all file paths,
+     * then deletes them in parallel batches (same concurrency as content
+     * copy) followed by directory cleanup in reverse-depth order.
+     *
+     * Note: Only DA.live *source* content is deleted. Published CDN
+     * content cannot be unpublished from a VS Code extension (the Helix
+     * Admin API requires browser-based _AuthCookie_ auth). The caller
+     * should purge the CDN cache separately after clearing content.
+     *
+     * @param org - Organization name
+     * @param site - Site name
+     * @param onProgress - Optional progress callback
+     * @returns Result with count of deleted entries
+     */
+    async deleteAllSiteContent(
+        org: string,
+        site: string,
+        onProgress?: (info: { deleted: number; current: string }) => void,
+    ): Promise<{ success: boolean; deletedCount: number; deletedPaths: string[]; error?: string }> {
+        const filePaths: string[] = [];
+        const dirPaths: string[] = [];
+
+        // DA.live entry.path includes org/site prefix (e.g. /org/site/page.html).
+        // listDirectory and deleteSource already prepend org/site into the URL,
+        // so we must strip the prefix to avoid doubling it.
+        const pathPrefix = `/${org}/${site}`;
+        const stripPrefix = (entryPath: string): string =>
+            entryPath.replace(pathPrefix, '') || '/';
+
+        // Phase 1: Walk the tree and collect all relative paths
+        const collectPaths = async (dirPath: string): Promise<void> => {
+            const entries = await this.listDirectory(org, site, dirPath);
+
+            for (const entry of entries) {
+                const relativePath = stripPrefix(entry.path);
+                if (entry.ext) {
+                    filePaths.push(relativePath);
+                } else {
+                    await collectPaths(relativePath);
+                    // Collect dirs after recursion so deepest dirs come first
+                    dirPaths.push(relativePath);
+                }
+            }
+        };
+
+        try {
+            this.logger.info(`[DA.live] Deleting all content from ${org}/${site}`);
+            await collectPaths('/');
+
+            if (filePaths.length === 0) {
+                this.logger.info(`[DA.live] Site ${org}/${site} is already empty`);
+                return { success: true, deletedCount: 0, deletedPaths: [] };
+            }
+
+            this.logger.info(`[DA.live] Found ${filePaths.length} files and ${dirPaths.length} directories to delete`);
+
+            // Phase 2: Delete files in parallel batches
+            let deletedCount = 0;
+            for (let i = 0; i < filePaths.length; i += CONTENT_COPY_BATCH_SIZE) {
+                const batch = filePaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
+                await Promise.all(batch.map(async (filePath) => {
+                    const result = await this.deleteSource(org, site, filePath);
+                    if (result.success) {
+                        deletedCount++;
+                        onProgress?.({ deleted: deletedCount, current: filePath });
+                    }
+                }));
+            }
+
+            // Phase 3: Delete empty directories (deepest first — already ordered by collectPaths)
+            for (const dirPath of dirPaths) {
+                await this.deleteSource(org, site, dirPath);
+            }
+
+            this.logger.info(`[DA.live] Deleted ${deletedCount} files from ${org}/${site}`);
+            return { success: true, deletedCount, deletedPaths: filePaths };
+        } catch (error) {
+            this.logger.error(`[DA.live] Failed to delete site content: ${(error as Error).message}`);
+            return { success: false, deletedCount: filePaths.length, deletedPaths: filePaths, error: (error as Error).message };
+        }
+    }
+
+    /**
      * Create a JSON spreadsheet in DA.live's native format
      *
      * DA.live stores spreadsheets as .json files with a specific format.
@@ -711,6 +796,9 @@ export class DaLiveContentOperations {
      * @param templateOwner - GitHub owner of template repo
      * @param templateRepo - GitHub repo name of template
      * @param getFileContent - Function to fetch file from GitHub (from GitHubFileOperations)
+     * @param blockCollectionIds - Unused. Kept for call-site compatibility while the
+     *   pipeline still passes it. DA.live's library only renders block lists for a
+     *   section titled exactly "Blocks", so grouping is not possible.
      * @returns Result with success status, block count, and paths created (for publishing)
      */
     async createBlockLibraryFromTemplate(
@@ -719,6 +807,7 @@ export class DaLiveContentOperations {
         templateOwner: string,
         templateRepo: string,
         getFileContent: (owner: string, repo: string, path: string) => Promise<{ content: string; sha: string } | null>,
+        _blockCollectionIds?: string[],
     ): Promise<{ success: boolean; blocksCount: number; paths: string[]; error?: string }> {
         try {
             const componentDef = await getFileContent(templateOwner, templateRepo, 'component-definition.json');
@@ -757,12 +846,10 @@ export class DaLiveContentOperations {
     /**
      * Create block library configuration in DA.live
      *
-     * Creates:
-     * 1. /.da/config - Config sheet with library tab pointing to /library/blocks.json
-     * 2. /.da/library/blocks.json - Spreadsheet listing all blocks with paths to docs
-     *
-     * DA.live path mapping: /library/ → /.da/library/ internally
-     * Config references /library/blocks.json but files are stored at /.da/library/
+     * Creates a single "Blocks" spreadsheet at /.da/library/blocks.json and
+     * registers it in the site config. DA.live's library UI only renders
+     * block lists for sections titled exactly "Blocks" — custom-named sections
+     * are treated as iframe plugins and render blank.
      *
      * @param org - Destination organization (user's site)
      * @param site - Destination site name (user's site)
@@ -779,31 +866,10 @@ export class DaLiveContentOperations {
         }
 
         try {
-            // Step 1: Update site config via /config/ API
-            // The config API is a special endpoint that manages /.da/config
-            // This is NOT the same as creating a file via /source/
-            // The config automatically syncs to CDN without needing preview/publish
-            const configResult = await this.updateSiteConfig(org, site, [
-                {
-                    title: 'Blocks',
-                    // Path points to the blocks spreadsheet we'll create
-                    path: `https://content.da.live/${org}/${site}/.da/library/blocks.json`,
-                },
-            ]);
-            if (!configResult.success) {
-                this.logger.warn(`[DA.live] Failed to update config: ${configResult.error}`);
-                // Continue - blocks spreadsheet is still useful
-            }
+            // Create doc pages for blocks that have exampleHtml but no existing page
+            await this.ensureBlockDocPages(org, site, blocks);
 
-            // Step 2: Delete any existing blocks spreadsheet files
-            // Keep the blocks/ folder - it contains block documentation pages from template
-            await this.deleteSource(org, site, '.da/library/blocks.json');
-            await this.deleteSource(org, site, '.da/library/blocks.html');
-            await this.deleteSource(org, site, '.da/library/blocks.xlsx');
-
-            // Step 3: Check which blocks have documentation pages
-            // Not all blocks in component-definition.json have docs (sub-blocks, etc.)
-            // Only include blocks with docs in the library to avoid empty entries
+            // Check which blocks have documentation pages (including newly created ones)
             const existingBlockIds = await this.getBlocksWithDocs(org, site, blocks);
             const verifiedBlocks = blocks.filter(b => existingBlockIds.includes(b.id));
 
@@ -812,28 +878,45 @@ export class DaLiveContentOperations {
                 return { success: true, blocksCount: 0, paths: [] };
             }
 
-            // Step 4: Create /.da/library/blocks.json spreadsheet with verified blocks only
+            const contentBase = `https://content.da.live/${org}/${site}/.da/library/blocks`;
+            const paths: string[] = [];
+
+            // Clean up any existing library spreadsheet files (including grouped ones from previous runs)
+            await this.deleteSource(org, site, '.da/library/blocks.json');
+            await this.deleteSource(org, site, '.da/library/blocks.html');
+            await this.deleteSource(org, site, '.da/library/blocks.xlsx');
+            await this.deleteSource(org, site, '.da/library/storefront-blocks.json');
+            await this.deleteSource(org, site, '.da/library/storefront-blocks.html');
+            await this.deleteSource(org, site, '.da/library/block-collection.json');
+            await this.deleteSource(org, site, '.da/library/block-collection.html');
+
+            // Register single "Blocks" section in site config
+            const configResult = await this.updateSiteConfig(org, site, [
+                {
+                    title: 'Blocks',
+                    path: `https://content.da.live/${org}/${site}/.da/library/blocks.json`,
+                },
+            ]);
+            if (!configResult.success) {
+                this.logger.warn(`[DA.live] Failed to update config: ${configResult.error}`);
+            }
+
+            // Create single spreadsheet with all verified blocks
             const blocksResult = await this.createJsonSpreadsheet(
-                org,
-                site,
-                '.da/library/blocks',
+                org, site, '.da/library/blocks',
                 ['name', 'path'],
-                verifiedBlocks.map((b) => ({
-                    name: b.title,
-                    path: `https://content.da.live/${org}/${site}/.da/library/blocks/${b.id}`,
-                })),
+                verifiedBlocks.map(b => ({ name: b.title, path: `${contentBase}/${b.id}` })),
                 { overwrite: true },
             );
             if (!blocksResult.success) {
                 return { success: false, blocksCount: 0, paths: [], error: 'Failed to create /.da/library/blocks.json' };
             }
 
+            paths.push('.da/library/blocks.json');
+
             this.logger.info(`[DA.live] Block library created: ${verifiedBlocks.length}/${blocks.length} blocks with docs in ${org}/${site}`);
 
-            // Return paths for preview/publish
-            const paths: string[] = [
-                '.da/library/blocks.json', // Spreadsheet - use .json extension for Helix
-            ];
+            // Add block doc pages to paths for publishing
             for (const blockId of existingBlockIds) {
                 paths.push(`.da/library/blocks/${blockId}`);
             }
@@ -842,6 +925,54 @@ export class DaLiveContentOperations {
         } catch (error) {
             this.logger.error(`[DA.live] Block library creation failed: ${(error as Error).message}`);
             return { success: false, blocksCount: 0, paths: [], error: (error as Error).message };
+        }
+    }
+
+    /**
+     * Create documentation pages for blocks that have exampleHtml but no existing page.
+     *
+     * This is non-destructive: only creates pages for blocks missing from DA.live.
+     * Blocks that already have doc pages (e.g., copied from a template's content
+     * source) are left untouched. Failures are logged but don't halt the pipeline.
+     *
+     * @param org - Organization name
+     * @param site - Site name
+     * @param blocks - Array of block definitions (may include exampleHtml)
+     */
+    private async ensureBlockDocPages(
+        org: string,
+        site: string,
+        blocks: Array<{ title: string; id: string; exampleHtml?: string }>,
+    ): Promise<void> {
+        const blocksWithHtml = blocks.filter(b => b.exampleHtml);
+        if (blocksWithHtml.length === 0) return;
+
+        // Check which already exist (batch HEAD requests)
+        const existingIds = await this.getBlocksWithDocs(org, site, blocksWithHtml);
+        const missing = blocksWithHtml.filter(b => !existingIds.includes(b.id));
+
+        if (missing.length === 0) return;
+
+        this.logger.info(`[DA.live] Creating ${missing.length} missing block doc pages`);
+
+        for (const block of missing) {
+            try {
+                // Wrap exampleHtml in document structure expected by DA.live
+                const docHtml = `<body><header></header><main>${block.exampleHtml}</main><footer></footer></body>`;
+                const result = await this.createSource(
+                    org, site,
+                    `.da/library/blocks/${block.id}.html`,
+                    docHtml,
+                    { overwrite: true },
+                );
+                if (result.success) {
+                    this.logger.debug(`[DA.live] Created doc page for block: ${block.id}`);
+                } else {
+                    this.logger.warn(`[DA.live] Failed to create doc page for ${block.id}: ${result.error}`);
+                }
+            } catch (error) {
+                this.logger.warn(`[DA.live] Failed to create doc page for ${block.id}: ${(error as Error).message}`);
+            }
         }
     }
 
