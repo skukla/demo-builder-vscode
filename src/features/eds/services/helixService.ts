@@ -12,8 +12,10 @@
  * - Repo fullName parsing for org/site extraction
  */
 
+import { getCacheTTLWithJitter, isExpired, createCacheEntry } from '@/core/cache/cacheUtils';
+import type { CacheEntry } from '@/core/cache/cacheUtils';
 import { getLogger } from '@/core/logging';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubTokenService } from './githubTokenService';
@@ -88,6 +90,18 @@ export class HelixService {
     private githubTokenService?: GitHubTokenService;
     private daLiveOps: DaLiveContentOperations;
     private daLiveTokenProvider?: DaLiveTokenProvider;
+
+    /**
+     * Static cache for Admin API keys, keyed by "org/site".
+     * Shared across all HelixService instances within the same extension session.
+     * Keys have ~1 year server expiry; we cache for CACHE_TTL.LONG (1 hour).
+     */
+    private static apiKeyCache = new Map<string, CacheEntry<string>>();
+
+    /** Clear all cached API keys */
+    static clearApiKeyCache(): void {
+        HelixService.apiKeyCache.clear();
+    }
 
     /**
      * Create a HelixService
@@ -388,14 +402,12 @@ export class HelixService {
     }
 
     /**
-     * Delete a preview resource from the preview content bus.
+     * Get or create an Admin API Key with publish role for a site.
      *
-     * Create an Admin API Key with publish role for a site.
-     *
-     * Uses the DA.live IMS token with `Authorization: Bearer` to authenticate
-     * against the Config Service API. The resulting key can be used for
-     * DELETE operations (unpublish) that require higher privileges than
-     * the GitHub OAuth token provides.
+     * Returns a cached key if one exists and hasn't expired (CACHE_TTL.LONG).
+     * Otherwise creates a new key via the Config Service API using the
+     * DA.live IMS token. The key can be used for DELETE operations (unpublish)
+     * that require higher privileges than the GitHub OAuth token provides.
      *
      * @param org - Organization/owner name
      * @param site - Site/repository name
@@ -405,6 +417,14 @@ export class HelixService {
         org: string,
         site: string,
     ): Promise<string | null> {
+        // Check cache first — reuse existing key if still valid
+        const cacheKey = `${org}/${site}`;
+        const cached = HelixService.apiKeyCache.get(cacheKey);
+        if (cached && !isExpired(cached)) {
+            this.logger.debug(`[Helix] Reusing cached Admin API Key for ${org}/${site}`);
+            return cached.value;
+        }
+
         const imsToken = await this.getDaLiveToken();
         const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys.json`;
 
@@ -434,6 +454,8 @@ export class HelixService {
 
             if (keyValue) {
                 this.logger.info(`[Helix] Admin API Key created (id=${data.id}, expires=${data.expiration})`);
+                const jitteredTtl = getCacheTTLWithJitter(CACHE_TTL.LONG);
+                HelixService.apiKeyCache.set(cacheKey, createCacheEntry(keyValue, jitteredTtl));
             }
 
             return keyValue || null;
@@ -683,9 +705,9 @@ export class HelixService {
     /**
      * Unpublish pages from both live and preview CDN.
      *
-     * Creates a short-lived Admin API Key, then bulk-removes the given
-     * web paths from live and preview. Non-fatal: returns success=false
-     * (with a warning) if the API key cannot be created.
+     * Gets (or creates) an Admin API Key, then bulk-removes the given
+     * web paths from live and preview. If the cached key is rejected,
+     * invalidates the cache and retries once with a fresh key.
      *
      * @param org - GitHub organization/owner
      * @param site - GitHub repository name
@@ -703,13 +725,34 @@ export class HelixService {
             return { success: true, count: 0 };
         }
 
-        const apiKey = await this.createAdminApiKey(org, site);
+        let apiKey = await this.createAdminApiKey(org, site);
         if (!apiKey) {
             this.logger.warn('[Helix] Admin API Key creation failed, CDN pages not unpublished');
             return { success: false, count: 0 };
         }
 
-        await this.bulkUnpublish(org, site, branch, webPaths, apiKey);
+        try {
+            await this.bulkUnpublish(org, site, branch, webPaths, apiKey);
+        } catch (error) {
+            const msg = (error as Error).message;
+            if (msg.includes('401') || msg.includes('403')) {
+                // Cached key was rejected — invalidate and retry once with a fresh key
+                this.logger.warn(`[Helix] API key rejected (${msg}), retrying with fresh key`);
+                const cacheKey = `${org}/${site}`;
+                HelixService.apiKeyCache.delete(cacheKey);
+
+                apiKey = await this.createAdminApiKey(org, site);
+                if (!apiKey) {
+                    this.logger.warn('[Helix] Fresh API Key creation failed, CDN pages not unpublished');
+                    return { success: false, count: 0 };
+                }
+
+                await this.bulkUnpublish(org, site, branch, webPaths, apiKey);
+            } else {
+                throw error;
+            }
+        }
+
         await this.bulkDeletePreview(org, site, branch, webPaths, apiKey);
 
         this.logger.info(`[Helix] Unpublished ${webPaths.length} CDN pages`);

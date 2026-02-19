@@ -44,6 +44,11 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
         LONG: 180000, // Complex operations
         VERY_LONG: 300000, // Bulk operations
     },
+    CACHE_TTL: {
+        SHORT: 60000,
+        MEDIUM: 300000,
+        LONG: 3600000,
+    },
 }));
 
 // Mock DA.live content operations for publishAllSiteContent tests
@@ -758,6 +763,438 @@ describe('HelixService', () => {
                     }),
                 }),
             );
+        });
+    });
+
+    // ==========================================================
+    // Admin API Key Caching Tests
+    // ==========================================================
+    describe('Admin API Key Caching', () => {
+        // Import HelixService class for static cache access
+        let HelixServiceClass: typeof import('@/features/eds/services/helixService').HelixService;
+
+        beforeEach(async () => {
+            const module = await import('@/features/eds/services/helixService');
+            HelixServiceClass = module.HelixService;
+            // Clear the static cache between tests
+            HelixServiceClass.clearApiKeyCache();
+        });
+
+        it('should cache API key and reuse on subsequent calls for same org/site', async () => {
+            // Given: First call creates a key
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-1',
+                    value: 'api-key-value-1',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // When: First call creates the key
+            const key1 = await service.createAdminApiKey('testorg', 'testsite');
+
+            // Then: Should have called fetch once
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            expect(key1).toBe('api-key-value-1');
+
+            // When: Second call for same org/site
+            const key2 = await service.createAdminApiKey('testorg', 'testsite');
+
+            // Then: Should return cached key without additional fetch
+            expect(mockFetch).toHaveBeenCalledTimes(1); // Still just 1 call
+            expect(key2).toBe('api-key-value-1');
+        });
+
+        it('should create separate keys for different org/site combinations', async () => {
+            // Given: Two different sites
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: () => Promise.resolve({
+                        id: 'key-1',
+                        value: 'key-for-site-a',
+                        expiration: '2027-01-01T00:00:00Z',
+                    }),
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: () => Promise.resolve({
+                        id: 'key-2',
+                        value: 'key-for-site-b',
+                        expiration: '2027-01-01T00:00:00Z',
+                    }),
+                });
+
+            // When: Creating keys for different sites
+            const keyA = await service.createAdminApiKey('org-a', 'site-a');
+            const keyB = await service.createAdminApiKey('org-b', 'site-b');
+
+            // Then: Should create separate keys
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            expect(keyA).toBe('key-for-site-a');
+            expect(keyB).toBe('key-for-site-b');
+        });
+
+        it('should not cache failed key creation (null result)', async () => {
+            // Given: First call fails
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error',
+            });
+
+            // Second call succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-1',
+                    value: 'api-key-after-retry',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // When: First call returns null
+            const key1 = await service.createAdminApiKey('testorg', 'testsite');
+            expect(key1).toBeNull();
+
+            // When: Second call should retry (not return cached null)
+            const key2 = await service.createAdminApiKey('testorg', 'testsite');
+
+            // Then: Should have made two fetch calls
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            expect(key2).toBe('api-key-after-retry');
+        });
+
+        it('should create new key when cached key expires', async () => {
+            // Given: A cached key with expired TTL
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: () => Promise.resolve({
+                        id: 'key-1',
+                        value: 'old-key',
+                        expiration: '2027-01-01T00:00:00Z',
+                    }),
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: () => Promise.resolve({
+                        id: 'key-2',
+                        value: 'new-key',
+                        expiration: '2027-01-01T00:00:00Z',
+                    }),
+                });
+
+            // When: First call caches the key
+            await service.createAdminApiKey('testorg', 'testsite');
+
+            // Simulate cache expiry by advancing time
+            const originalDateNow = Date.now;
+            Date.now = () => originalDateNow() + 2 * 60 * 60 * 1000; // +2 hours (beyond CACHE_TTL.LONG = 1hr)
+
+            try {
+                // When: Second call after expiry
+                const key2 = await service.createAdminApiKey('testorg', 'testsite');
+
+                // Then: Should create a new key
+                expect(mockFetch).toHaveBeenCalledTimes(2);
+                expect(key2).toBe('new-key');
+            } finally {
+                Date.now = originalDateNow;
+            }
+        });
+
+        it('should clear all cached keys via clearApiKeyCache', async () => {
+            // Given: A cached key
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-1',
+                    value: 'cached-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            await service.createAdminApiKey('testorg', 'testsite');
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+
+            // When: Cache is cleared
+            HelixServiceClass.clearApiKeyCache();
+
+            // Then: Next call should create a new key
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-2',
+                    value: 'fresh-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            const key = await service.createAdminApiKey('testorg', 'testsite');
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            expect(key).toBe('fresh-key');
+        });
+
+        it('should share cache across HelixService instances', async () => {
+            // Given: First instance creates a key
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-1',
+                    value: 'shared-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            await service.createAdminApiKey('testorg', 'testsite');
+
+            // When: A second instance requests the same key
+            const service2 = new HelixServiceClass(
+                undefined,
+                mockGitHubTokenService,
+                mockDaLiveTokenProvider,
+            );
+            const key = await service2.createAdminApiKey('testorg', 'testsite');
+
+            // Then: Should reuse cached key (no additional fetch)
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            expect(key).toBe('shared-key');
+        });
+    });
+
+    // ==========================================================
+    // unpublishPages Retry-on-Auth-Failure Tests
+    // ==========================================================
+    describe('unpublishPages retry on auth failure', () => {
+        let HelixServiceClass: typeof import('@/features/eds/services/helixService').HelixService;
+
+        beforeEach(async () => {
+            const module = await import('@/features/eds/services/helixService');
+            HelixServiceClass = module.HelixService;
+            HelixServiceClass.clearApiKeyCache();
+        });
+
+        it('should retry with fresh key when bulkUnpublish fails with 401', async () => {
+            // Given: First key creation succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-1',
+                    value: 'stale-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // bulkUnpublish fails with 401 (stale key rejected)
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 401,
+                statusText: 'Unauthorized',
+            });
+
+            // Retry: new key creation succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-2',
+                    value: 'fresh-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // Retry: bulkUnpublish succeeds with fresh key (202 + immediate success)
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // bulkDeletePreview succeeds (202 + immediate success)
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // When
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about']);
+
+            // Then: Should succeed after retry
+            expect(result).toEqual({ success: true, count: 1 });
+            // 1 create key + 1 failed unpublish + 1 new key + 1 retry unpublish + 1 delete preview = 5
+            expect(mockFetch).toHaveBeenCalledTimes(5);
+        });
+
+        it('should retry with fresh key when bulkUnpublish fails with 403', async () => {
+            // Given: First key creation succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-1',
+                    value: 'stale-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // bulkUnpublish fails with 403 (key revoked)
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                statusText: 'Forbidden',
+            });
+
+            // Retry: new key creation succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-2',
+                    value: 'fresh-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // Retry: bulkUnpublish succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // bulkDeletePreview succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // When
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about']);
+
+            // Then: Should succeed after retry
+            expect(result).toEqual({ success: true, count: 1 });
+        });
+
+        it('should invalidate cache entry on auth failure before retrying', async () => {
+            // Given: First key creation and cache
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-1',
+                    value: 'cached-stale-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // bulkUnpublish fails with 401
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 401,
+                statusText: 'Unauthorized',
+            });
+
+            // Retry: createAdminApiKey must NOT return cached stale key — should fetch fresh
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-2',
+                    value: 'new-key-after-invalidation',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // Retry: bulkUnpublish succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // bulkDeletePreview succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+            });
+
+            // When
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/page']);
+
+            // Then: The retry key creation must have actually called fetch (not reused cache)
+            expect(result.success).toBe(true);
+            // Fetch calls: create key(1) + failed unpublish(2) + create new key(3) + retry unpublish(4) + delete preview(5)
+            expect(mockFetch).toHaveBeenCalledTimes(5);
+        });
+
+        it('should return failure when retry also fails', async () => {
+            // Given: First key creation succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-1',
+                    value: 'bad-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // bulkUnpublish fails with 401
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 401,
+                statusText: 'Unauthorized',
+            });
+
+            // Retry: new key creation also fails
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error',
+            });
+
+            // When: Both attempts fail
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/page']);
+
+            // Then: Should return failure
+            expect(result).toEqual({ success: false, count: 0 });
+        });
+
+        it('should not retry on non-auth errors (e.g., 500)', async () => {
+            // Given: Key creation succeeds
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({
+                    id: 'key-1',
+                    value: 'valid-key',
+                    expiration: '2027-01-01T00:00:00Z',
+                }),
+            });
+
+            // bulkUnpublish fails with 500 (server error, not auth)
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error',
+            });
+
+            // When/Then: Should throw the server error, not retry
+            await expect(
+                service.unpublishPages('testorg', 'testsite', 'main', ['/page']),
+            ).rejects.toThrow(/500/);
+
+            // Should NOT have attempted key creation again
+            expect(mockFetch).toHaveBeenCalledTimes(2); // create key + failed unpublish only
         });
     });
 });
