@@ -5,9 +5,9 @@
  * demo packages from demo-packages.json and retrieve storefronts for specific stacks.
  *
  * Structure: Option A (Nested Storefronts)
- * - 2 packages (citisignal, buildright)
- * - 3 storefronts total (citisignal has 3, buildright has 0)
- * - EDS storefronts have explicit contentSource for DA.live content
+ * - 3 packages (citisignal, buildright, custom)
+ * - 6 storefronts total (citisignal 3, buildright 1, custom 2)
+ * - EDS storefronts have explicit contentSource for DA.live content (except Custom)
  *
  * TDD: Tests written FIRST to define expected behavior.
  */
@@ -30,14 +30,15 @@ describe('demoPackageLoader', () => {
             expect(packages.length).toBeGreaterThan(0);
         });
 
-        it('should return exactly 2 packages (citisignal and buildright)', async () => {
+        it('should return exactly 3 packages (citisignal, buildright, and custom)', async () => {
             const packages = await loadDemoPackages();
 
-            expect(packages.length).toBe(2);
+            expect(packages.length).toBe(3);
 
             const ids = packages.map(p => p.id);
             expect(ids).toContain('citisignal');
             expect(ids).toContain('buildright');
+            expect(ids).toContain('custom');
         });
 
         it('should return packages with required properties', async () => {
@@ -199,10 +200,10 @@ describe('demoPackageLoader', () => {
     });
 
     describe('getAllStorefronts', () => {
-        it('should return all 4 storefronts with package and stack info', async () => {
+        it('should return all 6 storefronts with package and stack info', async () => {
             const storefronts = await getAllStorefronts();
 
-            expect(storefronts).toHaveLength(4);
+            expect(storefronts).toHaveLength(6);
         });
 
         it('should include package ID and stack ID with each storefront', async () => {

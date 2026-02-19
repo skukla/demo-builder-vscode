@@ -59,11 +59,25 @@ export interface Stack {
 }
 
 /**
+ * AddonDefinition - Display metadata for an addon
+ */
+export interface AddonDefinition {
+    /** Human-readable name */
+    name: string;
+
+    /** Short description for UI display */
+    description: string;
+}
+
+/**
  * StacksConfig - Root structure of stacks.json
  */
 export interface StacksConfig {
     /** Schema version (e.g., '1.0.0') */
     version: string;
+
+    /** Addon display metadata keyed by addon ID */
+    addonDefinitions?: Record<string, AddonDefinition>;
 
     /** Array of available stacks */
     stacks: Stack[];

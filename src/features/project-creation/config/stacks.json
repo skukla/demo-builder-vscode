@@ -1,6 +1,20 @@
 {
   "$schema": "./stacks.schema.json",
   "version": "1.0.0",
+  "addonDefinitions": {
+    "demo-inspector": {
+      "name": "Demo Inspector",
+      "description": "Interactive overlay for exploring demo components and features"
+    },
+    "adobe-commerce-aco": {
+      "name": "Adobe Commerce Optimizer",
+      "description": "Catalog optimization service for enhanced product discovery"
+    },
+    "commerce-block-collection": {
+      "name": "Commerce Block Collection",
+      "description": "Custom EDS blocks: hero, carousel, newsletter, store locator, and more"
+    }
+  },
   "stacks": [
     {
       "id": "headless-paas",
@@ -37,7 +51,8 @@
       "backend": "adobe-commerce-paas",
       "dependencies": ["eds-commerce-mesh"],
       "optionalAddons": [
-        { "id": "adobe-commerce-aco" }
+        { "id": "adobe-commerce-aco" },
+        { "id": "commerce-block-collection", "default": true }
       ],
       "features": ["Ultra-fast delivery", "DA.live content", "Self-managed backend"],
       "requiresGitHub": true,
@@ -52,7 +67,8 @@
       "backend": "adobe-commerce-accs",
       "dependencies": ["eds-accs-mesh"],
       "optionalAddons": [
-        { "id": "adobe-commerce-aco" }
+        { "id": "adobe-commerce-aco" },
+        { "id": "commerce-block-collection", "default": true }
       ],
       "features": ["Ultra-fast delivery", "DA.live content", "Managed backend"],
       "requiresGitHub": true,

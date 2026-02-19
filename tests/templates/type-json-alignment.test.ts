@@ -410,7 +410,7 @@ describe('Type/JSON Alignment Validation', () => {
 
     describe('stacks.json <-> Stack alignment', () => {
         it('should have no unknown fields in root config', () => {
-            const rootAllowed = new Set(['$schema', 'version', 'stacks']);
+            const rootAllowed = new Set(['$schema', 'version', 'stacks', 'addonDefinitions']);
             const unknown = findUnknownFields(stacksConfig, rootAllowed);
             if (unknown.length > 0) {
                 throw new Error(`stacks.json root has unknown fields: ${unknown.join(', ')}. ` +
