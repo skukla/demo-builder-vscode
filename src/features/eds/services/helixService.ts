@@ -196,8 +196,9 @@ export class HelixService {
      * @param site - Site/repository name
      * @param branch - Branch name
      * @param jobName - Job name from 202 response
-     * @param topic - Job topic (preview or live)
+     * @param topic - Job topic (preview, live, preview-remove, live-remove)
      * @param onProgress - Optional callback for progress updates
+     * @param apiKey - Optional Admin API Key (used for unpublish jobs created with API key auth)
      * @throws Error if job fails or times out
      */
     private async pollJobCompletion(
@@ -207,8 +208,12 @@ export class HelixService {
         jobName: string,
         topic: string,
         onProgress?: BulkProgressCallback,
+        apiKey?: string,
     ): Promise<void> {
-        const githubToken = await this.getGitHubToken();
+        // Use API key auth when provided (unpublish jobs), otherwise GitHub token
+        const authHeaders: Record<string, string> = apiKey
+            ? { 'Authorization': `token ${apiKey}` }
+            : { 'x-auth-token': await this.getGitHubToken() };
         // Job status URL format: GET /job/{org}/{site}/{ref}/{topic}/{jobId}
         const url = `${HELIX_ADMIN_URL}/job/${org}/${site}/${branch}/${topic}/${jobName}`;
         const startTime = Date.now();
@@ -224,9 +229,7 @@ export class HelixService {
             try {
                 const response = await fetch(url, {
                     method: 'GET',
-                    headers: {
-                        'x-auth-token': githubToken,
-                    },
+                    headers: authHeaders,
                     signal: AbortSignal.timeout(TIMEOUTS.QUICK),
                 });
 
@@ -382,6 +385,299 @@ export class HelixService {
         }
 
         this.logger.debug(`[Helix] Successfully published: ${cleanPath}`);
+    }
+
+    /**
+     * Delete a preview resource from the preview content bus.
+     *
+     * Create an Admin API Key with publish role for a site.
+     *
+     * Uses the DA.live IMS token with `Authorization: Bearer` to authenticate
+     * against the Config Service API. The resulting key can be used for
+     * DELETE operations (unpublish) that require higher privileges than
+     * the GitHub OAuth token provides.
+     *
+     * @param org - Organization/owner name
+     * @param site - Site/repository name
+     * @returns The API key value, or null if creation failed
+     */
+    async createAdminApiKey(
+        org: string,
+        site: string,
+    ): Promise<string | null> {
+        const imsToken = await this.getDaLiveToken();
+        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys.json`;
+
+        this.logger.debug(`[Helix] Creating Admin API Key for ${org}/${site}`);
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${imsToken}`,
+                    'content-type': 'application/json',
+                },
+                body: JSON.stringify({
+                    description: 'Demo Builder publish key',
+                    roles: ['publish'],
+                }),
+                signal: AbortSignal.timeout(TIMEOUTS.LONG),
+            });
+
+            if (!response.ok) {
+                this.logger.warn(`[Helix] Admin API Key creation failed: ${response.status}`);
+                return null;
+            }
+
+            const data = await response.json();
+            const keyValue = data.value as string | undefined;
+
+            if (keyValue) {
+                this.logger.info(`[Helix] Admin API Key created (id=${data.id}, expires=${data.expiration})`);
+            }
+
+            return keyValue || null;
+        } catch (error) {
+            this.logger.warn(`[Helix] Admin API Key creation error: ${(error as Error).message}`);
+            return null;
+        }
+    }
+
+    /**
+     * Delete preview for a resource.
+     *
+     * Sends DELETE /preview/{org}/{site}/{ref}/{path} to remove the page
+     * from the preview CDN partition.
+     *
+     * @param org - Organization/owner name
+     * @param site - Site/repository name
+     * @param path - Content path (e.g., '/' for homepage, '/products')
+     * @param branch - Branch name (default: main)
+     * @param apiKey - Optional Admin API Key for DELETE auth (preferred over GitHub token)
+     * @returns true if deleted (204) or not found (404), false if auth failed
+     * @throws Error on non-auth failures (5xx, network)
+     */
+    async deletePreview(
+        org: string,
+        site: string,
+        path: string = '/',
+        branch: string = DEFAULT_BRANCH,
+        apiKey?: string,
+    ): Promise<boolean> {
+        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+        const cleanPath = normalizedPath.endsWith('/') && normalizedPath !== '/'
+            ? normalizedPath.slice(0, -1)
+            : normalizedPath;
+        const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}${cleanPath}`;
+
+        this.logger.debug(`[Helix] Deleting preview: ${url}`);
+
+        // Use Admin API Key if available, otherwise fall back to GitHub + IMS tokens
+        const headers: Record<string, string> = apiKey
+            ? { 'Authorization': `token ${apiKey}` }
+            : {
+                'x-auth-token': await this.getGitHubToken(),
+                'x-content-source-authorization': `Bearer ${await this.getDaLiveToken()}`,
+            };
+
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers,
+            signal: AbortSignal.timeout(TIMEOUTS.LONG),
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            this.logger.debug(`[Helix] Delete preview auth failed: ${response.status}`);
+            return false;
+        }
+
+        if (response.status === 204 || response.status === 404) {
+            this.logger.debug(`[Helix] Preview deleted: ${cleanPath}`);
+            return true;
+        }
+
+        if (!response.ok) {
+            throw new Error(`Failed to delete preview: ${response.status} ${response.statusText}`);
+        }
+
+        return true;
+    }
+
+    /**
+     * Unpublish a resource from the live content bus.
+     *
+     * Sends DELETE /live/{org}/{site}/{ref}/{path} to remove the page
+     * from the live CDN partition and purge associated caches.
+     *
+     * @param org - Organization/owner name
+     * @param site - Site/repository name
+     * @param path - Content path (e.g., '/' for homepage, '/products')
+     * @param branch - Branch name (default: main)
+     * @param apiKey - Optional Admin API Key for DELETE auth (preferred over GitHub token)
+     * @returns true if unpublished (204) or not found (404), false if auth failed
+     * @throws Error on non-auth failures (5xx, network)
+     */
+    async unpublishPage(
+        org: string,
+        site: string,
+        path: string = '/',
+        branch: string = DEFAULT_BRANCH,
+        apiKey?: string,
+    ): Promise<boolean> {
+        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+        const cleanPath = normalizedPath.endsWith('/') && normalizedPath !== '/'
+            ? normalizedPath.slice(0, -1)
+            : normalizedPath;
+        const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}${cleanPath}`;
+
+        this.logger.debug(`[Helix] Unpublishing: ${url}`);
+
+        const headers: Record<string, string> = apiKey
+            ? { 'Authorization': `token ${apiKey}` }
+            : {
+                'x-auth-token': await this.getGitHubToken(),
+                'x-content-source-authorization': `Bearer ${await this.getDaLiveToken()}`,
+            };
+
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers,
+            signal: AbortSignal.timeout(TIMEOUTS.LONG),
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            this.logger.debug(`[Helix] Unpublish auth failed: ${response.status}`);
+            return false;
+        }
+
+        if (response.status === 204 || response.status === 404) {
+            this.logger.debug(`[Helix] Unpublished: ${cleanPath}`);
+            return true;
+        }
+
+        if (!response.ok) {
+            throw new Error(`Failed to unpublish: ${response.status} ${response.statusText}`);
+        }
+
+        return true;
+    }
+
+    /**
+     * Bulk unpublish pages from the live CDN.
+     *
+     * Sends POST /live/{org}/{site}/{ref}/* with { paths, delete: true }
+     * to remove multiple pages from the live content bus in one operation.
+     * Returns 202 with an async job (topic: "live-remove") that is polled
+     * to completion.
+     *
+     * @param org - Organization/owner name
+     * @param site - Site/repository name
+     * @param branch - Branch name
+     * @param paths - Web paths to unpublish (e.g., ['/about', '/products'])
+     * @param apiKey - Admin API Key for authentication
+     */
+    async bulkUnpublish(
+        org: string,
+        site: string,
+        branch: string,
+        paths: string[],
+        apiKey: string,
+    ): Promise<void> {
+        const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}/*`;
+
+        this.logger.debug(`[Helix] Bulk unpublish: ${paths.length} pages`);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ paths, delete: true }),
+            signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
+        });
+
+        if (response.status === 202) {
+            let jobInfo: BulkJobResponse | undefined;
+            try {
+                jobInfo = await response.json();
+            } catch {
+                this.logger.warn('[Helix] Could not parse job info from bulk unpublish response');
+            }
+
+            const jobName = jobInfo?.job?.name || (jobInfo as any)?.name;
+            const jobTopic = jobInfo?.job?.topic || (jobInfo as any)?.topic || 'live-remove';
+
+            if (jobName) {
+                await this.pollJobCompletion(org, site, branch, jobName, jobTopic, undefined, apiKey);
+            }
+            return;
+        }
+
+        if (response.ok) {
+            return;
+        }
+
+        throw new Error(`Bulk unpublish failed: ${response.status} ${response.statusText}`);
+    }
+
+    /**
+     * Bulk delete preview for pages.
+     *
+     * Sends POST /preview/{org}/{site}/{ref}/* with { paths, delete: true }
+     * to remove multiple pages from the preview content bus in one operation.
+     * Returns 202 with an async job (topic: "preview-remove") that is polled
+     * to completion.
+     *
+     * @param org - Organization/owner name
+     * @param site - Site/repository name
+     * @param branch - Branch name
+     * @param paths - Web paths to unpreview (e.g., ['/about', '/products'])
+     * @param apiKey - Admin API Key for authentication
+     */
+    async bulkDeletePreview(
+        org: string,
+        site: string,
+        branch: string,
+        paths: string[],
+        apiKey: string,
+    ): Promise<void> {
+        const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}/*`;
+
+        this.logger.debug(`[Helix] Bulk delete preview: ${paths.length} pages`);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ paths, delete: true }),
+            signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
+        });
+
+        if (response.status === 202) {
+            let jobInfo: BulkJobResponse | undefined;
+            try {
+                jobInfo = await response.json();
+            } catch {
+                this.logger.warn('[Helix] Could not parse job info from bulk delete preview response');
+            }
+
+            const jobName = jobInfo?.job?.name || (jobInfo as any)?.name;
+            const jobTopic = jobInfo?.job?.topic || (jobInfo as any)?.topic || 'preview-remove';
+
+            if (jobName) {
+                await this.pollJobCompletion(org, site, branch, jobName, jobTopic, undefined, apiKey);
+            }
+            return;
+        }
+
+        if (response.ok) {
+            return;
+        }
+
+        throw new Error(`Bulk delete preview failed: ${response.status} ${response.statusText}`);
     }
 
     /**
