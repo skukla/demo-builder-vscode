@@ -161,10 +161,9 @@ export async function getLinkedEdsProjects(
 /**
  * Delete a DA.live site
  *
- * Helix CDN content is NOT explicitly unpublished because the Helix Admin API
- * requires browser-based auth (_AuthCookie_) for delete operations, which a
- * VS Code extension cannot provide. Published CDN content expires naturally
- * and becomes unreachable once the Helix site config is deleted.
+ * CDN unpublish is handled separately by the caller (projectDeletionService)
+ * via HelixService.bulkUnpublish/bulkDeletePreview using an Admin API Key.
+ * This function only handles the DA.live source content deletion.
  *
  * @param daLiveOrgOps - DaLiveOrgOperations for site deletion
  * @param daLiveOrg - DA.live organization name

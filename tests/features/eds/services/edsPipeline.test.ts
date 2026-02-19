@@ -485,15 +485,13 @@ describe('executeEdsPipeline', () => {
     // ============================================
 
     describe('content clear', () => {
-        it('should create API key and bulk unpublish all HTML pages', async () => {
+        it('should call unpublishPages with converted web paths', async () => {
             (mockDaLiveContentOps as Record<string, unknown>).deleteAllSiteContent = jest.fn().mockResolvedValue({
                 success: true,
                 deletedCount: 3,
                 deletedPaths: ['/index.html', '/about.html', '/products/default.html'],
             });
-            (mockHelixService as Record<string, unknown>).createAdminApiKey = jest.fn().mockResolvedValue('test-api-key-123');
-            (mockHelixService as Record<string, unknown>).bulkUnpublish = jest.fn().mockResolvedValue(undefined);
-            (mockHelixService as Record<string, unknown>).bulkDeletePreview = jest.fn().mockResolvedValue(undefined);
+            (mockHelixService as Record<string, unknown>).unpublishPages = jest.fn().mockResolvedValue({ success: true, count: 3 });
 
             const result = await executeEdsPipeline(
                 { ...baseParams, clearExistingContent: true, skipContent: true },
@@ -505,52 +503,20 @@ describe('executeEdsPipeline', () => {
                 'test-org', 'test-site', expect.any(Function),
             );
 
-            // Should create API key using repo owner/name
-            expect(mockHelixService.createAdminApiKey).toHaveBeenCalledWith('test-owner', 'test-repo');
-
-            // Should bulk unpublish all 3 pages with API key
-            expect(mockHelixService.bulkUnpublish).toHaveBeenCalledTimes(1);
-            expect(mockHelixService.bulkUnpublish).toHaveBeenCalledWith(
+            // Should call unified unpublishPages with converted web paths
+            expect(mockHelixService.unpublishPages).toHaveBeenCalledWith(
                 'test-owner', 'test-repo', 'main',
                 expect.arrayContaining(['/', '/about', '/products/default']),
-                'test-api-key-123',
-            );
-
-            // Should bulk delete preview for all 3 pages with API key
-            expect(mockHelixService.bulkDeletePreview).toHaveBeenCalledTimes(1);
-            expect(mockHelixService.bulkDeletePreview).toHaveBeenCalledWith(
-                'test-owner', 'test-repo', 'main',
-                expect.arrayContaining(['/', '/about', '/products/default']),
-                'test-api-key-123',
             );
         });
 
-        it('should succeed when API key creation fails (non-fatal)', async () => {
+        it('should succeed when unpublishPages throws (non-fatal)', async () => {
             (mockDaLiveContentOps as Record<string, unknown>).deleteAllSiteContent = jest.fn().mockResolvedValue({
                 success: true,
                 deletedCount: 2,
                 deletedPaths: ['/index.html', '/about.html'],
             });
-            (mockHelixService as Record<string, unknown>).createAdminApiKey = jest.fn().mockResolvedValue(null);
-
-            const result = await executeEdsPipeline(
-                { ...baseParams, clearExistingContent: true, skipContent: true },
-                services,
-            );
-
-            // Pipeline succeeds — CDN pages not unpublished but source content is cleared
-            expect(result.success).toBe(true);
-        });
-
-        it('should succeed when bulk unpublish throws (non-fatal)', async () => {
-            (mockDaLiveContentOps as Record<string, unknown>).deleteAllSiteContent = jest.fn().mockResolvedValue({
-                success: true,
-                deletedCount: 2,
-                deletedPaths: ['/index.html', '/about.html'],
-            });
-            (mockHelixService as Record<string, unknown>).createAdminApiKey = jest.fn().mockResolvedValue('test-api-key-123');
-            (mockHelixService as Record<string, unknown>).bulkUnpublish = jest.fn().mockRejectedValue(new Error('Bulk job timeout'));
-            (mockHelixService as Record<string, unknown>).bulkDeletePreview = jest.fn().mockResolvedValue(undefined);
+            (mockHelixService as Record<string, unknown>).unpublishPages = jest.fn().mockRejectedValue(new Error('Bulk job timeout'));
 
             const result = await executeEdsPipeline(
                 { ...baseParams, clearExistingContent: true, skipContent: true },
@@ -559,8 +525,6 @@ describe('executeEdsPipeline', () => {
 
             // Pipeline succeeds — bulk unpublish failure is non-fatal
             expect(result.success).toBe(true);
-            // bulkDeletePreview should NOT be called since bulkUnpublish threw
-            expect(mockHelixService.bulkDeletePreview).not.toHaveBeenCalled();
         });
 
         it('should skip CDN unpublish when no files were deleted', async () => {
@@ -576,8 +540,8 @@ describe('executeEdsPipeline', () => {
             );
 
             expect(result.success).toBe(true);
-            // No deleted files — no API key creation or unpublish needed
-            expect((mockHelixService as Record<string, unknown>).createAdminApiKey).toBeUndefined();
+            // No deleted files — unpublishPages should not be called
+            expect((mockHelixService as Record<string, unknown>).unpublishPages).toBeUndefined();
         });
 
         it('should unpublish non-HTML files with their original paths', async () => {
@@ -586,9 +550,7 @@ describe('executeEdsPipeline', () => {
                 deletedCount: 3,
                 deletedPaths: ['/about.html', '/media_abc123.png', '/config.json'],
             });
-            (mockHelixService as Record<string, unknown>).createAdminApiKey = jest.fn().mockResolvedValue('test-api-key-123');
-            (mockHelixService as Record<string, unknown>).bulkUnpublish = jest.fn().mockResolvedValue(undefined);
-            (mockHelixService as Record<string, unknown>).bulkDeletePreview = jest.fn().mockResolvedValue(undefined);
+            (mockHelixService as Record<string, unknown>).unpublishPages = jest.fn().mockResolvedValue({ success: true, count: 3 });
 
             await executeEdsPipeline(
                 { ...baseParams, clearExistingContent: true, skipContent: true },
@@ -596,10 +558,9 @@ describe('executeEdsPipeline', () => {
             );
 
             // HTML paths converted, non-HTML paths kept as-is
-            expect(mockHelixService.bulkUnpublish).toHaveBeenCalledWith(
+            expect(mockHelixService.unpublishPages).toHaveBeenCalledWith(
                 'test-owner', 'test-repo', 'main',
                 ['/about', '/media_abc123.png', '/config.json'],
-                'test-api-key-123',
             );
         });
 
@@ -609,9 +570,7 @@ describe('executeEdsPipeline', () => {
                 deletedCount: 2,
                 deletedPaths: ['/index.html', '/phones/index.html'],
             });
-            (mockHelixService as Record<string, unknown>).createAdminApiKey = jest.fn().mockResolvedValue('test-api-key-123');
-            (mockHelixService as Record<string, unknown>).bulkUnpublish = jest.fn().mockResolvedValue(undefined);
-            (mockHelixService as Record<string, unknown>).bulkDeletePreview = jest.fn().mockResolvedValue(undefined);
+            (mockHelixService as Record<string, unknown>).unpublishPages = jest.fn().mockResolvedValue({ success: true, count: 2 });
 
             await executeEdsPipeline(
                 { ...baseParams, clearExistingContent: true, skipContent: true },
@@ -619,10 +578,9 @@ describe('executeEdsPipeline', () => {
             );
 
             // /index.html → /, /phones/index.html → /phones
-            expect(mockHelixService.bulkUnpublish).toHaveBeenCalledWith(
+            expect(mockHelixService.unpublishPages).toHaveBeenCalledWith(
                 'test-owner', 'test-repo', 'main',
                 ['/', '/phones'],
-                'test-api-key-123',
             );
         });
     });

@@ -681,6 +681,42 @@ export class HelixService {
     }
 
     /**
+     * Unpublish pages from both live and preview CDN.
+     *
+     * Creates a short-lived Admin API Key, then bulk-removes the given
+     * web paths from live and preview. Non-fatal: returns success=false
+     * (with a warning) if the API key cannot be created.
+     *
+     * @param org - GitHub organization/owner
+     * @param site - GitHub repository name
+     * @param branch - Branch name
+     * @param webPaths - Web paths to unpublish (e.g., ['/about', '/products'])
+     * @returns Whether unpublish succeeded and how many paths were processed
+     */
+    async unpublishPages(
+        org: string,
+        site: string,
+        branch: string,
+        webPaths: string[],
+    ): Promise<{ success: boolean; count: number }> {
+        if (webPaths.length === 0) {
+            return { success: true, count: 0 };
+        }
+
+        const apiKey = await this.createAdminApiKey(org, site);
+        if (!apiKey) {
+            this.logger.warn('[Helix] Admin API Key creation failed, CDN pages not unpublished');
+            return { success: false, count: 0 };
+        }
+
+        await this.bulkUnpublish(org, site, branch, webPaths, apiKey);
+        await this.bulkDeletePreview(org, site, branch, webPaths, apiKey);
+
+        this.logger.info(`[Helix] Unpublished ${webPaths.length} CDN pages`);
+        return { success: true, count: webPaths.length };
+    }
+
+    /**
      * Preview and publish a page in one operation
      * First previews to sync from DA.live, then publishes to live CDN
      *
@@ -961,7 +997,7 @@ export class HelixService {
      * @param path - Starting path (default: root)
      * @returns Array of web paths to publish
      */
-    private async listAllPages(org: string, site: string, path: string = '/'): Promise<string[]> {
+    async listAllPages(org: string, site: string, path: string = '/'): Promise<string[]> {
         const pages: string[] = [];
         // DA.live paths include org/site prefix, need to strip it for recursion
         const pathPrefix = `/${org}/${site}`;

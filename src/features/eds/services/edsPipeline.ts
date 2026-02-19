@@ -152,9 +152,8 @@ export async function executeEdsPipeline(
 
             // Step 0b: Unpublish deleted content from the CDN.
             // The Helix content bus retains previously-published resources even
-            // after DA.live source deletion. We create an Admin API Key and use
-            // bulk POST with delete:true to remove all paths in two API calls.
-            // This covers HTML pages, media/images, and any other published assets.
+            // after DA.live source deletion. unpublishPages creates an Admin API
+            // Key and bulk-removes all paths from live + preview in two API calls.
             if (clearResult.deletedPaths.length > 0) {
                 // Convert DA.live paths to web paths for Admin API
                 // HTML: /accessories.html → /accessories, /products/index.html → /products
@@ -175,24 +174,11 @@ export async function executeEdsPipeline(
                     message: `Unpublishing ${webPaths.length} CDN pages...`,
                 });
 
-                // Create an Admin API Key for bulk unpublish operations
-                const apiKey = await helixService.createAdminApiKey(repoOwner, repoName);
-
-                if (apiKey) {
-                    logger.info(`[EdsPipeline] Bulk unpublishing ${webPaths.length} CDN pages`);
-
-                    try {
-                        await helixService.bulkUnpublish(repoOwner, repoName, 'main', webPaths, apiKey);
-                        await helixService.bulkDeletePreview(repoOwner, repoName, 'main', webPaths, apiKey);
-                        logger.info(`[EdsPipeline] Unpublished ${webPaths.length} CDN pages`);
-                    } catch (unpublishError) {
-                        // Non-fatal — source content is cleared, CDN will eventually sync
-                        logger.warn(`[EdsPipeline] Bulk unpublish failed: ${(unpublishError as Error).message}`);
-                    }
-                } else {
-                    // Non-fatal — source content is cleared, CDN pages will 404
-                    // once the content bus entry expires or is overwritten by new content
-                    logger.warn('[EdsPipeline] Admin API Key creation failed, CDN pages not unpublished');
+                try {
+                    await helixService.unpublishPages(repoOwner, repoName, 'main', webPaths);
+                } catch (unpublishError) {
+                    // Non-fatal — source content is cleared, CDN will eventually sync
+                    logger.warn(`[EdsPipeline] Bulk unpublish failed: ${(unpublishError as Error).message}`);
                 }
             }
 

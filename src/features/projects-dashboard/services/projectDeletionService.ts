@@ -23,6 +23,7 @@ import {
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { HelixService } from '@/features/eds/services/helixService';
 import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 
 /**
@@ -436,6 +437,37 @@ async function performEdsCleanup(
             };
 
             const daLiveOrgOps = new DaLiveOrgOperations(daLiveTokenProvider, context.logger);
+
+            // Bulk unpublish CDN content before deleting the site
+            // (site must still exist so we can enumerate its pages)
+            if (edsMetadata?.githubRepo) {
+                const [githubOwner, githubRepo] = edsMetadata.githubRepo.split('/');
+                if (githubOwner && githubRepo) {
+                    try {
+                        progress.report({ message: 'Unpublishing CDN content...' });
+                        const helixService = new HelixService(context.logger, undefined, daLiveTokenProvider);
+                        const pages = await helixService.listAllPages(
+                            edsMetadata.daLiveOrg!,
+                            edsMetadata.daLiveSite!,
+                        );
+
+                        const unpublishResult = await helixService.unpublishPages(
+                            githubOwner, githubRepo, 'main', pages,
+                        );
+
+                        if (unpublishResult.success && unpublishResult.count > 0) {
+                            results.push({
+                                type: 'helix',
+                                name: `${githubOwner}/${githubRepo}`,
+                                success: true,
+                            });
+                        }
+                    } catch (unpublishError) {
+                        // Non-fatal — site deletion proceeds regardless
+                        context.logger.warn(`[Delete Project] CDN unpublish failed: ${(unpublishError as Error).message}`);
+                    }
+                }
+            }
 
             const cleanupResult = await deleteDaLiveSite(
                 daLiveOrgOps,
