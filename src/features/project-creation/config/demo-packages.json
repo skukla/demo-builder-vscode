@@ -71,12 +71,6 @@
             "org": "demo-system-stores",
             "site": "accs-citisignal"
           },
-          "submodules": {
-            "demo-inspector": {
-              "path": "demo-inspector",
-              "repository": "skukla/demo-inspector-universal"
-            }
-          },
           "contentPatches": ["index-product-teaser-sku", "phones-product-teaser-sku", "phones-heading-reorder", "smart-watches-category-id", "smart-watches-url-path"],
           "contentPatchSource": {
             "owner": "skukla",
@@ -104,12 +98,6 @@
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
-          },
-          "submodules": {
-            "demo-inspector": {
-              "path": "demo-inspector",
-              "repository": "skukla/demo-inspector-universal"
-            }
           },
           "contentPatches": ["phones-heading-reorder", "smart-watches-category-id-accs"],
           "contentPatchSource": {
