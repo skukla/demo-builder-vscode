@@ -51,6 +51,7 @@
       "backend": "adobe-commerce-paas",
       "dependencies": ["eds-commerce-mesh"],
       "optionalAddons": [
+        { "id": "demo-inspector", "default": true },
         { "id": "adobe-commerce-aco" },
         { "id": "commerce-block-collection", "default": true }
       ],
@@ -67,6 +68,7 @@
       "backend": "adobe-commerce-accs",
       "dependencies": ["eds-accs-mesh"],
       "optionalAddons": [
+        { "id": "demo-inspector", "default": true },
         { "id": "adobe-commerce-aco" },
         { "id": "commerce-block-collection", "default": true }
       ],

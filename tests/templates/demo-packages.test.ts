@@ -408,8 +408,8 @@ describe('demo-packages.json', () => {
             expect(headless).toBeDefined();
             expect(headless.submodules).toBeDefined();
             expect(headless.submodules!['demo-inspector']).toBeDefined();
-            expect(headless.submodules!['demo-inspector'].path).toBe('src/demo-inspector');
-            expect(headless.submodules!['demo-inspector'].repository).toBe('skukla/demo-inspector');
+            expect(headless.submodules!['demo-inspector'].path).toBe('src/demo-inspector-universal');
+            expect(headless.submodules!['demo-inspector'].repository).toBe('skukla/demo-inspector-universal');
         });
 
         it('should have eds-paas and eds-accs storefronts', () => {

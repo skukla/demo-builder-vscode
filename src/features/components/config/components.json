@@ -77,8 +77,8 @@
             },
             "submodules": {
                 "demo-inspector": {
-                    "path": "src/demo-inspector",
-                    "repository": "skukla/demo-inspector"
+                    "path": "src/demo-inspector-universal",
+                    "repository": "skukla/demo-inspector-universal"
                 }
             }
         }
@@ -299,7 +299,7 @@
     "dependencies": {
         "demo-inspector": {
             "name": "Demo Inspector",
-            "description": "Interactive inspector overlay for demos",
+            "description": "Universal inspector overlay for API Mesh sources and EDS block structure",
             "subType": "inspector",
             "icon": "eye"
         }

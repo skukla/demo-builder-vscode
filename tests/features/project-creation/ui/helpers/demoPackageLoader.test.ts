@@ -145,15 +145,18 @@ describe('demoPackageLoader', () => {
             expect(storefront).toBeDefined();
             expect(storefront?.submodules).toBeDefined();
             expect(storefront?.submodules?.['demo-inspector']).toBeDefined();
-            expect(storefront?.submodules?.['demo-inspector'].path).toBe('src/demo-inspector');
-            expect(storefront?.submodules?.['demo-inspector'].repository).toBe('skukla/demo-inspector');
+            expect(storefront?.submodules?.['demo-inspector'].path).toBe('src/demo-inspector-universal');
+            expect(storefront?.submodules?.['demo-inspector'].repository).toBe('skukla/demo-inspector-universal');
         });
 
-        it('should return storefront without submodules for EDS storefronts', async () => {
+        it('should return storefront with submodules for EDS storefronts', async () => {
             const storefront = await getStorefrontForStack('citisignal', 'eds-paas');
 
             expect(storefront).toBeDefined();
-            expect(storefront?.submodules).toBeUndefined();
+            expect(storefront?.submodules).toBeDefined();
+            expect(storefront?.submodules?.['demo-inspector']).toBeDefined();
+            expect(storefront?.submodules?.['demo-inspector'].path).toBe('demo-inspector');
+            expect(storefront?.submodules?.['demo-inspector'].repository).toBe('skukla/demo-inspector-universal');
         });
 
         it('should return undefined for unknown stack', async () => {
