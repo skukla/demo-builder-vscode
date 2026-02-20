@@ -50,6 +50,8 @@ export interface DaLiveServiceCardProps {
     onCancelInput: () => void;
     /** Called when "Connect DA.Live" button clicked to open DA.live in browser */
     onOpenDaLive?: () => void;
+    /** Called when "Bookmarklet Setup" link clicked to show setup instructions */
+    onOpenBookmarkletSetup?: () => void;
     /** Show compact view (minimal details when another card is active) */
     compact?: boolean;
     /** Default org name from config setting (for pre-filling) */
@@ -75,6 +77,7 @@ export function DaLiveServiceCard({
     onReset,
     onCancelInput,
     onOpenDaLive,
+    onOpenBookmarkletSetup,
     compact = false,
     defaultOrg,
 }: DaLiveServiceCardProps): React.ReactElement {
@@ -153,15 +156,26 @@ export function DaLiveServiceCard({
                                     Cancel
                                 </button>
                             </Flex>
-                            {onOpenDaLive && (
-                                <button
-                                    className="service-action-link"
-                                    onClick={onOpenDaLive}
-                                    type="button"
-                                >
-                                    Open DA.live
-                                </button>
-                            )}
+                            <Flex gap="size-200" alignItems="center">
+                                {onOpenBookmarkletSetup && (
+                                    <button
+                                        className="service-action-link"
+                                        onClick={onOpenBookmarkletSetup}
+                                        type="button"
+                                    >
+                                        Bookmarklet Setup
+                                    </button>
+                                )}
+                                {onOpenDaLive && (
+                                    <button
+                                        className="service-action-link"
+                                        onClick={onOpenDaLive}
+                                        type="button"
+                                    >
+                                        Open DA.live
+                                    </button>
+                                )}
+                            </Flex>
                         </Flex>
                     </div>
                 ) : isAuthenticated ? (

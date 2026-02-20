@@ -17,6 +17,9 @@ import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
+import { openUrl } from '@/core/utils/browserUtils';
+import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
+import { getBookmarkletSetupPageUrl } from '@/features/eds/ui/helpers/bookmarkletSetupPage';
 import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
@@ -236,6 +239,13 @@ export class CommandManager {
         // Show Sidebar (explicit show command - used by dashboard button)
         this.registerCommand('demoBuilder.showSidebar', async () => {
             await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
+        });
+
+        // DA.live Bookmarklet Setup (recall the setup page)
+        this.registerCommand('demoBuilder.openDaLiveBookmarkletSetup', async () => {
+            const bookmarkletUrl = getBookmarkletUrl();
+            const setupPageUrl = getBookmarkletSetupPageUrl(bookmarkletUrl);
+            await openUrl(setupPageUrl, 'demo-builder-bookmarklet-setup.html');
         });
 
         // Open Component (reveal in Explorer)

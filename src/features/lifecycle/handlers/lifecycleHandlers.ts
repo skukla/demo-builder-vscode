@@ -14,6 +14,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { openUrl } from '@/core/utils/browserUtils';
 import { validateProjectPath, validateURL } from '@/core/validation';
 import { toggleLogsPanel } from '../services/lifecycleService';
 import { ErrorCode } from '@/types/errorCodes';
@@ -311,28 +312,7 @@ export async function handleOpenExternal(
     }
 
     try {
-        // Handle data URLs by writing to temp file
-        if (url.startsWith('data:')) {
-            // Extract content from data URL
-            const match = url.match(/^data:([^;]+);([^,]+),(.*)$/);
-            if (!match) {
-                context.logger.error('[OpenExternal] Invalid data URL format');
-                return { success: false, error: 'Invalid data URL format' };
-            }
-
-            const [, mimeType, encoding, data] = match;
-            const content = encoding === 'charset=utf-8'
-                ? decodeURIComponent(data)
-                : Buffer.from(data, 'base64').toString('utf-8');
-
-            // Write to temp file
-            const ext = mimeType.includes('html') ? '.html' : '.txt';
-            const tempFile = path.join(os.tmpdir(), `demo-builder-setup${ext}`);
-            await fsPromises.writeFile(tempFile, content, 'utf-8');
-
-            context.logger.info('[OpenExternal] Wrote data URL to temp file:', tempFile);
-            await vscode.env.openExternal(vscode.Uri.file(tempFile));
-        } else {
+        if (!url.startsWith('data:')) {
             // Regular URL - validate to prevent open redirect/malicious URL attacks
             // SECURITY: Validates protocol and prevents SSRF to private networks
             try {
@@ -341,10 +321,10 @@ export async function handleOpenExternal(
                 context.logger.error('[OpenExternal] URL validation failed', validationError as Error);
                 return { success: false, error: 'Invalid or unsafe URL' };
             }
-
-            context.logger.info('[OpenExternal] Opening URL');
-            await vscode.env.openExternal(vscode.Uri.parse(url));
         }
+
+        context.logger.info('[OpenExternal] Opening URL');
+        await openUrl(url, 'demo-builder-setup.html');
 
         context.logger.info('[OpenExternal] Successfully opened');
         return { success: true };

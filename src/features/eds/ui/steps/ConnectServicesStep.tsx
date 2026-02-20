@@ -69,6 +69,14 @@ export function ConnectServicesStep({
         daLiveAuth.cancelAuth();
     };
 
+    const handleOpenBookmarkletSetup = () => {
+        if (daLiveAuth.bookmarkletUrl) {
+            vscode.postMessage('openExternal', {
+                url: getBookmarkletSetupPageUrl(daLiveAuth.bookmarkletUrl),
+            });
+        }
+    };
+
     return (
         <SingleColumnLayout maxWidth="900px">
             <div className="services-cards-grid">
@@ -95,6 +103,7 @@ export function ConnectServicesStep({
                     onReset={handleDaLiveReset}
                     onCancelInput={handleCancelInput}
                     onOpenDaLive={daLiveAuth.openDaLive}
+                    onOpenBookmarkletSetup={daLiveAuth.bookmarkletUrl ? handleOpenBookmarkletSetup : undefined}
                 />
             </div>
         </SingleColumnLayout>

@@ -68,6 +68,11 @@
         "category": "Demo Builder"
       },
       {
+        "command": "demoBuilder.openDaLiveBookmarkletSetup",
+        "title": "DA.live Bookmarklet Setup",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.cleanupDaLiveSites",
         "title": "Manage DA.live Sites",
         "category": "Demo Builder"

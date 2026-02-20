@@ -16,6 +16,7 @@ import { parseEnvFile } from '@/core/utils/envParser';
 import { Project, ComponentInstance } from '@/types';
 import { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
+import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 
 // Import from services for use in this file
 import {
@@ -206,7 +207,6 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
     const project = await context.stateManager.getCurrentProject();
     if (!project) return;
 
-    const { detectFrontendChanges } = await import('@/features/mesh/services/stalenessDetector');
     const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
 
     const meshComponent = getMeshComponentInstance(project);
