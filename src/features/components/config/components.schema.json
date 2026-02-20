@@ -116,6 +116,24 @@
                         }
                     }
                 },
+                "submodules": {
+                    "type": "object",
+                    "description": "Git submodules to initialize after cloning (key is submodule ID, value defines path and repository)",
+                    "additionalProperties": {
+                        "type": "object",
+                        "required": ["path"],
+                        "properties": {
+                            "path": {
+                                "type": "string",
+                                "description": "Path within the cloned repository where the submodule lives"
+                            },
+                            "repository": {
+                                "type": "string",
+                                "description": "GitHub repository in 'owner/repo' format"
+                            }
+                        }
+                    }
+                },
                 "compatibleBackends": {
                     "type": "array",
                     "items": { "type": "string" },
