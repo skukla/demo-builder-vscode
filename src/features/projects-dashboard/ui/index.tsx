@@ -255,13 +255,13 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
-    // Handle reset EDS project (EDS projects)
-    const handleResetEds = useCallback(async (project: Project) => {
+    // Handle reset project (all project types)
+    const handleResetProject = useCallback(async (project: Project) => {
         try {
             const response = await webviewClient.request<{
                 success: boolean;
                 cancelled?: boolean;
-            }>('resetEds', {
+            }>('resetProject', {
                 projectPath: project.path,
             });
 
@@ -270,7 +270,7 @@ const ProjectsDashboardApp: React.FC = () => {
                 fetchProjects(true);
             }
         } catch (error) {
-            console.error('Failed to reset EDS project:', error);
+            console.error('Failed to reset project:', error);
         }
     }, [fetchProjects]);
 
@@ -357,7 +357,7 @@ const ProjectsDashboardApp: React.FC = () => {
                 onOpenBrowser={handleOpenBrowser}
                 onOpenLiveSite={handleOpenLiveSite}
                 onOpenDaLive={handleOpenDaLive}
-                onResetEds={handleResetEds}
+                onResetProject={handleResetProject}
                 onRepublishContent={handleRepublishContent}
                 onEditProject={handleEditProject}
                 onRenameProject={handleRenameProject}

@@ -1,7 +1,7 @@
 /**
  * Dashboard Handlers - DA.live Auth Tests
  *
- * Tests for DA.live authentication in handleResetEds:
+ * Tests for DA.live authentication in handleResetProject:
  * - Confirmation dialog shown first (immediate UX feedback)
  * - Auth check happens inside progress notification
  * - Sign-in notification when token is expired/expiring
@@ -203,7 +203,7 @@ jest.mock('@/features/eds/services/edsResetService', () => ({
 // =============================================================================
 
 import * as vscode from 'vscode';
-import { handleResetEds } from '@/features/projects-dashboard/handlers/dashboardHandlers';
+import { handleResetProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { ServiceLocator } from '@/core/di';
 import { ServiceLocator as ServiceLocatorDirect } from '@/core/di/serviceLocator';
 import { HelixService } from '@/features/eds/services/helixService';
@@ -283,10 +283,10 @@ function createMockContext(project: Project | undefined): HandlerContext {
 }
 
 // =============================================================================
-// Tests - DA.live Auth Pre-check in handleResetEds
+// Tests - DA.live Auth Pre-check in handleResetProject
 // =============================================================================
 
-describe('handleResetEds DA.live auth (confirmation-first flow)', () => {
+describe('handleResetProject DA.live auth (confirmation-first flow)', () => {
     let mockHelixService: jest.Mocked<HelixService>;
     let mockAuthService: { getTokenManager: jest.Mock };
     let mockFileOps: {
@@ -416,8 +416,8 @@ describe('handleResetEds DA.live auth (confirmation-first flow)', () => {
         const project = createMockEdsProject();
         const context = createMockContext(project);
 
-        // When: handleResetEds is called without project path
-        const result = await handleResetEds(context, undefined);
+        // When: handleResetProject is called without project path
+        const result = await handleResetProject(context, undefined);
 
         // Then: Should return error
         expect(result.success).toBe(false);
@@ -428,8 +428,8 @@ describe('handleResetEds DA.live auth (confirmation-first flow)', () => {
         // Given: Project path that doesn't exist
         const context = createMockContext(undefined); // loadProjectFromPath returns undefined
 
-        // When: handleResetEds is called
-        const result = await handleResetEds(context, { projectPath: '/nonexistent/path' });
+        // When: handleResetProject is called
+        const result = await handleResetProject(context, { projectPath: '/nonexistent/path' });
 
         // Then: Should return error
         expect(result.success).toBe(false);
@@ -441,8 +441,8 @@ describe('handleResetEds DA.live auth (confirmation-first flow)', () => {
         const project = createMockEdsProject();
         const context = createMockContext(project);
 
-        // When: handleResetEds is called
-        await handleResetEds(context, { projectPath: project.path });
+        // When: handleResetProject is called
+        await handleResetProject(context, { projectPath: project.path });
 
         // Then: Should delegate to resetEdsProjectWithUI
         expect(mockResetEdsProjectWithUI).toHaveBeenCalledWith({
@@ -467,8 +467,8 @@ describe('handleResetEds DA.live auth (confirmation-first flow)', () => {
             contentCopied: 10,
         });
 
-        // When: handleResetEds is called
-        const result = await handleResetEds(context, { projectPath: project.path });
+        // When: handleResetProject is called
+        const result = await handleResetProject(context, { projectPath: project.path });
 
         // Then: Should return success
         expect(result.success).toBe(true);
@@ -485,8 +485,8 @@ describe('handleResetEds DA.live auth (confirmation-first flow)', () => {
             cancelled: true,
         });
 
-        // When: handleResetEds is called
-        const result = await handleResetEds(context, { projectPath: project.path });
+        // When: handleResetProject is called
+        const result = await handleResetProject(context, { projectPath: project.path });
 
         // Then: Should return cancelled
         expect(result.success).toBe(false);
@@ -505,8 +505,8 @@ describe('handleResetEds DA.live auth (confirmation-first flow)', () => {
             errorType: 'DALIVE_AUTH_REQUIRED',
         });
 
-        // When: handleResetEds is called
-        const result = await handleResetEds(context, { projectPath: project.path });
+        // When: handleResetProject is called
+        const result = await handleResetProject(context, { projectPath: project.path });
 
         // Then: Should return the auth error
         expect(result.success).toBe(false);
@@ -524,8 +524,8 @@ describe('handleResetEds DA.live auth (confirmation-first flow)', () => {
             error: 'EDS metadata missing',
         });
 
-        // When: handleResetEds is called
-        const result = await handleResetEds(context, { projectPath: project.path });
+        // When: handleResetProject is called
+        const result = await handleResetProject(context, { projectPath: project.path });
 
         // Then: Should return the error
         expect(result.success).toBe(false);
@@ -545,8 +545,8 @@ describe('handleResetEds DA.live auth (confirmation-first flow)', () => {
             meshRedeployed: true,
         });
 
-        // When: handleResetEds is called
-        const result = await handleResetEds(context, { projectPath: project.path });
+        // When: handleResetProject is called
+        const result = await handleResetProject(context, { projectPath: project.path });
 
         // Then: Should return success with extra fields
         expect(result.success).toBe(true);

@@ -89,11 +89,11 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'setViewModeOverride')).toBe(true);
         });
 
-        it('should include EDS action handlers', () => {
+        it('should include project reset and EDS action handlers', () => {
             // Given: projectsListHandlers object
-            // When: Checking for EDS action message types
-            // Then: EDS action handlers present
-            expect(hasHandler(projectsListHandlers, 'resetEds')).toBe(true);
+            // When: Checking for project reset and EDS action message types
+            // Then: Reset and EDS action handlers present
+            expect(hasHandler(projectsListHandlers, 'resetProject')).toBe(true);
             expect(hasHandler(projectsListHandlers, 'republishContent')).toBe(true);
         });
 

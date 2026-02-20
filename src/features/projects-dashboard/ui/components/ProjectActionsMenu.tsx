@@ -47,8 +47,8 @@ export interface ProjectActionsMenuProps {
     onOpenLiveSite?: (project: Project) => void;
     /** Callback to open DA.live for authoring (for EDS projects) */
     onOpenDaLive?: (project: Project) => void;
-    /** Callback to reset EDS project from template (for EDS projects) */
-    onResetEds?: (project: Project) => void;
+    /** Callback to reset project (re-clone components or reset from template) */
+    onResetProject?: (project: Project) => void;
     /** Callback to republish content to CDN (for EDS projects) */
     onRepublishContent?: (project: Project) => void;
     /** Callback to edit project settings */
@@ -77,7 +77,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     onOpenBrowser,
     onOpenLiveSite,
     onOpenDaLive,
-    onResetEds,
+    onResetProject,
     onRepublishContent,
     onEdit,
     onRename,
@@ -104,8 +104,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             case 'openDaLive':
                 onOpenDaLive?.(project);
                 break;
-            case 'resetEds':
-                onResetEds?.(project);
+            case 'resetProject':
+                onResetProject?.(project);
                 break;
             case 'republishContent':
                 onRepublishContent?.(project);
@@ -123,7 +123,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 onDelete?.(project);
                 break;
         }
-    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetEds, onRepublishContent, onEdit, onRename, onExport, onDelete]);
+    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onExport, onDelete]);
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
@@ -149,10 +149,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             // Rename is always available
             if (onRename) {
                 items.push({ key: 'rename', label: 'Rename', icon: 'rename' });
-            }
-            // Reset EDS project from template
-            if (onResetEds) {
-                items.push({ key: 'resetEds', label: 'Reset', icon: 'reset' });
             }
             // Republish Content (EDS only)
             if (onRepublishContent) {
@@ -182,6 +178,11 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             }
         }
 
+        // Reset project — available for all project types
+        if (onResetProject) {
+            items.push({ key: 'resetProject', label: 'Reset', icon: 'reset' });
+        }
+
         // Export and Delete always available for all project types
         if (onExport) {
             items.push({ key: 'export', label: 'Export', icon: 'export' });
@@ -190,7 +191,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             items.push({ key: 'delete', label: 'Delete', icon: 'delete' });
         }
         return items;
-    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetEds, onRepublishContent, onEdit, onRename, onExport, onDelete]);
+    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onExport, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {

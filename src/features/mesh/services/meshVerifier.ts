@@ -316,6 +316,14 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
 }
 
 /**
+ * Fetch mesh info (meshId, endpoint) from Adobe I/O via aio api-mesh:describe.
+ * Used by reset flows to recover mesh ID when not stored in project metadata.
+ */
+export async function fetchMeshInfoFromAdobeIO(logger: Logger): Promise<{ meshId?: string; endpoint?: string } | null> {
+    return fetchMeshInfoFromAdobeIOImpl(logger);
+}
+
+/**
  * Backward-compatible export: Update project with verified mesh status
  */
 export async function syncMeshStatus(

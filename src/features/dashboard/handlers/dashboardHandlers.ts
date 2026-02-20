@@ -430,21 +430,33 @@ export const handleNavigateBack: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'resetEds' message - Reset EDS project to template state
+ * Handle 'resetProject' message - Reset project to initial state
  *
- * Delegates to the consolidated resetEdsProjectWithUI function in edsResetService.
- * This eliminates code duplication between dashboard and projects-dashboard handlers.
+ * Dispatches to the appropriate reset service based on project type:
+ * - EDS projects: resetEdsProjectWithUI (template-based reset)
+ * - Headless projects: resetProjectWithUI (component re-clone)
  */
-export const handleResetEds: MessageHandler = async (context) => {
+export const handleResetProject: MessageHandler = async (context) => {
     const project = await context.stateManager.getCurrentProject();
 
     if (!project) {
-        context.logger.error('[Dashboard] resetEds: No current project');
+        context.logger.error('[Dashboard] resetProject: No current project');
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetService');
-    return resetEdsProjectWithUI({
+    const { isEdsProject } = await import('@/types/typeGuards');
+
+    if (isEdsProject(project)) {
+        const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetService');
+        return resetEdsProjectWithUI({
+            project,
+            context,
+            logPrefix: '[Dashboard]',
+        });
+    }
+
+    const { resetProjectWithUI } = await import('@/features/lifecycle/services/projectResetService');
+    return resetProjectWithUI({
         project,
         context,
         logPrefix: '[Dashboard]',
@@ -527,6 +539,6 @@ export const dashboardHandlers = defineHandlers({
     // Project management handlers
     'deleteProject': handleDeleteProject,
 
-    // EDS handlers
-    'resetEds': handleResetEds,
+    // Project reset handler
+    'resetProject': handleResetProject,
 });

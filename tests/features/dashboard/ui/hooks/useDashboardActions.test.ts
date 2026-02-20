@@ -299,7 +299,7 @@ describe('useDashboardActions', () => {
         });
     });
 
-    // Note: EDS Actions (handleResetEds) are backend-only handlers in dashboardHandlers.ts.
+    // Note: Project reset (handleResetProject) is a backend-only handler in dashboardHandlers.ts.
     // They are NOT part of this frontend hook.
     // UI calls these via message passing from ActionGrid, not through this hook.
 });

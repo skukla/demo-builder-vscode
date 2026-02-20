@@ -939,12 +939,13 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
 };
 
 /**
- * Handle 'resetEds' message - Reset EDS project to template state
+ * Handle 'resetProject' message - Reset project to initial state
  *
- * Delegates to the consolidated resetEdsProjectWithUI function in edsResetService.
- * This eliminates code duplication between dashboard and projects-dashboard handlers.
+ * Dispatches to the appropriate reset service based on project type:
+ * - EDS projects: resetEdsProjectWithUI (template-based reset)
+ * - Headless projects: resetProjectWithUI (component re-clone)
  */
-export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
+export const handleResetProject: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
     payload?: { projectPath: string },
 ): Promise<HandlerResponse> => {
@@ -967,15 +968,24 @@ export const handleResetEds: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project not found' };
     }
 
-    const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetService');
-    return resetEdsProjectWithUI({
+    const { isEdsProject } = await import('@/types/typeGuards');
+
+    if (isEdsProject(project)) {
+        const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetService');
+        return resetEdsProjectWithUI({
+            project,
+            context,
+            logPrefix: '[ProjectsList]',
+            includeBlockLibrary: true,
+            verifyCdn: true,
+            showLogsOnError: true,
+        });
+    }
+
+    const { resetProjectWithUI } = await import('@/features/lifecycle/services/projectResetService');
+    return resetProjectWithUI({
         project,
         context,
         logPrefix: '[ProjectsList]',
-        // Projects dashboard enables all features
-        includeBlockLibrary: true,
-        verifyCdn: true,
-        // redeployMesh auto-detects based on project
-        showLogsOnError: true,
     });
 };

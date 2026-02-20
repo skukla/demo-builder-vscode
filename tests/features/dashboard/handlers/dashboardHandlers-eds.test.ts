@@ -2,7 +2,7 @@
  * Dashboard Handlers - EDS Actions Tests
  *
  * Tests for EDS (Edge Delivery Services) action handlers:
- * - handleResetEds: Reset EDS project (reset repo contents to template, recopy content)
+ * - handleResetProject: Reset EDS project (reset repo contents to template, recopy content)
  */
 
 import { HandlerContext } from '@/types/handlers';
@@ -158,7 +158,7 @@ jest.mock('@/features/eds/services/edsResetService', () => ({
 // =============================================================================
 
 import * as vscode from 'vscode';
-import { handleResetEds } from '@/features/dashboard/handlers/dashboardHandlers';
+import { handleResetProject } from '@/features/dashboard/handlers/dashboardHandlers';
 import { ServiceLocator } from '@/core/di';
 import { HelixService } from '@/features/eds/services/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
@@ -238,7 +238,7 @@ function createMockContext(project: Project | undefined): HandlerContext {
 // Tests
 // =============================================================================
 
-describe('handleResetEds', () => {
+describe('handleResetProject', () => {
     let mockHelixService: jest.Mocked<HelixService>;
     let mockAuthService: { getTokenManager: jest.Mock };
     let mockFileOps: {
@@ -359,8 +359,8 @@ describe('handleResetEds', () => {
         // Given: No current project
         const context = createMockContext(undefined);
 
-        // When: handleResetEds is called
-        const result = await handleResetEds(context);
+        // When: handleResetProject is called
+        const result = await handleResetProject(context);
 
         // Then: Should return error
         expect(result.success).toBe(false);
@@ -375,8 +375,8 @@ describe('handleResetEds', () => {
         const project = createMockEdsProject();
         const context = createMockContext(project);
 
-        // When: handleResetEds is called
-        await handleResetEds(context);
+        // When: handleResetProject is called
+        await handleResetProject(context);
 
         // Then: Should delegate to resetEdsProjectWithUI
         expect(mockResetEdsProjectWithUI).toHaveBeenCalledWith({
@@ -398,8 +398,8 @@ describe('handleResetEds', () => {
             contentCopied: 10,
         });
 
-        // When: handleResetEds is called
-        const result = await handleResetEds(context);
+        // When: handleResetProject is called
+        const result = await handleResetProject(context);
 
         // Then: Should return the success result
         expect(result.success).toBe(true);
@@ -417,8 +417,8 @@ describe('handleResetEds', () => {
             cancelled: true,
         });
 
-        // When: handleResetEds is called
-        const result = await handleResetEds(context);
+        // When: handleResetProject is called
+        const result = await handleResetProject(context);
 
         // Then: Should return cancelled
         expect(result.success).toBe(false);
@@ -436,8 +436,8 @@ describe('handleResetEds', () => {
             error: 'EDS metadata missing',
         });
 
-        // When: handleResetEds is called
-        const result = await handleResetEds(context);
+        // When: handleResetProject is called
+        const result = await handleResetProject(context);
 
         // Then: Should return the error
         expect(result.success).toBe(false);

@@ -39,8 +39,8 @@ export interface ProjectRowProps {
     onOpenLiveSite?: (project: Project) => void;
     /** Callback to open DA.live for authoring (for EDS projects) */
     onOpenDaLive?: (project: Project) => void;
-    /** Callback to reset EDS project from template (for EDS projects) */
-    onResetEds?: (project: Project) => void;
+    /** Callback to reset project (re-clone components or reset from template) */
+    onResetProject?: (project: Project) => void;
     /** Callback to republish content to CDN (for EDS projects) */
     onRepublishContent?: (project: Project) => void;
     /** Callback to edit project settings */
@@ -65,7 +65,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
     onOpenBrowser,
     onOpenLiveSite,
     onOpenDaLive,
-    onResetEds,
+    onResetProject,
     onRepublishContent,
     onEdit,
     onRename,
@@ -128,7 +128,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         onOpenBrowser={onOpenBrowser}
                         onOpenLiveSite={onOpenLiveSite}
                         onOpenDaLive={onOpenDaLive}
-                        onResetEds={onResetEds}
+                        onResetProject={onResetProject}
                         onRepublishContent={onRepublishContent}
                         onEdit={onEdit}
                         onRename={onRename}
