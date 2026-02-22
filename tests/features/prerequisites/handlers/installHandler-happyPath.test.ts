@@ -52,7 +52,6 @@ import {
     mockAdobeCliPrereq,
     mockManualPrereq,
     mockNodeResult,
-    mockNpmPrereq,
     createMockContext,
     setupMockCommandExecutor,
     setupSharedUtilityMocks,

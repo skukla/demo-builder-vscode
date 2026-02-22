@@ -5,12 +5,12 @@
  * testability and reduce inline complexity in useMemo hooks.
  */
 
-import React from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import React from 'react';
+import type { ComponentData, ComponentsData } from './ReviewStep';
 import { COMPONENT_IDS, hasMeshInDependencies, isMeshComponentId } from '@/core/constants';
 import { cn } from '@/core/ui/utils/classNames';
-import type { ComponentData, ComponentsData } from './ReviewStep';
 
 /**
  * Component info item structure for the review list.
@@ -46,7 +46,7 @@ interface ComponentsState {
 export function resolveServiceNames(
     backendId: string | undefined,
     backends: ComponentData[] | undefined,
-    services: Record<string, { name: string; description?: string }> | undefined
+    services: Record<string, { name: string; description?: string }> | undefined,
 ): string[] {
     if (!backendId || !backends || !services) {
         return [];
@@ -89,7 +89,7 @@ export function buildComponentInfoList(
     meshStatus: string | undefined,
     componentsData: ComponentsData | undefined,
     hasDemoInspector: boolean,
-    backendServiceNames?: string[]
+    backendServiceNames?: string[],
 ): ComponentInfoItem[] {
     if (!components || !componentsData) {
         return [];
@@ -149,12 +149,12 @@ export function buildComponentInfoList(
         const otherDeps = components.dependencies
             .filter((id) => !isMeshComponentId(id) && id !== COMPONENT_IDS.DEMO_INSPECTOR)
             .map((id) => componentsData.dependencies?.find((d) => d.id === id))
-            .filter(Boolean);
+            .filter((d): d is NonNullable<typeof d> => Boolean(d));
 
         if (otherDeps.length > 0) {
             info.push({
                 label: 'Dependencies',
-                value: otherDeps.map((d) => d!.name).join(', '),
+                value: otherDeps.map((d) => d.name).join(', '),
             });
         }
     }
@@ -163,12 +163,12 @@ export function buildComponentInfoList(
     if (components.integrations && componentsData.integrations) {
         const integrations = components.integrations
             .map((id) => componentsData.integrations?.find((i) => i.id === id))
-            .filter(Boolean);
+            .filter((i): i is NonNullable<typeof i> => Boolean(i));
 
         if (integrations.length > 0) {
             info.push({
                 label: 'Integrations',
-                value: integrations.map((i) => i!.name).join(', '),
+                value: integrations.map((i) => i.name).join(', '),
             });
         }
     }
@@ -177,12 +177,12 @@ export function buildComponentInfoList(
     if (components.appBuilder && componentsData.appBuilder) {
         const apps = components.appBuilder
             .map((id) => componentsData.appBuilder?.find((a) => a.id === id))
-            .filter(Boolean);
+            .filter((a): a is NonNullable<typeof a> => Boolean(a));
 
         if (apps.length > 0) {
             info.push({
                 label: 'App Builder',
-                value: apps.map((a) => a!.name).join(', '),
+                value: apps.map((a) => a.name).join(', '),
             });
         }
     }

@@ -9,11 +9,11 @@ import { Text } from '@adobe/react-spectrum';
 import LinkOut from '@spectrum-icons/workflow/LinkOut';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import React, { useState } from 'react';
-import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
-import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
+import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 
 interface GitHubAppInstallDialogProps {
     /** GitHub repository owner */
@@ -92,13 +92,13 @@ export function GitHubAppInstallDialog({
                     label: 'Open Installation Page',
                     icon: <LinkOut />,
                     variant: 'secondary',
-                    onPress: handleOpenInstallPage
+                    onPress: handleOpenInstallPage,
                 },
                 {
                     label: 'Check Installation',
                     icon: <Refresh />,
                     variant: 'accent',
-                    onPress: handleCheckInstallation
+                    onPress: handleCheckInstallation,
                 },
             ]}
         >

@@ -7,10 +7,10 @@
  * Pattern: Uses same dependency injection as GitHubRepoOperations (takes GitHubTokenService).
  */
 
+import type { GitHubTokenService } from './githubTokenService';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-import type { GitHubTokenService } from './githubTokenService';
 
 /** Helix admin base URL for code sync checks */
 const HELIX_ADMIN_BASE_URL = 'https://admin.hlx.page';

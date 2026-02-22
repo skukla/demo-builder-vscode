@@ -15,13 +15,13 @@
  */
 
 import * as vscode from 'vscode';
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import { getBookmarkletUrl } from '../utils/daLiveTokenBookmarklet';
 import {
     getDaLiveAuthService,
     validateDaLiveToken,
     offerSaveDefaultOrg,
 } from './edsHelpers';
+import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
+import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /** Bookmarklet URL is static — compute once */
 const bookmarkletUrl = getBookmarkletUrl();

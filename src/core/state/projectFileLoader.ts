@@ -8,8 +8,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types';
+import type { Logger } from '@/types/logger';
 import { getComponentInstancesByType, parseJSON } from '@/types/typeGuards';
 
 export interface ProjectManifest {

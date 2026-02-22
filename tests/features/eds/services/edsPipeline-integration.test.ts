@@ -1,7 +1,10 @@
 /**
- * EDS Pipeline Tests
+ * EDS Pipeline Tests - Integration
  *
- * Tests for the shared content pipeline used by both setup and reset flows.
+ * Tests for pipeline integration behavior:
+ * - Progress callback
+ * - Content clear + CDN overwrite
+ * - Full pipeline execution order
  */
 
 import {
@@ -19,7 +22,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     bulkPreviewAndPublish: (...args: unknown[]) => mockBulkPreviewAndPublish(...args),
 }));
 
-describe('executeEdsPipeline', () => {
+describe('executeEdsPipeline - integration', () => {
     let mockDaLiveContentOps: EdsPipelineServices['daLiveContentOps'];
     let mockGithubFileOps: EdsPipelineServices['githubFileOps'];
     let mockHelixService: EdsPipelineServices['helixService'];
@@ -78,319 +81,6 @@ describe('executeEdsPipeline', () => {
         };
     });
 
-    // ============================================
-    // Content Copy
-    // ============================================
-
-    describe('content copy', () => {
-        it('should skip content copy when skipContent is true', async () => {
-            const result = await executeEdsPipeline(
-                { ...baseParams, skipContent: true },
-                services,
-            );
-
-            expect(result.success).toBe(true);
-            expect(result.contentFilesCopied).toBe(0);
-            expect(mockDaLiveContentOps.copyContentFromSource).not.toHaveBeenCalled();
-        });
-
-        it('should copy content when source is provided', async () => {
-            const contentSource = { org: 'src-org', site: 'src-site' };
-            const result = await executeEdsPipeline(
-                { ...baseParams, contentSource },
-                services,
-            );
-
-            expect(result.success).toBe(true);
-            expect(result.contentFilesCopied).toBe(42);
-            expect(mockDaLiveContentOps.copyContentFromSource).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    org: 'src-org',
-                    site: 'src-site',
-                    indexUrl: 'https://main--src-site--src-org.aem.live/full-index.json',
-                }),
-                'test-org',
-                'test-site',
-                expect.any(Function),
-                undefined,
-                undefined,
-            );
-        });
-
-        it('should use custom indexPath when provided', async () => {
-            const contentSource = { org: 'src-org', site: 'src-site', indexPath: '/custom-index.json' };
-            const result = await executeEdsPipeline(
-                { ...baseParams, contentSource },
-                services,
-            );
-
-            expect(result.success).toBe(true);
-            expect(mockDaLiveContentOps.copyContentFromSource).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    indexUrl: 'https://main--src-site--src-org.aem.live/custom-index.json',
-                }),
-                expect.anything(),
-                expect.anything(),
-                expect.anything(),
-                undefined,
-                undefined,
-            );
-        });
-
-        it('should pass content patches to copy operation', async () => {
-            const contentSource = { org: 'src-org', site: 'src-site' };
-            const contentPatches = ['patch-1', 'patch-2'];
-            const contentPatchSource = { owner: 'patch-owner', repo: 'patch-repo', path: '/patches' };
-
-            await executeEdsPipeline(
-                { ...baseParams, contentSource, contentPatches, contentPatchSource },
-                services,
-            );
-
-            expect(mockDaLiveContentOps.copyContentFromSource).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.anything(),
-                expect.anything(),
-                expect.anything(),
-                contentPatches,
-                contentPatchSource,
-            );
-        });
-
-        it('should fail when skipContent is false and no content source', async () => {
-            const result = await executeEdsPipeline(
-                { ...baseParams, skipContent: false },
-                services,
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.error).toContain('Content source is required');
-        });
-
-        it('should fail when content copy returns failure', async () => {
-            (mockDaLiveContentOps.copyContentFromSource as jest.Mock).mockResolvedValue({
-                success: false,
-                totalFiles: 10,
-                copiedFiles: [],
-                failedFiles: [{ path: '/page', error: 'fail' }],
-            });
-
-            const result = await executeEdsPipeline(
-                { ...baseParams, contentSource: { org: 'o', site: 's' } },
-                services,
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.error).toContain('Content copy failed');
-        });
-    });
-
-    // ============================================
-    // Block Library
-    // ============================================
-
-    describe('block library', () => {
-        it('should skip block library when includeBlockLibrary is false', async () => {
-            const result = await executeEdsPipeline(
-                { ...baseParams, skipContent: true, includeBlockLibrary: false },
-                services,
-            );
-
-            expect(result.success).toBe(true);
-            expect(result.libraryPaths).toEqual([]);
-            expect(mockDaLiveContentOps.createBlockLibraryFromTemplate).not.toHaveBeenCalled();
-        });
-
-        it('should use template repo without blockCollectionIds', async () => {
-            const result = await executeEdsPipeline(
-                { ...baseParams, skipContent: true, includeBlockLibrary: true },
-                services,
-            );
-
-            expect(result.success).toBe(true);
-            expect(mockDaLiveContentOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
-                'test-org',
-                'test-site',
-                'template-owner',
-                'template-repo',
-                expect.any(Function),
-                undefined,
-            );
-        });
-
-        it('should use user repo with blockCollectionIds', async () => {
-            const blockCollectionIds = ['hero', 'columns'];
-            const result = await executeEdsPipeline(
-                { ...baseParams, skipContent: true, includeBlockLibrary: true, blockCollectionIds },
-                services,
-            );
-
-            expect(result.success).toBe(true);
-            expect(mockDaLiveContentOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
-                'test-org',
-                'test-site',
-                'test-owner',   // user's repo, not template
-                'test-repo',
-                expect.any(Function),
-                blockCollectionIds,
-            );
-        });
-
-        it('should include library paths in result', async () => {
-            const result = await executeEdsPipeline(
-                { ...baseParams, skipContent: true, includeBlockLibrary: true },
-                services,
-            );
-
-            expect(result.libraryPaths).toEqual(['.da/library/blocks.json', '.da/library/blocks/hero']);
-        });
-    });
-
-    // ============================================
-    // EDS Settings
-    // ============================================
-
-    describe('EDS settings', () => {
-        it('should always apply EDS settings', async () => {
-            await executeEdsPipeline(
-                { ...baseParams, skipContent: true },
-                services,
-            );
-
-            expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalledWith(
-                mockDaLiveContentOps,
-                'test-org',
-                'test-site',
-                mockLogger,
-            );
-        });
-    });
-
-    // ============================================
-    // Cache Purge
-    // ============================================
-
-    describe('cache purge', () => {
-        it('should not purge cache when purgeCache is false', async () => {
-            await executeEdsPipeline(
-                { ...baseParams, skipContent: true, purgeCache: false },
-                services,
-            );
-
-            expect(mockHelixService.purgeCacheAll).not.toHaveBeenCalled();
-        });
-
-        it('should purge cache when purgeCache is true', async () => {
-            await executeEdsPipeline(
-                { ...baseParams, skipContent: true, purgeCache: true },
-                services,
-            );
-
-            expect(mockHelixService.purgeCacheAll).toHaveBeenCalledWith(
-                'test-owner',
-                'test-repo',
-                'main',
-            );
-        });
-    });
-
-    // ============================================
-    // Content Publish
-    // ============================================
-
-    describe('content publish', () => {
-        it('should skip publish when skipPublish defaults to skipContent', async () => {
-            await executeEdsPipeline(
-                { ...baseParams, skipContent: true },
-                services,
-            );
-
-            expect(mockHelixService.publishAllSiteContent).not.toHaveBeenCalled();
-        });
-
-        it('should publish when skipContent is true but skipPublish is false', async () => {
-            await executeEdsPipeline(
-                { ...baseParams, skipContent: true, skipPublish: false },
-                services,
-            );
-
-            expect(mockHelixService.publishAllSiteContent).toHaveBeenCalledWith(
-                'test-owner/test-repo',
-                'main',
-                'test-org',
-                'test-site',
-                expect.any(Function),
-            );
-        });
-
-        it('should publish content when content was copied', async () => {
-            await executeEdsPipeline(
-                { ...baseParams, contentSource: { org: 'o', site: 's' } },
-                services,
-            );
-
-            expect(mockHelixService.publishAllSiteContent).toHaveBeenCalledWith(
-                'test-owner/test-repo',
-                'main',
-                'test-org',
-                'test-site',
-                expect.any(Function),
-            );
-        });
-    });
-
-    // ============================================
-    // Library Publish
-    // ============================================
-
-    describe('library publish', () => {
-        it('should publish library paths when they exist', async () => {
-            await executeEdsPipeline(
-                { ...baseParams, skipContent: true, includeBlockLibrary: true },
-                services,
-            );
-
-            expect(mockBulkPreviewAndPublish).toHaveBeenCalledWith(
-                mockHelixService,
-                'test-owner',
-                'test-repo',
-                ['.da/library/blocks.json', '.da/library/blocks/hero'],
-                mockLogger,
-            );
-        });
-
-        it('should not publish when no library paths', async () => {
-            (mockDaLiveContentOps.createBlockLibraryFromTemplate as jest.Mock).mockResolvedValue({
-                success: true,
-                blocksCount: 0,
-                paths: [],
-            });
-
-            await executeEdsPipeline(
-                { ...baseParams, skipContent: true, includeBlockLibrary: true },
-                services,
-            );
-
-            expect(mockBulkPreviewAndPublish).not.toHaveBeenCalled();
-        });
-
-        it('should not fail when library publish throws', async () => {
-            mockBulkPreviewAndPublish.mockRejectedValue(new Error('publish error'));
-
-            const result = await executeEdsPipeline(
-                { ...baseParams, skipContent: true, includeBlockLibrary: true },
-                services,
-            );
-
-            // Pipeline should succeed even if library publish fails (non-fatal)
-            expect(result.success).toBe(true);
-        });
-    });
-
-    // ============================================
-    // Progress Callback
-    // ============================================
-
     describe('progress callback', () => {
         it('should call progress callback for each operation', async () => {
             const onProgress = jest.fn();
@@ -435,7 +125,7 @@ describe('executeEdsPipeline', () => {
             );
 
             const contentCopyCalls = onProgress.mock.calls.filter(
-                (call: [{ operation: string }]) => call[0].operation === 'content-copy' && call[0].current !== undefined,
+                (call: [{ operation: string; current?: number }]) => call[0].operation === 'content-copy' && call[0].current !== undefined,
             );
             expect(contentCopyCalls.length).toBeGreaterThan(0);
             expect(contentCopyCalls[0][0]).toMatchObject({
@@ -461,7 +151,7 @@ describe('executeEdsPipeline', () => {
             );
 
             const publishCalls = onProgress.mock.calls.filter(
-                (call: [{ operation: string }]) => call[0].operation === 'content-publish' && call[0].current !== undefined,
+                (call: [{ operation: string; current?: number }]) => call[0].operation === 'content-publish' && call[0].current !== undefined,
             );
             expect(publishCalls.length).toBeGreaterThan(0);
             expect(publishCalls[0][0]).toMatchObject({
@@ -479,10 +169,6 @@ describe('executeEdsPipeline', () => {
             expect(result.success).toBe(true);
         });
     });
-
-    // ============================================
-    // Content Clear + CDN Overwrite
-    // ============================================
 
     describe('content clear', () => {
         it('should call unpublishPages with converted web paths', async () => {
@@ -523,7 +209,7 @@ describe('executeEdsPipeline', () => {
                 services,
             );
 
-            // Pipeline succeeds — bulk unpublish failure is non-fatal
+            // Pipeline succeeds -- bulk unpublish failure is non-fatal
             expect(result.success).toBe(true);
         });
 
@@ -540,7 +226,7 @@ describe('executeEdsPipeline', () => {
             );
 
             expect(result.success).toBe(true);
-            // No deleted files — unpublishPages should not be called
+            // No deleted files -- unpublishPages should not be called
             expect((mockHelixService as Record<string, unknown>).unpublishPages).toBeUndefined();
         });
 
@@ -577,17 +263,13 @@ describe('executeEdsPipeline', () => {
                 services,
             );
 
-            // /index.html → /, /phones/index.html → /phones
+            // /index.html -> /, /phones/index.html -> /phones
             expect(mockHelixService.unpublishPages).toHaveBeenCalledWith(
                 'test-owner', 'test-repo', 'main',
                 ['/', '/phones'],
             );
         });
     });
-
-    // ============================================
-    // Full Pipeline
-    // ============================================
 
     describe('full pipeline', () => {
         it('should execute all steps in order for a complete setup', async () => {

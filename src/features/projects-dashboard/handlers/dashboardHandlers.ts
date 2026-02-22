@@ -21,17 +21,15 @@ import {
 } from '../services';
 import { BaseWebviewCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
-import { ServiceLocator } from '@/core/di';
 import { executeCommandForProject } from '@/core/handlers';
-import { getLogger } from '@/core/logging';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito, TIMEOUTS } from '@/core/utils';
 import { validateProjectPath, validateProjectNameSecurity } from '@/core/validation';
 import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
-import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { republishStorefrontConfig } from '@/features/eds';
 import { showDaLiveAuthQuickPick, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
-import { republishStorefrontConfig, needsStorefrontRepublish } from '@/features/eds';
+import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import { getMeshComponentInstance, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
@@ -845,7 +843,7 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                 // Required to list and publish content from DA.live
                 const daLiveTokenProvider = {
                     getAccessToken: async () => {
-                        return await daLiveAuthService.getAccessToken();
+                        return daLiveAuthService.getAccessToken();
                     },
                 };
 

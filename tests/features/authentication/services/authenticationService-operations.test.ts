@@ -1,5 +1,5 @@
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { CommandExecutor, CommandResult } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell';
 import type { Logger, StepLogger } from '@/core/logging';
 import {
     createMockCommandExecutor,

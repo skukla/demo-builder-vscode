@@ -15,11 +15,11 @@
  * @module features/eds/services/edsPipeline
  */
 
-import type { Logger } from '@/types/logger';
-import type { ContentPatchSource } from '@/types/demoPackages';
 import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { HelixService } from './helixService';
+import type { ContentPatchSource } from '@/types/demoPackages';
+import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Types
@@ -78,6 +78,198 @@ export interface EdsPipelineResult {
 }
 
 // ==========================================================
+// Pipeline Helpers
+// ==========================================================
+
+/**
+ * Convert DA.live paths to web paths for Admin API.
+ * HTML: /accessories.html -> /accessories, /products/index.html -> /products
+ * Non-HTML: kept as-is (e.g. /media_abc.png, /config.json)
+ */
+function toWebPaths(daLivePaths: string[]): string[] {
+    return daLivePaths.map(p => {
+        if (!p.endsWith('.html')) {
+            return p;
+        }
+        let web = p.replace(/\.html$/i, '');
+        if (web === '/index' || web.endsWith('/index')) {
+            web = web.slice(0, -6) || '/';
+        }
+        return web || '/';
+    });
+}
+
+/**
+ * Step 0: Clear all existing DA.live content and unpublish from CDN.
+ */
+async function pipelineClearContent(
+    daLiveContentOps: DaLiveContentOperations,
+    helixService: HelixService,
+    daLiveOrg: string,
+    daLiveSite: string,
+    repoOwner: string,
+    repoName: string,
+    logger: Logger,
+    onProgress?: EdsPipelineProgressCallback,
+): Promise<void> {
+    onProgress?.({
+        operation: 'content-clear',
+        message: 'Clearing existing DA.live content...',
+    });
+
+    logger.info(`[EdsPipeline] Clearing all DA.live content for ${daLiveOrg}/${daLiveSite}`);
+
+    const clearResult = await daLiveContentOps.deleteAllSiteContent(
+        daLiveOrg,
+        daLiveSite,
+        (info) => {
+            onProgress?.({
+                operation: 'content-clear',
+                message: `Clearing content (${info.deleted} files removed)`,
+                subMessage: info.current,
+            });
+        },
+    );
+
+    if (!clearResult.success) {
+        throw new Error(`Content clear failed: ${clearResult.error}`);
+    }
+
+    logger.info(`[EdsPipeline] Cleared ${clearResult.deletedCount} files`);
+
+    // Unpublish deleted content from CDN (Helix retains previously-published resources)
+    if (clearResult.deletedPaths.length > 0) {
+        const webPaths = toWebPaths(clearResult.deletedPaths);
+
+        onProgress?.({
+            operation: 'content-clear',
+            message: `Unpublishing ${webPaths.length} CDN pages...`,
+        });
+
+        try {
+            await helixService.unpublishPages(repoOwner, repoName, 'main', webPaths);
+        } catch (unpublishError) {
+            // Non-fatal -- source content is cleared, CDN will eventually sync
+            logger.warn(`[EdsPipeline] Bulk unpublish failed: ${(unpublishError as Error).message}`);
+        }
+    }
+
+    onProgress?.({
+        operation: 'content-clear',
+        message: `Cleared ${clearResult.deletedCount} files`,
+    });
+}
+
+/**
+ * Step 1: Copy content from source to DA.live.
+ * @returns Number of files copied.
+ */
+async function pipelineCopyContent(
+    daLiveContentOps: DaLiveContentOperations,
+    contentSource: { org: string; site: string; indexPath?: string },
+    daLiveOrg: string,
+    daLiveSite: string,
+    contentPatches: string[] | undefined,
+    contentPatchSource: ContentPatchSource | undefined,
+    logger: Logger,
+    onProgress?: EdsPipelineProgressCallback,
+): Promise<number> {
+    onProgress?.({
+        operation: 'content-copy',
+        message: 'Populating DA.live content...',
+    });
+
+    const indexPath = contentSource.indexPath || '/full-index.json';
+    const fullContentSource = {
+        org: contentSource.org,
+        site: contentSource.site,
+        indexUrl: `https://main--${contentSource.site}--${contentSource.org}.aem.live${indexPath}`,
+    };
+
+    logger.info(`[EdsPipeline] Copying content from ${contentSource.org}/${contentSource.site} to ${daLiveOrg}/${daLiveSite}`);
+
+    const contentResult = await daLiveContentOps.copyContentFromSource(
+        fullContentSource,
+        daLiveOrg,
+        daLiveSite,
+        (progress) => {
+            const statusMessage = progress.message || `Copying content (${progress.processed}/${progress.total})`;
+            onProgress?.({
+                operation: 'content-copy',
+                message: statusMessage,
+                subMessage: progress.currentFile,
+                current: progress.processed,
+                total: progress.total,
+                percentage: progress.percentage,
+            });
+        },
+        contentPatches,
+        contentPatchSource,
+    );
+
+    if (!contentResult.success) {
+        throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
+    }
+
+    logger.info(`[EdsPipeline] Content populated: ${contentResult.totalFiles} files`);
+
+    onProgress?.({
+        operation: 'content-copy',
+        message: 'Content populated',
+    });
+
+    return contentResult.totalFiles;
+}
+
+/**
+ * Step 5: Publish content to CDN.
+ * Treats "No publishable pages" as non-fatal.
+ */
+async function pipelinePublishContent(
+    helixService: HelixService,
+    repoOwner: string,
+    repoName: string,
+    daLiveOrg: string,
+    daLiveSite: string,
+    logger: Logger,
+    onProgress?: EdsPipelineProgressCallback,
+): Promise<void> {
+    onProgress?.({
+        operation: 'content-publish',
+        message: 'Publishing content to CDN...',
+    });
+
+    logger.info(`[EdsPipeline] Publishing content to CDN for ${repoOwner}/${repoName}`);
+
+    try {
+        await helixService.publishAllSiteContent(
+            `${repoOwner}/${repoName}`,
+            'main',
+            daLiveOrg,
+            daLiveSite,
+            (info) => {
+                onProgress?.({
+                    operation: 'content-publish',
+                    message: info.message,
+                    subMessage: info.currentPath,
+                    current: info.current,
+                    total: info.total,
+                });
+            },
+        );
+        logger.info('[EdsPipeline] Content published to CDN');
+    } catch (publishError) {
+        // No publishable pages is non-fatal (e.g. Custom package with no content source)
+        const msg = (publishError as Error).message;
+        if (msg.includes('No publishable pages')) {
+            logger.info('[EdsPipeline] No content pages to publish (site has no publishable content)');
+        } else {
+            throw publishError;
+        }
+    }
+}
+
+// ==========================================================
 // Pipeline
 // ==========================================================
 
@@ -121,148 +313,39 @@ export async function executeEdsPipeline(
     let libraryPaths: string[] = [];
 
     try {
-        // ============================================
         // Step 0: Clear Existing Content (if requested)
-        // ============================================
         if (clearExistingContent) {
-            onProgress?.({
-                operation: 'content-clear',
-                message: 'Clearing existing DA.live content...',
-            });
-
-            logger.info(`[EdsPipeline] Clearing all DA.live content for ${daLiveOrg}/${daLiveSite}`);
-
-            const clearResult = await daLiveContentOps.deleteAllSiteContent(
-                daLiveOrg,
-                daLiveSite,
-                (info) => {
-                    onProgress?.({
-                        operation: 'content-clear',
-                        message: `Clearing content (${info.deleted} files removed)`,
-                        subMessage: info.current,
-                    });
-                },
+            await pipelineClearContent(
+                daLiveContentOps, helixService, daLiveOrg, daLiveSite,
+                repoOwner, repoName, logger, onProgress,
             );
-
-            if (!clearResult.success) {
-                throw new Error(`Content clear failed: ${clearResult.error}`);
-            }
-
-            logger.info(`[EdsPipeline] Cleared ${clearResult.deletedCount} files`);
-
-            // Step 0b: Unpublish deleted content from the CDN.
-            // The Helix content bus retains previously-published resources even
-            // after DA.live source deletion. unpublishPages creates an Admin API
-            // Key and bulk-removes all paths from live + preview in two API calls.
-            if (clearResult.deletedPaths.length > 0) {
-                // Convert DA.live paths to web paths for Admin API
-                // HTML: /accessories.html → /accessories, /products/index.html → /products
-                // Non-HTML: kept as-is (e.g. /media_abc.png, /config.json)
-                const webPaths = clearResult.deletedPaths.map(p => {
-                    if (p.endsWith('.html')) {
-                        let web = p.replace(/\.html$/i, '');
-                        if (web === '/index' || web.endsWith('/index')) {
-                            web = web.slice(0, -6) || '/';
-                        }
-                        return web || '/';
-                    }
-                    return p;
-                });
-
-                onProgress?.({
-                    operation: 'content-clear',
-                    message: `Unpublishing ${webPaths.length} CDN pages...`,
-                });
-
-                try {
-                    await helixService.unpublishPages(repoOwner, repoName, 'main', webPaths);
-                } catch (unpublishError) {
-                    // Non-fatal — source content is cleared, CDN will eventually sync
-                    logger.warn(`[EdsPipeline] Bulk unpublish failed: ${(unpublishError as Error).message}`);
-                }
-            }
-
-            onProgress?.({
-                operation: 'content-clear',
-                message: `Cleared ${clearResult.deletedCount} files`,
-            });
         }
 
-        // ============================================
         // Step 1: Content Copy
-        // ============================================
         if (!skipContent) {
             if (!contentSource) {
                 throw new Error('Content source is required when skipContent is false');
             }
-
-            onProgress?.({
-                operation: 'content-copy',
-                message: 'Populating DA.live content...',
-            });
-
-            const indexPath = contentSource.indexPath || '/full-index.json';
-            const fullContentSource = {
-                org: contentSource.org,
-                site: contentSource.site,
-                indexUrl: `https://main--${contentSource.site}--${contentSource.org}.aem.live${indexPath}`,
-            };
-
-            logger.info(`[EdsPipeline] Copying content from ${contentSource.org}/${contentSource.site} to ${daLiveOrg}/${daLiveSite}`);
-
-            const contentResult = await daLiveContentOps.copyContentFromSource(
-                fullContentSource,
-                daLiveOrg,
-                daLiveSite,
-                (progress) => {
-                    const statusMessage = progress.message || `Copying content (${progress.processed}/${progress.total})`;
-                    onProgress?.({
-                        operation: 'content-copy',
-                        message: statusMessage,
-                        subMessage: progress.currentFile,
-                        current: progress.processed,
-                        total: progress.total,
-                        percentage: progress.percentage,
-                    });
-                },
-                contentPatches,
-                contentPatchSource,
+            contentFilesCopied = await pipelineCopyContent(
+                daLiveContentOps, contentSource, daLiveOrg, daLiveSite,
+                contentPatches, contentPatchSource, logger, onProgress,
             );
-
-            if (!contentResult.success) {
-                throw new Error(`Content copy failed: ${contentResult.failedFiles.length} files failed`);
-            }
-
-            contentFilesCopied = contentResult.totalFiles;
-            logger.info(`[EdsPipeline] Content populated: ${contentFilesCopied} files`);
-
-            onProgress?.({
-                operation: 'content-copy',
-                message: 'Content populated',
-            });
         } else {
             logger.info('[EdsPipeline] Skipping content copy (skipContent=true)');
         }
 
-        // ============================================
         // Step 2: Block Library
-        // ============================================
         if (includeBlockLibrary) {
             onProgress?.({
                 operation: 'block-library',
                 message: 'Configuring block library...',
             });
 
-            // When block collection is active, read component-definition.json from
-            // user's repo (which has merged entries) instead of the template repo
             const compDefOwner = blockCollectionIds ? repoOwner : templateOwner;
             const compDefRepo = blockCollectionIds ? repoName : templateRepo;
 
             const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
-                daLiveOrg,
-                daLiveSite,
-                compDefOwner,
-                compDefRepo,
+                daLiveOrg, daLiveSite, compDefOwner, compDefRepo,
                 (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
                 blockCollectionIds,
             );
@@ -278,9 +361,7 @@ export async function executeEdsPipeline(
             }
         }
 
-        // ============================================
         // Step 3: EDS Settings
-        // ============================================
         onProgress?.({
             operation: 'eds-settings',
             message: 'Applying EDS configuration...',
@@ -289,9 +370,7 @@ export async function executeEdsPipeline(
         const { applyDaLiveOrgConfigSettings } = await import('../handlers/edsHelpers');
         await applyDaLiveOrgConfigSettings(daLiveContentOps, daLiveOrg, daLiveSite, logger);
 
-        // ============================================
         // Step 4: Cache Purge
-        // ============================================
         if (purgeCache) {
             onProgress?.({
                 operation: 'cache-purge',
@@ -302,50 +381,16 @@ export async function executeEdsPipeline(
             logger.info('[EdsPipeline] Stale cache purged');
         }
 
-        // ============================================
         // Step 5: Content Publish
-        // ============================================
         if (!skipPublish) {
-            onProgress?.({
-                operation: 'content-publish',
-                message: 'Publishing content to CDN...',
-            });
-
-            logger.info(`[EdsPipeline] Publishing content to CDN for ${repoOwner}/${repoName}`);
-
-            try {
-                await helixService.publishAllSiteContent(
-                    `${repoOwner}/${repoName}`,
-                    'main',
-                    daLiveOrg,
-                    daLiveSite,
-                    (info) => {
-                        onProgress?.({
-                            operation: 'content-publish',
-                            message: info.message,
-                            subMessage: info.currentPath,
-                            current: info.current,
-                            total: info.total,
-                        });
-                    },
-                );
-                logger.info('[EdsPipeline] Content published to CDN');
-            } catch (publishError) {
-                // No publishable pages is non-fatal (e.g. Custom package with no content source)
-                const msg = (publishError as Error).message;
-                if (msg.includes('No publishable pages')) {
-                    logger.info('[EdsPipeline] No content pages to publish (site has no publishable content)');
-                } else {
-                    throw publishError;
-                }
-            }
+            await pipelinePublishContent(
+                helixService, repoOwner, repoName, daLiveOrg, daLiveSite, logger, onProgress,
+            );
         } else {
             logger.info('[EdsPipeline] Skipping content publish (skipPublish=true)');
         }
 
-        // ============================================
         // Step 6: Library Publish
-        // ============================================
         if (libraryPaths.length > 0) {
             onProgress?.({
                 operation: 'library-publish',
@@ -357,7 +402,7 @@ export async function executeEdsPipeline(
                 await bulkPreviewAndPublish(helixService, repoOwner, repoName, libraryPaths, logger);
                 logger.info('[EdsPipeline] Block library published');
             } catch (libPublishError) {
-                // Non-fatal — library config was created, publishing can be retried
+                // Non-fatal -- library config was created, publishing can be retried
                 logger.warn(`[EdsPipeline] Block library publish failed: ${(libPublishError as Error).message}`);
             }
         }

@@ -120,7 +120,7 @@ export class WorkspaceWatcherManager implements vscode.Disposable {
             getLoggerLazy().warn(
                 `[WorkspaceWatcherManager] Watcher already exists for ${workspaceFolder.name} with pattern ${pattern}`,
             );
-            return this.watchers.get(key)!;
+            return this.watchers.get(key) as vscode.FileSystemWatcher;
         }
 
         // Create new watcher

@@ -43,8 +43,8 @@ jest.mock('vscode', () => ({
                     onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
                     asWebviewUri: jest.fn((uri: any) => uri),
                 },
-                onDidDispose: jest.fn((callback) => {
-                    mockDisposeCallback = callback;
+                onDidDispose: jest.fn((cb) => {
+                    mockDisposeCallback = cb;
                     return { dispose: jest.fn() };
                 }),
                 dispose: jest.fn(() => {
@@ -57,7 +57,7 @@ jest.mock('vscode', () => ({
             };
             return mockPanel;
         }),
-        onDidChangeActiveColorTheme: jest.fn((callback) => ({
+        onDidChangeActiveColorTheme: jest.fn(() => ({
             dispose: jest.fn(),
         })),
         setStatusBarMessage: jest.fn(),
@@ -112,7 +112,7 @@ class TestWebviewCommand extends BaseWebviewCommand {
         return '<html><body>Test</body></html>';
     }
 
-    protected initializeMessageHandlers(_comm: any): void {
+    protected initializeMessageHandlers(): void {
         // Test implementation
     }
 

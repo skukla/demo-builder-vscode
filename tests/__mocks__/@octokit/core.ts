@@ -6,7 +6,8 @@
  */
 
 export class Octokit {
-    constructor(_options?: any) {
+    constructor(_options?: Record<string, unknown>) {
+        void _options;
         // Mock constructor
     }
 

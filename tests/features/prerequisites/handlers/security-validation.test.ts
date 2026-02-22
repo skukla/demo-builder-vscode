@@ -108,7 +108,7 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
             for (const maliciousVersion of maliciousVersions) {
                 // The validateNodeVersion function should reject malicious input
                 expect(() => {
-                    const { validateNodeVersion: realValidate } = require('@/core/validation');
+                    const { validateNodeVersion: _realValidate } = require('@/core/validation');
                     // Get the actual implementation
                     const actualValidate = jest.requireActual('@/core/validation').validateNodeVersion;
                     actualValidate(maliciousVersion);
@@ -262,10 +262,10 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
                 },
             } as PrerequisiteDefinition;
 
-            let shellParam: any;
+            let _shellParam: any;
             mockCommandExecutor.execute.mockImplementation((cmd: string, options?: any) => {
                 if (cmd === 'fnm list') {
-                    shellParam = options?.shell;
+                    _shellParam = options?.shell;
                     return Promise.resolve(createCommandResult('v18.0.0'));
                 }
                 return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));

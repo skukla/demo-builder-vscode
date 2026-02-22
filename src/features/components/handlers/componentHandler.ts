@@ -55,7 +55,7 @@ export class ComponentHandler {
             throw new Error('Invalid component selection');
         }
 
-        return await this.dependencyResolver.generateConfiguration(
+        return this.dependencyResolver.generateConfiguration(
             frontendComponent,
             backendComponent,
             resolved.all,

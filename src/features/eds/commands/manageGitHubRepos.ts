@@ -12,10 +12,11 @@
  */
 
 import * as vscode from 'vscode';
-import { getLogger } from '@/core/logging';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { HandlerContext } from '@/types/handlers';
 
 interface RepoQuickPickItem extends vscode.QuickPickItem {
     repoFullName: string;
@@ -35,7 +36,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
             logger,
         };
 
-        const { tokenService, repoOperations } = getGitHubServices(minimalContext as any);
+        const { tokenService, repoOperations } = getGitHubServices(minimalContext as unknown as HandlerContext);
 
         // Check if we have a valid token
         let token = await tokenService.getToken();
@@ -85,7 +86,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
         }
 
         let allRepos: Array<{ fullName: string }> = [];
-        let repoToProjectMap = new Map<string, string[]>();
+        const repoToProjectMap = new Map<string, string[]>();
 
         await vscode.window.withProgress(
             {

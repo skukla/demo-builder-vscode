@@ -15,7 +15,7 @@ export class ResourceLocker {
         const currentLock = this.locks.get(resource) || Promise.resolve();
 
         // Create new lock that waits for current lock then executes operation
-        let releaseLock: () => void;
+        let releaseLock: (() => void) | undefined;
         const newLock = new Promise<void>((resolve) => {
             releaseLock = resolve;
         });
@@ -26,7 +26,7 @@ export class ResourceLocker {
                 return operation();
             })
             .finally(() => {
-                releaseLock!();
+                releaseLock?.();
             });
 
         // Update the lock for this resource

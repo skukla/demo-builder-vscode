@@ -9,25 +9,24 @@ import {
     TextField,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { useSelectedComponents } from './hooks/useSelectedComponents';
+import { useServiceGroups } from './hooks/useServiceGroups';
 import { FormField, ConfigSection } from '@/core/ui/components/forms';
 import { TwoColumnLayout, PageHeader, PageFooter } from '@/core/ui/components/layout';
 import { NavigationPanel, NavigationSection } from '@/core/ui/components/navigation';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import {
+    normalizeProjectName,
+    getProjectNameError,
+} from '@/core/validation/normalizers';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import type { Project } from '@/types/base';
 import { getMeshComponentInstance, hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
-import { getAllComponentDefinitions } from './configureHelpers';
-import { useSelectedComponents } from './hooks/useSelectedComponents';
-import { useServiceGroups } from './hooks/useServiceGroups';
-import {
-    normalizeProjectName,
-    getProjectNameError,
-} from '@/core/validation/normalizers';
 
 // Create validators with consistent error messages
 const urlValidator = url('Please enter a valid URL');
@@ -381,7 +380,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
                 if (field.validation?.pattern && hasValueInConfig && typeof valueInConfig === 'string') {
                     const patternValidator = pattern(
                         new RegExp(field.validation.pattern),
-                        field.validation.message || 'Invalid format'
+                        field.validation.message || 'Invalid format',
                     );
                     const result = patternValidator(valueInConfig);
                     if (!result.valid && result.error) {

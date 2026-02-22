@@ -17,7 +17,7 @@ import type { WizardState, EDSConfig } from '@/types/webview';
 
 // Mock webviewClient
 const mockPostMessage = jest.fn();
-let messageHandlers: Map<string, (data: unknown) => void> = new Map();
+const messageHandlers: Map<string, (data: unknown) => void> = new Map();
 
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {

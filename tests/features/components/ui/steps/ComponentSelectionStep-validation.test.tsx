@@ -5,7 +5,6 @@ import { ComponentSelectionStep } from '@/features/components/ui/steps/Component
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
 import {
-    baseState,
     mockComponentsData,
     mockUpdateState,
     mockSetCanProceed,

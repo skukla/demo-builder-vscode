@@ -22,7 +22,7 @@ describe('CommandSequencer', () => {
         it('should execute commands in sequence', async () => {
             const executionOrder: number[] = [];
 
-            const mockExecute = jest.fn(async (command: string, config: CommandConfig): Promise<CommandResult> => {
+            const mockExecute = jest.fn(async (command: string): Promise<CommandResult> => {
                 const index = parseInt(command.split(' ')[1]);
                 executionOrder.push(index);
                 await delay(50);

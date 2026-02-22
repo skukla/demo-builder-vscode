@@ -29,7 +29,7 @@ jest.mock('vscode', () => ({
         showInformationMessage: jest.fn(),
     },
     commands: {
-        registerCommand: jest.fn((id, callback) => ({
+        registerCommand: jest.fn((_id, _callback) => ({
             dispose: jest.fn(),
         })),
         executeCommand: jest.fn(),
@@ -84,7 +84,7 @@ describe('EnvFileWatcherService', () => {
     describe('Creation and Disposal', () => {
         it('should create service with all internal commands registered', () => {
             // When: Service instantiated
-            const service = new EnvFileWatcherService(
+            const _service = new EnvFileWatcherService(
                 mockContext,
                 mockStateManager as any,
                 mockWatcherManager,
@@ -138,7 +138,7 @@ describe('EnvFileWatcherService', () => {
 
         it('should dispose all commands when service disposed', () => {
             // Given: Service with registered commands
-            const service = new EnvFileWatcherService(
+            const _service = new EnvFileWatcherService(
                 mockContext,
                 mockStateManager as any,
                 mockWatcherManager,

@@ -87,7 +87,7 @@ export function useWizardEffects({
                 isEditMode: state.wizardMode ? state.wizardMode !== 'create' : state.editMode,
             });
         }
-    }, [state.currentStep, completedSteps, confirmedSteps, WIZARD_STEPS]);
+    }, [state.currentStep, state.editMode, state.wizardMode, completedSteps, confirmedSteps, WIZARD_STEPS]);
 
     // Hydrate project title from API if needed (handles old projects without projectTitle stored)
     useEffect(() => {
@@ -113,10 +113,10 @@ export function useWizardEffects({
                     });
                     setState(prev => ({
                         ...prev,
-                        adobeProject: {
-                            ...prev.adobeProject!,
+                        adobeProject: prev.adobeProject ? {
+                            ...prev.adobeProject,
                             title: matchingProject?.title,
-                        },
+                        } : prev.adobeProject,
                     }));
                 }
             })

@@ -8,7 +8,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { setupMocks, mockHomedir, mockStateFile, createMockProject, mockLoggerInstance, type TestMocks } from './stateManager.testUtils';
+import { setupMocks, mockHomedir, createMockProject, type TestMocks } from './stateManager.testUtils';
 import type { Project } from '@/types';
 
 // Re-declare mocks to ensure proper typing and hoisting

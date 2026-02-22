@@ -191,7 +191,7 @@ describe('sessionUIState', () => {
             sessionUIState.viewModeOverride = 'rows';
 
             // Require the module again - should get same instance
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
+             
             const { sessionUIState: sameInstance } = require('@/core/state/sessionUIState');
 
             expect(sameInstance.isComponentsViewShown).toBe(true);

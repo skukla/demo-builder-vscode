@@ -20,12 +20,11 @@
  * @module features/eds/services/configGenerator
  */
 
+import configTemplate from '../config/config-template.json';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Logger } from '@/types';
-import type { Project } from '@/types';
+import type { Logger , Project } from '@/types';
 
 // Bundled template - single source of truth
-import configTemplate from '../config/config-template.json';
 
 // ==========================================================
 // Types
@@ -197,19 +196,41 @@ export function mapBackendToEnvironmentType(backendComponentId?: string): Enviro
  * @param backendComponentId - Backend component ID for environment type (e.g., 'adobe-commerce-paas')
  * @returns Config parameters for generation
  */
+/**
+ * Resolve a config field from ACCS or PaaS sources based on environment type.
+ *
+ * @param isAccs - Whether the backend is ACCS
+ * @param edsConfig - EDS storefront config
+ * @param meshConfig - Mesh config (ACCS or PaaS depending on isAccs)
+ * @param accsKey - Config key for ACCS environments
+ * @param paasKey - Config key for PaaS environments
+ * @returns Resolved value or undefined
+ */
+function resolveConfigField(
+    isAccs: boolean,
+    edsConfig: Record<string, string | boolean | number | undefined>,
+    meshConfig: Record<string, string | boolean | number | undefined>,
+    accsKey: string,
+    paasKey: string,
+): string | undefined {
+    if (isAccs) {
+        return (edsConfig[accsKey] || meshConfig[accsKey]) as string | undefined;
+    }
+    return (edsConfig[paasKey] || meshConfig[paasKey]) as string | undefined;
+}
+
 export function extractConfigParamsFromConfigs(
     componentConfigs: ComponentConfigs | undefined,
     meshEndpoint?: string,
     backendComponentId?: string,
 ): Partial<ConfigGeneratorParams> {
     const edsConfig = componentConfigs?.[COMPONENT_IDS.EDS_STOREFRONT] || {};
-    // Check both mesh configs - only one will be present depending on backend
     const paasMeshConfig = componentConfigs?.[COMPONENT_IDS.EDS_COMMERCE_MESH] || {};
     const accsMeshConfig = componentConfigs?.[COMPONENT_IDS.EDS_ACCS_MESH] || {};
 
-    // Map backend component ID to environment type (defaults to 'paas' if not provided)
     const environmentType = mapBackendToEnvironmentType(backendComponentId);
     const isAccs = environmentType === 'accs';
+    const meshConfig = isAccs ? accsMeshConfig : paasMeshConfig;
 
     // For ACCS: prefer mesh endpoint, then ACCS endpoint
     // For PaaS: prefer mesh endpoint, then Commerce GraphQL endpoint
@@ -218,41 +239,27 @@ export function extractConfigParamsFromConfigs(
             ? (edsConfig.ACCS_GRAPHQL_ENDPOINT || accsMeshConfig.ACCS_GRAPHQL_ENDPOINT)
             : edsConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT);
 
-    // Map store codes based on backend type
-    const storeViewCode = isAccs
-        ? (edsConfig.ACCS_STORE_VIEW_CODE || accsMeshConfig.ACCS_STORE_VIEW_CODE)
-        : (edsConfig.ADOBE_COMMERCE_STORE_VIEW_CODE || paasMeshConfig.ADOBE_COMMERCE_STORE_VIEW_CODE);
-
-    const storeCode = isAccs
-        ? (edsConfig.ACCS_STORE_CODE || accsMeshConfig.ACCS_STORE_CODE)
-        : (edsConfig.ADOBE_COMMERCE_STORE_CODE || paasMeshConfig.ADOBE_COMMERCE_STORE_CODE);
-
-    const websiteCode = isAccs
-        ? (edsConfig.ACCS_WEBSITE_CODE || accsMeshConfig.ACCS_WEBSITE_CODE)
-        : (edsConfig.ADOBE_COMMERCE_WEBSITE_CODE || paasMeshConfig.ADOBE_COMMERCE_WEBSITE_CODE);
-
-    const customerGroup = isAccs
-        ? (edsConfig.ACCS_CUSTOMER_GROUP || accsMeshConfig.ACCS_CUSTOMER_GROUP)
-        : (edsConfig.ADOBE_COMMERCE_CUSTOMER_GROUP || paasMeshConfig.ADOBE_COMMERCE_CUSTOMER_GROUP);
+    const storeViewCode = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_STORE_VIEW_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE');
+    const storeCode = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_STORE_CODE', 'ADOBE_COMMERCE_STORE_CODE');
+    const websiteCode = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_WEBSITE_CODE', 'ADOBE_COMMERCE_WEBSITE_CODE');
+    const customerGroup = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_CUSTOMER_GROUP', 'ADOBE_COMMERCE_CUSTOMER_GROUP');
 
     return {
         environmentType,
         commerceEndpoint: commerceEndpoint as string | undefined,
-        // ACCS: no separate catalog service endpoint (built into supergraph)
         catalogServiceEndpoint: isAccs
             ? undefined
             : (edsConfig.PAAS_CATALOG_SERVICE_ENDPOINT) as string | undefined,
-        // ACCS: no API key or environment ID needed
         commerceApiKey: isAccs
             ? undefined
             : (edsConfig.ADOBE_CATALOG_API_KEY || paasMeshConfig.ADOBE_CATALOG_API_KEY) as string | undefined,
         commerceEnvironmentId: isAccs
             ? undefined
             : (edsConfig.ADOBE_COMMERCE_ENVIRONMENT_ID || paasMeshConfig.ADOBE_COMMERCE_ENVIRONMENT_ID) as string | undefined,
-        storeViewCode: storeViewCode as string | undefined,
-        storeCode: storeCode as string | undefined,
-        websiteCode: websiteCode as string | undefined,
-        customerGroup: customerGroup as string | undefined,
+        storeViewCode,
+        storeCode,
+        websiteCode,
+        customerGroup,
         aemAssetsEnabled: edsConfig.AEM_ASSETS_ENABLED === 'true',
     };
 }

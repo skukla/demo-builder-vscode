@@ -13,13 +13,13 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import type * as vscode from 'vscode';
-import type { Logger } from '@/types';
-import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { GitHubTokenService } from './githubTokenService';
 import { GitHubFileOperations } from './githubFileOperations';
+import { GitHubTokenService } from './githubTokenService';
 import { HelixService } from './helixService';
 import type { PhaseProgressCallback } from './types';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import type { Logger } from '@/types';
 
 // ==========================================================
 // Types
@@ -98,7 +98,7 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
         try {
             configContent = await fsPromises.readFile(configJsonPath, 'utf-8');
             logger.debug(`[ConfigSync] Read local config.json (${configContent.length} bytes)`);
-        } catch (error) {
+        } catch (_error) {
             const message = `Local config.json not found at ${configJsonPath}`;
             logger.error(`[ConfigSync] ${message}`);
             result.error = message;

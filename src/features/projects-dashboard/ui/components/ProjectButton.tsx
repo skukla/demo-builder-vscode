@@ -8,12 +8,12 @@
 
 import { Flex, Text } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
+import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import type { Project } from '@/types/base';
 
 /**

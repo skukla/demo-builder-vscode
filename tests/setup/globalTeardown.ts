@@ -18,7 +18,7 @@ export default async function globalTeardown() {
     // Note: This is a safety net - individual tests should clean up their own timers
     if (typeof global.setTimeout !== 'undefined') {
         try {
-            // @ts-ignore - accessing internal timer registry
+            // @ts-expect-error - accessing internal timer registry
             const timers = global.setTimeout._timers;
             if (timers && typeof timers.clear === 'function') {
                 timers.clear();

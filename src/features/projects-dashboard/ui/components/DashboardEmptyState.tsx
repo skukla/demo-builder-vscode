@@ -63,7 +63,7 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
                 </Text>
                 <Flex gap="size-200" alignItems="center">
                     <Button
-                        ref={buttonRef as any}
+                        ref={buttonRef as unknown as React.RefObject<HTMLElement>}
                         variant="cta"
                         onPress={onCreate}
                     >

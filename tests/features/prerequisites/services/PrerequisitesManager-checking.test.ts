@@ -20,8 +20,6 @@ import { PrerequisitesManager } from '@/features/prerequisites/services/Prerequi
 import {
     setupMocks,
     setupConfigLoader,
-    createPerNodePrerequisite,
-    createStandardPrerequisite,
     mockConfig,
     type TestMocks,
 } from './PrerequisitesManager.testUtils';

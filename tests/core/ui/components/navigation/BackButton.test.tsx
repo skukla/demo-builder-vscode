@@ -196,7 +196,7 @@ describe('BackButton', () => {
             const onPress = jest.fn();
 
             // When: Component renders
-            const { container } = renderWithProvider(
+            renderWithProvider(
                 <BackButton onPress={onPress} />
             );
 

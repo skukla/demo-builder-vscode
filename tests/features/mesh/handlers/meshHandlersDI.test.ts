@@ -17,7 +17,7 @@ import { handleCreateApiMesh } from '@/features/mesh/handlers/createHandler';
 import { handleDeleteApiMesh } from '@/features/mesh/handlers/deleteHandler';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
-import * as vscode from 'vscode';
+import * as _vscode from 'vscode';
 
 // Mock dependencies
 jest.mock('@/core/di');

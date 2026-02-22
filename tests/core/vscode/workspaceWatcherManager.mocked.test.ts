@@ -25,9 +25,9 @@ jest.mock('vscode', () => {
                     pattern,
                     _disposed: false,
                     _listeners: {
-                        onCreate: [] as Function[],
-                        onChange: [] as Function[],
-                        onDelete: [] as Function[]
+                        onCreate: [] as ((...args: unknown[]) => unknown)[],
+                        onChange: [] as ((...args: unknown[]) => unknown)[],
+                        onDelete: [] as ((...args: unknown[]) => unknown)[]
                     },
                     onDidCreate: jest.fn((listener) => {
                         watcher._listeners.onCreate.push(listener);
@@ -235,7 +235,7 @@ describe('WorkspaceWatcherManager', () => {
 
             // When: Simulate file creation
             const mockUri = vscode.Uri.file('/workspace/.env');
-            mockWatchers[0]._listeners.onCreate.forEach((l: Function) => l(mockUri));
+            mockWatchers[0]._listeners.onCreate.forEach((l: (...args: unknown[]) => unknown) => l(mockUri));
 
             // Then: Only onCreate listener triggered
             expect(createListener).toHaveBeenCalledWith(mockUri);

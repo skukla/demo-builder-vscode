@@ -58,7 +58,7 @@ describe('ConfigSection', () => {
 
     describe('Divider', () => {
         it('does not show divider by default', () => {
-            const { container } = renderWithProviders(
+            const { container: _container } = renderWithProviders(
                 <ConfigSection id="test" label="Test">
                     <div>Content</div>
                 </ConfigSection>
@@ -131,7 +131,7 @@ describe('ConfigSection', () => {
 
     describe('Multiple Sections', () => {
         it('renders multiple sections independently', () => {
-            const { container } = renderWithProviders(
+            const { container: _container } = renderWithProviders(
                 <>
                     <ConfigSection id="section1" label="Section 1">
                         <div>Content 1</div>

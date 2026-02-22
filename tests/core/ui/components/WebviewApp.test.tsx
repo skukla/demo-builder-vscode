@@ -203,7 +203,7 @@ describe('WebviewApp', () => {
         });
 
         it('passes init data to render function after init', async () => {
-            const renderFn = jest.fn((data) => <div>Rendered</div>);
+            const renderFn = jest.fn((_data) => <div>Rendered</div>);
 
             render(
                 <WebviewApp>

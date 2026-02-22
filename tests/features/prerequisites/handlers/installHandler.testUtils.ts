@@ -231,7 +231,7 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
             logError: jest.fn(),
         } as any,
         progressUnifier: {
-            executeStep: jest.fn().mockImplementation(async (step, current, total, callback, options) => {
+            executeStep: jest.fn().mockImplementation(async (step, current, total, callback, _options) => {
                 // Call the progress callback
                 await callback?.({ current: current + 1, total, message: step.message });
                 // Return void (no return value needed)

@@ -11,8 +11,8 @@
  * @module features/eds/handlers/edsDaLiveOrgConfigHandlers
  */
 
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import { DaLiveOrgConfigService, DaLiveOrgConfig } from '../services/daLiveOrgConfigService';
+import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 // ==========================================================
 // Payload Types

@@ -7,7 +7,7 @@
  * @jest-environment jsdom
  */
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { useFieldValidation } from '@/features/dashboard/ui/configure/hooks/useFieldValidation';
 import type { ServiceGroup } from '@/features/components/ui/hooks/useComponentConfig';
 import type { ComponentConfigs } from '@/types/webview';

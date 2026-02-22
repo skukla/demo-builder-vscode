@@ -1,4 +1,4 @@
-import { withTimeout, tryWithTimeout, WithTimeoutResult } from '@/core/utils/promiseUtils';
+import { withTimeout, tryWithTimeout } from '@/core/utils/promiseUtils';
 
 describe('promiseUtils', () => {
     beforeEach(() => {

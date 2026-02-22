@@ -9,9 +9,7 @@ import { ProjectsDashboard } from '@/features/projects-dashboard/ui/ProjectsDash
 import {
     createMockProjects,
     createMockProject,
-    createRunningProject,
 } from '../testUtils';
-import type { Project } from '@/types/base';
 
 // Mock the webviewClient
 jest.mock('@/core/ui/utils/WebviewClient', () => ({

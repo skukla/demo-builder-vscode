@@ -11,7 +11,7 @@ import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { ConfigurationSummary } from '@/core/ui/components/wizard';
-import { WizardState, WizardStep } from '@/types/webview';
+import { WizardState } from '@/types/webview';
 
 // Helper to render with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {

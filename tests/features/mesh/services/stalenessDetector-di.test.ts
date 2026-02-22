@@ -105,7 +105,7 @@ describe('StalenessDetectorService - DI Pattern', () => {
         });
 
         it('should use injected logger when calculating source hash', async () => {
-            const mockFs = require('fs/promises');
+            const _mockFs = require('fs/promises');
             jest.mock('fs/promises', () => ({
                 readFile: jest.fn().mockRejectedValue(new Error('File not found')),
                 readdir: jest.fn().mockRejectedValue(new Error('Dir not found')),

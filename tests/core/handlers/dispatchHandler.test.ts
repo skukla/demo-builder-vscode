@@ -8,7 +8,7 @@
  */
 
 import { dispatchHandler, hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import type { HandlerMap, MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { HandlerMap, HandlerContext } from '@/types/handlers';
 
 // Mock handler context factory
 function createMockContext(): HandlerContext {

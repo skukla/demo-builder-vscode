@@ -1,23 +1,17 @@
 /**
- * Demo Packages Configuration Tests
+ * Demo Packages Tests - Data Validation
  *
- * TDD: Tests written FIRST to define behavior before implementation.
- *
- * This test suite validates the demo-packages.json configuration file
- * which unifies brands and templates into self-contained package definitions.
- *
- * Structure: Option A (Nested Storefronts)
- * - packages[] contain nested storefronts keyed by stack ID
- * - Each package has configDefaults (brand data)
- * - EDS storefronts have explicit contentSource for DA.live content
- *
- * Key validations:
- * - Structure validation (2 packages, 5 storefronts total)
+ * Tests for demo-packages.json configuration file:
+ * - Schema validation
+ * - Structure validation (packages and storefronts)
+ * - Required fields
+ * - EDS contentSource and contentPatches
  * - Embedded brand data (configDefaults)
- * - Nested storefronts structure
- * - Git source validation (valid URLs, type enum)
- * - EDS contentSource validation (explicit config, not derived)
- * - Schema validation (rejects invalid packages)
+ * - Git source validation
+ * - Cross-reference validation
+ * - Featured packages/storefronts
+ * - Package details (citisignal, buildright)
+ * - Submodules and tags validation
  */
 
 import * as fs from 'fs';
@@ -144,11 +138,10 @@ describe('demo-packages.json', () => {
             const buildright = packagesConfig.packages.find(p => p.id === 'buildright');
             expect(buildright).toBeDefined();
             expect(Object.keys(buildright!.storefronts).length).toBe(1);
-            expect((buildright as any).status).toBe('coming-soon');
+            expect((buildright as Record<string, unknown>).status).toBe('coming-soon');
         });
 
         it('should have storefronts keyed by stack ID', () => {
-            // Only citisignal has storefronts; buildright is a placeholder
             const citisignal = packagesConfig.packages.find(p => p.id === 'citisignal');
             expect(citisignal!.storefronts['headless-paas']).toBeDefined();
             expect(citisignal!.storefronts['eds-paas']).toBeDefined();
@@ -174,7 +167,6 @@ describe('demo-packages.json', () => {
 
         it('should NOT have package-level contentSources (content source is per-storefront)', () => {
             packagesConfig.packages.forEach(pkg => {
-                // Package-level contentSources removed - content source is now defined per-storefront
                 expect((pkg as Record<string, unknown>).contentSources).toBeUndefined();
             });
         });
@@ -183,12 +175,9 @@ describe('demo-packages.json', () => {
     describe('EDS storefronts - contentSource', () => {
         it('should have contentSource for branded EDS storefronts', () => {
             packagesConfig.packages.forEach(pkg => {
-                // Skip coming-soon packages (storefronts may be incomplete)
-                if ((pkg as any).status === 'coming-soon') return;
-                // Custom package intentionally has no contentSource (unbranded boilerplate)
+                if ((pkg as Record<string, unknown>).status === 'coming-soon') return;
                 if (pkg.id === 'custom') return;
                 Object.entries(pkg.storefronts).forEach(([stackId, storefront]) => {
-                    // EDS storefronts should have explicit contentSource config
                     if (stackId.startsWith('eds-')) {
                         expect((storefront as Record<string, unknown>).contentSource).toBeDefined();
                         const contentSource = (storefront as Record<string, unknown>).contentSource as { org: string; site: string };
@@ -220,13 +209,11 @@ describe('demo-packages.json', () => {
             const edsAccs = citisignal!.storefronts['eds-accs'] as Record<string, unknown>;
             expect(edsAccs).toBeDefined();
 
-            // ACCS should have heading reorder and ACCS-specific category ID patch
             const patches = edsAccs.contentPatches as string[];
             expect(patches).toBeDefined();
             expect(patches).toContain('phones-heading-reorder');
             expect(patches).toContain('smart-watches-category-id-accs');
 
-            // ACCS should NOT have PaaS-specific patches
             expect(patches).not.toContain('index-product-teaser-sku');
             expect(patches).not.toContain('phones-product-teaser-sku');
             expect(patches).not.toContain('smart-watches-category-id');
@@ -467,287 +454,6 @@ describe('demo-packages.json', () => {
                     }
                 });
             });
-        });
-    });
-});
-
-describe('demo-packages.schema.json - validation rules', () => {
-    let schema: Record<string, unknown>;
-
-    beforeAll(() => {
-        const schemaPath = path.join(__dirname, '../../src/features/project-creation/config/demo-packages.schema.json');
-        schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
-    });
-
-    describe('package validation', () => {
-        it('should reject packages missing required id field', () => {
-            const ajv = new Ajv();
-            const validate = ajv.compile(schema);
-
-            const invalidConfig = {
-                version: '1.0.0',
-                packages: [
-                    {
-                        // id is missing
-                        name: 'Test Package',
-                        description: 'Test description',
-                        configDefaults: {},
-                        storefronts: {
-                            'eds-paas': {
-                                name: 'Test Storefront',
-                                description: 'Test storefront description',
-                                source: {
-                                    type: 'git',
-                                    url: 'https://github.com/test/repo',
-                                    branch: 'main',
-                                    gitOptions: { shallow: true, recursive: false }
-                                }
-                            }
-                        }
-                    }
-                ]
-            };
-
-            const valid = validate(invalidConfig);
-            expect(valid).toBe(false);
-        });
-
-        it('should reject packages missing required storefronts field', () => {
-            const ajv = new Ajv();
-            const validate = ajv.compile(schema);
-
-            const invalidConfig = {
-                version: '1.0.0',
-                packages: [
-                    {
-                        id: 'test-package',
-                        name: 'Test Package',
-                        description: 'Test description',
-                        configDefaults: {}
-                        // storefronts is missing
-                    }
-                ]
-            };
-
-            const valid = validate(invalidConfig);
-            expect(valid).toBe(false);
-        });
-
-        it('should reject packages missing required configDefaults field', () => {
-            const ajv = new Ajv();
-            const validate = ajv.compile(schema);
-
-            const invalidConfig = {
-                version: '1.0.0',
-                packages: [
-                    {
-                        id: 'test-package',
-                        name: 'Test Package',
-                        description: 'Test description',
-                        // configDefaults is missing
-                        storefronts: {
-                            'eds-paas': {
-                                name: 'Test Storefront',
-                                description: 'Test storefront description',
-                                source: {
-                                    type: 'git',
-                                    url: 'https://github.com/test/repo',
-                                    branch: 'main',
-                                    gitOptions: { shallow: true, recursive: false }
-                                }
-                            }
-                        }
-                    }
-                ]
-            };
-
-            const valid = validate(invalidConfig);
-            expect(valid).toBe(false);
-        });
-    });
-
-    describe('storefront validation', () => {
-        it('should reject storefronts missing required source field', () => {
-            const ajv = new Ajv();
-            const validate = ajv.compile(schema);
-
-            const invalidConfig = {
-                version: '1.0.0',
-                packages: [
-                    {
-                        id: 'test-package',
-                        name: 'Test Package',
-                        description: 'Test description',
-                        configDefaults: {},
-                        storefronts: {
-                            'eds-paas': {
-                                name: 'Test Storefront',
-                                description: 'Test storefront description'
-                                // source is missing
-                            }
-                        }
-                    }
-                ]
-            };
-
-            const valid = validate(invalidConfig);
-            expect(valid).toBe(false);
-        });
-
-        it('should reject invalid source.type values', () => {
-            const ajv = new Ajv();
-            const validate = ajv.compile(schema);
-
-            const invalidConfig = {
-                version: '1.0.0',
-                packages: [
-                    {
-                        id: 'test-package',
-                        name: 'Test Package',
-                        description: 'Test description',
-                        configDefaults: {},
-                        storefronts: {
-                            'eds-paas': {
-                                name: 'Test Storefront',
-                                description: 'Test storefront description',
-                                source: {
-                                    type: 'svn', // Invalid: only 'git' is allowed
-                                    url: 'https://github.com/test/repo',
-                                    branch: 'main',
-                                    gitOptions: { shallow: true, recursive: false }
-                                }
-                            }
-                        }
-                    }
-                ]
-            };
-
-            const valid = validate(invalidConfig);
-            expect(valid).toBe(false);
-        });
-    });
-
-    describe('valid configurations', () => {
-        it('should accept valid source.type "git"', () => {
-            const ajv = new Ajv();
-            const validate = ajv.compile(schema);
-
-            const validConfig = {
-                version: '1.0.0',
-                packages: [
-                    {
-                        id: 'test-package',
-                        name: 'Test Package',
-                        description: 'Test description',
-                        configDefaults: {},
-                        storefronts: {
-                            'eds-paas': {
-                                name: 'Test Storefront',
-                                description: 'Test storefront description',
-                                source: {
-                                    type: 'git',
-                                    url: 'https://github.com/test/repo',
-                                    branch: 'main',
-                                    gitOptions: { shallow: true, recursive: false }
-                                }
-                            }
-                        }
-                    }
-                ]
-            };
-
-            const valid = validate(validConfig);
-            expect(valid).toBe(true);
-        });
-
-        it('should accept packages with multiple storefronts', () => {
-            const ajv = new Ajv();
-            const validate = ajv.compile(schema);
-
-            const validConfig = {
-                version: '1.0.0',
-                packages: [
-                    {
-                        id: 'test-package',
-                        name: 'Test Package',
-                        description: 'Test description',
-                        configDefaults: {},
-                        storefronts: {
-                            'eds-paas': {
-                                name: 'EDS PaaS',
-                                description: 'EDS with PaaS backend',
-                                source: {
-                                    type: 'git',
-                                    url: 'https://github.com/test/repo',
-                                    branch: 'main',
-                                    gitOptions: { shallow: true, recursive: false }
-                                }
-                            },
-                            'headless-paas': {
-                                name: 'Headless PaaS',
-                                description: 'Next.js with PaaS backend',
-                                source: {
-                                    type: 'git',
-                                    url: 'https://github.com/test/nextjs-repo',
-                                    branch: 'master',
-                                    gitOptions: { shallow: false, recursive: false }
-                                }
-                            }
-                        }
-                    }
-                ]
-            };
-
-            const valid = validate(validConfig);
-            expect(valid).toBe(true);
-        });
-
-        it('should accept packages with optional fields', () => {
-            const ajv = new Ajv();
-            const validate = ajv.compile(schema);
-
-            const validConfig = {
-                version: '1.0.0',
-                packages: [
-                    {
-                        id: 'test-package',
-                        name: 'Test Package',
-                        description: 'Test description',
-                        icon: 'test-icon',
-                        featured: true,
-                        addons: {
-                            'some-addon': 'required'
-                        },
-                        configDefaults: {
-                            SOME_VAR: 'some_value'
-                        },
-                        storefronts: {
-                            'eds-paas': {
-                                name: 'Test Storefront',
-                                description: 'Test storefront description',
-                                icon: 'eds',
-                                featured: true,
-                                tags: ['eds', 'paas', 'test'],
-                                source: {
-                                    type: 'git',
-                                    url: 'https://github.com/test/repo',
-                                    branch: 'main',
-                                    gitOptions: { shallow: true, recursive: false }
-                                },
-                                submodules: {
-                                    'my-submodule': {
-                                        path: 'src/submodule',
-                                        repository: 'owner/repo'
-                                    }
-                                }
-                            }
-                        }
-                    }
-                ]
-            };
-
-            const valid = validate(validConfig);
-            expect(valid).toBe(true);
         });
     });
 });

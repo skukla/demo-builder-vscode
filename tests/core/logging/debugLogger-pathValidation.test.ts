@@ -6,7 +6,6 @@
  */
 
 import {
-    mockLogsChannel,
     mockDebugChannel,
     createMockContext,
     resetMocks,

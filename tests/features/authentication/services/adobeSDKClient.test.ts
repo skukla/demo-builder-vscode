@@ -78,7 +78,7 @@ describe('AdobeSDKClient', () => {
     describe('initialization', () => {
         it('should initialize SDK with valid token', async () => {
             const sdk = require('@adobe/aio-lib-console');
-            const { TokenManager } = require('@/features/authentication/services/tokenManager');
+            const { TokenManager: _TokenManager } = require('@/features/authentication/services/tokenManager');
             const { validateAccessToken } = require('@/core/validation');
 
             mockTokenManager.inspectToken.mockResolvedValue({

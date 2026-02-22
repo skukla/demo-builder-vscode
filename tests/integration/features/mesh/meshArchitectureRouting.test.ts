@@ -171,12 +171,12 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
         it('all PaaS stacks should have a mesh component', () => {
             // Given: All stacks that use PaaS backend
             const paasStacks = Object.entries(componentsJson.stacks)
-                .filter(([_, stack]: [string, any]) =>
+                .filter(([_key, stack]: [string, any]) =>
                     stack.backend === 'adobe-commerce-paas'
                 );
 
             // When: Checking each stack's required components
-            for (const [stackId, stack] of paasStacks) {
+            for (const [_stackId, stack] of paasStacks) {
                 const hasMesh = (stack as any).requiredComponents.some((c: string) =>
                     c.includes('mesh')
                 );
@@ -201,7 +201,7 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
             const stacks = componentsJson.stacks;
 
             // When: Checking for legacy commerce-mesh references
-            for (const [stackId, stack] of Object.entries(stacks)) {
+            for (const [_stackId, stack] of Object.entries(stacks)) {
                 const requiredComponents = (stack as any).requiredComponents || [];
                 const optionalComponents = (stack as any).optionalComponents || [];
 

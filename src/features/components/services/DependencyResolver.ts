@@ -9,12 +9,12 @@
  * Extracted from ComponentRegistryManager.ts for better separation of concerns.
  */
 
+import type { ComponentRegistryManager } from './ComponentRegistryManager';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
 import {
     ComponentDefinition,
 } from '@/types';
 import { ProjectConfig } from '@/types/handlers';
-import type { ComponentRegistryManager } from './ComponentRegistryManager';
 
 /**
  * Resolves component dependencies and generates configuration

@@ -29,7 +29,7 @@ export function useVSCodeMessage<T = unknown>(
   // Update callback ref when deps change
   useEffect(() => {
     callbackRef.current = callback;
-  }, deps);
+  }, deps); // eslint-disable-line react-hooks/exhaustive-deps -- deps is caller-provided like useCallback; callback is captured via ref to avoid re-subscriptions
 
   useEffect(() => {
     // Wrapper that uses the ref to call the latest callback

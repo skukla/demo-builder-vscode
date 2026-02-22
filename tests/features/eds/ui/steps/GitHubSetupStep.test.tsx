@@ -13,7 +13,6 @@
 
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import type { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';

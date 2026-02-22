@@ -6,9 +6,9 @@
  */
 
 import { Flex, Text, ActionButton } from '@adobe/react-spectrum';
-import Wrench from '@spectrum-icons/workflow/Wrench';
 import Help from '@spectrum-icons/workflow/Help';
 import Settings from '@spectrum-icons/workflow/Settings';
+import Wrench from '@spectrum-icons/workflow/Wrench';
 import React from 'react';
 
 export interface UtilityBarProps {

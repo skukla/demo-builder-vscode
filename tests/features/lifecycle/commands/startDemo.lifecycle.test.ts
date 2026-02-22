@@ -12,7 +12,7 @@
 
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator as _ServiceLocator } from '@/core/di';
 import { StateManager } from '@/core/state';
 import { Logger } from '@/core/logging';
 import * as vscode from 'vscode';

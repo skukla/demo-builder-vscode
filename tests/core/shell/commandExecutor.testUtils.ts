@@ -138,7 +138,7 @@ export function setupMockDependencies() {
                 maxDelay: 5000,
                 backoffFactor: 2
             })),
-            getStrategy: jest.fn((_name: string) => ({
+            getStrategy: jest.fn(() => ({
                 maxAttempts: 2,
                 initialDelay: 1000,
                 maxDelay: 5000,

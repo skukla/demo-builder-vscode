@@ -10,14 +10,12 @@
  * - Error handling (1 test)
  */
 
-import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import type { WizardState, EDSConfig } from '@/types/webview';
 
 // Mock webviewClient
 const mockPostMessage = jest.fn();
-const mockOnMessage = jest.fn(() => jest.fn()); // Return unsubscribe function
-let messageHandlers: Map<string, (data: unknown) => void> = new Map();
+const messageHandlers: Map<string, (data: unknown) => void> = new Map();
 
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {

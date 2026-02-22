@@ -62,6 +62,103 @@ export function shouldConfigureExistingMesh(
 }
 
 /**
+ * Fetch mesh info from Adobe I/O when deployment result is incomplete.
+ */
+async function fetchMeshInfoFromDescribe(
+    logger: Logger,
+): Promise<{ meshId?: string; endpoint?: string }> {
+    try {
+        const commandManager = ServiceLocator.getCommandExecutor();
+        const describeResult = await commandManager.execute('aio api-mesh:describe', {
+            timeout: TIMEOUTS.NORMAL,
+            configureTelemetry: false,
+            useNodeVersion: getMeshNodeVersion(),
+            enhancePath: true,
+        });
+
+        if (describeResult.code === 0) {
+            const meshData = extractAndParseJSON<{
+                meshId?: string;
+                mesh_id?: string;
+                meshEndpoint?: string;
+                endpoint?: string;
+            }>(describeResult.stdout);
+
+            if (meshData) {
+                return {
+                    meshId: meshData.meshId || meshData.mesh_id,
+                    endpoint: meshData.meshEndpoint || meshData.endpoint,
+                };
+            }
+        }
+    } catch (_describeError) {
+        logger.warn('[Project Creation] Could not fetch mesh info, continuing without it');
+    }
+    return {};
+}
+
+/**
+ * Handle successful mesh deployment: resolve mesh info, update project state.
+ */
+async function handleMeshDeploySuccess(params: {
+    meshDeployResult: { data?: { meshId?: string; endpoint?: string } };
+    apiMeshConfig: MeshApiConfig | undefined;
+    startTime: number;
+    attempt: number;
+    setupContext: ProjectSetupContext;
+    project: Project;
+    meshComponent: import('@/types').ComponentInstance;
+    meshComponentId: string;
+    onMeshCreated?: (workspace: string | undefined) => void;
+    updateMeshPhase: (state: Partial<MeshPhaseState> & { status: MeshPhaseState['status'] }) => void;
+    logger: Logger;
+}): Promise<void> {
+    const {
+        meshDeployResult, apiMeshConfig, startTime, attempt,
+        setupContext, project, meshComponent, meshComponentId,
+        onMeshCreated, updateMeshPhase, logger,
+    } = params;
+
+    const finalElapsed = Math.floor((Date.now() - startTime) / 1000);
+
+    if (onMeshCreated) {
+        const adobeConfig = setupContext.config as { adobe?: { workspace?: string } };
+        onMeshCreated(adobeConfig.adobe?.workspace);
+    }
+
+    // Get mesh info - prefer from deployment result, fall back to wizard config
+    let meshId = meshDeployResult.data?.meshId || apiMeshConfig?.meshId;
+    let endpoint = meshDeployResult.data?.endpoint || apiMeshConfig?.endpoint;
+
+    // If mesh info is incomplete, fetch it from Adobe I/O
+    if (!meshId || !endpoint) {
+        const describeInfo = await fetchMeshInfoFromDescribe(logger);
+        meshId = meshId || describeInfo.meshId;
+        endpoint = endpoint || describeInfo.endpoint;
+    }
+
+    // Update component instance
+    meshComponent.status = 'deployed';
+    meshComponent.metadata = { meshId: meshId || '', meshStatus: 'deployed' };
+    if (!project.componentInstances) {
+        project.componentInstances = {};
+    }
+    project.componentInstances[meshComponentId] = meshComponent;
+
+    updateMeshPhase({
+        status: 'success',
+        attempt,
+        maxAttempts: MAX_MESH_ATTEMPTS,
+        elapsedSeconds: finalElapsed,
+        endpoint,
+        message: 'Mesh deployed successfully',
+    });
+
+    await updateProjectMeshState(project, logger, endpoint);
+    logger.info(`[Project Creation] Phase 3 complete: Mesh deployed${endpoint ? ' at ' + endpoint : ''}`);
+}
+
+/**
  * Deploy a new mesh and update project state
  *
  * Supports retry on failure when onMeshPhaseUpdate and waitForMeshDecision are provided.
@@ -146,75 +243,15 @@ export async function deployNewMesh(
                         message: subMessage || message,
                     });
                 },
-                apiMeshConfig?.meshId, // Pass existing mesh ID to enable update strategy
+                apiMeshConfig?.meshId,
             );
 
             if (meshDeployResult.success) {
-                // Success! Update mesh phase and continue
-                const finalElapsed = Math.floor((Date.now() - startTime) / 1000);
-
-                // Notify that mesh was created for this workspace
-                if (onMeshCreated) {
-                    const adobeConfig = setupContext.config as { adobe?: { workspace?: string } };
-                    onMeshCreated(adobeConfig.adobe?.workspace);
-                }
-
-                // Get mesh info - prefer from deployment result, fall back to wizard config
-                let meshId = meshDeployResult.data?.meshId || apiMeshConfig?.meshId;
-                let endpoint = meshDeployResult.data?.endpoint || apiMeshConfig?.endpoint;
-
-                // If wizard didn't capture mesh info (e.g., still provisioning), fetch it now
-                if (!meshId || !endpoint) {
-                    try {
-                        const describeResult = await commandManager.execute('aio api-mesh:describe', {
-                            timeout: TIMEOUTS.NORMAL,
-                            configureTelemetry: false,
-                            useNodeVersion: getMeshNodeVersion(),
-                            enhancePath: true,
-                        });
-                        
-                        if (describeResult.code === 0) {
-                            const meshData = extractAndParseJSON<{
-                                meshId?: string;
-                                mesh_id?: string;
-                                meshEndpoint?: string;
-                                endpoint?: string;
-                            }>(describeResult.stdout);
-                            
-                            if (meshData) {
-                                meshId = meshId || meshData.meshId || meshData.mesh_id;
-                                endpoint = endpoint || meshData.meshEndpoint || meshData.endpoint;
-                            }
-                        }
-                    } catch (describeError) {
-                        logger.warn('[Project Creation] Could not fetch mesh info, continuing without it');
-                    }
-                }
-
-                // Update component instance with deployment info
-                // Note: endpoint is stored in meshState (authoritative), not componentInstance
-                meshComponent.status = 'deployed';
-                meshComponent.metadata = {
-                    meshId: meshId || '',
-                    meshStatus: 'deployed',
-                };
-                project.componentInstances![meshComponentId] = meshComponent;
-
-                // Update mesh phase to success
-                updateMeshPhase({
-                    status: 'success',
-                    attempt,
-                    maxAttempts: MAX_MESH_ATTEMPTS,
-                    elapsedSeconds: finalElapsed,
-                    endpoint,
-                    message: 'Mesh deployed successfully',
+                await handleMeshDeploySuccess({
+                    meshDeployResult, apiMeshConfig, startTime, attempt,
+                    setupContext, project, meshComponent, meshComponentId,
+                    onMeshCreated, updateMeshPhase, logger,
                 });
-
-                // Update meshState to track deployment (includes endpoint as single source of truth)
-                // See docs/architecture/state-ownership.md
-                await updateProjectMeshState(project, logger, endpoint);
-
-                logger.info(`[Project Creation] Phase 3 complete: Mesh deployed${endpoint ? ' at ' + endpoint : ''}`);
                 return; // Success, exit the retry loop
             } else {
                 throw new Error(meshDeployResult.error || 'Mesh deployment failed');
@@ -330,7 +367,10 @@ export async function linkExistingMesh(
     // Preserve existing component properties (like path from Phase 1 cloning)
     // Note: endpoint is stored in meshState (authoritative), not componentInstance
     if (meshComponentId) {
-        project.componentInstances![meshComponentId] = {
+        if (!project.componentInstances) {
+            project.componentInstances = {};
+        }
+        project.componentInstances[meshComponentId] = {
             ...meshComponent, // Preserve path if component was cloned
             id: meshComponentId,
             name: 'Commerce API Mesh',

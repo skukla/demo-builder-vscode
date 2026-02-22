@@ -2,10 +2,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { isMeshComponentId } from '@/core/constants';
-import type { Logger } from '@/types/logger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project } from '@/types';
 import { toAppError, isTimeout, isNetwork } from '@/types/errors';
+import type { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -73,7 +73,7 @@ export class ComponentUpdater {
                     filter: (src: string) => {
                         // Exclude node_modules - can be regenerated with npm install
                         return !src.includes('node_modules');
-                    }
+                    },
                 });
 
                 // 2. Preserve .env file(s) for merge
@@ -151,7 +151,7 @@ export class ComponentUpdater {
                         ];
                         const componentDef = allComponents.find(c => c.id === componentId);
                         nodeVersion = componentDef?.configuration?.nodeVersion || null;
-                    } catch (error) {
+                    } catch (_error) {
                         this.logger.debug('[Updates] Could not determine node version from registry, using default');
                     }
                     

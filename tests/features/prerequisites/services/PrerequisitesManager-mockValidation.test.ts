@@ -67,7 +67,7 @@ describe('Mock Structure Validation - Prerequisites', () => {
 
         it('should have componentRequirements with prerequisites arrays', () => {
             expect(actualPrerequisitesJson.componentRequirements).toBeDefined();
-            Object.entries(actualPrerequisitesJson.componentRequirements).forEach(([id, req]) => {
+            Object.entries(actualPrerequisitesJson.componentRequirements).forEach(([_id, req]) => {
                 expect(Array.isArray(req.prerequisites)).toBe(true);
             });
         });

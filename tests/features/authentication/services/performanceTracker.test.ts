@@ -62,7 +62,6 @@ describe('PerformanceTracker', () => {
         });
 
         it('should override previous timing for same operation', () => {
-            const time1 = Date.now();
             tracker.startTiming('operation');
 
             jest.advanceTimersByTime(1000);
@@ -178,8 +177,6 @@ describe('PerformanceTracker', () => {
         });
 
         it('should return metrics for ongoing operations', () => {
-            const startTime = Date.now();
-
             tracker.startTiming('operation1');
             tracker.startTiming('operation2');
 
@@ -192,7 +189,6 @@ describe('PerformanceTracker', () => {
         });
 
         it('should calculate duration from start to now', () => {
-            const startTime = Date.now();
             tracker.startTiming('operation');
 
             jest.advanceTimersByTime(1500);

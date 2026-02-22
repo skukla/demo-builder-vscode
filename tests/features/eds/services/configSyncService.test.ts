@@ -12,7 +12,7 @@
  * 5. Error handling for each step
  */
 
-import { syncConfigToRemote, ConfigSyncParams, ConfigSyncResult } from '@/features/eds/services/configSyncService';
+import { syncConfigToRemote, ConfigSyncParams } from '@/features/eds/services/configSyncService';
 import { promises as fsPromises } from 'fs';
 
 // Mock the dependencies

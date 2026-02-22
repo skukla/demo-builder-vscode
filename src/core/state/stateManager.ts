@@ -108,7 +108,7 @@ export class StateManager {
                     if (freshProject) {
                         this.logger.debug(
                             `[StateManager] Loaded project from manifest: ` +
-                            `selectedPackage=${freshProject.selectedPackage}, selectedStack=${freshProject.selectedStack}`
+                            `selectedPackage=${freshProject.selectedPackage}, selectedStack=${freshProject.selectedStack}`,
                         );
                         validProject = freshProject;
                     } else {

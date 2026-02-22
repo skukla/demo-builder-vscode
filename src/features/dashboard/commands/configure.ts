@@ -8,15 +8,15 @@ import { ServiceLocator } from '@/core/di';
 import { createBundleUris } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
+import { normalizeIfUrl } from '@/core/validation/Validator';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
-import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
+import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, SharedState } from '@/types/handlers';
 import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
-import { normalizeIfUrl } from '@/core/validation/Validator';
 
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;
@@ -90,8 +90,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     protected async getWebviewContent(): Promise<string> {
+        if (!this.panel) {
+            throw new Error('Panel must be created before getting webview content');
+        }
         const bundleUris = createBundleUris({
-            webview: this.panel!.webview,
+            webview: this.panel.webview,
             extensionPath: this.context.extensionPath,
             featureBundleName: 'configure',
         });
@@ -100,12 +103,12 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         // Get base URI for media assets
         const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
-        const baseUri = this.panel!.webview.asWebviewUri(mediaPath);
+        const baseUri = this.panel.webview.asWebviewUri(mediaPath);
 
         return getWebviewHTMLWithBundles({
             bundleUris,
             nonce,
-            cspSource: this.panel!.webview.cspSource,
+            cspSource: this.panel.webview.cspSource,
             title: 'Configure Project',
             baseUri,
         });
@@ -207,188 +210,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 const result = { success: true };
                 
                 // Show success notification after returning (non-blocking)
-                setImmediate(async () => {
-                    // Refresh Dashboard status (if open) to show amber indicators
-                    await ProjectDashboardWebviewCommand.refreshStatus();
-
-                    // Smart notification based on what changed
-                    // Only show generic success if no contextual notification is shown
-                    let contextualNotificationShown = false;
-
-                    // Check if this is an EDS project for combined notifications
-                    const isEds = isEdsProject(project);
-
-                    // Scenario: Both mesh AND storefront changed (EDS projects with mesh)
-                    if (meshChanges.hasChanges && storefrontChanges.hasChanges && isEds) {
-                        const shouldShowMesh = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
-                        const shouldShowStorefront = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowStorefrontNotification');
-
-                        if (shouldShowMesh || shouldShowStorefront) {
-                            contextualNotificationShown = true;
-                            await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
-                            await vscode.commands.executeCommand('demoBuilder._internal.markStorefrontNotificationShown');
-
-                            vscode.window.showWarningMessage(
-                                'Configuration saved. Apply changes to mesh and storefront?',
-                                'Apply Changes',
-                                'Later',
-                            ).then(async selection => {
-                                if (selection === 'Apply Changes') {
-                                    // Use ensureAuthAndApply to handle inline sign-in if needed
-                                    await this.ensureAuthAndApply(
-                                        async () => {
-                                            await this.withDeploymentStatus(async () => {
-                                                // Deploy mesh first, then republish storefront
-                                                await vscode.commands.executeCommand('demoBuilder.deployMesh');
-                                                // Reload project after mesh deployment to get updated meshState
-                                                const freshProject = await this.stateManager.getCurrentProject();
-                                                if (freshProject) {
-                                                    await this.republishStorefront(freshProject);
-                                                }
-                                            });
-                                        },
-                                        'apply changes to mesh and storefront',
-                                    );
-                                } else if (selection === 'Later') {
-                                    // Track that user declined both updates
-                                    if (project.meshState) {
-                                        project.meshState.userDeclinedUpdate = true;
-                                        project.meshState.declinedAt = new Date().toISOString();
-                                    }
-                                    if (project.edsStorefrontState) {
-                                        project.edsStorefrontState.userDeclinedUpdate = true;
-                                        project.edsStorefrontState.declinedAt = new Date().toISOString();
-                                        project.edsStorefrontStatusSummary = 'update-declined';
-                                    }
-                                    await this.stateManager.saveProject(project);
-                                    await ProjectDashboardWebviewCommand.refreshStatus();
-                                }
-                            });
-                        } else {
-                            this.logger.debug('[Configure] Combined notification already shown this session, suppressing');
-                        }
-                    }
-                    // Scenario: Only storefront changed (EDS projects without mesh changes)
-                    else if (storefrontChanges.hasChanges && isEds) {
-                        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowStorefrontNotification');
-                        if (shouldShow) {
-                            contextualNotificationShown = true;
-                            await vscode.commands.executeCommand('demoBuilder._internal.markStorefrontNotificationShown');
-
-                            vscode.window.showInformationMessage(
-                                'Configuration saved. Republish storefront to apply changes.',
-                                'Republish',
-                                'Later',
-                            ).then(async selection => {
-                                if (selection === 'Republish') {
-                                    await this.withDeploymentStatus(() => this.republishStorefront(project));
-                                } else if (selection === 'Later') {
-                                    // Track that user declined the update
-                                    if (project.edsStorefrontState) {
-                                        project.edsStorefrontState.userDeclinedUpdate = true;
-                                        project.edsStorefrontState.declinedAt = new Date().toISOString();
-                                    }
-                                    project.edsStorefrontStatusSummary = 'update-declined';
-                                    await this.stateManager.saveProject(project);
-                                    await ProjectDashboardWebviewCommand.refreshStatus();
-                                }
-                            });
-                        } else {
-                            this.logger.debug('[Configure] Storefront notification already shown this session, suppressing');
-                        }
-                    }
-                    // Scenario: Mesh changed (with or without demo running)
-                    else if (meshChanges.hasChanges && project.status === 'running') {
-                        // Check if mesh notification already shown this session
-                        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
-                        if (shouldShow) {
-                            contextualNotificationShown = true;
-                            await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
-                            vscode.window.showWarningMessage(
-                                'Configuration saved. Redeploy mesh and restart demo to apply changes.',
-                                'Redeploy Mesh',
-                                'Later',
-                            ).then(async selection => {
-                                if (selection === 'Redeploy Mesh') {
-                                    // Use ensureAuthAndApply to handle inline sign-in if needed
-                                    await this.ensureAuthAndApply(
-                                        () => this.withDeploymentStatus(async () => { await vscode.commands.executeCommand('demoBuilder.deployMesh'); }),
-                                        'redeploy mesh',
-                                    );
-                                } else if (selection === 'Later') {
-                                    // Track that user declined the update
-                                    if (project.meshState) {
-                                        project.meshState.userDeclinedUpdate = true;
-                                        project.meshState.declinedAt = new Date().toISOString();
-                                        await this.stateManager.saveProject(project);
-                                        // Refresh dashboard to show declined state
-                                        await ProjectDashboardWebviewCommand.refreshStatus();
-                                    }
-                                }
-                            });
-                        } else {
-                            this.logger.debug('[Configure] Mesh notification already shown this session, suppressing');
-                        }
-                    } else if (meshChanges.hasChanges) {
-                        // Mesh changed, demo not running
-                        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
-                        if (shouldShow) {
-                            contextualNotificationShown = true;
-                            await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
-                            vscode.window.showInformationMessage(
-                                'Configuration saved. Redeploy mesh to apply changes.',
-                                'Redeploy Mesh',
-                                'Later',
-                            ).then(async selection => {
-                                if (selection === 'Redeploy Mesh') {
-                                    // Use ensureAuthAndApply to handle inline sign-in if needed
-                                    await this.ensureAuthAndApply(
-                                        () => this.withDeploymentStatus(async () => { await vscode.commands.executeCommand('demoBuilder.deployMesh'); }),
-                                        'redeploy mesh',
-                                    );
-                                } else if (selection === 'Later') {
-                                    // Track that user declined the update
-                                    if (project.meshState) {
-                                        project.meshState.userDeclinedUpdate = true;
-                                        project.meshState.declinedAt = new Date().toISOString();
-                                        await this.stateManager.saveProject(project);
-                                        // Refresh dashboard to show declined state
-                                        await ProjectDashboardWebviewCommand.refreshStatus();
-                                    }
-                                }
-                            });
-                        } else {
-                            this.logger.debug('[Configure] Mesh notification already shown this session, suppressing');
-                        }
-                    } else if (project.status === 'running') {
-                        // Only non-mesh configs changed, demo is running
-                        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowRestartNotification');
-                        if (shouldShow) {
-                            contextualNotificationShown = true;
-                            await vscode.commands.executeCommand('demoBuilder._internal.markRestartNotificationShown');
-                            vscode.window.showInformationMessage(
-                                'Configuration saved. Restart the demo to apply changes.',
-                                'Restart Demo',
-                            ).then(async selection => {
-                                if (selection === 'Restart Demo') {
-                                    try {
-                                        await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                                        await vscode.commands.executeCommand('demoBuilder.startDemo');
-                                    } catch (error) {
-                                        // Commands handle their own error display
-                                        this.logger.error('[Configure] Failed to restart demo:', error as Error);
-                                    }
-                                }
-                            });
-                        } else {
-                            this.logger.debug('[Configure] Restart notification already shown this session, suppressing');
-                        }
-                    }
-
-                    // Show generic success only if no contextual notification was shown
-                    if (!contextualNotificationShown) {
-                        this.showSuccessMessage('Configuration saved successfully');
-                    }
+                setImmediate(() => {
+                    this.showPostSaveNotifications(project, meshChanges, storefrontChanges);
                 });
 
                 return result;
@@ -614,6 +437,176 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.error('[Configure] Failed to republish storefront:', error as Error);
             vscode.window.showErrorMessage(`Failed to republish storefront: ${(error as Error).message}`);
         }
+    }
+
+    /**
+     * Show post-save notifications based on what changed.
+     * Determines the right notification scenario and delegates to specific handlers.
+     */
+    private async showPostSaveNotifications(
+        project: Project,
+        meshChanges: { hasChanges: boolean },
+        storefrontChanges: { hasChanges: boolean },
+    ): Promise<void> {
+        await ProjectDashboardWebviewCommand.refreshStatus();
+
+        let contextualNotificationShown = false;
+        const isEds = isEdsProject(project);
+
+        if (meshChanges.hasChanges && storefrontChanges.hasChanges && isEds) {
+            contextualNotificationShown = await this.handleCombinedMeshStorefrontNotification(project);
+        } else if (storefrontChanges.hasChanges && isEds) {
+            contextualNotificationShown = await this.handleStorefrontOnlyNotification(project);
+        } else if (meshChanges.hasChanges) {
+            contextualNotificationShown = await this.handleMeshOnlyNotification(project);
+        } else if (project.status === 'running') {
+            contextualNotificationShown = await this.handleRestartNotification();
+        }
+
+        if (!contextualNotificationShown) {
+            this.showSuccessMessage('Configuration saved successfully');
+        }
+    }
+
+    /** Handle notification when both mesh and storefront changed */
+    private async handleCombinedMeshStorefrontNotification(project: Project): Promise<boolean> {
+        const shouldShowMesh = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
+        const shouldShowStorefront = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowStorefrontNotification');
+
+        if (!shouldShowMesh && !shouldShowStorefront) {
+            this.logger.debug('[Configure] Combined notification already shown this session, suppressing');
+            return false;
+        }
+
+        await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
+        await vscode.commands.executeCommand('demoBuilder._internal.markStorefrontNotificationShown');
+
+        const selection = await vscode.window.showWarningMessage(
+            'Configuration saved. Apply changes to mesh and storefront?',
+            'Apply Changes',
+            'Later',
+        );
+
+        if (selection === 'Apply Changes') {
+            await this.ensureAuthAndApply(
+                () => this.withDeploymentStatus(async () => {
+                    await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                    const freshProject = await this.stateManager.getCurrentProject();
+                    if (freshProject) {
+                        await this.republishStorefront(freshProject);
+                    }
+                }),
+                'apply changes to mesh and storefront',
+            );
+        } else if (selection === 'Later') {
+            if (project.meshState) {
+                project.meshState.userDeclinedUpdate = true;
+                project.meshState.declinedAt = new Date().toISOString();
+            }
+            if (project.edsStorefrontState) {
+                project.edsStorefrontState.userDeclinedUpdate = true;
+                project.edsStorefrontState.declinedAt = new Date().toISOString();
+                project.edsStorefrontStatusSummary = 'update-declined';
+            }
+            await this.stateManager.saveProject(project);
+            await ProjectDashboardWebviewCommand.refreshStatus();
+        }
+
+        return true;
+    }
+
+    /** Handle notification when only storefront changed */
+    private async handleStorefrontOnlyNotification(project: Project): Promise<boolean> {
+        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowStorefrontNotification');
+        if (!shouldShow) {
+            this.logger.debug('[Configure] Storefront notification already shown this session, suppressing');
+            return false;
+        }
+
+        await vscode.commands.executeCommand('demoBuilder._internal.markStorefrontNotificationShown');
+
+        const selection = await vscode.window.showInformationMessage(
+            'Configuration saved. Republish storefront to apply changes.',
+            'Republish',
+            'Later',
+        );
+
+        if (selection === 'Republish') {
+            await this.withDeploymentStatus(() => this.republishStorefront(project));
+        } else if (selection === 'Later') {
+            if (project.edsStorefrontState) {
+                project.edsStorefrontState.userDeclinedUpdate = true;
+                project.edsStorefrontState.declinedAt = new Date().toISOString();
+            }
+            project.edsStorefrontStatusSummary = 'update-declined';
+            await this.stateManager.saveProject(project);
+            await ProjectDashboardWebviewCommand.refreshStatus();
+        }
+
+        return true;
+    }
+
+    /** Handle notification when mesh changed (with or without running demo) */
+    private async handleMeshOnlyNotification(project: Project): Promise<boolean> {
+        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
+        if (!shouldShow) {
+            this.logger.debug('[Configure] Mesh notification already shown this session, suppressing');
+            return false;
+        }
+
+        await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
+
+        const isRunning = project.status === 'running';
+        const message = isRunning
+            ? 'Configuration saved. Redeploy mesh and restart demo to apply changes.'
+            : 'Configuration saved. Redeploy mesh to apply changes.';
+
+        const selection = await (isRunning
+            ? vscode.window.showWarningMessage(message, 'Redeploy Mesh', 'Later')
+            : vscode.window.showInformationMessage(message, 'Redeploy Mesh', 'Later'));
+
+        if (selection === 'Redeploy Mesh') {
+            await this.ensureAuthAndApply(
+                () => this.withDeploymentStatus(async () => { await vscode.commands.executeCommand('demoBuilder.deployMesh'); }),
+                'redeploy mesh',
+            );
+        } else if (selection === 'Later') {
+            if (project.meshState) {
+                project.meshState.userDeclinedUpdate = true;
+                project.meshState.declinedAt = new Date().toISOString();
+                await this.stateManager.saveProject(project);
+                await ProjectDashboardWebviewCommand.refreshStatus();
+            }
+        }
+
+        return true;
+    }
+
+    /** Handle notification when only non-mesh configs changed and demo is running */
+    private async handleRestartNotification(): Promise<boolean> {
+        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowRestartNotification');
+        if (!shouldShow) {
+            this.logger.debug('[Configure] Restart notification already shown this session, suppressing');
+            return false;
+        }
+
+        await vscode.commands.executeCommand('demoBuilder._internal.markRestartNotificationShown');
+
+        const selection = await vscode.window.showInformationMessage(
+            'Configuration saved. Restart the demo to apply changes.',
+            'Restart Demo',
+        );
+
+        if (selection === 'Restart Demo') {
+            try {
+                await vscode.commands.executeCommand('demoBuilder.stopDemo');
+                await vscode.commands.executeCommand('demoBuilder.startDemo');
+            } catch (error) {
+                this.logger.error('[Configure] Failed to restart demo:', error as Error);
+            }
+        }
+
+        return true;
     }
 
     /**

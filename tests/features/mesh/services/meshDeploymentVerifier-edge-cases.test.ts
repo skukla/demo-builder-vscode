@@ -134,7 +134,7 @@ describe('MeshDeploymentVerifier - Edge Cases', () => {
                 stdout: JSON.stringify({ meshStatus: 'pending' }),
             });
 
-            const promise = waitForMeshDeployment({
+            const _promise = waitForMeshDeployment({
                 initialWait: 1000,
                 pollInterval: 1000,
                 // maxRetries not specified, should be calculated

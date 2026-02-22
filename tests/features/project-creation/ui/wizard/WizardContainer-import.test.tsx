@@ -1,7 +1,7 @@
 // Import mocks FIRST - before any component imports
 import './WizardContainer.mocks';
 
-import { screen, waitFor, cleanup, act } from '@testing-library/react';
+import { screen, cleanup } from '@testing-library/react';
 import React from 'react';
 import { WizardContainer } from '@/features/project-creation/ui/wizard/WizardContainer';
 import '@testing-library/jest-dom';

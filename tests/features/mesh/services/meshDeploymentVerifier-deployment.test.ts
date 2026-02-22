@@ -8,7 +8,6 @@ import {
     createEndpointJsonResponse,
     createDescribeFailureResponse,
     createDefaultOptions,
-    advanceTimersAndResolve,
 } from './meshDeploymentVerifier.testUtils';
 
 // Mock dependencies

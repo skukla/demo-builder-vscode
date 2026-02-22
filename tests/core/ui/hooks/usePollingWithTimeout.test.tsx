@@ -7,7 +7,7 @@
  * @jest-environment jsdom
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { usePollingWithTimeout } from '@/core/ui/hooks/usePollingWithTimeout';
 
 describe('usePollingWithTimeout', () => {
@@ -275,7 +275,7 @@ describe('usePollingWithTimeout', () => {
             const fetcher = jest.fn().mockResolvedValue({ ready: false });
             const condition = jest.fn().mockReturnValue(false);
 
-            const { result, rerender } = renderHook(
+            const { rerender } = renderHook(
                 ({ enabled }) => usePollingWithTimeout({
                     fetcher,
                     condition,

@@ -267,7 +267,7 @@ describe('ProcessCleanup - Error Handling', () => {
             // When: Kill fails
             try {
                 await processCleanup.killProcessTree(testPid, 'SIGTERM');
-            } catch (error) {
+            } catch {
                 // Expected to fail
             }
 
@@ -288,7 +288,7 @@ describe('ProcessCleanup - Error Handling', () => {
 
             try {
                 await processCleanup.killProcessTree(testPid, 'SIGTERM');
-            } catch (error) {
+            } catch {
                 // Expected
             }
 

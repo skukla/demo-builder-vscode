@@ -146,8 +146,8 @@ export class StopDemoCommand extends BaseCommand {
                     try {
                         await this.processCleanup.killProcessTree(pid, 'SIGTERM');
                         this.logger.debug(`[Stop Demo] Demo stopped on port ${port}`);
-                    } catch (error: any) {
-                        if (error.code === 'EPERM') {
+                    } catch (error: unknown) {
+                        if (error instanceof Error && (error as NodeJS.ErrnoException).code === 'EPERM') {
                             await this.showError(
                                 `Permission denied killing process ${pid}. Try running VS Code as administrator or stop the process manually.`,
                             );
@@ -157,8 +157,8 @@ export class StopDemoCommand extends BaseCommand {
                             return;
                         }
                         // Log error but continue - show error and don't update state
-                        this.logger.warn(`[Stop Demo] Error killing process:`, error);
-                        await this.showError('Failed to stop demo process', error);
+                        this.logger.warn(`[Stop Demo] Error killing process:`, error as Error);
+                        await this.showError('Failed to stop demo process', error instanceof Error ? error : new Error(String(error)));
                         // Dispose terminal anyway (attempt cleanup)
                         this.disposeTerminal(terminalName);
                         return;

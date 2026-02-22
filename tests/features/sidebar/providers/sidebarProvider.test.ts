@@ -97,7 +97,7 @@ describe('SidebarProvider', () => {
     describe('resolveWebviewView', () => {
         let mockWebviewView: {
             webview: {
-                options: {};
+                options: Record<string, unknown>;
                 html: string;
                 onDidReceiveMessage: jest.Mock;
                 postMessage: jest.Mock;
@@ -171,7 +171,7 @@ describe('SidebarProvider', () => {
     describe('message handling', () => {
         let mockWebviewView: {
             webview: {
-                options: {};
+                options: Record<string, unknown>;
                 html: string;
                 onDidReceiveMessage: jest.Mock;
                 postMessage: jest.Mock;
@@ -251,7 +251,7 @@ describe('SidebarProvider', () => {
     describe('sendMessage', () => {
         let mockWebviewView: {
             webview: {
-                options: {};
+                options: Record<string, unknown>;
                 html: string;
                 onDidReceiveMessage: jest.Mock;
                 postMessage: jest.Mock;
@@ -315,7 +315,7 @@ describe('SidebarProvider', () => {
     describe('updateContext', () => {
         let mockWebviewView: {
             webview: {
-                options: {};
+                options: Record<string, unknown>;
                 html: string;
                 onDidReceiveMessage: jest.Mock;
                 postMessage: jest.Mock;

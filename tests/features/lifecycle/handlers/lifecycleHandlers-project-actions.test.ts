@@ -10,7 +10,7 @@ import {
     handleOpenProject,
     handleBrowseFiles
 } from '@/features/lifecycle/handlers/lifecycleHandlers';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext as _HandlerContext } from '@/commands/handlers/HandlerContext';
 import * as securityValidation from '@/core/validation';
 import { createMockContext } from './lifecycleHandlers.testUtils';
 

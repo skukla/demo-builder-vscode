@@ -15,7 +15,6 @@
  * Uses the shared useSelectionStep hook and SelectionStepContent component.
  */
 
-import React, { useEffect, useCallback, useState, useRef } from 'react';
 import {
     ActionButton,
     Button,
@@ -30,20 +29,21 @@ import {
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import Alert from '@spectrum-icons/workflow/Alert';
-import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
-import { StatusSection } from '@/core/ui/components/wizard';
-import { Modal } from '@/core/ui/components/ui/Modal';
-import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
+import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
+import { SelectionStepContent } from '@/core/ui/components/selection';
+import { Modal } from '@/core/ui/components/ui/Modal';
+import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
+import { StatusSection } from '@/core/ui/components/wizard';
+import { useSelectionStep } from '@/core/ui/hooks';
+import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import {
     isValidRepositoryName,
     getRepositoryNameError,
     normalizeRepositoryName,
 } from '@/core/validation/normalizers';
-import { SelectionStepContent } from '@/core/ui/components/selection';
-import { useSelectionStep } from '@/core/ui/hooks';
-import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import type { GitHubRepoItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 import '../styles/eds-steps.css';
@@ -164,6 +164,293 @@ function GitHubConfigurationSummary({
 }
 
 /**
+ * GitHubAppInstallModal - Shows the GitHub App installation modal for new repos.
+ * Returns null when the modal should not be shown.
+ */
+function GitHubAppInstallModal({
+    repoMode,
+    repoCreationState,
+    createdRepo,
+    githubAppStatus,
+    isRechecking,
+    isModalDismissed,
+    recheckMessage,
+    hasRecheckFailed,
+    onCheckAgain,
+    onOpenInstallPage,
+    onDismiss,
+}: {
+    repoMode: string;
+    repoCreationState: RepoCreationState;
+    createdRepo?: { owner: string; name: string };
+    githubAppStatus: GitHubAppStatus;
+    isRechecking: boolean;
+    isModalDismissed: boolean;
+    recheckMessage: string;
+    hasRecheckFailed: boolean;
+    onCheckAgain: () => void;
+    onOpenInstallPage: () => void;
+    onDismiss: () => void;
+}): React.ReactElement | null {
+    const isNewWithCreatedRepo = repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
+    if (!isNewWithCreatedRepo) return null;
+    if (githubAppStatus.isInstalled === true) return null;
+
+    const shouldShowModal = (githubAppStatus.isInstalled === false || isRechecking) && !isModalDismissed;
+    if (!shouldShowModal || !createdRepo) return null;
+
+    const { owner, name: repo } = createdRepo;
+
+    return (
+        <DialogTrigger type="modal" isOpen={true} onOpenChange={(isOpen) => { if (!isOpen) onDismiss(); }}>
+            <ActionButton isHidden>Open</ActionButton>
+            {() => (
+                <Modal
+                    title="Install GitHub App"
+                    actionButtons={
+                        isRechecking
+                            ? []
+                            : [
+                                { label: 'Check Again', variant: 'secondary', onPress: onCheckAgain },
+                                { label: 'Install App', variant: 'accent', onPress: onOpenInstallPage },
+                            ]
+                    }
+                    onClose={onDismiss}
+                >
+                    <div style={{ minHeight: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {isRechecking ? (
+                            <LoadingDisplay message={recheckMessage} />
+                        ) : hasRecheckFailed ? (
+                            <Text UNSAFE_className="text-sm text-orange-700">
+                                {githubAppStatus.codeStatus === undefined
+                                    ? 'Your repository is still being registered. This can take a few minutes for new repositories. Please wait and try again.'
+                                    : 'App not detected. Please verify the app is installed for this repository.'}
+                            </Text>
+                        ) : (
+                            <NumberedInstructions
+                                instructions={[
+                                    { step: 'Click "Install App"', details: 'Opens the AEM Code Sync GitHub App page' },
+                                    { step: 'Configure the app', details: `Click "Configure", sign in if prompted, then click "Configure" next to "${owner}"` },
+                                    { step: 'Grant repository access', details: `Select "Only select repositories", search for "${repo}", and click the green "Save" button` },
+                                    { step: 'Return here and click "Check Again"', details: 'We\'ll verify the installation completed' },
+                                ]}
+                            />
+                        )}
+                    </div>
+                </Modal>
+            )}
+        </DialogTrigger>
+    );
+}
+
+/** GitHub App check result type */
+interface GitHubAppCheckResult {
+    success: boolean;
+    isInstalled: boolean;
+    codeStatus?: number;
+    installUrl?: string;
+    error?: string;
+}
+
+/**
+ * Retry-poll for GitHub App installation with exponential backoff.
+ * Extracted to reduce component complexity.
+ */
+async function pollGitHubAppInstallation(
+    owner: string,
+    repo: string,
+    setRecheckMessage: (msg: string) => void,
+): Promise<{ status: GitHubAppStatus; failed: boolean }> {
+    const maxAttempts = 5;
+    const retryDelayMs = 5000;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const result = await webviewClient.request<GitHubAppCheckResult>(
+                'check-github-app', { owner, repo, lenient: true },
+            );
+
+            if (result.success && result.isInstalled) {
+                return {
+                    status: { isChecking: false, isInstalled: true, codeStatus: result.codeStatus },
+                    failed: false,
+                };
+            }
+
+            // HTTP 404 (codeStatus undefined) means repo not yet indexed -- retry
+            if (result.codeStatus === undefined && attempt < maxAttempts) {
+                setRecheckMessage(`Repository is still being registered... (attempt ${attempt + 1} of ${maxAttempts})`);
+                await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+                continue;
+            }
+
+            return {
+                status: { isChecking: false, isInstalled: false, codeStatus: result.codeStatus, installUrl: result.installUrl },
+                failed: true,
+            };
+        } catch (err) {
+            console.error('[GitHub App] Check failed:', err);
+            return {
+                status: { isChecking: false, isInstalled: false, error: (err as Error).message },
+                failed: true,
+            };
+        }
+    }
+
+    // All retries exhausted
+    return { status: { isChecking: false, isInstalled: false }, failed: true };
+}
+
+/**
+ * Compute whether the user can proceed based on repo mode and current state.
+ * Extracted from useEffect to reduce component complexity.
+ */
+function computeCanProceed(
+    repoMode: string,
+    repoCreationState: RepoCreationState,
+    githubAppStatus: GitHubAppStatus,
+    selectedRepo: GitHubRepoItem | undefined,
+    isLoading: boolean,
+): boolean {
+    if (repoMode === 'new') {
+        return (
+            repoCreationState.isCreated &&
+            githubAppStatus.isInstalled === true &&
+            !githubAppStatus.isChecking &&
+            !repoCreationState.isCreating
+        );
+    }
+    return !!selectedRepo && !isLoading;
+}
+
+/**
+ * Build GitHubAppStatus from a check result.
+ * Extracted to simplify checkGitHubApp callback.
+ */
+function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAppStatus {
+    return {
+        isChecking: false,
+        isInstalled: result.success ? result.isInstalled : false,
+        codeStatus: result.codeStatus,
+        installUrl: result.installUrl,
+        error: result.success ? undefined : (result.error || 'Failed to check GitHub App status'),
+    };
+}
+
+/**
+ * NewRepoForm - Form for creating a new repository.
+ * Extracted to reduce main component complexity.
+ */
+function NewRepoForm({
+    repoName,
+    githubUser,
+    repoNameError,
+    repoCreationState,
+    templateAvailable,
+    onRepoNameChange,
+    onRepoNameBlur,
+    onUseExisting,
+    onCreateRepository,
+}: {
+    repoName: string;
+    githubUser?: { login: string };
+    repoNameError?: string;
+    repoCreationState: RepoCreationState;
+    templateAvailable: boolean;
+    onRepoNameChange: (value: string) => void;
+    onRepoNameBlur: () => void;
+    onUseExisting: () => void;
+    onCreateRepository: () => void;
+}): React.ReactElement {
+    return (
+        <View
+            backgroundColor="gray-50"
+            borderRadius="medium"
+            padding="size-300"
+        >
+            <Heading level={3} margin={0} marginBottom="size-200">Create New Repository</Heading>
+
+            <TextField
+                label="Repository Name"
+                value={repoName}
+                onChange={onRepoNameChange}
+                onBlur={onRepoNameBlur}
+                validationState={repoNameError || repoCreationState.error ? 'invalid' : undefined}
+                errorMessage={repoNameError || repoCreationState.error}
+                placeholder="my-eds-project"
+                description={githubUser ? `Will be created as ${githubUser.login}/${repoName || 'my-eds-project'}` : 'Name for your new GitHub repository'}
+                width="100%"
+                isRequired
+                autoFocus
+                isDisabled={repoCreationState.isCreated || repoCreationState.isCreating}
+            />
+
+            <Flex justifyContent="end" gap="size-100" marginTop="size-200">
+                <Button variant="secondary" onPress={onUseExisting}>
+                    Browse
+                </Button>
+                {!repoCreationState.isCreated && (
+                    <Button
+                        variant="accent"
+                        onPress={onCreateRepository}
+                        isDisabled={
+                            !repoName ||
+                            !isValidRepositoryName(repoName) ||
+                            repoCreationState.isCreating ||
+                            !templateAvailable
+                        }
+                    >
+                        Create
+                    </Button>
+                )}
+            </Flex>
+
+            <LoadingOverlay isVisible={repoCreationState.isCreating} />
+        </View>
+    );
+}
+
+/**
+ * ResetToTemplateOption - Checkbox with warning for resetting existing repos.
+ * Extracted to reduce main component complexity.
+ */
+function ResetToTemplateOption({
+    resetToTemplate,
+    onResetToTemplateChange,
+}: {
+    resetToTemplate: boolean;
+    onResetToTemplateChange: (isSelected: boolean) => void;
+}): React.ReactElement {
+    return (
+        <Flex direction="column" gap="size-100" marginTop="size-300">
+            <Checkbox
+                isSelected={resetToTemplate}
+                onChange={onResetToTemplateChange}
+            >
+                Reset to template (replaces all content)
+            </Checkbox>
+
+            <View
+                marginStart="size-300"
+                minHeight="size-250"
+                UNSAFE_className="reset-warning-container"
+            >
+                <Flex
+                    alignItems="center"
+                    gap="size-100"
+                    UNSAFE_className={resetToTemplate ? 'reset-warning-visible' : 'reset-warning-hidden'}
+                >
+                    <Alert size="S" UNSAFE_className="text-orange-500 flex-shrink-0" />
+                    <Text UNSAFE_className="text-xs text-orange-600">
+                        This will delete and recreate the repository with the selected template content.
+                    </Text>
+                </Flex>
+            </View>
+        </Flex>
+    );
+}
+
+/**
  * GitHubRepoSelectionStep Component
  */
 export function GitHubRepoSelectionStep({
@@ -178,33 +465,21 @@ export function GitHubRepoSelectionStep({
     const githubUser = edsConfig?.githubAuth?.user;
     const repoName = edsConfig?.repoName || '';
 
-    // Validation state
     const [repoNameError, setRepoNameError] = useState<string | undefined>();
-
-    // Repository creation state (for new repos)
     const [repoCreationState, setRepoCreationState] = useState<RepoCreationState>({
         isCreating: false,
-        isCreated: !!edsConfig?.createdRepo,  // Restore from state if navigating back
+        isCreated: !!edsConfig?.createdRepo,
     });
-
-    // GitHub App installation status
     const [githubAppStatus, setGitHubAppStatus] = useState<GitHubAppStatus>({
         isChecking: false,
         isInstalled: null,
     });
-
-    // Track if we're rechecking from within the modal (vs initial check)
     const [isRechecking, setIsRechecking] = useState(false);
     const [recheckMessage, setRecheckMessage] = useState('Checking installation status...');
     const [hasRecheckFailed, setHasRecheckFailed] = useState(false);
-
-    // Track if user dismissed the GitHub App modal (reset when repo changes)
     const [isModalDismissed, setIsModalDismissed] = useState(false);
-
-    // Track last checked repo to avoid duplicate checks
     const lastCheckedRepo = useRef<string | null>(null);
 
-    // Use selection step hook for repository list
     const {
         items: repos,
         filteredItems: filteredRepos,
@@ -226,7 +501,7 @@ export function GitHubRepoSelectionStep({
         updateState,
         selectedItem: selectedRepo,
         searchFilterKey: 'githubRepoSearchFilter',
-        autoSelectSingle: false,  // Don't auto-select, user should choose
+        autoSelectSingle: false,
         searchFields: ['name', 'fullName', 'description'],
         onSelect: (repo) => {
             updateState({
@@ -235,12 +510,11 @@ export function GitHubRepoSelectionStep({
                     accsHost: edsConfig?.accsHost || '',
                     storeViewCode: edsConfig?.storeViewCode || '',
                     customerGroup: edsConfig?.customerGroup || '',
-                    repoName: repo.name,  // Update to selected repo's name
+                    repoName: repo.name,
                     daLiveOrg: edsConfig?.daLiveOrg || '',
                     daLiveSite: edsConfig?.daLiveSite || '',
                     repoMode: 'existing',
                     selectedRepo: repo,
-                    // Also set existingRepo for backward compatibility
                     existingRepo: repo.fullName,
                     existingRepoVerified: true,
                 },
@@ -248,18 +522,12 @@ export function GitHubRepoSelectionStep({
         },
         validateBeforeLoad: () => {
             if (!state.edsConfig?.githubAuth?.isAuthenticated) {
-                return {
-                    valid: false,
-                    error: 'GitHub authentication required. Please go back and authenticate.',
-                };
+                return { valid: false, error: 'GitHub authentication required. Please go back and authenticate.' };
             }
             return { valid: true };
         },
     });
 
-    /**
-     * Update EDS config state
-     */
     const updateEdsConfig = useCallback((updates: Partial<typeof edsConfig>) => {
         updateState({
             edsConfig: {
@@ -275,292 +543,114 @@ export function GitHubRepoSelectionStep({
         });
     }, [edsConfig, updateState]);
 
-    /**
-     * Handle switching to create new mode
-     */
+    const resetLocalState = useCallback(() => {
+        setRepoCreationState({ isCreating: false, isCreated: false });
+        setGitHubAppStatus({ isChecking: false, isInstalled: null });
+        setIsModalDismissed(false);
+        lastCheckedRepo.current = null;
+    }, []);
+
     const handleCreateNew = useCallback(() => {
-        // Clear existing repo selection and repo name (start fresh)
         updateEdsConfig({
-            repoMode: 'new',
-            repoName: '', // Clear so user enters a new name
-            selectedRepo: undefined,
-            existingRepo: undefined,
-            existingRepoVerified: undefined,
-            resetToTemplate: false,
-            createdRepo: undefined, // Clear any previously created repo
+            repoMode: 'new', repoName: '', selectedRepo: undefined,
+            existingRepo: undefined, existingRepoVerified: undefined,
+            resetToTemplate: false, createdRepo: undefined,
         });
-        // Reset local creation state
-        setRepoCreationState({ isCreating: false, isCreated: false });
-        setGitHubAppStatus({ isChecking: false, isInstalled: null });
-        setIsModalDismissed(false);
-        lastCheckedRepo.current = null;
-    }, [updateEdsConfig]);
+        resetLocalState();
+    }, [updateEdsConfig, resetLocalState]);
 
-    /**
-     * Handle switching to use existing mode
-     */
     const handleUseExisting = useCallback(() => {
-        // Clear new repo state
-        updateEdsConfig({
-            repoMode: 'existing',
-            createdRepo: undefined, // Clear any previously created repo
-        });
-        // Reset local creation state
-        setRepoCreationState({ isCreating: false, isCreated: false });
-        setGitHubAppStatus({ isChecking: false, isInstalled: null });
-        setIsModalDismissed(false);
-        lastCheckedRepo.current = null;
-    }, [updateEdsConfig]);
+        updateEdsConfig({ repoMode: 'existing', createdRepo: undefined });
+        resetLocalState();
+    }, [updateEdsConfig, resetLocalState]);
 
-    /**
-     * Handle reset to template checkbox change
-     */
     const handleResetToTemplateChange = useCallback((isSelected: boolean) => {
         updateEdsConfig({ resetToTemplate: isSelected });
     }, [updateEdsConfig]);
 
-    /**
-     * Handle repository name change
-     * Normalizes input for consistent repo naming
-     */
     const handleRepoNameChange = useCallback((value: string) => {
-        // Normalize the input for consistent repo naming
         const normalized = normalizeRepositoryName(value);
         updateEdsConfig({ repoName: normalized });
-
-        // Validate and show error if needed
-        const error = getRepositoryNameError(normalized);
-        setRepoNameError(error);
+        setRepoNameError(getRepositoryNameError(normalized));
     }, [updateEdsConfig]);
 
-    /**
-     * Validate repository name on blur
-     */
     const handleRepoNameBlur = useCallback(() => {
-        const error = getRepositoryNameError(repoName);
-        setRepoNameError(error);
+        setRepoNameError(getRepositoryNameError(repoName));
     }, [repoName]);
 
-    /**
-     * Check GitHub App installation for a repository
-     * @param lenient - If true, accepts non-404 as installed (for post-install verification)
-     *                  If false (default), requires 200 status (strict verification)
-     */
     const checkGitHubApp = useCallback(async (owner: string, repo: string, lenient = false) => {
         const repoKey = `${owner}/${repo}`;
-
-        // Skip if same repo already checked with same mode
-        // Allow recheck if switching from strict to lenient (user clicked "Check Again")
-        if (lastCheckedRepo.current === repoKey && !lenient) {
-            return;
-        }
-
+        if (lastCheckedRepo.current === repoKey && !lenient) return;
         lastCheckedRepo.current = repoKey;
 
         try {
-            const result = await webviewClient.request<{
-                success: boolean;
-                isInstalled: boolean;
-                codeStatus?: number;
-                installUrl?: string;
-                error?: string;
-            }>('check-github-app', { owner, repo, lenient });
-
-            if (result.success) {
-                setGitHubAppStatus({
-                    isChecking: false,
-                    isInstalled: result.isInstalled,
-                    codeStatus: result.codeStatus,
-                    installUrl: result.installUrl,
-                });
-            } else {
-                setGitHubAppStatus({
-                    isChecking: false,
-                    isInstalled: false,
-                    codeStatus: result.codeStatus,
-                    error: result.error || 'Failed to check GitHub App status',
-                });
-            }
-        } catch (error) {
-            console.error('[GitHub App] Check failed:', error);
-            setGitHubAppStatus({
-                isChecking: false,
-                isInstalled: false,
-                error: (error as Error).message,
-            });
+            const result = await webviewClient.request<GitHubAppCheckResult>(
+                'check-github-app', { owner, repo, lenient },
+            );
+            setGitHubAppStatus(buildAppStatusFromResult(result));
+        } catch (err) {
+            console.error('[GitHub App] Check failed:', err);
+            setGitHubAppStatus({ isChecking: false, isInstalled: false, error: (err as Error).message });
         } finally {
             setIsRechecking(false);
         }
     }, []);
 
-    /**
-     * Create a new GitHub repository from template
-     * Called when user clicks "Create" button
-     */
     const handleCreateRepository = useCallback(async () => {
-        // Validate template config is available
         const templateOwner = edsConfig?.templateOwner;
         const templateRepo = edsConfig?.templateRepo;
 
         if (!templateOwner || !templateRepo) {
-            setRepoCreationState({
-                isCreating: false,
-                isCreated: false,
-                error: 'Template configuration not available. Please check your stack settings.',
-            });
+            setRepoCreationState({ isCreating: false, isCreated: false, error: 'Template configuration not available. Please check your stack settings.' });
             return;
         }
-
         if (!repoName || !isValidRepositoryName(repoName)) {
             setRepoNameError(getRepositoryNameError(repoName));
             return;
         }
 
-        // Start creation
         setRepoCreationState({ isCreating: true, isCreated: false });
         setRepoNameError(undefined);
 
         try {
             const result = await webviewClient.request<{
                 success: boolean;
-                data?: {
-                    owner: string;
-                    name: string;
-                    url: string;
-                    fullName: string;
-                };
+                data?: { owner: string; name: string; url: string; fullName: string };
                 error?: string;
-            }>('create-github-repo', {
-                repoName,
-                templateOwner,
-                templateRepo,
-                isPrivate: false,
-            });
+            }>('create-github-repo', { repoName, templateOwner, templateRepo, isPrivate: false });
 
-            if (result.success && result.data) {
-                // Repository created successfully
-                const createdRepo = result.data;
-
-                // Store the created repo info in state
-                updateEdsConfig({
-                    createdRepo: {
-                        owner: createdRepo.owner,
-                        name: createdRepo.name,
-                        url: createdRepo.url,
-                        fullName: createdRepo.fullName,
-                    },
-                });
-
-                setRepoCreationState({ isCreating: false, isCreated: true });
-
-                // For newly created repos from template, the GitHub App is NEVER pre-installed.
-                // Skip the automatic check (which can return stale cached data from a previously
-                // deleted repo with the same name) and directly show "not installed" status.
-                // User must install the app and click "Check Again" to verify.
-                setGitHubAppStatus({
-                    isChecking: false,
-                    isInstalled: false,
-                    installUrl: `https://github.com/apps/aem-code-sync/installations/select_target`,
-                });
-            } else {
+            if (!result.success || !result.data) {
                 throw new Error(result.error || 'Failed to create repository');
             }
-        } catch (error) {
-            console.error('[GitHub Repo] Creation failed:', error);
-            setRepoCreationState({
-                isCreating: false,
-                isCreated: false,
-                error: (error as Error).message,
+
+            updateEdsConfig({
+                createdRepo: { owner: result.data.owner, name: result.data.name, url: result.data.url, fullName: result.data.fullName },
             });
+            setRepoCreationState({ isCreating: false, isCreated: true });
+            setGitHubAppStatus({ isChecking: false, isInstalled: false, installUrl: 'https://github.com/apps/aem-code-sync/installations/select_target' });
+        } catch (err) {
+            console.error('[GitHub Repo] Creation failed:', err);
+            setRepoCreationState({ isCreating: false, isCreated: false, error: (err as Error).message });
         }
-    }, [repoName, edsConfig?.templateOwner, edsConfig?.templateRepo, updateEdsConfig, checkGitHubApp]);
+    }, [repoName, edsConfig?.templateOwner, edsConfig?.templateRepo, updateEdsConfig]);
 
-    /**
-     * Handle "Check Again" button click from within the modal
-     * Uses lenient mode since user just completed installation
-     * Note: Only called for NEW repos (existing repos check in StorefrontSetup)
-     */
     const handleCheckAgain = useCallback(async () => {
-        // Only handle new repos - existing repos check happens in StorefrontSetup
-        if (repoMode !== 'new' || !edsConfig?.createdRepo) {
-            return;
-        }
-
-        const owner = edsConfig.createdRepo.owner;
-        const repo = edsConfig.createdRepo.name;
-
-        const maxAttempts = 5;
-        const retryDelayMs = 5000;
+        if (repoMode !== 'new' || !edsConfig?.createdRepo) return;
 
         setIsRechecking(true);
         setHasRecheckFailed(false);
         setRecheckMessage('Checking installation status...');
         setGitHubAppStatus({ isChecking: true, isInstalled: null });
 
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-                const result = await webviewClient.request<{
-                    success: boolean;
-                    isInstalled: boolean;
-                    codeStatus?: number;
-                    installUrl?: string;
-                    error?: string;
-                }>('check-github-app', { owner, repo, lenient: true });
+        const { status, failed } = await pollGitHubAppInstallation(
+            edsConfig.createdRepo.owner, edsConfig.createdRepo.name, setRecheckMessage,
+        );
 
-                if (result.success && result.isInstalled) {
-                    setGitHubAppStatus({
-                        isChecking: false,
-                        isInstalled: true,
-                        codeStatus: result.codeStatus,
-                    });
-                    setIsRechecking(false);
-                    return;
-                }
-
-                // HTTP 404 (codeStatus undefined) means repo not yet indexed — retry
-                if (result.codeStatus === undefined && attempt < maxAttempts) {
-                    setRecheckMessage(
-                        `Repository is still being registered... (attempt ${attempt + 1} of ${maxAttempts})`,
-                    );
-                    await new Promise(resolve => setTimeout(resolve, retryDelayMs));
-                    continue;
-                }
-
-                // Final failure — set status with codeStatus for message differentiation
-                setGitHubAppStatus({
-                    isChecking: false,
-                    isInstalled: false,
-                    codeStatus: result.codeStatus,
-                    installUrl: result.installUrl,
-                });
-                setHasRecheckFailed(true);
-                setIsRechecking(false);
-                return;
-            } catch (error) {
-                console.error('[GitHub App] Check failed:', error);
-                setGitHubAppStatus({
-                    isChecking: false,
-                    isInstalled: false,
-                    error: (error as Error).message,
-                });
-                setHasRecheckFailed(true);
-                setIsRechecking(false);
-                return;
-            }
-        }
-
-        // All retries exhausted
-        setGitHubAppStatus({
-            isChecking: false,
-            isInstalled: false,
-        });
-        setHasRecheckFailed(true);
+        setGitHubAppStatus(status);
+        setHasRecheckFailed(failed);
         setIsRechecking(false);
-    }, [repoMode, edsConfig?.createdRepo, selectedRepo]);
+    }, [repoMode, edsConfig?.createdRepo]);
 
-    /**
-     * Open GitHub App installation page
-     */
     const handleOpenInstallPage = useCallback(() => {
         if (githubAppStatus.installUrl) {
             vscode.postMessage('openExternal', { url: githubAppStatus.installUrl });
@@ -609,85 +699,31 @@ export function GitHubRepoSelectionStep({
     }, [repoMode, edsConfig?.createdRepo, githubAppStatus.isInstalled, checkGitHubApp]);
 
     // Update canProceed based on selection and repo mode
-    // - NEW repos: require repo created AND app verified (check happens here)
-    // - EXISTING repos: only require repo selection (app check deferred to StorefrontSetup)
     useEffect(() => {
-        const appVerified = githubAppStatus.isInstalled === true;
-        const isCheckingApp = githubAppStatus.isChecking;
-        const isCreatingRepo = repoCreationState.isCreating;
-
-        if (repoMode === 'new') {
-            // New repos: require repo to be created AND app verified
-            // User must click "Create" first, then wait for app installation
-            const isRepoCreated = repoCreationState.isCreated;
-            setCanProceed(isRepoCreated && appVerified && !isCheckingApp && !isCreatingRepo);
-        } else {
-            // Existing repos: only require repo selection
-            // GitHub App check is deferred to StorefrontSetup (after fstab.yaml push)
-            // because Helix doesn't know about the repo until it's configured
-            const isExistingValid = !!selectedRepo;
-            setCanProceed(isExistingValid && !isLoading);
-        }
+        setCanProceed(computeCanProceed(repoMode, repoCreationState, githubAppStatus, selectedRepo, isLoading));
     }, [repoMode, repoCreationState, selectedRepo, githubAppStatus, isLoading, setCanProceed]);
 
-    // Derived state for showing reset option (extracted per SOP to avoid long boolean chain in JSX)
+    // Derived state for showing reset option
     const shouldShowResetOption = selectedRepo && hasLoadedOnce && !isLoading;
+    const templateAvailable = !!(edsConfig?.templateOwner && edsConfig?.templateRepo);
 
     // Left column: Repository selection
     const leftContent = (
         <>
-            {/* Create New Repository mode */}
             {repoMode === 'new' && (
-                <View
-                    backgroundColor="gray-50"
-                    borderRadius="medium"
-                    padding="size-300"
-                >
-                    <Heading level={3} margin={0} marginBottom="size-200">Create New Repository</Heading>
-
-                    <TextField
-                        label="Repository Name"
-                        value={repoName}
-                        onChange={handleRepoNameChange}
-                        onBlur={handleRepoNameBlur}
-                        validationState={repoNameError || repoCreationState.error ? 'invalid' : undefined}
-                        errorMessage={repoNameError || repoCreationState.error}
-                        placeholder="my-eds-project"
-                        description={githubUser ? `Will be created as ${githubUser.login}/${repoName || 'my-eds-project'}` : 'Name for your new GitHub repository'}
-                        width="100%"
-                        isRequired
-                        autoFocus
-                        isDisabled={repoCreationState.isCreated || repoCreationState.isCreating}
-                    />
-
-                    <Flex justifyContent="end" gap="size-100" marginTop="size-200">
-                        <Button variant="secondary" onPress={handleUseExisting}>
-                            Browse
-                        </Button>
-                        {/* Create button — primary action on the right per Spectrum convention */}
-                        {!repoCreationState.isCreated && (
-                            <Button
-                                variant="accent"
-                                onPress={handleCreateRepository}
-                                isDisabled={
-                                    !repoName ||
-                                    !isValidRepositoryName(repoName) ||
-                                    repoCreationState.isCreating ||
-                                    !edsConfig?.templateOwner ||
-                                    !edsConfig?.templateRepo
-                                }
-                            >
-                                Create
-                            </Button>
-                        )}
-                    </Flex>
-
-                    {/* Loading overlay while creating */}
-                    <LoadingOverlay isVisible={repoCreationState.isCreating} />
-                </View>
+                <NewRepoForm
+                    repoName={repoName}
+                    githubUser={githubUser}
+                    repoNameError={repoNameError}
+                    repoCreationState={repoCreationState}
+                    templateAvailable={templateAvailable}
+                    onRepoNameChange={handleRepoNameChange}
+                    onRepoNameBlur={handleRepoNameBlur}
+                    onUseExisting={handleUseExisting}
+                    onCreateRepository={handleCreateRepository}
+                />
             )}
 
-            {/* Use Existing Repository mode */}
             {repoMode === 'existing' && (
                 <>
                     <SelectionStepContent
@@ -730,125 +766,28 @@ export function GitHubRepoSelectionStep({
                             </Text>
                         )}
                     />
-
-                    {/* Reset to template option - only show when repo is selected and initial load complete */}
                     {shouldShowResetOption && (
-                        <Flex direction="column" gap="size-100" marginTop="size-300">
-                            <Checkbox
-                                isSelected={resetToTemplate}
-                                onChange={handleResetToTemplateChange}
-                            >
-                                Reset to template (replaces all content)
-                            </Checkbox>
-
-                            {/* Warning notice - fixed height container prevents layout jump */}
-                            <View
-                                marginStart="size-300"
-                                minHeight="size-250"
-                                UNSAFE_className="reset-warning-container"
-                            >
-                                <Flex
-                                    alignItems="center"
-                                    gap="size-100"
-                                    UNSAFE_className={resetToTemplate ? 'reset-warning-visible' : 'reset-warning-hidden'}
-                                >
-                                    <Alert size="S" UNSAFE_className="text-orange-500 flex-shrink-0" />
-                                    <Text UNSAFE_className="text-xs text-orange-600">
-                                        This will delete and recreate the repository with the selected template content.
-                                    </Text>
-                                </Flex>
-                            </View>
-                        </Flex>
+                        <ResetToTemplateOption
+                            resetToTemplate={resetToTemplate}
+                            onResetToTemplateChange={handleResetToTemplateChange}
+                        />
                     )}
                 </>
             )}
 
-            {/* GitHub App Status Section - shows ONLY for NEW repos after creation
-                EXISTING repos: No modal here - check happens in StorefrontSetup after fstab.yaml push */}
-            {(() => {
-                // Only show modal for NEW repos after creation
-                // EXISTING repos: Skip modal - app check deferred to StorefrontSetup
-                const isNewWithCreatedRepo = repoMode === 'new' && repoCreationState.isCreated && !!edsConfig?.createdRepo;
-
-                // Only show for new repos that need app verification
-                if (!isNewWithCreatedRepo) return null;
-
-                // Success state: no banner needed - status shown in Configuration Summary panel
-                if (githubAppStatus.isInstalled === true) {
-                    return null;
-                }
-
-                // Show modal when not installed (including HTTP 404 = not yet indexed) OR when rechecking (unless dismissed)
-                if ((githubAppStatus.isInstalled === false || isRechecking) && !isModalDismissed) {
-                    // Get owner/repo for display (only NEW repos reach this point)
-                    if (!edsConfig?.createdRepo) {
-                        return null;
-                    }
-                    const owner = edsConfig.createdRepo.owner;
-                    const repo = edsConfig.createdRepo.name;
-
-                    const handleDismiss = () => {
-                        setIsModalDismissed(true);
-                    };
-
-                    return (
-                        <DialogTrigger type="modal" isOpen={true} onOpenChange={(isOpen) => { if (!isOpen) handleDismiss(); }}>
-                            {/* Hidden trigger - modal auto-opens */}
-                            <ActionButton isHidden>Open</ActionButton>
-                            {() => (
-                                <Modal
-                                    title="Install GitHub App"
-                                    actionButtons={
-                                        isRechecking
-                                            ? [] // Hide buttons while rechecking
-                                            : [
-                                                { label: 'Check Again', variant: 'secondary', onPress: handleCheckAgain },
-                                                { label: 'Install App', variant: 'accent', onPress: handleOpenInstallPage },
-                                            ]
-                                    }
-                                    onClose={handleDismiss}
-                                >
-                                    {/* Fixed height container prevents modal resize during recheck */}
-                                    <div style={{ minHeight: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {isRechecking ? (
-                                            <LoadingDisplay message={recheckMessage} />
-                                        ) : hasRecheckFailed ? (
-                                            <Text UNSAFE_className="text-sm text-orange-700">
-                                                {githubAppStatus.codeStatus === undefined
-                                                    ? 'Your repository is still being registered. This can take a few minutes for new repositories. Please wait and try again.'
-                                                    : 'App not detected. Please verify the app is installed for this repository.'}
-                                            </Text>
-                                        ) : (
-                                            <NumberedInstructions
-                                                instructions={[
-                                                    {
-                                                        step: 'Click "Install App"',
-                                                        details: 'Opens the AEM Code Sync GitHub App page',
-                                                    },
-                                                    {
-                                                        step: 'Configure the app',
-                                                        details: `Click "Configure", sign in if prompted, then click "Configure" next to "${owner}"`,
-                                                    },
-                                                    {
-                                                        step: 'Grant repository access',
-                                                        details: `Select "Only select repositories", search for "${repo}", and click the green "Save" button`,
-                                                    },
-                                                    {
-                                                        step: 'Return here and click "Check Again"',
-                                                        details: 'We\'ll verify the installation completed',
-                                                    },
-                                                ]}
-                                            />
-                                        )}
-                                    </div>
-                                </Modal>
-                            )}
-                        </DialogTrigger>
-                    );
-                }
-
-                return null;
-            })()}
+            <GitHubAppInstallModal
+                repoMode={repoMode}
+                repoCreationState={repoCreationState}
+                createdRepo={edsConfig?.createdRepo}
+                githubAppStatus={githubAppStatus}
+                isRechecking={isRechecking}
+                isModalDismissed={isModalDismissed}
+                recheckMessage={recheckMessage}
+                hasRecheckFailed={hasRecheckFailed}
+                onCheckAgain={handleCheckAgain}
+                onOpenInstallPage={handleOpenInstallPage}
+                onDismiss={() => setIsModalDismissed(true)}
+            />
         </>
     );
 

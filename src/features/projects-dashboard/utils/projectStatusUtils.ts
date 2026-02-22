@@ -6,9 +6,9 @@
  * to eliminate code duplication.
  */
 
+import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import type { Project, ProjectStatus } from '@/types/base';
 import { getComponentInstanceValues } from '@/types/typeGuards';
-import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 
 /**
  * StatusDot variant type for visual status indication

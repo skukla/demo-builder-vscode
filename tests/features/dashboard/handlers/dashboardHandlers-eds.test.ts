@@ -7,7 +7,6 @@
 
 import { HandlerContext } from '@/types/handlers';
 import { Project } from '@/types';
-import { ErrorCode } from '@/types/errorCodes';
 
 // Explicit test timeout to prevent hanging
 jest.setTimeout(5000);

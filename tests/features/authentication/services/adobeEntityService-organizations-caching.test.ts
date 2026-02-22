@@ -80,7 +80,7 @@ describe('AdobeEntityService - Organizations - Caching', () => {
             });
             (parseJSON as jest.Mock).mockReturnValue({ org: { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' } });
 
-            const result = await service.getCurrentOrganization();
+            const _result = await service.getCurrentOrganization();
 
             // Should call Adobe CLI and cache the result
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
@@ -97,7 +97,7 @@ describe('AdobeEntityService - Organizations - Caching', () => {
                 org: { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' },
             });
 
-            const result = await service.getCurrentOrganization();
+            const _result = await service.getCurrentOrganization();
 
             // Should not call CLI since console.where is cached
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();

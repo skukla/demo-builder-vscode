@@ -6,6 +6,9 @@ import {
     Text,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useRef, useState } from 'react';
+import { loadStacks } from '../helpers/brandStackLoader';
+import { loadDemoPackages } from '../helpers/demoPackageLoader';
+import { filterComponentConfigsForStackChange } from '../helpers/stackHelpers';
 import {
     useWizardState,
     useWizardNavigation,
@@ -21,11 +24,6 @@ import {
     EditProjectConfig,
     WizardStepConfigWithRequirements,
 } from './wizardHelpers';
-import { loadStacks } from '../helpers/brandStackLoader';
-import { loadDemoPackages } from '../helpers/demoPackageLoader';
-import { filterComponentConfigsForStackChange } from '../helpers/stackHelpers';
-import type { DemoPackage } from '@/types/demoPackages';
-import type { Stack } from '@/types/stacks';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay } from '@/core/ui/components/feedback';
 import { PageHeader, PageFooter } from '@/core/ui/components/layout';
@@ -38,16 +36,18 @@ import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjec
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
-import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
-import { GitHubSetupStep } from '@/features/eds/ui/steps/GitHubSetupStep';
-import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
+import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';
 import { DaLiveSetupStep } from '@/features/eds/ui/steps/DaLiveSetupStep';
 import { DataSourceConfigStep } from '@/features/eds/ui/steps/DataSourceConfigStep';
-import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';
+import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
+import { GitHubSetupStep } from '@/features/eds/ui/steps/GitHubSetupStep';
 import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
+import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
+import type { DemoPackage } from '@/types/demoPackages';
+import type { Stack } from '@/types/stacks';
 import { ComponentSelection } from '@/types/webview';
 
 // Extracted hooks

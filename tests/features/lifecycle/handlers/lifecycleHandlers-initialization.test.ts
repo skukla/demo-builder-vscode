@@ -7,7 +7,7 @@
  */
 
 import { handleReady } from '@/features/lifecycle/handlers/lifecycleHandlers';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext as _HandlerContext } from '@/commands/handlers/HandlerContext';
 import { createMockContext } from './lifecycleHandlers.testUtils';
 
 // Mock vscode inline to avoid hoisting issues

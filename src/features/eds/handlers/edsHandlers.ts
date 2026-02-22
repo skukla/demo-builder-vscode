@@ -19,8 +19,31 @@
  * @module features/eds/handlers
  */
 
+import {
+    handleVerifyDaLiveOrg,
+    handleGetDaLiveSites,
+    handleDaLiveOAuth,
+    handleCheckDaLiveAuth,
+    handleOpenDaLiveLogin,
+    handleStoreDaLiveToken,
+    handleStoreDaLiveTokenWithOrg,
+    handleClearDaLiveAuth,
+} from './edsDaLiveHandlers';
+import {
+    handleCheckGitHubAuth,
+    handleGitHubOAuth,
+    handleGitHubChangeAccount,
+    handleGetGitHubRepos,
+    handleVerifyGitHubRepo,
+    handleCreateGitHubRepo,
+} from './edsGitHubHandlers';
+import {
+    handleStartStorefrontSetup,
+    handleCancelStorefrontSetup,
+    handleResumeStorefrontSetup,
+} from './storefrontSetupHandlers';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
 // Re-export all GitHub handlers
 export {
@@ -141,31 +164,6 @@ export async function handleValidateAccsCredentials(
 // ============================================================================
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
-
-import { defineHandlers } from '@/types/handlers';
-import {
-    handleCheckGitHubAuth,
-    handleGitHubOAuth,
-    handleGitHubChangeAccount,
-    handleGetGitHubRepos,
-    handleVerifyGitHubRepo,
-    handleCreateGitHubRepo,
-} from './edsGitHubHandlers';
-import {
-    handleVerifyDaLiveOrg,
-    handleGetDaLiveSites,
-    handleDaLiveOAuth,
-    handleCheckDaLiveAuth,
-    handleOpenDaLiveLogin,
-    handleStoreDaLiveToken,
-    handleStoreDaLiveTokenWithOrg,
-    handleClearDaLiveAuth,
-} from './edsDaLiveHandlers';
-import {
-    handleStartStorefrontSetup,
-    handleCancelStorefrontSetup,
-    handleResumeStorefrontSetup,
-} from './storefrontSetupHandlers';
 
 /**
  * EDS feature handler map

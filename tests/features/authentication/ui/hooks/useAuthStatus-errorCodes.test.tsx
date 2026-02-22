@@ -6,9 +6,9 @@
 
 // Import mock exports from testUtils
 import {
-    mockPostMessage,
+    mockPostMessage as _mockPostMessage,
     mockOnMessage,
-    mockRequestAuth,
+    mockRequestAuth as _mockRequestAuth,
     baseState,
     resetMocks,
 } from './useAuthStatus.testUtils';

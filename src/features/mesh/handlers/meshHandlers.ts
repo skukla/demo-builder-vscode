@@ -7,10 +7,10 @@
  * Part of Step 3: Handler Registry Simplification
  */
 
-import { defineHandlers } from '@/types/handlers';
 import { handleCheckApiMesh } from './checkHandler';
 import { handleCreateApiMesh } from './createHandler';
 import { handleDeleteApiMesh } from './deleteHandler';
+import { defineHandlers } from '@/types/handlers';
 
 /**
  * Mesh feature handler map

@@ -120,7 +120,7 @@ describe('StackSelector', () => {
     });
 
     describe('Selection State', () => {
-        it('should show selected state for selected stack with aria-selected', () => {
+        it('should show selected state for selected stack with aria-pressed', () => {
             render(
                 <StackSelector
                     stacks={mockStacks}
@@ -134,7 +134,7 @@ describe('StackSelector', () => {
                 card.textContent?.includes('Headless')
             );
 
-            expect(headlessCard).toHaveAttribute('aria-selected', 'true');
+            expect(headlessCard).toHaveAttribute('aria-pressed', 'true');
         });
 
         it('should not show selected state for unselected stacks', () => {
@@ -151,7 +151,7 @@ describe('StackSelector', () => {
                 card.textContent?.includes('Edge Delivery')
             );
 
-            expect(edgeDeliveryCard).toHaveAttribute('aria-selected', 'false');
+            expect(edgeDeliveryCard).toHaveAttribute('aria-pressed', 'false');
         });
 
         it('should show no selected state when selectedStack is undefined', () => {
@@ -165,7 +165,7 @@ describe('StackSelector', () => {
 
             const cards = screen.getAllByTestId('stack-card');
             cards.forEach(card => {
-                expect(card).toHaveAttribute('aria-selected', 'false');
+                expect(card).toHaveAttribute('aria-pressed', 'false');
             });
         });
     });

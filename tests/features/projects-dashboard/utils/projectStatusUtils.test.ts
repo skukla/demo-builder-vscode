@@ -10,14 +10,13 @@
  * Tests for those functions are in tests/types/typeGuards-project-accessors.test.ts.
  */
 
-import type { Project, ProjectStatus } from '@/types/base';
+import type { ProjectStatus } from '@/types/base';
 import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
     getMeshStatusText,
     getMeshStatusVariant,
-    StatusVariant,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import { createMockProject, createRunningProject } from '../testUtils';
 

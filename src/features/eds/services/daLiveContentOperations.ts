@@ -12,10 +12,15 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { formatDuration } from '@/core/utils/timeFormatting';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { Logger } from '@/types/logger';
-import type { ContentPatchSource } from '@/types/demoPackages';
+import {
+    DA_LIVE_BASE_URL,
+    MAX_RETRY_ATTEMPTS,
+    RETRYABLE_STATUS_CODES,
+    getRetryDelay,
+    normalizePath,
+} from './daLiveConstants';
+import { getMimeType } from './daLiveMimeTypes';
+import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
 import {
     DaLiveError,
     DaLiveAuthError,
@@ -25,15 +30,10 @@ import {
     type DaLiveCopyResult,
     type DaLiveProgressCallback,
 } from './types';
-import {
-    DA_LIVE_BASE_URL,
-    MAX_RETRY_ATTEMPTS,
-    RETRYABLE_STATUS_CODES,
-    getRetryDelay,
-    normalizePath,
-} from './daLiveConstants';
-import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
-import { getMimeType } from './daLiveMimeTypes';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { ContentPatchSource } from '@/types/demoPackages';
+import type { Logger } from '@/types/logger';
 
 /**
  * Batch size for parallel content copying operations.
@@ -183,7 +183,7 @@ export class DaLiveContentOperations {
             throw this.createErrorFromResponse(response, 'list directory');
         }
 
-        return await response.json();
+        return response.json();
     }
 
     /**
@@ -319,6 +319,64 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Build the source URL for fetching content
+     */
+    private buildSourceUrl(sourceBaseUrl: string, sourcePath: string, isHtmlPath: boolean): string {
+        if (!isHtmlPath) {
+            return `${sourceBaseUrl}${sourcePath}`;
+        }
+        if (sourcePath === '/' || sourcePath.endsWith('/')) {
+            return `${sourceBaseUrl}${sourcePath}index.plain.html`;
+        }
+        return `${sourceBaseUrl}${sourcePath}.plain.html`;
+    }
+
+    /**
+     * Resolve the DA.live destination path with proper file extension
+     */
+    private resolveDaPath(destPath: string, isHtml: boolean): string {
+        let daPath = normalizePath(destPath);
+        if (isHtml && !daPath.endsWith('.html')) {
+            if (daPath === '' || daPath.endsWith('/')) {
+                daPath = `${daPath}index.html`;
+            } else {
+                daPath = `${daPath}.html`;
+            }
+        }
+        return daPath;
+    }
+
+    /**
+     * Process HTML content: apply patches and transform for DA.live
+     */
+    private async processHtmlContent(
+        sourceResponse: Response,
+        sourcePath: string,
+        sourceBaseUrl: string,
+        contentPatchIds?: string[],
+        contentPatchSource?: ContentPatchSource,
+    ): Promise<Blob> {
+        let htmlText = await sourceResponse.text();
+
+        if (contentPatchIds && contentPatchIds.length > 0) {
+            const { applyContentPatches } = await import('./contentPatchRegistry');
+            const { html: patchedHtml, results } = await applyContentPatches(
+                htmlText, sourcePath, contentPatchIds, this.logger, contentPatchSource,
+            );
+            htmlText = patchedHtml;
+
+            for (const result of results) {
+                if (!result.applied && result.reason) {
+                    this.logger.debug(`[DA.live] Content patch '${result.patchId}' not applied to ${sourcePath}: ${result.reason}`);
+                }
+            }
+        }
+
+        const transformedHtml = this.transformHtmlForDaLive(htmlText, sourceBaseUrl);
+        return new Blob([transformedHtml], { type: 'text/html' });
+    }
+
+    /**
      * Copy a single file with retry logic
      * Uses the /source endpoint (like storefront-tools) which creates content directly,
      * rather than /copy which requires the destination site to already exist.
@@ -340,37 +398,16 @@ export class DaLiveContentOperations {
     ): Promise<boolean> {
         const sourceBaseUrl = `https://main--${source.site}--${source.org}.aem.live`;
 
-        // Check if this is a spreadsheet path (like /config) by testing for JSON response
-        // Spreadsheets are stored as .xlsx in DA.live and served as .json on CDN
         const isSpreadsheet = await this.isSpreadsheetPath(sourceBaseUrl, sourcePath);
         if (isSpreadsheet) {
             return this.copySpreadsheetFile(token, source, sourcePath, destination, destPath);
         }
 
-        // For HTML content, fetch .plain.html which returns just the main content
-        // This is closer to what DA.live expects than the full rendered page
         const isHtmlPath = !sourcePath.match(/\.[a-z0-9]+$/i) || sourcePath.endsWith('.html');
-
-        // Build the correct .plain.html URL
-        // - /nav → /nav.plain.html
-        // - / → /index.plain.html
-        // - /citisignal-fr/ → /citisignal-fr/index.plain.html
-        let sourceUrl: string;
-        if (isHtmlPath) {
-            if (sourcePath === '/' || sourcePath.endsWith('/')) {
-                // Directory paths need index.plain.html
-                sourceUrl = `${sourceBaseUrl}${sourcePath}index.plain.html`;
-            } else {
-                // Regular paths just append .plain.html
-                sourceUrl = `${sourceBaseUrl}${sourcePath}.plain.html`;
-            }
-        } else {
-            sourceUrl = `${sourceBaseUrl}${sourcePath}`;
-        }
+        const sourceUrl = this.buildSourceUrl(sourceBaseUrl, sourcePath, isHtmlPath);
 
         for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try {
-                // Step 1: Fetch content from source
                 const sourceResponse = await fetch(sourceUrl, {
                     signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
                 });
@@ -381,61 +418,14 @@ export class DaLiveContentOperations {
                 }
 
                 const contentType = sourceResponse.headers.get('content-type') || '';
-
-                // Step 2: Determine file extension and DA.live path
-                // DA.live uses /source endpoint and requires proper file extensions
-                let daPath = normalizePath(destPath);
-
-                // Ensure proper extension for HTML content
                 const isHtml = contentType.includes('text/html') || isHtmlPath;
-                if (isHtml && !daPath.endsWith('.html')) {
-                    // Handle root path (empty string after normalization) and paths ending with '/'
-                    if (daPath === '' || daPath.endsWith('/')) {
-                        daPath = `${daPath}index.html`;
-                    } else {
-                        daPath = `${daPath}.html`;
-                    }
-                }
+                const daPath = this.resolveDaPath(destPath, isHtml);
 
-                // Step 3: Process content - transform HTML for DA.live compatibility
-                // Transform HTML for DA.live using "Anchor Escape Pattern":
-                // - Fetch .plain.html (just main content, no page wrapper)
-                // - Convert <picture>/<img> to anchors with "//External Image//" marker
-                // - Anchor href points to source CDN (media already exists there)
-                // - Wrap in expected document structure
-                // Client-side JS in the project will convert anchors back to images
-                let contentBlob: Blob;
-                if (isHtml) {
-                    let htmlText = await sourceResponse.text();
+                const contentBlob = isHtml
+                    ? await this.processHtmlContent(sourceResponse, sourcePath, sourceBaseUrl, contentPatchIds, contentPatchSource)
+                    : await sourceResponse.blob();
 
-                    // Apply content patches if any match this page path
-                    if (contentPatchIds && contentPatchIds.length > 0) {
-                        const { applyContentPatches } = await import('./contentPatchRegistry');
-                        const { html: patchedHtml, results } = await applyContentPatches(
-                            htmlText,
-                            sourcePath,
-                            contentPatchIds,
-                            this.logger,
-                            contentPatchSource,
-                        );
-                        htmlText = patchedHtml;
-
-                        for (const result of results) {
-                            if (!result.applied && result.reason) {
-                                this.logger.debug(`[DA.live] Content patch '${result.patchId}' not applied to ${sourcePath}: ${result.reason}`);
-                            }
-                        }
-                    }
-
-                    const transformedHtml = this.transformHtmlForDaLive(htmlText, sourceBaseUrl);
-                    contentBlob = new Blob([transformedHtml], { type: 'text/html' });
-                } else {
-                    contentBlob = await sourceResponse.blob();
-                }
-
-                // Step 4: POST content directly to /source endpoint (creates the content)
                 const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${daPath}`;
-
                 const formData = new FormData();
                 formData.append('data', contentBlob);
 
@@ -453,7 +443,6 @@ export class DaLiveContentOperations {
                     continue;
                 }
 
-                // Log error details for debugging
                 let errorDetail = '';
                 try {
                     const errorBody = await response.text();

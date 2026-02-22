@@ -35,7 +35,7 @@ describe('GitHubRepoSelectionStep - GitHub App Check', () => {
         it('should NOT trigger check for existing repo selection (deferred to StorefrontSetup)', () => {
             // Given: User selects an existing repository
             const repoMode = 'existing' as const;
-            const selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
+            const _selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
 
             // When: Evaluating check conditions at GitHubRepoSelectionStep
             // EXISTING repos: Check deferred to StorefrontSetup (after fstab.yaml push)
@@ -73,8 +73,8 @@ describe('GitHubRepoSelectionStep - GitHub App Check', () => {
 
         it('should NOT trigger check when no GitHub user', () => {
             // Given: No GitHub user authenticated
-            const repoMode = 'existing' as const;
-            const selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
+            const _repoMode = 'existing' as const;
+            const _selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
             const githubUser = undefined;
 
             // When: Evaluating check conditions
@@ -95,7 +95,7 @@ describe('GitHubRepoSelectionStep - GitHub App Check', () => {
         describe('EXISTING repos: Only require selection', () => {
             it('should allow proceeding when repo is selected (no app check required)', () => {
                 // Given: User selected an existing repo
-                const repoMode = 'existing' as const;
+                const _repoMode = 'existing' as const;
                 const selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
                 const isLoading = false;
 
@@ -110,7 +110,7 @@ describe('GitHubRepoSelectionStep - GitHub App Check', () => {
 
             it('should NOT allow proceeding when no repo selected', () => {
                 // Given: No repo selected
-                const repoMode = 'existing' as const;
+                const _repoMode = 'existing' as const;
                 const selectedRepo = undefined;
                 const isLoading = false;
 
@@ -124,7 +124,7 @@ describe('GitHubRepoSelectionStep - GitHub App Check', () => {
 
             it('should NOT allow proceeding while repos are loading', () => {
                 // Given: Repos are being loaded
-                const repoMode = 'existing' as const;
+                const _repoMode = 'existing' as const;
                 const selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
                 const isLoading = true;
 
@@ -140,7 +140,7 @@ describe('GitHubRepoSelectionStep - GitHub App Check', () => {
         describe('NEW repos: Require creation AND app verification', () => {
             it('should NOT allow proceeding when GitHub App is not installed', () => {
                 // Given: GitHub App check returns isInstalled: false
-                const repoMode = 'new' as const;
+                const _repoMode = 'new' as const;
                 const repoCreationState = { isCreated: true, isCreating: false };
                 const githubAppStatus: GitHubAppStatus = {
                     isChecking: false,
@@ -158,7 +158,7 @@ describe('GitHubRepoSelectionStep - GitHub App Check', () => {
 
             it('should allow proceeding when repo created AND app verified', () => {
                 // Given: Repo created and GitHub App is installed
-                const repoMode = 'new' as const;
+                const _repoMode = 'new' as const;
                 const repoCreationState = { isCreated: true, isCreating: false };
                 const githubAppStatus: GitHubAppStatus = {
                     isChecking: false,
@@ -178,7 +178,7 @@ describe('GitHubRepoSelectionStep - GitHub App Check', () => {
 
             it('should NOT allow proceeding while GitHub App check is in progress', () => {
                 // Given: GitHub App check is in progress
-                const repoMode = 'new' as const;
+                const _repoMode = 'new' as const;
                 const repoCreationState = { isCreated: true, isCreating: false };
                 const githubAppStatus: GitHubAppStatus = {
                     isChecking: true,
@@ -197,7 +197,7 @@ describe('GitHubRepoSelectionStep - GitHub App Check', () => {
 
             it('should NOT allow proceeding when repo not yet created', () => {
                 // Given: Repo not created yet
-                const repoMode = 'new' as const;
+                const _repoMode = 'new' as const;
                 const repoCreationState = { isCreated: false, isCreating: false };
                 const githubAppStatus: GitHubAppStatus = {
                     isChecking: false,
@@ -246,8 +246,8 @@ describe('GitHubRepoSelectionStep - GitHub App Check', () => {
         it('should NOT show modal for EXISTING repos (check deferred to StorefrontSetup)', () => {
             // Given: User selects an existing repo
             const repoMode = 'existing' as const;
-            const selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
-            const githubAppStatus: GitHubAppStatus = {
+            const _selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
+            const _githubAppStatus: GitHubAppStatus = {
                 isChecking: false,
                 isInstalled: null,  // Not checked - check deferred
             };

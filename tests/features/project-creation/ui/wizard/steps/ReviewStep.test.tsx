@@ -8,8 +8,8 @@ import '@testing-library/jest-dom';
 describe('ReviewStep', () => {
     const mockUpdateState = jest.fn();
     const mockSetCanProceed = jest.fn();
-    const mockOnNext = jest.fn();
-    const mockOnBack = jest.fn();
+    const _mockOnNext = jest.fn();
+    const _mockOnBack = jest.fn();
 
     // Mock component data - IDs must match those used in stacks.json
     // headless-paas stack uses: frontend='headless', backend='adobe-commerce-paas', dependencies=['headless-commerce-mesh']

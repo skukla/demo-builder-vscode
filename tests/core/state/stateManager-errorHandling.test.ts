@@ -11,8 +11,6 @@
 
 import { StateManager } from '@/core/state/stateManager';
 import { Project } from '@/types/base';
-import * as os from 'os';
-import * as path from 'path';
 
 // Mock fs/promises module (matches StateManager's import)
 jest.mock('fs/promises', () => ({

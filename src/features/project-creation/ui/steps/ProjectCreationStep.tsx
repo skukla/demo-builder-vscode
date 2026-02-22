@@ -2,8 +2,10 @@ import { Text, Flex, Button } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { isProgressActive } from './projectCreationPredicates';
+import { getCancelButtonText } from '../helpers/buttonTextHelpers';
 import { getStackById } from '../hooks/useSelectedStack';
+import { buildProjectConfig, ImportedSettings } from '../wizard/wizardHelpers';
+import { isProgressActive } from './projectCreationPredicates';
 import { hasMeshInDependencies } from '@/core/constants';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
@@ -11,12 +13,307 @@ import { PageFooter } from '@/core/ui/components/layout/PageFooter';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { MeshErrorDialog } from '@/features/mesh/ui/steps/components/MeshErrorDialog';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
-import { getCancelButtonText } from '../helpers/buttonTextHelpers';
-import { WizardState } from '@/types/webview';
+import { MeshErrorDialog } from '@/features/mesh/ui/steps/components/MeshErrorDialog';
 import { DemoPackage } from '@/types/demoPackages';
-import { buildProjectConfig, ImportedSettings } from '../wizard/wizardHelpers';
+import { WizardState } from '@/types/webview';
+
+/** Extract GitHub owner/repo from EDS config for GitHub App check */
+function extractGitHubRepoInfo(edsConfig: WizardState['edsConfig']): { owner?: string; repo?: string } {
+    if (!edsConfig) return {};
+
+    const authenticatedUser = edsConfig.githubAuth?.user?.login;
+
+    if (edsConfig.existingRepo && edsConfig.existingRepo.includes('/')) {
+        const [owner, repo] = edsConfig.existingRepo.split('/');
+        return { owner, repo };
+    }
+    if (edsConfig.selectedRepo) {
+        return { owner: edsConfig.selectedRepo.owner, repo: edsConfig.selectedRepo.name };
+    }
+    if (edsConfig.repoName && authenticatedUser) {
+        return { owner: authenticatedUser, repo: edsConfig.repoName };
+    }
+    return {};
+}
+
+/** Success completion content */
+function SuccessContent({ isOpeningProject }: {
+    isOpeningProject: boolean;
+}) {
+    if (isOpeningProject) {
+        return (
+            <CenteredFeedbackContainer>
+                <LoadingDisplay size="L" message="Loading your projects..." />
+            </CenteredFeedbackContainer>
+        );
+    }
+
+    return (
+        <CenteredFeedbackContainer>
+            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+                <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                <Flex direction="column" gap="size-100" alignItems="center">
+                    <Text UNSAFE_className="text-xl font-medium">Project Created Successfully</Text>
+                    <Text UNSAFE_className="text-sm text-gray-600 text-center">Click below to view your projects</Text>
+                </Flex>
+            </Flex>
+        </CenteredFeedbackContainer>
+    );
+}
+
+/** Error/cancelled state content */
+function ErrorContent({ isCancelled, errorMessage }: {
+    isCancelled: boolean;
+    errorMessage?: string;
+}) {
+    return (
+        <CenteredFeedbackContainer>
+            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+                <AlertCircle size="L" UNSAFE_className="text-red-600" />
+                <Flex direction="column" gap="size-100" alignItems="center">
+                    <Text UNSAFE_className="text-xl font-medium">
+                        {isCancelled ? 'Project Creation Cancelled' : 'Project Creation Failed'}
+                    </Text>
+                    {errorMessage && (
+                        <Text UNSAFE_className="text-sm text-gray-600">{errorMessage}</Text>
+                    )}
+                </Flex>
+            </Flex>
+        </CenteredFeedbackContainer>
+    );
+}
+
+type DetectedMeshInfo = { meshId?: string; meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error'; endpoint?: string };
+
+/**
+ * Run API Mesh access check for the selected workspace.
+ * Returns mesh info on success, null on failure, undefined if no mesh found.
+ */
+async function runMeshCheck(
+    state: WizardState,
+    stack: import('@/types/stacks').Stack | undefined,
+    updateState: (updates: Partial<WizardState>) => void,
+    setMeshCheckResult: (result: MeshCheckResult | null) => void,
+    setPhase: (phase: StepPhase) => void,
+): Promise<DetectedMeshInfo | null | undefined> {
+    setPhase('checking-mesh');
+    setMeshCheckResult(null);
+
+    try {
+        const result = await webviewClient.request<MeshCheckResult>('check-api-mesh', {
+            workspaceId: state.adobeWorkspace?.id,
+            projectId: state.adobeProject?.id,
+            selectedComponents: stack ? [
+                stack.frontend, stack.backend, ...stack.dependencies,
+            ].filter(Boolean) : [],
+        });
+
+        if (!result.success || !result.apiEnabled) {
+            setMeshCheckResult(result);
+            setPhase('mesh-error');
+            return null;
+        }
+
+        if (result.meshExists && result.meshId) {
+            const meshInfo: DetectedMeshInfo = {
+                meshId: result.meshId,
+                meshStatus: result.meshStatus,
+                endpoint: result.endpoint,
+            };
+            updateState({
+                apiMesh: { isChecking: false, apiEnabled: true, meshExists: true, ...meshInfo },
+            });
+            return meshInfo;
+        }
+
+        return undefined;
+    } catch (error) {
+        setMeshCheckResult({
+            success: false,
+            apiEnabled: false,
+            error: error instanceof Error ? error.message : 'Failed to check API Mesh access',
+        });
+        setPhase('mesh-error');
+        return null;
+    }
+}
+
+/** Determine StepPhase from creation progress */
+function derivePhaseFromProgress(
+    progress: WizardState['creationProgress'],
+    _currentPhase: StepPhase,
+): StepPhase | undefined {
+    if (!progress) return undefined;
+    if (progress.currentOperation === 'Cancelled') return 'cancelled';
+    if (progress.currentOperation === 'Failed' || progress.error) return 'failed';
+    if (progress.currentOperation === 'Project Created') return 'completed';
+    return undefined; // No change
+}
+
+/** Handle creation failure messages and detect GitHub App install requirement */
+function handleCreationFailedMessage(
+    data: unknown,
+    setGitHubAppInstallData: (data: GitHubAppInstallData | null) => void,
+    setPhase: (phase: StepPhase) => void,
+): void {
+    const failedData = data as {
+        errorType?: string;
+        errorDetails?: { owner?: string; repo?: string; installUrl?: string };
+    };
+
+    if (failedData.errorType === 'GITHUB_APP_NOT_INSTALLED' && failedData.errorDetails) {
+        const { owner, repo, installUrl } = failedData.errorDetails;
+        if (owner && repo && installUrl) {
+            setGitHubAppInstallData({ owner, repo, installUrl, message: 'GitHub App installation required for code sync' });
+            setPhase('github-app-install');
+        }
+    }
+}
+
+/** Main content area - renders the appropriate content for each phase */
+function StepContentArea(props: {
+    phase: StepPhase;
+    progress: WizardState['creationProgress'];
+    isActive: boolean;
+    isCompleted: boolean;
+    isOpeningProject: boolean;
+    showGenericError: boolean;
+    isCancelled: boolean;
+    meshCheckResult: MeshCheckResult | null;
+    githubAppInstallData: GitHubAppInstallData | null;
+    onRetryMeshCheck: () => void;
+    onBack: () => void;
+    onOpenConsole: () => void;
+    onGitHubAppInstalled: () => void;
+}) {
+    const {
+        phase, progress, isActive, isCompleted, isOpeningProject,
+        showGenericError, isCancelled, meshCheckResult, githubAppInstallData,
+        onRetryMeshCheck, onBack, onOpenConsole, onGitHubAppInstalled,
+    } = props;
+
+    if (phase === 'checking-mesh') {
+        return (
+            <CenteredFeedbackContainer>
+                <LoadingDisplay size="L" message="Checking API Mesh Access" subMessage="Verifying workspace configuration..." />
+            </CenteredFeedbackContainer>
+        );
+    }
+
+    if (phase === 'mesh-error' && meshCheckResult) {
+        return (
+            <MeshErrorDialog
+                error={meshCheckResult.error || 'API Mesh API is not enabled for this workspace.'}
+                setupInstructions={meshCheckResult.setupInstructions}
+                onRetry={onRetryMeshCheck}
+                onBack={onBack}
+                onOpenConsole={onOpenConsole}
+            />
+        );
+    }
+
+    if (phase === 'github-app-install' && githubAppInstallData) {
+        return (
+            <GitHubAppInstallDialog
+                owner={githubAppInstallData.owner}
+                repo={githubAppInstallData.repo}
+                installUrl={githubAppInstallData.installUrl}
+                message={githubAppInstallData.message}
+                onInstallDetected={onGitHubAppInstalled}
+            />
+        );
+    }
+
+    if (isActive && progress) {
+        return (
+            <CenteredFeedbackContainer>
+                <LoadingDisplay
+                    size="L"
+                    message={progress.currentOperation || 'Processing'}
+                    subMessage={progress.message}
+                    helperText="This could take up to 3 minutes"
+                />
+            </CenteredFeedbackContainer>
+        );
+    }
+
+    if (isCompleted && !progress?.error) {
+        return <SuccessContent isOpeningProject={isOpeningProject} />;
+    }
+
+    if (showGenericError) {
+        return <ErrorContent isCancelled={isCancelled} errorMessage={progress?.error} />;
+    }
+
+    if (phase === 'creating' && !progress) {
+        return (
+            <CenteredFeedbackContainer>
+                <LoadingDisplay size="L" message="Initializing" subMessage="Preparing to create your project..." />
+            </CenteredFeedbackContainer>
+        );
+    }
+
+    return null;
+}
+
+/** Footer area - renders the appropriate buttons for each phase */
+function StepFooterArea(props: {
+    isCheckingMesh: boolean;
+    isActive: boolean;
+    isGitHubAppInstall: boolean;
+    isCompleted: boolean;
+    isOpeningProject: boolean;
+    showGenericError: boolean;
+    isCancelling: boolean;
+    hasError: boolean;
+    onBack: () => void;
+    onCancel: () => void;
+    onShowLogs: () => void;
+    onOpenProject: () => void;
+}) {
+    const {
+        isCheckingMesh, isActive, isGitHubAppInstall, isCompleted,
+        isOpeningProject, showGenericError, isCancelling, hasError,
+        onBack, onCancel, onShowLogs, onOpenProject,
+    } = props;
+
+    if (isCheckingMesh || isActive || isGitHubAppInstall) {
+        return (
+            <PageFooter
+                leftContent={
+                    <Button variant="secondary" onPress={isCheckingMesh ? onBack : onCancel} isQuiet isDisabled={isCancelling}>
+                        {getCancelButtonText(isCheckingMesh, isCancelling)}
+                    </Button>
+                }
+                centerContent={<Button variant="secondary" onPress={onShowLogs} isQuiet>Logs</Button>}
+                constrainWidth={true}
+            />
+        );
+    }
+
+    if (isCompleted && !hasError) {
+        return (
+            <PageFooter
+                centerContent={!isOpeningProject && <Button variant="secondary" onPress={onShowLogs} isQuiet>Logs</Button>}
+                rightContent={!isOpeningProject && <Button variant="cta" onPress={onOpenProject}>View Projects</Button>}
+                constrainWidth={true}
+            />
+        );
+    }
+
+    if (showGenericError) {
+        return (
+            <PageFooter
+                leftContent={<Button variant="secondary" onPress={onBack} isQuiet>Back</Button>}
+                centerContent={<Button variant="secondary" onPress={onShowLogs} isQuiet>Logs</Button>}
+                constrainWidth={true}
+            />
+        );
+    }
+
+    return null;
+}
 
 interface ProjectCreationStepProps {
     state: WizardState;
@@ -57,7 +354,7 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
     // Get stack directly from config - source of truth for components
     const stack = useMemo(
         () => state.selectedStack ? getStackById(state.selectedStack) : undefined,
-        [state.selectedStack]
+        [state.selectedStack],
     );
 
     // Determine if checks are needed - use stack dependencies directly
@@ -77,29 +374,7 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
             return true; // Not needed or no config, proceed
         }
 
-        // Get authenticated GitHub user (owner)
-        const authenticatedUser = state.edsConfig.githubAuth?.user?.login;
-        
-        // Extract owner and repo from available sources
-        let owner: string | undefined;
-        let repo: string | undefined;
-        
-        // If using existing repo, extract owner and repo from "owner/repo" format
-        if (state.edsConfig.existingRepo && state.edsConfig.existingRepo.includes('/')) {
-            const [existingOwner, existingRepo] = state.edsConfig.existingRepo.split('/');
-            owner = existingOwner;
-            repo = existingRepo;
-        } 
-        // If using selected repo from list, use its properties
-        else if (state.edsConfig.selectedRepo) {
-            owner = state.edsConfig.selectedRepo.owner;
-            repo = state.edsConfig.selectedRepo.name;
-        }
-        // If creating new repo, use authenticated user as owner
-        else if (state.edsConfig.repoName && authenticatedUser) {
-            owner = authenticatedUser;
-            repo = state.edsConfig.repoName;
-        }
+        const { owner, repo } = extractGitHubRepoInfo(state.edsConfig);
 
         if (!owner || !repo) {
             return true; // Can't check without owner/repo, let it proceed and fail later if needed
@@ -136,78 +411,22 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
      * Run pre-flight checks before starting project creation
      */
     const runPreFlightChecks = useCallback(async () => {
-        // Store mesh info from check result (React state updates are async, can't rely on state)
-        let detectedMeshInfo: { meshId?: string; meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error'; endpoint?: string } | undefined;
+        // Run mesh check if needed (returns null on failure, meshInfo on success, undefined if no mesh)
+        const meshInfo = needsMeshCheck
+            ? await runMeshCheck(state, stack, updateState, setMeshCheckResult, setPhase)
+            : undefined;
 
-        // First check mesh (if needed)
-        if (needsMeshCheck) {
-            setPhase('checking-mesh');
-            setMeshCheckResult(null);
+        if (meshInfo === null) return; // Mesh check failed, phase already set
 
-            try {
-                // Use stack components directly - no derivation from state needed
-                const result = await webviewClient.request<MeshCheckResult>('check-api-mesh', {
-                    workspaceId: state.adobeWorkspace?.id,
-                    projectId: state.adobeProject?.id,
-                    selectedComponents: stack ? [
-                        stack.frontend,
-                        stack.backend,
-                        ...stack.dependencies,
-                    ].filter(Boolean) : [],
-                });
-
-                if (!result.success || !result.apiEnabled) {
-                    setMeshCheckResult(result);
-                    setPhase('mesh-error');
-                    return; // Stop here
-                }
-
-                // Update wizard state with mesh info (if mesh exists)
-                if (result.meshExists && result.meshId) {
-                    detectedMeshInfo = {
-                        meshId: result.meshId,
-                        meshStatus: result.meshStatus,
-                        endpoint: result.endpoint,
-                    };
-                    
-                    updateState({
-                        apiMesh: {
-                            isChecking: false,
-                            apiEnabled: true,
-                            meshExists: true,
-                            ...detectedMeshInfo,
-                        },
-                    });
-                }
-            } catch (error) {
-                setMeshCheckResult({
-                    success: false,
-                    apiEnabled: false,
-                    error: error instanceof Error ? error.message : 'Failed to check API Mesh access',
-                });
-                setPhase('mesh-error');
-                return; // Stop here
-            }
-        }
-
-        // Then check GitHub app (if needed)
         const githubAppOk = await checkGitHubApp();
-        if (!githubAppOk) {
-            return; // Stop here, dialog is showing
-        }
+        if (!githubAppOk) return;
 
         // All checks passed, start creation
         setPhase('creating');
 
-        // Build config with fresh mesh info (React state may be stale)
-        const stateWithMeshInfo = detectedMeshInfo ? {
+        const stateWithMeshInfo = meshInfo ? {
             ...state,
-            apiMesh: {
-                isChecking: false,
-                apiEnabled: true,
-                meshExists: true,
-                ...detectedMeshInfo,
-            },
+            apiMesh: { isChecking: false, apiEnabled: true, meshExists: true, ...meshInfo },
         } : state;
         // eslint-disable-next-line no-console
         console.log('[ProjectCreationStep] Before buildProjectConfig - state.edsConfig:', {
@@ -217,7 +436,7 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
         });
         const projectConfig = buildProjectConfig(stateWithMeshInfo, importedSettings, packages);
         vscode.createProject(projectConfig);
-    }, [needsMeshCheck, needsGitHubAppCheck, checkGitHubApp, state, updateState, importedSettings, packages]);
+    }, [needsMeshCheck, checkGitHubApp, state, stack, updateState, importedSettings, packages]);
 
     /**
      * Handle detected GitHub app installation
@@ -246,47 +465,15 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
 
     // Update phase based on progress
     useEffect(() => {
-        if (!progress) return;
-
-        if (progress.currentOperation === 'Cancelled') {
-            setPhase('cancelled');
-        } else if (progress.currentOperation === 'Failed' || progress.error) {
-            setPhase('failed');
-        } else if (progress.currentOperation === 'Project Created') {
-            setPhase('completed');
-        } else if (phase === 'creating') {
-            // Stay in creating phase while progress is active
-        }
+        const newPhase = derivePhaseFromProgress(progress, phase);
+        if (newPhase) setPhase(newPhase);
     }, [progress, phase]);
 
     // Listen for creationFailed messages with GITHUB_APP_NOT_INSTALLED error
-    // This handles the case where the error occurs during creation (after pre-flight check)
     useEffect(() => {
         const unsubscribe = vscode.onMessage('creationFailed', (data: unknown) => {
-            const failedData = data as {
-                errorType?: string;
-                errorDetails?: {
-                    owner?: string;
-                    repo?: string;
-                    installUrl?: string;
-                };
-            };
-
-            // Handle GitHub App not installed error specially
-            if (failedData.errorType === 'GITHUB_APP_NOT_INSTALLED' && failedData.errorDetails) {
-                const { owner, repo, installUrl } = failedData.errorDetails;
-                if (owner && repo && installUrl) {
-                    setGitHubAppInstallData({
-                        owner,
-                        repo,
-                        installUrl,
-                        message: 'GitHub App installation required for code sync',
-                    });
-                    setPhase('github-app-install');
-                }
-            }
+            handleCreationFailedMessage(data, setGitHubAppInstallData, setPhase);
         });
-
         return unsubscribe;
     }, []);
 
@@ -329,197 +516,44 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
     const showGenericError = (progress?.error || isCancelled || isFailed) &&
         phase !== 'mesh-error' && phase !== 'github-app-install';
     const isCheckingMesh = phase === 'checking-mesh';
-    const isMeshError = phase === 'mesh-error';
     const isGitHubAppInstall = phase === 'github-app-install';
 
     return (
         <div className="flex-column h-full w-full">
-            {/* Main content area */}
             <div className="flex-1 flex w-full">
                 <SingleColumnLayout>
-                    {/* Checking API Mesh access */}
-                    {isCheckingMesh && (
-                        <CenteredFeedbackContainer>
-                            <LoadingDisplay
-                                size="L"
-                                message="Checking API Mesh Access"
-                                subMessage="Verifying workspace configuration..."
-                            />
-                        </CenteredFeedbackContainer>
-                    )}
-
-                    {/* API Mesh not enabled - show error dialog */}
-                    {isMeshError && meshCheckResult && (
-                        <MeshErrorDialog
-                            error={meshCheckResult.error || 'API Mesh API is not enabled for this workspace.'}
-                            setupInstructions={meshCheckResult.setupInstructions}
-                            onRetry={handleRetryMeshCheck}
-                            onBack={onBack}
-                            onOpenConsole={handleOpenConsole}
-                        />
-                    )}
-
-                    {/* GitHub App installation required - show install message */}
-                    {isGitHubAppInstall && githubAppInstallData && (
-                        <GitHubAppInstallDialog
-                            owner={githubAppInstallData.owner}
-                            repo={githubAppInstallData.repo}
-                            installUrl={githubAppInstallData.installUrl}
-                            message={githubAppInstallData.message}
-                            onInstallDetected={handleGitHubAppInstalled}
-                        />
-                    )}
-
-                    {/* Active creation state */}
-                    {isActive && progress && (
-                        <CenteredFeedbackContainer>
-                            <LoadingDisplay
-                                size="L"
-                                message={progress.currentOperation || 'Processing'}
-                                subMessage={progress.message}
-                                helperText="This could take up to 3 minutes"
-                            />
-                        </CenteredFeedbackContainer>
-                    )}
-
-                    {/* Success state or opening transition */}
-                    {isCompleted && !progress?.error && (
-                        <>
-                            {isOpeningProject ? (
-                                <CenteredFeedbackContainer>
-                                    <LoadingDisplay
-                                        size="L"
-                                        message="Loading your projects..."
-                                    />
-                                </CenteredFeedbackContainer>
-                            ) : (
-                                <CenteredFeedbackContainer>
-                                    <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                                        <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
-                                        <Flex direction="column" gap="size-100" alignItems="center">
-                                            <Text UNSAFE_className="text-xl font-medium">
-                                                Project Created Successfully
-                                            </Text>
-                                            <Text UNSAFE_className="text-sm text-gray-600 text-center">
-                                                Click below to view your projects
-                                            </Text>
-                                        </Flex>
-                                    </Flex>
-                                </CenteredFeedbackContainer>
-                            )}
-                        </>
-                    )}
-
-                    {/* Error state */}
-                    {showGenericError && (
-                        <CenteredFeedbackContainer>
-                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                                <AlertCircle size="L" UNSAFE_className="text-red-600" />
-                                <Flex direction="column" gap="size-100" alignItems="center">
-                                    <Text UNSAFE_className="text-xl font-medium">
-                                        {isCancelled ? 'Project Creation Cancelled' : 'Project Creation Failed'}
-                                    </Text>
-                                    {progress?.error && (
-                                        <Text UNSAFE_className="text-sm text-gray-600">{progress.error}</Text>
-                                    )}
-                                </Flex>
-                            </Flex>
-                        </CenteredFeedbackContainer>
-                    )}
-
-                    {/* Initial loading state (before progress updates arrive) - only when creating */}
-                    {phase === 'creating' && !progress && (
-                        <CenteredFeedbackContainer>
-                            <LoadingDisplay
-                                size="L"
-                                message="Initializing"
-                                subMessage="Preparing to create your project..."
-                            />
-                        </CenteredFeedbackContainer>
-                    )}
+                    <StepContentArea
+                        phase={phase}
+                        progress={progress}
+                        isActive={isActive}
+                        isCompleted={isCompleted}
+                        isOpeningProject={isOpeningProject}
+                        showGenericError={!!showGenericError}
+                        isCancelled={isCancelled}
+                        meshCheckResult={meshCheckResult}
+                        githubAppInstallData={githubAppInstallData}
+                        onRetryMeshCheck={handleRetryMeshCheck}
+                        onBack={onBack}
+                        onOpenConsole={handleOpenConsole}
+                        onGitHubAppInstalled={handleGitHubAppInstalled}
+                    />
                 </SingleColumnLayout>
             </div>
 
-            {/* Footer - uses PageFooter for consistency with WizardContainer */}
-
-            {/* Show Cancel during checking, active creation, or GitHub app install */}
-            {(isCheckingMesh || isActive || isGitHubAppInstall) && (
-                <PageFooter
-                    leftContent={
-                        <Button
-                            variant="secondary"
-                            onPress={isCheckingMesh ? onBack : handleCancel}
-                            isQuiet
-                            isDisabled={isCancelling}
-                        >
-                            {getCancelButtonText(isCheckingMesh, isCancelling)}
-                        </Button>
-                    }
-                    centerContent={
-                        <Button
-                            variant="secondary"
-                            onPress={handleShowLogs}
-                            isQuiet
-                        >
-                            Logs
-                        </Button>
-                    }
-                    constrainWidth={true}
-                />
-            )}
-
-            {/* Show View Projects button on success, empty footer during loading transition */}
-            {isCompleted && !progress?.error && (
-                <PageFooter
-                    centerContent={
-                        !isOpeningProject && (
-                            <Button
-                                variant="secondary"
-                                onPress={handleShowLogs}
-                                isQuiet
-                            >
-                                Logs
-                            </Button>
-                        )
-                    }
-                    rightContent={
-                        !isOpeningProject && (
-                            <Button
-                                variant="cta"
-                                onPress={handleOpenProject}
-                            >
-                                View Projects
-                            </Button>
-                        )
-                    }
-                    constrainWidth={true}
-                />
-            )}
-
-            {/* Show Back and Logs buttons on error/cancelled */}
-            {showGenericError && (
-                <PageFooter
-                    leftContent={
-                        <Button
-                            variant="secondary"
-                            onPress={onBack}
-                            isQuiet
-                        >
-                            Back
-                        </Button>
-                    }
-                    centerContent={
-                        <Button
-                            variant="secondary"
-                            onPress={handleShowLogs}
-                            isQuiet
-                        >
-                            Logs
-                        </Button>
-                    }
-                    constrainWidth={true}
-                />
-            )}
+            <StepFooterArea
+                isCheckingMesh={isCheckingMesh}
+                isActive={isActive}
+                isGitHubAppInstall={isGitHubAppInstall}
+                isCompleted={isCompleted}
+                isOpeningProject={isOpeningProject}
+                showGenericError={!!showGenericError}
+                isCancelling={isCancelling}
+                hasError={!!progress?.error}
+                onBack={onBack}
+                onCancel={handleCancel}
+                onShowLogs={handleShowLogs}
+                onOpenProject={handleOpenProject}
+            />
         </div>
     );
 }

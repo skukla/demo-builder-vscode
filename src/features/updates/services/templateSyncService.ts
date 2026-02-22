@@ -13,15 +13,14 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DEFAULT_SHELL } from '@/types/shell';
-import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
-import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
 import { injectTokenIntoUrl } from '@/features/eds/services/githubHelpers';
+import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import type { Project } from '@/types';
+import type { Logger } from '@/types/logger';
+import { DEFAULT_SHELL } from '@/types/shell';
 
 /**
  * Options for template sync operation
@@ -207,7 +206,7 @@ export class TemplateSyncService {
 
             // Step 4: Try merge (without commit)
             this.logger.debug(`[TemplateSync] Attempting merge...`);
-            const mergeResult = await commandManager.execute(
+            await commandManager.execute(
                 `git merge template/main --no-commit --no-ff`,
                 { cwd: repoDir, timeout: TIMEOUTS.NORMAL, shell: DEFAULT_SHELL },
             );
@@ -259,7 +258,6 @@ export class TemplateSyncService {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
             });
 
-            let syncedCommit: string;
             if (statusResult.stdout.trim()) {
                 const commitResult = await commandManager.execute(
                     `git commit -m "chore: sync with template"`,
@@ -274,7 +272,7 @@ export class TemplateSyncService {
             const shaResult = await commandManager.execute(`git rev-parse HEAD`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
             });
-            syncedCommit = shaResult.stdout.trim();
+            const syncedCommit = shaResult.stdout.trim();
 
             // Step 7: Push to origin
             this.logger.debug(`[TemplateSync] Pushing to origin...`);
@@ -427,7 +425,6 @@ export class TemplateSyncService {
             cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
         });
 
-        let syncedCommit: string;
         if (statusResult.stdout.trim()) {
             const commitResult = await commandManager.execute(
                 `git commit -m "chore: sync with template (reset)"`,
@@ -442,7 +439,7 @@ export class TemplateSyncService {
         const shaResult = await commandManager.execute(`git rev-parse HEAD`, {
             cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
         });
-        syncedCommit = shaResult.stdout.trim();
+        const syncedCommit = shaResult.stdout.trim();
 
         // Push with force (reset may rewrite history)
         this.logger.debug(`[TemplateSync] Pushing to origin...`);

@@ -11,7 +11,6 @@ jest.mock('@/core/ui/hooks/useDebouncedLoading', () => ({
 
 // Import mock exports from testUtils
 import {
-    mockPostMessage,
     mockOnMessage,
     TestItem,
     baseState,

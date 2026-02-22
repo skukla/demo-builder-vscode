@@ -64,7 +64,7 @@ describe('useFocusOnMount', () => {
 
             // Initially no button, then add it
             let queryCount = 0;
-            jest.spyOn(container, 'querySelector').mockImplementation((selector) => {
+            jest.spyOn(container, 'querySelector').mockImplementation((_selector) => {
                 queryCount++;
                 if (queryCount === 1) return null; // First call returns null
                 return button; // RAF call finds button

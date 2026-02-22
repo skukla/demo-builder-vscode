@@ -8,8 +8,8 @@
  */
 
 import { useState, useEffect, useMemo, useRef, Dispatch, SetStateAction } from 'react';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 /**
  * Mesh deployment status values

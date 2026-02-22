@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useDebouncedValue, useSetToggle } from '@/core/ui/hooks';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { WizardState } from '@/types/webview';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { RawComponentDefinition } from '@/types/components';
+import { WizardState } from '@/types/webview';
 
 /**
  * Resolves service dependencies for a given stack configuration.
@@ -163,7 +163,7 @@ export function useComponentSelection({
                 return newSet;
             });
         }
-    }, [selectedFrontend, frontendDependencies, frontendAddons]);
+    }, [selectedFrontend, frontendDependencies, frontendAddons, setSelectedDependencies]);
 
     // Initialize required services when backend changes or addons change
     // Services are now dynamically determined based on what's missing

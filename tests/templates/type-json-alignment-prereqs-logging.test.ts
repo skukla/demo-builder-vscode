@@ -1,367 +1,74 @@
 /**
- * Type/JSON Alignment Validation Tests
+ * Type/JSON Alignment Validation Tests - Prerequisites & Logging
  *
- * TDD: These tests ensure TypeScript types remain synchronized with JSON configuration files.
- * Catches type drift that causes silent runtime failures.
- *
- * The key innovation here is the "no unknown fields" tests that detect when JSON
- * has fields not defined in TypeScript interfaces.
- *
- * Pattern:
- * 1. Define expected fields from TypeScript interfaces (source of truth)
- * 2. Load JSON files at test time
- * 3. Scan each object for fields not in the allowed list
- * 4. Fail with actionable error message identifying specific field and file
- *
- * Note: templates.json tests removed - replaced by demo-packages.json architecture
+ * Tests for TypeScript type synchronization with:
+ * - prerequisites.json
+ * - logging.json
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 
 // ============================================================================
-// Allowed Fields from TypeScript Interfaces
-// These MUST stay in sync with the corresponding TypeScript interfaces.
-// If you add a field to an interface, add it here too!
-// ============================================================================
-
-/**
- * Stack fields from src/types/stacks.ts
- */
-const STACK_FIELDS = new Set([
-    'id',
-    'name',
-    'description',
-    'icon',
-    'frontend',
-    'backend',
-    'dependencies',
-    'optionalAddons',
-    'features',
-    'requiresGitHub',
-    'requiresDaLive',
-]);
-
-// Note: Brand fields removed - brands.json replaced by demo-packages.json
-// See: .rptc/plans/demo-packages-simplification/
-
-// ============================================================================
-// Components.json Field Sets
-// From src/types/components.ts - RawComponentRegistry, RawComponentDefinition
-// ============================================================================
-
-/**
- * Root-level fields for components.json
- * All top-level sections that can appear in components.json
- */
-const COMPONENTS_ROOT_FIELDS = new Set([
-    '$schema',
-    'version',
-    'infrastructure',
-    'frontends',
-    'backends',
-    'mesh',
-    'brands',
-    'stacks',
-    'dependencies',
-    'appBuilderApps',
-    'integrations',
-    'addons',
-    'tools',
-    'services',
-    'envVars',
-    'selectionGroups',
-]);
-
-/**
- * Component definition fields from RawComponentDefinition interface
- * Common fields across frontend, backend, mesh, dependencies, appBuilderApps, etc.
- */
-const COMPONENT_DEFINITION_FIELDS = new Set([
-    'name',
-    'description',
-    'type',
-    'subType',
-    'icon',
-    'source',
-    'dependencies',
-    'configuration',
-    'compatibleBackends',
-    'features',
-    'requiresApiKey',
-    'endpoint',
-    'requiresDeployment',
-    'submodules',
-    'metadata',           // Runtime metadata (e.g., EDS URLs populated at creation)
-    // Additional fields found in specific sections:
-    'addonFor',           // addons section
-    'category',           // tools section
-    'hidden',             // tools section
-    'dataRepository',     // tools section
-    'installPath',        // tools section
-    'configDefaults',     // brands section (in components.json)
-    'contentSource',      // brands section (in components.json)
-    'frontend',           // stacks section
-    'backend',            // stacks section
-    'requiredComponents', // stacks section
-    'optionalComponents', // stacks section
-    'requiredEnvVars',    // services section (at top level, not in configuration)
-]);
-
-/**
- * Component configuration fields
- * From RawComponentDefinition.configuration
- */
-const COMPONENT_CONFIGURATION_FIELDS = new Set([
-    'requiredEnvVars',
-    'optionalEnvVars',
-    'requiredServices',
-    'providesServices',
-    'port',
-    'nodeVersion',
-    'buildScript',
-    'required',
-    'meshIntegration',
-    'providesEndpoint',
-    'providesEnvVars',
-    'requiresDeployment',
-    'configFiles',  // Config file generation settings (e.g., .env, site.json)
-    'deploymentTarget',
-    'runtime',
-    'actions',
-    'impact',
-    'removable',
-    'defaultEnabled',
-    'position',
-    'startOpen',
-    'scripts',            // tools configuration
-    'skipNpmInstall',     // Skip npm install (e.g., EDS is static site)
-]);
-
-/**
- * Component source fields
- * From RawComponentDefinition.source
- */
-const COMPONENT_SOURCE_FIELDS = new Set([
-    'type',
-    'url',
-    'package',
-    'version',
-    'branch',
-    'gitOptions',
-    'timeouts',
-]);
-
-/**
- * Git options fields
- */
-const COMPONENT_GIT_OPTIONS_FIELDS = new Set([
-    'shallow',
-    'recursive',
-    'tag',
-    'commit',
-]);
-
-/**
- * EnvVar definition fields from components.json envVars section
- */
-const ENV_VAR_DEFINITION_FIELDS = new Set([
-    'label',
-    'type',
-    'required',
-    'default',
-    'placeholder',
-    'description',
-    'help',
-    'group',
-    'providedBy',
-    'usedBy',
-    'derivedFrom',  // NEW: For computed variables (e.g., ADOBE_CATALOG_SERVICE_ENDPOINT from PAAS_...)
-    'options',
-    'validation',
-]);
-
-/**
- * Selection groups fields
- */
-const SELECTION_GROUPS_FIELDS = new Set([
-    'frontends',
-    'backends',
-    'stacks',
-    'brands',
-    'dependencies',
-    'appBuilderApps',
-    'integrations',
-    'addons',
-    'tools',
-]);
-
-/**
- * Service definition fields
- * From ServiceDefinition
- */
-const SERVICE_DEFINITION_FIELDS = new Set([
-    'name',
-    'description',
-    'backendSpecific',
-    'requiredEnvVars',
-    'requiredEnvVarsByBackend',
-    'optionalEnvVars',
-    'required',
-    'endpoint',
-    'requiresApiKey',
-]);
-
-// ============================================================================
 // Prerequisites.json Field Sets
-// From src/features/prerequisites/services/types.ts
 // ============================================================================
 
-/**
- * Root-level fields for prerequisites.json
- * From PrerequisitesConfig interface
- */
 const PREREQUISITES_ROOT_FIELDS = new Set([
-    '$schema',
-    'version',
-    'prerequisites',
-    'componentRequirements',
+    '$schema', 'version', 'prerequisites', 'componentRequirements',
 ]);
 
-/**
- * PrerequisiteDefinition fields
- * From src/features/prerequisites/services/types.ts
- */
 const PREREQUISITE_DEFINITION_FIELDS = new Set([
-    'id',
-    'name',
-    'description',
-    'optional',
-    'depends',
-    'perNodeVersion',
-    'check',
-    'install',
-    'uninstall',
-    'postInstall',
-    'multiVersion',
-    'versionCheck',
-    'plugins',
+    'id', 'name', 'description', 'optional', 'depends', 'perNodeVersion',
+    'check', 'install', 'uninstall', 'postInstall', 'multiVersion',
+    'versionCheck', 'plugins',
 ]);
 
-/**
- * PrerequisiteCheck fields
- * From src/features/prerequisites/services/types.ts
- */
 const PREREQUISITE_CHECK_FIELDS = new Set([
-    'command',
-    'parseVersion',
-    'contains',
-    'parseInstalledVersions',
+    'command', 'parseVersion', 'contains', 'parseInstalledVersions',
 ]);
 
-/**
- * PrerequisiteInstall fields
- * From src/features/prerequisites/services/types.ts
- */
 const PREREQUISITE_INSTALL_FIELDS = new Set([
-    'commands',
-    'message',
-    'requires',
-    'dynamic',
-    'template',
-    'versions',
-    'manual',
-    'url',
-    'steps',
+    'commands', 'message', 'requires', 'dynamic', 'template',
+    'versions', 'manual', 'url', 'steps',
 ]);
 
-/**
- * InstallStep fields
- * From src/features/prerequisites/services/types.ts
- */
 const INSTALL_STEP_FIELDS = new Set([
-    'name',
-    'message',
-    'commands',
-    'commandTemplate',
-    'estimatedDuration',
-    'progressStrategy',
-    'milestones',
-    'progressParser',
-    'continueOnError',
+    'name', 'message', 'commands', 'commandTemplate', 'estimatedDuration',
+    'progressStrategy', 'milestones', 'progressParser', 'continueOnError',
 ]);
 
-/**
- * ProgressMilestone fields
- * From src/features/prerequisites/services/types.ts
- */
 const PROGRESS_MILESTONE_FIELDS = new Set([
-    'pattern',
-    'progress',
-    'message',
+    'pattern', 'progress', 'message',
 ]);
 
-/**
- * PrerequisitePlugin fields
- * From src/features/prerequisites/services/types.ts
- */
 const PREREQUISITE_PLUGIN_FIELDS = new Set([
-    'id',
-    'name',
-    'description',
-    'check',
-    'install',
-    'requiredFor',
+    'id', 'name', 'description', 'check', 'install', 'requiredFor',
 ]);
 
-/**
- * ComponentRequirement fields
- * From src/features/prerequisites/services/types.ts
- */
 const COMPONENT_REQUIREMENT_FIELDS = new Set([
-    'prerequisites',
-    'plugins',
-    'nodeVersions',
+    'prerequisites', 'plugins', 'nodeVersions',
 ]);
 
-/**
- * PostInstall fields
- * From src/features/prerequisites/services/types.ts
- */
 const POST_INSTALL_FIELDS = new Set([
-    'message',
-    'action',
+    'message', 'action',
 ]);
 
 // ============================================================================
 // Logging.json Field Sets
-// From src/core/logging/stepLogger.ts - LoggingTemplates interface
 // ============================================================================
 
-/**
- * Root-level fields for logging.json
- * From LoggingTemplates interface: operations, statuses, [key: string] index signature
- * Note: Index signature allows extensibility, but current implementation only uses these two
- */
 const LOGGING_ROOT_FIELDS = new Set([
-    'operations',
-    'statuses',
+    'operations', 'statuses',
 ]);
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-/**
- * Get all field names from an object (shallow)
- */
 function getObjectFields(obj: Record<string, unknown>): string[] {
     return Object.keys(obj);
 }
 
-/**
- * Find fields in object that are not in the allowed set
- */
 function findUnknownFields(
     obj: Record<string, unknown>,
     allowedFields: Set<string>
@@ -369,9 +76,6 @@ function findUnknownFields(
     return getObjectFields(obj).filter(field => !allowedFields.has(field));
 }
 
-/**
- * Format an actionable error message for unknown fields
- */
 function formatUnknownFieldsError(
     objectType: string,
     objectId: string | unknown,
@@ -386,222 +90,17 @@ function formatUnknownFieldsError(
 // Tests
 // ============================================================================
 
-describe('Type/JSON Alignment Validation', () => {
-    let stacksConfig: Record<string, unknown>;
-    let componentsConfig: Record<string, unknown>;
+describe('Type/JSON Alignment - Prerequisites & Logging', () => {
     let prerequisitesConfig: Record<string, unknown>;
     let loggingConfig: Record<string, unknown>;
 
     beforeAll(() => {
-        const stacksPath = path.join(__dirname, '../../src/features/project-creation/config/stacks.json');
-        const componentsPath = path.join(__dirname, '../../src/features/components/config/components.json');
         const prerequisitesPath = path.join(__dirname, '../../src/features/prerequisites/config/prerequisites.json');
         const loggingPath = path.join(__dirname, '../../src/core/logging/config/logging.json');
 
-        stacksConfig = JSON.parse(fs.readFileSync(stacksPath, 'utf-8'));
-        componentsConfig = JSON.parse(fs.readFileSync(componentsPath, 'utf-8'));
         prerequisitesConfig = JSON.parse(fs.readFileSync(prerequisitesPath, 'utf-8'));
         loggingConfig = JSON.parse(fs.readFileSync(loggingPath, 'utf-8'));
     });
-
-    // ========================================================================
-    // stacks.json alignment
-    // ========================================================================
-
-    describe('stacks.json <-> Stack alignment', () => {
-        it('should have no unknown fields in root config', () => {
-            const rootAllowed = new Set(['$schema', 'version', 'stacks', 'addonDefinitions']);
-            const unknown = findUnknownFields(stacksConfig, rootAllowed);
-            if (unknown.length > 0) {
-                throw new Error(`stacks.json root has unknown fields: ${unknown.join(', ')}. ` +
-                     `Add to StacksConfig (src/types/stacks.ts) or remove from JSON.`);
-            }
-        });
-
-        it('should have no unknown fields in any stack', () => {
-            const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;
-            stacks.forEach(stack => {
-                const unknown = findUnknownFields(stack, STACK_FIELDS);
-                if (unknown.length > 0) {
-                    throw new Error(formatUnknownFieldsError(
-                        'Stack',
-                        stack.id,
-                        unknown,
-                        'src/types/stacks.ts - Stack'
-                    ));
-                }
-            });
-        });
-    });
-
-    // ========================================================================
-    // brands.json alignment - REMOVED
-    // brands.json replaced by demo-packages.json
-    // See: .rptc/plans/demo-packages-simplification/
-    // ========================================================================
-
-    // ========================================================================
-    // components.json alignment
-    // ========================================================================
-
-    describe('components.json <-> RawComponentRegistry alignment', () => {
-        /**
-         * Helper to validate all entries in a section have no unknown fields
-         */
-        function validateSectionEntries(
-            sectionName: string,
-            allowedFields: Set<string>,
-            typeLabel: string
-        ): void {
-            const section = componentsConfig[sectionName] as Record<string, Record<string, unknown>> | undefined;
-            if (!section) return;
-
-            Object.entries(section).forEach(([id, entry]) => {
-                const unknown = findUnknownFields(entry, allowedFields);
-                if (unknown.length > 0) {
-                    throw new Error(formatUnknownFieldsError(
-                        typeLabel,
-                        id,
-                        unknown,
-                        'src/types/components.ts - RawComponentDefinition'
-                    ));
-                }
-            });
-        }
-
-        it('should have no unknown fields in root config', () => {
-            const unknown = findUnknownFields(componentsConfig, COMPONENTS_ROOT_FIELDS);
-            if (unknown.length > 0) {
-                throw new Error(`components.json root has unknown fields: ${unknown.join(', ')}. ` +
-                     `Add to COMPONENTS_ROOT_FIELDS or RawComponentRegistry (src/types/components.ts) or remove from JSON.`);
-            }
-        });
-
-        // Component section tests - parameterized to eliminate duplication
-        const componentSections = [
-            ['frontends', 'Frontend component'],
-            ['backends', 'Backend component'],
-            ['mesh', 'Mesh component'],
-            ['dependencies', 'Dependency component'],
-            ['appBuilderApps', 'App Builder app'],
-            ['integrations', 'Integration'],
-            ['addons', 'Addon'],
-            ['tools', 'Tool'],
-            ['infrastructure', 'Infrastructure component'],
-            ['brands', 'Brand (in components.json)'],
-            ['stacks', 'Stack (in components.json)'],
-        ] as const;
-
-        it.each(componentSections)(
-            'should have no unknown fields in %s entries',
-            (sectionName, typeLabel) => {
-                validateSectionEntries(sectionName, COMPONENT_DEFINITION_FIELDS, typeLabel);
-            }
-        );
-
-        it('should have no unknown fields in component configuration blocks', () => {
-            const sectionsWithConfig = [
-                'frontends', 'backends', 'mesh', 'appBuilderApps',
-                'integrations', 'addons', 'tools'
-            ] as const;
-
-            sectionsWithConfig.forEach(section => {
-                const components = componentsConfig[section] as Record<string, Record<string, unknown>> | undefined;
-                if (!components) return;
-
-                Object.entries(components).forEach(([id, component]) => {
-                    if (!component.configuration) return;
-                    const config = component.configuration as Record<string, unknown>;
-                const unknown = findUnknownFields(config, COMPONENT_CONFIGURATION_FIELDS);
-                if (unknown.length > 0) {
-                    throw new Error(`${section}.${id}.configuration has unknown fields: ${unknown.join(', ')}. ` +
-                         `Add to COMPONENT_CONFIGURATION_FIELDS or RawComponentDefinition.configuration (src/types/components.ts) or remove from JSON.`);
-                }
-                });
-            });
-        });
-
-        it('should have no unknown fields in component source blocks', () => {
-            const sectionsWithSource = ['frontends', 'backends', 'mesh', 'appBuilderApps', 'tools'] as const;
-
-            sectionsWithSource.forEach(section => {
-                const components = componentsConfig[section] as Record<string, Record<string, unknown>> | undefined;
-                if (!components) return;
-
-                Object.entries(components).forEach(([id, component]) => {
-                    if (!component.source) return;
-                    const source = component.source as Record<string, unknown>;
-                    const unknown = findUnknownFields(source, COMPONENT_SOURCE_FIELDS);
-                    if (unknown.length > 0) {
-                        throw new Error(`${section}.${id}.source has unknown fields: ${unknown.join(', ')}. ` +
-                             `Add to COMPONENT_SOURCE_FIELDS or RawComponentDefinition.source (src/types/components.ts) or remove from JSON.`);
-                    }
-                });
-            });
-        });
-
-        it('should have no unknown fields in source.gitOptions blocks', () => {
-            const sectionsWithSource = ['frontends', 'backends', 'mesh', 'appBuilderApps', 'tools'] as const;
-
-            sectionsWithSource.forEach(section => {
-                const components = componentsConfig[section] as Record<string, Record<string, unknown>> | undefined;
-                if (!components) return;
-
-                Object.entries(components).forEach(([id, component]) => {
-                    if (!component.source) return;
-                    const source = component.source as Record<string, unknown>;
-                    if (!source.gitOptions) return;
-                    const gitOptions = source.gitOptions as Record<string, unknown>;
-                    const unknown = findUnknownFields(gitOptions, COMPONENT_GIT_OPTIONS_FIELDS);
-                    if (unknown.length > 0) {
-                        throw new Error(`${section}.${id}.source.gitOptions has unknown fields: ${unknown.join(', ')}. ` +
-                             `Add to COMPONENT_GIT_OPTIONS_FIELDS (src/types/components.ts) or remove from JSON.`);
-                    }
-                });
-            });
-        });
-
-        it('should have no unknown fields in envVars entries', () => {
-            const envVars = componentsConfig.envVars as Record<string, Record<string, unknown>> | undefined;
-            if (!envVars) return;
-
-            Object.entries(envVars).forEach(([key, envVar]) => {
-            const unknown = findUnknownFields(envVar, ENV_VAR_DEFINITION_FIELDS);
-            if (unknown.length > 0) {
-                throw new Error(`envVars.${key} has unknown fields: ${unknown.join(', ')}. ` +
-                     `Add to ENV_VAR_DEFINITION_FIELDS or EnvVarDefinition (src/types/components.ts) or remove from JSON.`);
-            }
-            });
-        });
-
-        it('should have no unknown fields in selectionGroups', () => {
-            const selectionGroups = componentsConfig.selectionGroups as Record<string, unknown> | undefined;
-            if (!selectionGroups) return;
-
-            const unknown = findUnknownFields(selectionGroups, SELECTION_GROUPS_FIELDS);
-            if (unknown.length > 0) {
-                throw new Error(`selectionGroups has unknown fields: ${unknown.join(', ')}. ` +
-                     `Add to SELECTION_GROUPS_FIELDS or RawComponentRegistry.selectionGroups (src/types/components.ts) or remove from JSON.`);
-            }
-        });
-
-        it('should have no unknown fields in services', () => {
-            const services = componentsConfig.services as Record<string, Record<string, unknown>> | undefined;
-            if (!services) return;
-
-            Object.entries(services).forEach(([serviceId, service]) => {
-                const unknown = findUnknownFields(service, SERVICE_DEFINITION_FIELDS);
-                if (unknown.length > 0) {
-                    throw new Error(`services.${serviceId} has unknown fields: ${unknown.join(', ')}. ` +
-                         `Add to SERVICE_DEFINITION_FIELDS or ServiceDefinition (src/types/components.ts) or remove from JSON.`);
-                }
-            });
-        });
-    });
-
-    // ========================================================================
-    // prerequisites.json alignment
-    // ========================================================================
 
     describe('prerequisites.json <-> PrerequisitesConfig alignment', () => {
         it('should have no unknown fields in root config', () => {
@@ -618,9 +117,7 @@ describe('Type/JSON Alignment Validation', () => {
                 const unknown = findUnknownFields(prereq, PREREQUISITE_DEFINITION_FIELDS);
                 if (unknown.length > 0) {
                     throw new Error(formatUnknownFieldsError(
-                        'Prerequisite',
-                        prereq.id,
-                        unknown,
+                        'Prerequisite', prereq.id, unknown,
                         'src/features/prerequisites/services/types.ts - PrerequisiteDefinition'
                     ));
                 }
@@ -834,10 +331,6 @@ describe('Type/JSON Alignment Validation', () => {
         });
     });
 
-    // ========================================================================
-    // logging.json alignment
-    // ========================================================================
-
     describe('logging.json <-> LoggingTemplates alignment', () => {
         it('should have no unknown fields in root config', () => {
             const unknown = findUnknownFields(loggingConfig, LOGGING_ROOT_FIELDS);
@@ -899,5 +392,4 @@ describe('Type/JSON Alignment Validation', () => {
             });
         });
     });
-
 });

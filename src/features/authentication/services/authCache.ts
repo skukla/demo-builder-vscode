@@ -14,8 +14,6 @@
  * SECURITY: Cache TTLs include optional jitter to prevent timing attacks
  */
 
-import { getCacheTTLWithJitter } from '@/core/cache/cacheUtils';
-import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -23,6 +21,8 @@ import type {
     AdobeConsoleWhereResponse,
     AuthTokenValidation,
 } from './types';
+import { getCacheTTLWithJitter } from '@/core/cache/cacheUtils';
+import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 
 interface CacheEntry<T> {
     value: T;
@@ -98,7 +98,7 @@ export class AuthCache {
             this.organizations = null;
             return undefined;
         }
-        return this.organizations!.value;
+        return this.organizations?.value;
     }
 
     // =========================================================================
@@ -130,7 +130,7 @@ export class AuthCache {
             this.projectsByOrg.delete(orgId);
             return undefined;
         }
-        return entry!.value;
+        return entry?.value;
     }
 
     // =========================================================================
@@ -168,7 +168,7 @@ export class AuthCache {
             this.workspacesByOrgProject.delete(key);
             return undefined;
         }
-        return entry!.value;
+        return entry?.value;
     }
 
     // =========================================================================
@@ -226,7 +226,7 @@ export class AuthCache {
             this.consoleWhere = null;
             return undefined;
         }
-        return this.consoleWhere!.value;
+        return this.consoleWhere?.value;
     }
 
     clearConsoleWhere(): void {
@@ -249,7 +249,7 @@ export class AuthCache {
             this.tokenInspection = null;
             return undefined;
         }
-        return this.tokenInspection!.value;
+        return this.tokenInspection?.value;
     }
 
     clearTokenInspection(): void {
@@ -276,7 +276,7 @@ export class AuthCache {
             this.validation = null;
             return undefined;
         }
-        return this.validation!.value;
+        return this.validation?.value;
     }
 
     clearValidation(): void {

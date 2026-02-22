@@ -10,19 +10,19 @@
  * 4. Paste token in VS Code → Token validated and stored
  */
 
-import React, { useState } from 'react';
 import { Text, TextField, Flex, DialogContainer } from '@adobe/react-spectrum';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import React, { useState } from 'react';
+import { getBookmarkletSetupPageUrl } from '../helpers/bookmarkletSetupPage';
+import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useCanProceed } from '@/core/ui/hooks';
 import { vscode } from '@/core/ui/utils/vscode-api';
-import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
-import { getBookmarkletSetupPageUrl } from '../helpers/bookmarkletSetupPage';
 import type { BaseStepProps } from '@/types/wizard';
 
 /**

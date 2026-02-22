@@ -6,10 +6,10 @@ import { BaseCommand } from '@/core/base/baseCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { LAST_UPDATE_CHECK_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
-import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging, validatePathSafety } from '@/core/validation';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
+import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 
 export class ResetAllCommand extends BaseCommand {

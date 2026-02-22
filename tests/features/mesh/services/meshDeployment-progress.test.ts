@@ -1,6 +1,5 @@
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import {
-    mockFs,
     createMockCommandManager,
     createMockLogger,
     setupMeshDeploymentVerifierMock,

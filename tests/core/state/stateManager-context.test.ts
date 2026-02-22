@@ -9,7 +9,6 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
-import * as os from 'os';
 import { setupMocks, createMockProject, type TestMocks } from './stateManager.testUtils';
 
 // Re-declare mocks to ensure proper typing and hoisting

@@ -6,7 +6,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ProjectsGrid } from '@/features/projects-dashboard/ui/components/ProjectsGrid';
-import { createMockProjects, createMockProject } from '../../testUtils';
+import { createMockProjects } from '../../testUtils';
 
 // Wrap component with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {

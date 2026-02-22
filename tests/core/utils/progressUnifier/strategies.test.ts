@@ -31,7 +31,7 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
             );
 
             // Mock spawn to delay completion
-            mocks.spawn.mockImplementation((command, args, options) => {
+            mocks.spawn.mockImplementation((_command, _args, _options) => {
                 const process = createMockProcess();
                 // Complete after 40 seconds
                 mocks.timers.setTimeout(async () => {
@@ -108,7 +108,7 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
             );
 
             // Mock spawn to delay completion
-            mocks.spawn.mockImplementation((command, args, options) => {
+            mocks.spawn.mockImplementation((_command, _args, _options) => {
                 const process = createMockProcess();
                 // Complete after 80 seconds
                 mocks.timers.setTimeout(async () => {
@@ -154,7 +154,7 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
             );
 
             // Mock spawn to delay completion
-            mocks.spawn.mockImplementation((command, args, options) => {
+            mocks.spawn.mockImplementation((_command, _args, _options) => {
                 const process = createMockProcess();
                 // Complete after 35 seconds
                 mocks.timers.setTimeout(async () => {

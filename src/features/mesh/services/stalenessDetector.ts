@@ -227,7 +227,7 @@ export async function readMeshEnvVarsFromFile(meshComponentPath: string): Promis
                 result[key] = value;
             }
         }
-    } catch (error) {
+    } catch (_error) {
         // Return empty object if file doesn't exist or can't be read
         // This is expected for new projects or projects without mesh
     }
@@ -461,7 +461,9 @@ async function detectMeshChangesImpl(
             // Successfully fetched deployed config - use it as baseline
             logger.debug('[Mesh Staleness] Successfully fetched deployed config, populating meshState.envVars');
 
-            project.meshState!.envVars = deployedConfig;
+            if (project.meshState) {
+                project.meshState.envVars = deployedConfig;
+            }
             didPopulateFromDeployedConfig = true;
 
             // Now continue with normal comparison using the fetched baseline

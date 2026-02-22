@@ -35,6 +35,7 @@ import * as vscode from 'vscode';
 import { WorkspaceWatcherManager } from './workspaceWatcherManager';
 import { DisposableStore } from '@/core/utils/disposableStore';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { Logger } from '@/types/logger';
 
 /**
  * Service for managing workspace-scoped .env file watchers
@@ -68,9 +69,9 @@ export class EnvFileWatcherService implements vscode.Disposable {
 
     constructor(
         private _context: vscode.ExtensionContext,
-        private stateManager: any, // Using any to avoid circular dependencies with StateManager
+        private stateManager: { getCurrentProject(): Promise<{ status?: string } | null> },
         private watcherManager: WorkspaceWatcherManager,
-        private logger: any,
+        private logger: Logger,
     ) {
         this.registerInternalCommands();
     }

@@ -1,19 +1,17 @@
-import { DEFAULT_SHELL } from '@/types/shell';
+/**
+ * ComponentUpdater Tests - Extended Coverage
+ *
+ * Tests for extended coverage:
+ * - .env file preservation
+ * - Version tracking
+ * - formatUpdateError error formatting
+ * - Verification edge cases
+ * - parseEnvFile edge cases
+ */
+
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { Logger } from '@/core/logging';
 import type { Project } from '@/types';
-
-/**
- * ComponentUpdater Test Suite (Step 1 - Group 4)
- *
- * Tests for component update functionality with focus on:
- * - Shell parameter for unzip command (CRITICAL FIX)
- * - Update workflow (snapshot, download, extract, verify, merge)
- * - Rollback on failure
- * - Error handling
- *
- * Total tests: 6
- */
 
 // Mock dependencies
 jest.mock('@/core/logging');
@@ -41,24 +39,22 @@ import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
 
-describe('ComponentUpdater (Step 1)', () => {
+describe('ComponentUpdater - Extended Coverage', () => {
     let updater: ComponentUpdater;
     let mockLogger: jest.Mocked<Logger>;
     let mockProject: Project;
-    let mockExecutor: any;
+    let mockExecutor: Record<string, jest.Mock>;
 
     beforeEach(() => {
         jest.clearAllMocks();
 
-        // Mock logger
         mockLogger = {
             info: jest.fn(),
             debug: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
-        } as any;
+        } as unknown as jest.Mocked<Logger>;
 
-        // Mock executor with execute method
         mockExecutor = {
             execute: jest.fn().mockResolvedValue({
                 stdout: '',
@@ -68,14 +64,11 @@ describe('ComponentUpdater (Step 1)', () => {
             })
         };
 
-        // Mock ServiceLocator
         (ServiceLocator.getCommandExecutor as jest.Mock) = jest.fn().mockReturnValue(mockExecutor);
 
-        // Mock security validation
         const securityValidation = require('@/core/validation');
         securityValidation.validateGitHubDownloadURL = jest.fn();
 
-        // Mock fs operations using jest.spyOn
         jest.spyOn(fs, 'cp').mockResolvedValue(undefined);
         jest.spyOn(fs, 'rm').mockResolvedValue(undefined);
         jest.spyOn(fs, 'mkdir').mockResolvedValue(undefined);
@@ -85,18 +78,15 @@ describe('ComponentUpdater (Step 1)', () => {
         jest.spyOn(fs, 'unlink').mockResolvedValue(undefined);
         jest.spyOn(fs, 'rename').mockResolvedValue(undefined);
 
-        // Mock vscode.commands
         (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
 
-        // Mock global fetch
         global.fetch = jest.fn().mockResolvedValue({
             ok: true,
             arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024))
-        }) as any;
+        }) as unknown as typeof fetch;
 
         updater = new ComponentUpdater(mockLogger, '/mock/extension/path');
 
-        // Mock project
         mockProject = {
             path: '/path/to/project',
             name: 'test-project',
@@ -108,303 +98,7 @@ describe('ComponentUpdater (Step 1)', () => {
                 }
             },
             componentVersions: {}
-        } as any;
-    });
-
-    describe('updateComponent() - Shell parameter for unzip (CRITICAL FIX)', () => {
-        it('should use shell parameter for unzip command', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // CRITICAL: Verify shell parameter is passed to unzip command
-            expect(mockExecutor.execute).toHaveBeenCalledWith(
-                expect.stringContaining('unzip'),
-                expect.objectContaining({
-                    shell: DEFAULT_SHELL
-                })
-            );
-        });
-
-        it('should include timeout in shell command execution', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // Verify timeout is included
-            expect(mockExecutor.execute).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.objectContaining({
-                    timeout: expect.any(Number)
-                })
-            );
-        });
-
-        it('should include enhancePath in shell command execution', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // Verify enhancePath is included
-            expect(mockExecutor.execute).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.objectContaining({
-                    enhancePath: true
-                })
-            );
-        });
-    });
-
-    describe('updateComponent() - Full workflow', () => {
-        it('should create snapshot before update', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // Verify snapshot creation (with filter to exclude node_modules)
-            expect(fs.cp).toHaveBeenCalledWith(
-                '/path/to/project/components/test-component',
-                expect.stringContaining('snapshot'),
-                expect.objectContaining({ 
-                    recursive: true,
-                    filter: expect.any(Function)
-                })
-            );
-        });
-
-        it('should rollback on failure', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            // Simulate failure during extraction
-            mockExecutor.execute.mockRejectedValueOnce(new Error('Extraction failed'));
-
-            await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
-            // Verify rollback happened
-            expect(fs.rename).toHaveBeenCalled();
-            expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Rollback successful')
-            );
-        });
-
-        it('should prevent concurrent updates to same component', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            // Start first update
-            const update1 = updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // Attempt concurrent update
-            const update2 = updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // First should succeed, second should fail
-            await expect(update1).resolves.not.toThrow();
-            await expect(update2).rejects.toThrow('Update already in progress');
-        });
-    });
-
-    describe('runPostUpdateBuild() - Configuration-driven builds', () => {
-        it('should skip build when component has no buildScript configured', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            // Default mock has no buildScript
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // Verify npm install and npm run build were NOT called (only unzip)
-            const executeCalls = mockExecutor.execute.mock.calls;
-            const buildCalls = executeCalls.filter((call: any[]) =>
-                call[0].includes('npm install') || call[0].includes('npm run')
-            );
-            expect(buildCalls.length).toBe(0);
-        });
-
-        it('should run npm install and build script when buildScript is configured', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            // Override mock to return component with buildScript
-            const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
-            ComponentRegistryManager.mockImplementation(() => ({
-                getComponentById: jest.fn().mockResolvedValue({
-                    id: 'eds-commerce-mesh',
-                    name: 'Commerce Mesh',
-                    configuration: {
-                        buildScript: 'build',
-                        nodeVersion: '20'
-                    }
-                })
-            }));
-
-            // Create new updater with fresh mock
-            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
-
-            // Add commerce-mesh to project
-            const meshProject = {
-                ...mockProject,
-                componentInstances: {
-                    'eds-commerce-mesh': {
-                        id: 'eds-commerce-mesh',
-                        path: '/path/to/project/components/commerce-mesh',
-                        port: 3000
-                    }
-                }
-            } as any;
-
-            await buildUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion);
-
-            // Verify npm install was called
-            expect(mockExecutor.execute).toHaveBeenCalledWith(
-                'npm install --no-fund',
-                expect.objectContaining({
-                    cwd: '/path/to/project/components/commerce-mesh',
-                    useNodeVersion: '20'
-                })
-            );
-
-            // Verify build script was called
-            expect(mockExecutor.execute).toHaveBeenCalledWith(
-                'npm run build -- --force',
-                expect.objectContaining({
-                    cwd: '/path/to/project/components/commerce-mesh',
-                    useNodeVersion: '20'
-                })
-            );
-        });
-
-        it('should clean up GitHub archive root folder after extraction', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // Verify extraction command includes rmdir cleanup
-            expect(mockExecutor.execute).toHaveBeenCalledWith(
-                expect.stringMatching(/unzip.*&&.*mv.*&&.*rmdir/),
-                expect.any(Object)
-            );
-        });
-
-        it('should throw error when npm install fails during post-update build', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            // Override mock to return component with buildScript
-            const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
-            ComponentRegistryManager.mockImplementation(() => ({
-                getComponentById: jest.fn().mockResolvedValue({
-                    id: 'eds-commerce-mesh',
-                    name: 'Commerce Mesh',
-                    configuration: {
-                        buildScript: 'build',
-                        nodeVersion: '20'
-                    }
-                })
-            }));
-
-            // Create new updater with fresh mock
-            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
-
-            // Add commerce-mesh to project
-            const meshProject = {
-                ...mockProject,
-                componentInstances: {
-                    'eds-commerce-mesh': {
-                        id: 'eds-commerce-mesh',
-                        path: '/path/to/project/components/commerce-mesh',
-                        port: 3000
-                    }
-                }
-            } as any;
-
-            // Make npm install fail
-            mockExecutor.execute
-                .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // unzip
-                .mockResolvedValueOnce({ stdout: '', stderr: 'npm ERR! install failed', code: 1, duration: 100 }); // npm install fails
-
-            await expect(
-                buildUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] Post-update build failed',
-                expect.any(Error)
-            );
-        });
-
-        it('should throw error when build script fails', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            // Override mock to return component with buildScript
-            const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
-            ComponentRegistryManager.mockImplementation(() => ({
-                getComponentById: jest.fn().mockResolvedValue({
-                    id: 'eds-commerce-mesh',
-                    name: 'Commerce Mesh',
-                    configuration: {
-                        buildScript: 'build',
-                        nodeVersion: '20'
-                    }
-                })
-            }));
-
-            // Create new updater with fresh mock
-            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
-
-            // Add commerce-mesh to project
-            const meshProject = {
-                ...mockProject,
-                componentInstances: {
-                    'eds-commerce-mesh': {
-                        id: 'eds-commerce-mesh',
-                        path: '/path/to/project/components/commerce-mesh',
-                        port: 3000
-                    }
-                }
-            } as any;
-
-            // npm install succeeds, build fails
-            mockExecutor.execute
-                .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // unzip
-                .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // npm install
-                .mockResolvedValueOnce({ stdout: '', stderr: 'Build failed: esbuild error', code: 1, duration: 100 }); // npm run build fails
-
-            await expect(
-                buildUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] Post-update build failed',
-                expect.any(Error)
-            );
-        });
-    });
-
-    // ============================================================
-    // EXTENDED COVERAGE TESTS - Step 5 (Test Coverage Remediation)
-    // ============================================================
-
-    describe('Snapshot lifecycle', () => {
-        it('should remove snapshot after successful update', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // Verify snapshot cleanup - fs.rm called with snapshot path
-            expect(fs.rm).toHaveBeenCalledWith(
-                expect.stringContaining('.snapshot-'),
-                { recursive: true, force: true }
-            );
-        });
+        } as unknown as Project;
     });
 
     describe('.env file preservation', () => {
@@ -548,30 +242,21 @@ describe('ComponentUpdater (Step 1)', () => {
     });
 
     describe('formatUpdateError error formatting (tested via failed updates)', () => {
-        // NOTE: The implementation has a quirk where the formatted error throw (line 108)
-        // is caught by the inner catch (line 109), causing "Manual recovery required" to be
-        // thrown instead. However, the formatted message IS passed to logger.error as the
-        // rollbackError, so we verify formatting by checking those logger calls.
-
         it('should detect network error and format with helpful message', async () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
 
-            // Mock fetch to throw network error
             (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('fetch failed'));
 
             await expect(
                 updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
             ).rejects.toThrow();
 
-            // The original error is logged before rollback attempt
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] Update failed, rolling back to snapshot',
                 expect.any(Error)
             );
 
-            // The formatted error is passed to logger.error as rollbackError
-            // (because the throw at line 108 is caught by line 109)
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] CRITICAL: Rollback failed',
                 expect.objectContaining({
@@ -584,7 +269,6 @@ describe('ComponentUpdater (Step 1)', () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
 
-            // Mock fetch to throw timeout error
             (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('operation timed out'));
 
             await expect(
@@ -603,7 +287,6 @@ describe('ComponentUpdater (Step 1)', () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
 
-            // Mock fetch to return 404
             (global.fetch as jest.Mock).mockResolvedValueOnce({
                 ok: false,
                 status: 404
@@ -625,7 +308,6 @@ describe('ComponentUpdater (Step 1)', () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
 
-            // Mock fetch to return 403
             (global.fetch as jest.Mock).mockResolvedValueOnce({
                 ok: false,
                 status: 403
@@ -647,7 +329,6 @@ describe('ComponentUpdater (Step 1)', () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
 
-            // Mock fetch to return 500
             (global.fetch as jest.Mock).mockResolvedValueOnce({
                 ok: false,
                 status: 500
@@ -664,7 +345,6 @@ describe('ComponentUpdater (Step 1)', () => {
                 })
             );
         });
-
     });
 
     describe('Verification edge cases', () => {
@@ -683,7 +363,6 @@ describe('ComponentUpdater (Step 1)', () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
 
-            // Override ComponentRegistryManager mock to return commerce-mesh config
             const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
             ComponentRegistryManager.mockImplementation(() => ({
                 getComponentById: jest.fn().mockResolvedValue({
@@ -702,9 +381,8 @@ describe('ComponentUpdater (Step 1)', () => {
                         port: 3000
                     }
                 }
-            } as any;
+            } as unknown as Project;
 
-            // Create new updater with fresh mock
             const meshUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
 
             await meshUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion);
@@ -745,10 +423,8 @@ describe('ComponentUpdater (Step 1)', () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
 
-            // Mock fs.access to pass (file exists)
             (fs.access as jest.Mock).mockResolvedValue(undefined);
 
-            // Mock package.json to return invalid JSON during verification
             (fs.readFile as jest.Mock).mockReset();
             (fs.readFile as jest.Mock).mockImplementation(async (filePath: string) => {
                 if (filePath.includes('package.json')) {
@@ -764,7 +440,6 @@ describe('ComponentUpdater (Step 1)', () => {
                 updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
             ).rejects.toThrow();
 
-            // The original error with "package.json is invalid" is logged
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] Update failed, rolling back to snapshot',
                 expect.objectContaining({
@@ -772,7 +447,6 @@ describe('ComponentUpdater (Step 1)', () => {
                 })
             );
 
-            // The formatted error is logged as rollbackError (formatted as "incomplete or corrupted")
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] CRITICAL: Rollback failed',
                 expect.objectContaining({
@@ -805,7 +479,6 @@ describe('ComponentUpdater (Step 1)', () => {
 
             await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
 
-            // Find the writeFile call for .env
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(
                 (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
@@ -813,10 +486,8 @@ describe('ComponentUpdater (Step 1)', () => {
 
             expect(envWriteCall).toBeDefined();
             const mergedContent = envWriteCall![1] as string;
-            // Merged should have the actual vars from user (not comments)
             expect(mergedContent).toContain('VAR1=value1');
             expect(mergedContent).toContain('VAR2=value2');
-            // Should not contain comments (they are stripped in merge)
             expect(mergedContent).not.toContain('#');
         });
 
@@ -842,7 +513,6 @@ describe('ComponentUpdater (Step 1)', () => {
 
             await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
 
-            // Find the writeFile call for .env
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(
                 (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
@@ -850,7 +520,6 @@ describe('ComponentUpdater (Step 1)', () => {
 
             expect(envWriteCall).toBeDefined();
             const mergedContent = envWriteCall![1] as string;
-            // The full URL with = signs should be preserved
             expect(mergedContent).toContain('API_URL=https://example.com?param=value&other=123');
         });
     });

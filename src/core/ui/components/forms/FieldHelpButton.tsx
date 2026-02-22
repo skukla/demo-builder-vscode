@@ -225,9 +225,18 @@ function StepContent({
                     <img
                         src={screenshotSrc}
                         alt={step.screenshotAlt || `Step ${index + 1}`}
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => {
                             e.stopPropagation();
                             onImageClick(screenshotSrc, step.screenshotAlt || `Step ${index + 1}`);
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onImageClick(screenshotSrc, step.screenshotAlt || `Step ${index + 1}`);
+                            }
                         }}
                         className="screenshot-thumbnail"
                     />
@@ -315,7 +324,7 @@ export function FieldHelpButton({
                                     key={i}
                                     step={step}
                                     index={i}
-                                    total={help.steps!.length}
+                                    total={help.steps?.length ?? 0}
                                     onImageClick={handleImageClick}
                                     resolveScreenshot={resolveScreenshot}
                                 />

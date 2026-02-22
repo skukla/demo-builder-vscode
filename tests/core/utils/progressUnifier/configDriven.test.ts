@@ -241,7 +241,7 @@ describe('ProgressUnifier - Config-Driven Approach', () => {
 
             // Then: All progress updates should use synthetic confidence (strategy didn't switch)
             const syntheticUpdates = progressUpdates.filter(p => p.command?.confidence === 'synthetic');
-            const exactUpdates = progressUpdates.filter(p => p.command?.confidence === 'exact');
+            const _exactUpdates = progressUpdates.filter(p => p.command?.confidence === 'exact');
 
             expect(syntheticUpdates.length).toBeGreaterThan(0);
             // Exact updates should NOT appear because we're using synthetic strategy
@@ -262,7 +262,7 @@ describe('ProgressUnifier - Config-Driven Approach', () => {
                 'some-command',
                 10000
             );
-            // @ts-ignore - Testing undefined case
+            // @ts-expect-error - Testing undefined case
             step.progressStrategy = undefined;
 
             // Mock spawn
@@ -297,7 +297,7 @@ describe('ProgressUnifier - Config-Driven Approach', () => {
                 'some-command',
                 10000
             );
-            // @ts-ignore - Testing invalid case
+            // @ts-expect-error - Testing invalid case
             step.progressStrategy = 'invalid-strategy';
 
             // Mock spawn
@@ -364,7 +364,7 @@ describe('ProgressUnifier - Config-Driven Approach', () => {
             await executePromise;
 
             // After completion, should have 100% overall progress
-            const finalProgress = progressUpdates[progressUpdates.length - 1];
+            const _finalProgress = progressUpdates[progressUpdates.length - 1];
             // The final update may be overall progress without command details
             // Check that we reached 100% in some form
             const has100Percent = progressUpdates.some(

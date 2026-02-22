@@ -1,6 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import React from 'react';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { WizardState } from '@/types/webview';
 import { ErrorCode } from '@/types/errorCodes';

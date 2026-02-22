@@ -1,8 +1,12 @@
+/* eslint-disable max-lines */
 /**
  * Mock for @adobe/react-spectrum
  *
  * Lightweight stubs to avoid loading the full Spectrum library (~6MB)
  * in Jest tests. This prevents memory exhaustion in parallel test runs.
+ *
+ * Note: eslint-disable max-lines is used here because mock files naturally
+ * need to be large to cover all the components they mock.
  */
 import React from 'react';
 
@@ -153,7 +157,7 @@ export const Picker: React.FC<any> = ({
 };
 
 // Item mock for Picker
-export const Item: React.FC<any> = ({ children, textValue, ...props }) => (
+export const Item: React.FC<any> = ({ children, _textValue, ..._props }) => (
     <>{children}</>
 );
 
@@ -333,7 +337,7 @@ export const Form: React.FC<any> = ({ children, onSubmit, ...props }) => (
 // DialogTrigger mock - handles both simple children and render function pattern
 // In tests, always renders both trigger and dialog so tests can verify content
 // NOTE: React.Children.toArray doesn't include function children, so we iterate manually
-export const DialogTrigger: React.FC<any> = ({ children, isOpen: controlledIsOpen, onOpenChange, type = 'modal' }) => {
+export const DialogTrigger: React.FC<any> = ({ children, isOpen: _controlledIsOpen, onOpenChange, type: _type = 'modal' }) => {
     // Create a close handler for render function pattern
     const handleClose = () => {
         onOpenChange?.(false);
@@ -504,9 +508,9 @@ export const ListView: React.FC<any> = ({
     children,
     items,
     onSelectionChange,
-    selectedKeys,
-    defaultSelectedKeys,
-    selectionMode,
+    _selectedKeys,
+    _defaultSelectedKeys,
+    _selectionMode,
     'aria-label': ariaLabel,
     UNSAFE_className,
     ...props
@@ -632,7 +636,7 @@ export const Menu: React.FC<any> = ({ children, items, onAction, ...props }) => 
 };
 
 // DialogContainer mock
-export const DialogContainer: React.FC<any> = ({ children, onDismiss, ...props }) => (
+export const DialogContainer: React.FC<any> = ({ children, _onDismiss, ...props }) => (
     <div data-testid="spectrum-dialog-container" {...filterSpectrumProps(props)}>
         {children}
     </div>

@@ -10,22 +10,40 @@
  * Extracted from GitHubService as part of god file split.
  */
 
-import { Octokit } from '@octokit/core';
-import { retry } from '@octokit/plugin-retry';
-import * as path from 'path';
 import * as fs from 'fs/promises';
 import * as os from 'os';
-import { getLogger } from '@/core/logging';
-import { ServiceLocator } from '@/core/di';
-import { TIMEOUTS } from '@/core/utils';
-import { DEFAULT_SHELL } from '@/types/shell';
-import type { Logger } from '@/types/logger';
+import * as path from 'path';
+import { Octokit } from '@octokit/core';
+import { retry } from '@octokit/plugin-retry';
+import { injectTokenIntoUrl } from './githubHelpers';
+import type { GitHubTokenService } from './githubTokenService';
 import type {
     GitHubRepo,
     GitHubApiError,
 } from './types';
-import type { GitHubTokenService } from './githubTokenService';
-import { injectTokenIntoUrl } from './githubHelpers';
+import { ServiceLocator } from '@/core/di';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils';
+import type { Logger } from '@/types/logger';
+import { DEFAULT_SHELL } from '@/types/shell';
+
+/** GitHub API repository response shape (subset used by this module) */
+interface GitHubApiRepoResponse {
+    id: number;
+    name: string;
+    full_name: string;
+    html_url: string;
+    clone_url: string;
+    default_branch: string;
+    description: string | null;
+    updated_at: string;
+    private: boolean;
+    permissions?: {
+        push?: boolean;
+        pull?: boolean;
+        admin?: boolean;
+    };
+}
 
 /** Error messages for repository operations */
 const ERROR_MESSAGES = {
@@ -244,9 +262,9 @@ export class GitHubRepoOperations {
                 this.logger.debug(`[GitHub:ListRepos] Page ${page}: received ${repos.length} repos`);
 
                 // Filter to only repos with push access and map to our type
-                const mappedRepos = repos
-                    .filter((repo: any) => repo.permissions?.push)
-                    .map((repo: any) => ({
+                const mappedRepos = (repos as GitHubApiRepoResponse[])
+                    .filter((repo) => repo.permissions?.push)
+                    .map((repo) => ({
                         id: repo.id,
                         name: repo.name,
                         fullName: repo.full_name,

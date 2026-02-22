@@ -110,7 +110,7 @@ describe('ResourceLocker', () => {
 
             const operations = Array.from({ length: 5 }, (_, i) => createOperation(i + 1));
 
-            const promises = operations.map((op, i) =>
+            const promises = operations.map((op) =>
                 resourceLocker.executeExclusive('resource1', op)
             );
 

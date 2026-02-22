@@ -1,10 +1,10 @@
 import { getLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { toAppError, isTimeout } from '@/types/errors';
+import type { Logger } from '@/types/logger';
 import { parseJSON, toError } from '@/types/typeGuards';
 
 /**

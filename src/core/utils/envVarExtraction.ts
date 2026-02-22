@@ -3,8 +3,8 @@
  *
  * Utilities for extracting and parsing environment variables from .env files.
  */
-import * as fsPromises from 'fs/promises';
 import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
 
 /**
  * Extracts environment variables from a .env file

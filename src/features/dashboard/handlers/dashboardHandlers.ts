@@ -17,17 +17,15 @@ import {
 import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { sessionUIState } from '@/core/state/sessionUIState';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { openInIncognito } from '@/core/utils';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
 import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
-import { ErrorCode } from '@/types/errorCodes';
-import { MessageHandler } from '@/types/handlers';
-import { getMeshComponentInstance, getProjectFrontendPort } from '@/types/typeGuards';
-import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
-import { getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
+import { ErrorCode } from '@/types/errorCodes';
+import { MessageHandler , defineHandlers } from '@/types/handlers';
+import { getMeshComponentInstance, getProjectFrontendPort } from '@/types/typeGuards';
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -225,7 +223,7 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
         async () => {
             // Open in incognito mode for clean demo experience (no cached content/cookies)
             // Falls back to normal browser if incognito mode is not available
-            const openedIncognito = await openInIncognito(payload.url!);
+            const openedIncognito = await openInIncognito(payload.url);
             context.logger.debug(`[Dashboard] Opening live site: ${payload.url} (incognito: ${openedIncognito})`);
         },
     );
@@ -502,7 +500,6 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
 
-import { defineHandlers } from '@/types/handlers';
 
 /**
  * Dashboard feature handler map

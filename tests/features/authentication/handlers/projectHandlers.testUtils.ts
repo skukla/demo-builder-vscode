@@ -4,8 +4,6 @@
  * Common mocks, factories, and helpers used across project handler tests.
  */
 
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
-
 // Mock dependencies setup
 export const setupMocks = () => {
     jest.mock('@/core/di/serviceLocator');

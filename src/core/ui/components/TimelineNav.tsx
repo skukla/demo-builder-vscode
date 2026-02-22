@@ -297,9 +297,12 @@ export function TimelineNav({
 
                     return (
                         <View key={step.id} position="relative">
-                            {/* Step item */}
+                            {/* Step item - role/tabIndex/keyboard conditionally applied when clickable */}
+                            {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- role and tabIndex are conditionally set when isClickable; non-clickable steps are inert */}
                             <div
                                 data-testid={`timeline-step-${step.id}`}
+                                role={isClickable ? 'button' : undefined}
+                                tabIndex={isClickable ? 0 : undefined}
                                 aria-current={!step.isExiting && actualIndex === currentStepIndex ? 'step' : undefined}
                                 style={{
                                     marginBottom: displayIndex < displaySteps.length - 1 ? stepSpacing : undefined,
@@ -314,6 +317,12 @@ export function TimelineNav({
                                     isExiting && 'timeline-step-exit',
                                 )}
                                 onClick={() => !step.isExiting && handleStepClick(actualIndex)}
+                                onKeyDown={(e) => {
+                                    if ((e.key === 'Enter' || e.key === ' ') && !step.isExiting) {
+                                        e.preventDefault();
+                                        handleStepClick(actualIndex);
+                                    }
+                                }}
                             >
                                 <View
                                     UNSAFE_className="nav-item-row"

@@ -10,7 +10,6 @@
 import {
     buildComponentInfoList,
     resolveServiceNames,
-    type ComponentInfoItem,
 } from '@/features/project-creation/ui/steps/reviewStepHelpers';
 import type { ComponentData, ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 

@@ -15,7 +15,7 @@ import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authenti
 
 // Mock getCacheTTLWithJitter to be deterministic
 jest.mock('@/core/cache/cacheUtils', () => ({
-    getCacheTTLWithJitter: jest.fn((ttl: number, _jitter?: number) => ttl),
+    getCacheTTLWithJitter: jest.fn((ttl: number) => ttl),
 }));
 
 import { AuthCache } from '@/features/authentication/services/authCache';

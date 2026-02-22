@@ -10,18 +10,18 @@
  * Extracted from GitHubService as part of god file split.
  */
 
-import * as vscode from 'vscode';
 import { Octokit } from '@octokit/core';
 import { retry } from '@octokit/plugin-retry';
-import { getLogger } from '@/core/logging';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { Logger } from '@/types/logger';
+import * as vscode from 'vscode';
 import {
     type GitHubToken,
     type GitHubTokenValidation,
     type GitHubUser,
     type GitHubApiError,
 } from './types';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { Logger } from '@/types/logger';
 
 /** Storage key for GitHub token in VS Code SecretStorage */
 const TOKEN_STORAGE_KEY = 'github-token';

@@ -53,6 +53,71 @@ async function checkTokenExpiry(context: HandlerContext): Promise<boolean> {
 }
 
 /**
+ * Get token expiry information for the current session
+ */
+async function getTokenExpiryInfo(
+    context: HandlerContext,
+): Promise<{ tokenExpiresIn: number | undefined; tokenExpiringSoon: boolean }> {
+    try {
+        const tokenManager = context.authManager?.getTokenManager();
+        const tokenInspection = await tokenManager?.inspectToken();
+        if (!tokenInspection) {
+            return { tokenExpiresIn: undefined, tokenExpiringSoon: false };
+        }
+
+        const tokenExpiresIn = tokenInspection.expiresIn;
+        const tokenExpiringSoon = tokenExpiresIn < 5;
+
+        if (tokenExpiringSoon) {
+            context.logger.warn(`[Auth] Token expires in ${formatMinutes(tokenExpiresIn)} - user should re-authenticate`);
+        }
+
+        return { tokenExpiresIn, tokenExpiringSoon };
+    } catch {
+        return { tokenExpiresIn: undefined, tokenExpiringSoon: false };
+    }
+}
+
+/**
+ * Get current org/project context from cache or CLI
+ */
+/**
+ * Check if cached org is invalidated by validation cache
+ */
+function isCachedOrgInvalid(context: HandlerContext, org: AdobeOrg): boolean {
+    const validation = context.authManager?.getValidationCache();
+    if (!validation) return false;
+    const orgIdentifier = org.code || org.name;
+    return validation.org === orgIdentifier && !validation.isValid;
+}
+
+/**
+ * Get current org/project context from cache or CLI
+ */
+async function getAuthContext(
+    context: HandlerContext,
+): Promise<{ currentOrg?: AdobeOrg; currentProject?: AdobeProject }> {
+    // Check cache first (fast - no API calls)
+    const cachedOrg = context.authManager?.getCachedOrganization();
+    const cachedProject = context.authManager?.getCachedProject();
+
+    // If cache is empty, read from Adobe CLI (persists across extension restarts)
+    if (!cachedOrg) {
+        const currentOrg = await context.authManager?.getCurrentOrganization();
+        const currentProject = await context.authManager?.getCurrentProject();
+        return { currentOrg, currentProject };
+    }
+
+    // Don't show cached org if validation failed
+    if (isCachedOrgInvalid(context, cachedOrg)) {
+        return { currentOrg: undefined, currentProject: undefined };
+    }
+
+    context.logger.debug(`[Auth] Using cached organization: ${cachedOrg.name}`);
+    return { currentOrg: cachedOrg, currentProject: cachedProject };
+}
+
+/**
  * check-auth - Check Adobe authentication status
  *
  * Performs a quick check of authentication status and retrieves
@@ -77,60 +142,16 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
         const checkDuration = Date.now() - checkStartTime;
 
         // Check token expiry to warn user if token is about to expire
-        let tokenExpiresIn: number | undefined;
-        let tokenExpiringSoon = false;
-        if (isAuthenticated) {
-            try {
-                const tokenManager = context.authManager?.getTokenManager();
-                if (tokenManager) {
-                    const tokenInspection = await tokenManager.inspectToken();
-                    if (tokenInspection) {
-                        tokenExpiresIn = tokenInspection.expiresIn;
-                        tokenExpiringSoon = tokenInspection.expiresIn < 5; // Less than 5 minutes
-
-                        if (tokenExpiringSoon) {
-                            context.logger.warn(`[Auth] Token expires in ${formatMinutes(tokenExpiresIn)} - user should re-authenticate`);
-                        }
-                    }
-                }
-            } catch {
-                // Token inspection failed - non-critical, continue without expiry warning
-            }
-        }
+        const { tokenExpiresIn, tokenExpiringSoon } = isAuthenticated
+            ? await getTokenExpiryInfo(context)
+            : { tokenExpiresIn: undefined, tokenExpiringSoon: false };
 
         context.logger.debug(`[Auth] Check complete in ${formatDuration(checkDuration)}: authenticated=${isAuthenticated}${tokenExpiresIn ? `, expires in ${formatMinutes(tokenExpiresIn)}` : ''}`);
 
         // Get org/project context (check cache first, then Adobe CLI if cache miss)
-        let currentOrg: AdobeOrg | undefined;
-        let currentProject: AdobeProject | undefined;
-
-        if (isAuthenticated) {
-            // Check cache first (fast - no API calls)
-            currentOrg = context.authManager?.getCachedOrganization();
-            currentProject = context.authManager?.getCachedProject();
-
-            // If cache is empty, read from Adobe CLI (persists across extension restarts)
-            if (!currentOrg) {
-                currentOrg = await context.authManager?.getCurrentOrganization();
-                currentProject = await context.authManager?.getCurrentProject();
-            } else {
-                // Don't show cached org if validation failed
-                const validation = context.authManager?.getValidationCache();
-
-                if (validation) {
-                    const orgIdentifier = currentOrg.code || currentOrg.name;
-
-                    if (validation.org === orgIdentifier && !validation.isValid) {
-                        // Cached org known to be invalid - don't show it
-                        currentOrg = undefined;
-                        currentProject = undefined;
-                    }
-                } else {
-                    // No validation cache - show org from cache (validation deferred until org is used)
-                    context.logger.debug(`[Auth] Using cached organization: ${currentOrg.name}`);
-                }
-            }
-        }
+        const { currentOrg, currentProject } = isAuthenticated
+            ? await getAuthContext(context)
+            : { currentOrg: undefined, currentProject: undefined };
 
         // Determine final status with user-friendly messaging
         let message: string;
@@ -189,12 +210,236 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
 }
 
 /**
+ * Post-login org resolution result
+ */
+interface PostLoginOrgResult {
+    currentOrg?: AdobeOrg;
+    currentProject?: AdobeProject;
+    requiresOrgSelection: boolean;
+    orgLacksAccess: boolean;
+}
+
+/**
+ * Resolve organization after successful login
+ */
+async function resolvePostLoginOrg(context: HandlerContext): Promise<PostLoginOrgResult | null> {
+    // Check token expiry BEFORE fetching organizations
+    const tokenValid = await checkTokenExpiry(context);
+    if (!tokenValid) return null;
+
+    context.logger.debug('[Auth] Fetching organizations after login');
+    await context.authManager?.ensureSDKInitialized();
+    await context.sendMessage('auth-status', {
+        isChecking: true,
+        message: 'Signing in...',
+        subMessage: 'Loading organizations...',
+        isAuthenticated: true,
+    });
+
+    const orgs = await context.authManager?.getOrganizations();
+    context.logger.debug(`[Auth] Found ${orgs?.length ?? 0} organization(s) accessible to user`);
+
+    if (orgs?.length === 1) {
+        return autoSelectSingleOrg(context, orgs[0]);
+    }
+
+    if (orgs && orgs.length > 1) {
+        context.logger.debug(`[Auth] ${orgs.length} organizations available, user must select`);
+        return { requiresOrgSelection: true, orgLacksAccess: false };
+    }
+
+    context.logger.warn('[Auth] No organizations accessible for this user');
+    return { requiresOrgSelection: true, orgLacksAccess: true };
+}
+
+/**
+ * Auto-select a single available organization
+ */
+async function autoSelectSingleOrg(
+    context: HandlerContext,
+    org: AdobeOrg,
+): Promise<PostLoginOrgResult> {
+    context.logger.debug(`[Auth] Single organization available: ${org.name}, auto-selecting`);
+    await context.sendMessage('auth-status', {
+        isChecking: true,
+        message: 'Signing in...',
+        subMessage: 'Selecting organization...',
+        isAuthenticated: true,
+    });
+
+    const selected = await context.authManager?.selectOrganization(org.id);
+    if (selected) {
+        context.authManager?.setCachedOrganization(org);
+        context.logger.debug(`[Auth] Successfully auto-selected and cached organization: ${org.name}`);
+        return { currentOrg: org, requiresOrgSelection: false, orgLacksAccess: false };
+    }
+
+    context.logger.warn(`[Auth] Failed to auto-select organization: ${org.name}`);
+    return { requiresOrgSelection: true, orgLacksAccess: false };
+}
+
+/**
+ * Send post-login auth status message based on org resolution result
+ */
+async function sendPostLoginStatus(
+    context: HandlerContext,
+    result: PostLoginOrgResult,
+): Promise<void> {
+    if (result.orgLacksAccess) {
+        await context.sendMessage('auth-status', {
+            authenticated: true, isAuthenticated: true, isChecking: false,
+            organization: undefined, project: undefined,
+            message: 'No organizations found',
+            subMessage: 'Your Adobe account doesn\'t have access to any organizations with App Builder',
+            requiresOrgSelection: true, orgLacksAccess: true,
+        });
+    } else if (result.requiresOrgSelection) {
+        await context.sendMessage('auth-status', {
+            authenticated: true, isAuthenticated: true, isChecking: false,
+            organization: undefined, project: undefined,
+            message: 'Sign-in complete',
+            subMessage: 'Choose your organization to continue',
+            requiresOrgSelection: true, orgLacksAccess: false,
+        });
+    } else {
+        await context.sendMessage('auth-status', {
+            authenticated: true, isAuthenticated: true, isChecking: false,
+            organization: result.currentOrg, project: result.currentProject,
+            message: 'All set!',
+            subMessage: result.currentOrg ? `Connected to ${result.currentOrg.name}` : 'Authentication verified',
+            requiresOrgSelection: false, orgLacksAccess: false,
+        });
+    }
+}
+
+/**
  * authenticate - Perform Adobe authentication
  *
  * Initiates browser-based Adobe login flow. Uses constant message during loading
  * (only subMessage changes) to prevent LoadingDisplay flickering.
  */
 const AUTH_LOADING_MESSAGE = 'Signing in...';
+
+/**
+ * Handle successful login - resolve orgs and send status
+ */
+async function handleLoginSuccess(
+    context: HandlerContext,
+    loginDuration: number,
+): Promise<SimpleResult> {
+    context.logger.info(`[Auth] Authentication completed successfully after ${formatDuration(loginDuration)}`);
+
+    const setupStart = Date.now();
+    let orgResult: PostLoginOrgResult = { requiresOrgSelection: true, orgLacksAccess: false };
+
+    try {
+        const resolved = await resolvePostLoginOrg(context);
+        if (!resolved) {
+            context.sharedState.isAuthenticating = false;
+            await context.sendMessage('auth-status', {
+                authenticated: false, isAuthenticated: false, isChecking: false,
+                code: ErrorCode.AUTH_REQUIRED,
+                message: 'Session expired',
+                subMessage: 'Please sign in again to continue',
+                requiresOrgSelection: true, orgLacksAccess: false,
+            });
+            return { success: false, code: ErrorCode.AUTH_REQUIRED };
+        }
+        orgResult = resolved;
+    } catch (error) {
+        context.logger.error('[Auth] Failed to fetch organizations:', error as Error);
+    }
+
+    const totalSetupTime = Date.now() - setupStart;
+    context.logger.debug(`[Auth] Post-login setup completed in ${formatDuration(totalSetupTime)}`);
+
+    await sendPostLoginStatus(context, orgResult);
+    return { success: true };
+}
+
+/**
+ * Handle case where user is already authenticated (skip login)
+ */
+async function handleAlreadyAuthenticated(context: HandlerContext): Promise<SimpleResult> {
+    context.logger.debug('[Auth] Already authenticated, skipping login');
+
+    await context.sendMessage('auth-status', {
+        isChecking: true,
+        message: 'Verifying authentication...',
+        subMessage: 'Checking Adobe credentials...',
+        isAuthenticated: true,
+    });
+
+    await context.authManager?.ensureSDKInitialized();
+
+    const currentOrg = await context.authManager?.getCurrentOrganization();
+    const currentProject = await context.authManager?.getCurrentProject();
+    context.sharedState.isAuthenticating = false;
+
+    const orgLacksAccess = !currentOrg ? context.authManager?.wasOrgClearedDueToValidation() : false;
+
+    await context.sendMessage('auth-status', {
+        authenticated: true, isAuthenticated: true, isChecking: false,
+        organization: currentOrg, project: currentProject,
+        message: orgLacksAccess ? 'Organization selection required' : 'Already signed in',
+        subMessage: getAuthSubMessage(!!orgLacksAccess, currentOrg),
+        requiresOrgSelection: !currentOrg, orgLacksAccess,
+    });
+    return { success: true };
+}
+
+/**
+ * Attempt to skip login if already authenticated
+ * Returns SimpleResult if already auth'd, undefined if login is needed
+ */
+async function trySkipLogin(
+    context: HandlerContext,
+    force: boolean,
+): Promise<SimpleResult | undefined> {
+    if (force) return undefined;
+
+    context.logger.debug('[Auth] Checking for existing valid authentication (token-only)...');
+    const isAlreadyAuth = await context.authManager?.isAuthenticated();
+    if (!isAlreadyAuth) return undefined;
+
+    return handleAlreadyAuthenticated(context);
+}
+
+/**
+ * Execute the browser-based login flow
+ */
+async function executeBrowserLogin(
+    context: HandlerContext,
+    force: boolean,
+    authStartTime: number,
+): Promise<SimpleResult> {
+    context.logger.debug(`[Auth] Starting Adobe authentication process${force ? ' (forced)' : ''} - opening browser...`);
+    context.logger.debug(`[Auth] Initiating browser-based login${force ? ' with force flag' : ''}`);
+
+    await context.sendMessage('auth-status', {
+        isChecking: true,
+        message: AUTH_LOADING_MESSAGE,
+        subMessage: force ? 'Starting fresh login...' : 'Opening browser...',
+        isAuthenticated: false,
+    });
+
+    const loginSuccess = await context.authManager?.login(force);
+    const loginDuration = Date.now() - authStartTime;
+    context.sharedState.isAuthenticating = false;
+
+    if (!loginSuccess) {
+        context.logger.warn(`[Auth] Authentication timed out after ${formatDuration(loginDuration)}`);
+        await context.sendMessage('auth-status', {
+            authenticated: false, isAuthenticated: false, isChecking: false,
+            error: 'timeout', code: ErrorCode.TIMEOUT,
+            message: 'Sign-in timed out',
+            subMessage: 'The browser window may have been closed. Please try again.',
+        });
+        return { success: false, code: ErrorCode.TIMEOUT };
+    }
+
+    return handleLoginSuccess(context, loginDuration);
+}
 
 export async function handleAuthenticate(
     context: HandlerContext,
@@ -212,212 +457,10 @@ export async function handleAuthenticate(
     try {
         context.sharedState.isAuthenticating = true;
 
-        // If not forcing, check if already authenticated
-        if (!force) {
-            context.logger.debug('[Auth] Checking for existing valid authentication (token-only)...');
-            // Use token-only check to avoid 9+ second delay before showing browser
-            const isAlreadyAuth = await context.authManager?.isAuthenticated();
+        const skipResult = await trySkipLogin(context, force);
+        if (skipResult) return skipResult;
 
-            if (isAlreadyAuth) {
-                context.logger.debug('[Auth] Already authenticated, skipping login');
-
-                // Send loading message while we verify credentials and initialize SDK
-                await context.sendMessage('auth-status', {
-                    isChecking: true,
-                    message: 'Verifying authentication...',
-                    subMessage: 'Checking Adobe credentials...',
-                    isAuthenticated: true, // Shows authenticated during check
-                });
-
-                // Initialize SDK for faster org/project operations
-                await context.authManager?.ensureSDKInitialized();
-
-                // Get the current context
-                const currentOrg = await context.authManager?.getCurrentOrganization();
-                const currentProject = await context.authManager?.getCurrentProject();
-
-                // Now done checking
-                context.sharedState.isAuthenticating = false;
-
-                // Check if org was cleared due to validation failure
-                const orgLacksAccess = !currentOrg ? context.authManager?.wasOrgClearedDueToValidation() : false;
-
-                await context.sendMessage('auth-status', {
-                    authenticated: true,
-                    isAuthenticated: true,
-                    isChecking: false,
-                    organization: currentOrg,
-                    project: currentProject,
-                    message: orgLacksAccess ? 'Organization selection required' : 'Already signed in',
-                    subMessage: getAuthSubMessage(!!orgLacksAccess, currentOrg),
-                    requiresOrgSelection: !currentOrg,
-                    orgLacksAccess,
-                });
-                return { success: true };
-            }
-        }
-
-        context.logger.debug(`[Auth] Starting Adobe authentication process${force ? ' (forced)' : ''} - opening browser...`);
-
-        // Start authentication - pass force flag to authManager
-        context.logger.debug(`[Auth] Initiating browser-based login${force ? ' with force flag' : ''}`);
-
-        // Show "opening browser" message immediately to inform user
-        // Use constant message, vary only subMessage
-        await context.sendMessage('auth-status', {
-            isChecking: true,
-            message: AUTH_LOADING_MESSAGE,
-            subMessage: force ? 'Starting fresh login...' : 'Opening browser...',
-            isAuthenticated: false,
-        });
-
-        // Start login process
-        const loginSuccess = await context.authManager?.login(force);
-
-        const loginDuration = Date.now() - authStartTime;
-        context.sharedState.isAuthenticating = false;
-
-        if (loginSuccess) {
-            context.logger.info(`[Auth] Authentication completed successfully after ${formatDuration(loginDuration)}`);
-
-            const setupStart = Date.now();
-            let currentOrg: AdobeOrg | undefined;
-            let currentProject: AdobeProject | undefined;
-            let requiresOrgSelection = false;
-            let orgLacksAccess = false;
-
-            try {
-                // STEP 2 FIX: Check token expiry BEFORE fetching organizations
-                const tokenValid = await checkTokenExpiry(context);
-
-                if (!tokenValid) {
-                    // Token expired or invalid - send clear message
-                    context.sharedState.isAuthenticating = false;
-
-                    await context.sendMessage('auth-status', {
-                        authenticated: false,
-                        isAuthenticated: false,
-                        isChecking: false,
-                        code: ErrorCode.AUTH_REQUIRED,
-                        message: 'Session expired',
-                        subMessage: 'Please sign in again to continue',
-                        requiresOrgSelection: true,
-                        orgLacksAccess: false,
-                    });
-
-                    return { success: false, code: ErrorCode.AUTH_REQUIRED };
-                }
-
-                // Token is valid (or inspection failed but we continue) - proceed with org fetch
-                context.logger.debug('[Auth] Fetching organizations after login');
-
-                // Initialize SDK for faster operations (token stable after login)
-                await context.authManager?.ensureSDKInitialized();
-                await context.sendMessage('auth-status', {
-                    isChecking: true,
-                    message: AUTH_LOADING_MESSAGE,
-                    subMessage: 'Loading organizations...',
-                    isAuthenticated: true,
-                });
-
-                // Fetch organization list (uses SDK if available, falls back to CLI)
-                const orgs = await context.authManager?.getOrganizations();
-                context.logger.debug(`[Auth] Found ${orgs?.length ?? 0} organization(s) accessible to user`);
-
-                if (orgs?.length === 1) {
-                    // Auto-select single org
-                    context.logger.debug(`[Auth] Single organization available: ${orgs?.[0].name}, auto-selecting`);
-                    await context.sendMessage('auth-status', {
-                        isChecking: true,
-                        message: AUTH_LOADING_MESSAGE,
-                        subMessage: 'Selecting organization...',
-                        isAuthenticated: true,
-                    });
-
-                    const selected = await context.authManager?.selectOrganization(orgs?.[0].id);
-
-                    if (selected) {
-                        currentOrg = orgs?.[0];
-                        context.authManager?.setCachedOrganization(currentOrg);
-                        context.logger.debug(`[Auth] Successfully auto-selected and cached organization: ${orgs?.[0].name}`);
-                    } else {
-                        context.logger.warn(`[Auth] Failed to auto-select organization: ${orgs?.[0].name}`);
-                        requiresOrgSelection = true;
-                    }
-                } else if (orgs && orgs.length > 1) {
-                    context.logger.debug(`[Auth] ${orgs?.length} organizations available, user must select`);
-                    requiresOrgSelection = true;
-                } else {
-                    context.logger.warn('[Auth] No organizations accessible for this user');
-                    requiresOrgSelection = true;
-                    orgLacksAccess = true;
-                }
-            } catch (error) {
-                context.logger.error('[Auth] Failed to fetch organizations:', error as Error);
-                requiresOrgSelection = true;
-            }
-
-            // Log total post-login setup time
-            const totalSetupTime = Date.now() - setupStart;
-            context.logger.debug(`[Auth] Post-login setup completed in ${formatDuration(totalSetupTime)}`);
-
-            // Send appropriate status message based on org selection outcome
-            if (orgLacksAccess) {
-                await context.sendMessage('auth-status', {
-                    authenticated: true,
-                    isAuthenticated: true,
-                    isChecking: false,
-                    organization: undefined,
-                    project: undefined,
-                    message: 'No organizations found',
-                    subMessage: 'Your Adobe account doesn\'t have access to any organizations with App Builder',
-                    requiresOrgSelection: true,
-                    orgLacksAccess: true,
-                });
-            } else if (requiresOrgSelection) {
-                await context.sendMessage('auth-status', {
-                    authenticated: true,
-                    isAuthenticated: true,
-                    isChecking: false,
-                    organization: undefined,
-                    project: undefined,
-                    message: 'Sign-in complete',
-                    subMessage: 'Choose your organization to continue',
-                    requiresOrgSelection: true,
-                    orgLacksAccess: false,
-                });
-            } else {
-                // Successfully auto-selected org
-                await context.sendMessage('auth-status', {
-                    authenticated: true,
-                    isAuthenticated: true,
-                    isChecking: false,
-                    organization: currentOrg,
-                    project: currentProject,
-                    message: 'All set!',
-                    subMessage: currentOrg ? `Connected to ${currentOrg.name}` : 'Authentication verified',
-                    requiresOrgSelection: false,
-                    orgLacksAccess: false,
-                });
-            }
-
-            return { success: true };
-        } else {
-            context.logger.warn(`[Auth] Authentication timed out after ${formatDuration(loginDuration)}`);
-
-            await context.sendMessage('auth-status', {
-                authenticated: false,
-                isAuthenticated: false,
-                isChecking: false,
-                error: 'timeout',
-                code: ErrorCode.TIMEOUT,
-                message: 'Sign-in timed out',
-                subMessage: 'The browser window may have been closed. Please try again.',
-            });
-
-            return { success: false, code: ErrorCode.TIMEOUT };
-        }
-
+        return await executeBrowserLogin(context, force, authStartTime);
     } catch (error) {
         const failDuration = Date.now() - authStartTime;
         context.sharedState.isAuthenticating = false;

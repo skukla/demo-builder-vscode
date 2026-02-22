@@ -16,14 +16,14 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import stacksConfig from '@/features/project-creation/config/stacks.json';
+import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import type { Project, TransformedComponentDefinition, ComponentRegistry } from '@/types';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { Stack } from '@/types/stacks';
-import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 // Stacks configuration — same source of truth used by executor.ts
-import stacksConfig from '@/features/project-creation/config/stacks.json';
 
 /**
  * Look up a stack by ID from stacks.json
@@ -57,6 +57,63 @@ interface LoadResult {
     stack: Stack;
 }
 
+/** Look up a component definition by type from the registry manager */
+async function findComponentByType(
+    registryManager: { getFrontends: () => Promise<TransformedComponentDefinition[]>; getDependencies: () => Promise<TransformedComponentDefinition[]>; getAppBuilder: () => Promise<TransformedComponentDefinition[]>; getComponentById: (id: string) => Promise<TransformedComponentDefinition | undefined> },
+    comp: { id: string; type: string },
+): Promise<TransformedComponentDefinition | undefined> {
+    if (comp.type === 'frontend') {
+        const frontends = await registryManager.getFrontends();
+        return frontends.find((f: { id: string }) => f.id === comp.id);
+    }
+    if (comp.type === 'dependency') {
+        const deps = await registryManager.getDependencies();
+        return deps.find((d: { id: string }) => d.id === comp.id);
+    }
+    if (comp.type === 'app-builder') {
+        const apps = await registryManager.getAppBuilder();
+        return apps.find((a: { id: string }) => a.id === comp.id);
+    }
+    return undefined;
+}
+
+/** Build the flat component list from stack + saved addons */
+function buildComponentList(
+    stack: Stack,
+    project: Project,
+    frontendSubmoduleIds: Set<string>,
+): { id: string; type: string }[] {
+    const frontend = stack.frontend;
+    const dependencies = stack.dependencies || [];
+    const filteredDependencies = dependencies.filter(
+        (id: string) => !frontendSubmoduleIds.has(id),
+    );
+    const appBuilder = (project.selectedAddons || []).filter(
+        addon => !stack.optionalAddons?.some(opt => opt.id === addon),
+    );
+    return [
+        ...(frontend ? [{ id: frontend, type: 'frontend' }] : []),
+        ...filteredDependencies.map((id: string) => ({ id, type: 'dependency' })),
+        ...appBuilder.map((id: string) => ({ id, type: 'app-builder' })),
+    ];
+}
+
+/** Get frontend submodule IDs to exclude from dependency loop */
+async function getFrontendSubmoduleIds(
+    registryManager: { getFrontends: () => Promise<TransformedComponentDefinition[]> },
+    frontend: string | undefined,
+): Promise<Set<string>> {
+    const ids = new Set<string>();
+    if (frontend) {
+        const frontends = await registryManager.getFrontends();
+        const frontendDef = frontends.find((f: { id: string }) => f.id === frontend);
+        if (frontendDef?.submodules) {
+            Object.keys(frontendDef.submodules).forEach(id => ids.add(id));
+        }
+    }
+    return ids;
+}
+
 /**
  * Reconstruct component definitions from saved project state.
  *
@@ -85,49 +142,13 @@ async function loadComponentDefinitionsFromProject(
         );
     }
 
-    const frontend = stack.frontend;
-    const dependencies = stack.dependencies || [];
-
-    // Get frontend's submodule IDs to exclude from dependency loop
-    const frontendSubmoduleIds = new Set<string>();
-    if (frontend) {
-        const frontends = await registryManager.getFrontends();
-        const frontendDef = frontends.find((f: { id: string }) => f.id === frontend);
-        if (frontendDef?.submodules) {
-            Object.keys(frontendDef.submodules).forEach(id => frontendSubmoduleIds.add(id));
-        }
-    }
-
-    const filteredDependencies = dependencies.filter(
-        (id: string) => !frontendSubmoduleIds.has(id),
-    );
-
-    // Build component list from stack + saved addons (exclude submodule addons)
-    const appBuilder = (project.selectedAddons || []).filter(
-        addon => !stack.optionalAddons?.some(opt => opt.id === addon),
-    );
-
-    const allComponents = [
-        ...(frontend ? [{ id: frontend, type: 'frontend' }] : []),
-        ...filteredDependencies.map((id: string) => ({ id, type: 'dependency' })),
-        ...appBuilder.map((id: string) => ({ id, type: 'app-builder' })),
-    ];
+    const frontendSubmoduleIds = await getFrontendSubmoduleIds(registryManager, stack.frontend);
+    const allComponents = buildComponentList(stack, project, frontendSubmoduleIds);
 
     const componentDefinitions: Map<string, ComponentDefinitionEntry> = new Map();
 
     for (const comp of allComponents) {
-        let componentDef: TransformedComponentDefinition | undefined;
-
-        if (comp.type === 'frontend') {
-            const frontends = await registryManager.getFrontends();
-            componentDef = frontends.find((f: { id: string }) => f.id === comp.id);
-        } else if (comp.type === 'dependency') {
-            const deps = await registryManager.getDependencies();
-            componentDef = deps.find((d: { id: string }) => d.id === comp.id);
-        } else if (comp.type === 'app-builder') {
-            const apps = await registryManager.getAppBuilder();
-            componentDef = apps.find((a: { id: string }) => a.id === comp.id);
-        }
+        let componentDef = await findComponentByType(registryManager, comp);
 
         // Fallback: search all sections (e.g., mesh in "mesh" section)
         if (!componentDef) {
@@ -235,6 +256,131 @@ async function regenerateEnvFiles(
 
         await generateComponentEnvFile(componentPath, compId, definition, envContext);
         context.logger.debug(`[ProjectReset] Regenerated .env for ${definition.name}`);
+    }
+}
+
+// ==========================================================
+// Mesh Redeployment
+// ==========================================================
+
+/** Ensure Adobe I/O authentication, prompting sign-in if expired */
+async function ensureAdobeAuth(
+    project: Project,
+    context: HandlerContext,
+    logPrefix: string,
+    vscode: typeof import('vscode'),
+): Promise<boolean> {
+    const { ServiceLocator } = await import('@/core/di');
+    const authService = ServiceLocator.getAuthenticationService();
+    const isAuthenticated = await authService.isAuthenticated();
+
+    if (!isAuthenticated) {
+        context.logger.info(`${logPrefix} Adobe I/O token expired, prompting sign-in`);
+        const signInButton = 'Sign In';
+        const selection = await vscode.window.showWarningMessage(
+            'Your Adobe I/O session has expired. Sign in to redeploy the API Mesh, or skip to finish without redeploying.',
+            signInButton,
+            'Skip',
+        );
+
+        if (selection === signInButton) {
+            const loginSuccess = await authService.loginAndRestoreProjectContext({
+                organization: project.adobe?.organization,
+                projectId: project.adobe?.projectId,
+                workspace: project.adobe?.workspace,
+            });
+            if (!loginSuccess) {
+                context.logger.warn(`${logPrefix} Sign-in failed, skipping mesh redeploy`);
+            }
+        }
+    }
+
+    return authService.isAuthenticated();
+}
+
+/** Set Adobe org/project/workspace context for mesh deployment */
+async function restoreAdobeContext(
+    project: Project,
+    progress: { report: (value: { message: string }) => void },
+): Promise<void> {
+    const { ServiceLocator } = await import('@/core/di');
+    const authService = ServiceLocator.getAuthenticationService();
+
+    progress.report({ message: 'Setting Adobe context...' });
+    if (project.adobe?.organization) {
+        await authService.selectOrganization(project.adobe.organization);
+    }
+    if (project.adobe?.projectId && project.adobe?.organization) {
+        await authService.selectProject(project.adobe.projectId, project.adobe.organization);
+    }
+    if (project.adobe?.workspace && project.adobe?.projectId) {
+        await authService.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
+    }
+}
+
+/** Handle mesh redeployment during project reset */
+async function handleMeshRedeployment(
+    project: Project,
+    context: HandlerContext,
+    logPrefix: string,
+    progress: { report: (value: { message: string }) => void },
+    vscode: typeof import('vscode'),
+): Promise<{ redeployed: boolean; earlyReturn?: HandlerResponse } | null> {
+    const { getMeshComponentInstance } = await import('@/types/typeGuards');
+    const meshComponent = getMeshComponentInstance(project);
+
+    if (!meshComponent?.path) return null;
+
+    progress.report({ message: 'Checking Adobe I/O authentication...' });
+    const isAuthenticated = await ensureAdobeAuth(project, context, logPrefix, vscode);
+
+    if (!isAuthenticated) {
+        context.logger.info(`${logPrefix} Not authenticated, skipping mesh redeploy`);
+        return { redeployed: false };
+    }
+
+    await restoreAdobeContext(project, progress);
+
+    progress.report({ message: 'Redeploying API Mesh...' });
+    context.logger.info(`${logPrefix} Redeploying mesh`);
+
+    try {
+        const { deployMeshComponent } = await import('@/features/mesh/services/meshDeployment');
+        const { fetchMeshInfoFromAdobeIO } = await import('@/features/mesh/services/meshVerifier');
+        const { ServiceLocator } = await import('@/core/di');
+        const commandManager = ServiceLocator.getCommandExecutor();
+
+        const meshInfo = await fetchMeshInfoFromAdobeIO(context.logger);
+        const existingMeshId = meshInfo?.meshId || '';
+
+        const meshResult = await deployMeshComponent(
+            meshComponent.path,
+            commandManager,
+            context.logger,
+            (_msg, sub) => progress.report({ message: sub || _msg }),
+            existingMeshId,
+        );
+
+        if (meshResult.success && meshResult.data?.endpoint) {
+            const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
+            await updateMeshState(project, meshResult.data.endpoint);
+            context.logger.info(`${logPrefix} Mesh redeployed: ${meshResult.data.endpoint}`);
+            return { redeployed: true };
+        }
+        throw new Error(meshResult.error || 'Mesh deployment failed');
+    } catch (meshError) {
+        context.logger.error(`${logPrefix} Mesh redeployment failed`, meshError as Error);
+        project.status = 'ready';
+        await context.stateManager.saveProject(project);
+
+        void vscode.window.showWarningMessage(
+            `"${project.name}" reset successfully, but mesh redeployment failed: ${(meshError as Error).message}. You can redeploy manually from the dashboard.`,
+        );
+
+        return {
+            redeployed: false,
+            earlyReturn: { success: true, error: `Reset completed but mesh redeployment failed: ${(meshError as Error).message}` },
+        };
     }
 }
 
@@ -366,95 +512,11 @@ export async function resetProjectWithUI(
                 );
 
                 // Step 6: Redeploy API Mesh (if project has mesh)
-                const { getMeshComponentInstance } = await import('@/types/typeGuards');
-                const meshComponent = getMeshComponentInstance(project);
-
-                let meshRedeployed = false;
-                if (meshComponent?.path) {
-                    progress.report({ message: 'Checking Adobe I/O authentication...' });
-                    const { ServiceLocator } = await import('@/core/di');
-                    const authService = ServiceLocator.getAuthenticationService();
-                    const isAuthenticated = await authService.isAuthenticated();
-
-                    if (!isAuthenticated) {
-                        context.logger.info(`${logPrefix} Adobe I/O token expired, prompting sign-in`);
-                        const signInButton = 'Sign In';
-                        const selection = await vscode.window.showWarningMessage(
-                            'Your Adobe I/O session has expired. Sign in to redeploy the API Mesh, or skip to finish without redeploying.',
-                            signInButton,
-                            'Skip',
-                        );
-
-                        if (selection === signInButton) {
-                            const loginSuccess = await authService.loginAndRestoreProjectContext({
-                                organization: project.adobe?.organization,
-                                projectId: project.adobe?.projectId,
-                                workspace: project.adobe?.workspace,
-                            });
-                            if (!loginSuccess) {
-                                context.logger.warn(`${logPrefix} Sign-in failed, skipping mesh redeploy`);
-                            }
-                        }
-                    }
-
-                    // Only deploy if authenticated (either already or after sign-in)
-                    const isNowAuthenticated = await authService.isAuthenticated();
-                    if (isNowAuthenticated) {
-                        progress.report({ message: 'Setting Adobe context...' });
-                        if (project.adobe?.organization) {
-                            await authService.selectOrganization(project.adobe.organization);
-                        }
-                        if (project.adobe?.projectId && project.adobe?.organization) {
-                            await authService.selectProject(project.adobe.projectId, project.adobe.organization);
-                        }
-                        if (project.adobe?.workspace && project.adobe?.projectId) {
-                            await authService.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
-                        }
-
-                        progress.report({ message: 'Redeploying API Mesh...' });
-                        context.logger.info(`${logPrefix} Redeploying mesh`);
-
-                        try {
-                            const { deployMeshComponent } = await import('@/features/mesh/services/meshDeployment');
-                            const { fetchMeshInfoFromAdobeIO } = await import('@/features/mesh/services/meshVerifier');
-                            const commandManager = ServiceLocator.getCommandExecutor();
-
-                            // Query Adobe I/O for existing mesh ID (context already set above)
-                            const meshInfo = await fetchMeshInfoFromAdobeIO(context.logger);
-                            const existingMeshId = meshInfo?.meshId || '';
-
-                            const meshResult = await deployMeshComponent(
-                                meshComponent.path,
-                                commandManager,
-                                context.logger,
-                                (_msg, sub) => progress.report({ message: sub || _msg }),
-                                existingMeshId,
-                            );
-
-                            if (meshResult.success && meshResult.data?.endpoint) {
-                                const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
-                                await updateMeshState(project, meshResult.data.endpoint);
-                                meshRedeployed = true;
-                                context.logger.info(`${logPrefix} Mesh redeployed: ${meshResult.data.endpoint}`);
-                            } else {
-                                throw new Error(meshResult.error || 'Mesh deployment failed');
-                            }
-                        } catch (meshError) {
-                            context.logger.error(`${logPrefix} Mesh redeployment failed`, meshError as Error);
-                            // Partial success — reset worked but mesh failed
-                            project.status = 'ready';
-                            await context.stateManager.saveProject(project);
-
-                            void vscode.window.showWarningMessage(
-                                `"${project.name}" reset successfully, but mesh redeployment failed: ${(meshError as Error).message}. You can redeploy manually from the dashboard.`,
-                            );
-
-                            return { success: true, error: `Reset completed but mesh redeployment failed: ${(meshError as Error).message}` };
-                        }
-                    } else {
-                        context.logger.info(`${logPrefix} Not authenticated, skipping mesh redeploy`);
-                    }
-                }
+                const meshRedeployResult = await handleMeshRedeployment(
+                    project, context, logPrefix, progress, vscode,
+                );
+                if (meshRedeployResult?.earlyReturn) return meshRedeployResult.earlyReturn;
+                const meshRedeployed = meshRedeployResult?.redeployed ?? false;
 
                 // Save final project state
                 project.status = 'ready';

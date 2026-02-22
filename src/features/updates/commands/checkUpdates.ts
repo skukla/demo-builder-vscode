@@ -4,9 +4,9 @@ import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { sanitizeErrorForLogging } from '@/core/validation';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
-import { UpdateManager, MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
-import { TemplateUpdateChecker, TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import { TemplateUpdateChecker, TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
+import { UpdateManager, MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
 import { Project } from '@/types';
 
 /**
@@ -183,7 +183,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                         components: [],
                     });
                 }
-                projectComponentMap.get(project.path)!.components.push({
+                projectComponentMap.get(project.path)?.components.push({
                     componentId: update.componentId,
                     currentVersion,
                     latestVersion: update.latestVersion,
@@ -221,7 +221,10 @@ export class CheckUpdatesCommand extends BaseCommand {
         // Add template update data
         for (const { project, update } of templateUpdates) {
             if (projectDataMap.has(project.path)) {
-                projectDataMap.get(project.path)!.templateUpdate = update;
+                const projectData = projectDataMap.get(project.path);
+                if (projectData) {
+                    projectData.templateUpdate = update;
+                }
             } else {
                 projectDataMap.set(project.path, {
                     project,
@@ -334,7 +337,7 @@ export class CheckUpdatesCommand extends BaseCommand {
             if (!projectUpdates.has(key)) {
                 projectUpdates.set(key, []);
             }
-            projectUpdates.get(key)!.push(selection);
+            projectUpdates.get(key)?.push(selection);
         }
 
         // Check for running demos first (before showing progress)

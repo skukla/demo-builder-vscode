@@ -7,7 +7,6 @@ import {
     mockNodePrereq,
     mockNpmPrereq,
     mockAdobeCliPrereq,
-    mockNodeResult,
 } from './continueHandler.testUtils';
 
 // Mock dependencies - but keep handlePrerequisiteCheckError real

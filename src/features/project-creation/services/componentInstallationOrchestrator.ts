@@ -9,9 +9,9 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { ProgressTracker } from '../handlers/shared';
+import { ComponentManager } from '@/features/components/services/componentManager';
 import type { Project, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
-import { ComponentManager } from '@/features/components/services/componentManager';
 
 export interface ComponentDefinitionEntry {
     definition: TransformedComponentDefinition;
@@ -84,8 +84,11 @@ export async function cloneAllComponents(
     const cloneResults = await Promise.all(clonePromises);
 
     // Update project with all cloned components
+    if (!project.componentInstances) {
+        project.componentInstances = {};
+    }
     for (const { compId, component } of cloneResults) {
-        project.componentInstances![compId] = component;
+        project.componentInstances[compId] = component;
     }
 
     // Save project state after all clones (show components in sidebar)
@@ -129,7 +132,7 @@ export async function installAllComponents(
 
     // Update all component statuses to ready
     for (const [compId] of componentDefinitions) {
-        const componentInstance = project.componentInstances![compId];
+        const componentInstance = project.componentInstances?.[compId];
         if (componentInstance) {
             componentInstance.status = 'ready';
             componentInstance.lastUpdated = new Date();

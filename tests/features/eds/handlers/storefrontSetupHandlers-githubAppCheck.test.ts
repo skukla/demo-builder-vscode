@@ -46,7 +46,7 @@ describe('Storefront Setup - GitHub App Check (Phase 2.5)', () => {
             // Given: GitHub App not installed for existing repo
             const repoOwner = 'test-user';
             const repoName = 'existing-repo';
-            const isInstalled = false;
+            const _isInstalled = false;
 
             // When: Building the message payload
             const messageType = 'storefront-setup-github-app-required';
@@ -67,7 +67,7 @@ describe('Storefront Setup - GitHub App Check (Phase 2.5)', () => {
 
         it('should return early with GitHub App installation required error', () => {
             // Given: GitHub App not installed
-            const isInstalled = false;
+            const _isInstalled = false;
             const repoUrl = 'https://github.com/test-user/existing-repo';
             const repoOwner = 'test-user';
             const repoName = 'existing-repo';
@@ -101,8 +101,8 @@ describe('Storefront Setup - GitHub App Check (Phase 2.5)', () => {
 
         it('should log verification success for existing repos', () => {
             // Given: GitHub App verified
-            const repoOwner = 'test-user';
-            const repoName = 'existing-repo';
+            const _repoOwner = 'test-user';
+            const _repoName = 'existing-repo';
             const codeStatus = 200;
 
             // When: Building log message
@@ -122,8 +122,8 @@ describe('Storefront Setup - GitHub App Check (Phase 2.5)', () => {
          */
         it('should NOT check GitHub App for pre-created new repos', () => {
             // Given: Repo was pre-created in GitHubRepoSelectionStep
-            const repoMode = 'new' as const;
-            const usePreCreatedRepo = true;
+            const _repoMode = 'new' as const;
+            const _usePreCreatedRepo = true;
             const useExistingRepo = false;
 
             // When: Determining if Phase 2.5 check should run

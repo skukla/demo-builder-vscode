@@ -100,9 +100,17 @@ export function useAuthStatus({
         webviewClient.requestAuth(force);
     }, [state.adobeAuth, state.adobeOrg?.id, updateState]);
 
-    // Check authentication on mount
+    // Check authentication on mount and subscribe to auth-status messages
+    // Refs are used inside the handler to read latest state without re-subscribing
+    const stateRef = useRef(state);
+    stateRef.current = state;
+    const updateStateRef = useRef(updateState);
+    updateStateRef.current = updateState;
+    const checkAuthenticationRef = useRef(checkAuthentication);
+    checkAuthenticationRef.current = checkAuthentication;
+
     useEffect(() => {
-        checkAuthentication();
+        checkAuthenticationRef.current();
 
         const unsubscribe = webviewClient.onMessage('auth-status', (data) => {
             const authData = data as AuthStatusData;
@@ -117,9 +125,9 @@ export function useAuthStatus({
             // Check for timeout using typed error code
             if (authData.code === ErrorCode.TIMEOUT) {
                 setAuthTimeout(true);
-                updateState({
+                updateStateRef.current({
                     adobeAuth: {
-                        ...state.adobeAuth,
+                        ...stateRef.current.adobeAuth,
                         isChecking: false,
                         error: authData.error || 'timeout',
                         code: authData.code,
@@ -145,7 +153,7 @@ export function useAuthStatus({
             // IMPORTANT: Only compare when we have an actual newOrgId (auth complete)
             // Skip comparison when newOrgId is undefined (still checking)
             const newOrgId = authData.organization?.id;
-            const previousOrgId = preAuthOrgIdRef.current ?? state.adobeOrg?.id;
+            const previousOrgId = preAuthOrgIdRef.current ?? stateRef.current.adobeOrg?.id;
             const orgChanged = newOrgId !== undefined &&
                                previousOrgId !== undefined &&
                                previousOrgId !== newOrgId;
@@ -163,7 +171,7 @@ export function useAuthStatus({
             // Clear the ref after comparison
             preAuthOrgIdRef.current = undefined;
 
-            updateState({
+            updateStateRef.current({
                 adobeAuth: {
                     isAuthenticated: authData.isAuthenticated,
                     isChecking: authData.isChecking !== undefined ? authData.isChecking : false,

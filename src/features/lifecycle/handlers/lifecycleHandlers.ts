@@ -12,12 +12,12 @@
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import * as vscode from 'vscode';
+import { toggleLogsPanel } from '../services/lifecycleService';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { openUrl } from '@/core/utils/browserUtils';
 import { validateProjectPath, validateURL } from '@/core/validation';
-import { toggleLogsPanel } from '../services/lifecycleService';
 import { ErrorCode } from '@/types/errorCodes';
+import { defineHandlers } from '@/types/handlers';
 import { SimpleResult, DataResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 
@@ -360,7 +360,6 @@ async function loadComponents(context: HandlerContext): Promise<void> {
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
 
-import { defineHandlers } from '@/types/handlers';
 
 /**
  * Lifecycle feature handler map

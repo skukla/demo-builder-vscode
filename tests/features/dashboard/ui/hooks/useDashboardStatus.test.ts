@@ -7,7 +7,7 @@
  * @jest-environment jsdom
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 
 // Mock the WebviewClient - must be before import
 jest.mock('@/core/ui/utils/WebviewClient', () => ({

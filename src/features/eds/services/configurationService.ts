@@ -16,9 +16,9 @@
  * @module features/eds/services/configurationService
  */
 
+import type { TokenProvider } from './daLiveContentOperations';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-import type { TokenProvider } from './daLiveContentOperations';
 
 // ==========================================================
 // Constants

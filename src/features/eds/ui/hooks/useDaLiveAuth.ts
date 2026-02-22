@@ -11,7 +11,7 @@
  * 3. User pastes token in VS Code → Token validated and stored
  */
 
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { type MutableRefObject, useEffect, useCallback, useRef, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { WizardState, EDSConfig } from '@/types/webview';
@@ -96,6 +96,100 @@ interface UseDaLiveAuthReturn {
     /** Cancel current auth attempt (reset isAuthenticating without clearing token) */
     cancelAuth: () => void;
 }
+
+// ==========================================================
+// Message Handler Helpers
+// ==========================================================
+
+type EdsConfigRef = MutableRefObject<EDSConfig | undefined>;
+type UpdateStateRef = MutableRefObject<(updates: Partial<WizardState>) => void>;
+type UpdateDaLiveAuthRef = MutableRefObject<(updates: Partial<NonNullable<EDSConfig['daLiveAuth']>>) => void>;
+
+/** Build an edsConfig update object with org and auth state. */
+function buildEdsConfigWithOrg(
+    edsConfigRef: EdsConfigRef,
+    orgName: string,
+    authUpdates: Partial<NonNullable<EDSConfig['daLiveAuth']>>,
+): Partial<WizardState> {
+    return {
+        edsConfig: {
+            ...edsConfigRef.current,
+            accsHost: edsConfigRef.current?.accsHost || '',
+            storeViewCode: edsConfigRef.current?.storeViewCode || '',
+            customerGroup: edsConfigRef.current?.customerGroup || '',
+            repoName: edsConfigRef.current?.repoName || '',
+            daLiveOrg: orgName,
+            daLiveSite: edsConfigRef.current?.daLiveSite || '',
+            daLiveAuth: {
+                ...edsConfigRef.current?.daLiveAuth,
+                isAuthenticated: edsConfigRef.current?.daLiveAuth?.isAuthenticated || false,
+                ...authUpdates,
+            },
+        },
+    };
+}
+
+/** Handle 'dalive-auth-status' message: update state based on auth and org presence. */
+function handleAuthStatusUpdate(
+    authData: DaLiveAuthStatusData,
+    edsConfigRef: EdsConfigRef,
+    updateStateRef: UpdateStateRef,
+    updateDaLiveAuthRef: UpdateDaLiveAuthRef,
+): void {
+    if (authData.isAuthenticated && authData.orgName) {
+        updateStateRef.current(buildEdsConfigWithOrg(edsConfigRef, authData.orgName, {
+            isAuthenticated: true, isAuthenticating: false, error: undefined,
+        }));
+    } else if (!authData.isAuthenticated && authData.orgName) {
+        updateStateRef.current(buildEdsConfigWithOrg(edsConfigRef, authData.orgName, {
+            isAuthenticated: false, isAuthenticating: false, error: authData.error,
+        }));
+    } else {
+        updateDaLiveAuthRef.current({
+            isAuthenticated: authData.isAuthenticated,
+            isAuthenticating: false,
+            error: authData.error,
+        });
+    }
+}
+
+/** Handle 'dalive-token-stored' message. */
+function handleTokenStored(
+    storedData: DaLiveTokenStoredData,
+    updateDaLiveAuthRef: UpdateDaLiveAuthRef,
+): void {
+    if (storedData.success) {
+        updateDaLiveAuthRef.current({ isAuthenticated: true, isAuthenticating: false, error: undefined });
+    } else {
+        updateDaLiveAuthRef.current({
+            isAuthenticated: false, isAuthenticating: false,
+            error: storedData.error || 'Failed to store token',
+        });
+    }
+}
+
+/** Handle 'dalive-token-with-org-result' message. */
+function handleTokenWithOrgResult(
+    resultData: DaLiveTokenWithOrgResultData,
+    edsConfigRef: EdsConfigRef,
+    updateStateRef: UpdateStateRef,
+    updateDaLiveAuthRef: UpdateDaLiveAuthRef,
+): void {
+    if (resultData.success && resultData.orgName) {
+        updateStateRef.current(buildEdsConfigWithOrg(edsConfigRef, resultData.orgName, {
+            isAuthenticated: true, isAuthenticating: false, error: undefined,
+        }));
+    } else {
+        updateDaLiveAuthRef.current({
+            isAuthenticated: false, isAuthenticating: false,
+            error: resultData.error || 'Failed to verify organization',
+        });
+    }
+}
+
+// ==========================================================
+// Hook
+// ==========================================================
 
 /**
  * Hook for managing DA.live authentication state
@@ -228,101 +322,36 @@ export function useDaLiveAuth({
         const unsubscribeStatus = webviewClient.onMessage('dalive-auth-status', (data) => {
             const authData = data as DaLiveAuthStatusData;
             log.debug('Received DA.live auth status:', authData);
-
-            // Initial check complete
             setIsChecking(false);
 
-            // Track setup completion status
             if (authData.setupComplete !== undefined) {
                 setupCompleteRef.current = authData.setupComplete;
             }
-
-            // Store bookmarklet URL if provided (eagerly sent with auth status)
             if (authData.bookmarkletUrl) {
                 setBookmarkletUrl(authData.bookmarkletUrl);
             }
 
-            // If backend returned cached org name, store it in edsConfig
-            if (authData.isAuthenticated && authData.orgName) {
-                updateStateRef.current({
-                    edsConfig: {
-                        ...edsConfigRef.current,
-                        accsHost: edsConfigRef.current?.accsHost || '',
-                        storeViewCode: edsConfigRef.current?.storeViewCode || '',
-                        customerGroup: edsConfigRef.current?.customerGroup || '',
-                        repoName: edsConfigRef.current?.repoName || '',
-                        daLiveOrg: authData.orgName,
-                        daLiveSite: edsConfigRef.current?.daLiveSite || '',
-                        daLiveAuth: {
-                            ...edsConfigRef.current?.daLiveAuth,
-                            isAuthenticated: true,
-                            isAuthenticating: false,
-                            error: undefined,
-                        },
-                    },
-                });
-            } else if (!authData.isAuthenticated && authData.orgName) {
-                // Not authenticated but have a default org — pre-fill it
-                updateStateRef.current({
-                    edsConfig: {
-                        ...edsConfigRef.current,
-                        accsHost: edsConfigRef.current?.accsHost || '',
-                        storeViewCode: edsConfigRef.current?.storeViewCode || '',
-                        customerGroup: edsConfigRef.current?.customerGroup || '',
-                        repoName: edsConfigRef.current?.repoName || '',
-                        daLiveOrg: authData.orgName,
-                        daLiveSite: edsConfigRef.current?.daLiveSite || '',
-                        daLiveAuth: {
-                            ...edsConfigRef.current?.daLiveAuth,
-                            isAuthenticated: false,
-                            isAuthenticating: false,
-                            error: authData.error,
-                        },
-                    },
-                });
-            } else {
-                updateDaLiveAuthRef.current({
-                    isAuthenticated: authData.isAuthenticated,
-                    isAuthenticating: false,
-                    error: authData.error,
-                });
-            }
+            handleAuthStatusUpdate(authData, edsConfigRef, updateStateRef, updateDaLiveAuthRef);
         });
 
         // Listen for login opened (returns bookmarklet URL)
         const unsubscribeOpened = webviewClient.onMessage('dalive-login-opened', (data) => {
             const openedData = data as DaLiveLoginOpenedData;
             log.debug('DA.live login opened, bookmarklet URL received');
-
             setBookmarkletUrl(openedData.bookmarkletUrl);
-            // Keep isAuthenticating true - user needs to paste token
         });
 
         // Listen for token stored
         const unsubscribeStored = webviewClient.onMessage('dalive-token-stored', (data) => {
             const storedData = data as DaLiveTokenStoredData;
             log.debug('DA.live token stored:', storedData);
-
-            if (storedData.success) {
-                updateDaLiveAuthRef.current({
-                    isAuthenticated: true,
-                    isAuthenticating: false,
-                    error: undefined,
-                });
-            } else {
-                updateDaLiveAuthRef.current({
-                    isAuthenticated: false,
-                    isAuthenticating: false,
-                    error: storedData.error || 'Failed to store token',
-                });
-            }
+            handleTokenStored(storedData, updateDaLiveAuthRef);
         });
 
         // Listen for auth errors
         const unsubscribeError = webviewClient.onMessage('dalive-auth-error', (data) => {
             const errorData = data as { error: string };
             log.error('DA.live auth error:', errorData.error);
-
             updateDaLiveAuthRef.current({
                 isAuthenticated: false,
                 isAuthenticating: false,
@@ -334,33 +363,7 @@ export function useDaLiveAuth({
         const unsubscribeTokenWithOrg = webviewClient.onMessage('dalive-token-with-org-result', (data) => {
             const resultData = data as DaLiveTokenWithOrgResultData;
             log.debug('DA.live token with org result:', resultData);
-
-            if (resultData.success && resultData.orgName) {
-                // Store the verified org in edsConfig so DataSourceConfigStep can use it
-                updateStateRef.current({
-                    edsConfig: {
-                        ...edsConfigRef.current,
-                        accsHost: edsConfigRef.current?.accsHost || '',
-                        storeViewCode: edsConfigRef.current?.storeViewCode || '',
-                        customerGroup: edsConfigRef.current?.customerGroup || '',
-                        repoName: edsConfigRef.current?.repoName || '',
-                        daLiveOrg: resultData.orgName,
-                        daLiveSite: edsConfigRef.current?.daLiveSite || '',
-                        daLiveAuth: {
-                            ...edsConfigRef.current?.daLiveAuth,
-                            isAuthenticated: true,
-                            isAuthenticating: false,
-                            error: undefined,
-                        },
-                    },
-                });
-            } else {
-                updateDaLiveAuthRef.current({
-                    isAuthenticated: false,
-                    isAuthenticating: false,
-                    error: resultData.error || 'Failed to verify organization',
-                });
-            }
+            handleTokenWithOrgResult(resultData, edsConfigRef, updateStateRef, updateDaLiveAuthRef);
         });
 
         return () => {

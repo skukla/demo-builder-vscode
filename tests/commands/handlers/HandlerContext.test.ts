@@ -7,8 +7,8 @@
 import {
     HandlerContext,
     SharedState,
-    MessageHandler,
-    HandlerResponse,
+    type MessageHandler,
+    type HandlerResponse,
     PrerequisiteCheckState,
     ApiServicesConfig
 } from '@/commands/handlers/HandlerContext';
@@ -30,7 +30,7 @@ describe('HandlerContext', () => {
         });
 
         it('should export MessageHandler type', () => {
-            const handler: MessageHandler = async (context, payload) => {
+            const handler: MessageHandler = async (_context, _payload) => {
                 return { success: true };
             };
             expect(handler).toBeDefined();
@@ -200,7 +200,7 @@ describe('HandlerContext', () => {
 
     describe('MessageHandler Function Type', () => {
         it('should accept context and return promise', async () => {
-            const handler: MessageHandler = async (context) => {
+            const handler: MessageHandler = async (_context) => {
                 return { success: true };
             };
 
@@ -211,7 +211,7 @@ describe('HandlerContext', () => {
         });
 
         it('should accept context and payload', async () => {
-            const handler: MessageHandler<{ value: string }> = async (context, payload) => {
+            const handler: MessageHandler<{ value: string }> = async (_context, payload) => {
                 return { success: true, data: payload?.value };
             };
 
@@ -228,7 +228,7 @@ describe('HandlerContext', () => {
                 workspaceId: string;
             }
 
-            const handler: MessageHandler<TestPayload> = async (context, payload) => {
+            const handler: MessageHandler<TestPayload> = async (_context, payload) => {
                 return {
                     success: true,
                     data: `${payload?.projectId}/${payload?.workspaceId}`

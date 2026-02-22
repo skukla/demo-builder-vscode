@@ -13,13 +13,12 @@
  */
 
 import * as vscode from 'vscode';
-import { getCacheTTLWithJitter, isExpired, createCacheEntry } from '@/core/cache/cacheUtils';
-import type { CacheEntry } from '@/core/cache/cacheUtils';
+import { DaLiveContentOperations } from './daLiveContentOperations';
+import type { GitHubTokenService } from './githubTokenService';
+import { getCacheTTLWithJitter, isExpired, createCacheEntry, type CacheEntry } from '@/core/cache/cacheUtils';
 import { getLogger } from '@/core/logging';
 import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-import { DaLiveContentOperations } from './daLiveContentOperations';
-import type { GitHubTokenService } from './githubTokenService';
 
 // ==========================================================
 // Constants
@@ -36,7 +35,7 @@ const DEFAULT_BRANCH = 'main';
  * @see https://www.aem.live/docs/admin.html
  */
 interface BulkJobResponse {
-    /** Job information for async operations */
+    /** Job information for async operations (nested format) */
     job?: {
         /** Job name for status tracking */
         name: string;
@@ -47,6 +46,10 @@ interface BulkJobResponse {
     };
     /** Message ID for the bulk operation */
     messageId?: string;
+    /** Job name (flat format - alternative to job.name) */
+    name?: string;
+    /** Topic (flat format - alternative to job.topic) */
+    topic?: string;
 }
 
 /**
@@ -54,14 +57,20 @@ interface BulkJobResponse {
  */
 interface JobStatusResponse {
     /** Current job state */
-    state: 'created' | 'running' | 'stopped';
-    /** Progress information */
+    state: 'created' | 'running' | 'stopped' | 'finished';
+    /** Alternative status field (some API versions use 'status' instead of 'state') */
+    status?: string;
+    /** Progress information (nested format) */
     progress?: {
         /** Number of items processed */
         processed: number;
         /** Total number of items */
         total: number;
     };
+    /** Number of items processed (flat format) */
+    processed?: number;
+    /** Total number of items (flat format) */
+    total?: number;
     /** Error information if job failed */
     error?: string;
     /** Result data when job completes */
@@ -331,17 +340,17 @@ export class HelixService {
                 }
 
                 // Check job state - handle both 'stopped' and 'finished' states
-                if (status.state === 'stopped' || (status as any).state === 'finished' || (status as any).status === 'finished') {
+                if (status.state === 'stopped' || status.state === 'finished' || status.status === 'finished') {
                     // Job completed
-                    if (status.error || (status as any).error) {
-                        throw new Error(`Bulk ${topic} job failed: ${status.error || (status as any).error}`);
+                    if (status.error) {
+                        throw new Error(`Bulk ${topic} job failed: ${status.error}`);
                     }
                     this.logger.debug(`[Helix] Bulk ${topic} job completed successfully`);
                     return;
                 }
 
                 // Job still running, wait and poll again
-                this.logger.debug(`[Helix] Job state: ${status.state || (status as any).status}, progress: ${status.progress?.processed ?? (status as any).processed ?? '?'}/${status.progress?.total ?? (status as any).total ?? '?'}`);
+                this.logger.debug(`[Helix] Job state: ${status.state || status.status}, progress: ${status.progress?.processed ?? status.processed ?? '?'}/${status.progress?.total ?? status.total ?? '?'}`);
                 await new Promise(resolve => setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS));
             } catch (error) {
                 const errorMessage = (error as Error).message;
@@ -803,8 +812,8 @@ export class HelixService {
                 this.logger.warn('[Helix] Could not parse job info from bulk unpublish response');
             }
 
-            const jobName = jobInfo?.job?.name || (jobInfo as any)?.name;
-            const jobTopic = jobInfo?.job?.topic || (jobInfo as any)?.topic || 'live-remove';
+            const jobName = jobInfo?.job?.name || jobInfo?.name;
+            const jobTopic = jobInfo?.job?.topic || jobInfo?.topic || 'live-remove';
 
             if (jobName) {
                 await this.pollJobCompletion(org, site, branch, jobName, jobTopic, undefined, apiKey);
@@ -862,8 +871,8 @@ export class HelixService {
                 this.logger.warn('[Helix] Could not parse job info from bulk delete preview response');
             }
 
-            const jobName = jobInfo?.job?.name || (jobInfo as any)?.name;
-            const jobTopic = jobInfo?.job?.topic || (jobInfo as any)?.topic || 'preview-remove';
+            const jobName = jobInfo?.job?.name || jobInfo?.name;
+            const jobTopic = jobInfo?.job?.topic || jobInfo?.topic || 'preview-remove';
 
             if (jobName) {
                 await this.pollJobCompletion(org, site, branch, jobName, jobTopic, undefined, apiKey);
@@ -1040,8 +1049,8 @@ export class HelixService {
 
             // If we have job info, poll for completion
             // Handle both nested (job.name) and top-level (name) response formats
-            const jobName = jobInfo?.job?.name || (jobInfo as any)?.name;
-            const jobTopic = jobInfo?.job?.topic || (jobInfo as any)?.topic || 'preview';
+            const jobName = jobInfo?.job?.name || jobInfo?.name;
+            const jobTopic = jobInfo?.job?.topic || jobInfo?.topic || 'preview';
 
             if (jobName) {
                 await this.pollJobCompletion(
@@ -1154,8 +1163,8 @@ export class HelixService {
 
             // If we have job info, poll for completion
             // Handle both nested (job.name) and top-level (name) response formats
-            const jobName = jobInfo?.job?.name || (jobInfo as any)?.name;
-            const jobTopic = jobInfo?.job?.topic || (jobInfo as any)?.topic || 'live';
+            const jobName = jobInfo?.job?.name || jobInfo?.name;
+            const jobTopic = jobInfo?.job?.topic || jobInfo?.topic || 'live';
 
             if (jobName) {
                 await this.pollJobCompletion(

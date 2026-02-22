@@ -19,11 +19,11 @@ import {
 describe('useFocusTrap - Focus Management', () => {
   let container: HTMLDivElement;
   let button1: HTMLButtonElement;
-  let button2: HTMLButtonElement;
+  let _button2: HTMLButtonElement;
   let button3: HTMLButtonElement;
 
   beforeEach(() => {
-    ({ container, button1, button2, button3 } = createTestContainer());
+    ({ container, button1, button2: _button2, button3 } = createTestContainer());
   });
 
   afterEach(() => {
@@ -59,7 +59,7 @@ describe('useFocusTrap - Focus Management', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Force effect to re-run with container now set by toggling enabled
@@ -77,7 +77,7 @@ describe('useFocusTrap - Focus Management', () => {
         useFocusTrap({ autoFocus: false, enabled: true })
       );
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       expect(document.activeElement).not.toBe(button1);
@@ -88,7 +88,7 @@ describe('useFocusTrap - Focus Management', () => {
         useFocusTrap({ autoFocus: true, enabled: false })
       );
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       expect(document.activeElement).not.toBe(button1);
@@ -99,7 +99,7 @@ describe('useFocusTrap - Focus Management', () => {
     it('does not trap focus when disabled', () => {
       const { result } = renderHook(() => useFocusTrap({ enabled: false }));
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       button3.focus();
@@ -124,7 +124,7 @@ describe('useFocusTrap - Focus Management', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Start disabled - should not trap
@@ -160,7 +160,7 @@ describe('useFocusTrap - Focus Management', () => {
     it('removes event listener on unmount', () => {
       const { result, unmount } = renderHook(() => useFocusTrap({ enabled: true }));
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Unmount

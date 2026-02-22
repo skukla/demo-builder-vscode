@@ -5,7 +5,7 @@
  * Verifies that unused context types have been removed.
  */
 
-import type { SidebarContext, NavigationTarget, SidebarMessageType } from '@/features/sidebar/types';
+import type { SidebarContext } from '@/features/sidebar/types';
 import type { Project } from '@/types/base';
 
 /**
@@ -172,7 +172,7 @@ describe('Sidebar Types - Supporting Types', () => {
     describe('NavItem type', () => {
         it('should exist and be importable', async () => {
             // NavItem is still used by SidebarNav component
-            const { NavItem } = await import('@/features/sidebar/types');
+            const { NavItem: _NavItem } = await import('@/features/sidebar/types');
             // NavItem is a type, not a value, so we can't directly test it
             // but we can verify the module exports it by checking no error
             expect(true).toBe(true);
@@ -259,11 +259,12 @@ describe('Type Narrowing', () => {
                     return 'Projects Dashboard';
                 case 'project':
                     return `Project: ${context.project.name}`;
-                default:
+                default: {
                     // If all cases are handled, this should be unreachable
                     // TypeScript would error if we forgot a case
                     const exhaustiveCheck: never = context;
                     return exhaustiveCheck;
+                }
             }
         };
 

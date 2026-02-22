@@ -15,8 +15,8 @@
  * - Error Handling (4 tests)
  */
 
-import * as os from 'os';
-import * as path from 'path';
+import * as _os from 'os';
+import * as _path from 'path';
 
 // Mock vscode module
 jest.mock('vscode');
@@ -85,7 +85,7 @@ describe('ToolManager', () => {
     const MOCK_HOME = '/Users/testuser';
     const TOOLS_BASE_PATH = `${MOCK_HOME}/.demo-builder/tools`;
     const INGESTION_TOOL_PATH = `${TOOLS_BASE_PATH}/commerce-demo-ingestion`;
-    const DATA_REPO_PATH = `${TOOLS_BASE_PATH}/vertical-data-citisignal`;
+    const _DATA_REPO_PATH = `${TOOLS_BASE_PATH}/vertical-data-citisignal`;
 
     beforeEach(async () => {
         jest.clearAllMocks();
@@ -654,9 +654,9 @@ describe('ToolManager', () => {
         it('should handle npm install failures', async () => {
             // Given: Clone succeeds but npm install fails
             mockFsAccess.mockRejectedValue(new Error('ENOENT'));
-            let callCount = 0;
+            let _callCount = 0;
             mockCommandExecutor.execute.mockImplementation((cmd: string) => {
-                callCount++;
+                _callCount++;
                 if (cmd.includes('npm install')) {
                     return Promise.resolve({
                         code: 1,

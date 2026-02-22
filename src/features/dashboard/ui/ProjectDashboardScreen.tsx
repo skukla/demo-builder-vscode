@@ -14,8 +14,8 @@ import {
     Link,
 } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useRef } from 'react';
-import { isStartActionDisabled } from './dashboardPredicates';
 import { ActionGrid } from './components/ActionGrid';
+import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
 import { StatusCard } from '@/core/ui/components/feedback';
@@ -140,7 +140,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                 }
             }, TIMEOUTS.UI_UPDATE_DELAY);
         }
-    }, []); // Only on mount
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-once effect for initial focus; focusTimer is stable, projectStatus read only on mount
 
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';

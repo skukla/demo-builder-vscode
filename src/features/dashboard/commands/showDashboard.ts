@@ -3,17 +3,17 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
-import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { createBundleUris } from '@/core/utils/bundleUri';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
+import { loadDemoPackages } from '@/features/project-creation/ui/helpers/demoPackageLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { Project, ComponentInstance } from '@/types';
 import type { DemoPackage } from '@/types/demoPackages';
-import type { Stack, StacksConfig } from '@/types/stacks';
-import { loadDemoPackages } from '@/features/project-creation/ui/helpers/demoPackageLoader';
 import { HandlerContext, SharedState } from '@/types/handlers';
+import type { Stack, StacksConfig } from '@/types/stacks';
 import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
 
 /**
@@ -48,8 +48,11 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     protected async getWebviewContent(): Promise<string> {
+        if (!this.panel) {
+            throw new Error('Panel must be created before getting webview content');
+        }
         const bundleUris = createBundleUris({
-            webview: this.panel!.webview,
+            webview: this.panel.webview,
             extensionPath: this.context.extensionPath,
             featureBundleName: 'dashboard',
         });
@@ -60,7 +63,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         return getWebviewHTMLWithBundles({
             bundleUris,
             nonce,
-            cspSource: this.panel!.webview.cspSource,
+            cspSource: this.panel.webview.cspSource,
             title: 'Project Dashboard',
         });
     }
@@ -81,11 +84,11 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
         // Check if project has mesh: deployed instance, mesh state, or selected dependency
         const hasMeshInstance = Object.values(project?.componentInstances || {}).some(
-            (instance: any) => instance.subType === 'mesh'
+            (instance) => instance.subType === 'mesh',
         );
         const hasMeshState = !!project?.meshState;
         const hasMeshDependency = (project?.componentSelections?.dependencies || []).some(
-            (dep: string) => dep.includes('mesh')
+            (dep: string) => dep.includes('mesh'),
         );
         const hasMesh = hasMeshInstance || hasMeshState || hasMeshDependency;
 
@@ -174,7 +177,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         for (const messageType of messageTypes) {
             comm.onStreaming(messageType, async (data: unknown) => {
                 const context = this.createHandlerContext();
-                return await dispatchHandler(dashboardHandlers, context, messageType, data);
+                return dispatchHandler(dashboardHandlers, context, messageType, data);
             });
         }
     }

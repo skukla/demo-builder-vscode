@@ -11,23 +11,23 @@
  */
 
 import * as vscode from 'vscode';
+import { installBlockCollection } from '../services/blockCollectionHelpers';
+import { CleanupService } from '../services/cleanupService';
+import { ConfigurationService } from '../services/configurationService';
+import { DaLiveAuthService } from '../services/daLiveAuthService';
+import { DaLiveContentOperations, createDaLiveTokenProvider } from '../services/daLiveContentOperations';
+import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
+import { generateFstabContent } from '../services/fstabGenerator';
+import { GitHubAppService } from '../services/githubAppService';
+import { GitHubFileOperations } from '../services/githubFileOperations';
+import { GitHubRepoOperations } from '../services/githubRepoOperations';
+import { GitHubTokenService } from '../services/githubTokenService';
+import { HelixService } from '../services/helixService';
+import { ToolManager } from '../services/toolManager';
+import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
+import { configureDaLivePermissions } from './edsHelpers';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
-import { CleanupService } from '../services/cleanupService';
-import { GitHubRepoOperations } from '../services/githubRepoOperations';
-import { GitHubFileOperations } from '../services/githubFileOperations';
-import { GitHubTokenService } from '../services/githubTokenService';
-import { GitHubAppService } from '../services/githubAppService';
-import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
-import { DaLiveContentOperations, createDaLiveTokenProvider } from '../services/daLiveContentOperations';
-import { DaLiveAuthService } from '../services/daLiveAuthService';
-import { HelixService } from '../services/helixService';
-import { ConfigurationService } from '../services/configurationService';
-import { ToolManager } from '../services/toolManager';
-import { generateFstabContent } from '../services/fstabGenerator';
-import { configureDaLivePermissions } from './edsHelpers';
-import { installBlockCollection } from '../services/blockCollectionHelpers';
 
 // ==========================================================
 // Types
@@ -187,7 +187,7 @@ export async function handleCancelStorefrontSetup(
     }
 
     // Clean up created resources
-    if (hasCreatedResources) {
+    if (hasCreatedResources && partialState) {
         try {
             await context.sendMessage('storefront-setup-progress', {
                 phase: 'cancelling',
@@ -197,7 +197,7 @@ export async function handleCancelStorefrontSetup(
 
             const cleanupResult = await cleanupStorefrontSetupResources(
                 context,
-                partialState!,
+                partialState,
                 edsConfig,
             );
 
@@ -404,6 +404,462 @@ interface StorefrontSetupResult {
 }
 
 /**
+ * Services bundle for storefront setup phases
+ */
+interface SetupServices {
+    githubRepoOps: GitHubRepoOperations;
+    githubFileOps: GitHubFileOperations;
+    githubAppService: GitHubAppService;
+    daLiveContentOps: DaLiveContentOperations;
+    helixService: HelixService;
+    daLiveAuthService: DaLiveAuthService;
+    daLiveTokenProvider: { getAccessToken: () => Promise<string | null> };
+    configurationService: ConfigurationService;
+}
+
+/**
+ * Mutable repo info passed through phases
+ */
+interface RepoInfo {
+    repoUrl?: string;
+    repoOwner: string;
+    repoName: string;
+}
+
+/**
+ * Execute Phase 1: GitHub repository setup (create, use existing, or pre-created)
+ */
+async function executePhaseGitHubRepo(
+    context: HandlerContext,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    signal: AbortSignal,
+    templateOwner: string,
+    templateRepo: string,
+): Promise<StorefrontSetupResult | null> {
+    const logger = context.logger;
+    if (signal.aborted) {
+        throw new Error('Operation cancelled');
+    }
+
+    const repoMode = edsConfig.repoMode || 'new';
+    const useExistingRepo = repoMode === 'existing' && (edsConfig.selectedRepo || edsConfig.existingRepo);
+    const usePreCreatedRepo = repoMode === 'new' && !!edsConfig.createdRepo;
+
+    if (usePreCreatedRepo && edsConfig.createdRepo) {
+        repoInfo.repoOwner = edsConfig.createdRepo.owner;
+        repoInfo.repoName = edsConfig.createdRepo.name;
+        repoInfo.repoUrl = edsConfig.createdRepo.url;
+
+        logger.info(`[Storefront Setup] Using pre-created repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`);
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'github-repo',
+            message: `Using repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
+            progress: 15,
+            ...repoInfo,
+        });
+    } else if (useExistingRepo) {
+        await executePhaseExistingRepo(context, edsConfig, services, repoInfo, templateOwner, templateRepo);
+    } else {
+        await executePhaseNewRepo(context, edsConfig, services, repoInfo, signal, templateOwner, templateRepo);
+    }
+
+    return null;
+}
+
+/**
+ * Handle existing repository setup (parse info, optional reset to template)
+ */
+async function executePhaseExistingRepo(
+    context: HandlerContext,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    templateOwner: string,
+    templateRepo: string,
+): Promise<void> {
+    const logger = context.logger;
+
+    if (edsConfig.selectedRepo) {
+        const [owner, name] = edsConfig.selectedRepo.fullName.split('/');
+        repoInfo.repoOwner = owner;
+        repoInfo.repoName = name;
+        repoInfo.repoUrl = edsConfig.selectedRepo.htmlUrl;
+    } else if (edsConfig.existingRepo) {
+        const [owner, name] = edsConfig.existingRepo.split('/');
+        repoInfo.repoOwner = owner;
+        repoInfo.repoName = name;
+        repoInfo.repoUrl = `https://github.com/${edsConfig.existingRepo}`;
+    }
+
+    logger.info(`[Storefront Setup] Using existing repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`);
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'github-repo',
+        message: `Using existing repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
+        progress: 5,
+        ...repoInfo,
+    });
+
+    if (edsConfig.resetToTemplate) {
+        logger.info('[Storefront Setup] Resetting repository to template...');
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'github-repo', message: 'Resetting repository to template...', progress: 6,
+        });
+
+        await services.githubRepoOps.resetToTemplate(
+            repoInfo.repoOwner, repoInfo.repoName,
+            templateOwner, templateRepo, 'main', 'chore: reset to template',
+        );
+        logger.info('[Storefront Setup] Repository reset to template');
+    }
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'github-repo', message: 'Repository ready', progress: 15, ...repoInfo,
+    });
+}
+
+/**
+ * Handle new repository creation from template
+ */
+async function executePhaseNewRepo(
+    context: HandlerContext,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    signal: AbortSignal,
+    templateOwner: string,
+    templateRepo: string,
+): Promise<void> {
+    const logger = context.logger;
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'github-repo', message: 'Creating GitHub repository from template...', progress: 5,
+    });
+
+    logger.info(`[Storefront Setup] Creating repository: ${repoInfo.repoName}`);
+
+    const repo = await services.githubRepoOps.createFromTemplate(
+        templateOwner, templateRepo, repoInfo.repoName, edsConfig.isPrivate ?? false,
+    );
+
+    repoInfo.repoUrl = repo.htmlUrl;
+    const [owner, name] = repo.fullName.split('/');
+    repoInfo.repoOwner = owner;
+    repoInfo.repoName = name;
+
+    logger.info(`[Storefront Setup] Repository created: ${repoInfo.repoUrl}`);
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'github-repo', message: 'Waiting for repository content...', progress: 10, ...repoInfo,
+    });
+
+    await services.githubRepoOps.waitForContent(repoInfo.repoOwner, repoInfo.repoName, signal);
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'github-repo', message: 'Repository ready', progress: 15, ...repoInfo,
+    });
+}
+
+/**
+ * Execute Phase 2: Helix configuration (fstab.yaml, block collection, GitHub App check)
+ */
+async function executePhaseHelixConfig(
+    context: HandlerContext,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    selectedAddons: string[] | undefined,
+    useExistingRepo: boolean,
+): Promise<{ blockCollectionIds?: string[]; earlyReturn?: StorefrontSetupResult }> {
+    const logger = context.logger;
+    const { githubFileOps } = services;
+
+    if (context.sharedState.storefrontSetupAbortController &&
+        (context.sharedState.storefrontSetupAbortController as AbortController).signal.aborted) {
+        throw new Error('Operation cancelled');
+    }
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'helix-config', message: 'Configuring Edge Delivery Services...', progress: 20,
+    });
+
+    const fstabContent = generateFstabContent({ daLiveOrg: edsConfig.daLiveOrg, daLiveSite: edsConfig.daLiveSite });
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'helix-config', message: 'Pushing fstab.yaml configuration...', progress: 25,
+    });
+
+    const existingFstab = await githubFileOps.getFileContent(repoInfo.repoOwner, repoInfo.repoName, 'fstab.yaml');
+    await githubFileOps.createOrUpdateFile(
+        repoInfo.repoOwner, repoInfo.repoName, 'fstab.yaml', fstabContent,
+        'chore: configure fstab.yaml for DA.live content source', existingFstab?.sha,
+    );
+    logger.info('[Storefront Setup] fstab.yaml pushed to GitHub');
+
+    // Phase 2.1: Commerce Block Collection (if selected)
+    let blockCollectionIds: string[] | undefined;
+    if (selectedAddons?.includes('commerce-block-collection')) {
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'helix-config', message: 'Installing Commerce Block Collection...', progress: 25,
+        });
+        const result = await installBlockCollection(githubFileOps, repoInfo.repoOwner, repoInfo.repoName, logger);
+        if (result.success) {
+            logger.info(`[Storefront Setup] Block collection: ${result.blocksCount} blocks installed`);
+            blockCollectionIds = result.blockIds;
+        } else {
+            logger.warn(`[Storefront Setup] Block collection failed: ${result.error}`);
+        }
+    }
+
+    // Phase 2.5: GitHub App Check (EXISTING repos only)
+    if (useExistingRepo) {
+        const earlyReturn = await checkGitHubAppForExistingRepo(
+            context, services, repoInfo,
+        );
+        if (earlyReturn) {
+            return { blockCollectionIds, earlyReturn };
+        }
+    }
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'helix-config', message: 'Helix configured', progress: 35,
+    });
+
+    return { blockCollectionIds };
+}
+
+/**
+ * Check GitHub App installation for existing repos. Returns early result if not installed.
+ */
+async function checkGitHubAppForExistingRepo(
+    context: HandlerContext,
+    services: SetupServices,
+    repoInfo: RepoInfo,
+): Promise<StorefrontSetupResult | null> {
+    const logger = context.logger;
+    const { githubAppService } = services;
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'helix-config', message: 'Verifying GitHub App installation...', progress: 28,
+    });
+
+    logger.info(`[Storefront Setup] Checking GitHub App for existing repo: ${repoInfo.repoOwner}/${repoInfo.repoName}`);
+    const { isInstalled, codeStatus } = await githubAppService.isAppInstalled(repoInfo.repoOwner, repoInfo.repoName);
+
+    if (!isInstalled) {
+        const installUrl = githubAppService.getInstallUrl(repoInfo.repoOwner, repoInfo.repoName);
+        logger.info(`[Storefront Setup] GitHub App not installed. Install URL: ${installUrl}`);
+
+        await context.sendMessage('storefront-setup-github-app-required', {
+            owner: repoInfo.repoOwner, repo: repoInfo.repoName, installUrl,
+            message: 'The AEM Code Sync GitHub App must be installed to continue.',
+        });
+
+        return { success: false, error: 'GitHub App installation required', ...repoInfo };
+    }
+
+    logger.info(`[Storefront Setup] GitHub App verified for existing repo (code.status: ${codeStatus})`);
+    return null;
+}
+
+/**
+ * Execute Phase 3: Code sync verification and CDN publishing
+ */
+async function executePhaseCodeSync(
+    context: HandlerContext,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    signal: AbortSignal,
+): Promise<StorefrontSetupResult | null> {
+    const logger = context.logger;
+    const { helixService, daLiveAuthService, daLiveTokenProvider } = services;
+
+    // Phase 3: Code Sync Verification
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'code-sync', message: 'Verifying code synchronization...', progress: 40,
+    });
+
+    const codeSyncResult = await verifyCodeSync(
+        context, services, repoInfo, signal,
+    );
+    if (codeSyncResult) return codeSyncResult;
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'code-sync', message: 'Code synchronized', progress: 42,
+    });
+
+    // Phase 3b: Publish Code to CDN
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'code-sync', message: 'Publishing code to CDN...', progress: 43,
+    });
+
+    try {
+        await helixService.previewCode(repoInfo.repoOwner, repoInfo.repoName, '/*', 'main');
+        logger.info('[Storefront Setup] Code published to CDN');
+    } catch (error) {
+        logger.warn(`[Storefront Setup] Code preview warning: ${(error as Error).message}`);
+    }
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'code-sync', message: 'Code synchronized', progress: 45,
+    });
+
+    // Phase 3c: Configure Admin Access
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'code-sync', message: 'Configuring site permissions...', progress: 47,
+    });
+
+    const daLiveEmail = await daLiveAuthService.getUserEmail();
+    const userEmail = daLiveEmail || edsConfig.githubAuth?.user?.email;
+
+    if (userEmail) {
+        const adminResult = await configureDaLivePermissions(
+            daLiveTokenProvider, edsConfig.daLiveOrg, edsConfig.daLiveSite, userEmail, logger,
+        );
+        if (!adminResult.success) {
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'code-sync',
+                message: `⚠️ Permissions partially configured: ${adminResult.error}`,
+                progress: 47,
+            });
+        }
+    } else {
+        logger.warn('[Storefront Setup] No user email available for permissions');
+    }
+
+    // Phase 3d: Configuration Service Registration
+    await registerConfigurationService(context, services, repoInfo, edsConfig, logger);
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'code-sync', message: 'Site configuration complete', progress: 49,
+    });
+
+    return null;
+}
+
+/**
+ * Poll for code sync and handle GitHub App not installed scenario
+ */
+async function verifyCodeSync(
+    context: HandlerContext,
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    signal: AbortSignal,
+): Promise<StorefrontSetupResult | null> {
+    const logger = context.logger;
+    const { githubAppService } = services;
+
+    try {
+        const codeUrl = `https://admin.hlx.page/code/${repoInfo.repoOwner}/${repoInfo.repoName}/main/scripts/aem.js`;
+        let syncVerified = false;
+        const maxAttempts = 25;
+        const pollInterval = 2000;
+
+        for (let attempt = 0; attempt < maxAttempts && !syncVerified; attempt++) {
+            if (signal.aborted) throw new Error('Operation cancelled');
+
+            try {
+                const response = await fetch(codeUrl, {
+                    method: 'GET', signal: AbortSignal.timeout(TIMEOUTS.QUICK),
+                });
+                if (response.ok) syncVerified = true;
+            } catch {
+                // Continue polling
+            }
+
+            if (!syncVerified && attempt < maxAttempts - 1) {
+                await new Promise(resolve => setTimeout(resolve, pollInterval));
+            }
+        }
+
+        if (!syncVerified) {
+            const { isInstalled, codeStatus } = await githubAppService.isAppInstalled(repoInfo.repoOwner, repoInfo.repoName);
+
+            if (!isInstalled) {
+                const installUrl = githubAppService.getInstallUrl(repoInfo.repoOwner, repoInfo.repoName);
+                logger.info(`[Storefront Setup] GitHub App not installed. Install URL: ${installUrl}`);
+
+                await context.sendMessage('storefront-setup-github-app-required', {
+                    owner: repoInfo.repoOwner, repo: repoInfo.repoName, installUrl,
+                    message: 'The AEM Code Sync GitHub App must be installed to continue.',
+                });
+
+                return { success: false, error: 'GitHub App installation required', ...repoInfo };
+            }
+
+            if (codeStatus === 400) {
+                logger.info('[Storefront Setup] Code sync in progress (initializing), continuing...');
+            } else {
+                logger.warn(`[Storefront Setup] Code sync status unclear (code.status: ${codeStatus}), continuing...`);
+            }
+        } else {
+            logger.info('[Storefront Setup] Code sync verified');
+        }
+    } catch (error) {
+        if ((error as Error).message === 'GitHub App installation required') throw error;
+        throw new Error(`Code sync failed: ${(error as Error).message}`);
+    }
+
+    return null;
+}
+
+/**
+ * Register site with Configuration Service and set folder mapping
+ */
+async function registerConfigurationService(
+    context: HandlerContext,
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    logger: import('@/types/logger').Logger,
+): Promise<void> {
+    const { configurationService } = services;
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'code-sync', message: 'Registering site with Configuration Service...', progress: 48,
+    });
+
+    try {
+        const contentSourceUrl = `https://content.da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}/`;
+        const registerResult = await configurationService.registerSite({
+            org: repoInfo.repoOwner, site: repoInfo.repoName,
+            codeOwner: repoInfo.repoOwner, codeRepo: repoInfo.repoName, contentSourceUrl,
+        });
+
+        if (registerResult.success) {
+            logger.info('[Storefront Setup] Site registered with Configuration Service');
+        } else if (registerResult.statusCode === 409) {
+            logger.info('[Storefront Setup] Site config already exists (409), continuing');
+        } else if (registerResult.statusCode === 401) {
+            logger.warn(`[Storefront Setup] Config Service requires org admin setup: ${registerResult.error}`);
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'code-sync', message: 'Site config skipped (org admin setup needed)', progress: 49,
+            });
+            throw new SkipConfigService();
+        } else {
+            logger.warn(`[Storefront Setup] Config Service registration warning: ${registerResult.error}`);
+        }
+
+        const folderResult = await configurationService.setFolderMapping(
+            repoInfo.repoOwner, repoInfo.repoName, { '/products/': '/products/default' },
+        );
+        if (folderResult.success) {
+            logger.info('[Storefront Setup] Folder mapping configured via Configuration Service');
+        } else {
+            logger.warn(`[Storefront Setup] Folder mapping warning: ${folderResult.error}`);
+        }
+    } catch (error) {
+        if (error instanceof SkipConfigService) {
+            // Expected — org admin not set up, already logged above
+        } else {
+            logger.warn(`[Storefront Setup] Configuration Service warning: ${(error as Error).message}`);
+        }
+    }
+}
+
+/**
  * Execute all storefront setup phases
  *
  * This runs the remote setup operations:
@@ -432,42 +888,31 @@ async function executeStorefrontSetupPhases(
 
     // Create service dependencies
     const githubTokenService = new GitHubTokenService(context.context.secrets, logger);
-    const githubRepoOps = new GitHubRepoOperations(githubTokenService, logger);
-    const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
-    const githubAppService = new GitHubAppService(githubTokenService, logger);
-
-    // Create TokenProvider adapter for DA.live operations
-    const tokenProvider = createDaLiveTokenProvider(context.authManager);
-
-    const _daLiveOrgOps = new DaLiveOrgOperations(tokenProvider, logger);
-    const daLiveContentOps = new DaLiveContentOperations(tokenProvider, logger);
-
-    // Create HelixService for CDN operations (code preview, content publish)
-    // Uses GitHub token for admin API auth and DA.live token for x-content-source-authorization
     const daLiveAuthService = new DaLiveAuthService(context.context);
     const daLiveTokenProvider = {
-        getAccessToken: async () => {
-            return await daLiveAuthService.getAccessToken();
-        },
+        getAccessToken: async () => daLiveAuthService.getAccessToken(),
     };
-    const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
 
-    // Derive skipContent from user selections:
-    // - If no content source configured (e.g., Custom package) → skip content copy
-    // - If using an EXISTING site (selectedSite exists) AND not resetting content → skip content copy
-    // - If creating a NEW site OR resetting existing site → copy content
+    const services: SetupServices = {
+        githubRepoOps: new GitHubRepoOperations(githubTokenService, logger),
+        githubFileOps: new GitHubFileOperations(githubTokenService, logger),
+        githubAppService: new GitHubAppService(githubTokenService, logger),
+        daLiveContentOps: new DaLiveContentOperations(
+            createDaLiveTokenProvider(context.authManager), logger,
+        ),
+        helixService: new HelixService(logger, githubTokenService, daLiveTokenProvider),
+        daLiveAuthService,
+        daLiveTokenProvider,
+        configurationService: new ConfigurationService(daLiveTokenProvider, logger),
+    };
+
+    // Derive skipContent from user selections
     const contentSource = edsConfig.contentSource;
     const isUsingExistingSite = Boolean(edsConfig.selectedSite);
     const wantsToResetContent = Boolean(edsConfig.resetSiteContent);
     const skipContent = !contentSource || (isUsingExistingSite && !wantsToResetContent);
 
-    // Create a modified config with the derived skipContent value
-    const resolvedEdsConfig = {
-        ...edsConfig,
-        skipContent,
-    };
-
-    // Log content handling decision with full context for debugging
+    // Log content handling decision
     logger.info(`[Storefront Setup] Content handling decision:`);
     logger.info(`  - selectedSite: ${edsConfig.selectedSite ? JSON.stringify(edsConfig.selectedSite) : 'undefined (new site)'}`);
     logger.info(`  - resetSiteContent: ${edsConfig.resetSiteContent ?? 'undefined (default false)'}`);
@@ -475,532 +920,60 @@ async function executeStorefrontSetupPhases(
     logger.info(`  - wantsToResetContent: ${wantsToResetContent}`);
     logger.info(`  - RESULT skipContent: ${skipContent} (${skipContent ? 'will SKIP content copy' : 'will COPY content'})`);
 
-    // GitHub owner can come from explicit githubOwner or from githubAuth.user.login
-    // The UI stores it at githubAuth.user.login when authenticated via Connect Services
+    // Validate GitHub owner
     const githubOwner = edsConfig.githubOwner || edsConfig.githubAuth?.user?.login;
     if (!githubOwner) {
         logger.error('[Storefront Setup] GitHub owner not found. edsConfig:', JSON.stringify(edsConfig, null, 2));
-        return {
-            success: false,
-            error: 'GitHub owner not configured. Please complete GitHub authentication.',
-        };
+        return { success: false, error: 'GitHub owner not configured. Please complete GitHub authentication.' };
     }
     logger.info(`[Storefront Setup] Using GitHub owner: ${githubOwner}`);
 
-    // Get template info from edsConfig (set during wizard flow)
+    // Validate template info
     const templateOwner = edsConfig.templateOwner;
     const templateRepo = edsConfig.templateRepo;
-
     if (!templateOwner || !templateRepo) {
         logger.error('[Storefront Setup] Template not configured. edsConfig:', JSON.stringify(edsConfig, null, 2));
-        return {
-            success: false,
-            error: 'GitHub template not configured. Please check your stack configuration.',
-        };
+        return { success: false, error: 'GitHub template not configured. Please check your stack configuration.' };
     }
 
-    let repoUrl: string | undefined;
-    let repoOwner: string = githubOwner;
-    let repoName: string = edsConfig.repoName;
-
-    // Determine if using existing repo
+    const repoInfo: RepoInfo = { repoOwner: githubOwner, repoName: edsConfig.repoName };
     const repoMode = edsConfig.repoMode || 'new';
-    const useExistingRepo = repoMode === 'existing' && (edsConfig.selectedRepo || edsConfig.existingRepo);
-    // Check if repo was pre-created in GitHubRepoSelectionStep (new flow)
-    const usePreCreatedRepo = repoMode === 'new' && !!edsConfig.createdRepo;
+    const useExistingRepo = repoMode === 'existing' && !!(edsConfig.selectedRepo || edsConfig.existingRepo);
 
     try {
-        // ============================================
         // Phase 1: GitHub Repository Setup
-        // ============================================
-        // Check for cancellation before starting
-        if (signal.aborted) {
-            throw new Error('Operation cancelled');
-        }
-
-        if (usePreCreatedRepo && edsConfig.createdRepo) {
-            // Repository was already created in GitHubRepoSelectionStep
-            // Just use the info and skip creation
-            repoOwner = edsConfig.createdRepo.owner;
-            repoName = edsConfig.createdRepo.name;
-            repoUrl = edsConfig.createdRepo.url;
-
-            logger.info(`[Storefront Setup] Using pre-created repository: ${repoOwner}/${repoName}`);
-
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'github-repo',
-                message: `Using repository: ${repoOwner}/${repoName}`,
-                progress: 15,
-                repoUrl,
-                repoOwner,
-                repoName,
-            });
-        } else if (useExistingRepo) {
-            // Use existing repository
-            if (edsConfig.selectedRepo) {
-                // Parse from selectedRepo (newer format)
-                const [owner, name] = edsConfig.selectedRepo.fullName.split('/');
-                repoOwner = owner;
-                repoName = name;
-                repoUrl = edsConfig.selectedRepo.htmlUrl;
-            } else if (edsConfig.existingRepo) {
-                // Parse from existingRepo string (legacy format: owner/repo)
-                const [owner, name] = edsConfig.existingRepo.split('/');
-                repoOwner = owner;
-                repoName = name;
-                repoUrl = `https://github.com/${edsConfig.existingRepo}`;
-            }
-
-            logger.info(`[Storefront Setup] Using existing repository: ${repoOwner}/${repoName}`);
-
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'github-repo',
-                message: `Using existing repository: ${repoOwner}/${repoName}`,
-                progress: 5,
-                repoUrl,
-                repoOwner,
-                repoName,
-            });
-
-            // If resetToTemplate is set, reset the repo to match template
-            // Uses Git Tree API for atomic reset (~4 API calls vs 4000+ for file-by-file)
-            if (edsConfig.resetToTemplate) {
-                logger.info('[Storefront Setup] Resetting repository to template...');
-                await context.sendMessage('storefront-setup-progress', {
-                    phase: 'github-repo',
-                    message: 'Resetting repository to template...',
-                    progress: 6,
-                });
-
-                await githubRepoOps.resetToTemplate(
-                    repoOwner,
-                    repoName,
-                    templateOwner,
-                    templateRepo,
-                    'main',
-                    'chore: reset to template',
-                );
-
-                logger.info('[Storefront Setup] Repository reset to template');
-            }
-
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'github-repo',
-                message: 'Repository ready',
-                progress: 15,
-                repoUrl,
-                repoOwner,
-                repoName,
-            });
-        } else {
-            // Create new repository from template
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'github-repo',
-                message: 'Creating GitHub repository from template...',
-                progress: 5,
-            });
-
-            logger.info(`[Storefront Setup] Creating repository: ${repoName}`);
-
-            const repo = await githubRepoOps.createFromTemplate(
-                templateOwner,
-                templateRepo,
-                repoName,
-                edsConfig.isPrivate ?? false,
-            );
-
-            repoUrl = repo.htmlUrl;
-            // Parse owner from fullName (format: owner/repo)
-            const [owner, name] = repo.fullName.split('/');
-            repoOwner = owner;
-            repoName = name;
-
-            logger.info(`[Storefront Setup] Repository created: ${repoUrl}`);
-
-            // Wait for template content to be populated
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'github-repo',
-                message: 'Waiting for repository content...',
-                progress: 10,
-                repoUrl,
-                repoOwner,
-                repoName,
-            });
-
-            await githubRepoOps.waitForContent(repoOwner, repoName, signal);
-
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'github-repo',
-                message: 'Repository ready',
-                progress: 15,
-                repoUrl,
-                repoOwner,
-                repoName,
-            });
-        }
-
-        // ============================================
-        // Phase 2: Helix Configuration
-        // ============================================
-        // Check for cancellation before continuing
-        if (signal.aborted) {
-            throw new Error('Operation cancelled');
-        }
-
-        await context.sendMessage('storefront-setup-progress', {
-            phase: 'helix-config',
-            message: 'Configuring Edge Delivery Services...',
-            progress: 20,
-        });
-
-        // Generate fstab.yaml content using centralized generator (single source of truth)
-        const fstabContent = generateFstabContent({
-            daLiveOrg: edsConfig.daLiveOrg,
-            daLiveSite: edsConfig.daLiveSite,
-        });
-
-        // Push fstab.yaml to GitHub
-        await context.sendMessage('storefront-setup-progress', {
-            phase: 'helix-config',
-            message: 'Pushing fstab.yaml configuration...',
-            progress: 25,
-        });
-
-        // Check if fstab.yaml already exists (to get SHA for update)
-        const existingFstab = await githubFileOps.getFileContent(repoOwner, repoName, 'fstab.yaml');
-        const fstabSha = existingFstab?.sha;
-
-        await githubFileOps.createOrUpdateFile(
-            repoOwner,
-            repoName,
-            'fstab.yaml',
-            fstabContent,
-            'chore: configure fstab.yaml for DA.live content source',
-            fstabSha,
+        const phase1Result = await executePhaseGitHubRepo(
+            context, edsConfig, services, repoInfo, signal, templateOwner, templateRepo,
         );
+        if (phase1Result) return phase1Result;
 
-        logger.info('[Storefront Setup] fstab.yaml pushed to GitHub');
+        // Phase 2: Helix Configuration
+        const { blockCollectionIds, earlyReturn } = await executePhaseHelixConfig(
+            context, edsConfig, services, repoInfo, selectedAddons, useExistingRepo,
+        );
+        if (earlyReturn) return earlyReturn;
 
-        // ============================================
-        // Phase 2.1: Commerce Block Collection (if selected)
-        // ============================================
-        // Copy custom block dirs from isle5 before code sync so they're
-        // included when Helix picks up the repo contents.
-        let blockCollectionIds: string[] | undefined;
-        if (selectedAddons?.includes('commerce-block-collection')) {
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'helix-config',
-                message: 'Installing Commerce Block Collection...',
-                progress: 25,
-            });
+        // Phase 3: Code Sync Verification + CDN publish + permissions + config service
+        const phase3Result = await executePhaseCodeSync(
+            context, edsConfig, services, repoInfo, signal,
+        );
+        if (phase3Result) return phase3Result;
 
-            const result = await installBlockCollection(githubFileOps, repoOwner, repoName, logger);
-            if (result.success) {
-                logger.info(`[Storefront Setup] Block collection: ${result.blocksCount} blocks installed`);
-                blockCollectionIds = result.blockIds;
-            } else {
-                // Non-blocking — continue setup without block collection
-                logger.warn(`[Storefront Setup] Block collection failed: ${result.error}`);
-            }
-        }
-
-        // ============================================
-        // Phase 2.5: GitHub App Check (EXISTING repos only)
-        // ============================================
-        // For EXISTING repos, check GitHub App AFTER fstab.yaml push
-        // Helix now knows about the repo (via fstab.yaml), so the check will work correctly
-        // NEW repos already verified the app in GitHubRepoSelectionStep
-        if (useExistingRepo) {
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'helix-config',
-                message: 'Verifying GitHub App installation...',
-                progress: 28,
-            });
-
-            logger.info(`[Storefront Setup] Checking GitHub App for existing repo: ${repoOwner}/${repoName}`);
-
-            const { isInstalled, codeStatus } = await githubAppService.isAppInstalled(repoOwner, repoName);
-
-            if (!isInstalled) {
-                const installUrl = githubAppService.getInstallUrl(repoOwner, repoName);
-                logger.info(`[Storefront Setup] GitHub App not installed. Install URL: ${installUrl}`);
-
-                // Notify UI to show GitHub App install dialog
-                await context.sendMessage('storefront-setup-github-app-required', {
-                    owner: repoOwner,
-                    repo: repoName,
-                    installUrl,
-                    message: 'The AEM Code Sync GitHub App must be installed to continue.',
-                });
-
-                // Return early - UI will resume after app installation
-                return {
-                    success: false,
-                    error: 'GitHub App installation required',
-                    repoUrl,
-                    repoOwner,
-                    repoName,
-                };
-            }
-
-            logger.info(`[Storefront Setup] GitHub App verified for existing repo (code.status: ${codeStatus})`);
-        }
-
-        // NOTE: config.json generation moved to executor Phase 4/5
-        // Phase 4 generates config.json locally with mesh endpoint (via generateEdsConfigJson)
-        // Phase 5 syncs config.json to GitHub and publishes to CDN (via syncConfigToRemote)
-        // This consolidation ensures config.json always has the mesh endpoint and is only pushed once
-
-        await context.sendMessage('storefront-setup-progress', {
-            phase: 'helix-config',
-            message: 'Helix configured',
-            progress: 35,
-        });
-
-        // ============================================
-        // Phase 3: Code Sync Verification
-        // ============================================
-        await context.sendMessage('storefront-setup-progress', {
-            phase: 'code-sync',
-            message: 'Verifying code synchronization...',
-            progress: 40,
-        });
-
-        try {
-            // Poll for code sync
-            const codeUrl = `https://admin.hlx.page/code/${repoOwner}/${repoName}/main/scripts/aem.js`;
-            let syncVerified = false;
-            const maxAttempts = 25;
-            const pollInterval = 2000;
-
-            for (let attempt = 0; attempt < maxAttempts && !syncVerified; attempt++) {
-                if (signal.aborted) {
-                    throw new Error('Operation cancelled');
-                }
-
-                try {
-                    const response = await fetch(codeUrl, {
-                        method: 'GET',
-                        signal: AbortSignal.timeout(TIMEOUTS.QUICK),
-                    });
-                    if (response.ok) {
-                        syncVerified = true;
-                    }
-                } catch {
-                    // Continue polling
-                }
-
-                if (!syncVerified && attempt < maxAttempts - 1) {
-                    await new Promise(resolve => setTimeout(resolve, pollInterval));
-                }
-            }
-
-            if (!syncVerified) {
-                // Code sync not yet complete - check if GitHub App is installed
-                const { isInstalled, codeStatus } = await githubAppService.isAppInstalled(repoOwner, repoName);
-
-                if (!isInstalled) {
-                    const installUrl = githubAppService.getInstallUrl(repoOwner, repoName);
-                    logger.info(`[Storefront Setup] GitHub App not installed. Install URL: ${installUrl}`);
-
-                    // Notify UI to show GitHub App install dialog
-                    await context.sendMessage('storefront-setup-github-app-required', {
-                        owner: repoOwner,
-                        repo: repoName,
-                        installUrl,
-                        message: 'The AEM Code Sync GitHub App must be installed to continue.',
-                    });
-
-                    // Return early - UI will resume after app installation
-                    return {
-                        success: false,
-                        error: 'GitHub App installation required',
-                        repoUrl,
-                        repoOwner,
-                        repoName,
-                    };
-                }
-
-                // App is installed - sync will complete eventually, continue setup
-                if (codeStatus === 400) {
-                    // Status 400 = sync initializing, this is normal for new repos
-                    logger.info('[Storefront Setup] Code sync in progress (initializing), continuing...');
-                } else {
-                    // Status 200 but file not found, or other status - unexpected but not fatal
-                    logger.warn(`[Storefront Setup] Code sync status unclear (code.status: ${codeStatus}), continuing...`);
-                }
-            } else {
-                logger.info('[Storefront Setup] Code sync verified');
-            }
-        } catch (error) {
-            if ((error as Error).message === 'GitHub App installation required') {
-                throw error;
-            }
-            throw new Error(`Code sync failed: ${(error as Error).message}`);
-        }
-
-        await context.sendMessage('storefront-setup-progress', {
-            phase: 'code-sync',
-            message: 'Code synchronized',
-            progress: 42,
-        });
-
-        // ============================================
-        // Phase 3b: Publish Code to CDN
-        // ============================================
-        // Code sync only makes code accessible via admin.hlx.page/code
-        // We need to POST to actually publish code to the CDN (aem.live)
-        await context.sendMessage('storefront-setup-progress', {
-            phase: 'code-sync',  // Use code-sync (code-publish not a valid UI phase)
-            message: 'Publishing code to CDN...',
-            progress: 43,
-        });
-
-        try {
-            // Preview all code files (/* wildcard) to publish to CDN
-            await helixService.previewCode(repoOwner, repoName, '/*', 'main');
-            logger.info('[Storefront Setup] Code published to CDN');
-        } catch (error) {
-            // Code preview failure is not fatal - site may still work, just with stale code
-            logger.warn(`[Storefront Setup] Code preview warning: ${(error as Error).message}`);
-        }
-
-        await context.sendMessage('storefront-setup-progress', {
-            phase: 'code-sync',
-            message: 'Code synchronized',
-            progress: 45,
-        });
-
-        // ============================================
-        // Phase 3c: Configure Admin Access
-        // ============================================
-        // Grant the user admin/author/publish access to the site via DA.live Config API
-        await context.sendMessage('storefront-setup-progress', {
-            phase: 'code-sync',
-            message: 'Configuring site permissions...',
-            progress: 47,
-        });
-
-        // Get user email (fallback to GitHub if DA.live email not available)
-        const daLiveEmail = await daLiveAuthService.getUserEmail();
-        const userEmail = daLiveEmail || edsConfig.githubAuth?.user?.email;
-
-        if (userEmail) {
-            const adminResult = await configureDaLivePermissions(
-                daLiveTokenProvider,
-                edsConfig.daLiveOrg,
-                edsConfig.daLiveSite,
-                userEmail,
-                logger,
-            );
-
-            if (!adminResult.success) {
-                // Non-fatal - surface error in UI for troubleshooting
-                await context.sendMessage('storefront-setup-progress', {
-                    phase: 'code-sync',
-                    message: `⚠️ Permissions partially configured: ${adminResult.error}`,
-                    progress: 47,
-                });
-            }
-        } else {
-            logger.warn('[Storefront Setup] No user email available for permissions');
-        }
-
-        // ============================================
-        // Phase 3d: Configuration Service Registration
-        // ============================================
-        // Register the site with the AEM Configuration Service and set folder mapping.
-        // The Config Service manages server-side site config in Helix 5.
-        // Folder mapping (e.g., /products/ -> /products/default) MUST be set via this
-        // API — the fstab.yaml folders section is not processed by the pipeline.
-        //
-        // Requires: GitHub App installed (admin role auto-assigned on install)
-        await context.sendMessage('storefront-setup-progress', {
-            phase: 'code-sync',
-            message: 'Registering site with Configuration Service...',
-            progress: 48,
-        });
-
-        const configurationService = new ConfigurationService(daLiveTokenProvider, logger);
-
-        try {
-            // Step 1: Register the site (code source + content source)
-            const contentSourceUrl = `https://content.da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}/`;
-            const registerResult = await configurationService.registerSite({
-                org: repoOwner,
-                site: repoName,
-                codeOwner: repoOwner,
-                codeRepo: repoName,
-                contentSourceUrl,
-            });
-
-            if (registerResult.success) {
-                logger.info('[Storefront Setup] Site registered with Configuration Service');
-            } else if (registerResult.statusCode === 409) {
-                // 409 = already exists, treat as non-fatal
-                logger.info('[Storefront Setup] Site config already exists (409), continuing');
-            } else if (registerResult.statusCode === 401) {
-                // 401 = org-level admin not set up yet — skip folder mapping too
-                logger.warn(`[Storefront Setup] Config Service requires org admin setup: ${registerResult.error}`);
-                await context.sendMessage('storefront-setup-progress', {
-                    phase: 'code-sync',
-                    message: 'Site config skipped (org admin setup needed)',
-                    progress: 49,
-                });
-                // Skip folder mapping — same auth will fail
-                throw new SkipConfigService();
-            } else {
-                logger.warn(`[Storefront Setup] Config Service registration warning: ${registerResult.error}`);
-            }
-
-            // Step 2: Set folder mapping for PDP routing
-            const folderResult = await configurationService.setFolderMapping(
-                repoOwner,
-                repoName,
-                { '/products/': '/products/default' },
-            );
-
-            if (folderResult.success) {
-                logger.info('[Storefront Setup] Folder mapping configured via Configuration Service');
-            } else {
-                logger.warn(`[Storefront Setup] Folder mapping warning: ${folderResult.error}`);
-            }
-        } catch (error) {
-            if (error instanceof SkipConfigService) {
-                // Expected — org admin not set up, already logged above
-            } else {
-                // Config Service failure is non-fatal: site works for everything except
-                // folder-mapped routes (PDP pages). Log and continue.
-                logger.warn(`[Storefront Setup] Configuration Service warning: ${(error as Error).message}`);
-            }
-        }
-
-        await context.sendMessage('storefront-setup-progress', {
-            phase: 'code-sync',
-            message: 'Site configuration complete',
-            progress: 49,
-        });
-
-        // ============================================
         // Phase 4-5: Content Pipeline
-        // ============================================
-        // Check for cancellation before continuing
-        if (signal.aborted) {
-            throw new Error('Operation cancelled');
-        }
+        if (signal.aborted) throw new Error('Operation cancelled');
 
         const { executeEdsPipeline } = await import('../services/edsPipeline');
 
         const pipelineResult = await executeEdsPipeline(
             {
-                repoOwner,
-                repoName,
+                repoOwner: repoInfo.repoOwner,
+                repoName: repoInfo.repoName,
                 daLiveOrg: edsConfig.daLiveOrg,
                 daLiveSite: edsConfig.daLiveSite,
                 templateOwner,
                 templateRepo,
                 clearExistingContent: wantsToResetContent,
-                skipContent: resolvedEdsConfig.skipContent,
+                skipContent,
                 contentSource,
                 contentPatches: edsConfig.contentPatches,
                 contentPatchSource: edsConfig.contentPatchSource,
@@ -1008,9 +981,8 @@ async function executeStorefrontSetupPhases(
                 blockCollectionIds,
                 purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
             },
-            { daLiveContentOps, githubFileOps, helixService, logger },
+            { daLiveContentOps: services.daLiveContentOps, githubFileOps: services.githubFileOps, helixService: services.helixService, logger },
             (info) => {
-                // Map pipeline operations → setup phase/progress percentages
                 const mapping: Record<string, { phase: string; progress: number }> = {
                     'content-clear': { phase: 'content-copy', progress: 45 },
                     'content-copy': { phase: 'content-copy', progress: 50 },
@@ -1023,20 +995,15 @@ async function executeStorefrontSetupPhases(
                 const m = mapping[info.operation] ?? { phase: info.operation, progress: 50 };
                 let progress = m.progress;
 
-                // Scale content copy progress from 50% to 60%
                 if (info.operation === 'content-copy' && info.percentage !== undefined) {
                     progress = 50 + Math.round(info.percentage * 0.1);
                 }
-                // Scale publish progress from 67% to 90%
                 if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
                     progress = 67 + Math.round((info.current / info.total) * 23);
                 }
 
                 context.sendMessage('storefront-setup-progress', {
-                    phase: m.phase,
-                    message: info.message,
-                    subMessage: info.subMessage,
-                    progress,
+                    phase: m.phase, message: info.message, subMessage: info.subMessage, progress,
                 });
             },
         );
@@ -1045,44 +1012,18 @@ async function executeStorefrontSetupPhases(
             throw new Error(pipelineResult.error || 'Content pipeline failed');
         }
 
-        const libraryPaths = pipelineResult.libraryPaths;
-
-        // Check for cancellation after pipeline
-        if (signal.aborted) {
-            throw new Error('Operation cancelled');
-        }
+        if (signal.aborted) throw new Error('Operation cancelled');
 
         await context.sendMessage('storefront-setup-progress', {
             phase: 'content-publish',
-            message: libraryPaths.length > 0 ? 'Site is live!' : 'Content publish complete',
+            message: pipelineResult.libraryPaths.length > 0 ? 'Site is live!' : 'Content publish complete',
             progress: 90,
         });
 
-        // NOTE: Frontend availability verification removed
-        // The HTTP 200 check was misleading - site can return 200 but show
-        // "Configuration Error" because config.json doesn't exist yet.
-        // The reliable "site ready" indicator is the config.json verification
-        // in Phase 5 of the executor (syncConfigToRemote), which validates
-        // the commerce-endpoint field exists in the config.
-
-        // ============================================
-        // Complete
-        // ============================================
-        return {
-            success: true,
-            repoUrl,
-            repoOwner,
-            repoName,
-        };
+        return { success: true, ...repoInfo };
     } catch (error) {
         logger.error(`[Storefront Setup] Failed: ${(error as Error).message}`);
-        return {
-            success: false,
-            error: (error as Error).message,
-            repoUrl,
-            repoOwner,
-            repoName,
-        };
+        return { success: false, error: (error as Error).message, ...repoInfo };
     }
 }
 
@@ -1112,10 +1053,10 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     const daLiveAuthService = new DaLiveAuthService(context.context);
     const daLiveTokenProvider = {
         getAccessToken: async () => {
-            return await daLiveAuthService.getAccessToken();
+            return daLiveAuthService.getAccessToken();
         },
     };
-    const helixService = new HelixService(context.logger, githubTokenService, daLiveTokenProvider);
+    const _helixService = new HelixService(context.logger, githubTokenService, daLiveTokenProvider);
 
     const toolManager = new ToolManager(context.logger);
     const configurationService = new ConfigurationService(daLiveTokenProvider, context.logger);

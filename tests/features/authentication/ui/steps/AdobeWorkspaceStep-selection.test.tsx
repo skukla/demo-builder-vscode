@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
@@ -37,7 +37,6 @@ jest.mock('@/core/ui/components/ui/FadeTransition', () => ({
 
 import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import {
-    mockPostMessage,
     mockOnMessage,
     mockWorkspaces,
     baseState,

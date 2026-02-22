@@ -9,8 +9,8 @@
  * @module features/eds/services/blockCollectionHelpers
  */
 
-import type { Logger } from '@/types/logger';
 import type { GitHubFileOperations } from './githubFileOperations';
+import type { Logger } from '@/types/logger';
 
 const SOURCE_OWNER = 'stephen-garner-adobe';
 const SOURCE_REPO = 'isle5';

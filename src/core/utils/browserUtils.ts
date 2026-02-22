@@ -4,12 +4,12 @@
  * Helpers for opening URLs in the system browser from the extension host.
  */
 
+import { exec } from 'child_process';
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import * as vscode from 'vscode';
-import { exec } from 'child_process';
 import { promisify } from 'util';
+import * as vscode from 'vscode';
 
 const execAsync = promisify(exec);
 

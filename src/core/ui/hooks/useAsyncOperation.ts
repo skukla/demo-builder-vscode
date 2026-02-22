@@ -115,7 +115,7 @@ export function useAsyncOperation<T = void>(
                 return undefined;
             }
         },
-        [onSuccess, onError],
+        [onSuccess, onError, isMountedRef],
     );
 
     const reset = useCallback(() => {

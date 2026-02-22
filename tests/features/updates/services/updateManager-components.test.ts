@@ -76,7 +76,6 @@ import {
     createMockWorkspaceConfig,
     createMockProject,
     createMockRelease,
-    mockFetchSuccess,
     mockSecurityValidationPass,
 } from './updateManager.testUtils';
 

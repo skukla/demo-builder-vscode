@@ -8,7 +8,6 @@
 import { getConsoleWhereContext, clearConsoleContext, type ContextOperationsDeps } from './contextOperations';
 import { mapOrganizations } from './entityMappers';
 import { getLogger, StepLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { validateOrgId } from '@/core/validation';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
@@ -18,6 +17,7 @@ import type {
     RawAdobeOrg,
     SDKResponse,
 } from '@/features/authentication/services/types';
+import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
 /**
@@ -31,6 +31,56 @@ export interface OrganizationOperationsDeps extends ContextOperationsDeps {
 }
 
 /**
+ * Try fetching orgs via SDK
+ */
+async function tryFetchOrgsViaSDK(
+    deps: OrganizationOperationsDeps,
+    startTime: number,
+): Promise<AdobeOrg[]> {
+    const debugLogger = getLogger();
+    if (!deps.sdkClient.isInitialized()) return [];
+
+    try {
+        const client = deps.sdkClient.getClient() as { getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>> };
+        const sdkResult = await client.getOrganizations();
+        if (!sdkResult.body || !Array.isArray(sdkResult.body)) {
+            throw new Error('Invalid SDK response format');
+        }
+        const mapped = mapOrganizations(sdkResult.body);
+        debugLogger.debug(`[Org Ops] Retrieved ${mapped.length} organizations via SDK in ${formatDuration(Date.now() - startTime)}`);
+        return mapped;
+    } catch (sdkError) {
+        debugLogger.trace('[Org Ops] SDK failed, falling back to CLI:', sdkError);
+        debugLogger.warn('[Org Ops] SDK unavailable, using slower CLI fallback for organizations');
+        return [];
+    }
+}
+
+/**
+ * Fetch orgs via CLI
+ */
+async function fetchOrgsViaCLI(
+    deps: OrganizationOperationsDeps,
+    startTime: number,
+): Promise<AdobeOrg[]> {
+    const debugLogger = getLogger();
+    const result = await deps.commandManager.execute('aio console org list --json', { encoding: 'utf8' });
+
+    if (result.code !== 0) {
+        throw new Error(`Failed to get organizations: ${result.stderr}`);
+    }
+
+    const orgs = parseJSON<RawAdobeOrg[]>(result.stdout);
+    if (!orgs || !Array.isArray(orgs)) {
+        throw new Error('Invalid organizations response format');
+    }
+
+    const mapped = mapOrganizations(orgs);
+    debugLogger.debug(`[Org Ops] Retrieved ${mapped.length} organizations via CLI in ${formatDuration(Date.now() - startTime)}`);
+    return mapped;
+}
+
+/**
  * Get list of organizations (SDK with CLI fallback)
  */
 export async function getOrganizations(deps: OrganizationOperationsDeps): Promise<AdobeOrg[]> {
@@ -38,76 +88,26 @@ export async function getOrganizations(deps: OrganizationOperationsDeps): Promis
     const startTime = Date.now();
 
     try {
-        // Check cache first
         const cachedOrgs = deps.cacheManager.getCachedOrgList();
-        if (cachedOrgs) {
-            return cachedOrgs;
-        }
+        if (cachedOrgs) return cachedOrgs;
 
         deps.stepLogger.logTemplate('adobe-setup', 'loading-organizations', {});
 
-        let mappedOrgs: AdobeOrg[] = [];
-
-        // Auto-initialize SDK if not ready (lazy init pattern)
         if (!deps.sdkClient.isInitialized()) {
             await deps.sdkClient.ensureInitialized();
         }
 
-        // Try SDK first for 30x performance improvement
-        if (deps.sdkClient.isInitialized()) {
-            try {
-                const client = deps.sdkClient.getClient() as { getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>> };
-                const sdkResult = await client.getOrganizations();
-                const sdkDuration = Date.now() - startTime;
-
-                if (sdkResult.body && Array.isArray(sdkResult.body)) {
-                    mappedOrgs = mapOrganizations(sdkResult.body);
-
-                    debugLogger.debug(`[Org Ops] Retrieved ${mappedOrgs.length} organizations via SDK in ${formatDuration(sdkDuration)}`);
-                } else {
-                    throw new Error('Invalid SDK response format');
-                }
-            } catch (sdkError) {
-                debugLogger.trace('[Org Ops] SDK failed, falling back to CLI:', sdkError);
-                debugLogger.warn('[Org Ops] SDK unavailable, using slower CLI fallback for organizations');
-            }
-        }
-
-        // CLI fallback (if SDK not available or failed)
+        let mappedOrgs = await tryFetchOrgsViaSDK(deps, startTime);
         if (mappedOrgs.length === 0) {
-            const result = await deps.commandManager.execute(
-                'aio console org list --json',
-                { encoding: 'utf8' },
-            );
-
-            const cliDuration = Date.now() - startTime;
-
-            if (result.code !== 0) {
-                throw new Error(`Failed to get organizations: ${result.stderr}`);
-            }
-
-            // SECURITY: Use parseJSON for type-safe parsing
-            const orgs = parseJSON<RawAdobeOrg[]>(result.stdout);
-
-            if (!orgs || !Array.isArray(orgs)) {
-                throw new Error('Invalid organizations response format');
-            }
-
-            mappedOrgs = mapOrganizations(orgs);
-
-            debugLogger.debug(`[Org Ops] Retrieved ${mappedOrgs.length} organizations via CLI in ${formatDuration(cliDuration)}`);
+            mappedOrgs = await fetchOrgsViaCLI(deps, startTime);
         }
 
-        // Clear stale CLI context if no orgs accessible
         if (mappedOrgs.length === 0) {
             deps.logger.info('No organizations accessible. Clearing previous selections...');
-            debugLogger.debug('[Org Ops] No organizations accessible - clearing stale CLI context');
             await clearConsoleContext(deps);
         }
 
-        // Cache the result
         deps.cacheManager.setCachedOrgList(mappedOrgs);
-
         deps.stepLogger.logTemplate('adobe-setup', 'found', {
             count: mappedOrgs.length,
             item: mappedOrgs.length === 1 ? 'organization' : 'organizations',
@@ -121,6 +121,78 @@ export async function getOrganizations(deps: OrganizationOperationsDeps): Promis
 }
 
 /**
+ * Create a fallback org object from string
+ */
+function createFallbackOrg(orgString: string): AdobeOrg {
+    return { id: orgString, code: orgString, name: orgString };
+}
+
+/**
+ * Fetch org list safely (returns empty array on failure)
+ */
+async function fetchOrgListSafely(deps: OrganizationOperationsDeps): Promise<AdobeOrg[]> {
+    const debugLogger = getLogger();
+    try {
+        return await getOrganizations(deps);
+    } catch (error) {
+        debugLogger.trace('[Org Ops] Failed to fetch org list for ID resolution:', error);
+        return [];
+    }
+}
+
+/**
+ * Resolve org string to full org object using fetch or cache
+ */
+async function resolveOrgFromString(
+    deps: OrganizationOperationsDeps,
+    orgString: string,
+): Promise<AdobeOrg> {
+    const debugLogger = getLogger();
+    const cachedOrgList = deps.cacheManager.getCachedOrgList();
+
+    const orgList = (cachedOrgList && cachedOrgList.length > 0)
+        ? cachedOrgList
+        : await fetchOrgListSafely(deps);
+
+    const matchedOrg = orgList.find(o => o.name === orgString || o.code === orgString);
+    if (matchedOrg) return matchedOrg;
+
+    debugLogger.warn('[Org Ops] Could not find org in list, using name as fallback');
+    return createFallbackOrg(orgString);
+}
+
+/**
+ * Parse org data from console context value
+ */
+async function parseOrgFromContext(
+    deps: OrganizationOperationsDeps,
+    orgValue: string | { id: string; code?: string; name?: string },
+): Promise<AdobeOrg | undefined> {
+    const debugLogger = getLogger();
+
+    if (typeof orgValue === 'string') {
+        if (!orgValue.trim()) {
+            debugLogger.debug('[Org Ops] Organization name is empty string');
+            return undefined;
+        }
+        return resolveOrgFromString(deps, orgValue);
+    }
+
+    if (typeof orgValue === 'object') {
+        const orgName = orgValue.name || orgValue.id || 'Unknown';
+        debugLogger.debug(`[Org Ops] Current organization: ${orgName}`);
+        return {
+            id: orgValue.id || orgName,
+            code: orgValue.code || orgName,
+            name: orgName,
+        };
+    }
+
+    debugLogger.debug('[Org Ops] Organization data is not string or object');
+    return undefined;
+}
+
+/**
  * Get current organization from CLI
  */
 export async function getCurrentOrganization(
@@ -129,104 +201,20 @@ export async function getCurrentOrganization(
     const debugLogger = getLogger();
 
     try {
-        // Check cache first
         const cachedOrg = deps.cacheManager.getCachedOrganization();
-        if (cachedOrg) {
-            return cachedOrg;
-        }
+        if (cachedOrg) return cachedOrg;
 
         const context = await getConsoleWhereContext(deps);
-        if (!context) {
+        if (!context?.org) {
+            debugLogger.debug('[Org Ops] No organization currently selected');
             return undefined;
         }
 
-        if (context.org) {
-            // Handle both string and object formats
-            let orgData;
-            if (typeof context.org === 'string') {
-                if (context.org.trim()) {
-                    // PERFORMANCE FIX: Always resolve full org object for SDK compatibility
-                    // The SDK requires numeric org ID (e.g., "3397333"), not names or IMS org codes
-                    // Passing name or IMS org code causes 400 Bad Request and forces slow CLI fallback
-
-                    // Check if we're in post-login phase (no cached org list)
-                    const cachedOrgList = deps.cacheManager.getCachedOrgList();
-
-                    if (!cachedOrgList || cachedOrgList.length === 0) {
-                        // No cached org list = likely post-login, fetch it now to resolve full org object
-                        try {
-                            // Fetch org list to get full org object with code (required for SDK operations)
-                            const orgs = await getOrganizations(deps);
-                            const matchedOrg = orgs.find(o => o.name === context.org || o.code === context.org);
-
-                            if (matchedOrg) {
-                                orgData = matchedOrg;
-                            } else {
-                                debugLogger.warn('[Org Ops] Could not find org in list, using name as fallback');
-                                orgData = {
-                                    id: context.org,
-                                    code: context.org,
-                                    name: context.org,
-                                };
-                            }
-                        } catch (error) {
-                            debugLogger.trace('[Org Ops] Failed to fetch org list for ID resolution:', error);
-                            // Fallback to name-only (SDK operations will fail, CLI fallback will be used)
-                            orgData = {
-                                id: context.org,
-                                code: context.org,
-                                name: context.org,
-                            };
-                        }
-                    } else {
-                        // We have cached org list, safe to resolve full org object without API calls
-                        try {
-                            // Try to resolve ID from cache
-                            const matchedOrg = cachedOrgList.find(o => o.name === context.org || o.code === context.org);
-
-                            if (matchedOrg) {
-                                orgData = matchedOrg;
-                            } else {
-                                debugLogger.warn('[Org Ops] Could not find org in cached list, using name as fallback');
-                                orgData = {
-                                    id: context.org,
-                                    code: context.org,
-                                    name: context.org,
-                                };
-                            }
-                        } catch (error) {
-                            debugLogger.trace('[Org Ops] Failed to resolve from cache:', error);
-                            orgData = {
-                                id: context.org,
-                                code: context.org,
-                                name: context.org,
-                            };
-                        }
-                    }
-                } else {
-                    debugLogger.debug('[Org Ops] Organization name is empty string');
-                    return undefined;
-                }
-            } else if (context.org && typeof context.org === 'object') {
-                const orgName = context.org.name || context.org.id || 'Unknown';
-                debugLogger.debug(`[Org Ops] Current organization: ${orgName}`);
-                orgData = {
-                    id: context.org.id || orgName,
-                    code: context.org.code || orgName,
-                    name: orgName,
-                };
-            } else {
-                debugLogger.debug('[Org Ops] Organization data is not string or object');
-                return undefined;
-            }
-
-            // Cache the result
+        const orgData = await parseOrgFromContext(deps, context.org);
+        if (orgData) {
             deps.cacheManager.setCachedOrganization(orgData);
-            return orgData;
         }
-
-        debugLogger.debug('[Org Ops] No organization currently selected');
-        return undefined;
+        return orgData;
     } catch (error) {
         debugLogger.debug('[Org Ops] Failed to get current organization:', error);
         return undefined;

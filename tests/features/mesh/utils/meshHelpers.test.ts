@@ -8,9 +8,7 @@ import {
     getMeshStatusCategory,
     extractAndParseJSON,
     pollForMeshDeployment,
-    MeshStatusCategory,
     PollConfig,
-    PollResult,
 } from '@/features/mesh/utils/meshHelpers';
 
 describe('meshHelpers', () => {

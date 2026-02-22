@@ -7,13 +7,13 @@
  */
 
 import React, { useState } from 'react';
+import { GitHubServiceCard, DaLiveServiceCard } from '../components';
+import { getBookmarkletSetupPageUrl } from '../helpers/bookmarkletSetupPage';
+import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
+import { useGitHubAuth } from '../hooks/useGitHubAuth';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useCanProceedAll } from '@/core/ui/hooks';
 import { vscode } from '@/core/ui/utils/vscode-api';
-import { useGitHubAuth } from '../hooks/useGitHubAuth';
-import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
-import { getBookmarkletSetupPageUrl } from '../helpers/bookmarkletSetupPage';
-import { GitHubServiceCard, DaLiveServiceCard } from '../components';
 import type { BaseStepProps } from '@/types/wizard';
 import '../styles/connect-services.css';
 

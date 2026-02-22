@@ -26,7 +26,7 @@ import type { OptionalAddon } from '@/types/stacks';
  */
 export function filterAddonsByPackage(stackAddons: OptionalAddon[], pkg: DemoPackage): OptionalAddon[] {
     if (!pkg.addons) return stackAddons;
-    return stackAddons.filter(addon => addon.id in pkg.addons!);
+    return stackAddons.filter(addon => pkg.addons && addon.id in pkg.addons);
 }
 
 /**
@@ -49,6 +49,6 @@ export function filterPackagesBySearchQuery(packages: DemoPackage[], searchQuery
     return packages.filter(
         (p) =>
             p.name.toLowerCase().includes(query) ||
-            p.description.toLowerCase().includes(query)
+            p.description.toLowerCase().includes(query),
     );
 }

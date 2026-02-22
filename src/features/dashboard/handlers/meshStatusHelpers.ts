@@ -11,19 +11,19 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { COMPONENT_IDS } from '@/core/constants';
-import { parseEnvFile } from '@/core/utils/envParser';
-import { Project, ComponentInstance } from '@/types';
-import { HandlerContext } from '@/types/handlers';
-import { getMeshComponentInstance } from '@/types/typeGuards';
-import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
-
-// Import from services for use in this file
 import {
     buildStatusPayload,
     hasMeshDeploymentRecord,
     getMeshEndpoint,
 } from '../services/dashboardStatusService';
+import { COMPONENT_IDS } from '@/core/constants';
+import { parseEnvFile } from '@/core/utils/envParser';
+import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
+import { Project, ComponentInstance } from '@/types';
+import { HandlerContext } from '@/types/handlers';
+import { getMeshComponentInstance } from '@/types/typeGuards';
+
+// Import from services for use in this file
 
 // Re-export for backward compatibility
 export {

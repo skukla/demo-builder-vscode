@@ -11,9 +11,7 @@ import type { ComponentHandler } from '@/features/components/handlers/componentH
 import type { ErrorLogger } from '@/core/logging/errorLogger';
 import type { ProgressUnifier } from '@/core/utils/progressUnifier';
 import type { StepLogger } from '@/core/logging/stepLogger';
-import type { Logger, DebugLogger } from '@/types/logger';
 import type { StateManager } from '@/core/state/stateManager';
-import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { ExtensionContext } from 'vscode';
 
 // Test data

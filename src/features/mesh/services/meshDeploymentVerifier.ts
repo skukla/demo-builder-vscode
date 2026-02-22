@@ -34,6 +34,76 @@ export interface VerificationOptions {
     logger?: Logger;
 }
 
+/** Parsed mesh data from Adobe CLI response */
+interface MeshGetResponse {
+    meshStatus?: string;
+    meshId?: string;
+    mesh_id?: string;
+    endpoint?: string;
+    error?: string;
+}
+
+/**
+ * Try to extract JSON from stdout and parse mesh data.
+ * Returns parsed mesh data or undefined if no valid JSON found.
+ * This is kept synchronous to avoid extra microtask ticks in the polling loop.
+ */
+function extractMeshData(stdout: string, logger?: Logger): MeshGetResponse | undefined {
+    const jsonMatch = /\{[\s\S]*\}/.exec(stdout);
+    if (!jsonMatch) return undefined;
+
+    const meshData = parseJSON<MeshGetResponse>(jsonMatch[0]);
+    if (!meshData) {
+        logger?.warn('[Mesh Verification] Failed to parse mesh data');
+        return undefined;
+    }
+
+    return meshData;
+}
+
+/**
+ * Process parsed mesh data into a deployment verification result.
+ * Only called when mesh data was successfully extracted.
+ * Returns a final result if the status is terminal (deployed or error),
+ * or undefined if polling should continue.
+ */
+async function processMeshStatus(
+    meshData: MeshGetResponse,
+    stdout: string,
+    initialWait: number,
+    pollInterval: number,
+    attempt: number,
+    logger?: Logger,
+): Promise<MeshDeploymentVerificationResult | undefined> {
+    const meshStatus = meshData.meshStatus?.toLowerCase();
+    logger?.info(`[Mesh Verification] Status: ${meshStatus || 'unknown'}`);
+
+    if (meshStatus === 'deployed' || meshStatus === 'success') {
+        const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
+        logger?.info(`[Mesh Verification] ✅ Verified deployment after ${totalTime}s`);
+
+        const deployedMeshId = meshData.meshId || meshData.mesh_id;
+        let deployedEndpoint: string | undefined;
+        if (deployedMeshId) {
+            deployedEndpoint = await getEndpoint(deployedMeshId, logger);
+        } else {
+            logger?.warn('[Mesh Verification] No meshId found in response, cannot retrieve endpoint');
+        }
+
+        return { deployed: true, meshId: deployedMeshId, endpoint: deployedEndpoint };
+    }
+
+    if (meshStatus === 'error' || meshStatus === 'failed') {
+        logger?.trace('[Mesh Verification] Full API response:', stdout);
+        const { extractMeshErrorSummary } = await import('../utils/errorFormatter');
+        const fullError = meshData.error || stdout || 'Mesh deployment failed with error status';
+        return { deployed: false, error: extractMeshErrorSummary(fullError) };
+    }
+
+    // Pending/building - continue polling
+    return undefined;
+}
+
 /**
  * Poll Adobe I/O until mesh is fully deployed
  * Mesh deployment is asynchronous - command can succeed while mesh is still deploying
@@ -49,97 +119,44 @@ export async function waitForMeshDeployment(
     // Formula: (totalTimeout - initialWait) / pollInterval
     const maxRetries = options.maxRetries ??
         Math.floor((TIMEOUTS.LONG - initialWait) / pollInterval);
-    
-    const {
-        onProgress,
-        logger,
-    } = options;
-    
+
+    const { onProgress, logger } = options;
+
     const commandManager = ServiceLocator.getCommandExecutor();
-    
+
     // Initial wait - mesh won't be ready immediately after update command
     logger?.info(`[Mesh Verification] Waiting ${initialWait / 1000}s for mesh provisioning...`);
     await new Promise(resolve => setTimeout(resolve, initialWait));
-    
-    let attempt = 0;
-    let meshDeployed = false;
-    let deployedMeshId: string | undefined;
-    let deployedEndpoint: string | undefined;
-    
-    while (attempt < maxRetries && !meshDeployed) {
-        attempt++;
-        
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
         const elapsed = initialWait + (attempt - 1) * pollInterval;
         const elapsedSeconds = Math.floor(elapsed / 1000);
-        
-        // Notify progress
+
         onProgress?.(attempt, maxRetries, elapsedSeconds);
-        
-        // Wait between attempts (except first)
+
         if (attempt > 1) {
             await new Promise(resolve => setTimeout(resolve, pollInterval));
         }
-        
+
         logger?.info(`[Mesh Verification] Attempt ${attempt}/${maxRetries} (${elapsedSeconds}s elapsed)`);
-        
+
         try {
-            // Call aio api-mesh get to check deployment status
-            const verifyResult = await commandManager.execute(
-                'aio api-mesh get',
-                {
-                    timeout: TIMEOUTS.NORMAL,
-                    configureTelemetry: false,
-                    useNodeVersion: getMeshNodeVersion(),
-                    enhancePath: true,
-                    shell: true,
-                },
-            );
-            
+            const verifyResult = await commandManager.execute('aio api-mesh get', {
+                timeout: TIMEOUTS.NORMAL,
+                configureTelemetry: false,
+                useNodeVersion: getMeshNodeVersion(),
+                enhancePath: true,
+                shell: true,
+            });
+
             if (verifyResult.code === 0) {
-                // Parse JSON response
-                const jsonMatch = /\{[\s\S]*\}/.exec(verifyResult.stdout);
-                if (jsonMatch) {
-                    const meshData = parseJSON<{ meshStatus?: string; meshId?: string; mesh_id?: string; endpoint?: string; error?: string }>(jsonMatch[0]);
-                    if (!meshData) {
-                        logger?.warn('[Mesh Verification] Failed to parse mesh data');
-                        continue;
-                    }
-                    const meshStatus = meshData.meshStatus?.toLowerCase();
-                    
-                    logger?.info(`[Mesh Verification] Status: ${meshStatus || 'unknown'}`);
-                    
-                    if (meshStatus === 'deployed' || meshStatus === 'success') {
-                        // Success! Mesh is fully deployed
-                        const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
-                        logger?.info(`[Mesh Verification] ✅ Verified deployment after ${totalTime}s`);
-
-                        // Handle both camelCase (meshId) and snake_case (mesh_id) responses from Adobe CLI
-                        deployedMeshId = meshData.meshId || meshData.mesh_id;
-
-                        // Get endpoint using describe command
-                        if (deployedMeshId) {
-                            deployedEndpoint = await getEndpoint(deployedMeshId, logger);
-                        } else {
-                            logger?.warn(`[Mesh Verification] No meshId found in response, cannot retrieve endpoint`);
-                        }
-
-                        meshDeployed = true;
-                        break;
-                    } else if (meshStatus === 'error' || meshStatus === 'failed') {
-                        // Log full response for deep debugging - Adobe's error field is often truncated
-                        logger?.trace('[Mesh Verification] Full API response:', verifyResult.stdout);
-
-                        // Try to extract more meaningful error from full response
-                        const { extractMeshErrorSummary } = await import('../utils/errorFormatter');
-                        const fullError = meshData.error || verifyResult.stdout || 'Mesh deployment failed with error status';
-                        const userFriendlyError = extractMeshErrorSummary(fullError);
-
-                        return {
-                            deployed: false,
-                            error: userFriendlyError,
-                        };
-                    }
-                    // Otherwise continue polling (status is pending/building/etc)
+                const meshData = extractMeshData(verifyResult.stdout, logger);
+                if (meshData) {
+                    const result = await processMeshStatus(
+                        meshData, verifyResult.stdout,
+                        initialWait, pollInterval, attempt, logger,
+                    );
+                    if (result) return result;
                 }
             }
         } catch (verifyError) {
@@ -147,21 +164,10 @@ export async function waitForMeshDeployment(
             // Continue polling - transient errors are common
         }
     }
-    
-    if (!meshDeployed) {
-        const error = 'Mesh deployment verification timed out. The mesh may still be deploying - check the Developer Console.';
-        logger?.warn(`[Mesh Verification] ${error}`);
-        return {
-            deployed: false,
-            error,
-        };
-    }
-    
-    return {
-        deployed: true,
-        meshId: deployedMeshId,
-        endpoint: deployedEndpoint,
-    };
+
+    const error = 'Mesh deployment verification timed out. The mesh may still be deploying - check the Developer Console.';
+    logger?.warn(`[Mesh Verification] ${error}`);
+    return { deployed: false, error };
 }
 
 /**

@@ -63,7 +63,7 @@ export interface AdobeConsoleWhereResponse {
     workspace?: string | { id: string; name: string; title?: string };
 }
 
-export interface SDKResponse<T = any> {
+export interface SDKResponse<T = unknown> {
     body?: T;
     statusCode?: number;
 }

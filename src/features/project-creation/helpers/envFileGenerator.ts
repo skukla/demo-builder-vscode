@@ -5,13 +5,12 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { formatGroupName } from './formatters';
-import { normalizeIfUrl } from '@/core/validation/Validator';
 import { generateConfigFile } from '@/core/config/configFileGenerator';
-import { TransformedComponentDefinition, EnvVarDefinition, ConfigFileDefinition, ComponentRegistry } from '@/types/components';
-import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import { COMPONENT_IDS } from '@/core/constants';
-import { generateConfigJson, extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
-import type { ConfigGeneratorParams } from '@/features/eds/services/configGenerator';
+import { normalizeIfUrl } from '@/core/validation/Validator';
+import { generateConfigJson, extractConfigParamsFromConfigs, type ConfigGeneratorParams } from '@/features/eds/services/configGenerator';
+import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
+import { TransformedComponentDefinition, EnvVarDefinition, ConfigFileDefinition, ComponentRegistry } from '@/types/components';
 
 /**
  * Resolves all environment variable keys for a component, including backend-specific service env vars.
@@ -78,6 +77,72 @@ export interface EnvGenerationContext {
     getEnvVarDefinitions(): Record<string, Omit<EnvVarDefinition, 'key'>>;
     /** Get mesh endpoint if available */
     getMeshEndpoint(): string | undefined;
+}
+
+/**
+ * Group env var definitions by their group field.
+ */
+function groupEnvVarsBySection(vars: EnvVarDefinition[]): Map<string, EnvVarDefinition[]> {
+    const groups = new Map<string, EnvVarDefinition[]>();
+    for (const envVar of vars) {
+        const group = envVar.group || 'general';
+        if (!groups.has(group)) {
+            groups.set(group, []);
+        }
+        groups.get(group)?.push(envVar);
+    }
+    return groups;
+}
+
+/**
+ * Resolve the value for a single env var using priority order:
+ * 1. Derived/computed values
+ * 2. Runtime values (MESH_ENDPOINT)
+ * 3. User-provided values from componentConfigs
+ * 4. Default value from definition
+ * 5. Empty string
+ */
+function resolveEnvVarValue(
+    envVar: EnvVarDefinition,
+    derivedValues: Map<string, string>,
+    context: EnvGenerationContext,
+): string {
+    const key = envVar.key;
+
+    if (derivedValues.has(key)) {
+        return derivedValues.get(key) ?? '';
+    }
+
+    if (key === 'MESH_ENDPOINT') {
+        return context.getMeshEndpoint() || '';
+    }
+
+    const componentConfigs = context.getComponentConfigs();
+    if (componentConfigs) {
+        for (const compId in componentConfigs) {
+            const configValue = componentConfigs[compId]?.[key];
+            if (configValue !== undefined) {
+                return String(configValue);
+            }
+        }
+    }
+
+    if (envVar.default !== undefined) {
+        return String(envVar.default);
+    }
+
+    return '';
+}
+
+/**
+ * Append env var lines (description comment + key=value) to the output.
+ */
+function appendEnvVarLines(lines: string[], envVar: EnvVarDefinition, value: string): void {
+    if (envVar.description) {
+        lines.push(`# ${envVar.description}`);
+    }
+    const normalizedValue = normalizeIfUrl(value);
+    lines.push(`${envVar.key}=${normalizedValue || ''}`);
 }
 
 /**
@@ -160,66 +225,14 @@ export async function generateComponentEnvFile(
     const relevantVars = Array.from(varsByKey.values());
 
     if (relevantVars.length > 0) {
-        // Group variables by their group
-        const groups = new Map<string, EnvVarDefinition[]>();
+        const groups = groupEnvVarsBySection(relevantVars);
 
-        for (const envVar of relevantVars) {
-            const group = envVar.group || 'general';
-            if (!groups.has(group)) {
-                groups.set(group, []);
-            }
-            groups.get(group)!.push(envVar);
-        }
-
-        // Write variables grouped by section
         for (const [groupName, vars] of groups.entries()) {
             lines.push(`# ${formatGroupName(groupName)}`);
 
             for (const envVar of vars) {
-                const key = envVar.key;
-                let value = '';
-
-                // Priority order for values:
-                // 1. Derived/computed values (e.g., ADOBE_CATALOG_SERVICE_ENDPOINT)
-                // 2. Runtime values (e.g., MESH_ENDPOINT from deployment)
-                // 3. User-provided values (from wizard - check all components)
-                // 4. Default value (from components.json)
-                // 5. Empty string
-
-                if (derivedValues.has(key)) {
-                    value = derivedValues.get(key)!;
-                } else if (key === 'MESH_ENDPOINT') {
-                    const meshEndpoint = context.getMeshEndpoint();
-                    if (meshEndpoint) {
-                        value = meshEndpoint;
-                    }
-                } else {
-                    const componentConfigs = context.getComponentConfigs();
-                    if (componentConfigs) {
-                        // Check if ANY component has this value (field might be entered under different component)
-                        for (const compId in componentConfigs) {
-                            const configValue = componentConfigs[compId]?.[key];
-                            if (configValue !== undefined) {
-                                value = String(configValue);
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                // Fall back to default value from field definition
-                if (!value && envVar.default !== undefined) {
-                    value = String(envVar.default);
-                }
-
-                // Add description as comment if available
-                if (envVar.description) {
-                    lines.push(`# ${envVar.description}`);
-                }
-
-                // Normalize URL values (remove trailing slashes)
-                const normalizedValue = normalizeIfUrl(value);
-                lines.push(`${key}=${normalizedValue || ''}`);
+                const value = resolveEnvVarValue(envVar, derivedValues, context);
+                appendEnvVarLines(lines, envVar, value);
             }
 
             lines.push('');
@@ -331,7 +344,7 @@ async function generateSingleConfigFile(
     const accsEndpoint = getConfigValue('ACCS_CATALOG_SERVICE_ENDPOINT');
     if (paasEndpoint || accsEndpoint) {
         const derivedEndpoint = paasEndpoint || accsEndpoint;
-        derivedValues.set('ADOBE_CATALOG_SERVICE_ENDPOINT', derivedEndpoint!);
+        derivedValues.set('ADOBE_CATALOG_SERVICE_ENDPOINT', derivedEndpoint ?? '');
         context.logger.debug(`[Config Generator] Computed ADOBE_CATALOG_SERVICE_ENDPOINT from ${paasEndpoint ? 'PAAS' : 'ACCS'}_CATALOG_SERVICE_ENDPOINT: ${derivedEndpoint}`);
     }
     
@@ -348,7 +361,7 @@ async function generateSingleConfigFile(
         // Get value from config
         // Priority: 1. Derived values, 2. Runtime values, 3. User-provided values
         if (derivedValues.has(envVarKey)) {
-            value = derivedValues.get(envVarKey)!;
+            value = derivedValues.get(envVarKey) ?? '';
         } else if (envVarKey === 'MESH_ENDPOINT') {
             const meshEndpoint = context.getMeshEndpoint();
             if (meshEndpoint) {
@@ -398,7 +411,7 @@ async function generateSingleConfigFile(
         await fsPromises.writeFile(
             filePath,
             JSON.stringify(outputConfig, null, 2),
-            'utf-8'
+            'utf-8',
         );
     }
     

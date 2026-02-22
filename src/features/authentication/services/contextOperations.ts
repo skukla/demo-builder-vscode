@@ -80,14 +80,105 @@ export function extractContextId(value: string | { id: string } | undefined): st
 }
 
 /**
+ * Resolve org name/code from CLI context to numeric ID using cache
+ */
+function resolveOrgId(
+    deps: ContextOperationsDeps,
+    rawOrgId: string | undefined,
+    orgContextValue: string | { id: string } | undefined,
+): string | undefined {
+    const debugLogger = getLogger();
+    if (!rawOrgId || typeof orgContextValue !== 'string') return rawOrgId;
+
+    const cachedOrg = deps.cacheManager.getCachedOrganization();
+    if (cachedOrg?.id) {
+        debugLogger.trace(`[Context Ops] Resolved org name "${orgContextValue}" to ID: ${cachedOrg.id}`);
+        return cachedOrg.id;
+    }
+
+    const cachedOrgList = deps.cacheManager.getCachedOrgList();
+    const matchingOrg = cachedOrgList?.find(o => o.name === orgContextValue || o.code === orgContextValue);
+    if (matchingOrg?.id) {
+        debugLogger.trace(`[Context Ops] Resolved org name "${orgContextValue}" to ID from list: ${matchingOrg.id}`);
+        return matchingOrg.id;
+    }
+
+    debugLogger.trace(`[Context Ops] Cannot resolve org name "${orgContextValue}" - no cached org`);
+    return rawOrgId;
+}
+
+/**
+ * Resolve project name from CLI context to numeric ID using cache
+ */
+function resolveProjectId(
+    deps: ContextOperationsDeps,
+    rawProjectId: string | undefined,
+    projectContextValue: string | { id: string } | undefined,
+): string | undefined {
+    const debugLogger = getLogger();
+    if (!rawProjectId || typeof projectContextValue !== 'string') return rawProjectId;
+
+    const cachedProject = deps.cacheManager.getCachedProject();
+    if (cachedProject?.id) {
+        debugLogger.trace(`[Context Ops] Resolved project name "${rawProjectId}" to ID: ${cachedProject.id}`);
+        return cachedProject.id;
+    }
+
+    debugLogger.trace(`[Context Ops] Cannot resolve project name "${rawProjectId}" - no cached project`);
+    return rawProjectId;
+}
+
+/**
+ * Ensure org context matches expected, re-select if needed
+ */
+async function ensureOrgContext(
+    deps: ContextOperationsDeps,
+    context: AdobeConsoleWhereResponse | undefined,
+    expectedOrgId: string,
+    selectOrganization: (orgId: string) => Promise<boolean>,
+): Promise<boolean> {
+    const debugLogger = getLogger();
+    const currentOrgId = resolveOrgId(deps, extractContextId(context?.org), context?.org);
+
+    if (currentOrgId === expectedOrgId) return true;
+
+    debugLogger.debug(`[Context Ops] Context sync: org mismatch (current: "${currentOrgId || 'none'}"), re-selecting...`);
+    const orgSelected = await selectOrganization(expectedOrgId);
+    if (!orgSelected) {
+        debugLogger.error('[Context Ops] Failed to restore org context');
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Ensure project context matches expected, re-select if needed
+ */
+async function ensureProjectContext(
+    deps: ContextOperationsDeps,
+    context: AdobeConsoleWhereResponse | undefined,
+    expectedProjectId: string,
+    orgWasChanged: boolean,
+    doSelectProject: (projectId: string) => Promise<boolean>,
+): Promise<boolean> {
+    const debugLogger = getLogger();
+    const currentContext = orgWasChanged ? await getConsoleWhereContext(deps) : context;
+    const resolvedId = resolveProjectId(deps, extractContextId(currentContext?.project), currentContext?.project);
+
+    if (resolvedId === expectedProjectId) return true;
+
+    debugLogger.debug(`[Context Ops] Context sync: project mismatch (current: "${resolvedId || 'none'}"), re-selecting...`);
+    const projectSelected = await doSelectProject(expectedProjectId);
+    if (!projectSelected) {
+        debugLogger.error('[Context Ops] Failed to restore project context');
+        return false;
+    }
+    return true;
+}
+
+/**
  * Ensure Adobe CLI context matches expected state before dependent operations.
  * Re-selects org/project if another process changed the global context.
- *
- * @param deps - Dependencies for operations
- * @param expected - The org/project IDs that should be selected
- * @param selectOrganization - Callback to select org if mismatch
- * @param doSelectProject - Callback to select project if mismatch
- * @returns true if context is correct (or was corrected), false on failure
  */
 export async function ensureContext(
     deps: ContextOperationsDeps,
@@ -95,69 +186,17 @@ export async function ensureContext(
     selectOrganization: (orgId: string) => Promise<boolean>,
     doSelectProject: (projectId: string) => Promise<boolean>,
 ): Promise<boolean> {
-    const debugLogger = getLogger();
     const context = await getConsoleWhereContext(deps);
 
-    // Check organization context
-    let currentOrgId = extractContextId(context?.org);
-
-    // If currentOrgId is a name (string from CLI), check cache to resolve to ID
-    if (currentOrgId && typeof context?.org === 'string') {
-        const cachedOrg = deps.cacheManager.getCachedOrganization();
-        if (cachedOrg?.id) {
-            currentOrgId = cachedOrg.id;
-            debugLogger.trace(`[Context Ops] Resolved org name "${context.org}" to ID: ${currentOrgId}`);
-        } else {
-            // Try org list cache as fallback
-            const cachedOrgList = deps.cacheManager.getCachedOrgList();
-            const matchingOrg = cachedOrgList?.find(o => o.name === context.org || o.code === context.org);
-            if (matchingOrg?.id) {
-                currentOrgId = matchingOrg.id;
-                debugLogger.trace(`[Context Ops] Resolved org name "${context.org}" to ID from list: ${currentOrgId}`);
-            } else {
-                debugLogger.trace(`[Context Ops] Cannot resolve org name "${context.org}" - no cached org`);
-            }
-        }
+    if (expected.orgId) {
+        const orgOk = await ensureOrgContext(deps, context, expected.orgId, selectOrganization);
+        if (!orgOk) return false;
     }
 
-    if (expected.orgId && currentOrgId !== expected.orgId) {
-        debugLogger.debug(
-            `[Context Ops] Context sync: org mismatch (current: "${currentOrgId || 'none'}"), re-selecting...`,
-        );
-        const orgSelected = await selectOrganization(expected.orgId);
-        if (!orgSelected) {
-            debugLogger.error('[Context Ops] Failed to restore org context');
-            return false;
-        }
-    }
-
-    // Check project context (re-fetch context if org was changed)
     if (expected.projectId) {
-        const currentContext = expected.orgId ? await getConsoleWhereContext(deps) : context;
-        const currentProjectId = extractContextId(currentContext?.project);
-        
-        // If currentProjectId is a name (string from CLI), check cache to resolve to ID
-        let resolvedProjectId = currentProjectId;
-        if (currentProjectId && typeof currentContext?.project === 'string') {
-            const cachedProject = deps.cacheManager.getCachedProject();
-            if (cachedProject?.id) {
-                resolvedProjectId = cachedProject.id;
-                debugLogger.trace(`[Context Ops] Resolved project name "${currentProjectId}" to ID: ${resolvedProjectId}`);
-            } else {
-                debugLogger.trace(`[Context Ops] Cannot resolve project name "${currentProjectId}" - no cached project`);
-            }
-        }
-        
-        if (resolvedProjectId !== expected.projectId) {
-            debugLogger.debug(
-                `[Context Ops] Context sync: project mismatch (current: "${resolvedProjectId || currentProjectId || 'none'}"), re-selecting...`,
-            );
-            const projectSelected = await doSelectProject(expected.projectId);
-            if (!projectSelected) {
-                debugLogger.error('[Context Ops] Failed to restore project context');
-                return false;
-            }
-        }
+        const orgWasChanged = !!expected.orgId;
+        const projectOk = await ensureProjectContext(deps, context, expected.projectId, orgWasChanged, doSelectProject);
+        if (!projectOk) return false;
     }
 
     return true;

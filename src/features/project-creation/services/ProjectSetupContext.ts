@@ -12,8 +12,8 @@
  * - Easier to test and mock
  */
 
-import type { ComponentRegistry, EnvVarDefinition, TransformedComponentDefinition } from '@/types/components';
 import type { Project } from '@/types';
+import type { ComponentRegistry, EnvVarDefinition, TransformedComponentDefinition } from '@/types/components';
 import type { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
 

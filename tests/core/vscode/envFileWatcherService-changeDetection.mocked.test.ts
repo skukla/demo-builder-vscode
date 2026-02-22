@@ -24,7 +24,7 @@ import {
     mockStateManager,
     mockLogger,
     resetMocks,
-    commandCallbacks,
+    commandCallbacks as _commandCallbacks,
 } from './envFileWatcherService.testUtils';
 
 // Mock vscode API - must be in test file for proper hoisting
@@ -41,9 +41,9 @@ jest.mock('vscode', () => {
                     pattern,
                     _disposed: false,
                     _listeners: {
-                        onCreate: [] as Function[],
-                        onChange: [] as Function[],
-                        onDelete: [] as Function[]
+                        onCreate: [] as ((...args: unknown[]) => unknown)[],
+                        onChange: [] as ((...args: unknown[]) => unknown)[],
+                        onDelete: [] as ((...args: unknown[]) => unknown)[]
                     },
                     onDidCreate: jest.fn((listener) => {
                         watcher._listeners.onCreate.push(listener);
@@ -64,7 +64,7 @@ jest.mock('vscode', () => {
                         if (idx !== -1) mockWatchers.splice(idx, 1);
                     }),
                     _simulateChange: (uri: any) => {
-                        watcher._listeners.onChange.forEach((l: Function) => l(uri));
+                        watcher._listeners.onChange.forEach((l: (...args: unknown[]) => unknown) => l(uri));
                     }
                 };
 

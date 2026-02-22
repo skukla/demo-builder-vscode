@@ -12,7 +12,7 @@ import { HandlerContext } from '@/commands/handlers/HandlerContext';
 
 // Track component definitions passed to cloneAllComponents
 let componentDefinitionIds: string[] = [];
-let clonedComponents: Map<string, any> = new Map();
+const clonedComponents: Map<string, any> = new Map();
 
 // Mock dependencies
 jest.mock('@/features/mesh/services/meshDeployment');
@@ -276,7 +276,7 @@ describe('Executor - EDS Standard Flow', () => {
 
     describe('EDS Metadata Population', () => {
         it('should populate EDS metadata after cloning', async () => {
-            let savedProjects: any[] = [];
+            const savedProjects: any[] = [];
 
             const edsConfig = {
                 projectName: 'test-eds-metadata',

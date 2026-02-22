@@ -22,7 +22,7 @@ interface UsePrerequisiteAutoScrollReturn {
 export function usePrerequisiteAutoScroll(
     checks: PrerequisiteCheck[],
     setCanProceed: (value: boolean) => void,
-    scrollContainerRef: React.MutableRefObject<HTMLDivElement | null>
+    scrollContainerRef: React.MutableRefObject<HTMLDivElement | null>,
 ): UsePrerequisiteAutoScrollReturn {
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
     const hasAutoScrolled = useRef<boolean>(false);
@@ -63,7 +63,7 @@ export function usePrerequisiteAutoScroll(
                 }
             }
         }
-    }, [checks]);
+    }, [checks, scrollContainerRef]);
 
     // Update canProceed and auto-scroll to bottom when all complete
     useEffect(() => {
@@ -84,7 +84,7 @@ export function usePrerequisiteAutoScroll(
                 }
             }, FRONTEND_TIMEOUTS.SCROLL_SETTLE);
         }
-    }, [checks, setCanProceed]);
+    }, [checks, setCanProceed, scrollContainerRef]);
 
     return {
         itemRefs,

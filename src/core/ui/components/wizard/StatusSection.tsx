@@ -26,7 +26,7 @@ export function StatusSection({
     description, 
     status, 
     emptyText = 'Not selected', 
-    statusText 
+    statusText, 
 }: StatusSectionProps) {
     const renderIcon = () => {
         switch (status) {

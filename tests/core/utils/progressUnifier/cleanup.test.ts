@@ -31,7 +31,7 @@ describe('ProgressUnifier - Timer Cleanup', () => {
             );
 
             // Mock spawn to complete quickly
-            mocks.spawn.mockImplementation((command, args, options) => {
+            mocks.spawn.mockImplementation((_command, _args, _options) => {
                 const process = createMockProcess();
                 mocks.timers.setTimeout(async () => {
                     await process.triggerClose(0);
@@ -77,7 +77,7 @@ describe('ProgressUnifier - Timer Cleanup', () => {
             );
 
             // Mock spawn to fail
-            mocks.spawn.mockImplementation((command, args, options) => {
+            mocks.spawn.mockImplementation((_command, _args, _options) => {
                 const process = createMockProcess();
                 mocks.timers.setTimeout(async () => {
                     await process.triggerClose(1); // Exit code 1 (failure)
@@ -95,7 +95,7 @@ describe('ProgressUnifier - Timer Cleanup', () => {
             try {
                 await advanceTime(2000);
                 await executePromise;
-            } catch (error) {
+            } catch (_error) {
                 // Expected to fail
             }
 

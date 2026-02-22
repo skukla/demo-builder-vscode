@@ -262,8 +262,8 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     if (hasPackages && hasStacks) {
         return (
             <BrandGallery
-                packages={packages!}
-                stacks={stacks!}
+                packages={packages ?? []}
+                stacks={stacks ?? []}
                 selectedPackage={state.selectedPackage}
                 selectedStack={state.selectedStack}
                 selectedAddons={state.selectedAddons}

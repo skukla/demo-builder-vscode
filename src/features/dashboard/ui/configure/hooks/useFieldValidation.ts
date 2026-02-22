@@ -8,8 +8,8 @@
 
 import { useEffect, Dispatch, SetStateAction } from 'react';
 import type { ServiceGroup } from '../configureTypes';
-import { ComponentConfigs } from '@/types/webview';
 import { url, pattern } from '@/core/validation/Validator';
+import { ComponentConfigs } from '@/types/webview';
 
 interface UseFieldValidationProps {
     serviceGroups: ServiceGroup[];
@@ -71,7 +71,7 @@ export function useFieldValidation({
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
                         const patternValidator = pattern(
                             new RegExp(field.validation.pattern),
-                            field.validation.message || 'Invalid format'
+                            field.validation.message || 'Invalid format',
                         );
                         const result = patternValidator(value);
                         if (!result.valid && result.error) {

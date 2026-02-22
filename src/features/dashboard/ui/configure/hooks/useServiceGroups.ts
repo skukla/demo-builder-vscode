@@ -37,8 +37,8 @@ export function useServiceGroups({
                             componentIds: [id],
                         });
                     } else {
-                        const existing = fieldMap.get(envVarKey)!;
-                        if (!existing.componentIds.includes(id)) {
+                        const existing = fieldMap.get(envVarKey);
+                        if (existing && !existing.componentIds.includes(id)) {
                             existing.componentIds.push(id);
                         }
                     }
@@ -55,8 +55,8 @@ export function useServiceGroups({
                             componentIds: [id],
                         });
                     } else {
-                        const existing = fieldMap.get(envVarKey)!;
-                        if (!existing.componentIds.includes(id)) {
+                        const existing = fieldMap.get(envVarKey);
+                        if (existing && !existing.componentIds.includes(id)) {
                             existing.componentIds.push(id);
                         }
                     }

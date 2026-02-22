@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import {
     getEnabledWizardSteps,
     initializeComponentsFromImport,
@@ -9,11 +10,10 @@ import {
     EditProjectConfig,
     WizardStepConfigWithRequirements,
 } from '../wizardHelpers';
-import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
-import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
 import type { Stack } from '@/types/stacks';
+import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
 
 const log = webviewLogger('useWizardState');
 
@@ -71,6 +71,164 @@ interface UseWizardStateReturn {
 }
 
 /**
+ * Build EDS config for edit mode from saved project settings.
+ * Auth tokens are NOT assumed valid -- hooks validate on step visit.
+ */
+function buildEditModeEdsConfig(
+    edsConfig: NonNullable<ImportedSettings['edsConfig']>,
+): WizardState['edsConfig'] {
+    const owner = edsConfig.githubOwner || '';
+    const repo = edsConfig.repoName || '';
+    const site = edsConfig.daLiveSite || '';
+    const hasGithub = Boolean(owner && repo);
+    const hasDaLive = Boolean(edsConfig.daLiveOrg);
+
+    return {
+        accsHost: '',
+        storeViewCode: '',
+        customerGroup: '',
+        repoName: repo,
+        daLiveOrg: edsConfig.daLiveOrg || '',
+        daLiveSite: site,
+        githubAuth: hasGithub ? {
+            isAuthenticated: false,
+            isChecking: true,
+            user: { login: owner },
+        } : undefined,
+        daLiveAuth: hasDaLive ? {
+            isAuthenticated: false,
+            isChecking: true,
+        } : undefined,
+        repoUrl: edsConfig.repoUrl,
+        repoMode: hasGithub ? 'existing' : undefined,
+        selectedRepo: hasGithub ? {
+            id: `${owner}/${repo}`,
+            name: repo,
+            fullName: `${owner}/${repo}`,
+            htmlUrl: `https://github.com/${owner}/${repo}`,
+        } : undefined,
+        selectedSite: site ? {
+            id: site,
+            name: site,
+        } : undefined,
+    };
+}
+
+/**
+ * Build EDS config for import mode from imported project settings.
+ * Auth tokens are assumed valid since importing from existing project.
+ */
+function buildImportModeEdsConfig(
+    edsConfig: NonNullable<ImportedSettings['edsConfig']>,
+): WizardState['edsConfig'] {
+    const owner = edsConfig.githubOwner || '';
+    const repo = edsConfig.repoName || '';
+    const site = edsConfig.daLiveSite || '';
+    const hasGithub = Boolean(owner && repo);
+    const hasDaLive = Boolean(edsConfig.daLiveOrg);
+
+    return {
+        accsHost: '',
+        storeViewCode: '',
+        customerGroup: '',
+        repoName: repo,
+        daLiveOrg: edsConfig.daLiveOrg || '',
+        daLiveSite: site,
+        githubAuth: hasGithub ? {
+            isAuthenticated: true,
+            user: { login: owner },
+        } : undefined,
+        daLiveAuth: hasDaLive ? {
+            isAuthenticated: true,
+            org: edsConfig.daLiveOrg,
+        } : undefined,
+        repoUrl: edsConfig.repoUrl,
+        repoMode: hasGithub ? 'existing' : undefined,
+        selectedRepo: hasGithub ? {
+            id: `${owner}/${repo}`,
+            name: repo,
+            fullName: `${owner}/${repo}`,
+            htmlUrl: `https://github.com/${owner}/${repo}`,
+        } : undefined,
+        selectedSite: site ? {
+            id: site,
+            name: site,
+        } : undefined,
+    };
+}
+
+/** Build Adobe context objects from edit settings */
+function buildEditModeAdobeContext(adobe: ImportedSettings['adobe']) {
+    return {
+        org: adobe?.orgId ? { id: adobe.orgId, code: '', name: adobe.orgName || '' } : undefined,
+        project: adobe?.projectId ? { id: adobe.projectId, name: adobe.projectName || '', title: adobe.projectTitle } : undefined,
+        workspace: adobe?.workspaceId ? { id: adobe.workspaceId, name: adobe.workspaceName || '', title: adobe.workspaceTitle } : undefined,
+    };
+}
+
+/** Build component selection from edit settings */
+function buildEditModeComponents(selections: ImportedSettings['selections']): ComponentSelection | undefined {
+    if (!selections) return undefined;
+    return {
+        frontend: selections.frontend,
+        backend: selections.backend,
+        dependencies: selections.dependencies || [],
+        integrations: selections.integrations || [],
+        appBuilder: selections.appBuilder || [],
+    };
+}
+
+/** Initialize wizard state for edit mode */
+function buildEditModeState(
+    firstStep: WizardStep,
+    editProject: EditProjectConfig,
+): WizardState {
+    const editSettings = editProject.settings;
+    log.info('Initializing wizard in edit mode', {
+        projectName: editProject.projectName,
+        projectPath: editProject.projectPath,
+        hasSelections: !!editSettings.selections,
+        hasAdobe: !!editSettings.adobe,
+        hasConfigs: !!editSettings.configs,
+        hasEdsConfig: !!editSettings.edsConfig,
+    });
+
+    if (editSettings.edsConfig) {
+        log.info('Edit mode EDS config:', {
+            githubOwner: editSettings.edsConfig.githubOwner,
+            repoName: editSettings.edsConfig.repoName,
+            daLiveOrg: editSettings.edsConfig.daLiveOrg,
+            daLiveSite: editSettings.edsConfig.daLiveSite,
+        });
+    } else {
+        log.warn('Edit mode: No EDS config found in project settings');
+    }
+
+    const adobeContext = buildEditModeAdobeContext(editSettings.adobe);
+
+    return {
+        currentStep: firstStep,
+        projectName: editProject.projectName,
+        wizardMode: 'edit',
+        editMode: true,
+        editProjectPath: editProject.projectPath,
+        editOriginalName: editProject.projectName,
+        componentConfigs: editSettings.configs || {},
+        adobeAuth: { isAuthenticated: true, isChecking: false },
+        components: buildEditModeComponents(editSettings.selections),
+        adobeOrg: adobeContext.org,
+        adobeProject: adobeContext.project,
+        adobeWorkspace: adobeContext.workspace,
+        selectedPackage: editSettings.selectedPackage,
+        selectedStack: editSettings.selectedStack,
+        selectedAddons: editSettings.selectedAddons,
+        edsConfig: editSettings.edsConfig
+            ? buildEditModeEdsConfig(editSettings.edsConfig)
+            : undefined,
+    };
+}
+
+/**
  * Compute initial state based on mode (edit vs create) and any imported settings
  */
 function computeInitialState(
@@ -82,115 +240,14 @@ function computeInitialState(
 ): WizardState {
     const firstStep = getFirstEnabledStep(wizardSteps);
 
-    // EDIT MODE: Initialize with project data, start at first step
     if (editProject) {
-        const editSettings = editProject.settings;
-        log.info('Initializing wizard in edit mode', {
-            projectName: editProject.projectName,
-            projectPath: editProject.projectPath,
-            hasSelections: !!editSettings.selections,
-            hasAdobe: !!editSettings.adobe,
-            hasConfigs: !!editSettings.configs,
-            hasEdsConfig: !!editSettings.edsConfig,
-        });
-
-        // Debug: Log EDS config details for step satisfaction troubleshooting
-        if (editSettings.edsConfig) {
-            log.info('Edit mode EDS config:', {
-                githubOwner: editSettings.edsConfig.githubOwner,
-                repoName: editSettings.edsConfig.repoName,
-                daLiveOrg: editSettings.edsConfig.daLiveOrg,
-                daLiveSite: editSettings.edsConfig.daLiveSite,
-            });
-        } else {
-            log.warn('Edit mode: No EDS config found in project settings');
-        }
-
-        return {
-            currentStep: firstStep,
-            projectName: editProject.projectName,
-            wizardMode: 'edit',
-            editMode: true,  // Legacy, use wizardMode
-            editProjectPath: editProject.projectPath,
-            editOriginalName: editProject.projectName,  // For duplicate validation
-            componentConfigs: editSettings.configs || {},
-            adobeAuth: {
-                isAuthenticated: true, // Assumed authenticated for edit mode
-                isChecking: false,
-            },
-            components: editSettings.selections ? {
-                frontend: editSettings.selections.frontend,
-                backend: editSettings.selections.backend,
-                dependencies: editSettings.selections.dependencies || [],
-                integrations: editSettings.selections.integrations || [],
-                appBuilder: editSettings.selections.appBuilder || [],
-            } : undefined,
-            adobeOrg: editSettings.adobe?.orgId ? {
-                id: editSettings.adobe.orgId,
-                code: '',
-                name: editSettings.adobe.orgName || '',
-            } : undefined,
-            adobeProject: editSettings.adobe?.projectId ? {
-                id: editSettings.adobe.projectId,
-                name: editSettings.adobe.projectName || '',
-                title: editSettings.adobe.projectTitle,
-            } : undefined,
-            adobeWorkspace: editSettings.adobe?.workspaceId ? {
-                id: editSettings.adobe.workspaceId,
-                name: editSettings.adobe.workspaceName || '',
-                title: editSettings.adobe.workspaceTitle,
-            } : undefined,
-            // Package/Stack/Addons from source project
-            selectedPackage: editSettings.selectedPackage,
-            selectedStack: editSettings.selectedStack,
-            selectedAddons: editSettings.selectedAddons,
-            // EDS configuration from source project (for EDS stacks)
-            // Construct selectedRepo and selectedSite objects for list pre-selection
-            edsConfig: editSettings.edsConfig ? {
-                accsHost: '',
-                storeViewCode: '',
-                customerGroup: '',
-                repoName: editSettings.edsConfig.repoName || '',
-                daLiveOrg: editSettings.edsConfig.daLiveOrg || '',
-                daLiveSite: editSettings.edsConfig.daLiveSite || '',
-                // Note: templateOwner, templateRepo, contentSource, patches are derived
-                // from brand+stack in WelcomeStep, not stored per-project
-                // Don't assume authenticated - let hooks validate tokens on step visit
-                // Set user/org from saved config so UI can display them while checking
-                githubAuth: (editSettings.edsConfig.githubOwner && editSettings.edsConfig.repoName) ? {
-                    isAuthenticated: false,  // Will be validated by useGitHubAuth hook
-                    isChecking: true,        // Indicate validation pending
-                    user: { login: editSettings.edsConfig.githubOwner },
-                } : undefined,
-                daLiveAuth: editSettings.edsConfig.daLiveOrg ? {
-                    isAuthenticated: false,  // Will be validated by useDaLiveAuth hook
-                    isChecking: true,        // Indicate validation pending
-                } : undefined,
-                repoUrl: editSettings.edsConfig.repoUrl,
-                // Pre-select GitHub repo if owner and name are available
-                repoMode: (editSettings.edsConfig.githubOwner && editSettings.edsConfig.repoName) ? 'existing' : undefined,
-                selectedRepo: (editSettings.edsConfig.githubOwner && editSettings.edsConfig.repoName) ? {
-                    id: `${editSettings.edsConfig.githubOwner}/${editSettings.edsConfig.repoName}`,
-                    name: editSettings.edsConfig.repoName,
-                    fullName: `${editSettings.edsConfig.githubOwner}/${editSettings.edsConfig.repoName}`,
-                    // Include htmlUrl for storefrontSetupHandlers which uses selectedRepo.htmlUrl
-                    htmlUrl: `https://github.com/${editSettings.edsConfig.githubOwner}/${editSettings.edsConfig.repoName}`,
-                } : undefined,
-                // Pre-select DA.live site if site name is available
-                selectedSite: editSettings.edsConfig.daLiveSite ? {
-                    id: editSettings.edsConfig.daLiveSite,
-                    name: editSettings.edsConfig.daLiveSite,
-                } : undefined,
-            } : undefined,
-        };
+        return buildEditModeState(firstStep, editProject);
     }
 
-    // CREATE/IMPORT MODE: Use helper functions for cleaner initialization
+    // CREATE/IMPORT MODE
     const initialComponents = initializeComponentsFromImport(importedSettings, componentDefaults);
     const adobeContext = initializeAdobeContextFromImport(importedSettings);
     const initialProjectName = initializeProjectName(importedSettings, existingProjectNames);
-
-    // Determine wizard mode: 'import' if settings provided, otherwise 'create'
     const wizardMode = importedSettings ? 'import' : 'create';
 
     if (importedSettings) {
@@ -209,54 +266,17 @@ function computeInitialState(
         projectName: initialProjectName,
         wizardMode,
         componentConfigs: importedSettings?.configs || {},
-        adobeAuth: {
-            isAuthenticated: false,  // Start as false, will be checked on auth step
-            isChecking: false,       // Allow the check to proceed
-        },
+        adobeAuth: { isAuthenticated: false, isChecking: false },
         components: initialComponents,
         adobeOrg: adobeContext.org,
         adobeProject: adobeContext.project,
         adobeWorkspace: adobeContext.workspace,
-        // Package/Stack/Addons from imported settings
         selectedPackage: importedSettings?.selectedPackage,
         selectedStack: importedSettings?.selectedStack,
         selectedAddons: importedSettings?.selectedAddons,
-        // EDS configuration from imported settings (for EDS stacks)
-        // Construct selectedRepo and selectedSite objects for list pre-selection
-        edsConfig: importedSettings?.edsConfig ? {
-            accsHost: '',
-            storeViewCode: '',
-            customerGroup: '',
-            repoName: importedSettings.edsConfig.repoName || '',
-            daLiveOrg: importedSettings.edsConfig.daLiveOrg || '',
-            daLiveSite: importedSettings.edsConfig.daLiveSite || '',
-            // Note: templateOwner, templateRepo, contentSource, patches are derived
-            // from brand+stack in WelcomeStep, not stored per-project
-            // Mark GitHub/DA.live as authenticated since importing from existing project
-            githubAuth: (importedSettings.edsConfig.githubOwner && importedSettings.edsConfig.repoName) ? {
-                isAuthenticated: true,
-                user: { login: importedSettings.edsConfig.githubOwner },
-            } : undefined,
-            daLiveAuth: importedSettings.edsConfig.daLiveOrg ? {
-                isAuthenticated: true,
-                org: importedSettings.edsConfig.daLiveOrg,
-            } : undefined,
-            repoUrl: importedSettings.edsConfig.repoUrl,
-            // Pre-select GitHub repo if owner and name are available
-            repoMode: (importedSettings.edsConfig.githubOwner && importedSettings.edsConfig.repoName) ? 'existing' : undefined,
-            selectedRepo: (importedSettings.edsConfig.githubOwner && importedSettings.edsConfig.repoName) ? {
-                id: `${importedSettings.edsConfig.githubOwner}/${importedSettings.edsConfig.repoName}`,
-                name: importedSettings.edsConfig.repoName,
-                fullName: `${importedSettings.edsConfig.githubOwner}/${importedSettings.edsConfig.repoName}`,
-                // Include htmlUrl for storefrontSetupHandlers which uses selectedRepo.htmlUrl
-                htmlUrl: `https://github.com/${importedSettings.edsConfig.githubOwner}/${importedSettings.edsConfig.repoName}`,
-            } : undefined,
-            // Pre-select DA.live site if site name is available
-            selectedSite: importedSettings.edsConfig.daLiveSite ? {
-                id: importedSettings.edsConfig.daLiveSite,
-                name: importedSettings.edsConfig.daLiveSite,
-            } : undefined,
-        } : undefined,
+        edsConfig: importedSettings?.edsConfig
+            ? buildImportModeEdsConfig(importedSettings.edsConfig)
+            : undefined,
     };
 }
 

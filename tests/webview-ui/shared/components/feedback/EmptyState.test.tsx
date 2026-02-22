@@ -90,7 +90,7 @@ describe('EmptyState', () => {
         });
 
         it('renders description in small text', () => {
-            const { container } = renderWithProviders(
+            const { container: _container } = renderWithProviders(
                 <EmptyState title="Title" description="Description text" />
             );
             const description = screen.getByText('Description text');

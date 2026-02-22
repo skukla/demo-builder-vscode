@@ -16,10 +16,6 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { getLogger } from '@/core/logging';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { Logger } from '@/types/logger';
 import {
     ToolManagerError,
     type ACOConfig,
@@ -27,6 +23,10 @@ import {
     type ToolInstallOptions,
     type ToolExecutionOptions,
 } from './types';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Constants

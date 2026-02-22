@@ -1,15 +1,14 @@
 /**
- * useAuthStatus Hook Tests
+ * useAuthStatus Hook Tests - Message Handling & State
  *
- * Tests authentication status management, message handling,
- * timeout scenarios, and canProceed state updates.
+ * Tests auth-status message handling, re-authentication state
+ * preservation, and canProceed state updates.
  */
 
 // Import mock exports from testUtils
 import {
-    mockPostMessage,
+    mockPostMessage as _mockPostMessage,
     mockOnMessage,
-    mockRequestAuth,
     baseState,
     authenticatedState,
     stateWithProjectSelected,
@@ -19,7 +18,6 @@ import {
     reAuthSameOrgData,
     reAuthDifferentOrgData,
     resetMocks,
-    AuthStatusData,
 } from './useAuthStatus.testUtils';
 
 // Mock WebviewClient - must be in test file for proper hoisting
@@ -44,7 +42,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAuthStatus } from '@/features/authentication/ui/hooks/useAuthStatus';
 import { WizardState } from '@/types/webview';
 
-describe('useAuthStatus', () => {
+describe('useAuthStatus - messages & state', () => {
     const mockUpdateState = jest.fn();
     const mockSetCanProceed = jest.fn();
 
@@ -52,207 +50,11 @@ describe('useAuthStatus', () => {
         resetMocks();
         mockUpdateState.mockClear();
         mockSetCanProceed.mockClear();
-        // Suppress console.log in tests
         jest.spyOn(console, 'log').mockImplementation(() => {});
     });
 
     afterEach(() => {
         jest.restoreAllMocks();
-    });
-
-    describe('initialization', () => {
-        it('should return initial state values and begin checking', () => {
-            const { result } = renderHook(() =>
-                useAuthStatus({
-                    state: baseState as WizardState,
-                    updateState: mockUpdateState,
-                    setCanProceed: mockSetCanProceed,
-                })
-            );
-
-            // Hook calls checkAuthentication on mount, so authStatus is set
-            expect(result.current.authStatus).toBe('Checking Adobe authentication...');
-            expect(result.current.authSubMessage).toBe('');
-            expect(result.current.authTimeout).toBe(false);
-            // showLoadingSpinner reads from state.adobeAuth.isChecking which is still false
-            // until the updateState callback is invoked and state re-renders
-            expect(result.current.showLoadingSpinner).toBe(false);
-        });
-
-        it('should check authentication on mount', () => {
-            renderHook(() =>
-                useAuthStatus({
-                    state: baseState as WizardState,
-                    updateState: mockUpdateState,
-                    setCanProceed: mockSetCanProceed,
-                })
-            );
-
-            expect(mockPostMessage).toHaveBeenCalledWith('check-auth');
-        });
-
-        it('should subscribe to auth-status messages', () => {
-            renderHook(() =>
-                useAuthStatus({
-                    state: baseState as WizardState,
-                    updateState: mockUpdateState,
-                    setCanProceed: mockSetCanProceed,
-                })
-            );
-
-            expect(mockOnMessage).toHaveBeenCalledWith('auth-status', expect.any(Function));
-        });
-    });
-
-    describe('checkAuthentication', () => {
-        it('should update state to isChecking when called', () => {
-            const { result } = renderHook(() =>
-                useAuthStatus({
-                    state: baseState as WizardState,
-                    updateState: mockUpdateState,
-                    setCanProceed: mockSetCanProceed,
-                })
-            );
-
-            // Clear initial check-auth call
-            mockPostMessage.mockClear();
-            mockUpdateState.mockClear();
-
-            act(() => {
-                result.current.checkAuthentication();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('check-auth');
-            expect(mockUpdateState).toHaveBeenCalledWith({
-                adobeAuth: expect.objectContaining({
-                    isChecking: true,
-                }),
-            });
-        });
-
-        it('should skip check if already checking', () => {
-            const checkingState = {
-                ...baseState,
-                adobeAuth: {
-                    ...baseState.adobeAuth!,
-                    isChecking: true,
-                },
-            };
-
-            const { result } = renderHook(() =>
-                useAuthStatus({
-                    state: checkingState as WizardState,
-                    updateState: mockUpdateState,
-                    setCanProceed: mockSetCanProceed,
-                })
-            );
-
-            // Clear initial calls
-            mockPostMessage.mockClear();
-
-            act(() => {
-                result.current.checkAuthentication();
-            });
-
-            // Should not call postMessage again
-            expect(mockPostMessage).not.toHaveBeenCalled();
-        });
-
-        it('should set authStatus message when checking', () => {
-            const { result } = renderHook(() =>
-                useAuthStatus({
-                    state: baseState as WizardState,
-                    updateState: mockUpdateState,
-                    setCanProceed: mockSetCanProceed,
-                })
-            );
-
-            // Clear initial check
-            mockPostMessage.mockClear();
-
-            act(() => {
-                result.current.checkAuthentication();
-            });
-
-            expect(result.current.authStatus).toBe('Checking Adobe authentication...');
-        });
-    });
-
-    describe('handleLogin', () => {
-        it('should reset state and request auth', () => {
-            const { result } = renderHook(() =>
-                useAuthStatus({
-                    state: baseState as WizardState,
-                    updateState: mockUpdateState,
-                    setCanProceed: mockSetCanProceed,
-                })
-            );
-
-            mockUpdateState.mockClear();
-
-            act(() => {
-                result.current.handleLogin();
-            });
-
-            expect(mockRequestAuth).toHaveBeenCalledWith(false);
-            expect(mockUpdateState).toHaveBeenCalledWith({
-                adobeAuth: expect.objectContaining({
-                    isChecking: true,
-                    error: undefined,
-                }),
-            });
-        });
-
-        it('should request forced auth without immediately clearing state when force=true', () => {
-            // New behavior: handleLogin(true) does NOT clear org/project/workspace immediately
-            // Instead, the auth-status handler clears them only if the org actually changes
-            const { result } = renderHook(() =>
-                useAuthStatus({
-                    state: stateWithProjectSelected as WizardState,
-                    updateState: mockUpdateState,
-                    setCanProceed: mockSetCanProceed,
-                })
-            );
-
-            mockUpdateState.mockClear();
-
-            act(() => {
-                result.current.handleLogin(true);
-            });
-
-            expect(mockRequestAuth).toHaveBeenCalledWith(true);
-            // Should NOT clear org/project/workspace immediately
-            expect(mockUpdateState).toHaveBeenCalledWith({
-                adobeAuth: expect.objectContaining({
-                    isChecking: true,
-                    error: undefined,
-                }),
-            });
-            // Verify it was NOT called with undefined org/project/workspace
-            expect(mockUpdateState).not.toHaveBeenCalledWith(
-                expect.objectContaining({
-                    adobeOrg: undefined,
-                })
-            );
-        });
-
-        it('should clear auth status and timeout on login', () => {
-            const { result } = renderHook(() =>
-                useAuthStatus({
-                    state: baseState as WizardState,
-                    updateState: mockUpdateState,
-                    setCanProceed: mockSetCanProceed,
-                })
-            );
-
-            act(() => {
-                result.current.handleLogin();
-            });
-
-            expect(result.current.authStatus).toBe('');
-            expect(result.current.authSubMessage).toBe('');
-            expect(result.current.authTimeout).toBe(false);
-        });
     });
 
     describe('auth-status message handling', () => {
@@ -275,7 +77,6 @@ describe('useAuthStatus', () => {
 
             mockUpdateState.mockClear();
 
-            // Simulate auth status message
             act(() => {
                 authCallback?.(successAuthData);
             });
@@ -317,7 +118,6 @@ describe('useAuthStatus', () => {
                 })
             );
 
-            // Simulate timeout message
             act(() => {
                 authCallback?.(timeoutAuthData);
             });
@@ -349,7 +149,6 @@ describe('useAuthStatus', () => {
 
             mockUpdateState.mockClear();
 
-            // Simulate checking message
             act(() => {
                 authCallback?.(checkingAuthData);
             });
@@ -384,7 +183,6 @@ describe('useAuthStatus', () => {
                 })
             );
 
-            // Simulate message with no message/subMessage
             act(() => {
                 authCallback?.({
                     isAuthenticated: true,
@@ -418,20 +216,17 @@ describe('useAuthStatus', () => {
 
             mockUpdateState.mockClear();
 
-            // Trigger forced re-auth (e.g., token expiring)
             act(() => {
                 result.current.handleLogin(true);
             });
 
             mockUpdateState.mockClear();
 
-            // Simulate auth-status response with SAME org
             act(() => {
                 authCallback?.(reAuthSameOrgData);
             });
 
             await waitFor(() => {
-                // Should update auth state
                 expect(mockUpdateState).toHaveBeenCalledWith(
                     expect.objectContaining({
                         adobeAuth: expect.objectContaining({
@@ -444,7 +239,6 @@ describe('useAuthStatus', () => {
                 );
             });
 
-            // Should NOT have been called with adobeProject: undefined
             const allCalls = mockUpdateState.mock.calls;
             const clearedProject = allCalls.some(
                 (call) => call[0]?.adobeProject === undefined && 'adobeProject' in call[0]
@@ -471,27 +265,24 @@ describe('useAuthStatus', () => {
 
             mockUpdateState.mockClear();
 
-            // Trigger forced re-auth
             act(() => {
                 result.current.handleLogin(true);
             });
 
             mockUpdateState.mockClear();
 
-            // Simulate auth-status response with DIFFERENT org
             act(() => {
                 authCallback?.(reAuthDifferentOrgData);
             });
 
             await waitFor(() => {
-                // Should clear project and workspace because org changed
                 expect(mockUpdateState).toHaveBeenCalledWith(
                     expect.objectContaining({
                         adobeAuth: expect.objectContaining({
                             isAuthenticated: true,
                         }),
                         adobeOrg: expect.objectContaining({
-                            id: 'org-999',  // New org
+                            id: 'org-999',
                         }),
                         adobeProject: undefined,
                         adobeWorkspace: undefined,
@@ -501,9 +292,6 @@ describe('useAuthStatus', () => {
         });
 
         it('should clear state on regular auth check if org differs from state', async () => {
-            // FIX: When importing settings from Org A but logged into Org B,
-            // the first auth check should detect the mismatch and clear project/workspace.
-            // This prevents mesh deployment to wrong org's project/workspace.
             let authCallback: ((data: unknown) => void) | null = null;
             mockOnMessage.mockImplementation((type: string, callback: (data: unknown) => void) => {
                 if (type === 'auth-status') {
@@ -522,9 +310,6 @@ describe('useAuthStatus', () => {
 
             mockUpdateState.mockClear();
 
-            // Simulate regular auth-status with DIFFERENT org than in state
-            // Even without forced re-auth, state.adobeOrg differs from response org
-            // so project/workspace SHOULD be cleared
             act(() => {
                 authCallback?.(reAuthDifferentOrgData);
             });
@@ -533,7 +318,6 @@ describe('useAuthStatus', () => {
                 expect(mockUpdateState).toHaveBeenCalled();
             });
 
-            // SHOULD clear project/workspace because org in state differs from auth response
             const allCalls = mockUpdateState.mock.calls;
             const clearedProject = allCalls.some(
                 (call) => call[0]?.adobeProject === undefined && 'adobeProject' in call[0]
@@ -542,7 +326,6 @@ describe('useAuthStatus', () => {
         });
 
         it('should NOT clear state on regular auth check if org matches state', async () => {
-            // When the auth response org matches the state org, project/workspace should be preserved
             let authCallback: ((data: unknown) => void) | null = null;
             mockOnMessage.mockImplementation((type: string, callback: (data: unknown) => void) => {
                 if (type === 'auth-status') {
@@ -561,16 +344,14 @@ describe('useAuthStatus', () => {
 
             mockUpdateState.mockClear();
 
-            // Simulate regular auth-status with SAME org as in state
             act(() => {
-                authCallback?.(reAuthSameOrgData);  // org-123, matches stateWithProjectSelected
+                authCallback?.(reAuthSameOrgData);
             });
 
             await waitFor(() => {
                 expect(mockUpdateState).toHaveBeenCalled();
             });
 
-            // Should NOT clear project/workspace because org matches
             const allCalls = mockUpdateState.mock.calls;
             const clearedProject = allCalls.some(
                 (call) => call[0]?.adobeProject === undefined && 'adobeProject' in call[0]
@@ -639,59 +420,6 @@ describe('useAuthStatus', () => {
             );
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
-        });
-    });
-
-    describe('showLoadingSpinner', () => {
-        it('should reflect isChecking from state', () => {
-            const checkingState = {
-                ...baseState,
-                adobeAuth: {
-                    ...baseState.adobeAuth!,
-                    isChecking: true,
-                },
-            };
-
-            const { result } = renderHook(() =>
-                useAuthStatus({
-                    state: checkingState as WizardState,
-                    updateState: mockUpdateState,
-                    setCanProceed: mockSetCanProceed,
-                })
-            );
-
-            expect(result.current.showLoadingSpinner).toBe(true);
-        });
-
-        it('should be false when not checking', () => {
-            const { result } = renderHook(() =>
-                useAuthStatus({
-                    state: baseState as WizardState,
-                    updateState: mockUpdateState,
-                    setCanProceed: mockSetCanProceed,
-                })
-            );
-
-            expect(result.current.showLoadingSpinner).toBe(false);
-        });
-    });
-
-    describe('cleanup', () => {
-        it('should unsubscribe from messages on unmount', () => {
-            const unsubscribe = jest.fn();
-            mockOnMessage.mockReturnValue(unsubscribe);
-
-            const { unmount } = renderHook(() =>
-                useAuthStatus({
-                    state: baseState as WizardState,
-                    updateState: mockUpdateState,
-                    setCanProceed: mockSetCanProceed,
-                })
-            );
-
-            unmount();
-
-            expect(unsubscribe).toHaveBeenCalled();
         });
     });
 });

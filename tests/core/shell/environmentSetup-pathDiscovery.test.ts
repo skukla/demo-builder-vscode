@@ -11,8 +11,6 @@ import * as path from 'path';
 import {
     createEnvironmentSetup,
     mockFnmInstallation,
-    mockFnmVersions,
-    mockNvmVersions,
     resetAllMocks,
     mockLogger
 } from './environmentSetup.testUtils';

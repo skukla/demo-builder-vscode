@@ -40,6 +40,15 @@ jest.mock('@/features/lifecycle/commands/startDemo');
 jest.mock('@/features/lifecycle/commands/stopDemo');
 jest.mock('@/features/mesh/commands/deployMesh');
 jest.mock('@/features/updates/commands/checkUpdates');
+jest.mock('@/core/utils/browserUtils', () => ({
+    openUrl: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('@/features/eds/ui/helpers/bookmarkletSetupPage', () => ({
+    getBookmarkletSetupPageUrl: jest.fn().mockReturnValue('http://setup-page'),
+}));
+jest.mock('@/features/eds/utils/daLiveTokenBookmarklet', () => ({
+    getBookmarkletUrl: jest.fn().mockReturnValue('javascript:void(0)'),
+}));
 
 // Mock StateManager, Logger
 jest.mock('@/core/state');
@@ -109,11 +118,11 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 18 commands (19 total, but resetAll only in dev mode)', () => {
+        it('should register all 19 commands (20 total, but resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 18 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(18);
+            // Verify registerCommand was called 19 times (resetAll excluded - dev mode only)
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(19);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -134,6 +143,7 @@ describe('CommandManager', () => {
                 'demoBuilder.resetZoom',
                 'demoBuilder.toggleSidebar',
                 'demoBuilder.showSidebar',
+                'demoBuilder.openDaLiveBookmarkletSetup',
                 'demoBuilder.openComponent',
                 // Note: resetAll not included - only registers in Development mode
             ];

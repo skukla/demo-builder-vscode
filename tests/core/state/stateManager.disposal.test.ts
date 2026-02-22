@@ -18,7 +18,7 @@ import * as vscode from 'vscode';
 // Track mock EventEmitter state
 let mockEmitterDisposed = false;
 let mockListeners: Array<(data: any) => void> = [];
-let mockEmitterFireCount = 0;
+let _mockEmitterFireCount = 0;
 
 // Create a mock EventEmitter factory
 const createMockEventEmitter = () => {
@@ -35,7 +35,7 @@ const createMockEventEmitter = () => {
             };
         },
         fire: (data: any) => {
-            mockEmitterFireCount++;
+            _mockEmitterFireCount++;
             // Copy array to avoid mutation during iteration
             [...mockListeners].forEach(l => l(data));
         },
@@ -92,7 +92,7 @@ describe('StateManager - Disposal', () => {
         // Reset mock state before each test
         mockEmitterDisposed = false;
         mockListeners = [];
-        mockEmitterFireCount = 0;
+        _mockEmitterFireCount = 0;
 
         // Create mock context
         mockContext = {
@@ -168,7 +168,7 @@ describe('StateManager - Disposal', () => {
 
             // Subscribe both
             const subscription1 = stateManager.onProjectChanged(callback1);
-            const subscription2 = stateManager.onProjectChanged(callback2);
+            const _subscription2 = stateManager.onProjectChanged(callback2);
             expect(mockListeners.length).toBe(2);
 
             // Dispose only first subscription

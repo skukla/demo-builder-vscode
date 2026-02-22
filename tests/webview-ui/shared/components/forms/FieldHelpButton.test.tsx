@@ -16,7 +16,7 @@ describe('FieldHelpButton', () => {
     };
 
     // Help with screenshot (no steps)
-    const helpWithScreenshot = {
+    const _helpWithScreenshot = {
         title: 'Screenshot Help',
         text: 'Help text with a screenshot.',
     };

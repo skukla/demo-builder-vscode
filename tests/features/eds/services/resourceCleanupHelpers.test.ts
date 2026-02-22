@@ -14,7 +14,6 @@ import {
     deleteDaLiveSite,
     formatCleanupResults,
     summarizeCleanupResults,
-    type EdsProjectMetadata,
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
 

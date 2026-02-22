@@ -92,7 +92,7 @@ jest.mock('@/features/mesh/services/stalenessDetector');
 jest.mock('@/features/authentication');
 
 // Mock showDaLiveAuthQuickPick result holder
-let mockQuickPickAuthResult: { success: boolean; cancelled?: boolean; email?: string; error?: string } = { success: false, cancelled: true };
+const mockQuickPickAuthResult: { success: boolean; cancelled?: boolean; email?: string; error?: string } = { success: false, cancelled: true };
 
 // Mock edsHelpers - getGitHubServices, validateDaLiveToken, getDaLiveAuthService, showDaLiveAuthQuickPick
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({

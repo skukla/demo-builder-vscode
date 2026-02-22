@@ -10,15 +10,15 @@
 import { Text, DialogContainer, Checkbox, Divider } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { DemoPackage } from '@/types/demoPackages';
-import type { Stack, StacksConfig } from '@/types/stacks';
-import { cn } from '@/core/ui/utils/classNames';
-import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import stacksConfig from '../../config/stacks.json';
+import { sortPackages, filterPackagesBySearchQuery, filterAddonsByPackage } from './brandGalleryHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
-import { sortPackages, filterPackagesBySearchQuery, filterAddonsByPackage } from './brandGalleryHelpers';
-import stacksConfig from '../../config/stacks.json';
+import { cn } from '@/core/ui/utils/classNames';
+import { DemoPackage } from '@/types/demoPackages';
+import type { Stack, StacksConfig } from '@/types/stacks';
 
 /** Addon display metadata from stacks.json */
 const ADDON_METADATA = (stacksConfig as StacksConfig).addonDefinitions ?? {};
@@ -312,7 +312,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
 
     const filteredPackages = useMemo(
         () => sortPackages(filterPackagesBySearchQuery(packages, searchQuery)),
-        [packages, searchQuery]
+        [packages, searchQuery],
     );
 
     // Get the package object for the modal

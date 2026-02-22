@@ -133,7 +133,7 @@ describe('WizardContainer - Navigation', () => {
         });
 
         it('should not allow skipping steps via Continue', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const _user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}

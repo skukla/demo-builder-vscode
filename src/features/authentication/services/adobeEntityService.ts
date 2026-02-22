@@ -26,21 +26,21 @@
  * - Maintain backward-compatible API
  */
 
-import { StepLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
-import type { CommandExecutor } from '@/core/shell';
+import { AdobeContextResolver } from './adobeContextResolver';
+import { AdobeEntityFetcher } from './adobeEntityFetcher';
+import { AdobeEntitySelector } from './adobeEntitySelector';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import type { OrganizationValidator } from './organizationValidator';
-import { AdobeEntityFetcher } from './adobeEntityFetcher';
-import { AdobeContextResolver } from './adobeContextResolver';
-import { AdobeEntitySelector } from './adobeEntitySelector';
 import type {
     AdobeOrg,
     AdobeProject,
     AdobeWorkspace,
     AdobeContext,
 } from './types';
+import { StepLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
+import type { Logger } from '@/types/logger';
 
 /**
  * Facade service for managing Adobe entities
@@ -59,9 +59,9 @@ export class AdobeEntityService {
         logger: Logger,
         stepLogger: StepLogger,
     ) {
-        // Create selector first (needed for clearConsoleContext callback)
-        // But selector needs fetcher and resolver, so we create a temporary reference
-        let selectorRef: AdobeEntitySelector | undefined;
+        // Create selector reference container (needed for clearConsoleContext callback).
+        // Uses an object so the closure captures the mutable reference.
+        const selectorContainer: { ref?: AdobeEntitySelector } = {};
 
         // Create fetcher with callback to selector's clearConsoleContext
         this.fetcher = new AdobeEntityFetcher(
@@ -72,8 +72,8 @@ export class AdobeEntityService {
             stepLogger,
             {
                 onNoOrgsAccessible: async () => {
-                    if (selectorRef) {
-                        await selectorRef.clearConsoleContext();
+                    if (selectorContainer.ref) {
+                        await selectorContainer.ref.clearConsoleContext();
                     }
                 },
             },
@@ -98,7 +98,7 @@ export class AdobeEntityService {
         );
 
         // Set the reference for the callback
-        selectorRef = this.selector;
+        selectorContainer.ref = this.selector;
     }
 
     // =========================================================================

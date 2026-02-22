@@ -11,7 +11,6 @@ import {
     mapBackendToEnvironmentType,
     extractConfigParamsFromConfigs,
     type ConfigGeneratorParams,
-    type EnvironmentType,
 } from '@/features/eds/services/configGenerator';
 import type { Logger } from '@/types/logger';
 

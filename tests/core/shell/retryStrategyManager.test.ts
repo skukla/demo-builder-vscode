@@ -186,7 +186,7 @@ describe('RetryStrategyManager', () => {
                 initialDelay: 10,
                 maxDelay: 100,
                 backoffFactor: 2,
-                shouldRetry: (error) => false
+                shouldRetry: () => false
             };
 
             await expect(

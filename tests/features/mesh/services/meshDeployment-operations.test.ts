@@ -4,7 +4,6 @@ import {
     createMockCommandManager,
     createMockLogger,
     setupMeshDeploymentVerifierMock,
-    getMeshDeploymentVerifier,
     mockSuccessfulFileRead,
     mockSuccessfulDeployment,
     mockSuccessfulVerification,

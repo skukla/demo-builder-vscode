@@ -11,7 +11,6 @@ import * as vscode from 'vscode';
 import {
     getWebviewHTMLWithBundles,
     type BundleUris,
-    type WebviewHTMLWithBundlesOptions
 } from '@/core/utils/getWebviewHTMLWithBundles';
 
 /**

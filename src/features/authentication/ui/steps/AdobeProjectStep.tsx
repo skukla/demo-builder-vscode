@@ -1,10 +1,9 @@
 import { Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
-import { useCanProceed } from '@/core/ui/hooks';
 import { SelectionStepContent } from '@/core/ui/components/selection';
-import { useSelectionStep } from '@/core/ui/hooks';
 import { ConfigurationSummary } from '@/core/ui/components/wizard';
+import { useCanProceed , useSelectionStep } from '@/core/ui/hooks';
 import { AdobeProject } from '@/types/webview';
 import { TrackableStepProps } from '@/types/wizard';
 

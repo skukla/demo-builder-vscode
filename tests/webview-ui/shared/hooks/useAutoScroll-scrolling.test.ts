@@ -26,7 +26,7 @@ describe('useAutoScroll - Scrolling Operations', () => {
 
       const mockContainer = createMockContainer();
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       const mockElement = createMockElement({
@@ -36,7 +36,7 @@ describe('useAutoScroll - Scrolling Operations', () => {
 
       const refSetter = result.current.createItemRef(0);
       act(() => {
-        // @ts-ignore - mocking element
+        // @ts-expect-error - mocking element
         refSetter(mockElement);
       });
 
@@ -56,14 +56,14 @@ describe('useAutoScroll - Scrolling Operations', () => {
 
       const mockContainer = createMockContainer();
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       const mockElement = createMockElement();
 
       const refSetter = result.current.createItemRef(0);
       act(() => {
-        // @ts-ignore - mocking element
+        // @ts-expect-error - mocking element
         refSetter(mockElement);
       });
 
@@ -81,7 +81,7 @@ describe('useAutoScroll - Scrolling Operations', () => {
 
       const mockContainer = createMockContainer();
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       // Item is fully visible (offsetTop: 10, height: 20, within container)
@@ -92,7 +92,7 @@ describe('useAutoScroll - Scrolling Operations', () => {
 
       const refSetter = result.current.createItemRef(0);
       act(() => {
-        // @ts-ignore - mocking element
+        // @ts-expect-error - mocking element
         refSetter(mockElement);
       });
 
@@ -112,14 +112,14 @@ describe('useAutoScroll - Scrolling Operations', () => {
 
       const mockContainer = createMockContainer();
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       const mockElement = createMockElement();
 
       const refSetter = result.current.createItemRef(0);
       act(() => {
-        // @ts-ignore - mocking element
+        // @ts-expect-error - mocking element
         refSetter(mockElement);
       });
 
@@ -142,14 +142,14 @@ describe('useAutoScroll - Scrolling Operations', () => {
 
       const mockContainer = createMockContainer();
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       const mockElement = createMockElement();
 
       const refSetter = result.current.createItemRef(0);
       act(() => {
-        // @ts-ignore - mocking element
+        // @ts-expect-error - mocking element
         refSetter(mockElement);
       });
 
@@ -173,7 +173,7 @@ describe('useAutoScroll - Scrolling Operations', () => {
 
       const mockContainer = createMockContainer();
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       result.current.scrollToTop();
@@ -189,7 +189,7 @@ describe('useAutoScroll - Scrolling Operations', () => {
 
       const mockContainer = createMockContainer();
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       result.current.scrollToTop();
@@ -215,7 +215,7 @@ describe('useAutoScroll - Scrolling Operations', () => {
 
       const mockContainer = createMockContainer();
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       result.current.scrollToBottom();
@@ -231,7 +231,7 @@ describe('useAutoScroll - Scrolling Operations', () => {
 
       const mockContainer = createMockContainer();
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       result.current.scrollToBottom();

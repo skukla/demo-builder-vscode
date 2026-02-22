@@ -13,10 +13,10 @@ import {
     createExportSettings,
     getSuggestedFilename,
 } from './settingsSerializer';
-import { SETTINGS_FILE_VERSION } from '@/features/projects-dashboard/types/settingsFile';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import { showWebviewQuickPick } from '@/core/utils';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { SETTINGS_FILE_VERSION } from '@/features/projects-dashboard/types/settingsFile';
+import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 

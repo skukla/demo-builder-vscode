@@ -181,7 +181,7 @@ export function createMockExecuteCommand(config: MockExecuteConfig = {}) {
         telemetryResult = { stdout: '', stderr: '', code: 0, duration: 100 }
     } = config;
 
-    return jest.fn((command: string, options?: any) => {
+    return jest.fn((command: string) => {
         if (command.includes('fnm --version')) {
             return Promise.resolve({ stdout: fnmVersion, stderr: '', code: 0, duration: 100 });
         }

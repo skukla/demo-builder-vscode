@@ -6,19 +6,19 @@ import { CommandManager } from '@/commands/commandManager';
 import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { initializeLogger, getLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
 import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { AuthenticationService } from '@/features/authentication';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
-import { SidebarProvider } from '@/features/sidebar';
-import { getProjectFrontendPort } from '@/types/typeGuards';
-import { AutoUpdater } from '@/utils/autoUpdater';
-import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
+import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { SidebarProvider } from '@/features/sidebar';
+import type { Logger } from '@/types/logger';
+import { getProjectFrontendPort } from '@/types/typeGuards';
+import { AutoUpdater } from '@/utils/autoUpdater';
 
 /**
  * Check if projects list should auto-open when activity bar icon is clicked
@@ -51,7 +51,7 @@ let autoUpdater: AutoUpdater;
 let externalCommandManager: CommandExecutor;
 let authenticationService: AuthenticationService;
 let componentTreeProvider: ComponentTreeProvider;
-let componentTreeView: vscode.TreeView<any>;
+let componentTreeView: vscode.TreeView<unknown>;
 let daLiveAuthService: DaLiveAuthService;
 
 export async function activate(context: vscode.ExtensionContext) {

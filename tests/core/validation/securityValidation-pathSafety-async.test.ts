@@ -11,8 +11,6 @@
  * Target Coverage: 90%+
  */
 
-import * as path from 'path';
-
 // Mock fs/promises before importing the function under test
 jest.mock('fs/promises', () => ({
     lstat: jest.fn(),

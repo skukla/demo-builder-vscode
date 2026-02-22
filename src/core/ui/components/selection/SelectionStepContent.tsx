@@ -181,7 +181,7 @@ export function SelectionStepContent<T extends SelectableItem>({
     // State 4: Data loaded - show list (delegates to SearchableList)
 
     // Adapter: Convert Set-based onSelectionChange to item-based onSelect
-    const handleSelectionChange = (keys: Set<any>) => {
+    const handleSelectionChange = (keys: Set<React.Key>) => {
         const itemId = Array.from(keys)[0] as string;
         const item = items.find(i => i.id === itemId);
         if (item) {

@@ -19,7 +19,7 @@ describe('ProgressUnifier - Command Resolution', () => {
 
     describe('Pre-substituted template (no placeholder)', () => {
         it('should execute command when commandTemplate has no {version} placeholder', async () => {
-            const { onProgress, progressUpdates } = progressCollectorFactory();
+            const { onProgress } = progressCollectorFactory();
             const { progressUnifier, advanceTime, mocks } = createTestableProgressUnifier(mockLogger);
 
             // Given: commandTemplate with pre-substituted version (no {version} placeholder)
@@ -51,7 +51,7 @@ describe('ProgressUnifier - Command Resolution', () => {
 
     describe('Template with placeholder + nodeVersion provided', () => {
         it('should substitute {version} when nodeVersion is provided', async () => {
-            const { onProgress, progressUpdates } = progressCollectorFactory();
+            const { onProgress } = progressCollectorFactory();
             const { progressUnifier, advanceTime, mocks } = createTestableProgressUnifier(mockLogger);
 
             // Given: commandTemplate with {version} placeholder
@@ -83,7 +83,7 @@ describe('ProgressUnifier - Command Resolution', () => {
 
     describe('Template with placeholder but nodeVersion missing', () => {
         it('should NOT execute command when {version} placeholder but no nodeVersion', async () => {
-            const { onProgress, progressUpdates } = progressCollectorFactory();
+            const { onProgress } = progressCollectorFactory();
             const { progressUnifier, advanceTime, mocks } = createTestableProgressUnifier(mockLogger);
 
             // Given: commandTemplate with {version} placeholder
@@ -111,7 +111,7 @@ describe('ProgressUnifier - Command Resolution', () => {
 
     describe('Static commands array (backward compatibility)', () => {
         it('should use static commands array when provided', async () => {
-            const { onProgress, progressUpdates } = progressCollectorFactory();
+            const { onProgress } = progressCollectorFactory();
             const { progressUnifier, advanceTime, mocks } = createTestableProgressUnifier(mockLogger);
 
             // Given: step.commands = ["echo test", "npm install"]
@@ -150,7 +150,7 @@ describe('ProgressUnifier - Command Resolution', () => {
 
     describe('Empty commandTemplate', () => {
         it('should NOT execute command when commandTemplate is empty', async () => {
-            const { onProgress, progressUpdates } = progressCollectorFactory();
+            const { onProgress } = progressCollectorFactory();
             const { progressUnifier, advanceTime, mocks } = createTestableProgressUnifier(mockLogger);
 
             // Given: commandTemplate = ""

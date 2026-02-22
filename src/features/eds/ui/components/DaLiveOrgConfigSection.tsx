@@ -10,7 +10,6 @@
  * Settings are optional and can be configured later via the Configure UI.
  */
 
-import React from 'react';
 import {
     TextField,
     Flex,
@@ -20,6 +19,7 @@ import {
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import ChevronUp from '@spectrum-icons/workflow/ChevronUp';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
+import React from 'react';
 
 export interface DaLiveOrgConfigData {
     /** AEM Author environment URL for DA.live content authoring (e.g., author-p12345-e67890.adobeaemcloud.com) */

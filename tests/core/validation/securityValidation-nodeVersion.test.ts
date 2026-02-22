@@ -258,7 +258,7 @@ describe('securityValidation - validateNodeVersion', () => {
         });
 
         it('should block nested backticks', () => {
-            expect(() => validateNodeVersion('20`echo \`whoami\``'))
+            expect(() => validateNodeVersion('20`echo `whoami``'))
                 .toThrow(/invalid Node.js version format/i);
         });
     });

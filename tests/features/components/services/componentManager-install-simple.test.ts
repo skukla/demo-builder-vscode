@@ -187,7 +187,6 @@ describe('ComponentManager - Installation (Simple Components)', () => {
 
     describe('local components', () => {
         it('should link local component', async () => {
-            const fs = require('fs/promises');
             mockFileExists();
 
             const componentDef: TransformedComponentDefinition = {
@@ -208,7 +207,6 @@ describe('ComponentManager - Installation (Simple Components)', () => {
         });
 
         it('should verify local path exists', async () => {
-            const fs = require('fs/promises');
             mockFileNotFound();
 
             const componentDef: TransformedComponentDefinition = {

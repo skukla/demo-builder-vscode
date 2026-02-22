@@ -200,7 +200,7 @@ export async function handleGetDaLiveSites(
         if (entries.length > 0) {
             // Log first 3 entries as sample
             const sample = entries.slice(0, 3).map((e: { name: string; ext?: string }) =>
-                `${e.name}${e.ext ? ` (file: .${e.ext})` : ' (folder)'}`
+                `${e.name}${e.ext ? ` (file: .${e.ext})` : ' (folder)'}`,
             );
             context.logger.debug(`[EDS:DaLive] Raw entries sample: ${JSON.stringify(sample)}`);
         }

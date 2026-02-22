@@ -12,13 +12,13 @@
  */
 
 import * as vscode from 'vscode';
-import { getLogger } from '@/core/logging';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
-import { DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { DaLiveConfigService } from '../services/daLiveConfigService';
+import { DaLiveContentOperations } from '../services/daLiveContentOperations';
+import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 interface SiteQuickPickItem extends vscode.QuickPickItem {
     siteName: string;

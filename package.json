@@ -215,7 +215,7 @@
     "watch:all": "concurrently \"npm run watch\" \"npm run watch:webview\" --names \"esbuild,webpack\" --prefix-colors \"blue,green\"",
     "vscode:prepublish": "npm run compile",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src/**/*.ts",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
     "test": "node --max-old-space-size=4096 node_modules/.bin/jest --forceExit",

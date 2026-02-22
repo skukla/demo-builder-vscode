@@ -21,6 +21,8 @@
  * ```
  */
 
+/* eslint-disable no-console -- This is a browser-context logger where console is the only available output */
+
 // Check if we're in development mode
 // In webpack builds, this is replaced with actual value at compile time
 const isDev = process.env.NODE_ENV !== 'production';

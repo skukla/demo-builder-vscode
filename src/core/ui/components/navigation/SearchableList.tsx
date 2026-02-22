@@ -20,7 +20,7 @@ export interface SearchableListProps<T extends SearchableListItem> {
     /** Currently selected item IDs */
     selectedKeys?: string[];
     /** Selection change handler */
-    onSelectionChange?: (keys: Set<any>) => void;
+    onSelectionChange?: (keys: Set<React.Key>) => void;
     /** Search query */
     searchQuery: string;
     /** Search query change handler */
@@ -166,7 +166,7 @@ export function SearchableList<T extends SearchableListItem>({
 
             // Find scrollable container by checking which element is actually scrollable
             const findScrollable = (): HTMLElement | null => {
-                const grid = listContainerRef.current!.querySelector('[role="grid"]') as HTMLElement;
+                const grid = listContainerRef.current?.querySelector('[role="grid"]') as HTMLElement | null;
                 if (grid?.scrollHeight > grid?.clientHeight) return grid;
                 const parent = grid?.parentElement;
                 if (parent && parent.scrollHeight > parent.clientHeight) {

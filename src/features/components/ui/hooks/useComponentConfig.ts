@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { findComponentById } from '@/core/ui/utils/componentDataHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
-import { toServiceGroupWithSortedFields, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
+import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
+import { toServiceGroupWithSortedFields, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
 import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
 import { ComponentEnvVar, ComponentConfigs, WizardState } from '@/types/webview';
-import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 
 const log = webviewLogger('useComponentConfig');
 
@@ -80,6 +80,35 @@ interface UseComponentConfigReturn {
 // Service group definitions imported from shared source (serviceGroupTransforms.ts)
 // Note: 'mesh' group exists in shared list for Configure screen; wizard filters MESH_ENDPOINT
 // so the mesh group will be empty and hidden via `.filter(group => group.fields.length > 0)`
+
+/** Apply field defaults and brand-specific package defaults to component configs */
+function applyFieldDefaults(
+    prevConfigs: ComponentConfigs,
+    groups: ServiceGroup[],
+    packageConfigDefaults: Record<string, string> | undefined,
+): ComponentConfigs {
+    const newConfigs = { ...prevConfigs };
+    let hasChanges = false;
+    const packageDefaults = packageConfigDefaults || {};
+
+    groups.forEach(group => {
+        group.fields.forEach(field => {
+            const packageValue = packageDefaults[field.key];
+            const defaultValue = packageValue ?? field.default;
+            if (defaultValue !== undefined && defaultValue !== '') {
+                field.componentIds.forEach(componentId => {
+                    if (!newConfigs[componentId]) newConfigs[componentId] = {};
+                    if (!newConfigs[componentId][field.key] || packageValue) {
+                        newConfigs[componentId][field.key] = defaultValue;
+                        hasChanges = true;
+                    }
+                });
+            }
+        });
+    });
+
+    return hasChanges ? newConfigs : prevConfigs;
+}
 
 export function useComponentConfig({
     state,
@@ -216,8 +245,8 @@ export function useComponentConfig({
                     if (!fieldMap.has(envVarKey)) {
                         fieldMap.set(envVarKey, { ...envVarDef, key: envVarKey, componentIds: [id] });
                     } else {
-                        const existing = fieldMap.get(envVarKey)!;
-                        if (!existing.componentIds.includes(id)) {
+                        const existing = fieldMap.get(envVarKey);
+                        if (existing && !existing.componentIds.includes(id)) {
                             existing.componentIds.push(id);
                         }
                     }
@@ -274,34 +303,7 @@ export function useComponentConfig({
     useEffect(() => {
         if (serviceGroups.length === 0) return;
 
-        setComponentConfigs(prevConfigs => {
-            const newConfigs = { ...prevConfigs };
-            let hasChanges = false;
-
-            // Get package-specific defaults from state (e.g., CitiSignal store codes)
-            const packageDefaults = state.packageConfigDefaults || {};
-
-            serviceGroups.forEach(group => {
-                group.fields.forEach(field => {
-                    // Priority: 1) Package defaults, 2) Field defaults
-                    const packageValue = packageDefaults[field.key];
-                    const defaultValue = packageValue ?? field.default;
-
-                    if (defaultValue !== undefined && defaultValue !== '') {
-                        field.componentIds.forEach(componentId => {
-                            if (!newConfigs[componentId]) newConfigs[componentId] = {};
-                            // Apply if field is empty OR if package default should override
-                            if (!newConfigs[componentId][field.key] || packageValue) {
-                                newConfigs[componentId][field.key] = defaultValue;
-                                hasChanges = true;
-                            }
-                        });
-                    }
-                });
-            });
-
-            return hasChanges ? newConfigs : prevConfigs;
-        });
+        setComponentConfigs(prevConfigs => applyFieldDefaults(prevConfigs, serviceGroups, state.packageConfigDefaults));
     }, [serviceGroups, state.packageConfigDefaults]);
 
     // Note: Auto-fill mesh endpoint effect removed - MESH_ENDPOINT is now auto-configured
@@ -347,7 +349,7 @@ export function useComponentConfig({
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
                         const patternValidator = pattern(
                             new RegExp(field.validation.pattern),
-                            field.validation.message || 'Invalid format'
+                            field.validation.message || 'Invalid format',
                         );
                         const result = patternValidator(value);
                         if (!result.valid && result.error) {

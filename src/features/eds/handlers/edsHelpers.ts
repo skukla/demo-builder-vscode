@@ -13,18 +13,18 @@
  */
 
 import * as vscode from 'vscode';
-import type { HandlerContext } from '@/types/handlers';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { GitHubTokenService } from '../services/githubTokenService';
-import { GitHubRepoOperations } from '../services/githubRepoOperations';
-import { GitHubFileOperations } from '../services/githubFileOperations';
-import { GitHubOAuthService } from '../services/githubOAuthService';
-import { DaLiveOrgOperations, type TokenProvider } from '../services/daLiveOrgOperations';
-import { DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { DaLiveAuthService } from '../services/daLiveAuthService';
 import { DaLiveConfigService } from '../services/daLiveConfigService';
+import { DaLiveContentOperations } from '../services/daLiveContentOperations';
+import { DaLiveOrgOperations, type TokenProvider } from '../services/daLiveOrgOperations';
+import { GitHubFileOperations } from '../services/githubFileOperations';
+import { GitHubOAuthService } from '../services/githubOAuthService';
+import { GitHubRepoOperations } from '../services/githubRepoOperations';
+import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
 import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
 // ==========================================================
@@ -99,7 +99,10 @@ export function getDaLiveServices(context: HandlerContext): DaLiveServices {
         // Create token provider adapter from AuthenticationService
         const tokenProvider: TokenProvider = {
             getAccessToken: async () => {
-                const tokenManager = context.authManager!.getTokenManager();
+                const tokenManager = context.authManager?.getTokenManager();
+                if (!tokenManager) {
+                    return null;
+                }
                 const token = await tokenManager.getAccessToken();
                 return token ?? null;  // Convert undefined to null for TokenProvider interface
             },
@@ -420,7 +423,7 @@ export async function showDaLiveAuthQuickPick(
                 const validation = validateDaLiveToken(trimmedToken);
                 if (!validation.valid) {
                     context.logger.warn(`[DA.live Auth] Token validation failed: ${validation.error}`);
-                    await vscode.window.showErrorMessage(validation.error!);
+                    await vscode.window.showErrorMessage(validation.error ?? 'Token validation failed');
                     return { success: false, error: validation.error };
                 }
 

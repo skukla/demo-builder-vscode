@@ -17,6 +17,159 @@ import { getMeshStatusCategory, extractAndParseJSON } from '@/features/mesh/util
 import { ErrorCode } from '@/types/errorCodes';
 import { parseJSON, toError } from '@/types/typeGuards';
 
+/** Result type for handleCreateApiMesh */
+interface CreateMeshResult {
+    success: boolean;
+    meshId?: string;
+    endpoint?: string;
+    meshExists?: boolean;
+    meshStatus?: 'deployed' | 'error';
+    message?: string;
+    error?: string;
+    code?: ErrorCode;
+}
+
+/**
+ * Load mesh configuration template and write to temporary file
+ */
+async function prepareMeshConfig(
+    context: HandlerContext,
+    storagePath: string,
+): Promise<string> {
+    await fsPromises.mkdir(storagePath, { recursive: true });
+
+    const templatePath = path.join(context.context.extensionPath, 'src', 'features', 'mesh', 'config', 'mesh-config.json');
+    const templateContent = await fsPromises.readFile(templatePath, 'utf-8');
+    const minimalMeshConfig = parseJSON<Record<string, unknown>>(templateContent);
+    if (!minimalMeshConfig) {
+        throw new Error('Failed to parse mesh configuration template');
+    }
+
+    const meshConfigPath = path.join(storagePath, `mesh-config-${Date.now()}.json`);
+    await fsPromises.writeFile(meshConfigPath, JSON.stringify(minimalMeshConfig, null, 2), 'utf-8');
+
+    context.logger.debug('[API Mesh] Created minimal mesh configuration from template', {
+        templatePath,
+        outputPath: meshConfigPath,
+    });
+    context.debugLogger.trace('[API Mesh] Mesh config content', minimalMeshConfig);
+
+    return meshConfigPath;
+}
+
+/**
+ * Process a single mesh verification poll response.
+ * Returns a result if polling should stop, or undefined to continue polling.
+ */
+async function processVerificationResponse(
+    context: HandlerContext,
+    stdout: string,
+    initialWait: number,
+    pollInterval: number,
+    attempt: number,
+): Promise<CreateMeshResult | undefined> {
+    const meshData = extractAndParseJSON<{ meshId?: string; mesh_id?: string; meshStatus?: string; error?: string }>(stdout);
+    if (!meshData) {
+        context.logger.warn('[API Mesh] Could not parse JSON from get response');
+        context.debugLogger.trace('[API Mesh] Output:', stdout);
+        return undefined; // Continue polling
+    }
+
+    const rawMeshStatus = meshData.meshStatus || '';
+    const statusCategory = getMeshStatusCategory(rawMeshStatus);
+    const extractedMeshId = meshData.meshId || meshData.mesh_id;
+    context.debugLogger.debug('[API Mesh] Mesh status:', { rawMeshStatus, statusCategory, meshId: extractedMeshId });
+
+    if (statusCategory === 'deployed') {
+        const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
+        context.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
+        const endpoint = extractedMeshId ? await getEndpoint(context, extractedMeshId) : undefined;
+        return { success: true, meshId: extractedMeshId, endpoint, message: 'API Mesh created and deployed successfully' };
+    }
+
+    if (statusCategory === 'error') {
+        const errorMsg = meshData.error || 'Mesh deployment failed';
+        context.logger.error('[API Mesh] Mesh deployment failed with error status');
+        context.debugLogger.debug('[API Mesh] Error details:', errorMsg.substring(0, 500));
+        return {
+            success: false,
+            meshExists: true,
+            meshStatus: 'error',
+            error: 'Mesh deployment failed. Click "Recreate Mesh" to delete and try again.',
+            code: ErrorCode.UNKNOWN,
+        };
+    }
+
+    // Status is pending/provisioning/building - continue polling
+    context.logger.debug(`[API Mesh] Mesh status: ${rawMeshStatus || 'unknown'} (attempt ${attempt})`);
+    return undefined;
+}
+
+/**
+ * Poll Adobe I/O until the mesh is deployed or timeout is reached
+ */
+async function pollMeshDeployment(
+    context: HandlerContext,
+    onProgress?: (message: string, subMessage?: string) => void,
+): Promise<CreateMeshResult> {
+    const commandManager = ServiceLocator.getCommandExecutor();
+    const maxRetries = 10;
+    const pollInterval = TIMEOUTS.POLL.INTERVAL;
+    const initialWait = TIMEOUTS.POLL.INITIAL;
+
+    onProgress?.('Waiting for mesh deployment...', 'Provisioning mesh (~20 seconds)');
+    await new Promise(resolve => setTimeout(resolve, initialWait));
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        const elapsed = initialWait + (attempt - 1) * pollInterval;
+        const elapsedSeconds = Math.floor(elapsed / 1000);
+        onProgress?.(
+            'Waiting for mesh deployment...',
+            `Checking deployment status (~${elapsedSeconds}s elapsed, attempt ${attempt}/${maxRetries})`,
+        );
+
+        if (attempt > 1) {
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+
+        context.logger.debug(`[API Mesh] Verification attempt ${attempt}/${maxRetries}`);
+
+        try {
+            const verifyResult = await commandManager.execute('aio api-mesh get', {
+                timeout: TIMEOUTS.NORMAL,
+                configureTelemetry: false,
+                useNodeVersion: getMeshNodeVersion(),
+                enhancePath: true,
+                shell: true,
+            });
+
+            if (verifyResult.code === 0) {
+                const result = await processVerificationResponse(
+                    context, verifyResult.stdout, initialWait, pollInterval, attempt,
+                );
+                if (result) return result;
+            } else {
+                context.logger.warn(`[API Mesh] Get command returned exit code ${verifyResult.code}`);
+                context.debugLogger.trace('[API Mesh] stderr:', verifyResult.stderr);
+            }
+        } catch (verifyError) {
+            context.logger.warn('[API Mesh] Verification command failed', verifyError as Error);
+            context.debugLogger.debug('[API Mesh] Error details:', verifyError);
+        }
+    }
+
+    // Timed out
+    const totalWaitTime = Math.floor((initialWait + maxRetries * pollInterval) / 1000);
+    context.logger.warn(`[API Mesh] Mesh deployment verification timed out after ${maxRetries} attempts (~${totalWaitTime}s)`);
+    onProgress?.('Mesh still provisioning', 'Deployment is taking longer than usual');
+
+    return {
+        success: true,
+        meshId: undefined,
+        message: `Mesh is still provisioning after ${totalWaitTime} seconds. This is unusual but not necessarily an error. You can continue - the mesh will be available once deployment completes (check Adobe Console for status).`,
+    };
+}
+
 /**
  * Handler: create-api-mesh
  *
@@ -37,16 +190,7 @@ export async function handleCreateApiMesh(
         workspaceId: string;
         onProgress?: (message: string, subMessage?: string) => void;
     },
-): Promise<{
-    success: boolean;
-    meshId?: string;
-    endpoint?: string;
-    meshExists?: boolean;
-    meshStatus?: 'deployed' | 'error';
-    message?: string;
-    error?: string;
-    code?: ErrorCode;
-}> {
+): Promise<CreateMeshResult> {
     const { workspaceId, onProgress } = payload;
 
     // SECURITY: Validate workspaceId to prevent command injection
@@ -78,27 +222,9 @@ export async function handleCreateApiMesh(
     let meshConfigPath: string | undefined;
 
     try {
-        // Ensure storage directory exists
-        await fsPromises.mkdir(storagePath, { recursive: true });
-
         // Load minimal mesh configuration from template
         onProgress?.('Creating API Mesh...', 'Loading mesh configuration template');
-        const templatePath = path.join(context.context.extensionPath, 'src', 'features', 'mesh', 'config', 'mesh-config.json');
-        const templateContent = await fsPromises.readFile(templatePath, 'utf-8');
-        const minimalMeshConfig = parseJSON<Record<string, unknown>>(templateContent);
-        if (!minimalMeshConfig) {
-            throw new Error('Failed to parse mesh configuration template');
-        }
-
-        // Write mesh config to temporary file in extension storage
-        meshConfigPath = path.join(storagePath, `mesh-config-${Date.now()}.json`);
-        await fsPromises.writeFile(meshConfigPath, JSON.stringify(minimalMeshConfig, null, 2), 'utf-8');
-
-        context.logger.debug('[API Mesh] Created minimal mesh configuration from template', {
-            templatePath,
-            outputPath: meshConfigPath,
-        });
-        context.debugLogger.trace('[API Mesh] Mesh config content', minimalMeshConfig);
+        meshConfigPath = await prepareMeshConfig(context, storagePath);
 
         // Create mesh with the configuration file
         onProgress?.('Creating API Mesh...', 'Submitting configuration to Adobe');
@@ -141,145 +267,14 @@ export async function handleCreateApiMesh(
         context.debugLogger.trace('[API Mesh] Create output', { stdout: createResult.stdout });
 
         // Mesh creation is asynchronous - poll until it's deployed
-        // Typical deployment time: 60-90 seconds, with 2 minute buffer for safety
         context.logger.debug('[API Mesh] Starting deployment verification polling...');
         onProgress?.('Waiting for mesh deployment...', 'Mesh is being provisioned (typically takes 60-90 seconds)');
 
-        const maxRetries = 10; // 10 attempts with strategic timing = ~2 minutes max
-        const pollInterval = TIMEOUTS.POLL.INTERVAL;
-        const initialWait = TIMEOUTS.POLL.INITIAL;
-        let attempt = 0;
-        let meshDeployed = false;
-        let deployedMeshId: string | undefined;
-        let deployedEndpoint: string | undefined;
-
-        // Initial wait: mesh won't be ready for at least 20 seconds
-        onProgress?.('Waiting for mesh deployment...', 'Provisioning mesh (~20 seconds)');
-        await new Promise(resolve => setTimeout(resolve, initialWait));
-
-        while (attempt < maxRetries && !meshDeployed) {
-            attempt++;
-
-            const elapsed = initialWait + (attempt - 1) * pollInterval;
-            const elapsedSeconds = Math.floor(elapsed / 1000);
-            onProgress?.(
-                'Waiting for mesh deployment...',
-                `Checking deployment status (~${elapsedSeconds}s elapsed, attempt ${attempt}/${maxRetries})`,
-            );
-
-            // Wait between attempts (but not before first check, we already waited)
-            if (attempt > 1) {
-                await new Promise(resolve => setTimeout(resolve, pollInterval));
-            }
-
-            context.logger.debug(`[API Mesh] Verification attempt ${attempt}/${maxRetries}`);
-
-            try {
-                // Use 'get' without --active flag to get JSON response with meshStatus
-                const verifyResult = await commandManager.execute(
-                    'aio api-mesh get',
-                    {
-                        timeout: TIMEOUTS.NORMAL,
-                        configureTelemetry: false,
-                        useNodeVersion: getMeshNodeVersion(),
-                        enhancePath: true,
-                        shell: true,
-                    },
-                );
-
-                if (verifyResult.code === 0) {
-                    // Parse JSON response to check meshStatus
-                    try {
-                        // Extract JSON from output using Step 2 helper (skips "Successfully retrieved mesh" line)
-                        const meshData = extractAndParseJSON<{ meshId?: string; mesh_id?: string; meshStatus?: string; error?: string }>(verifyResult.stdout);
-                        if (!meshData) {
-                            context.logger.warn('[API Mesh] Could not parse JSON from get response');
-                            context.debugLogger.trace('[API Mesh] Output:', verifyResult.stdout);
-                            continue; // Try next iteration
-                        }
-                        const rawMeshStatus = meshData.meshStatus || '';
-                        const statusCategory = getMeshStatusCategory(rawMeshStatus);
-
-                        // Handle both camelCase (meshId) and snake_case (mesh_id) responses from Adobe CLI
-                        const extractedMeshId = meshData.meshId || meshData.mesh_id;
-                        context.debugLogger.debug('[API Mesh] Mesh status:', { rawMeshStatus, statusCategory, meshId: extractedMeshId });
-
-                        switch (statusCategory) {
-                            case 'deployed': {
-                                // Success! Mesh is fully deployed - store the mesh data
-                                const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
-                                context.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
-                                deployedMeshId = extractedMeshId;
-                                // Get endpoint using single source of truth
-                                deployedEndpoint = extractedMeshId ? await getEndpoint(context, extractedMeshId) : undefined;
-                                meshDeployed = true;
-                                break;
-                            }
-
-                            case 'error': {
-                                // Deployment failed - return error
-                                const errorMsg = meshData.error || 'Mesh deployment failed';
-                                context.logger.error('[API Mesh] Mesh deployment failed with error status');
-                                context.debugLogger.debug('[API Mesh] Error details:', errorMsg.substring(0, 500));
-
-                                return {
-                                    success: false,
-                                    meshExists: true,
-                                    meshStatus: 'error',
-                                    error: 'Mesh deployment failed. Click "Recreate Mesh" to delete and try again.',
-                                    code: ErrorCode.UNKNOWN,
-                                };
-                            }
-
-                            case 'pending':
-                                // Status is pending/provisioning/building - continue polling
-                                context.logger.debug(`[API Mesh] Mesh status: ${rawMeshStatus || 'unknown'} (attempt ${attempt}/${maxRetries})`);
-                                break;
-                        }
-                    } catch (parseError) {
-                        context.logger.warn('[API Mesh] Failed to parse mesh status JSON', parseError as Error);
-                        context.debugLogger.trace('[API Mesh] Raw output:', verifyResult.stdout);
-                        // Continue polling
-                    }
-                } else {
-                    // Non-zero exit code - likely mesh doesn't exist yet or other error
-                    context.logger.warn(`[API Mesh] Get command returned exit code ${verifyResult.code}`);
-                    context.debugLogger.trace('[API Mesh] stderr:', verifyResult.stderr);
-                    // Continue polling - mesh might still be initializing
-                }
-            } catch (verifyError) {
-                // Command execution failed - log and continue polling
-                context.logger.warn('[API Mesh] Verification command failed', verifyError as Error);
-                context.debugLogger.debug('[API Mesh] Error details:', verifyError);
-                // Continue polling - transient network issues shouldn't fail the entire process
-            }
+        const pollResult = await pollMeshDeployment(context, onProgress);
+        if (pollResult.success && pollResult.meshId) {
+            onProgress?.('✓ API Mesh Ready', 'Mesh successfully created and deployed');
         }
-
-        // Check if we succeeded or timed out
-        if (!meshDeployed) {
-            const totalWaitTime = Math.floor((initialWait + maxRetries * pollInterval) / 1000);
-            context.logger.warn(`[API Mesh] Mesh deployment verification timed out after ${maxRetries} attempts (~${totalWaitTime}s)`);
-            context.logger.debug('[API Mesh] Mesh is still provisioning but taking longer than expected');
-            onProgress?.('Mesh still provisioning', 'Deployment is taking longer than usual');
-
-            // TIMEOUT is not an ERROR - mesh is likely still being deployed
-            // Return success but note that verification is pending
-            return {
-                success: true, // Don't block user - mesh was submitted successfully
-                meshId: undefined, // We don't have the ID yet
-                message: `Mesh is still provisioning after ${totalWaitTime} seconds. This is unusual but not necessarily an error. You can continue - the mesh will be available once deployment completes (check Adobe Console for status).`,
-            };
-        }
-
-        // Use mesh data from successful polling result
-        onProgress?.('✓ API Mesh Ready', 'Mesh successfully created and deployed');
-
-        return {
-            success: true,
-            meshId: deployedMeshId,
-            endpoint: deployedEndpoint,
-            message: 'API Mesh created and deployed successfully',
-        };
+        return pollResult;
 
     } catch (error) {
         context.logger.error('[API Mesh] Creation failed', error as Error);

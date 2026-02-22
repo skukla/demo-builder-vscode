@@ -1,4 +1,3 @@
-import React from 'react';
 import { cleanup } from '@testing-library/react';
 import { SearchableListItem } from '@/core/ui/components/navigation/SearchableList';
 

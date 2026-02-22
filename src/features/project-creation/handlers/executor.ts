@@ -13,6 +13,7 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import stacksConfig from '../config/stacks.json';
 import {
     cloneAllComponents,
     installAllComponents,
@@ -24,24 +25,24 @@ import {
     sendCompletionAndCleanup,
     ensureEdsContent,
     type ComponentDefinitionEntry,
+    type MeshApiConfig,
 } from '../services';
 import { ProgressTracker } from './shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { COMPONENT_IDS } from '@/core/constants';
 import { parseGitHubUrl } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
-import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
 import type { Logger } from '@/types/logger';
+import type { Stack } from '@/types/stacks';
+import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 
 // EDS config.json sync to remote (Phase 5)
-import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 
 // Stacks configuration - source of truth for frontend/backend/dependencies
-import stacksConfig from '../config/stacks.json';
-import type { Stack } from '@/types/stacks';
 
 /**
  * Look up a stack by ID from the stacks configuration
@@ -224,7 +225,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // Determine project path based on edit mode
     const isEditMode = typedConfig.editMode && typedConfig.editProjectPath;
     const projectPath = isEditMode
-        ? typedConfig.editProjectPath!
+        ? typedConfig.editProjectPath
         : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
 
     // Load existing project state if in edit mode (to preserve creation date)
@@ -363,220 +364,28 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // ========================================================================
     // EDIT MODE: ATOMIC COMPONENT SWAP
     // ========================================================================
-    // After all components installed successfully in temp directory,
-    // atomically swap with production directory.
 
     if (isEditMode && tempComponentsDir) {
-        progressTracker('Applying Changes', 71, 'Swapping components...');
-        context.logger.info('[Project Edit] Swapping temporary components with production');
-
-        try {
-            await swapComponentsDirectory(projectPath, context.logger);
-
-            // Validate that components were installed before updating paths
-            if (!project.componentInstances || Object.keys(project.componentInstances).length === 0) {
-                context.logger.error('[Project Edit] No component instances found after swap');
-                throw new Error('Component swap completed but no components found in project state');
-            }
-
-            // Update component instance paths from .tmp to production
-            // (paths were set during clone to point to components.tmp)
-            // Use proper path reconstruction to avoid substring matching issues
-            const tempComponentsPath = path.join(projectPath, 'components.tmp');
-            const productionComponentsPath = path.join(projectPath, 'components');
-
-            for (const [compId, instance] of Object.entries(project.componentInstances)) {
-                if (instance.path && instance.path.startsWith(tempComponentsPath)) {
-                    const relativePath = path.relative(tempComponentsPath, instance.path);
-                    const oldPath = instance.path;
-                    instance.path = path.join(productionComponentsPath, relativePath);
-                    context.logger.debug(`[Project Edit] Updated path for ${compId}: ${oldPath} → ${instance.path}`);
-                }
-            }
-
-            // Save updated paths
-            await context.stateManager.saveProject(project);
-            context.logger.info('[Project Edit] Component swap completed successfully');
-        } catch (error) {
-            context.logger.error('[Project Edit] Failed to swap components', error as Error);
-            throw new Error(
-                `Failed to apply component changes: ${(error as Error).message}. ` +
-                `The project's original components have been preserved.`,
-            );
-        }
+        await performAtomicComponentSwap(
+            context, project, projectPath, progressTracker,
+        );
     }
 
     // ========================================================================
     // EDS METADATA POPULATION (if EDS stack)
     // ========================================================================
-    // After standard cloning, populate EDS-specific metadata from runtime config.
-    // The component was cloned by cloneAllComponents, but needs additional metadata
-    // that only exists at runtime (from preflight step).
 
-    // Debug: List all component instances after cloning
-    const instanceKeys = Object.keys(project.componentInstances || {});
-    context.logger.debug(`[Project Creation] Component instances after clone: [${instanceKeys.join(', ')}]`);
-    context.logger.debug(`[Project Creation] EDS metadata check: isEdsStack=${isEdsStack}, hasEdsConfig=${!!typedConfig.edsConfig}`);
-    if (typedConfig.edsConfig) {
-        context.logger.debug(`[Project Creation] EDS config values: repoUrl=${typedConfig.edsConfig.repoUrl}, githubOwner=${typedConfig.edsConfig.githubOwner}, repoName=${typedConfig.edsConfig.repoName}, daLiveOrg=${typedConfig.edsConfig.daLiveOrg}, daLiveSite=${typedConfig.edsConfig.daLiveSite}, preflightComplete=${typedConfig.edsConfig.preflightComplete}`);
-    }
-    if (isEdsStack && typedConfig.edsConfig) {
-        const { COMPONENT_IDS } = await import('@/core/constants');
-        context.logger.debug(`[Project Creation] Looking for EDS instance with key: ${COMPONENT_IDS.EDS_STOREFRONT}`);
-        const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-        if (edsInstance) {
-            // Derive githubRepo from repoUrl or explicit owner/name
-            const repoInfo = typedConfig.edsConfig.repoUrl ? parseGitHubUrl(typedConfig.edsConfig.repoUrl) : null;
-            const githubRepo = repoInfo
-                ? `${repoInfo.owner}/${repoInfo.repo}`
-                : (typedConfig.edsConfig.githubOwner && typedConfig.edsConfig.repoName
-                    ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
-                    : undefined);
-
-            // Fetch the template's current commit SHA for template sync feature
-            // This enables future update detection by comparing against the template's latest commit
-            let lastSyncedCommit: string | undefined;
-            const templateOwner = typedConfig.edsConfig.templateOwner;
-            const templateRepo = typedConfig.edsConfig.templateRepo;
-
-            if (templateOwner && templateRepo) {
-                try {
-                    const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
-                    const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
-                    const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
-                    const githubFileOps = new GitHubFileOperations(githubTokenService, context.logger);
-                    lastSyncedCommit = await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, 'main') ?? undefined;
-                    context.logger.debug(`[Project Creation] Fetched template commit SHA: ${lastSyncedCommit?.substring(0, 7)}`);
-                } catch (error) {
-                    // Non-fatal: Template sync is optional, don't fail project creation
-                    context.logger.warn(`[Project Creation] Could not fetch template commit SHA: ${(error as Error).message}`);
-                }
-            }
-
-            // Save project-specific EDS data to metadata
-            // Now includes template info for future update detection
-            edsInstance.metadata = {
-                ...edsInstance.metadata,
-                repoUrl: typedConfig.edsConfig.repoUrl,
-                githubRepo, // Source data for URL derivation (typeGuards derive previewUrl/liveUrl from this)
-                daLiveOrg: typedConfig.edsConfig.daLiveOrg,
-                daLiveSite: typedConfig.edsConfig.daLiveSite,
-                // Template sync fields - enables EDS template updates
-                templateOwner,
-                templateRepo,
-                lastSyncedCommit,
-            };
-            await context.stateManager.saveProject(project);
-            context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}, daLiveOrg=${edsInstance.metadata?.daLiveOrg}, templateOwner=${templateOwner}, lastSyncedCommit=${lastSyncedCommit?.substring(0, 7)}`);
-        } else {
-            context.logger.warn(`[Project Creation] EDS instance NOT found for key "${COMPONENT_IDS.EDS_STOREFRONT}" - metadata NOT populated`);
-        }
-    }
+    await populateEdsMetadata(context, project, typedConfig, isEdsStack);
 
     // ========================================================================
     // PHASE 3: MESH CONFIGURATION
     // ========================================================================
 
-    const meshComponent = getMeshComponentInstance(project);
-    const meshId = getMeshComponentId(project);
-    const meshDefinition = meshId ? componentDefinitions.get(meshId)?.definition : undefined;
-
-    const meshContext = {
-        setupContext,
-        meshDefinition,
-        progressTracker,
-        onMeshCreated: (workspace: string | undefined) => {
-            context.sharedState.meshCreatedForWorkspace = workspace;
-        },
-    };
-
-    // Debug logging for mesh deployment decision context (helps diagnose edit mode issues)
-    context.logger.debug(`[Mesh Setup] Decision context:`);
-    context.logger.debug(`  - isEditMode: ${isEditMode}`);
-    context.logger.debug(`  - existingProject?.meshState?.endpoint: ${existingProject?.meshState?.endpoint}`);
-    context.logger.debug(`  - typedConfig.apiMesh: ${JSON.stringify(typedConfig.apiMesh)}`);
-    context.logger.debug(`  - meshComponent?.path: ${meshComponent?.path}`);
-    context.logger.debug(`  - meshComponent?.endpoint: ${meshComponent?.endpoint}`);
-    context.logger.debug(`  - meshId: ${meshId}`);
-    context.logger.debug(`  - meshDefinition: ${meshDefinition ? 'found' : 'NOT FOUND'}`);
-    context.logger.debug(`  - shouldConfigureExistingMesh result: ${shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint)}`);
-
-    // Check for same-workspace import FIRST - if user imported settings from same workspace,
-    // the mesh already exists there, so we can skip deployment entirely
-    const isSameWorkspaceImport = typedConfig.importedWorkspaceId &&
-                                   typedConfig.importedMeshEndpoint &&
-                                   typedConfig.importedWorkspaceId === typedConfig.adobe?.workspace;
-
-    if (isSameWorkspaceImport) {
-        // Same workspace import - mesh already exists, just link to it
-        // This happens when importing from a file - the workspace is auto-selected from the import
-        context.logger.info(`[Mesh Setup] Skipping deployment - reusing mesh from imported settings`);
-        context.logger.debug(`[Mesh Setup] Imported workspace matches selected: ${typedConfig.importedWorkspaceId}`);
-        const importedApiMesh = {
-            endpoint: typedConfig.importedMeshEndpoint,
-            meshId: '', // We don't have the mesh ID, but endpoint is sufficient
-            meshStatus: 'deployed' as const,
-            workspace: typedConfig.adobe?.workspace,
-        };
-        await linkExistingMesh(meshContext, importedApiMesh);
-    } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint)) {
-        // Check for existing mesh (takes precedence - don't deploy if workspace already has mesh)
-        await linkExistingMesh(meshContext, typedConfig.apiMesh!);
-    } else if (isEditMode && existingProject?.meshState?.endpoint) {
-        // EDIT MODE: Reuse existing mesh from current project if it exists
-        context.logger.info('[Mesh Setup] Edit mode - reusing existing mesh from project');
-        const existingMesh = {
-            endpoint: existingProject.meshState.endpoint,
-            meshId: (getMeshComponentInstance(existingProject)?.metadata?.meshId as string) || '',
-            meshStatus: 'deployed' as const,
-            workspace: typedConfig.adobe?.workspace,
-        };
-        await linkExistingMesh(meshContext, existingMesh);
-    } else if (meshComponent?.path && meshDefinition) {
-        // No existing mesh in workspace - deploy new one
-        // If imported from different workspace, mesh endpoint won't work - must deploy fresh
-        if (typedConfig.importedWorkspaceId && typedConfig.importedWorkspaceId !== typedConfig.adobe?.workspace) {
-            context.logger.debug(`[Mesh Setup] Imported workspace differs from selected - deploying new mesh`);
-            context.logger.debug(`[Mesh Setup] Imported: ${typedConfig.importedWorkspaceId}, Selected: ${typedConfig.adobe?.workspace}`);
-        }
-
-        // PRE-FLIGHT: Ensure Adobe auth token is still valid before running CLI commands.
-        // Phases 1-2 (component install) can take minutes — token may have expired.
-        // Without this check, each aio command independently opens a browser for OAuth.
-        const authOk = await ensureMeshPreflightAuth(
-            context.authManager,
-            context.logger,
-            {
-                organization: typedConfig.adobe?.organization,
-                projectId: typedConfig.adobe?.projectId,
-                workspace: typedConfig.adobe?.workspace,
-            },
-        );
-        if (!authOk) {
-            throw new Error(
-                'Adobe authentication expired and re-login failed. ' +
-                'Please sign in again and retry.',
-            );
-        }
-
-        // CRITICAL: Ensure workspace context is correct before mesh deployment
-        // The Adobe CLI mesh commands operate on the currently-selected workspace.
-        // CLI context can drift from other sessions/operations, causing mesh to deploy
-        // to wrong workspace. This validates and restores context before deployment.
-        if (context.authManager && typedConfig.adobe?.workspace && typedConfig.adobe?.projectId) {
-            context.logger.debug(`[Mesh Setup] Ensuring workspace context: ${typedConfig.adobe.workspace}`);
-            const contextOk = await context.authManager.selectWorkspace(
-                typedConfig.adobe.workspace,
-                typedConfig.adobe.projectId,
-            );
-            if (!contextOk) {
-                context.logger.error('[Mesh Setup] Failed to set workspace context - mesh may deploy to wrong workspace');
-                // Continue anyway - the mesh command may still work if context happens to be correct
-            }
-        }
-
-        await deployNewMesh(meshContext, typedConfig.apiMesh);
-    }
+    await executeMeshPhase(
+        context, setupContext, project, typedConfig,
+        componentDefinitions, progressTracker,
+        isEditMode, existingProject,
+    );
 
     // ========================================================================
     // PHASE 4-5: FINALIZATION
@@ -599,155 +408,17 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     await generateEnvironmentFiles(finalizationContext);
 
     // Populate componentConfigs for mesh from the generated .env file
-    // This enables Configure UI to save mesh env var changes
-    const meshInstanceForConfig = getMeshComponentInstance(project);
-    const meshIdForConfig = getMeshComponentId(project);
-    if (meshInstanceForConfig?.path && meshIdForConfig) {
-        const { readMeshEnvVarsFromFile } = await import('@/features/mesh/services/stalenessDetector');
-        const meshEnvVars = await readMeshEnvVarsFromFile(meshInstanceForConfig.path);
-        if (meshEnvVars && Object.keys(meshEnvVars).length > 0) {
-            if (!project.componentConfigs) {
-                project.componentConfigs = {};
-            }
-            project.componentConfigs[meshIdForConfig] = meshEnvVars;
-            context.logger.debug(`[Project Creation] Populated componentConfigs[${meshIdForConfig}] with ${Object.keys(meshEnvVars).length} env vars`);
-        }
-    }
+    await populateMeshComponentConfigs(context, project);
 
     // ========================================================================
-    // PHASE 5: SYNC EDS CONFIG TO REMOTE
+    // PHASE 5: SYNC EDS CONFIG TO REMOTE + PHASE 5b: EDS CONTENT SETUP
     // ========================================================================
-    // Sync locally generated config.json to GitHub and publish to CDN.
-    // This happens AFTER Phase 4 generates the file with mesh endpoint.
-    //
-    // Config.json generation timeline for EDS projects:
-    // 1. StorefrontSetupStep (preflight): Generates fstab.yaml (no mesh endpoint needed)
-    // 2. executor Phase 3: Deploys mesh → project.meshState.endpoint
-    // 3. executor Phase 4: Generates config.json WITH mesh endpoint (via generateEdsConfigJson)
-    // 4. executor Phase 5: Syncs config.json to GitHub/CDN (this phase)
 
-    // Check if EDS preflight completed AND mesh endpoint available
-    // preflightComplete ensures StorefrontSetupStep finished successfully
-    const edsSetupCompleteForSync = !!typedConfig.edsConfig?.preflightComplete;
+    await syncEdsConfigToRemote(
+        context, project, typedConfig, isEdsStack, edsComponentPath, progressTracker,
+    );
 
-    if (isEdsStack && edsSetupCompleteForSync && project.meshState?.endpoint) {
-        progressTracker('Syncing Config', 92, 'Pushing config.json to GitHub...');
-
-        const repoUrl = typedConfig.edsConfig?.repoUrl;
-        if (repoUrl) {
-            const repoInfo = parseGitHubUrl(repoUrl);
-            if (repoInfo) {
-                // Validate config.json exists and is valid before syncing
-                const configJsonPath = path.join(edsComponentPath, 'config.json');
-                if (!fs.existsSync(configJsonPath)) {
-                    throw new Error(
-                        `Commerce configuration failed: config.json not found at ${configJsonPath}. ` +
-                        `Config generation may have failed in Phase 4.`,
-                    );
-                }
-
-                // Validate it's valid JSON
-                try {
-                    const configContent = fs.readFileSync(configJsonPath, 'utf-8');
-                    JSON.parse(configContent);
-                } catch (parseError) {
-                    throw new Error(
-                        `Commerce configuration failed: config.json is invalid JSON. ` +
-                        `Error: ${(parseError as Error).message}`,
-                    );
-                }
-
-                context.logger.info(`[Phase 5] Syncing config.json to ${repoInfo.owner}/${repoInfo.repo}`);
-
-                const syncResult = await syncConfigToRemote({
-                    componentPath: edsComponentPath,
-                    repoOwner: repoInfo.owner,
-                    repoName: repoInfo.repo,
-                    logger: context.logger,
-                    secrets: context.context.secrets,
-                    authManager: context.authManager,
-                    onProgress: (message) => progressTracker('Syncing Config', 94, message),
-                    verifyBlockLibrary: true, // Verify block library CDN in parallel with config
-                });
-
-                if (!syncResult.success) {
-                    // Make config sync failure fatal - user must know Commerce features won't work
-                    throw new Error(
-                        `Commerce configuration failed: Could not sync config.json to GitHub. ` +
-                        `The storefront is live but Commerce features will not work. ` +
-                        `Error: ${syncResult.error}`,
-                    );
-                }
-
-                context.logger.info(
-                    `[Phase 5] Config synced: GitHub=${syncResult.githubPushed}, CDN=${syncResult.cdnPublished}, ` +
-                    `BlockLibrary=${syncResult.blockLibraryVerified ?? 'n/a'}`,
-                );
-
-                // Update storefront state to track the published config baseline
-                const { updateStorefrontState } = await import('@/features/eds/services/storefrontStalenessDetector');
-                updateStorefrontState(project, project.componentConfigs || {});
-                project.edsStorefrontStatusSummary = 'published';
-                await context.stateManager.saveProject(project);
-            } else {
-                context.logger.warn('[Phase 5] Could not parse repo URL, skipping config sync');
-            }
-        } else {
-            context.logger.warn('[Phase 5] No repo URL available, skipping config sync');
-        }
-    } else {
-        // Log why we're skipping the Phase 5 sync
-        if (!isEdsStack) {
-            context.logger.debug('[Phase 5] Skipped - not an EDS stack');
-        } else if (!typedConfig.edsConfig) {
-            context.logger.debug('[Phase 5] Skipped - edsConfig not set');
-        } else if (!typedConfig.edsConfig.preflightComplete) {
-            context.logger.debug('[Phase 5] Skipped - preflight not completed');
-        } else if (!project.meshState?.endpoint) {
-            context.logger.debug('[Phase 5] Skipped - meshState.endpoint not set');
-        }
-    }
-
-    // ========================================================================
-    // PHASE 5b: EDS CONTENT SETUP
-    // ========================================================================
-    // During import, the StorefrontSetupStep is skipped (preflightComplete=true
-    // from the export file), so DA.live content (placeholders, enrichment) may
-    // not exist on the CDN. Verify and populate if missing.
-    // For fresh creations where StorefrontSetupStep already copied content,
-    // the CDN check passes and this phase is a no-op.
-
-    if (isEdsStack && typedConfig.edsConfig?.contentSource && typedConfig.edsConfig?.repoUrl) {
-        try {
-            const contentCopied = await ensureEdsContent(
-                {
-                    repoUrl: typedConfig.edsConfig.repoUrl,
-                    daLiveOrg: typedConfig.edsConfig.daLiveOrg,
-                    daLiveSite: typedConfig.edsConfig.daLiveSite,
-                    contentSource: typedConfig.edsConfig.contentSource,
-                    contentPatches: typedConfig.edsConfig.contentPatches,
-                    contentPatchSource: typedConfig.edsConfig.contentPatchSource,
-                    templateOwner: typedConfig.edsConfig.templateOwner,
-                    templateRepo: typedConfig.edsConfig.templateRepo,
-                },
-                {
-                    logger: context.logger,
-                    secrets: context.context.secrets,
-                    authManager: context.authManager,
-                    extensionContext: context.context,
-                },
-                (message, subMessage) => progressTracker('Setting Up Content', 95, subMessage || message),
-            );
-
-            if (contentCopied) {
-                context.logger.info('[Phase 5b] Storefront content populated and published');
-            }
-        } catch (error) {
-            // Non-fatal: storefront works without content, user can run Reset later
-            context.logger.warn(`[Phase 5b] Content setup failed: ${(error as Error).message}`);
-            context.logger.warn('[Phase 5b] Run EDS Reset from the dashboard to populate content');
-        }
-    }
+    await setupEdsContent(context, typedConfig, isEdsStack, progressTracker);
 
     await finalizeProject(finalizationContext);
     await sendCompletionAndCleanup(finalizationContext);
@@ -756,6 +427,416 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 // ============================================================================
 // Private Helper Functions
 // ============================================================================
+
+/**
+ * Populate EDS-specific metadata on the component instance after cloning.
+ */
+async function populateEdsMetadata(
+    context: HandlerContext,
+    project: import('@/types').Project,
+    typedConfig: ProjectCreationConfig,
+    isEdsStack: boolean,
+): Promise<void> {
+    const instanceKeys = Object.keys(project.componentInstances || {});
+    context.logger.debug(`[Project Creation] Component instances after clone: [${instanceKeys.join(', ')}]`);
+    context.logger.debug(`[Project Creation] EDS metadata check: isEdsStack=${isEdsStack}, hasEdsConfig=${!!typedConfig.edsConfig}`);
+
+    if (!isEdsStack || !typedConfig.edsConfig) return;
+
+    context.logger.debug(`[Project Creation] EDS config values: repoUrl=${typedConfig.edsConfig.repoUrl}, githubOwner=${typedConfig.edsConfig.githubOwner}, repoName=${typedConfig.edsConfig.repoName}`);
+
+    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    if (!edsInstance) {
+        context.logger.warn(`[Project Creation] EDS instance NOT found for key "${COMPONENT_IDS.EDS_STOREFRONT}" - metadata NOT populated`);
+        return;
+    }
+
+    // Derive githubRepo from repoUrl or explicit owner/name
+    const repoInfo = typedConfig.edsConfig.repoUrl ? parseGitHubUrl(typedConfig.edsConfig.repoUrl) : null;
+    const githubRepo = repoInfo
+        ? `${repoInfo.owner}/${repoInfo.repo}`
+        : (typedConfig.edsConfig.githubOwner && typedConfig.edsConfig.repoName
+            ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
+            : undefined);
+
+    // Fetch template commit SHA for future update detection
+    const lastSyncedCommit = await fetchTemplateCommitSha(context, typedConfig.edsConfig);
+
+    const templateOwner = typedConfig.edsConfig.templateOwner;
+    const templateRepo = typedConfig.edsConfig.templateRepo;
+
+    edsInstance.metadata = {
+        ...edsInstance.metadata,
+        repoUrl: typedConfig.edsConfig.repoUrl,
+        githubRepo,
+        daLiveOrg: typedConfig.edsConfig.daLiveOrg,
+        daLiveSite: typedConfig.edsConfig.daLiveSite,
+        templateOwner,
+        templateRepo,
+        lastSyncedCommit,
+    };
+    await context.stateManager.saveProject(project);
+    context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`);
+}
+
+/**
+ * Fetch the template's current commit SHA for template sync feature.
+ */
+async function fetchTemplateCommitSha(
+    context: HandlerContext,
+    edsConfig: NonNullable<ProjectCreationConfig['edsConfig']>,
+): Promise<string | undefined> {
+    const { templateOwner, templateRepo } = edsConfig;
+    if (!templateOwner || !templateRepo) return undefined;
+
+    try {
+        const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
+        const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
+        const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
+        const githubFileOps = new GitHubFileOperations(githubTokenService, context.logger);
+        const sha = await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, 'main') ?? undefined;
+        context.logger.debug(`[Project Creation] Fetched template commit SHA: ${sha?.substring(0, 7)}`);
+        return sha;
+    } catch (error) {
+        context.logger.warn(`[Project Creation] Could not fetch template commit SHA: ${(error as Error).message}`);
+        return undefined;
+    }
+}
+
+/**
+ * Execute Phase 3: Mesh configuration (deploy new, link existing, or skip).
+ */
+async function executeMeshPhase(
+    context: HandlerContext,
+    setupContext: import('@/features/project-creation/services/ProjectSetupContext').ProjectSetupContext,
+    project: import('@/types').Project,
+    typedConfig: ProjectCreationConfig,
+    componentDefinitions: Map<string, ComponentDefinitionEntry>,
+    progressTracker: ProgressTracker,
+    isEditMode: string | boolean | undefined,
+    existingProject: import('@/types').Project | undefined,
+): Promise<void> {
+    const meshComponent = getMeshComponentInstance(project);
+    const meshId = getMeshComponentId(project);
+    const meshDefinition = meshId ? componentDefinitions.get(meshId)?.definition : undefined;
+
+    const meshContext = {
+        setupContext,
+        meshDefinition,
+        progressTracker,
+        onMeshCreated: (workspace: string | undefined) => {
+            context.sharedState.meshCreatedForWorkspace = workspace;
+        },
+    };
+
+    logMeshDecisionContext(context, typedConfig, meshComponent, meshId, meshDefinition, isEditMode, existingProject);
+
+    // Check for same-workspace import FIRST
+    const isSameWorkspaceImport = typedConfig.importedWorkspaceId &&
+                                   typedConfig.importedMeshEndpoint &&
+                                   typedConfig.importedWorkspaceId === typedConfig.adobe?.workspace;
+
+    if (isSameWorkspaceImport) {
+        context.logger.info(`[Mesh Setup] Skipping deployment - reusing mesh from imported settings`);
+        const importedApiMesh = {
+            endpoint: typedConfig.importedMeshEndpoint,
+            meshId: '',
+            meshStatus: 'deployed' as const,
+            workspace: typedConfig.adobe?.workspace,
+        };
+        await linkExistingMesh(meshContext, importedApiMesh);
+    } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint)) {
+        await linkExistingMesh(meshContext, typedConfig.apiMesh as MeshApiConfig);
+    } else if (isEditMode && existingProject?.meshState?.endpoint) {
+        context.logger.info('[Mesh Setup] Edit mode - reusing existing mesh from project');
+        const existingMesh = {
+            endpoint: existingProject.meshState.endpoint,
+            meshId: (getMeshComponentInstance(existingProject)?.metadata?.meshId as string) || '',
+            meshStatus: 'deployed' as const,
+            workspace: typedConfig.adobe?.workspace,
+        };
+        await linkExistingMesh(meshContext, existingMesh);
+    } else if (meshComponent?.path && meshDefinition) {
+        await deployFreshMesh(context, typedConfig, meshContext);
+    }
+}
+
+/**
+ * Log mesh deployment decision context for debugging.
+ */
+function logMeshDecisionContext(
+    context: HandlerContext,
+    typedConfig: ProjectCreationConfig,
+    meshComponent: import('@/types').ComponentInstance | undefined,
+    meshId: string | undefined,
+    meshDefinition: import('@/types').TransformedComponentDefinition | undefined,
+    isEditMode: string | boolean | undefined,
+    existingProject: import('@/types').Project | undefined,
+): void {
+    context.logger.debug(`[Mesh Setup] Decision context:`);
+    context.logger.debug(`  - isEditMode: ${isEditMode}`);
+    context.logger.debug(`  - existingProject?.meshState?.endpoint: ${existingProject?.meshState?.endpoint}`);
+    context.logger.debug(`  - typedConfig.apiMesh: ${JSON.stringify(typedConfig.apiMesh)}`);
+    context.logger.debug(`  - meshComponent?.path: ${meshComponent?.path}`);
+    context.logger.debug(`  - meshId: ${meshId}`);
+    context.logger.debug(`  - meshDefinition: ${meshDefinition ? 'found' : 'NOT FOUND'}`);
+    context.logger.debug(`  - shouldConfigureExistingMesh result: ${shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint)}`);
+}
+
+/**
+ * Deploy a fresh mesh after pre-flight auth and workspace context checks.
+ */
+async function deployFreshMesh(
+    context: HandlerContext,
+    typedConfig: ProjectCreationConfig,
+    meshContext: import('../services').MeshSetupContext,
+): Promise<void> {
+    if (typedConfig.importedWorkspaceId && typedConfig.importedWorkspaceId !== typedConfig.adobe?.workspace) {
+        context.logger.debug(`[Mesh Setup] Imported workspace differs from selected - deploying new mesh`);
+    }
+
+    const authOk = await ensureMeshPreflightAuth(
+        context.authManager,
+        context.logger,
+        {
+            organization: typedConfig.adobe?.organization,
+            projectId: typedConfig.adobe?.projectId,
+            workspace: typedConfig.adobe?.workspace,
+        },
+    );
+    if (!authOk) {
+        throw new Error('Adobe authentication expired and re-login failed. Please sign in again and retry.');
+    }
+
+    if (context.authManager && typedConfig.adobe?.workspace && typedConfig.adobe?.projectId) {
+        context.logger.debug(`[Mesh Setup] Ensuring workspace context: ${typedConfig.adobe.workspace}`);
+        const contextOk = await context.authManager.selectWorkspace(
+            typedConfig.adobe.workspace,
+            typedConfig.adobe.projectId,
+        );
+        if (!contextOk) {
+            context.logger.error('[Mesh Setup] Failed to set workspace context - mesh may deploy to wrong workspace');
+        }
+    }
+
+    await deployNewMesh(meshContext, typedConfig.apiMesh);
+}
+
+/**
+ * Perform atomic component swap for edit mode.
+ */
+async function performAtomicComponentSwap(
+    context: HandlerContext,
+    project: import('@/types').Project,
+    projectPath: string,
+    progressTracker: ProgressTracker,
+): Promise<void> {
+    progressTracker('Applying Changes', 71, 'Swapping components...');
+    context.logger.info('[Project Edit] Swapping temporary components with production');
+
+    try {
+        await swapComponentsDirectory(projectPath, context.logger);
+
+        if (!project.componentInstances || Object.keys(project.componentInstances).length === 0) {
+            context.logger.error('[Project Edit] No component instances found after swap');
+            throw new Error('Component swap completed but no components found in project state');
+        }
+
+        const tempComponentsPath = path.join(projectPath, 'components.tmp');
+        const productionComponentsPath = path.join(projectPath, 'components');
+
+        for (const [compId, instance] of Object.entries(project.componentInstances)) {
+            if (instance.path && instance.path.startsWith(tempComponentsPath)) {
+                const relativePath = path.relative(tempComponentsPath, instance.path);
+                const oldPath = instance.path;
+                instance.path = path.join(productionComponentsPath, relativePath);
+                context.logger.debug(`[Project Edit] Updated path for ${compId}: ${oldPath} → ${instance.path}`);
+            }
+        }
+
+        await context.stateManager.saveProject(project);
+        context.logger.info('[Project Edit] Component swap completed successfully');
+    } catch (error) {
+        context.logger.error('[Project Edit] Failed to swap components', error as Error);
+        throw new Error(
+            `Failed to apply component changes: ${(error as Error).message}. ` +
+            `The project's original components have been preserved.`,
+        );
+    }
+}
+
+/**
+ * Populate componentConfigs for mesh from the generated .env file.
+ */
+async function populateMeshComponentConfigs(
+    context: HandlerContext,
+    project: import('@/types').Project,
+): Promise<void> {
+    const meshInstance = getMeshComponentInstance(project);
+    const meshId = getMeshComponentId(project);
+    if (!meshInstance?.path || !meshId) return;
+
+    const { readMeshEnvVarsFromFile } = await import('@/features/mesh/services/stalenessDetector');
+    const meshEnvVars = await readMeshEnvVarsFromFile(meshInstance.path);
+    if (meshEnvVars && Object.keys(meshEnvVars).length > 0) {
+        if (!project.componentConfigs) {
+            project.componentConfigs = {};
+        }
+        project.componentConfigs[meshId] = meshEnvVars;
+        context.logger.debug(`[Project Creation] Populated componentConfigs[${meshId}] with ${Object.keys(meshEnvVars).length} env vars`);
+    }
+}
+
+/**
+ * Phase 5: Sync EDS config.json to GitHub and publish to CDN.
+ */
+async function syncEdsConfigToRemote(
+    context: HandlerContext,
+    project: import('@/types').Project,
+    typedConfig: ProjectCreationConfig,
+    isEdsStack: boolean,
+    edsComponentPath: string,
+    progressTracker: ProgressTracker,
+): Promise<void> {
+    const edsSetupCompleteForSync = !!typedConfig.edsConfig?.preflightComplete;
+
+    if (!isEdsStack || !edsSetupCompleteForSync || !project.meshState?.endpoint) {
+        logPhase5SkipReason(context, isEdsStack, typedConfig);
+        return;
+    }
+
+    progressTracker('Syncing Config', 92, 'Pushing config.json to GitHub...');
+
+    const repoUrl = typedConfig.edsConfig?.repoUrl;
+    if (!repoUrl) {
+        context.logger.warn('[Phase 5] No repo URL available, skipping config sync');
+        return;
+    }
+
+    const repoInfo = parseGitHubUrl(repoUrl);
+    if (!repoInfo) {
+        context.logger.warn('[Phase 5] Could not parse repo URL, skipping config sync');
+        return;
+    }
+
+    validateConfigJson(edsComponentPath);
+
+    context.logger.info(`[Phase 5] Syncing config.json to ${repoInfo.owner}/${repoInfo.repo}`);
+
+    const syncResult = await syncConfigToRemote({
+        componentPath: edsComponentPath,
+        repoOwner: repoInfo.owner,
+        repoName: repoInfo.repo,
+        logger: context.logger,
+        secrets: context.context.secrets,
+        authManager: context.authManager,
+        onProgress: (message) => progressTracker('Syncing Config', 94, message),
+        verifyBlockLibrary: true,
+    });
+
+    if (!syncResult.success) {
+        throw new Error(
+            `Commerce configuration failed: Could not sync config.json to GitHub. ` +
+            `The storefront is live but Commerce features will not work. ` +
+            `Error: ${syncResult.error}`,
+        );
+    }
+
+    context.logger.info(
+        `[Phase 5] Config synced: GitHub=${syncResult.githubPushed}, CDN=${syncResult.cdnPublished}, ` +
+        `BlockLibrary=${syncResult.blockLibraryVerified ?? 'n/a'}`,
+    );
+
+    const { updateStorefrontState } = await import('@/features/eds/services/storefrontStalenessDetector');
+    updateStorefrontState(project, project.componentConfigs || {});
+    project.edsStorefrontStatusSummary = 'published';
+    await context.stateManager.saveProject(project);
+}
+
+/**
+ * Log reason for skipping Phase 5 config sync.
+ */
+function logPhase5SkipReason(
+    context: HandlerContext,
+    isEdsStack: boolean,
+    typedConfig: ProjectCreationConfig,
+): void {
+    if (!isEdsStack) {
+        context.logger.debug('[Phase 5] Skipped - not an EDS stack');
+    } else if (!typedConfig.edsConfig) {
+        context.logger.debug('[Phase 5] Skipped - edsConfig not set');
+    } else if (!typedConfig.edsConfig.preflightComplete) {
+        context.logger.debug('[Phase 5] Skipped - preflight not completed');
+    } else {
+        context.logger.debug('[Phase 5] Skipped - meshState.endpoint not set');
+    }
+}
+
+/**
+ * Validate config.json exists and is valid JSON before syncing.
+ */
+function validateConfigJson(edsComponentPath: string): void {
+    const configJsonPath = path.join(edsComponentPath, 'config.json');
+    if (!fs.existsSync(configJsonPath)) {
+        throw new Error(
+            `Commerce configuration failed: config.json not found at ${configJsonPath}. ` +
+            `Config generation may have failed in Phase 4.`,
+        );
+    }
+
+    try {
+        const configContent = fs.readFileSync(configJsonPath, 'utf-8');
+        JSON.parse(configContent);
+    } catch (parseError) {
+        throw new Error(
+            `Commerce configuration failed: config.json is invalid JSON. ` +
+            `Error: ${(parseError as Error).message}`,
+        );
+    }
+}
+
+/**
+ * Phase 5b: Ensure EDS content is set up (DA.live content for imports/creations).
+ */
+async function setupEdsContent(
+    context: HandlerContext,
+    typedConfig: ProjectCreationConfig,
+    isEdsStack: boolean,
+    progressTracker: ProgressTracker,
+): Promise<void> {
+    if (!isEdsStack || !typedConfig.edsConfig?.contentSource || !typedConfig.edsConfig?.repoUrl) {
+        return;
+    }
+
+    try {
+        const contentCopied = await ensureEdsContent(
+            {
+                repoUrl: typedConfig.edsConfig.repoUrl,
+                daLiveOrg: typedConfig.edsConfig.daLiveOrg,
+                daLiveSite: typedConfig.edsConfig.daLiveSite,
+                contentSource: typedConfig.edsConfig.contentSource,
+                contentPatches: typedConfig.edsConfig.contentPatches,
+                contentPatchSource: typedConfig.edsConfig.contentPatchSource,
+                templateOwner: typedConfig.edsConfig.templateOwner,
+                templateRepo: typedConfig.edsConfig.templateRepo,
+            },
+            {
+                logger: context.logger,
+                secrets: context.context.secrets,
+                authManager: context.authManager,
+                extensionContext: context.context,
+            },
+            (message, subMessage) => progressTracker('Setting Up Content', 95, subMessage || message),
+        );
+
+        if (contentCopied) {
+            context.logger.info('[Phase 5b] Storefront content populated and published');
+        }
+    } catch (error) {
+        context.logger.warn(`[Phase 5b] Content setup failed: ${(error as Error).message}`);
+        context.logger.warn('[Phase 5b] Run EDS Reset from the dashboard to populate content');
+    }
+}
 
 async function handlePortConflicts(
     context: HandlerContext,
@@ -803,13 +884,74 @@ async function cleanupOrphanedDirectory(
     }
 }
 
+/**
+ * Look up a component definition by type from the registry.
+ */
+async function lookupComponentDef(
+    compId: string,
+    compType: string,
+    registryManager: import('@/features/components/services/ComponentRegistryManager').ComponentRegistryManager,
+): Promise<TransformedComponentDefinition | undefined> {
+    let componentDef: TransformedComponentDefinition | undefined;
+
+    if (compType === 'frontend') {
+        const frontends = await registryManager.getFrontends();
+        componentDef = frontends.find((f: { id: string }) => f.id === compId);
+    } else if (compType === 'dependency') {
+        const deps = await registryManager.getDependencies();
+        componentDef = deps.find((d: { id: string }) => d.id === compId);
+    } else if (compType === 'app-builder') {
+        const ab = await registryManager.getAppBuilder();
+        componentDef = ab.find((a: { id: string }) => a.id === compId);
+    }
+
+    // Fallback: search all sections (e.g., mesh components in "mesh" section)
+    if (!componentDef) {
+        componentDef = await registryManager.getComponentById(compId) as TransformedComponentDefinition | undefined;
+    }
+
+    return componentDef;
+}
+
+/**
+ * Resolve the source for a frontend component based on stack type.
+ */
+function resolveFrontendSource(
+    componentDef: TransformedComponentDefinition,
+    typedConfig: ProjectCreationConfig,
+    isEdsStack: boolean,
+    logger: Logger,
+): TransformedComponentDefinition {
+    if (isEdsStack && typedConfig.edsConfig?.repoUrl) {
+        logger.debug(`[Project Creation] Using EDS repo source for ${componentDef.name}: ${typedConfig.edsConfig.repoUrl}`);
+        return {
+            ...componentDef,
+            source: { type: 'git' as const, url: typedConfig.edsConfig.repoUrl, branch: 'main' },
+        };
+    }
+
+    if (typedConfig.frontendSource) {
+        logger.debug(`[Project Creation] Using template source for ${componentDef.name}: ${typedConfig.frontendSource.url}`);
+        return {
+            ...componentDef,
+            source: {
+                type: typedConfig.frontendSource.type as 'git' | 'npm' | 'local',
+                url: typedConfig.frontendSource.url,
+                branch: typedConfig.frontendSource.branch,
+                gitOptions: typedConfig.frontendSource.gitOptions,
+            },
+        };
+    }
+
+    return componentDef;
+}
+
 async function loadComponentDefinitions(
     typedConfig: ProjectCreationConfig,
     registryManager: import('@/features/components/services/ComponentRegistryManager').ComponentRegistryManager,
     context: HandlerContext,
     isEdsStack: boolean = false,
 ): Promise<Map<string, ComponentDefinitionEntry>> {
-    // Get components directly from stack configuration - this is the source of truth
     const stack = typedConfig.selectedStack ? getStackById(typedConfig.selectedStack) : undefined;
 
     if (!stack) {
@@ -820,8 +962,7 @@ async function loadComponentDefinitions(
     const frontend = stack.frontend;
     const dependencies = stack.dependencies || [];
     const appBuilder = typedConfig.selectedAddons?.filter(addon =>
-        // App builder addons are those not in optionalAddons (which are submodules/integrations)
-        !stack.optionalAddons?.some(opt => opt.id === addon)
+        !stack.optionalAddons?.some(opt => opt.id === addon),
     ) || [];
 
     context.logger.info(`[Project Creation] Stack "${stack.id}" components: frontend=${frontend}, dependencies=[${dependencies.join(', ')}]`);
@@ -836,10 +977,8 @@ async function loadComponentDefinitions(
         }
     }
 
-    // Filter out submodule IDs from dependencies
     const filteredDependencies = dependencies.filter((id: string) => !frontendSubmoduleIds.has(id));
 
-    // Build component list from stack configuration
     const allComponents = [
         ...(frontend ? [{ id: frontend, type: 'frontend' }] : []),
         ...filteredDependencies.map((id: string) => ({ id, type: 'dependency' })),
@@ -849,64 +988,19 @@ async function loadComponentDefinitions(
     const componentDefinitions: Map<string, ComponentDefinitionEntry> = new Map();
 
     for (const comp of allComponents) {
-        let componentDef: TransformedComponentDefinition | undefined;
-
-        if (comp.type === 'frontend') {
-            const frontends = await registryManager.getFrontends();
-            componentDef = frontends.find((f: { id: string }) => f.id === comp.id);
-        } else if (comp.type === 'dependency') {
-            const dependencies = await registryManager.getDependencies();
-            componentDef = dependencies.find((d: { id: string }) => d.id === comp.id);
-        } else if (comp.type === 'app-builder') {
-            const appBuilder = await registryManager.getAppBuilder();
-            componentDef = appBuilder.find((a: { id: string }) => a.id === comp.id);
-        }
-
-        // Fallback: If not found in type-specific section, search all sections
-        // This handles components that are in different sections (e.g., mesh components
-        // selected as dependencies are stored in the "mesh" section of components.json)
-        if (!componentDef) {
-            componentDef = await registryManager.getComponentById(comp.id) as TransformedComponentDefinition | undefined;
-        }
+        let componentDef = await lookupComponentDef(comp.id, comp.type, registryManager);
 
         if (!componentDef) {
             context.logger.warn(`[Project Creation] Component ${comp.id} not found in registry`);
             continue;
         }
 
-        // For frontend components, determine source based on stack type:
-        // - EDS stacks: use edsConfig.repoUrl (user's repo created from template during preflight)
-        // - Other stacks: use frontendSource from config (template is source of truth)
+        // Resolve frontend source based on stack type
         if (comp.type === 'frontend') {
-            if (isEdsStack && typedConfig.edsConfig?.repoUrl) {
-                // EDS frontend: source is the user's GitHub repo created during preflight
-                componentDef = {
-                    ...componentDef,
-                    source: {
-                        type: 'git' as const,
-                        url: typedConfig.edsConfig.repoUrl,
-                        branch: 'main',
-                    },
-                };
-                context.logger.debug(`[Project Creation] Using EDS repo source for ${componentDef.name}: ${typedConfig.edsConfig.repoUrl}`);
-            } else if (typedConfig.frontendSource) {
-                // Non-EDS frontend: source from template config
-                componentDef = {
-                    ...componentDef,
-                    source: {
-                        type: typedConfig.frontendSource.type as 'git' | 'npm' | 'local',
-                        url: typedConfig.frontendSource.url,
-                        branch: typedConfig.frontendSource.branch,
-                        gitOptions: typedConfig.frontendSource.gitOptions,
-                    },
-                };
-                context.logger.debug(`[Project Creation] Using template source for ${componentDef.name}: ${typedConfig.frontendSource.url}`);
-            }
+            componentDef = resolveFrontendSource(componentDef, typedConfig, isEdsStack, context.logger);
         }
 
-        // Validate that installable components have a source defined
-        // Frontends get source from template (above), dependencies/app-builder from components.json
-        // Backends are configuration-only (remote systems) and don't need a source
+        // Validate source is defined for installable components
         if (!componentDef.source) {
             const errorMsg = comp.type === 'frontend'
                 ? `No storefront found for stack "${typedConfig.selectedStack}" and package "${typedConfig.selectedPackage}". ` +
@@ -918,12 +1012,9 @@ async function loadComponentDefinitions(
         }
 
         // Determine submodules for frontend components
-        // Submodules come from stack dependencies and selected addons
         const installOptions: { selectedSubmodules?: string[]; skipDependencies?: boolean } = { skipDependencies: true };
         if (comp.type === 'frontend' && componentDef.submodules && stack) {
-            const stackDependencies = stack.dependencies || [];
-            const selectedAddons = typedConfig.selectedAddons || [];
-            const allSelected = [...stackDependencies, ...selectedAddons];
+            const allSelected = [...(stack.dependencies || []), ...(typedConfig.selectedAddons || [])];
             const selectedSubmodules = allSelected.filter(
                 (depId: string) => componentDef?.submodules?.[depId] !== undefined,
             );
@@ -933,10 +1024,7 @@ async function loadComponentDefinitions(
             }
         }
 
-        // Ensure type is set on the definition for ComponentInstance creation
-        // This enables dynamic lookup by type (e.g., finding the frontend component)
         componentDef = { ...componentDef, type: comp.type as TransformedComponentDefinition['type'] };
-
         componentDefinitions.set(comp.id, { definition: componentDef, type: comp.type, installOptions });
     }
 

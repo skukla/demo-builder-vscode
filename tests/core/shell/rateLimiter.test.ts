@@ -315,7 +315,3 @@ describe('RateLimiter', () => {
     });
 });
 
-// Helper function for delays in tests
-function delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}

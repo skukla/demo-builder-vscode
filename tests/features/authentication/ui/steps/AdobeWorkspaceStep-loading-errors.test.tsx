@@ -39,7 +39,6 @@ jest.mock('@/core/ui/components/ui/FadeTransition', () => ({
 import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import {
     mockOnMessage,
-    mockWorkspaces,
     baseState,
     createMockUseSelectionStepReturn,
     createStateWithoutProject,

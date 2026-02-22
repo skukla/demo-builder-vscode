@@ -289,7 +289,7 @@ describe('MeshStatusDisplay', () => {
         });
 
         it('limits max width for error message readability', () => {
-            const { container } = renderWithSpectrum(
+            const { container: _container } = renderWithSpectrum(
                 <MeshStatusDisplay
                     meshData={{
                         meshId: 'mesh-456',

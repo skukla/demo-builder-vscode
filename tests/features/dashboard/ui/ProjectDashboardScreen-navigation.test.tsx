@@ -24,7 +24,7 @@ jest.mock('@adobe/react-spectrum', () => ({
     Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
         <button onClick={onPress} disabled={isDisabled} data-variant={variant} data-testid="back-button" {...props}>{children}</button>
     ),
-    ActionButton: ({ children, onPress, isQuiet, isDisabled, ...props }: any) => (
+    ActionButton: ({ children, onPress, _isQuiet, isDisabled, ...props }: any) => (
         <button onClick={onPress} disabled={isDisabled} {...props}>{children}</button>
     ),
     Divider: () => <hr />,

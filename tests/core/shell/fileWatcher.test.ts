@@ -148,7 +148,7 @@ describe('FileWatcher', () => {
             const onCreate = jest.fn();
             const onDelete = jest.fn();
 
-            const disposable = fileWatcher.createWatcher(
+            fileWatcher.createWatcher(
                 '/path/to/file.txt',
                 onChange,
                 onCreate,

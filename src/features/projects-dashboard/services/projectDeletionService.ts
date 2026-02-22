@@ -12,9 +12,10 @@
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils';
-import type { Project } from '@/types/base';
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import { toError } from '@/types/typeGuards';
+import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
+import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
+import { HelixService } from '@/features/eds/services/helixService';
 import {
     isEdsProject,
     extractEdsMetadata,
@@ -22,10 +23,9 @@ import {
     formatCleanupResults,
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
-import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
-import { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
-import { HelixService } from '@/features/eds/services/helixService';
-import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
+import type { Project } from '@/types/base';
+import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import { toError } from '@/types/typeGuards';
 
 /**
  * Retryable error codes for filesystem operations:
@@ -204,7 +204,7 @@ export async function deleteProject(
 /**
  * Check authentication status for cleanup operations
  */
-async function checkCleanupAuth(context: HandlerContext): Promise<CleanupAuthStatus> {
+async function _checkCleanupAuth(context: HandlerContext): Promise<CleanupAuthStatus> {
     // Check GitHub auth
     let gitHubAuthenticated = false;
     try {
@@ -379,6 +379,225 @@ async function showCleanupConfirmation(
 }
 
 /**
+ * Ensure DA.live authentication, prompting user if needed.
+ * Returns the auth service if authenticated, or null if auth was declined/failed.
+ */
+async function ensureDaLiveAuth(
+    context: HandlerContext,
+    resourceName: string,
+    results: CleanupResultItem[],
+): Promise<DaLiveAuthService | null> {
+    const daLiveAuthService = new DaLiveAuthService(context.context);
+    const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
+
+    if (isDaLiveAuthenticated) {
+        return daLiveAuthService;
+    }
+
+    const selection = await vscode.window.showWarningMessage(
+        'Your DA.live session has expired. Sign in to delete the DA.live site.',
+        'Sign In',
+    );
+
+    if (selection === 'Sign In') {
+        const authResult = await showDaLiveAuthQuickPick(context);
+        if (authResult.success) {
+            return daLiveAuthService;
+        }
+    }
+
+    results.push({
+        type: 'daLive',
+        name: resourceName,
+        success: false,
+        skipped: true,
+        error: 'Authentication required',
+    });
+    return null;
+}
+
+/**
+ * Unpublish CDN content and clean up Admin API key before deleting DA.live site
+ */
+async function unpublishCdnContent(
+    context: HandlerContext,
+    edsMetadata: ReturnType<typeof extractEdsMetadata>,
+    daLiveTokenProvider: { getAccessToken: () => Promise<string | null> },
+    results: CleanupResultItem[],
+    progress: vscode.Progress<{ message?: string }>,
+): Promise<void> {
+    if (!edsMetadata?.githubRepo) return;
+
+    const [githubOwner, githubRepo] = edsMetadata.githubRepo.split('/');
+    if (!githubOwner || !githubRepo) return;
+
+    try {
+        progress.report({ message: 'Unpublishing CDN content...' });
+        HelixService.initKeyStore(context.context.globalState);
+        const helixService = new HelixService(context.logger, undefined, daLiveTokenProvider);
+        const daOrg = edsMetadata.daLiveOrg ?? '';
+        const daSite = edsMetadata.daLiveSite ?? '';
+        const pages = await helixService.listAllPages(daOrg, daSite);
+
+        const unpublishResult = await helixService.unpublishPages(
+            githubOwner, githubRepo, 'main', pages,
+        );
+
+        if (unpublishResult.success && unpublishResult.count > 0) {
+            results.push({
+                type: 'helix',
+                name: `${githubOwner}/${githubRepo}`,
+                success: true,
+            });
+        }
+
+        const keyDeleteResult = await helixService.deleteAdminApiKey(daOrg, daSite);
+        if (!keyDeleteResult.success) {
+            context.logger.debug(`[Delete Project] Admin API key cleanup skipped: ${keyDeleteResult.error}`);
+        }
+    } catch (unpublishError) {
+        context.logger.warn(`[Delete Project] CDN unpublish failed: ${(unpublishError as Error).message}`);
+    }
+}
+
+/**
+ * Delete DA.live site content and clean up config
+ */
+async function performDaLiveCleanup(
+    context: HandlerContext,
+    edsMetadata: ReturnType<typeof extractEdsMetadata>,
+    options: CleanupOptions,
+    results: CleanupResultItem[],
+    progress: vscode.Progress<{ message?: string }>,
+): Promise<void> {
+    if (!options.deleteDaLiveSite || !edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite) return;
+
+    progress.report({ message: 'Deleting DA.live site...' });
+    const resourceName = `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`;
+
+    try {
+        const daLiveAuthService = await ensureDaLiveAuth(context, resourceName, results);
+        if (!daLiveAuthService) return;
+
+        const daLiveTokenProvider = {
+            getAccessToken: async () => daLiveAuthService.getAccessToken(),
+        };
+
+        const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, context.logger);
+
+        // Bulk unpublish CDN content before deleting the site
+        await unpublishCdnContent(context, edsMetadata, daLiveTokenProvider, results, progress);
+
+        progress.report({ message: 'Deleting DA.live site content...' });
+        const cleanupResult = await deleteDaLiveSite(
+            daLiveContentOps,
+            edsMetadata.daLiveOrg,
+            edsMetadata.daLiveSite,
+            context.logger,
+        );
+
+        results.push({
+            type: 'daLive',
+            name: resourceName,
+            success: cleanupResult.success,
+            error: cleanupResult.error,
+        });
+
+        // Clean up stale site-specific permission rows from org config
+        const { DaLiveConfigService } = await import('@/features/eds/services/daLiveConfigService');
+        const configService = new DaLiveConfigService(daLiveTokenProvider, context.logger);
+
+        const permResult = await configService.removeSitePermissions(
+            edsMetadata.daLiveOrg, edsMetadata.daLiveSite,
+        );
+        if (!permResult.success) {
+            context.logger.warn(`[Delete Project] Permission cleanup failed: ${permResult.error}`);
+        }
+
+        const configDeleteResult = await configService.deleteSiteConfig(
+            edsMetadata.daLiveOrg, edsMetadata.daLiveSite,
+        );
+        if (!configDeleteResult.success) {
+            context.logger.debug(`[Delete Project] Site config cleanup skipped: ${configDeleteResult.error}`);
+        }
+    } catch (error) {
+        context.logger.error('[Delete Project] DA.live cleanup failed', error as Error);
+        results.push({
+            type: 'daLive',
+            name: resourceName,
+            success: false,
+            error: (error as Error).message,
+        });
+    }
+}
+
+/**
+ * Delete GitHub repository with authentication handling
+ */
+async function performGitHubCleanup(
+    context: HandlerContext,
+    githubRepo: string,
+    results: CleanupResultItem[],
+    progress: vscode.Progress<{ message?: string }>,
+): Promise<void> {
+    progress.report({ message: 'Deleting GitHub repository...' });
+
+    try {
+        const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
+        const { tokenService, repoOperations } = getGitHubServices(context);
+
+        const existingToken = await tokenService.getToken();
+        if (!existingToken) {
+            const authenticated = await promptGitHubAuth(tokenService, githubRepo, results);
+            if (!authenticated) return;
+        }
+
+        const [owner, repo] = githubRepo.split('/');
+        if (!owner || !repo) {
+            results.push({ type: 'github', name: githubRepo, success: false, error: 'Invalid repository name format' });
+            return;
+        }
+
+        await repoOperations.deleteRepository(owner, repo);
+        results.push({ type: 'github', name: githubRepo, success: true });
+        context.logger.info(`[Delete Project] Deleted GitHub repository: ${githubRepo}`);
+    } catch (error) {
+        context.logger.error('[Delete Project] GitHub cleanup failed', error as Error);
+        results.push({ type: 'github', name: githubRepo, success: false, error: (error as Error).message });
+    }
+}
+
+/**
+ * Prompt user for GitHub authentication. Returns true if authenticated.
+ */
+async function promptGitHubAuth(
+    tokenService: { storeToken: (data: { token: string; tokenType: string; scopes: string[] }) => Promise<void> },
+    githubRepo: string,
+    results: CleanupResultItem[],
+): Promise<boolean> {
+    const selection = await vscode.window.showWarningMessage(
+        'GitHub authentication required to delete the repository.',
+        'Sign In',
+    );
+
+    if (selection !== 'Sign In') {
+        results.push({ type: 'github', name: githubRepo, success: false, skipped: true, error: 'Authentication required' });
+        return false;
+    }
+
+    try {
+        const session = await vscode.authentication.getSession('github', ['repo', 'delete_repo'], { createIfNone: true });
+        if (session) {
+            await tokenService.storeToken({ token: session.accessToken, tokenType: 'bearer', scopes: ['repo', 'delete_repo'] });
+        }
+        return true;
+    } catch {
+        results.push({ type: 'github', name: githubRepo, success: false, skipped: true, error: 'Authentication failed' });
+        return false;
+    }
+}
+
+/**
  * Perform EDS external resource cleanup
  */
 async function performEdsCleanup(
@@ -389,238 +608,11 @@ async function performEdsCleanup(
     progress: vscode.Progress<{ message?: string }>,
 ): Promise<void> {
     // 1. Delete DA.live site
-    if (options.deleteDaLiveSite && edsMetadata?.daLiveOrg && edsMetadata?.daLiveSite) {
-        progress.report({ message: 'Deleting DA.live site...' });
-
-        try {
-            // Check DA.live auth first - prompt if needed
-            const daLiveAuthService = new DaLiveAuthService(context.context);
-            const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
-
-            if (!isDaLiveAuthenticated) {
-                // Prompt user to sign in
-                const signInButton = 'Sign In';
-                const selection = await vscode.window.showWarningMessage(
-                    'Your DA.live session has expired. Sign in to delete the DA.live site.',
-                    signInButton,
-                );
-
-                if (selection === signInButton) {
-                    const authResult = await showDaLiveAuthQuickPick(context);
-                    if (!authResult.success) {
-                        results.push({
-                            type: 'daLive',
-                            name: `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`,
-                            success: false,
-                            skipped: true,
-                            error: 'Authentication required',
-                        });
-                        return;
-                    }
-                } else {
-                    results.push({
-                        type: 'daLive',
-                        name: `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`,
-                        success: false,
-                        skipped: true,
-                        error: 'Authentication required',
-                    });
-                    return;
-                }
-            }
-
-            const daLiveTokenProvider = {
-                getAccessToken: async () => {
-                    return await daLiveAuthService.getAccessToken();
-                },
-            };
-
-            const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, context.logger);
-
-            // Bulk unpublish CDN content before deleting the site
-            // (site must still exist so we can enumerate its pages)
-            if (edsMetadata?.githubRepo) {
-                const [githubOwner, githubRepo] = edsMetadata.githubRepo.split('/');
-                if (githubOwner && githubRepo) {
-                    try {
-                        progress.report({ message: 'Unpublishing CDN content...' });
-                        // Initialize persistent key store so we reuse existing keys
-                        HelixService.initKeyStore(context.context.globalState);
-                        const helixService = new HelixService(context.logger, undefined, daLiveTokenProvider);
-                        const pages = await helixService.listAllPages(
-                            edsMetadata.daLiveOrg!,
-                            edsMetadata.daLiveSite!,
-                        );
-
-                        const unpublishResult = await helixService.unpublishPages(
-                            githubOwner, githubRepo, 'main', pages,
-                        );
-
-                        if (unpublishResult.success && unpublishResult.count > 0) {
-                            results.push({
-                                type: 'helix',
-                                name: `${githubOwner}/${githubRepo}`,
-                                success: true,
-                            });
-                        }
-
-                        // Clean up the Admin API key — site is being deleted
-                        const keyDeleteResult = await helixService.deleteAdminApiKey(
-                            edsMetadata.daLiveOrg!,
-                            edsMetadata.daLiveSite!,
-                        );
-                        if (!keyDeleteResult.success) {
-                            context.logger.debug(
-                                `[Delete Project] Admin API key cleanup skipped: ${keyDeleteResult.error}`,
-                            );
-                        }
-                    } catch (unpublishError) {
-                        // Non-fatal — site deletion proceeds regardless
-                        context.logger.warn(`[Delete Project] CDN unpublish failed: ${(unpublishError as Error).message}`);
-                    }
-                }
-            }
-
-            progress.report({ message: 'Deleting DA.live site content...' });
-            const cleanupResult = await deleteDaLiveSite(
-                daLiveContentOps,
-                edsMetadata.daLiveOrg,
-                edsMetadata.daLiveSite,
-                context.logger,
-            );
-
-            results.push({
-                type: 'daLive',
-                name: `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`,
-                success: cleanupResult.success,
-                error: cleanupResult.error,
-            });
-
-            // Clean up stale site-specific permission rows from org config
-            // Best-effort: removeSitePermissions never throws
-            const { DaLiveConfigService } = await import(
-                '@/features/eds/services/daLiveConfigService'
-            );
-            const configService = new DaLiveConfigService(
-                daLiveTokenProvider,
-                context.logger,
-            );
-            const permResult = await configService.removeSitePermissions(
-                edsMetadata.daLiveOrg,
-                edsMetadata.daLiveSite,
-            );
-            if (!permResult.success) {
-                context.logger.warn(
-                    `[Delete Project] Permission cleanup failed: ${permResult.error}`,
-                );
-            }
-
-            // Best-effort: delete site-level config (block library entry)
-            const configDeleteResult = await configService.deleteSiteConfig(
-                edsMetadata.daLiveOrg,
-                edsMetadata.daLiveSite,
-            );
-            if (!configDeleteResult.success) {
-                context.logger.debug(
-                    `[Delete Project] Site config cleanup skipped: ${configDeleteResult.error}`,
-                );
-            }
-        } catch (error) {
-            context.logger.error('[Delete Project] DA.live cleanup failed', error as Error);
-            results.push({
-                type: 'daLive',
-                name: `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`,
-                success: false,
-                error: (error as Error).message,
-            });
-        }
-    }
+    await performDaLiveCleanup(context, edsMetadata, options, results, progress);
 
     // 2. Delete GitHub repository
     if (options.deleteGitHubRepo && edsMetadata?.githubRepo) {
-        progress.report({ message: 'Deleting GitHub repository...' });
-
-        try {
-            const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-            const { tokenService, repoOperations } = getGitHubServices(context);
-
-            // Check if we have a valid token
-            const existingToken = await tokenService.getToken();
-            if (!existingToken) {
-                // Prompt user to authenticate
-                const signInButton = 'Sign In';
-                const selection = await vscode.window.showWarningMessage(
-                    'GitHub authentication required to delete the repository.',
-                    signInButton,
-                );
-
-                if (selection !== signInButton) {
-                    results.push({
-                        type: 'github',
-                        name: edsMetadata.githubRepo,
-                        success: false,
-                        skipped: true,
-                        error: 'Authentication required',
-                    });
-                    return;
-                }
-
-                // Try VS Code's GitHub auth provider
-                try {
-                    const session = await vscode.authentication.getSession('github', ['repo', 'delete_repo'], {
-                        createIfNone: true,
-                    });
-
-                    if (session) {
-                        await tokenService.storeToken({
-                            token: session.accessToken,
-                            tokenType: 'bearer',
-                            scopes: ['repo', 'delete_repo'],
-                        });
-                    }
-                } catch {
-                    results.push({
-                        type: 'github',
-                        name: edsMetadata.githubRepo,
-                        success: false,
-                        skipped: true,
-                        error: 'Authentication failed',
-                    });
-                    return;
-                }
-            }
-
-            // Parse owner/repo from full name
-            const [owner, repo] = edsMetadata.githubRepo.split('/');
-            if (!owner || !repo) {
-                results.push({
-                    type: 'github',
-                    name: edsMetadata.githubRepo,
-                    success: false,
-                    error: 'Invalid repository name format',
-                });
-                return;
-            }
-
-            // Delete the repository
-            await repoOperations.deleteRepository(owner, repo);
-
-            results.push({
-                type: 'github',
-                name: edsMetadata.githubRepo,
-                success: true,
-            });
-
-            context.logger.info(`[Delete Project] Deleted GitHub repository: ${edsMetadata.githubRepo}`);
-        } catch (error) {
-            context.logger.error('[Delete Project] GitHub cleanup failed', error as Error);
-            results.push({
-                type: 'github',
-                name: edsMetadata.githubRepo,
-                success: false,
-                error: (error as Error).message,
-            });
-        }
+        await performGitHubCleanup(context, edsMetadata.githubRepo, results, progress);
     }
 }
 

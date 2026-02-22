@@ -134,7 +134,7 @@ export async function ensureEdsContent(
     const githubTokenService = new GitHubTokenService(deps.secrets, logger);
     const daLiveAuthService = new DaLiveAuthService(deps.extensionContext);
     const daLiveTokenProvider = {
-        getAccessToken: async () => await daLiveAuthService.getAccessToken(),
+        getAccessToken: async () => daLiveAuthService.getAccessToken(),
     };
     const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
 

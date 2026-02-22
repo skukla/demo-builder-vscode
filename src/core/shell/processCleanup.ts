@@ -42,6 +42,31 @@ function getLoggerLazy(): DebugLogger {
     return _logger;
 }
 
+/**
+ * Extract error code using duck-typing instead of instanceof Error.
+ *
+ * In some test environments (Jest with resetMocks), instanceof Error can
+ * return false for genuine Error objects due to prototype chain issues
+ * across different V8 contexts. Duck-typing the 'code' property is more
+ * reliable.
+ */
+function getErrorCode(error: unknown): string | undefined {
+    if (error !== null && typeof error === 'object' && 'code' in error) {
+        return (error as { code: string }).code;
+    }
+    return undefined;
+}
+
+/**
+ * Extract error message using duck-typing.
+ */
+function getErrorMessage(error: unknown): string {
+    if (error !== null && typeof error === 'object' && 'message' in error) {
+        return String((error as { message: unknown }).message);
+    }
+    return String(error);
+}
+
 export interface ProcessCleanupOptions {
     /** Milliseconds to wait for graceful shutdown before force-kill (default: 5000) */
     gracefulTimeout?: number;
@@ -104,8 +129,8 @@ export class ProcessCleanup {
         try {
             process.kill(pid, 0); // Signal 0 checks existence without killing
             return true;
-        } catch (error: any) {
-            if (error.code === 'ESRCH') {
+        } catch (error: unknown) {
+            if (getErrorCode(error) === 'ESRCH') {
                 // Process does not exist
                 return false;
             }
@@ -149,18 +174,27 @@ export class ProcessCleanup {
         const treeKill = require('tree-kill');
 
         return new Promise<void>((resolve, reject) => {
-            // tree-kill accepts signal as string
             const signalString = signal.toString();
+            let resolved = false;
+            let pollInterval: NodeJS.Timeout | undefined;
+            let forceKillTimeout: NodeJS.Timeout | undefined;
+
+            const finish = () => {
+                if (resolved) { return; }
+                resolved = true;
+                if (pollInterval) { clearInterval(pollInterval); }
+                if (forceKillTimeout) { clearTimeout(forceKillTimeout); }
+                resolve();
+            };
 
             treeKill(pid, signalString, (error?: Error) => {
                 if (error) {
-                    // Check if error is because process doesn't exist
-                    if (error.message && error.message.includes('ESRCH')) {
+                    const msg = getErrorMessage(error);
+                    if (msg.includes('ESRCH')) {
                         getLoggerLazy().debug(`[ProcessCleanup] Process ${pid} already exited`);
-                        resolve();
+                        finish();
                         return;
                     }
-
                     getLoggerLazy().error(`[ProcessCleanup] tree-kill failed for PID ${pid}:`, error);
                     reject(error);
                     return;
@@ -168,36 +202,37 @@ export class ProcessCleanup {
 
                 // tree-kill callback fires when signal sent, not when process exits
                 // Poll to ensure process is actually gone
-                const pollInterval = setInterval(() => {
+                pollInterval = setInterval(() => {
                     if (!this.processExists(pid)) {
-                        clearInterval(pollInterval);
-                        resolve();
+                        finish();
                     }
                 }, this.checkInterval);
 
                 // Set timeout to prevent infinite polling
-                setTimeout(() => {
-                    if (this.processExists(pid)) {
-                        clearInterval(pollInterval);
-                        getLoggerLazy().warn(`[ProcessCleanup] Process ${pid} still alive after tree-kill, force killing`);
-
-                        // Force kill
-                        try {
-                            process.kill(pid, 'SIGKILL');
-                        } catch (killError: any) {
-                            if (killError.code !== 'ESRCH') {
-                                getLoggerLazy().error(`[ProcessCleanup] Force kill failed:`, killError);
-                            }
-                        }
-
-                        // Final poll
-                        const finalPoll = setInterval(() => {
-                            if (!this.processExists(pid)) {
-                                clearInterval(finalPoll);
-                                resolve();
-                            }
-                        }, this.checkInterval);
+                forceKillTimeout = setTimeout(() => {
+                    if (!this.processExists(pid)) {
+                        finish();
+                        return;
                     }
+
+                    getLoggerLazy().warn(
+                        `[ProcessCleanup] Process ${pid} still alive after tree-kill, force killing`,
+                    );
+
+                    // Force kill
+                    try {
+                        process.kill(pid, 'SIGKILL');
+                    } catch (killError: unknown) {
+                        if (getErrorCode(killError) !== 'ESRCH') {
+                            getLoggerLazy().error(
+                                `[ProcessCleanup] Force kill failed:`,
+                                killError as Error,
+                            );
+                        }
+                    }
+
+                    // Continue polling (SIGKILL is not ignorable)
+                    // pollInterval is still running and will detect exit
                 }, this.gracefulTimeout);
             });
         });
@@ -233,19 +268,24 @@ export class ProcessCleanup {
             try {
                 process.kill(pid, signal);
                 getLoggerLazy().debug(`[ProcessCleanup] Sent ${signal} to PID ${pid}`);
-            } catch (error: any) {
+            } catch (error: unknown) {
                 cleanup();
 
-                if (error.code === 'ESRCH') {
-                    // Process doesn't exist (already exited)
+                if (getErrorCode(error) === 'ESRCH') {
                     getLoggerLazy().debug(`[ProcessCleanup] Process ${pid} already exited`);
                     resolve();
                     return;
                 }
 
                 // Other error (e.g., EPERM - permission denied)
-                getLoggerLazy().error(`[ProcessCleanup] Failed to kill process ${pid}:`, error);
-                reject(new Error(`Failed to kill process ${pid}: ${error.message}`));
+                getLoggerLazy().error(`[ProcessCleanup] Failed to kill process ${pid}:`, error as Error);
+                const wrappedError = new Error(
+                    `Failed to kill process ${pid}: ${getErrorMessage(error)}`,
+                );
+                if (getErrorCode(error)) {
+                    (wrappedError as NodeJS.ErrnoException).code = getErrorCode(error);
+                }
+                reject(wrappedError);
                 return;
             }
 
@@ -270,7 +310,9 @@ export class ProcessCleanup {
             // Only set timeout if initial signal wasn't SIGKILL
             if (signal !== 'SIGKILL' && this.gracefulTimeout > 0) {
                 forceKillTimeout = setTimeout(() => {
-                    getLoggerLazy().warn(`[ProcessCleanup] Timeout expired for PID ${pid}, sending SIGKILL`);
+                    getLoggerLazy().warn(
+                        `[ProcessCleanup] Timeout expired for PID ${pid}, sending SIGKILL`,
+                    );
 
                     try {
                         process.kill(pid, 'SIGKILL');
@@ -278,19 +320,23 @@ export class ProcessCleanup {
 
                         // Continue polling for exit after SIGKILL
                         // SIGKILL is not ignorable, process will exit
-                    } catch (error: any) {
+                    } catch (error: unknown) {
                         cleanup();
 
-                        if (error.code === 'ESRCH') {
-                            // Process already exited
+                        if (getErrorCode(error) === 'ESRCH') {
                             getLoggerLazy().debug(`[ProcessCleanup] Process ${pid} exited before SIGKILL`);
                             resolve();
                             return;
                         }
 
                         // Other error
-                        getLoggerLazy().error(`[ProcessCleanup] SIGKILL failed for PID ${pid}:`, error);
-                        reject(new Error(`Failed to force-kill process ${pid}: ${error.message}`));
+                        getLoggerLazy().error(
+                            `[ProcessCleanup] SIGKILL failed for PID ${pid}:`,
+                            error as Error,
+                        );
+                        reject(new Error(
+                            `Failed to force-kill process ${pid}: ${getErrorMessage(error)}`,
+                        ));
                     }
                 }, this.gracefulTimeout);
             }

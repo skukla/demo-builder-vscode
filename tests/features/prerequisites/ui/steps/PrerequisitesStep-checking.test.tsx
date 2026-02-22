@@ -8,9 +8,6 @@ import {
     mockOnMessage,
     baseState,
     baseStateWithSelectedStack,
-    createMockFunctions,
-    renderPrerequisitesStep,
-    setupMessageCallbacks,
     setupScrollMock,
     resetAllMocks,
 } from './PrerequisitesStep.testUtils';
@@ -151,7 +148,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
             return jest.fn();
         });
 
-        const { container } = render(
+        const { container: _container } = render(
             <Provider theme={defaultTheme}>
                 <PrerequisitesStep
                     state={baseState as WizardState}

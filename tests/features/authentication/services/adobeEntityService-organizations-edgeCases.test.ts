@@ -282,7 +282,7 @@ describe('AdobeEntityService - Organizations - Edge Cases', () => {
             // Track when each command is called
             const callTimestamps: number[] = [];
             let callCount = 0;
-            mockCommandExecutor.execute.mockImplementation(async (cmd) => {
+            mockCommandExecutor.execute.mockImplementation(async (_cmd) => {
                 callCount++;
                 if (callCount === 1) {
                     // First call is org list

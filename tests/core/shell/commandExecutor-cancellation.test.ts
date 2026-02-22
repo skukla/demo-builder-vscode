@@ -33,14 +33,13 @@ const waitForImmediate = () => new Promise(resolve => setImmediate(resolve));
 
 describe('CommandExecutor - Cancellation (AbortController)', () => {
     let commandExecutor: CommandExecutor;
-    let mockDependencies: ReturnType<typeof setupMockDependencies>;
     const mockExeca = execa as jest.MockedFunction<typeof execa>;
 
     beforeEach(() => {
         jest.clearAllMocks();
 
         // Setup mock implementations BEFORE creating instances
-        mockDependencies = setupMockDependencies();
+        setupMockDependencies();
 
         // Now create CommandExecutor - it will use our mocks
         commandExecutor = new CommandExecutor();

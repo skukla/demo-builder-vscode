@@ -61,7 +61,6 @@ jest.mock('@/core/state', () => ({
 
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
 import { StateManager } from '@/core/state';
-import * as fs from 'fs';
 
 // Helper to create mock project with components
 function createMockProjectWithComponents(name: string, components: Record<string, Partial<ComponentInstance>>): Project {

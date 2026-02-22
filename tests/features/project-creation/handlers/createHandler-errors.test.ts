@@ -1,10 +1,10 @@
 import { handleCreateProject } from '@/features/project-creation/handlers/createHandler';
-import * as validation from '@/core/validation';
+import * as _validation from '@/core/validation';
 import * as executor from '@/features/project-creation/handlers/executor';
-import * as promiseUtils from '@/core/utils/promiseUtils';
-import { ServiceLocator } from '@/core/di';
+import * as _promiseUtils from '@/core/utils/promiseUtils';
+import { ServiceLocator as _ServiceLocator } from '@/core/di';
 import * as vscode from 'vscode';
-import * as fs from 'fs';
+import * as _fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import {

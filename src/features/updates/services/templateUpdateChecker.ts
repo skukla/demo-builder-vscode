@@ -9,10 +9,10 @@
  */
 
 import * as vscode from 'vscode';
-import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
 import { COMPONENT_IDS } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { Project } from '@/types';
+import type { Logger } from '@/types/logger';
 
 /**
  * Result of checking for template updates

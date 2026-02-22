@@ -38,6 +38,7 @@ export default tseslint.config(
             '@typescript-eslint/no-unused-vars': ['error', {
                 argsIgnorePattern: '^_',
                 varsIgnorePattern: '^_',
+                caughtErrorsIgnorePattern: '^_',
             }],
             '@typescript-eslint/no-non-null-assertion': 'warn',
 
@@ -167,6 +168,12 @@ export default tseslint.config(
         rules: {
             // Relax rules for tests
             '@typescript-eslint/no-explicit-any': 'off',
+            '@typescript-eslint/no-require-imports': 'off',
+            '@typescript-eslint/no-unused-vars': ['error', {
+                argsIgnorePattern: '^_',
+                varsIgnorePattern: '^_',
+                caughtErrorsIgnorePattern: '^_',
+            }],
             'no-console': 'off',
             'max-nested-callbacks': 'off',
 
@@ -182,11 +189,15 @@ export default tseslint.config(
         ignores: [
             'dist/**',
             'node_modules/**',
-            'scripts/**/*.js',
+            'scripts/**',
             'out/**',
             '*.config.mjs',
+            '*.config.js',
             'coverage/**',
             'webpack.config.js',
+            'jest.config.js',
+            'esbuild.config.js',
+            'tests/__mocks__/**/*.js',
         ],
     }
 );

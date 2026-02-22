@@ -199,6 +199,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     }
 
     return (
+        // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- click handled by child MenuTrigger/ActionButton which provides keyboard support
         <div onClick={handleMenuClick}>
             <MenuTrigger>
                 <ActionButton

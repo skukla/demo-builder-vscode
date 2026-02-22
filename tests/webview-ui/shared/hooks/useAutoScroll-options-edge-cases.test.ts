@@ -21,14 +21,14 @@ describe('useAutoScroll - Options and Edge Cases', () => {
 
       const mockContainer = createMockContainer();
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       const mockElement = createMockElement();
 
       const refSetter = result.current.createItemRef(0);
       act(() => {
-        // @ts-ignore - mocking element
+        // @ts-expect-error - mocking element
         refSetter(mockElement);
       });
 
@@ -55,14 +55,14 @@ describe('useAutoScroll - Options and Edge Cases', () => {
 
       const mockContainer = createMockContainer();
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       const mockElement = createMockElement();
 
       const refSetter = result.current.createItemRef(0);
       act(() => {
-        // @ts-ignore - mocking element
+        // @ts-expect-error - mocking element
         refSetter(mockElement);
       });
 
@@ -88,14 +88,14 @@ describe('useAutoScroll - Options and Edge Cases', () => {
 
       const mockContainer = createMockContainer();
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       const mockElement = createMockElement();
 
       const refSetter = result.current.createItemRef(0);
       act(() => {
-        // @ts-ignore - mocking element
+        // @ts-expect-error - mocking element
         refSetter(mockElement);
       });
 
@@ -115,7 +115,7 @@ describe('useAutoScroll - Options and Edge Cases', () => {
         scrollTop: 50
       });
 
-      // @ts-ignore - mocking container
+      // @ts-expect-error - mocking container
       result.current.containerRef.current = mockContainer;
 
       // Item above visible area
@@ -126,7 +126,7 @@ describe('useAutoScroll - Options and Edge Cases', () => {
 
       const refSetter = result.current.createItemRef(0);
       act(() => {
-        // @ts-ignore - mocking element
+        // @ts-expect-error - mocking element
         refSetter(mockElement);
       });
 

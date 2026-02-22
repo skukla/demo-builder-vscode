@@ -19,10 +19,10 @@ jest.mock('@/core/logging/debugLogger', () => ({
 
 // Mock file system watchers
 export const mockWatchers: any[] = [];
-export let mockFileContents = new Map<string, string>();
+export const mockFileContents = new Map<string, string>();
 
 // Track command callbacks
-export const commandCallbacks: Record<string, Function> = {};
+export const commandCallbacks: Record<string, (...args: unknown[]) => unknown> = {};
 
 // Mock vscode API
 jest.mock('vscode', () => {
@@ -38,9 +38,9 @@ jest.mock('vscode', () => {
                     pattern,
                     _disposed: false,
                     _listeners: {
-                        onCreate: [] as Function[],
-                        onChange: [] as Function[],
-                        onDelete: [] as Function[]
+                        onCreate: [] as ((...args: unknown[]) => unknown)[],
+                        onChange: [] as ((...args: unknown[]) => unknown)[],
+                        onDelete: [] as ((...args: unknown[]) => unknown)[]
                     },
                     onDidCreate: jest.fn((listener) => {
                         watcher._listeners.onCreate.push(listener);
@@ -62,7 +62,7 @@ jest.mock('vscode', () => {
                     }),
                     // Helper to simulate file change
                     _simulateChange: (uri: vscode.Uri) => {
-                        watcher._listeners.onChange.forEach((l: Function) => l(uri));
+                        watcher._listeners.onChange.forEach((l: (...args: unknown[]) => unknown) => l(uri));
                     }
                 };
 

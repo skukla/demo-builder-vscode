@@ -10,8 +10,8 @@
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
-import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { createBundleUris } from '@/core/utils/bundleUri';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
@@ -46,8 +46,11 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
     }
 
     protected async getWebviewContent(): Promise<string> {
+        if (!this.panel) {
+            throw new Error('Panel must be created before getting webview content');
+        }
         const bundleUris = createBundleUris({
-            webview: this.panel!.webview,
+            webview: this.panel.webview,
             extensionPath: this.context.extensionPath,
             featureBundleName: 'projectsList',
         });
@@ -58,7 +61,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
         return getWebviewHTMLWithBundles({
             bundleUris,
             nonce,
-            cspSource: this.panel!.webview.cspSource,
+            cspSource: this.panel.webview.cspSource,
             title: 'Projects',
         });
     }

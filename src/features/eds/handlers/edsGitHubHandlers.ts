@@ -14,9 +14,9 @@
  */
 
 import * as vscode from 'vscode';
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import { getGitHubServices } from './edsHelpers';
 import { GITHUB_SCOPES } from '../services/types';
+import { getGitHubServices } from './edsHelpers';
+import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 // ==========================================================
 // Payload Types

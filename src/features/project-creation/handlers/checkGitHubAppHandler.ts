@@ -17,11 +17,11 @@
  * This handles the case where the GitHub app is installed but Helix hasn't indexed yet.
  */
 
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { HelixService } from '@/features/eds/services/helixService';
 import { PollingService } from '@/core/shell/pollingService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { HelixService } from '@/features/eds/services/helixService';
+import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 interface CheckGitHubAppRequest {
     owner: string;

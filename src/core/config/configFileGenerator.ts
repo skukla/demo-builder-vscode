@@ -66,7 +66,7 @@ export async function generateConfigFile(options: ConfigFileOptions): Promise<vo
             const templateContent = await fs.readFile(templatePath, 'utf-8');
             baseConfig = JSON.parse(templateContent);
             logger.debug(`[Config Generator] Loaded template from: ${templatePath}`);
-        } catch (error) {
+        } catch (_error) {
             logger.debug(`[Config Generator] Template not found, using default config`);
             baseConfig = { ...defaultConfig };
         }

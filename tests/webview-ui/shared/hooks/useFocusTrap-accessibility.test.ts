@@ -35,7 +35,7 @@ describe('useFocusTrap - Accessibility', () => {
 
       const { result } = renderHook(() => useFocusTrap({ enabled: true }));
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // The disabled button should not be in focus trap cycle
@@ -50,7 +50,7 @@ describe('useFocusTrap - Accessibility', () => {
 
       const { result } = renderHook(() => useFocusTrap({ enabled: true }));
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Element with tabindex="-1" should be excluded
@@ -66,7 +66,7 @@ describe('useFocusTrap - Accessibility', () => {
 
       const { result } = renderHook(() => useFocusTrap({ enabled: true }));
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Inputs should be included in focus trap
@@ -87,7 +87,7 @@ describe('useFocusTrap - Accessibility', () => {
         })
       );
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Custom selector should work
@@ -122,7 +122,7 @@ describe('useFocusTrap - Accessibility', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Force effect to re-run with container now set by toggling enabled

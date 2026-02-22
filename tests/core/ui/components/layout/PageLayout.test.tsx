@@ -115,7 +115,7 @@ describe('PageLayout', () => {
 
         it('should render header before content in DOM order', () => {
             // Given: PageLayout with header and content
-            const { container } = renderWithProvider(
+            renderWithProvider(
                 <PageLayout header={<div data-testid="header-elem">Header</div>}>
                     <div data-testid="content-elem">Content</div>
                 </PageLayout>
@@ -184,7 +184,7 @@ describe('PageLayout', () => {
 
         it('should render footer after content in DOM order', () => {
             // Given: PageLayout with content and footer
-            const { container } = renderWithProvider(
+            renderWithProvider(
                 <PageLayout footer={<div data-testid="footer-elem">Footer</div>}>
                     <div data-testid="content-elem">Content</div>
                 </PageLayout>

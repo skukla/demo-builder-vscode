@@ -12,7 +12,7 @@ import {
 import type { Stack } from '@/types/stacks';
 
 // Test fixtures matching templates/stacks.json
-const headlessStack: Stack = {
+const _headlessStack: Stack = {
     id: 'headless',
     name: 'Headless',
     description: 'NextJS storefront with API Mesh and Commerce PaaS',
@@ -23,7 +23,7 @@ const headlessStack: Stack = {
     features: ['Server-side rendering', 'API Mesh integration', 'Full customization'],
 };
 
-const edgeDeliveryStack: Stack = {
+const _edgeDeliveryStack: Stack = {
     id: 'edge-delivery',
     name: 'Edge Delivery',
     description: 'EDS storefront with Commerce Drop-ins and ACCS',
@@ -58,7 +58,7 @@ describe('stackHelpers', () => {
             optionalAddons: [{ id: 'adobe-commerce-aco' }],
         };
 
-        const edsPaasStack: Stack = {
+        const _edsPaasStack: Stack = {
             id: 'eds-paas',
             name: 'Edge Delivery + PaaS',
             description: 'EDS storefront with Commerce Drop-ins and PaaS',

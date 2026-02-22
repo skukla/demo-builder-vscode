@@ -8,9 +8,9 @@
  */
 
 import { useCallback, Dispatch, SetStateAction } from 'react';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 /**
  * Props for the useDashboardActions hook

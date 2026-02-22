@@ -2,11 +2,11 @@
  * Helper functions for WizardContainer component (SOP §3, §4 compliance)
  */
 
-import { hasMeshInDependencies } from '@/core/constants';
 import { getStackById } from '../hooks/useSelectedStack';
+import { hasMeshInDependencies } from '@/core/constants';
+import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
-import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
 
 /**
  * Step configuration for wizard navigation
@@ -516,6 +516,99 @@ export function getEnabledWizardSteps(
 // Project Configuration Builder
 // ============================================================================
 
+/** Extract imported MESH_ENDPOINT from componentConfigs */
+function extractImportedMeshEndpoint(
+    componentConfigs: WizardState['componentConfigs'],
+): string | undefined {
+    if (!componentConfigs) return undefined;
+    for (const componentConfig of Object.values(componentConfigs)) {
+        if (componentConfig?.MESH_ENDPOINT && typeof componentConfig.MESH_ENDPOINT === 'string') {
+            return componentConfig.MESH_ENDPOINT;
+        }
+    }
+    return undefined;
+}
+
+/** Validate stack/package configuration consistency and log warnings */
+function validateStackPackageConfig(
+    wizardState: WizardState,
+    packages: DemoPackage[] | undefined,
+): void {
+    if (wizardState.selectedStack && !wizardState.selectedPackage) {
+        console.warn(
+            '[Demo Builder] Incomplete configuration: architecture is selected but brand/package is missing. ' +
+            'This may result in missing storefront data.',
+        );
+        // eslint-disable-next-line no-console
+        console.log('[buildProjectConfig] Validation warning - selectedStack without selectedPackage:', {
+            selectedPackage: wizardState.selectedPackage,
+            selectedStack: wizardState.selectedStack,
+            hasPackages: !!packages,
+            packagesCount: packages?.length || 0,
+        });
+    }
+}
+
+/** Resolve frontend source from selected package/storefront combination */
+function resolveFrontendSourceFromPackage(
+    wizardState: WizardState,
+    packages: DemoPackage[] | undefined,
+): GitSource | undefined {
+    if (!packages || !wizardState.selectedStack || !wizardState.selectedPackage) {
+        return undefined;
+    }
+    const pkg = packages.find(p => p.id === wizardState.selectedPackage);
+    return pkg?.storefronts?.[wizardState.selectedStack]?.source;
+}
+
+/** Validate that stack lookup succeeded and log warnings if not */
+function validateStackLookup(
+    wizardState: WizardState,
+    stack: ReturnType<typeof getStackById> | undefined,
+): void {
+    if (wizardState.selectedStack && !stack) {
+        console.warn(
+            `[Demo Builder] Configuration warning: selected architecture '${wizardState.selectedStack}' not found. ` +
+            'Components may be missing from project.',
+        );
+        // eslint-disable-next-line no-console
+        console.log('[buildProjectConfig] Validation warning - stack lookup failed:', {
+            selectedStack: wizardState.selectedStack,
+            selectedPackage: wizardState.selectedPackage,
+            stackFound: false,
+        });
+    }
+}
+
+/** Build EDS config object for project creation from wizard EDS state */
+function buildProjectEdsConfig(wizardState: WizardState) {
+    const eds = wizardState.edsConfig;
+    if (!eds) return undefined;
+
+    return {
+        repoName: eds.repoName || '',
+        repoMode: eds.repoMode || 'new',
+        existingRepo: eds.selectedRepo?.fullName || eds.existingRepo,
+        resetToTemplate: eds.resetToTemplate,
+        daLiveOrg: eds.daLiveOrg || '',
+        daLiveSite: eds.selectedSite?.name || eds.daLiveSite || '',
+        accsEndpoint: eds.accsHost,
+        githubOwner: eds.githubAuth?.user?.login || '',
+        isPrivate: eds.selectedRepo?.isPrivate,
+        skipContent: eds.skipContent,
+        skipTools: !wizardState.selectedAddons?.includes('adobe-commerce-aco'),
+        resetSiteContent: eds.resetSiteContent || false,
+        templateOwner: eds.templateOwner,
+        templateRepo: eds.templateRepo,
+        contentSource: eds.contentSource,
+        patches: eds.patches,
+        contentPatches: eds.contentPatches,
+        contentPatchSource: eds.contentPatchSource,
+        repoUrl: eds.repoUrl,
+        preflightComplete: eds.preflightComplete,
+    };
+}
+
 /**
  * Build project configuration from wizard state for project creation
  *
@@ -528,75 +621,22 @@ export function buildProjectConfig(
     importedSettings?: ImportedSettings | null,
     packages?: DemoPackage[],
 ) {
-    // Extract MESH_ENDPOINT from componentConfigs if it exists (from imported settings)
-    let importedMeshEndpoint: string | undefined;
-    if (wizardState.componentConfigs) {
-        for (const componentConfig of Object.values(wizardState.componentConfigs)) {
-            if (componentConfig?.MESH_ENDPOINT && typeof componentConfig.MESH_ENDPOINT === 'string') {
-                importedMeshEndpoint = componentConfig.MESH_ENDPOINT;
-                break;
-            }
-        }
-    }
-
-    // ============================================================================
-    // VALIDATION: Check for incomplete stack/package configuration
-    // ============================================================================
-    // Validate that if selectedStack is set, selectedPackage should also be set.
-    // This is defensive - normally the wizard ensures both are set together,
-    // but we log if there's a mismatch to help diagnose incomplete state.
-    if (wizardState.selectedStack && !wizardState.selectedPackage) {
-        // User channel: User-friendly warning
-        // eslint-disable-next-line no-console
-        console.warn(
-            '[Demo Builder] Incomplete configuration: architecture is selected but brand/package is missing. ' +
-            'This may result in missing storefront data.',
-        );
-
-        // Debug channel: Technical details for troubleshooting
-        // eslint-disable-next-line no-console
-        console.log('[buildProjectConfig] Validation warning - selectedStack without selectedPackage:', {
-            selectedPackage: wizardState.selectedPackage,
-            selectedStack: wizardState.selectedStack,
-            hasPackages: !!packages,
-            packagesCount: packages?.length || 0,
-        });
-    }
-
-    // Resolve frontend source from selected package/storefront
-    // Note: templateOwner, templateRepo, contentSource, patches are derived in WelcomeStep
-    // and already present in wizardState.edsConfig - no fallback needed here
-    let frontendSource: GitSource | undefined;
-    if (packages && wizardState.selectedStack && wizardState.selectedPackage) {
-        const pkg = packages.find(p => p.id === wizardState.selectedPackage);
-        const storefront = pkg?.storefronts?.[wizardState.selectedStack];
-        if (storefront?.source) {
-            frontendSource = storefront.source;
-        }
-    }
-
-    // Get components directly from stack config - source of truth
+    const importedMeshEndpoint = extractImportedMeshEndpoint(wizardState.componentConfigs);
+    validateStackPackageConfig(wizardState, packages);
+    const frontendSource = resolveFrontendSourceFromPackage(wizardState, packages);
     const stack = wizardState.selectedStack ? getStackById(wizardState.selectedStack) : undefined;
+    validateStackLookup(wizardState, stack);
 
-    // ============================================================================
-    // VALIDATION: Check if stack lookup succeeded
-    // ============================================================================
-    if (wizardState.selectedStack && !stack) {
-        // User channel: User-friendly warning
-        // eslint-disable-next-line no-console
-        console.warn(
-            `[Demo Builder] Configuration warning: selected architecture '${wizardState.selectedStack}' not found. ` +
-            'Components may be missing from project.',
-        );
-
-        // Debug channel: Technical details
-        // eslint-disable-next-line no-console
-        console.log('[buildProjectConfig] Validation warning - stack lookup failed:', {
-            selectedStack: wizardState.selectedStack,
-            selectedPackage: wizardState.selectedPackage,
-            stackFound: false,
-        });
-    }
+    // Debug: trace EDS config values at project creation time
+    // eslint-disable-next-line no-console
+    console.log('[buildProjectConfig] Package/Stack/EDS config:', {
+        selectedPackage: wizardState.selectedPackage,
+        selectedStack: wizardState.selectedStack,
+        hasEdsConfig: !!wizardState.edsConfig,
+        repoUrl: wizardState.edsConfig?.repoUrl,
+        daLiveOrg: wizardState.edsConfig?.daLiveOrg,
+        daLiveSite: wizardState.edsConfig?.daLiveSite,
+    });
 
     return {
         projectName: wizardState.projectName,
@@ -609,7 +649,6 @@ export function buildProjectConfig(
             workspaceName: wizardState.adobeWorkspace?.name,
             workspaceTitle: wizardState.adobeWorkspace?.title,
         },
-        // Read components from stack config - no derivation needed
         components: stack ? {
             frontend: stack.frontend,
             backend: stack.backend,
@@ -619,58 +658,14 @@ export function buildProjectConfig(
         } : undefined,
         apiMesh: wizardState.apiMesh,
         componentConfigs: wizardState.componentConfigs,
-        // Track imported workspace for mesh reuse detection
-        // If user selects same workspace as imported settings, we can skip mesh deployment
         importedWorkspaceId: importedSettings?.adobe?.workspaceId,
         importedMeshEndpoint,
-        // Package/Stack selections
         selectedPackage: wizardState.selectedPackage,
         selectedStack: wizardState.selectedStack,
-        // Selected optional addons (e.g., ['demo-inspector'])
         selectedAddons: wizardState.selectedAddons || [],
-        // Frontend source from package storefront (source of truth for repos)
         frontendSource,
-        // Edit mode: re-use existing project directory
         editMode: wizardState.editMode,
         editProjectPath: wizardState.editProjectPath,
-        // EDS configuration (for Edge Delivery Services stacks)
-        // Debug: trace EDS config values at project creation time
-        // eslint-disable-next-line no-console
-        ...(console.log('[buildProjectConfig] Package/Stack/EDS config:', {
-            selectedPackage: wizardState.selectedPackage,
-            selectedStack: wizardState.selectedStack,
-            hasEdsConfig: !!wizardState.edsConfig,
-            repoUrl: wizardState.edsConfig?.repoUrl,
-            daLiveOrg: wizardState.edsConfig?.daLiveOrg,
-            daLiveSite: wizardState.edsConfig?.daLiveSite,
-        }), {}),
-        edsConfig: wizardState.edsConfig ? {
-            repoName: wizardState.edsConfig.repoName || '',
-            repoMode: wizardState.edsConfig.repoMode || 'new',
-            existingRepo: wizardState.edsConfig.selectedRepo?.fullName || wizardState.edsConfig.existingRepo,
-            resetToTemplate: wizardState.edsConfig.resetToTemplate,
-            daLiveOrg: wizardState.edsConfig.daLiveOrg || '',
-            daLiveSite: wizardState.edsConfig.selectedSite?.name || wizardState.edsConfig.daLiveSite || '',
-            accsEndpoint: wizardState.edsConfig.accsHost,
-            githubOwner: wizardState.edsConfig.githubAuth?.user?.login || '',
-            isPrivate: wizardState.edsConfig.selectedRepo?.isPrivate,
-            skipContent: wizardState.edsConfig.skipContent,
-            // Ingestion tool is only needed when ACO addon is selected
-            skipTools: !wizardState.selectedAddons?.includes('adobe-commerce-aco'),
-            // Whether to reset existing site content (replaces all content with demo data)
-            resetSiteContent: wizardState.edsConfig.resetSiteContent || false,
-            // Derived from brand+stack in WelcomeStep (source of truth)
-            templateOwner: wizardState.edsConfig.templateOwner,
-            templateRepo: wizardState.edsConfig.templateRepo,
-            contentSource: wizardState.edsConfig.contentSource,
-            patches: wizardState.edsConfig.patches,
-            contentPatches: wizardState.edsConfig.contentPatches,
-            contentPatchSource: wizardState.edsConfig.contentPatchSource,
-            // Results from StorefrontSetupStep (wizard handles all remote setup)
-            repoUrl: wizardState.edsConfig.repoUrl,
-            // Indicates StorefrontSetupStep completed successfully (enables Phase 5 config sync)
-            preflightComplete: wizardState.edsConfig.preflightComplete,
-            // Note: previewUrl/liveUrl not passed - derived from githubRepo by typeGuards
-        } : undefined,
+        edsConfig: buildProjectEdsConfig(wizardState),
     };
 }

@@ -33,6 +33,7 @@ jest.mock('@/core/di/serviceLocator');
 
 // Mock fs/promises
 jest.mock('fs/promises');
+const fs = require('fs/promises');
 
 describe('ComponentManager - Installation (Git Dependencies)', () => {
     let componentManager: ComponentManager;
@@ -60,7 +61,6 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
 
     describe('Node version management', () => {
         it('should create .node-version file when configured', async () => {
-            const fs = require('fs/promises');
             mockFileNotFound();
             (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
 
@@ -87,7 +87,6 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
         });
 
         it('should skip creating .node-version if already exists', async () => {
-            const fs = require('fs/promises');
             mockFileExists();
             (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
 
@@ -115,7 +114,6 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
         });
 
         it('should use correct Node version for npm install', async () => {
-            const fs = require('fs/promises');
             mockFileExists();
 
             const componentDef: TransformedComponentDefinition = {
@@ -145,7 +143,6 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
 
     describe('npm dependency installation', () => {
         it('should install npm dependencies if package.json exists', async () => {
-            const fs = require('fs/promises');
             mockFileExists();
 
             const componentDef: TransformedComponentDefinition = {
@@ -169,7 +166,6 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
         });
 
         it('should skip dependencies if skipDependencies is true', async () => {
-            const fs = require('fs/promises');
             mockFileExists();
 
             const componentDef: TransformedComponentDefinition = {
@@ -194,7 +190,6 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
         });
 
         it('should use custom install timeout', async () => {
-            const fs = require('fs/promises');
             mockFileExists();
 
             const componentDef: TransformedComponentDefinition = {
@@ -219,7 +214,6 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
         });
 
         it('should handle npm install failure gracefully', async () => {
-            const fs = require('fs/promises');
             mockFileExists();
 
             (mockCommandExecutor.execute as jest.Mock).mockImplementation((cmd: string) => {
@@ -259,7 +253,6 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
 
     describe('build script execution', () => {
         it('should run build script if configured', async () => {
-            const fs = require('fs/promises');
             mockFileExists();
 
             const componentDef: TransformedComponentDefinition = {
@@ -286,7 +279,6 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
         });
 
         it('should handle build failure gracefully', async () => {
-            const fs = require('fs/promises');
             mockFileExists();
 
             (mockCommandExecutor.execute as jest.Mock).mockImplementation((cmd: string) => {

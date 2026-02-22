@@ -38,7 +38,6 @@ import type { ToolManager } from '@/features/eds/services/toolManager';
 import type {
     EdsMetadata,
     EdsCleanupOptions,
-    EdsCleanupResult,
 } from '@/features/eds/services/types';
 
 // Type for the service we'll import dynamically

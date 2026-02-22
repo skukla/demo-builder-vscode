@@ -414,7 +414,7 @@ export function StorefrontSetupStep({
         // Subscribe to GitHub App required notifications
         const unsubGitHubApp = vscode.onMessage<GitHubAppData>(
             'storefront-setup-github-app-required',
-            handleGitHubAppRequired
+            handleGitHubAppRequired,
         );
 
         // Cleanup on unmount

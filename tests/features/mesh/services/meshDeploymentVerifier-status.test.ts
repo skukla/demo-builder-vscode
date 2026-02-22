@@ -107,7 +107,7 @@ describe('MeshDeploymentVerifier - Status and Polling', () => {
 
             const onProgress = jest.fn();
 
-            const promise = waitForMeshDeployment({
+            const _promise = waitForMeshDeployment({
                 initialWait: 1000,
                 pollInterval: 500,
                 maxRetries: 3,

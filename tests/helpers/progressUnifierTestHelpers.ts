@@ -147,7 +147,7 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
                             // Swallow promise rejections from close handlers
                             // The executeStep promise will still reject appropriately
                         });
-                    } catch (error) {
+                    } catch (_error) {
                         // Swallow sync errors from close handlers
                     }
                 }
@@ -166,19 +166,19 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
     };
 
     // Store reference to current mock process for external control
-    let currentMockProcess: MockChildProcess | null = null;
+    let _currentMockProcess: MockChildProcess | null = null;
 
     /**
      * Mock spawn function - returns controllable mock process
      * By default, processes complete successfully after 10ms of fake time
      */
     const mockSpawn = jest.fn((
-        command: string,
-        args: string[],
-        options: Record<string, unknown>
+        _command: string,
+        _args: string[],
+        _options: Record<string, unknown>
     ): ChildProcessWithoutNullStreams => {
         const process = createMockProcess();
-        currentMockProcess = process;
+        _currentMockProcess = process;
 
         // Auto-complete after 10ms fake time (can be overridden in tests)
         mockTimers.setTimeout(async () => {
@@ -262,7 +262,7 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
                         // The original promise will still reject appropriately
                     });
                 }
-            } catch (e) {
+            } catch (_e) {
                 // Swallow sync errors from callbacks
             }
 

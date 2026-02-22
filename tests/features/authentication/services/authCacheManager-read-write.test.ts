@@ -1,6 +1,5 @@
 import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import {
-    mockLogger,
     createMockOrg,
     createMockOrg2,
     createMockProject,

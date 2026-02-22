@@ -35,7 +35,7 @@ describe('StatusSection', () => {
         });
 
         it('applies uppercase styling to label', () => {
-            const { container } = renderWithProvider(
+            renderWithProvider(
                 <StatusSection
                     label="Test Label"
                     value="Test Value"

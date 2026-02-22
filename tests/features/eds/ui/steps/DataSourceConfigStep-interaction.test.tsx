@@ -1,30 +1,21 @@
 /**
- * Unit Tests: DataSourceConfigStep
+ * Unit Tests: DataSourceConfigStep - Interaction
  *
- * Tests for the DA.live site selection/creation step.
- * The component uses useSelectionStep to load sites from a verified org
- * and allows users to select an existing site or create a new one.
- *
- * Coverage:
- * - Loading states
- * - Site list display
- * - Site selection
+ * Tests for interaction behavior:
  * - Create new site flow
  * - Search/filter functionality
  * - Error state
  * - Empty state
- * - Navigation state (setCanProceed)
  */
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import type { WizardState, EDSConfig, DaLiveSiteItem } from '@/types/webview';
 
 // Mock webviewClient
 const mockPostMessage = jest.fn();
-let messageHandlers: Map<string, (data: unknown) => void> = new Map();
+const messageHandlers: Map<string, (data: unknown) => void> = new Map();
 
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {
@@ -108,9 +99,8 @@ const StatefulWrapper: React.FC<StatefulWrapperProps> = ({
     return <>{children({ state, updateState, setCanProceed })}</>;
 };
 
-// Helper to simulate message response - waits for handler to be registered
+// Helper to simulate message response
 async function simulateSitesResponse(sites: DaLiveSiteItem[]) {
-    // Wait for the handler to be registered (happens in useEffect after mount)
     await waitFor(() => {
         expect(messageHandlers.has('get-dalive-sites')).toBe(true);
     });
@@ -124,7 +114,6 @@ async function simulateSitesResponse(sites: DaLiveSiteItem[]) {
 }
 
 async function simulateSitesError(error: string) {
-    // Wait for the handler to be registered
     await waitFor(() => {
         expect(messageHandlers.has('get-dalive-sites-error')).toBe(true);
     });
@@ -137,7 +126,7 @@ async function simulateSitesError(error: string) {
     }
 }
 
-describe('DataSourceConfigStep', () => {
+describe('DataSourceConfigStep - Interaction', () => {
     let mockUpdateState: jest.Mock;
     let mockSetCanProceed: jest.Mock;
 
@@ -146,217 +135,6 @@ describe('DataSourceConfigStep', () => {
         messageHandlers.clear();
         mockUpdateState = jest.fn();
         mockSetCanProceed = jest.fn();
-    });
-
-    describe('Loading States', () => {
-        it('should show loading indicator while fetching sites', async () => {
-            const state = createDefaultState();
-
-            const { DataSourceConfigStep } = await import('@/features/eds/ui/steps/DataSourceConfigStep');
-            render(
-                <TestWrapper>
-                    <DataSourceConfigStep
-                        state={state}
-                        updateState={mockUpdateState}
-                        setCanProceed={mockSetCanProceed}
-                    />
-                </TestWrapper>
-            );
-
-            // Should show loading message
-            expect(screen.getByText(/Loading sites.../i)).toBeInTheDocument();
-            expect(screen.getByText(/Fetching sites from test-org/i)).toBeInTheDocument();
-        });
-
-        it('should request sites on mount when org is available', async () => {
-            const state = createDefaultState();
-
-            const { DataSourceConfigStep } = await import('@/features/eds/ui/steps/DataSourceConfigStep');
-            render(
-                <TestWrapper>
-                    <DataSourceConfigStep
-                        state={state}
-                        updateState={mockUpdateState}
-                        setCanProceed={mockSetCanProceed}
-                    />
-                </TestWrapper>
-            );
-
-            await waitFor(() => {
-                expect(mockPostMessage).toHaveBeenCalledWith('get-dalive-sites', { orgName: 'test-org' });
-            });
-        });
-    });
-
-    describe('Site List Display', () => {
-        it('should display site list after loading', async () => {
-            const initialState = createDefaultState();
-
-            const { DataSourceConfigStep } = await import('@/features/eds/ui/steps/DataSourceConfigStep');
-            render(
-                <TestWrapper>
-                    <StatefulWrapper
-                        initialState={initialState}
-                        setCanProceed={mockSetCanProceed}
-                        onUpdateState={mockUpdateState}
-                    >
-                        {({ state, updateState, setCanProceed }) => (
-                            <DataSourceConfigStep
-                                state={state}
-                                updateState={updateState}
-                                setCanProceed={setCanProceed}
-                            />
-                        )}
-                    </StatefulWrapper>
-                </TestWrapper>
-            );
-
-            // Simulate sites response
-            await simulateSitesResponse(mockSites);
-
-            await waitFor(() => {
-                expect(screen.getByText('site-alpha')).toBeInTheDocument();
-                expect(screen.getByText('site-beta')).toBeInTheDocument();
-                expect(screen.getByText('demo-store')).toBeInTheDocument();
-            });
-        });
-
-        it('should display site count in header', async () => {
-            const initialState = createDefaultState();
-
-            const { DataSourceConfigStep } = await import('@/features/eds/ui/steps/DataSourceConfigStep');
-            render(
-                <TestWrapper>
-                    <StatefulWrapper
-                        initialState={initialState}
-                        setCanProceed={mockSetCanProceed}
-                        onUpdateState={mockUpdateState}
-                    >
-                        {({ state, updateState, setCanProceed }) => (
-                            <DataSourceConfigStep
-                                state={state}
-                                updateState={updateState}
-                                setCanProceed={setCanProceed}
-                            />
-                        )}
-                    </StatefulWrapper>
-                </TestWrapper>
-            );
-
-            await simulateSitesResponse(mockSites);
-
-            await waitFor(() => {
-                // Site count is displayed in the SearchHeader
-                expect(screen.getByText(/3 sites/i)).toBeInTheDocument();
-            });
-        });
-    });
-
-    describe('Site Selection', () => {
-        it('should update state when site is selected', async () => {
-            const initialState = createDefaultState();
-
-            const { DataSourceConfigStep } = await import('@/features/eds/ui/steps/DataSourceConfigStep');
-            render(
-                <TestWrapper>
-                    <StatefulWrapper
-                        initialState={initialState}
-                        setCanProceed={mockSetCanProceed}
-                        onUpdateState={mockUpdateState}
-                    >
-                        {({ state, updateState, setCanProceed }) => (
-                            <DataSourceConfigStep
-                                state={state}
-                                updateState={updateState}
-                                setCanProceed={setCanProceed}
-                            />
-                        )}
-                    </StatefulWrapper>
-                </TestWrapper>
-            );
-
-            await simulateSitesResponse(mockSites);
-
-            await waitFor(() => {
-                expect(screen.getByText('site-alpha')).toBeInTheDocument();
-            });
-
-            // Click on a site row
-            const siteRow = screen.getByText('site-alpha');
-            fireEvent.click(siteRow);
-
-            await waitFor(() => {
-                expect(mockUpdateState).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        edsConfig: expect.objectContaining({
-                            daLiveSite: 'site-alpha',
-                            selectedSite: expect.objectContaining({ name: 'site-alpha' }),
-                        }),
-                    })
-                );
-            });
-        });
-
-        it('should enable Continue when site is selected', async () => {
-            const initialState = createDefaultState({
-                selectedSite: mockSites[0],
-                daLiveSite: 'site-alpha',
-            });
-
-            const { DataSourceConfigStep } = await import('@/features/eds/ui/steps/DataSourceConfigStep');
-            render(
-                <TestWrapper>
-                    <StatefulWrapper
-                        initialState={initialState}
-                        setCanProceed={mockSetCanProceed}
-                        onUpdateState={mockUpdateState}
-                    >
-                        {({ state, updateState, setCanProceed }) => (
-                            <DataSourceConfigStep
-                                state={state}
-                                updateState={updateState}
-                                setCanProceed={setCanProceed}
-                            />
-                        )}
-                    </StatefulWrapper>
-                </TestWrapper>
-            );
-
-            await simulateSitesResponse(mockSites);
-
-            await waitFor(() => {
-                expect(mockSetCanProceed).toHaveBeenCalledWith(true);
-            });
-        });
-
-        it('should disable Continue when no site is selected', async () => {
-            const initialState = createDefaultState();
-
-            const { DataSourceConfigStep } = await import('@/features/eds/ui/steps/DataSourceConfigStep');
-            render(
-                <TestWrapper>
-                    <StatefulWrapper
-                        initialState={initialState}
-                        setCanProceed={mockSetCanProceed}
-                        onUpdateState={mockUpdateState}
-                    >
-                        {({ state, updateState, setCanProceed }) => (
-                            <DataSourceConfigStep
-                                state={state}
-                                updateState={updateState}
-                                setCanProceed={setCanProceed}
-                            />
-                        )}
-                    </StatefulWrapper>
-                </TestWrapper>
-            );
-
-            await simulateSitesResponse(mockSites);
-
-            await waitFor(() => {
-                expect(mockSetCanProceed).toHaveBeenCalledWith(false);
-            });
-        });
     });
 
     describe('Create New Site', () => {
@@ -380,11 +158,9 @@ describe('DataSourceConfigStep', () => {
                 expect(screen.getByRole('button', { name: /New/i })).toBeInTheDocument();
             });
 
-            // Click New button
             const newButton = screen.getByRole('button', { name: /New/i });
             fireEvent.click(newButton);
 
-            // Should show create form
             await waitFor(() => {
                 expect(screen.getByText(/Create New Site/i)).toBeInTheDocument();
                 expect(screen.getByLabelText(/Site Name/i)).toBeInTheDocument();
@@ -415,26 +191,21 @@ describe('DataSourceConfigStep', () => {
 
             await simulateSitesResponse(mockSites);
 
-            // Click New button
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /New/i })).toBeInTheDocument();
             });
             fireEvent.click(screen.getByRole('button', { name: /New/i }));
 
-            // Type site name starting with number - normalizer will remove leading numbers
             const siteInput = screen.getByLabelText(/Site Name/i);
             fireEvent.change(siteInput, { target: { value: '123-invalid' } });
             fireEvent.blur(siteInput);
 
-            // With normalizer, "123-invalid" becomes "invalid" (leading numbers removed)
-            // so the input should be valid and updateState called with normalized value
             await waitFor(() => {
                 expect(mockUpdateState).toHaveBeenCalled();
             });
         });
 
         it('should enable Continue with valid new site name', async () => {
-            // Start with create mode active and valid name
             const state = createDefaultState({ daLiveSite: 'valid-site' });
 
             const { DataSourceConfigStep } = await import('@/features/eds/ui/steps/DataSourceConfigStep');
@@ -450,13 +221,11 @@ describe('DataSourceConfigStep', () => {
 
             await simulateSitesResponse(mockSites);
 
-            // Click New button
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /New/i })).toBeInTheDocument();
             });
             fireEvent.click(screen.getByRole('button', { name: /New/i }));
 
-            // Type valid site name
             const siteInput = screen.getByLabelText(/Site Name/i);
             fireEvent.change(siteInput, { target: { value: 'my-new-site' } });
 
@@ -489,7 +258,6 @@ describe('DataSourceConfigStep', () => {
 
             await simulateSitesResponse(mockSites);
 
-            // Click New, then Cancel
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /New/i })).toBeInTheDocument();
             });
@@ -502,7 +270,6 @@ describe('DataSourceConfigStep', () => {
             const browseButton = screen.getByRole('button', { name: /Browse/i });
             fireEvent.click(browseButton);
 
-            // Should be back to list view
             await waitFor(() => {
                 expect(screen.getByText('site-alpha')).toBeInTheDocument();
                 expect(screen.queryByText(/Create New Site/i)).not.toBeInTheDocument();
@@ -539,11 +306,9 @@ describe('DataSourceConfigStep', () => {
                 expect(screen.getByText('site-alpha')).toBeInTheDocument();
             });
 
-            // Type in search field
             const searchInput = screen.getByPlaceholderText(/Filter sites/i);
             fireEvent.change(searchInput, { target: { value: 'demo' } });
 
-            // Only demo-store should be visible
             await waitFor(() => {
                 expect(screen.getByText('demo-store')).toBeInTheDocument();
                 expect(screen.queryByText('site-alpha')).not.toBeInTheDocument();
@@ -579,7 +344,6 @@ describe('DataSourceConfigStep', () => {
                 expect(screen.getByText('site-alpha')).toBeInTheDocument();
             });
 
-            // Type non-matching search
             const searchInput = screen.getByPlaceholderText(/Filter sites/i);
             fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
 
@@ -604,7 +368,6 @@ describe('DataSourceConfigStep', () => {
                 </TestWrapper>
             );
 
-            // Simulate error response
             await simulateSitesError('Failed to fetch sites');
 
             await waitFor(() => {
@@ -650,7 +413,6 @@ describe('DataSourceConfigStep', () => {
                 </TestWrapper>
             );
 
-            // Return empty sites array
             await simulateSitesResponse([]);
 
             await waitFor(() => {

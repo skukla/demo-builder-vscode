@@ -9,6 +9,8 @@
 import { Flex, Text } from '@adobe/react-spectrum';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import React, { useCallback, useMemo } from 'react';
+import { ProjectActionsMenu } from './ProjectActionsMenu';
+import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
     getStatusText,
@@ -17,10 +19,8 @@ import {
     getStorefrontStatusText,
     getStorefrontStatusVariant,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
-import { isEdsProject } from '@/types/typeGuards';
-import { ProjectActionsMenu } from './ProjectActionsMenu';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import type { Project } from '@/types/base';
+import { isEdsProject } from '@/types/typeGuards';
 
 export interface ProjectRowProps {
     /** The project to display */

@@ -11,7 +11,7 @@
  * - tests/core/utils/getWebviewHTMLWithBundles.test.ts (helper tests)
  */
 
-import * as vscode from 'vscode';
+import * as _vscode from 'vscode';
 
 jest.mock('vscode');
 
@@ -22,7 +22,7 @@ describe('webviewHTMLBuilder - Deprecated Function Verification', () => {
         try {
             const utils = require('@/core/utils/webviewHTMLBuilder');
             generateWebviewHTML = utils.generateWebviewHTML;
-        } catch (error) {
+        } catch (_error) {
             // Module doesn't exist or export is missing - this is expected after deletion
         }
 
@@ -36,7 +36,7 @@ describe('webviewHTMLBuilder - Deprecated Function Verification', () => {
         try {
             const utils = require('@/core/utils/webviewHTMLBuilder');
             WebviewHTMLOptions = utils.WebviewHTMLOptions;
-        } catch (error) {
+        } catch (_error) {
             // Module doesn't exist or export is missing - this is expected after deletion
         }
 

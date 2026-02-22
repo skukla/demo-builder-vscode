@@ -13,11 +13,11 @@
  * string replacements that fit naturally in JSON.
  */
 
+import contentPatchesConfig from '../config/content-patches.json';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types';
 import type { ContentPatchSource } from '@/types/demoPackages';
 
-import contentPatchesConfig from '../config/content-patches.json';
 
 /**
  * Content patch definition (loaded directly from JSON)

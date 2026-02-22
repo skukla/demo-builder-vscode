@@ -1,4 +1,3 @@
-import React from 'react';
 import { WizardState, Workspace } from '@/types/webview';
 
 // Mock functions (to be used after jest.mock() calls in test files)

@@ -12,7 +12,7 @@
 
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator as _ServiceLocator } from '@/core/di';
 import { StateManager } from '@/core/state';
 import { Logger } from '@/core/logging';
 import * as vscode from 'vscode';
@@ -424,7 +424,7 @@ describe('StartDemoCommand - Error Handling', () => {
 
             // And: Status reverted to 'ready' (so user can retry)
             // Note: Current implementation may or may not revert - this tests desired behavior
-            const lastStatus = statusChanges[statusChanges.length - 1];
+            const _lastStatus = statusChanges[statusChanges.length - 1];
             // If error recovery is implemented, last status should be 'ready'
             // For now, we verify error was shown
             expect(vscode.window.showErrorMessage).toHaveBeenCalled();

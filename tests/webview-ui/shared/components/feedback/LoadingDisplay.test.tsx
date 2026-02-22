@@ -212,7 +212,7 @@ describe('LoadingDisplay', () => {
 
     describe('Custom ClassName', () => {
         it('applies custom className', () => {
-            const { container } = renderWithProviders(
+            const { container: _container } = renderWithProviders(
                 <LoadingDisplay message="Loading..." className="custom-class" />
             );
             // The className is applied to the Flex element inside the status div

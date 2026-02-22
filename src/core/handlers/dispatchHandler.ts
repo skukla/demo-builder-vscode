@@ -26,7 +26,7 @@ export async function dispatchHandler(
     handlers: HandlerMap,
     context: HandlerContext,
     messageType: string,
-    data: unknown
+    data: unknown,
 ): Promise<HandlerResponse> {
     const handler = handlers[messageType];
 
@@ -34,7 +34,7 @@ export async function dispatchHandler(
         throw new Error(`No handler registered for message type: ${messageType}`);
     }
 
-    return await handler(context, data);
+    return handler(context, data);
 }
 
 /**

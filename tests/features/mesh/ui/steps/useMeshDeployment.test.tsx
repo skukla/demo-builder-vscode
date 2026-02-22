@@ -70,7 +70,7 @@ describe('useMeshDeployment', () => {
                 status: 'deploying',
             });
 
-            const { result } = renderHook(() =>
+            const { result: _result } = renderHook(() =>
                 useMeshDeployment({ hasMeshComponent: true, workspaceId: 'ws-123' })
             );
 

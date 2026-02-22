@@ -13,7 +13,6 @@
  * which dynamically renders fields based on the selected stack's backend component.
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
 import {
     Button,
     Checkbox,
@@ -29,13 +28,14 @@ import {
 // Note: Heading is still used for the "Create New Site" subsection (level={3})
 import Add from '@spectrum-icons/workflow/Add';
 import Alert from '@spectrum-icons/workflow/Alert';
+import React, { useEffect, useState, useCallback } from 'react';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
-import { StatusSection } from '@/core/ui/components/wizard';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { StatusSection } from '@/core/ui/components/wizard';
 import { useSelectionStep } from '@/core/ui/hooks';
 import { normalizeIdentifierName } from '@/core/validation/normalizers';
 import type { DaLiveSiteItem } from '@/types/webview';
@@ -106,6 +106,54 @@ function ContentConfigurationSummary({
 }
 
 /**
+ * Renders the left-column content for early return states (loading, error, empty).
+ * Returns null when none of the early states apply.
+ */
+function renderFeedbackState(
+    showLoading: boolean,
+    isLoading: boolean,
+    hasLoadedOnce: boolean,
+    error: string | null | undefined,
+    sites: DaLiveSiteItem[],
+    isCreatingNew: boolean,
+    daLiveOrg: string,
+    refresh: () => void,
+    handleCreateNew: () => void,
+): React.ReactElement | null {
+    if (showLoading || (isLoading && !hasLoadedOnce)) {
+        return (
+            <CenteredFeedbackContainer>
+                <LoadingDisplay size="L" message="Loading sites..." subMessage={`Fetching sites from ${daLiveOrg}`} />
+            </CenteredFeedbackContainer>
+        );
+    }
+
+    if (error && !isLoading) {
+        return (
+            <StatusDisplay
+                variant="error"
+                title="Error Loading Sites"
+                message={error}
+                actions={[{ label: 'Try Again', onPress: refresh, variant: 'accent' }]}
+            />
+        );
+    }
+
+    if (sites.length === 0 && !isLoading && !isCreatingNew) {
+        return (
+            <EmptyState title="No Sites Found" description={`No existing sites found in ${daLiveOrg}.`}>
+                <Button variant="accent" onPress={handleCreateNew}>
+                    <Add size="S" />
+                    <Text>Create New Site</Text>
+                </Button>
+            </EmptyState>
+        );
+    }
+
+    return null;
+}
+
+/**
  * DataSourceConfigStep Component
  *
  * Select or create a DA.live site for your EDS project.
@@ -149,21 +197,18 @@ export function DataSourceConfigStep({
         selectedItem: selectedSite,
         searchFilterKey: 'daLiveSiteSearchFilter',
         autoSelectSingle: false,
-        autoLoad: !!daLiveOrg,  // Auto-load when org is available
+        autoLoad: !!daLiveOrg,
         searchFields: ['name'],
         onSelect: (site) => {
             setIsCreatingNew(false);
             updateEdsConfig({
                 selectedSite: site,
                 daLiveSite: site.name,
-                resetSiteContent: false, // Reset checkbox when selecting a site
+                resetSiteContent: false,
             });
         },
     });
 
-    /**
-     * Update EDS config state
-     */
     const updateEdsConfig = useCallback((updates: Partial<typeof edsConfig>) => {
         updateState({
             edsConfig: {
@@ -179,54 +224,32 @@ export function DataSourceConfigStep({
         });
     }, [edsConfig, updateState]);
 
-    /**
-     * Handle creating a new site
-     */
     const handleCreateNew = useCallback(() => {
         setIsCreatingNew(true);
-        updateEdsConfig({
-            selectedSite: undefined,
-            daLiveSite: '',
-        });
+        updateEdsConfig({ selectedSite: undefined, daLiveSite: '' });
     }, [updateEdsConfig]);
 
-    /**
-     * Cancel creating new site (go back to list)
-     */
     const handleCancelNew = useCallback(() => {
         setIsCreatingNew(false);
         setSiteNameError(undefined);
     }, []);
 
-    /**
-     * Handle site name change (for new site)
-     * Uses shared normalizer for consistent identifier formatting
-     */
     const handleSiteNameChange = useCallback((value: string) => {
         const normalizedValue = normalizeIdentifierName(value);
         setSiteNameError(undefined);
         updateEdsConfig({ daLiveSite: normalizedValue });
     }, [updateEdsConfig]);
 
-    /**
-     * Validate site name on blur
-     */
     const handleSiteNameBlur = useCallback(() => {
         if (daLiveSite && !isValidSiteName(daLiveSite)) {
             setSiteNameError('Must start with a letter and contain only lowercase letters, numbers, and hyphens');
         }
     }, [daLiveSite]);
 
-    /**
-     * Handle reset site content checkbox change
-     */
     const handleResetSiteContentChange = useCallback((isSelected: boolean) => {
         updateEdsConfig({ resetSiteContent: isSelected });
     }, [updateEdsConfig]);
 
-    /**
-     * Handle list selection change
-     */
     const handleSelectionChange = useCallback((keys: 'all' | Set<React.Key>) => {
         if (keys === 'all') return;
         const itemId = Array.from(keys)[0] as string;
@@ -236,103 +259,37 @@ export function DataSourceConfigStep({
         }
     }, [sites, selectItem]);
 
-    // Validate pre-selected site exists in loaded sites (for import flow)
-    // If the imported site no longer exists, clear the selection
     useEffect(() => {
         if (!isCreatingNew && selectedSite && hasLoadedOnce && sites.length > 0) {
             const siteExists = sites.some(site => site.id === selectedSite.id);
             if (!siteExists) {
-                // Pre-selected site doesn't exist - clear selection
-                updateEdsConfig({
-                    selectedSite: undefined,
-                    daLiveSite: '',
-                });
+                updateEdsConfig({ selectedSite: undefined, daLiveSite: '' });
             }
         }
     }, [hasLoadedOnce, sites, selectedSite, isCreatingNew, updateEdsConfig]);
 
-    // Update canProceed based on site selection
-    // Also disable while site list is loading
     useEffect(() => {
         const isNewValid = isCreatingNew && daLiveSite.trim() !== '' && isValidSiteName(daLiveSite);
         const isExistingValid = !isCreatingNew && !!selectedSite && !isLoading;
         setCanProceed(isNewValid || isExistingValid);
     }, [isCreatingNew, daLiveSite, selectedSite, isLoading, setCanProceed]);
 
-    // Loading state
-    if (showLoading || (isLoading && !hasLoadedOnce)) {
-        return (
-            <TwoColumnLayout
-                leftContent={
-                    <CenteredFeedbackContainer>
-                        <LoadingDisplay
-                            size="L"
-                            message="Loading sites..."
-                            subMessage={`Fetching sites from ${daLiveOrg}`}
-                        />
-                    </CenteredFeedbackContainer>
-                }
-                rightContent={
-                    <ContentConfigurationSummary
-                        daLiveOrg={daLiveOrg}
-                        selectedSite={selectedSite}
-                        isCreatingNew={isCreatingNew}
-                        newSiteName={daLiveSite}
-                    />
-                }
-            />
-        );
-    }
+    // Shared right-column summary
+    const summaryContent = (
+        <ContentConfigurationSummary
+            daLiveOrg={daLiveOrg}
+            selectedSite={selectedSite}
+            isCreatingNew={isCreatingNew}
+            newSiteName={daLiveSite}
+        />
+    );
 
-    // Error state
-    if (error && !isLoading) {
-        return (
-            <TwoColumnLayout
-                leftContent={
-                    <StatusDisplay
-                        variant="error"
-                        title="Error Loading Sites"
-                        message={error}
-                        actions={[{ label: 'Try Again', onPress: refresh, variant: 'accent' }]}
-                    />
-                }
-                rightContent={
-                    <ContentConfigurationSummary
-                        daLiveOrg={daLiveOrg}
-                        selectedSite={selectedSite}
-                        isCreatingNew={isCreatingNew}
-                        newSiteName={daLiveSite}
-                    />
-                }
-            />
-        );
-    }
-
-    // Empty state
-    if (sites.length === 0 && !isLoading && !isCreatingNew) {
-        return (
-            <TwoColumnLayout
-                leftContent={
-                    <EmptyState
-                        title="No Sites Found"
-                        description={`No existing sites found in ${daLiveOrg}.`}
-                    >
-                        <Button variant="accent" onPress={handleCreateNew}>
-                            <Add size="S" />
-                            <Text>Create New Site</Text>
-                        </Button>
-                    </EmptyState>
-                }
-                rightContent={
-                    <ContentConfigurationSummary
-                        daLiveOrg={daLiveOrg}
-                        selectedSite={selectedSite}
-                        isCreatingNew={isCreatingNew}
-                        newSiteName={daLiveSite}
-                    />
-                }
-            />
-        );
+    // Early return for loading/error/empty states
+    const feedbackContent = renderFeedbackState(
+        showLoading, isLoading, hasLoadedOnce, error, sites, isCreatingNew, daLiveOrg, refresh, handleCreateNew,
+    );
+    if (feedbackContent) {
+        return <TwoColumnLayout leftContent={feedbackContent} rightContent={summaryContent} />;
     }
 
     return (
@@ -341,7 +298,6 @@ export function DataSourceConfigStep({
             {/* Site Selection */}
             {!isCreatingNew && (
                 <>
-                    {/* Search + New button row */}
                     <Flex alignItems="start" gap="size-200" marginBottom="size-100">
                         <View flex>
                             <SearchHeader
@@ -365,7 +321,6 @@ export function DataSourceConfigStep({
                         </Button>
                     </Flex>
 
-                    {/* Site list */}
                     <ListView
                         items={filteredSites}
                         selectionMode="single"
@@ -387,7 +342,6 @@ export function DataSourceConfigStep({
                         )}
                     </ListView>
 
-                    {/* Reset site content option - only show when site is selected and not loading */}
                     {selectedSite && !showLoading && (
                         <Flex direction="column" gap="size-100" marginTop="size-300">
                             <Checkbox
@@ -397,7 +351,6 @@ export function DataSourceConfigStep({
                                 Reset content (replaces all content)
                             </Checkbox>
 
-                            {/* Warning notice - fixed height container prevents layout jump */}
                             <View
                                 marginStart="size-300"
                                 minHeight="size-250"
@@ -417,7 +370,6 @@ export function DataSourceConfigStep({
                         </Flex>
                     )}
 
-                    {/* No results */}
                     {searchQuery && filteredSites.length === 0 && (
                         <Flex justifyContent="center" UNSAFE_className="centered-padding-md">
                             <Text UNSAFE_className="description-text">
@@ -459,14 +411,7 @@ export function DataSourceConfigStep({
                 </View>
             )}
             </>}
-            rightContent={
-                <ContentConfigurationSummary
-                    daLiveOrg={daLiveOrg}
-                    selectedSite={selectedSite}
-                    isCreatingNew={isCreatingNew}
-                    newSiteName={daLiveSite}
-                />
-            }
+            rightContent={summaryContent}
         />
     );
 }

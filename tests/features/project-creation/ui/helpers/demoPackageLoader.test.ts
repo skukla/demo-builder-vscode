@@ -19,7 +19,7 @@ import {
     getAvailableStacksForPackage,
     getAllStorefronts,
 } from '@/features/project-creation/ui/helpers/demoPackageLoader';
-import type { DemoPackage, Storefront } from '@/types/demoPackages';
+// Types DemoPackage and Storefront are used implicitly via loadDemoPackages return types
 
 describe('demoPackageLoader', () => {
     describe('loadDemoPackages', () => {

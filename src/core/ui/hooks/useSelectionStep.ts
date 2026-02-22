@@ -5,6 +5,68 @@ import { ErrorCode } from '@/types/errorCodes';
 import { WizardState } from '@/types/webview';
 
 /**
+ * Check if a selected item needs syncing with fresh data
+ * Handles hydration (ID-only imports) and refresh (external rename)
+ */
+function needsSelectedItemSync<T extends { id: string }>(
+  selectedItem: T,
+  matchingItem: T,
+): boolean {
+  const selectedTitle = 'title' in selectedItem ? selectedItem.title : undefined;
+  const matchingTitle = 'title' in matchingItem ? matchingItem.title : undefined;
+  const selectedName = 'name' in selectedItem ? (selectedItem as { name?: string }).name : undefined;
+  const matchingName = 'name' in matchingItem ? (matchingItem as { name?: string }).name : undefined;
+
+  const titleChanged = matchingTitle && selectedTitle !== matchingTitle;
+  const nameChanged = matchingName && selectedName !== matchingName;
+  const needsHydration = !selectedTitle && matchingTitle;
+
+  return !!(titleChanged || nameChanged || needsHydration);
+}
+
+/**
+ * Handle auto-selection logic for received items
+ */
+function handleAutoSelect<T extends { id: string }>(
+  data: T[],
+  selectedItem: T | undefined,
+  autoSelectSingle: boolean,
+  autoSelectCustom: ((items: T[]) => T | undefined) | undefined,
+  onSelect: ((item: T) => void) | undefined,
+): void {
+  if (!onSelect || selectedItem?.id) return;
+
+  // Auto-select if only one item
+  if (autoSelectSingle && data.length === 1) {
+    onSelect(data[0]);
+    return;
+  }
+
+  // Auto-select using custom logic (if multiple items)
+  if (!autoSelectCustom || data.length <= 1) return;
+  const item = autoSelectCustom(data);
+  if (item) {
+    onSelect(item);
+  }
+}
+
+/**
+ * Sync selected item with fresh data (hydration & rename detection)
+ */
+function syncSelectedItem<T extends { id: string }>(
+  data: T[],
+  selectedItem: T | undefined,
+  onSelect: ((item: T) => void) | undefined,
+): void {
+  if (!selectedItem?.id || !onSelect) return;
+
+  const matchingItem = data.find(item => item.id === selectedItem.id);
+  if (matchingItem && needsSelectedItemSync(selectedItem, matchingItem)) {
+    onSelect(matchingItem);
+  }
+}
+
+/**
  * Configuration options for the selection step hook
  *
  * @template T - Item type that must have an `id` property
@@ -163,8 +225,8 @@ export function useSelectionStep<T extends { id: string }>(
     validateBeforeLoad,
   } = options;
 
-  // Get cached items from wizard state
-  const items = (state[cacheKey] as T[]) || [];
+  // Get cached items from wizard state (memoized to prevent useMemo deps changing on every render)
+  const items = useMemo(() => (state[cacheKey] as T[]) || [], [state, cacheKey]);
 
   // Local state
   const [isLoading, setIsLoading] = useState(!state[cacheKey]); // Only load if cache is empty
@@ -236,44 +298,9 @@ export function useSelectionStep<T extends { id: string }>(
         setError(null);
         setErrorCode(null);
 
-        // Auto-select if only one item
-        if (autoSelectSingle && data.length === 1 && !selectedItem?.id) {
-          const item = data[0] as T;
-          if (onSelect) {
-            onSelect(item);
-          }
-        }
-
-        // Auto-select using custom logic (if multiple items)
-        if (autoSelectCustom && !selectedItem?.id && data.length > 1) {
-          const item = autoSelectCustom(data as T[]);
-          if (item && onSelect) {
-            onSelect(item);
-          }
-        }
-
-        // Sync selected item with fresh data from loaded list
-        // This handles two cases:
-        // 1. Hydration: imported settings only have ID, populate title/name/description
-        // 2. Refresh: project was renamed externally, sync the new name
-        if (selectedItem?.id && onSelect) {
-          const matchingItem = (data as T[]).find(item => item.id === selectedItem.id);
-          if (matchingItem) {
-            // Check if fresh data differs from selected item (name/title changed externally)
-            const selectedTitle = 'title' in selectedItem ? selectedItem.title : undefined;
-            const matchingTitle = 'title' in matchingItem ? matchingItem.title : undefined;
-            const selectedName = 'name' in selectedItem ? (selectedItem as { name?: string }).name : undefined;
-            const matchingName = 'name' in matchingItem ? (matchingItem as { name?: string }).name : undefined;
-
-            const titleChanged = matchingTitle && selectedTitle !== matchingTitle;
-            const nameChanged = matchingName && selectedName !== matchingName;
-            const needsHydration = !selectedTitle && matchingTitle;
-
-            if (titleChanged || nameChanged || needsHydration) {
-              onSelect(matchingItem);
-            }
-          }
-        }
+        const typedData = data as T[];
+        handleAutoSelect(typedData, selectedItem, autoSelectSingle, autoSelectCustom, onSelect);
+        syncSelectedItem(typedData, selectedItem, onSelect);
       } else if (data && typeof data === 'object' && 'error' in data) {
         // Backend sends structured error (including timeout)
         const errorData = data as { error: string; code?: ErrorCode };

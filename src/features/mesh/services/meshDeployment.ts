@@ -84,6 +84,51 @@ async function buildMeshComponent(
 }
 
 /**
+ * Validate mesh.json exists and is valid JSON
+ */
+async function validateMeshConfig(
+    componentPath: string,
+    logger: Logger,
+    onProgress?: (message: string, subMessage?: string) => void,
+): Promise<string> {
+    const meshConfigPath = path.join(componentPath, 'mesh.json');
+    await fsPromises.access(meshConfigPath);
+
+    onProgress?.('Reading mesh configuration...', '');
+
+    const meshConfigContent = await fsPromises.readFile(meshConfigPath, 'utf-8');
+    const config = parseJSON<Record<string, unknown>>(meshConfigContent);
+    if (!config) {
+        throw new Error('Invalid mesh.json file: Invalid JSON');
+    }
+
+    logger.debug(`[Mesh Deployment] Using config from: ${meshConfigPath}`);
+    return meshConfigPath;
+}
+
+/**
+ * Handle a failed deploy command by formatting and throwing a meaningful error
+ */
+async function handleDeployFailure(
+    deployResult: { code: number | null; stdout?: string; stderr?: string },
+    logger: Logger,
+): Promise<never> {
+    logger.debug('[Mesh Deployment] Command failed', {
+        code: deployResult.code,
+        stdoutLength: deployResult.stdout?.length || 0,
+        stderrLength: deployResult.stderr?.length || 0,
+        stdout: deployResult.stdout?.substring(0, 500),
+        stderr: deployResult.stderr?.substring(0, 500),
+    });
+
+    const errorMsg = deployResult.stderr?.trim() || deployResult.stdout?.trim() ||
+        `Mesh deployment command failed with exit code ${deployResult.code}`;
+    const { formatAdobeCliError } = await import('@/features/mesh/utils/errorFormatter');
+    const formattedError = formatAdobeCliError(errorMsg);
+    throw new Error(formattedError || `Mesh deployment failed with exit code ${deployResult.code}`);
+}
+
+/**
  * Deploy mesh component from cloned repository
  * Builds mesh.json (if needed), then deploys it to Adobe I/O
  *
@@ -104,48 +149,29 @@ export async function deployMeshComponent(
         // Build mesh component (installs deps, generates mesh.json + resolvers)
         await buildMeshComponent(componentPath, commandManager, logger, onProgress);
 
-        // Check for mesh.json in component directory
-        const meshConfigPath = path.join(componentPath, 'mesh.json');
-        await fsPromises.access(meshConfigPath);
-
-        onProgress?.('Reading mesh configuration...', '');
-
-        // Validate mesh config exists and is valid JSON
-        const meshConfigContent = await fsPromises.readFile(meshConfigPath, 'utf-8');
-        try {
-            const config = parseJSON<Record<string, unknown>>(meshConfigContent);
-            if (!config) {
-                throw new Error('Invalid JSON');
-            }
-        } catch (parseError) {
-            throw new Error('Invalid mesh.json file: ' + (parseError as Error).message);
-        }
-
-        // Use the original mesh.json path directly (not a temp copy)
-        // This ensures relative paths in mesh.json (like build/resolvers/*.js) resolve correctly
-        logger.debug(`[Mesh Deployment] Using config from: ${meshConfigPath}`);
+        // Validate and get mesh config path
+        const meshConfigPath = await validateMeshConfig(componentPath, logger, onProgress);
 
         // Determine deployment strategy based on whether mesh already exists
-        // If mesh exists (detected in wizard or from previous deployment), use update instead of create
         const meshCommand: 'create' | 'update' = existingMeshId ? 'update' : 'create';
-        
+
         if (existingMeshId) {
             logger.debug(`[Mesh Deployment] Existing mesh detected (${existingMeshId}), using update strategy`);
         } else {
             logger.debug('[Mesh Deployment] No existing mesh, using create strategy');
         }
-        
+
         onProgress?.(
-            'Deploying API Mesh...', 
-            existingMeshId ? 'Updating existing mesh' : 'Creating mesh'
+            'Deploying API Mesh...',
+            existingMeshId ? 'Updating existing mesh' : 'Creating mesh',
         );
 
         const deployResult = await commandManager.execute(
             `aio api-mesh:${meshCommand} "${meshConfigPath}" --autoConfirmAction`,
             {
-                cwd: componentPath, // Run from mesh component directory (where .env file is)
+                cwd: componentPath,
                 streaming: true,
-                shell: true, // Required for command string with arguments and quoted paths
+                shell: true,
                 timeout: TIMEOUTS.LONG,
                 onOutput: (data: string) => {
                     const output = data.toLowerCase();
@@ -166,22 +192,7 @@ export async function deployMeshComponent(
         );
 
         if (deployResult.code !== 0) {
-            // Log full result for debugging
-            logger.debug('[Mesh Deployment] Command failed', {
-                code: deployResult.code,
-                stdoutLength: deployResult.stdout?.length || 0,
-                stderrLength: deployResult.stderr?.length || 0,
-                stdout: deployResult.stdout?.substring(0, 500),
-                stderr: deployResult.stderr?.substring(0, 500),
-            });
-
-            // Use .trim() to handle whitespace-only output (e.g., "\n")
-            const errorMsg = deployResult.stderr?.trim() || deployResult.stdout?.trim() || 
-                `Mesh deployment command failed with exit code ${deployResult.code}`;
-            const { formatAdobeCliError } = await import('@/features/mesh/utils/errorFormatter');
-            const formattedError = formatAdobeCliError(errorMsg);
-            // Ensure we always have a meaningful error message
-            throw new Error(formattedError || `Mesh deployment failed with exit code ${deployResult.code}`);
+            await handleDeployFailure(deployResult, logger);
         }
 
         logger.debug(`[Mesh Deployment] ${meshCommand} command completed, verifying deployment...`);
@@ -190,13 +201,8 @@ export async function deployMeshComponent(
         const { waitForMeshDeployment } = await import('./meshDeploymentVerifier');
 
         const verificationResult = await waitForMeshDeployment({
-            onProgress: (_attempt, _maxRetries, _elapsedSeconds) => {
-                // Don't show individual mesh timing during project creation
-                // The overall "This could take up to 3 minutes" is already shown
-                onProgress?.(
-                    'Verifying deployment...',
-                    'Checking deployment status...',
-                );
+            onProgress: () => {
+                onProgress?.('Verifying deployment...', 'Checking deployment status...');
             },
             logger: logger,
         });

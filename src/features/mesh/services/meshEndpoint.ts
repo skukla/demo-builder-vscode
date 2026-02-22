@@ -41,6 +41,57 @@ async function checkApiMeshPlugin(
 }
 
 /**
+ * Fetch mesh endpoint from aio api-mesh:describe command output
+ */
+async function fetchEndpointFromDescribe(
+    commandManager: CommandExecutor,
+    logger: Logger,
+    debugLogger: Logger,
+): Promise<string | undefined> {
+    try {
+        debugLogger.debug('[API Mesh] Fetching endpoint via describe command');
+        const result = await commandManager.execute('aio api-mesh:describe', {
+            timeout: TIMEOUTS.NORMAL,
+            configureTelemetry: false,
+            useNodeVersion: getMeshNodeVersion(),
+            enhancePath: true,
+        });
+
+        if (result.code !== 0) return undefined;
+
+        debugLogger.debug(`[API Mesh] describe stdout (${result.stdout.length} chars): ${result.stdout.substring(0, 500)}`);
+
+        const jsonMatch = /\{[\s\S]*\}/.exec(result.stdout);
+        if (!jsonMatch) {
+            debugLogger.debug('[API Mesh] No JSON object found in describe output');
+            return undefined;
+        }
+
+        debugLogger.debug(`[API Mesh] JSON match found: ${jsonMatch[0].substring(0, 300)}`);
+        const meshData = parseJSON<{ meshEndpoint?: string; endpoint?: string }>(jsonMatch[0]);
+        if (!meshData) {
+            logger.warn('[Mesh] Failed to parse mesh data from describe');
+            return undefined;
+        }
+
+        debugLogger.debug(`[API Mesh] Parsed meshData keys: ${Object.keys(meshData).join(', ')}`);
+        debugLogger.debug(`[API Mesh] meshEndpoint: ${meshData.meshEndpoint}, endpoint: ${meshData.endpoint}`);
+
+        const endpoint = meshData.meshEndpoint || meshData.endpoint;
+        if (endpoint) {
+            logger.debug('[API Mesh] Retrieved endpoint from describe:', endpoint);
+            return endpoint;
+        }
+
+        debugLogger.debug('[API Mesh] No endpoint field found in parsed data');
+        return undefined;
+    } catch {
+        debugLogger.debug('[API Mesh] Describe failed, using constructed fallback');
+        return undefined;
+    }
+}
+
+/**
  * Get mesh endpoint - single source of truth approach:
  * 1. Use cached endpoint if available (instant)
  * 2. Call aio api-mesh:describe (official Adobe method, ~3s)
@@ -73,48 +124,9 @@ export async function getEndpoint(
     const hasPlugin = await checkApiMeshPlugin(commandManager, debugLogger);
 
     if (hasPlugin) {
-        // Call describe command (official Adobe method)
-        try {
-            debugLogger.debug('[API Mesh] Fetching endpoint via describe command');
-            const result = await commandManager.execute(
-                'aio api-mesh:describe',
-                {
-                    timeout: TIMEOUTS.NORMAL,
-                    configureTelemetry: false,
-                    useNodeVersion: getMeshNodeVersion(),
-                    enhancePath: true,
-                },
-            );
-
-            if (result.code === 0) {
-                // Debug: Log raw describe output for troubleshooting
-                debugLogger.debug(`[API Mesh] describe stdout (${result.stdout.length} chars): ${result.stdout.substring(0, 500)}`);
-                
-                // Parse JSON response
-                const jsonMatch = /\{[\s\S]*\}/.exec(result.stdout);
-                if (jsonMatch) {
-                    debugLogger.debug(`[API Mesh] JSON match found: ${jsonMatch[0].substring(0, 300)}`);
-                    const meshData = parseJSON<{ meshEndpoint?: string; endpoint?: string }>(jsonMatch[0]);
-                    if (!meshData) {
-                        logger.warn('[Mesh] Failed to parse mesh data from describe');
-                        // Continue to fallback
-                    } else {
-                        debugLogger.debug(`[API Mesh] Parsed meshData keys: ${Object.keys(meshData).join(', ')}`);
-                        debugLogger.debug(`[API Mesh] meshEndpoint: ${meshData.meshEndpoint}, endpoint: ${meshData.endpoint}`);
-                        const endpoint = meshData.meshEndpoint || meshData.endpoint;
-                        if (endpoint) {
-                            logger.debug('[API Mesh] Retrieved endpoint from describe:', endpoint);
-                            return endpoint;
-                        } else {
-                            debugLogger.debug('[API Mesh] No endpoint field found in parsed data');
-                        }
-                    }
-                } else {
-                    debugLogger.debug('[API Mesh] No JSON object found in describe output');
-                }
-            }
-        } catch {
-            debugLogger.debug('[API Mesh] Describe failed, using constructed fallback');
+        const describeEndpoint = await fetchEndpointFromDescribe(commandManager, logger, debugLogger);
+        if (describeEndpoint) {
+            return describeEndpoint;
         }
     } else {
         debugLogger.debug('[API Mesh] Plugin not installed, using constructed endpoint');

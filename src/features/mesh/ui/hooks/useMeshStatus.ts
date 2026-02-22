@@ -89,7 +89,7 @@ export function useMeshStatus(): UseMeshStatusReturn {
                 setStatus(meshData.status);
                 setMessage(meshData.message);
                 setEndpoint(meshData.endpoint);
-            }
+            },
         );
 
         return unsubscribe;

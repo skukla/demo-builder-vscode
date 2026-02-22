@@ -19,10 +19,10 @@
  * />
  */
 
-import React, { useState } from 'react';
 import { Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Alert from '@spectrum-icons/workflow/Alert';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import React, { useState } from 'react';
 
 /** Props for DaLiveServiceCard component */
 export interface DaLiveServiceCardProps {

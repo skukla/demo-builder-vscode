@@ -6,7 +6,7 @@
  */
 
 import { ProcessCleanup } from '@/core/shell/processCleanup';
-import { ChildProcess, spawn } from 'child_process';
+import { spawn } from 'child_process';
 
 // Mock logger
 jest.mock('@/core/logging/debugLogger', () => ({

@@ -7,7 +7,6 @@
 
 import { DisposableStore } from '@/core/utils/disposableStore';
 import type * as vscode from 'vscode';
-import { getLogger } from '@/core/logging';
 
 // Create a mock logger instance that persists across calls
 const mockLogger = {

@@ -23,7 +23,6 @@ import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
 import * as fs from 'fs/promises';
-import * as path from 'path';
 
 // Mock dependencies
 jest.mock('fs/promises');
@@ -31,9 +30,9 @@ jest.mock('@/core/di/serviceLocator');
 jest.mock('@/features/components/services/ComponentRegistryManager');
 
 describe('ComponentUpdater - Env Variable Migration', () => {
-    let componentUpdater: ComponentUpdater;
+    let _componentUpdater: ComponentUpdater;
     let mockLogger: Logger;
-    let mockProject: Project;
+    let _mockProject: Project;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -45,7 +44,7 @@ describe('ComponentUpdater - Env Variable Migration', () => {
             error: jest.fn(),
         } as unknown as Logger;
 
-        mockProject = {
+        _mockProject = {
             name: 'test-project',
             path: '/test/project',
             componentInstances: {
@@ -58,7 +57,7 @@ describe('ComponentUpdater - Env Variable Migration', () => {
             },
         } as Project;
 
-        componentUpdater = new ComponentUpdater(mockLogger, '/extension/path');
+        _componentUpdater = new ComponentUpdater(mockLogger, '/extension/path');
     });
 
     describe('Variable Name Changes Between Versions', () => {
@@ -107,18 +106,18 @@ ADOBE_CATALOG_API_KEY=
 
         it('[DESIRED BEHAVIOR] should detect and migrate renamed variables', async () => {
             // Given: Migration mapping (not yet implemented)
-            const variableMigrations = new Map([
+            const _variableMigrations = new Map([
                 ['CATALOG_SERVICE_ENDPOINT', 'ADOBE_CATALOG_SERVICE_ENDPOINT'],
             ]);
 
             // And: Old .env with old variable name
-            const oldEnvContent = `
+            const _oldEnvContent = `
 CATALOG_SERVICE_ENDPOINT=https://catalog-service.adobe.io/graphql
 ADOBE_CATALOG_API_KEY=secret-key-123
             `.trim();
 
             // And: New component expects new variable name
-            const newEnvExampleContent = `
+            const _newEnvExampleContent = `
 ADOBE_CATALOG_SERVICE_ENDPOINT=https://default-endpoint.adobe.io/graphql
 ADOBE_CATALOG_API_KEY=
             `.trim();
@@ -142,7 +141,7 @@ ADOBE_CATALOG_API_KEY=
             //   endpoint: "{env.ADOBE_CATALOG_SERVICE_ENDPOINT || env.CATALOG_SERVICE_ENDPOINT}"
             
             // And: Old .env with old variable name
-            const oldEnvContent = `
+            const _oldEnvContent = `
 CATALOG_SERVICE_ENDPOINT=https://catalog-service.adobe.io/graphql
             `.trim();
 
@@ -160,7 +159,7 @@ CATALOG_SERVICE_ENDPOINT=https://catalog-service.adobe.io/graphql
         it('should reproduce the actual deployment failure', async () => {
             // Given: Project with mesh v1.0.0-beta.2
             // - Used CATALOG_SERVICE_ENDPOINT (new naming convention)
-            const oldEnvContent = `
+            const _oldEnvContent = `
 ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://commerce.adobe.io/graphql
 ADOBE_COMMERCE_URL=https://commerce.adobe.io
 CATALOG_SERVICE_ENDPOINT=https://catalog-service-sandbox.adobe.io/graphql
@@ -194,13 +193,13 @@ ADOBE_CATALOG_API_KEY=6534c8452daa49ec93bf1595e2082245
     describe('Post-Update Validation (Missing Feature)', () => {
         it('should validate required env vars exist after update', async () => {
             // Given: Component declares required env vars in components.json
-            const requiredEnvVars = [
+            const _requiredEnvVars = [
                 'ADOBE_CATALOG_SERVICE_ENDPOINT',
                 'ADOBE_CATALOG_API_KEY',
             ];
 
             // And: .env file after update
-            const mergedEnvContent = `
+            const _mergedEnvContent = `
 CATALOG_SERVICE_ENDPOINT=https://catalog-service.adobe.io/graphql
 ADOBE_CATALOG_API_KEY=secret-key
             `.trim();

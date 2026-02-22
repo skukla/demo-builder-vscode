@@ -21,11 +21,11 @@ import {
 describe('useFocusTrap - Keyboard Handling', () => {
   let container: HTMLDivElement;
   let button1: HTMLButtonElement;
-  let button2: HTMLButtonElement;
+  let _button2: HTMLButtonElement;
   let button3: HTMLButtonElement;
 
   beforeEach(() => {
-    ({ container, button1, button2, button3 } = createTestContainer());
+    ({ container, button1, button2: _button2, button3 } = createTestContainer());
   });
 
   afterEach(() => {
@@ -40,7 +40,7 @@ describe('useFocusTrap - Keyboard Handling', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Force effect to re-run with container now set by toggling enabled
@@ -74,7 +74,7 @@ describe('useFocusTrap - Keyboard Handling', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Force effect to re-run with container now set by toggling enabled
@@ -100,7 +100,7 @@ describe('useFocusTrap - Keyboard Handling', () => {
     it('ignores non-Tab keys', () => {
       const { result } = renderHook(() => useFocusTrap({ enabled: true }));
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       const enterEvent = new KeyboardEvent('keydown', {
@@ -122,7 +122,7 @@ describe('useFocusTrap - Keyboard Handling', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Force effect to re-run with container now set by toggling enabled
@@ -157,7 +157,7 @@ describe('useFocusTrap - Keyboard Handling', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-ignore - mocking ref
+      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Force effect to re-run with container now set by toggling enabled

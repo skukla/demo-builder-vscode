@@ -2,14 +2,14 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
+import { ComponentRepositoryResolver } from './componentRepositoryResolver';
 import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
 import { ServiceLocator } from '@/core/di';
-import type { Logger } from '@/types/logger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project, SubmoduleConfig } from '@/types';
+import type { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { getComponentIds, getComponentVersion } from '@/types/typeGuards';
-import { ComponentRepositoryResolver } from './componentRepositoryResolver';
 
 export type { UpdateCheckResult };
 
@@ -152,7 +152,7 @@ export class UpdateManager {
                 if (!componentProjectMap.has(componentId)) {
                     componentProjectMap.set(componentId, []);
                 }
-                componentProjectMap.get(componentId)!.push({ project, currentVersion });
+                componentProjectMap.get(componentId)?.push({ project, currentVersion });
             }
         }
 

@@ -6,9 +6,9 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
+import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
 import type { Project } from '@/types/base';
 import { getComponentInstanceValues } from '@/types/typeGuards';
-import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
 
 /**
  * Component display name mappings

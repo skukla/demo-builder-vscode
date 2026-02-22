@@ -68,7 +68,7 @@ describe('Mock Structure Validation', () => {
             // Check frontends have name and description
             const frontends = mockRawRegistry.frontends;
             if (frontends) {
-                Object.entries(frontends).forEach(([id, component]) => {
+                Object.values(frontends).forEach((component) => {
                     expect(component.name).toBeDefined();
                     expect(component.description).toBeDefined();
                     // Note: nodeVersion is optional - some components (EDS, PaaS) don't need Node
@@ -79,7 +79,7 @@ describe('Mock Structure Validation', () => {
         it('should have backends with name defined', () => {
             const backends = mockRawRegistry.backends;
             if (backends) {
-                Object.entries(backends).forEach(([id, component]) => {
+                Object.values(backends).forEach((component) => {
                     expect(component.name).toBeDefined();
                     // Note: nodeVersion is optional - PaaS is a remote service without Node requirement
                 });

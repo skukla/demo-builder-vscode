@@ -64,55 +64,14 @@ export interface SearchHeaderProps {
     action?: React.ReactNode;
 }
 
-/**
- * SearchHeader - Reusable search/refresh/count bar
- *
- * Extracts the common header pattern from SearchableList for reuse
- * in both ListView-based and Grid-based views.
- *
- * @example
- * ```tsx
- * <SearchHeader
- *   searchQuery={query}
- *   onSearchQueryChange={setQuery}
- *   totalCount={projects.length}
- *   filteredCount={filteredProjects.length}
- *   itemNoun="project"
- *   onRefresh={handleRefresh}
- *   isRefreshing={isLoading}
- *   hasLoadedOnce={hasLoaded}
- * />
- * ```
- */
-export const SearchHeader: React.FC<SearchHeaderProps> = ({
-    searchQuery,
-    onSearchQueryChange,
-    searchPlaceholder = 'Type to filter...',
-    searchThreshold = 5,
-    totalCount,
-    filteredCount,
-    itemNoun = 'item',
-    itemNounPlural,
-    onRefresh,
-    isRefreshing = false,
-    refreshAriaLabel = 'Refresh list',
-    viewMode,
-    onViewModeChange,
-    hasLoadedOnce,
-    autoFocus = false,
-    alwaysShowCount = false,
-    action,
-}) => {
-    const showSearch = totalCount > searchThreshold;
-    const showCount = hasLoadedOnce && (alwaysShowCount || totalCount > 0);
-    const showViewToggle = viewMode !== undefined && onViewModeChange !== undefined;
-    // Use provided plural or default to simple +s
-    const nounPlural = itemNounPlural || `${itemNoun}s`;
-    const displayNoun = totalCount === 1 ? itemNoun : nounPlural;
-    const isFiltering = searchQuery.trim().length > 0;
-
-    // Refresh button component (reused in both layouts)
-    const RefreshButton = onRefresh ? (
+/** Render refresh button */
+function renderRefreshButton(
+    onRefresh: (() => void) | undefined,
+    isRefreshing: boolean,
+    refreshAriaLabel: string,
+): React.ReactNode {
+    if (!onRefresh) return null;
+    return (
         <ActionButton
             isQuiet
             onPress={onRefresh}
@@ -122,10 +81,16 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
         >
             {isRefreshing ? <Spinner size="S" /> : <Refresh />}
         </ActionButton>
-    ) : null;
+    );
+}
 
-    // View toggle buttons (cards/rows)
-    const ViewToggle = showViewToggle ? (
+/** Render view mode toggle buttons */
+function renderViewToggle(
+    viewMode: ViewMode | undefined,
+    onViewModeChange: ((mode: ViewMode) => void) | undefined,
+): React.ReactNode {
+    if (viewMode === undefined || onViewModeChange === undefined) return null;
+    return (
         <Flex gap="size-50">
             <TooltipTrigger delay={300}>
                 <ActionButton
@@ -160,20 +125,93 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                 <Tooltip>List view</Tooltip>
             </TooltipTrigger>
         </Flex>
-    ) : null;
+    );
+}
 
-    // Action buttons (view toggle + refresh + custom action)
-    const ActionButtons = (RefreshButton || ViewToggle || action) ? (
+/**
+ * SearchHeader - Reusable search/refresh/count bar
+ *
+ * Extracts the common header pattern from SearchableList for reuse
+ * in both ListView-based and Grid-based views.
+ *
+ * @example
+ * ```tsx
+ * <SearchHeader
+ *   searchQuery={query}
+ *   onSearchQueryChange={setQuery}
+ *   totalCount={projects.length}
+ *   filteredCount={filteredProjects.length}
+ *   itemNoun="project"
+ *   onRefresh={handleRefresh}
+ *   isRefreshing={isLoading}
+ *   hasLoadedOnce={hasLoaded}
+ * />
+ * ```
+ */
+/** Build count display text */
+function buildCountText(
+    isFiltering: boolean,
+    filteredCount: number,
+    totalCount: number,
+    displayNoun: string,
+): string {
+    return isFiltering
+        ? `Showing ${filteredCount} of ${totalCount} ${displayNoun}`
+        : `${totalCount} ${displayNoun}`;
+}
+
+/** Render action buttons group */
+function renderActionButtons(
+    viewToggle: React.ReactNode,
+    refreshButton: React.ReactNode,
+    action: React.ReactNode | undefined,
+): React.ReactNode {
+    if (!refreshButton && !viewToggle && !action) return null;
+    return (
         <Flex gap="size-100" alignItems="center">
-            {ViewToggle}
-            {RefreshButton}
+            {viewToggle}
+            {refreshButton}
             {action}
         </Flex>
-    ) : null;
+    );
+}
+
+/** Compute derived display values from props */
+function computeDisplayValues(props: SearchHeaderProps) {
+    const searchThreshold = props.searchThreshold ?? 5;
+    const itemNoun = props.itemNoun ?? 'item';
+    const alwaysShowCount = props.alwaysShowCount ?? false;
+    const nounPlural = props.itemNounPlural || `${itemNoun}s`;
+
+    return {
+        showSearch: props.totalCount > searchThreshold,
+        showCount: props.hasLoadedOnce && (alwaysShowCount || props.totalCount > 0),
+        nounPlural,
+        displayNoun: props.totalCount === 1 ? itemNoun : nounPlural,
+        isFiltering: props.searchQuery.trim().length > 0,
+    };
+}
+
+export const SearchHeader: React.FC<SearchHeaderProps> = (props) => {
+    const {
+        searchQuery, onSearchQueryChange, totalCount, filteredCount,
+        onRefresh, viewMode, onViewModeChange, action,
+    } = props;
+    const searchPlaceholder = props.searchPlaceholder ?? 'Type to filter...';
+    const isRefreshing = props.isRefreshing ?? false;
+    const refreshAriaLabel = props.refreshAriaLabel ?? 'Refresh list';
+    const autoFocus = props.autoFocus ?? false;
+
+    const { showSearch, showCount, nounPlural, displayNoun, isFiltering } = computeDisplayValues(props);
+
+    const ActionButtons = renderActionButtons(
+        renderViewToggle(viewMode, onViewModeChange),
+        renderRefreshButton(onRefresh, isRefreshing, refreshAriaLabel),
+        action,
+    );
 
     return (
         <div className="search-header">
-            {/* Search + Actions Bar (when search is shown) */}
             {showSearch && (
                 <Flex gap="size-100" marginBottom="size-200" alignItems="end">
                     <SearchField
@@ -190,15 +228,11 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                 </Flex>
             )}
 
-            {/* Item Count + Actions (always shown when data loaded) */}
             {showCount && (
                 <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
                     <Text UNSAFE_className="text-sm text-gray-600">
-                        {isFiltering
-                            ? `Showing ${filteredCount} of ${totalCount} ${displayNoun}`
-                            : `${totalCount} ${displayNoun}`}
+                        {buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
                     </Text>
-                    {/* Show actions here only if search bar not shown */}
                     {!showSearch && ActionButtons}
                 </Flex>
             )}

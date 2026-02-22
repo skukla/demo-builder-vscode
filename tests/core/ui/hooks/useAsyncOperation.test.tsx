@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useAsyncOperation } from '@/core/ui/hooks/useAsyncOperation';
 
 describe('useAsyncOperation', () => {

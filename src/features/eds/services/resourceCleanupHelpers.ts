@@ -12,10 +12,10 @@
  * - formatCleanupResults: Human-readable cleanup summary
  */
 
+import type { DaLiveContentOperations } from './daLiveContentOperations';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
-import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { StateManager } from '@/types/state';
 
 // ==========================================================

@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavigationPanel } from '@/core/ui/components/navigation/NavigationPanel';
 
 describe('NavigationPanel - Metadata', () => {

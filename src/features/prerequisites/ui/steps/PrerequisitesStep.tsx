@@ -17,8 +17,8 @@ import {
     renderPrerequisiteMessage,
 } from './hooks';
 import { cn } from '@/core/ui/utils/classNames';
-import { NavigableStepProps } from '@/types/wizard';
 import { WizardState } from '@/types/webview';
+import { NavigableStepProps } from '@/types/wizard';
 
 // Extracted hooks and helpers
 

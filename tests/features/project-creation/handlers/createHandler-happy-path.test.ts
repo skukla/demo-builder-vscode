@@ -2,10 +2,10 @@ import { handleCreateProject } from '@/features/project-creation/handlers/create
 import * as validation from '@/core/validation';
 import * as executor from '@/features/project-creation/handlers/executor';
 import * as promiseUtils from '@/core/utils/promiseUtils';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator as _ServiceLocator } from '@/core/di';
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import { promises as fsPromises } from 'fs';
+import * as _fs from 'fs';
+import { promises as _fsPromises } from 'fs';
 import {
     createMockContext,
     setupDefaultMocks,
@@ -27,10 +27,10 @@ jest.mock('fs', () => ({
 
 describe('Project Creation - Create Handler - Happy Path', () => {
     let mockContext: ReturnType<typeof createMockContext>;
-    let mockCommandExecutor: ReturnType<typeof setupDefaultMocks>;
+    let _mockCommandExecutor: ReturnType<typeof setupDefaultMocks>;
 
     beforeEach(() => {
-        mockCommandExecutor = setupDefaultMocks();
+        _mockCommandExecutor = setupDefaultMocks();
         mockContext = createMockContext();
     });
 
@@ -73,7 +73,7 @@ describe('Project Creation - Create Handler - Happy Path', () => {
             (vscode.workspace as any).isTrusted = false;
 
             // Create function that captures the mocked return value
-            let tipShown = false;
+            const tipShown = false;
             const getMock = jest.fn().mockImplementation((key: string, defaultValue: boolean) => {
                 if (key === 'demoBuilder.trustTipShown') {
                     return tipShown;

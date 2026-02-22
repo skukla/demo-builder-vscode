@@ -7,16 +7,16 @@
  * @module features/eds/services/storefrontRepublishService
  */
 
-import * as path from 'path';
 import * as fsPromises from 'fs/promises';
+import * as path from 'path';
 import type * as vscode from 'vscode';
-import type { Project } from '@/types';
-import type { Logger } from '@/types/logger';
-import type { PhaseProgressCallback } from './types';
-import { COMPONENT_IDS } from '@/core/constants';
 import { generateConfigJson, extractConfigParams } from './configGenerator';
 import { syncConfigToRemote } from './configSyncService';
 import { updateStorefrontState } from './storefrontStalenessDetector';
+import type { PhaseProgressCallback } from './types';
+import { COMPONENT_IDS } from '@/core/constants';
+import type { Project } from '@/types';
+import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Types
