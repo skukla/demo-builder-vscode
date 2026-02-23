@@ -305,7 +305,7 @@ describe('createBlockLibraryFromTemplate', () => {
 
             // Verify logging
             expect(mockLogger.info).toHaveBeenCalledWith(
-                expect.stringContaining('Creating 2 missing block doc pages'),
+                expect.stringContaining('Creating 2 block doc pages'),
             );
         });
 
@@ -335,7 +335,7 @@ describe('createBlockLibraryFromTemplate', () => {
             expect(result.paths).not.toContain('.da/library/blocks/cards');
         });
 
-        it('should skip blocks that already have doc pages', async () => {
+        it('should overwrite blocks that already have doc pages', async () => {
             // Given: hero-cta already has a doc page
             mockGetFileContent.mockResolvedValue({
                 content: createComponentDef([
@@ -345,7 +345,7 @@ describe('createBlockLibraryFromTemplate', () => {
                 sha: 'abc123',
             });
             mockFetch.mockImplementation(createDocPageMockFetch({
-                existingDocPages: ['hero-cta'], // Already exists
+                existingDocPages: ['hero-cta'], // Already exists — should be overwritten
                 createSucceeds: true,
             }));
 
@@ -354,19 +354,18 @@ describe('createBlockLibraryFromTemplate', () => {
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
-            // Then: Both blocks should be in library (one was pre-existing, one was created)
+            // Then: Both blocks should be in library
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(2);
 
-            // Only 1 POST to /source/ should have been made (for newsletter only)
+            // Both blocks should get POST to /source/ (overwrite ensures format consistency)
             const createCalls = mockFetch.mock.calls.filter(
                 (call: [string, RequestInit]) =>
                     call[0].includes('/source/') &&
                     call[0].includes('.da/library/blocks/') &&
                     call[1]?.method === 'POST',
             );
-            expect(createCalls).toHaveLength(1);
-            expect(createCalls[0][0]).toContain('newsletter.html');
+            expect(createCalls).toHaveLength(2);
         });
 
         it('should continue when one doc page creation fails', async () => {
@@ -483,8 +482,10 @@ describe('createBlockLibraryFromTemplate', () => {
             const postedBlob = postedFormData!.get('data') as Blob;
             const postedHtml = await postedBlob.text();
 
+            // Block must be inside a section <div> — DA.live treats direct
+            // children of <main> as sections, not blocks
             expect(postedHtml).toBe(
-                `<body><header></header><main>${exampleHtml}</main><footer></footer></body>`,
+                `<body><header></header><main><div>${exampleHtml}</div></main><footer></footer></body>`,
             );
         });
     });

@@ -971,18 +971,18 @@ export class DaLiveContentOperations {
         const blocksWithHtml = blocks.filter(b => b.exampleHtml);
         if (blocksWithHtml.length === 0) return;
 
-        // Check which already exist (batch HEAD requests)
-        const existingIds = await this.getBlocksWithDocs(org, site, blocksWithHtml);
-        const missing = blocksWithHtml.filter(b => !existingIds.includes(b.id));
+        // Always create/overwrite doc pages for blocks with exampleHtml.
+        // Using overwrite ensures format fixes (e.g. section wrapper) are
+        // applied to pages created by earlier extension versions.
+        this.logger.info(`[DA.live] Creating ${blocksWithHtml.length} block doc pages`);
 
-        if (missing.length === 0) return;
-
-        this.logger.info(`[DA.live] Creating ${missing.length} missing block doc pages`);
-
-        for (const block of missing) {
+        for (const block of blocksWithHtml) {
             try {
-                // Wrap exampleHtml in document structure expected by DA.live
-                const docHtml = `<body><header></header><main>${block.exampleHtml}</main><footer></footer></body>`;
+                // Wrap exampleHtml in document structure expected by DA.live.
+                // Block must be inside a section <div> — DA.live treats direct
+                // children of <main> as sections, not blocks. This matches the
+                // format produced by .plain.html (content source copy path).
+                const docHtml = `<body><header></header><main><div>${block.exampleHtml}</div></main><footer></footer></body>`;
                 const result = await this.createSource(
                     org, site,
                     `.da/library/blocks/${block.id}.html`,
