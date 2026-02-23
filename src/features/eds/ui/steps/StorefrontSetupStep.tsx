@@ -107,36 +107,7 @@ interface StorefrontSetupStepProps {
     setCanProceed: (canProceed: boolean) => void;
 }
 
-/**
- * Get human-readable description for the current phase
- * These appear in the PageHeader as status text - keep them concise
- */
-function _getPhaseDescription(phase: StorefrontSetupPhase): string {
-    switch (phase) {
-        case 'idle':
-            return 'Preparing setup...';
-        case 'github-repo':
-            return 'Creating GitHub repository...';
-        case 'helix-config':
-            return 'Configuring Edge Delivery Services...';
-        case 'code-sync':
-            return 'Syncing with content bus...';
-        case 'github-app':
-            return 'Waiting for GitHub App installation...';
-        case 'content-copy':
-            return 'Copying demo content...';
-        case 'content-publish':
-            return 'Publishing content...';
-        case 'cancelling':
-            return 'Cancelling setup...';
-        case 'completed':
-            return 'Storefront published.';
-        case 'error':
-            return 'Setup failed.';
-        default:
-            return 'Processing...';
-    }
-}
+
 
 /**
  * Get helper text for loading display based on phase
@@ -269,11 +240,6 @@ export function StorefrontSetupStep({
 
         // Update wizard state with repo URL
         // Note: previewUrl/liveUrl are derived from githubRepo by typeGuards, not stored
-        // eslint-disable-next-line no-console
-        console.log('[StorefrontSetupStep] handleComplete - updating state with repoUrl:', {
-            githubRepo: data.githubRepo,
-            currentEdsConfig: edsConfigRef.current,
-        });
         updateState({
             edsConfig: {
                 ...edsConfigRef.current,
@@ -331,8 +297,9 @@ export function StorefrontSetupStep({
             componentConfigs: state.componentConfigs,
             backendComponentId: state.components?.backend,
             selectedAddons: state.selectedAddons,
+            selectedPackage: state.selectedPackage,
         });
-    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.selectedAddons]);
+    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.selectedAddons, state.selectedPackage]);
 
     /**
      * Handle GitHub App installation detected
@@ -355,6 +322,8 @@ export function StorefrontSetupStep({
     const setupStartedRef = useRef(false);
     // Track if setup is currently running (for cleanup on unmount)
     const isSetupRunningRef = useRef(false);
+    // Track latest partialState for cleanup (avoids stale closure in unmount effect)
+    const partialStateRef = useRef(setupState.partialState);
     // Store initial config in ref to use in one-time effect
     const initialConfigRef = useRef({
         projectName: state.projectName,
@@ -362,14 +331,17 @@ export function StorefrontSetupStep({
         componentConfigs: state.componentConfigs,
         backendComponentId: state.components?.backend,
         selectedAddons: state.selectedAddons,
+        selectedPackage: state.selectedPackage,
     });
 
-    // Update running state when phase changes
+    // Update running state and partialState ref when phase changes
     useEffect(() => {
         isSetupRunningRef.current = isActivePhase(setupState.phase);
-    }, [setupState.phase]);
+        partialStateRef.current = setupState.partialState;
+    }, [setupState.phase, setupState.partialState]);
 
     // Cleanup effect: send cancel message when wizard closes during active setup
+    // Uses refs to avoid stale closure — reads latest partialState and edsConfig at unmount time
     useEffect(() => {
         return () => {
             // On unmount, if setup was running, send cancel message to abort backend operations
@@ -377,16 +349,16 @@ export function StorefrontSetupStep({
                 // eslint-disable-next-line no-console
                 console.log('[StorefrontSetupStep] Unmounting during active setup, sending cancel');
                 vscode.postMessage('storefront-setup-cancel', {
-                    partialState: setupState.partialState,
+                    partialState: partialStateRef.current,
                     edsConfig: {
-                        daLiveOrg: state.edsConfig?.daLiveOrg,
-                        daLiveSite: state.edsConfig?.daLiveSite,
+                        daLiveOrg: edsConfigRef.current?.daLiveOrg,
+                        daLiveSite: edsConfigRef.current?.daLiveSite,
                     },
                 });
             }
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Empty deps - cleanup only runs on unmount
+    }, []); // Empty deps - cleanup only runs on unmount, reads from refs
 
     // Set up message listeners (stable callbacks, no re-subscription needed)
     useEffect(() => {
@@ -441,6 +413,7 @@ export function StorefrontSetupStep({
             componentConfigs: initialConfigRef.current.componentConfigs,
             backendComponentId: initialConfigRef.current.backendComponentId,
             selectedAddons: initialConfigRef.current.selectedAddons,
+            selectedPackage: initialConfigRef.current.selectedPackage,
         });
     }, []);
 

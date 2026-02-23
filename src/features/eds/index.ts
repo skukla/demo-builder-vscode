@@ -50,15 +50,17 @@ export type { ConfigGeneratorParams, ConfigGeneratorResult } from './services/co
 export {
     executeEdsReset,
     extractResetParams,
-    resetEdsProjectWithUI,
 } from './services/edsResetService';
 export type {
     EdsResetParams,
     EdsResetProgress,
     EdsResetResult,
     ExtractParamsResult,
-    ResetWithUIOptions,
 } from './services/edsResetService';
+
+// EDS Reset UI (UI orchestration extracted from edsResetService)
+export { resetEdsProjectWithUI } from './services/edsResetUI';
+export type { ResetWithUIOptions } from './services/edsResetUI';
 
 // Storefront Staleness Detection (config.json republish tracking)
 export {

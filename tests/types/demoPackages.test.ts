@@ -18,9 +18,12 @@ import type {
     Submodule,
     Storefront,
     Addons,
+    AddonSource,
+    AddonConfig,
     DemoPackage,
     DemoPackagesConfig,
 } from '@/types/demoPackages';
+import { isAddonWithSource, getAddonAvailability } from '@/types/demoPackages';
 
 describe('GitOptions type', () => {
     it('should require shallow and recursive fields', () => {
@@ -151,7 +154,7 @@ describe('Storefront type', () => {
         expect(storefront.submodules?.['demo-inspector']?.path).toBe('src/demo-inspector');
     });
 
-    it('should match actual headless-paas storefront from demo-packages.json', () => {
+    it('should accept structure matching headless-paas storefront pattern', () => {
         // Given: Storefront matching citisignal headless-paas
         const storefront: Storefront = {
             name: 'CitiSignal Headless',
@@ -214,6 +217,94 @@ describe('Addons type', () => {
         // Then: all addons should be accessible
         expect(addons['adobe-commerce-aco']).toBe('required');
         expect(addons['another-addon']).toBe('optional');
+    });
+
+    it('should accept addon with source config (object form)', () => {
+        // Given: Addon with source configuration
+        const addons: Addons = {
+            'commerce-block-collection': {
+                availability: 'optional',
+                source: { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' },
+            },
+        };
+
+        // Then: object-form addon should be accessible
+        const config = addons['commerce-block-collection'];
+        expect(typeof config).toBe('object');
+    });
+
+    it('should accept mixed simple and object addons', () => {
+        // Given: Mix of string and object addon configs
+        const addons: Addons = {
+            'demo-inspector': 'required',
+            'commerce-block-collection': {
+                availability: 'optional',
+                source: { owner: 'org', repo: 'repo', branch: 'main' },
+            },
+        };
+
+        // Then: both forms should be accessible
+        expect(addons['demo-inspector']).toBe('required');
+        expect(typeof addons['commerce-block-collection']).toBe('object');
+    });
+});
+
+describe('AddonSource type', () => {
+    it('should require owner, repo, and branch fields', () => {
+        const source: AddonSource = {
+            owner: 'stephen-garner-adobe',
+            repo: 'isle5',
+            branch: 'main',
+        };
+
+        expect(source.owner).toBe('stephen-garner-adobe');
+        expect(source.repo).toBe('isle5');
+        expect(source.branch).toBe('main');
+    });
+});
+
+describe('AddonConfig type', () => {
+    it('should accept simple string values', () => {
+        const config: AddonConfig = 'required';
+        expect(config).toBe('required');
+    });
+
+    it('should accept object with availability and source', () => {
+        const config: AddonConfig = {
+            availability: 'optional',
+            source: { owner: 'org', repo: 'repo', branch: 'main' },
+        };
+        expect(typeof config).toBe('object');
+    });
+});
+
+describe('isAddonWithSource', () => {
+    it('should return true for object config with source', () => {
+        const config: AddonConfig = {
+            availability: 'optional',
+            source: { owner: 'org', repo: 'repo', branch: 'main' },
+        };
+        expect(isAddonWithSource(config)).toBe(true);
+    });
+
+    it('should return false for simple string config', () => {
+        const config: AddonConfig = 'required';
+        expect(isAddonWithSource(config)).toBe(false);
+    });
+});
+
+describe('getAddonAvailability', () => {
+    it('should return string value for simple config', () => {
+        expect(getAddonAvailability('required')).toBe('required');
+        expect(getAddonAvailability('optional')).toBe('optional');
+    });
+
+    it('should return availability from object config', () => {
+        const config: AddonConfig = {
+            availability: 'optional',
+            source: { owner: 'org', repo: 'repo', branch: 'main' },
+        };
+        expect(getAddonAvailability(config)).toBe('optional');
     });
 });
 
@@ -351,7 +442,7 @@ describe('DemoPackage type (nested storefronts structure)', () => {
         expect(pkg.configDefaults.ADOBE_COMMERCE_WEBSITE_CODE).toBe('citisignal');
     });
 
-    it('should match actual citisignal package from demo-packages.json', () => {
+    it('should accept structure matching citisignal package pattern', () => {
         // Given: Package matching citisignal from demo-packages.json
         const pkg: DemoPackage = {
             id: 'citisignal',
@@ -359,6 +450,13 @@ describe('DemoPackage type (nested storefronts structure)', () => {
             description: 'Telecommunications demo with CitiSignal branding',
             icon: 'citisignal',
             featured: true,
+            addons: {
+                'demo-inspector': 'required',
+                'commerce-block-collection': {
+                    availability: 'optional',
+                    source: { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' },
+                },
+            },
             configDefaults: {
                 ADOBE_COMMERCE_WEBSITE_CODE: 'citisignal',
                 ADOBE_COMMERCE_STORE_CODE: 'citisignal_store',
@@ -562,5 +660,12 @@ describe('type exports from @/types/demoPackages', () => {
         // Then: Module should be accessible (types are erased at runtime)
         // TypeScript validates type exports at compile time
         expect(types).toBeDefined();
+    });
+
+    it('should export runtime functions isAddonWithSource and getAddonAvailability', async () => {
+        const types = await import('@/types/demoPackages');
+
+        expect(typeof types.isAddonWithSource).toBe('function');
+        expect(typeof types.getAddonAvailability).toBe('function');
     });
 });

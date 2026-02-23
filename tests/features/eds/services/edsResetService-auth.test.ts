@@ -117,7 +117,7 @@ jest.mock('@/features/eds/services/githubAppService', () => ({
 // =============================================================================
 
 import * as vscode from 'vscode';
-import { resetEdsProjectWithUI } from '@/features/eds/services/edsResetService';
+import { resetEdsProjectWithUI } from '@/features/eds/services/edsResetUI';
 
 // =============================================================================
 // Helpers

@@ -9,59 +9,97 @@ The EDS feature provides complete integration with Adobe Edge Delivery Services,
 ```
 src/features/eds/
 ├── services/
-│   ├── githubService.ts      # GitHub OAuth, token management, repo operations
-│   ├── daLiveService.ts      # DA.live content management
-│   ├── edsProjectService.ts  # Project setup orchestration
-│   ├── toolManager.ts        # Commerce demo ingestion tool management
-│   ├── errorFormatters.ts    # User-friendly error message formatting
-│   └── types.ts              # TypeScript type definitions
+│   ├── githubTokenService.ts       # GitHub token management via SecretStorage
+│   ├── githubRepoOperations.ts     # Repository CRUD (create from template, delete)
+│   ├── githubFileOperations.ts     # File read/write/commit via GitHub API
+│   ├── githubOAuthService.ts       # GitHub OAuth popup flow with CSRF protection
+│   ├── githubAppService.ts         # AEM Code Sync GitHub App installation check
+│   ├── githubHelpers.ts            # Shared GitHub utilities
+│   ├── daLiveAuthService.ts        # DA.live IMS authentication
+│   ├── daLiveContentOperations.ts  # DA.live content copy with progress
+│   ├── daLiveOrgOperations.ts      # DA.live org access verification
+│   ├── daLiveConfigService.ts      # DA.live config/permissions spreadsheets
+│   ├── daLiveOrgConfigService.ts   # DA.live org-level configuration
+│   ├── daLiveConstants.ts          # DA.live shared constants
+│   ├── daLiveMimeTypes.ts          # MIME type mapping for DA.live uploads
+│   ├── daLiveSpreadsheetUtils.ts   # Spreadsheet parsing utilities
+│   ├── helixService.ts             # Helix 5 Configuration Service API
+│   ├── configurationService.ts     # AEM Configuration Service (site registration)
+│   ├── configGenerator.ts          # config.json generation for storefronts
+│   ├── configSyncService.ts        # Config.json sync between DA.live and repo
+│   ├── cleanupService.ts           # External resource cleanup on project deletion
+│   ├── resourceCleanupHelpers.ts   # Shared cleanup helper functions
+│   ├── toolManager.ts              # Commerce demo ingestion tool management
+│   ├── contentPatchRegistry.ts     # Content patch definitions for demo customization
+│   ├── blockCollectionHelpers.ts   # Block collection installation from source repo
+│   ├── edsResetService.ts          # Core reset logic (template reset, code sync)
+│   ├── edsResetUI.ts               # Reset UI orchestration (auth, progress, notifications)
+│   ├── edsPipeline.ts              # EDS setup pipeline orchestration
+│   ├── fstabGenerator.ts           # fstab.yaml generation
+│   ├── storefrontRepublishService.ts # Storefront config republish
+│   ├── storefrontStalenessDetector.ts # Config.json staleness detection
+│   ├── errorFormatters.ts          # User-friendly error message formatting
+│   ├── codeSyncErrors.ts           # Code sync error hierarchy
+│   └── types.ts                    # TypeScript type definitions
 ├── ui/
-│   ├── steps/                # Wizard step components
-│   │   ├── DataSourceConfigStep.tsx
-│   │   └── GitHubDaLiveSetupStep.tsx
+│   ├── steps/
+│   │   ├── ConnectServicesStep.tsx      # GitHub + DA.live auth connection
+│   │   ├── GitHubRepoSelectionStep.tsx  # Repository selection/creation
+│   │   ├── GitHubSetupStep.tsx          # GitHub configuration
+│   │   ├── DaLiveSetupStep.tsx          # DA.live site configuration
+│   │   ├── DataSourceConfigStep.tsx     # Commerce data source config
+│   │   └── StorefrontSetupStep.tsx      # Storefront setup execution
 │   └── hooks/
-│       └── useGitHubAuth.ts  # GitHub authentication hook
+│       ├── useGitHubAuth.ts         # GitHub authentication hook
+│       └── useDaLiveAuth.ts         # DA.live authentication hook
 ├── handlers/
-│   ├── index.ts              # Handler exports
-│   └── edsHandlers.ts        # Message handlers for wizard operations
-└── index.ts                  # Public API exports
+│   ├── index.ts                     # Handler exports
+│   ├── edsHandlers.ts              # Core EDS message handlers
+│   ├── edsGitHubHandlers.ts        # GitHub-specific handlers
+│   ├── edsDaLiveHandlers.ts        # DA.live content handlers
+│   ├── edsDaLiveAuthHandlers.ts    # DA.live auth handlers
+│   ├── edsDaLiveOrgHandlers.ts     # DA.live org handlers
+│   ├── edsDaLiveOrgConfigHandlers.ts # DA.live org config handlers
+│   ├── storefrontSetupHandlers.ts  # Storefront setup orchestration + cleanup
+│   ├── storefrontSetupPhases.ts    # Storefront setup phase executors
+│   ├── edsHelpers.ts               # Shared handler utilities
+│   └── cleanupDaLiveSitesHandler.ts # DA.live site cleanup handler
+└── index.ts                         # Public API exports
 ```
 
 ## Key Services
 
-### EdsProjectService
+### Storefront Setup (storefrontSetupHandlers + storefrontSetupPhases)
 
-Orchestrates complete EDS project setup through these phases:
+Orchestrates complete EDS project setup through phases:
 
 | Phase | Progress | Operations |
 |-------|----------|------------|
-| `github-repo` | 0-15% | Create GitHub repository from CitiSignal template |
-| `github-clone` | 15-25% | Clone repository to local path |
-| `helix-config` | 25-40% | Configure Helix 5 via Configuration Service API |
-| `code-sync` | 40-55% | Verify Code Bus synchronization |
-| `dalive-content` | 55-70% | Copy CitiSignal content to DA.live |
-| `tools-clone` | 70-85% | Clone commerce-demo-ingestion tool |
-| `env-config` | 85-95% | Generate .env file with configuration |
+| `github-repo` | 0-20% | Create/configure GitHub repository from template |
+| `helix-config` | 20-35% | Configure Helix 5 via Configuration Service API |
+| `code-sync` | 35-55% | Verify Code Bus synchronization |
+| `dalive-content` | 55-85% | Copy demo content to DA.live |
 | `complete` | 100% | Setup complete |
 
-### GitHubService
+### GitHub Services (extracted modules)
 
-Handles GitHub OAuth authentication and repository operations:
+- **GitHubTokenService** - Token storage via VS Code SecretStorage
+- **GitHubRepoOperations** - Repository creation from templates, deletion
+- **GitHubFileOperations** - File read/write/commit via GitHub API
+- **GitHubOAuthService** - OAuth popup flow with CSRF protection
+- **GitHubAppService** - AEM Code Sync app installation verification
 
-- OAuth popup flow with CSRF protection
-- Token storage via VS Code SecretStorage
-- Repository creation from templates
-- File operations (read, write, commit)
-- Rate limiting and error handling
+### DA.live Services (extracted modules)
 
-### DaLiveService
+- **DaLiveAuthService** - IMS token management for DA.live
+- **DaLiveContentOperations** - Content copy with progress tracking
+- **DaLiveOrgOperations** - Organization access verification
+- **DaLiveConfigService** - Config/permissions spreadsheet management
 
-Manages DA.live content operations:
+### EDS Reset (edsResetService + edsResetUI)
 
-- IMS token integration via AuthenticationService
-- Organization access verification
-- Directory listing and content copy
-- CitiSignal content workflow with progress tracking
+- **edsResetService** - Core reset logic: template reset, code sync, mesh redeploy
+- **edsResetUI** - UI orchestration: auth checks, progress notifications, confirmation dialogs
 
 ### Error Formatters
 
@@ -69,15 +107,6 @@ Transform technical errors into user-friendly messages:
 
 ```typescript
 import { formatGitHubError, formatDaLiveError, formatHelixError } from '@/features/eds';
-
-// Example usage
-try {
-    await githubService.createFromTemplate(...);
-} catch (error) {
-    const edsError = formatGitHubError(error);
-    // edsError.userMessage: "A repository with this name already exists..."
-    // edsError.recoveryHint: "Go back and enter a different project name..."
-}
 ```
 
 ## Error Codes
@@ -110,75 +139,25 @@ try {
 
 ## Partial State Tracking
 
-The `EdsPartialState` interface tracks setup progress for recovery:
+The `StorefrontSetupPartialState` interface tracks setup progress for cleanup on cancel:
 
 ```typescript
-interface EdsPartialState {
-    repoCreated?: boolean;    // GitHub repo was created
-    repoUrl?: string;         // URL for cleanup if needed
-    contentCopied?: boolean;  // DA.live content was copied
-    failedFiles?: string[];   // Files that failed to copy
-    phase: EdsSetupPhase;     // Current/failed phase
-}
-```
-
-## Usage
-
-### Basic Project Setup
-
-```typescript
-import { EdsProjectService } from '@/features/eds';
-
-const service = new EdsProjectService(
-    githubService,
-    daLiveService,
-    authService,
-    componentManager
-);
-
-const result = await service.setupProject({
-    projectName: 'My EDS Site',
-    projectPath: '/path/to/project',
-    repoName: 'my-eds-site',
-    daLiveOrg: 'my-org',
-    daLiveSite: 'my-site',
-    accsEndpoint: 'https://commerce.example.com/graphql',
-    githubOwner: 'username',
-}, (phase, progress, message) => {
-    console.log(`${phase}: ${progress}% - ${message}`);
-});
-
-if (result.success) {
-    console.log(`Preview: ${result.previewUrl}`);
-    console.log(`Live: ${result.liveUrl}`);
-}
-```
-
-### Error Handling
-
-```typescript
-const result = await service.setupProject(config, progressCallback);
-
-if (!result.success) {
-    // Result includes partial state info for recovery
-    console.log(`Failed at phase: ${result.phase}`);
-    console.log(`Repo URL (for cleanup): ${result.repoUrl}`);
-    console.log(`Error: ${result.error}`);
+interface StorefrontSetupPartialState {
+    repoCreated: boolean;
+    repoUrl?: string;
+    repoOwner?: string;
+    repoName?: string;
+    contentCopied: boolean;
+    phase: string;
 }
 ```
 
 ## Testing
 
-Tests are organized as:
-
-- **Unit tests**: `tests/unit/features/eds/services/`
-- **Integration tests**: `tests/integration/features/eds/`
-
-Run EDS tests:
+Tests are located at `tests/features/eds/`:
 
 ```bash
-npm test -- tests/unit/features/eds/
-npm test -- tests/integration/features/eds/
+npm test -- tests/features/eds/
 ```
 
 ## Dependencies
@@ -187,11 +166,10 @@ npm test -- tests/integration/features/eds/
 - `@octokit/plugin-retry` - Retry logic for API calls
 - VS Code SecretStorage - Secure token storage
 - AuthenticationService - IMS token management
-- ComponentManager - Tool installation
 
 ## Configuration
 
-The feature uses these timeouts (configurable in `timeoutConfig.ts`):
+The feature uses timeouts from `@/core/utils/timeoutConfig`:
 
 | Timeout | Default | Description |
 |---------|---------|-------------|

@@ -58,10 +58,17 @@
         "addons": {
           "type": "object",
           "additionalProperties": {
-            "type": "string",
-            "enum": ["required", "optional"]
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": ["required", "optional"]
+              },
+              {
+                "$ref": "#/definitions/addonWithSource"
+              }
+            ]
           },
-          "description": "Addon requirements (addon ID to requirement level)"
+          "description": "Addon requirements (addon ID to requirement level or object with source)"
         },
         "configDefaults": {
           "type": "object",
@@ -78,6 +85,43 @@
           }
         }
       }
+    },
+    "addonWithSource": {
+      "type": "object",
+      "required": ["availability", "source"],
+      "properties": {
+        "availability": {
+          "type": "string",
+          "enum": ["required", "optional"],
+          "description": "Addon requirement level"
+        },
+        "source": {
+          "$ref": "#/definitions/addonSource"
+        }
+      },
+      "additionalProperties": false
+    },
+    "addonSource": {
+      "type": "object",
+      "required": ["owner", "repo", "branch"],
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub owner/organization of the addon source repository"
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub repository name"
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Branch to use from the source repository"
+        }
+      },
+      "additionalProperties": false
     },
     "storefront": {
       "type": "object",

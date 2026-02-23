@@ -10,7 +10,14 @@
       "featured": true,
       "addons": {
         "demo-inspector": "optional",
-        "commerce-block-collection": "optional"
+        "commerce-block-collection": {
+          "availability": "optional",
+          "source": {
+            "owner": "stephen-garner-adobe",
+            "repo": "isle5",
+            "branch": "main"
+          }
+        }
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
@@ -146,13 +153,7 @@
             }
           },
           "templateOwner": "skukla",
-          "templateRepo": "buildright-eds",
-          "submodules": {
-            "demo-inspector": {
-              "path": "demo-inspector",
-              "repository": "skukla/demo-inspector-universal"
-            }
-          }
+          "templateRepo": "buildright-eds"
         }
       }
     },
@@ -163,7 +164,14 @@
       "icon": "custom",
       "featured": false,
       "addons": {
-        "commerce-block-collection": "optional"
+        "commerce-block-collection": {
+          "availability": "optional",
+          "source": {
+            "owner": "stephen-garner-adobe",
+            "repo": "isle5",
+            "branch": "main"
+          }
+        }
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "website",

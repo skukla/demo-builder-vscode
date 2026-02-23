@@ -27,14 +27,29 @@ tests/
 │   │   └── services/  # Authentication services (SDK, cache, tokens)
 │   ├── components/
 │   │   └── services/  # Component management services
+│   ├── dashboard/
+│   │   ├── handlers/  # Dashboard message handlers (EDS reset, etc.)
+│   │   └── ui/        # Dashboard UI predicates
+│   ├── eds/
+│   │   ├── handlers/  # EDS setup/cleanup handlers
+│   │   └── services/  # EDS services (reset, block collection, config, etc.)
 │   ├── lifecycle/
 │   │   └── handlers/  # Lifecycle handlers (start, stop, etc.)
 │   ├── mesh/
 │   │   ├── handlers/  # Mesh deployment handlers
 │   │   ├── services/  # Mesh deployment services
 │   │   └── utils/     # Mesh utilities (error formatting)
-│   └── prerequisites/
-│       └── services/  # Prerequisites checking and installation
+│   ├── prerequisites/
+│   │   └── services/  # Prerequisites checking and installation
+│   ├── project-creation/
+│   │   ├── handlers/  # Project creation executor tests
+│   │   └── ui/        # Wizard step and helper tests
+│   ├── projects-dashboard/
+│   │   ├── handlers/  # Projects list handlers (DA.live auth, etc.)
+│   │   └── ui/        # Dashboard UI component tests
+│   ├── sidebar/       # Sidebar navigation tests
+│   └── updates/
+│       └── services/  # Update manager and component updater tests
 ├── integration/       # Integration tests (cross-module testing)
 │   └── prerequisites/ # Prerequisites integration tests
 ├── webview-ui/        # React webview tests (mirrors webview-ui/src/)

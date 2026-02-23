@@ -192,8 +192,10 @@ global.fetch = jest.fn();
 const mockResetEdsProjectWithUI = jest.fn();
 const mockExtractResetParams = jest.fn();
 const mockExecuteEdsReset = jest.fn();
-jest.mock('@/features/eds/services/edsResetService', () => ({
+jest.mock('@/features/eds/services/edsResetUI', () => ({
     resetEdsProjectWithUI: (...args: unknown[]) => mockResetEdsProjectWithUI(...args),
+}));
+jest.mock('@/features/eds/services/edsResetService', () => ({
     extractResetParams: (...args: unknown[]) => mockExtractResetParams(...args),
     executeEdsReset: (...args: unknown[]) => mockExecuteEdsReset(...args),
 }));

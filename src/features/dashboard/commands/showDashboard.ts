@@ -8,7 +8,7 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { createBundleUris } from '@/core/utils/bundleUri';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
-import { loadDemoPackages } from '@/features/project-creation/ui/helpers/demoPackageLoader';
+import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { Project, ComponentInstance } from '@/types';
 import type { DemoPackage } from '@/types/demoPackages';

@@ -18,8 +18,8 @@ import {
     getPackageById,
     getAvailableStacksForPackage,
     getAllStorefronts,
+    getAddonSource,
 } from '@/features/project-creation/ui/helpers/demoPackageLoader';
-// Types DemoPackage and Storefront are used implicitly via loadDemoPackages return types
 
 describe('demoPackageLoader', () => {
     describe('loadDemoPackages', () => {
@@ -234,6 +234,51 @@ describe('demoPackageLoader', () => {
 
             expect(buildrightStorefronts).toHaveLength(1);
             expect(buildrightStorefronts[0].stackId).toBe('eds-paas');
+        });
+    });
+
+    describe('getAddonSource', () => {
+        it('should return addon source for citisignal commerce-block-collection', async () => {
+            const source = await getAddonSource('citisignal', 'commerce-block-collection');
+
+            expect(source).toBeDefined();
+            expect(source?.owner).toBe('stephen-garner-adobe');
+            expect(source?.repo).toBe('isle5');
+            expect(source?.branch).toBe('main');
+        });
+
+        it('should return addon source for custom commerce-block-collection', async () => {
+            const source = await getAddonSource('custom', 'commerce-block-collection');
+
+            expect(source).toBeDefined();
+            expect(source?.owner).toBe('stephen-garner-adobe');
+            expect(source?.repo).toBe('isle5');
+            expect(source?.branch).toBe('main');
+        });
+
+        it('should return undefined for addon without source (simple string config)', async () => {
+            const source = await getAddonSource('citisignal', 'demo-inspector');
+
+            expect(source).toBeUndefined();
+        });
+
+        it('should return undefined for non-existent addon', async () => {
+            const source = await getAddonSource('citisignal', 'non-existent-addon');
+
+            expect(source).toBeUndefined();
+        });
+
+        it('should return undefined for non-existent package', async () => {
+            const source = await getAddonSource('nonexistent', 'commerce-block-collection');
+
+            expect(source).toBeUndefined();
+        });
+
+        it('should return undefined for package with no addons', async () => {
+            // buildright has addons but not commerce-block-collection with source
+            const source = await getAddonSource('buildright', 'commerce-block-collection');
+
+            expect(source).toBeUndefined();
         });
     });
 });

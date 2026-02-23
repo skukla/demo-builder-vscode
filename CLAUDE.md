@@ -27,7 +27,7 @@ The Adobe Demo Builder is a VS Code extension that streamlines the creation of A
 ├─────────────────────────────────────────────────────────┤
 │              Core Systems                                │
 │  ├── Prerequisites System (JSON-driven)                  │
-│  ├── Component Registry (templates/)                     │
+│  ├── Component Registry (features/components/config/)    │
 │  ├── Progress Tracking (ProgressUnifier)                 │
 │  ├── Error Logging System                                │
 │  ├── StepLogger (Configuration-driven logging)           │
@@ -76,7 +76,7 @@ demo-builder-vscode/
 │   ├── utils/             # Legacy utilities (→ see src/utils/CLAUDE.md)
 │   ├── providers/         # VS Code providers
 │   └── types/             # TypeScript definitions
-├── templates/             # Configuration templates (→ see templates/CLAUDE.md)
+├── config files in src/features/*/config/  # Configuration per feature
 ├── docs/                  # Documentation
 │   └── CLAUDE.md         # Development strategy & guidelines
 ├── dist/                  # Compiled output
@@ -172,14 +172,14 @@ demo-builder-vscode/
 5. **src/utils/updateManager.ts** - GitHub Releases integration and update checking
 6. **src/utils/componentUpdater.ts** - Safe component updates with snapshot/rollback
 7. **src/utils/stateManager.ts** - Project state persistence and management
-8. **templates/prerequisites.json** - Prerequisite definitions
-9. **templates/components.json** - Component registry
-10. **templates/demo-templates.json** - Demo template definitions (pre-configured component selections)
+8. **src/features/prerequisites/config/prerequisites.json** - Prerequisite definitions
+9. **src/features/components/config/components.json** - Component registry
+10. **src/features/project-creation/config/demo-packages.json** - Demo package definitions (storefront configs, addons, content sources)
 
 ## Common Tasks
 
 ### Adding a New Prerequisite
-→ See `templates/CLAUDE.md` and `docs/systems/prerequisites-system.md`
+→ See `src/features/prerequisites/config/prerequisites.json` and `docs/systems/prerequisites-system.md`
 
 ### Modifying Wizard Steps
 -> See wizard steps in respective feature directories:
@@ -188,7 +188,7 @@ demo-builder-vscode/
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
   - `src/features/mesh/ui/steps/` - API Mesh step
   - `src/features/project-creation/ui/steps/` - WelcomeStep (with template selection), ReviewStep, ProjectCreationStep
--> Note: WelcomeStep includes demo template selection (see `templates/CLAUDE.md` for demo templates documentation)
+-> Note: WelcomeStep includes demo package selection (see `src/features/project-creation/config/demo-packages.json`)
 -> See feature documentation for wizard orchestration details
 
 ### Debugging Width Issues

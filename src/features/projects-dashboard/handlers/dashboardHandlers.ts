@@ -24,7 +24,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { executeCommandForProject } from '@/core/handlers';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito, TIMEOUTS } from '@/core/utils';
-import { validateProjectPath, validateProjectNameSecurity } from '@/core/validation';
+import { validateProjectPath, validateProjectNameSecurity, validateURL } from '@/core/validation';
 import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
 import { republishStorefrontConfig } from '@/features/eds';
 import { showDaLiveAuthQuickPick, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
@@ -667,6 +667,12 @@ export const handleOpenLiveSite: MessageHandler<{ projectPath: string }> = async
             cancellable: false,
         },
         async () => {
+            // Validate URL before shell execution (defense against injection via stored URLs)
+            try {
+                validateURL(liveUrl);
+            } catch {
+                throw new Error(`Invalid live URL: ${liveUrl}`);
+            }
             // Open in incognito mode for clean demo experience (no cached content/cookies)
             // Falls back to normal browser if incognito mode is not available
             await openInIncognito(liveUrl);
@@ -707,23 +713,9 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
 };
 
 // ============================================================================
-// EDS Actions Handler (Reset)
+// EDS Actions Handler (Republish)
 // ============================================================================
 
-/**
- * Reset EDS project to template state
- *
- * Resets the repository contents to match the template without deleting the repo.
- * This preserves the repo URL, settings, webhooks, and GitHub App installation.
- *
- * Uses bulk Git Tree API operations for efficiency (4 API calls vs thousands).
- *
- * Steps:
- * 1. Reset repo to template using bulk tree operations
- * 2. Waits for code sync
- * 3. Copies demo content to DA.live
- * 4. Publishes all content to CDN
- */
 /**
  * Republishes all content from DA.live to CDN for an EDS project.
  * This syncs config.json and all authored content to preview and live CDN.
@@ -790,9 +782,9 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
             {
                 location: vscode.ProgressLocation.Notification,
                 title: `Republishing ${project.name}`,
-            cancellable: false,
-        },
-        async (progress) => {
+                cancellable: false,
+            },
+            async (progress) => {
             try {
                 context.logger.info(`[ProjectsList] Republishing content for ${repoFullName}`);
 
@@ -969,7 +961,7 @@ export const handleResetProject: MessageHandler<{ projectPath: string }> = async
     const { isEdsProject } = await import('@/types/typeGuards');
 
     if (isEdsProject(project)) {
-        const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetService');
+        const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetUI');
         return resetEdsProjectWithUI({
             project,
             context,

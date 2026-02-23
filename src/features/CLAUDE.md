@@ -97,7 +97,7 @@ features/my-feature/
 - `ComponentManager` - Component lifecycle operations
 
 **Responsibilities:**
-- Component definition loading from templates/components.json
+- Component definition loading from config/components.json
 - Component dependency resolution
 - Component selection validation
 - Component metadata and configuration
@@ -127,12 +127,14 @@ features/my-feature/
 **Purpose**: Edge Delivery Services integration with GitHub, DA.live, and Helix 5
 
 **Key Services:**
-- `GitHubService` - OAuth authentication, repository creation from templates
-- `DaLiveService` - DA.live content management with IMS token integration
-- `EdsProjectService` - Project setup orchestration (GitHub + DA.live + Helix)
-- `ToolManager` - Commerce demo ingestion tool management
-- `CleanupService` - External resource cleanup on project deletion
+- `GitHubTokenService`, `GitHubRepoOperations`, `GitHubFileOperations`, `GitHubOAuthService` - GitHub integration (extracted modules)
+- `DaLiveAuthService`, `DaLiveContentOperations`, `DaLiveOrgOperations` - DA.live integration (extracted modules)
+- `ConfigurationService` - AEM Configuration Service (site registration)
 - `HelixService` - Helix 5 Configuration Service integration
+- `CleanupService` - External resource cleanup on project deletion
+- `ToolManager` - Commerce demo ingestion tool management
+- `edsResetService` + `edsResetUI` - Project reset (core logic + UI orchestration)
+- `blockCollectionHelpers` - Block collection installation from config-driven source
 - Error formatters for user-friendly error messages
 
 **Responsibilities:**
@@ -207,8 +209,7 @@ features/my-feature/
 **Purpose**: Project creation workflow, demo template selection, and environment setup
 
 **Key Services:**
-- Demo template loading and validation (`templateLoader.ts`)
-- Template defaults application (`templateDefaults.ts`)
+- Demo package loading and storefront resolution (`services/demoPackageLoader.ts`)
 - Project template application
 - Environment file generation
 - Directory structure creation

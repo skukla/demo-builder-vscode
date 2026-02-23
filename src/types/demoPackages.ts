@@ -110,12 +110,54 @@ export interface Storefront {
 }
 
 /**
+ * AddonSource - GitHub repository source for an addon
+ *
+ * Used by addons that fetch content from an external repository
+ * (e.g., the Commerce Block Collection fetches blocks from isle5).
+ */
+export interface AddonSource {
+    /** GitHub owner/organization */
+    owner: string;
+    /** GitHub repository name */
+    repo: string;
+    /** Branch to fetch from */
+    branch: string;
+}
+
+/**
+ * AddonConfig - Configuration for a single addon
+ *
+ * Simple form: "required" or "optional" (availability only)
+ * Object form: availability + source repository for content-fetching addons
+ */
+export type AddonConfig = 'required' | 'optional' | {
+    availability: 'required' | 'optional';
+    source: AddonSource;
+};
+
+/**
+ * Type guard to check if an addon config has a source repository.
+ */
+export function isAddonWithSource(
+    config: AddonConfig,
+): config is { availability: 'required' | 'optional'; source: AddonSource } {
+    return typeof config === 'object' && 'source' in config;
+}
+
+/**
+ * Get the availability of an addon config regardless of its form.
+ */
+export function getAddonAvailability(config: AddonConfig): 'required' | 'optional' {
+    return typeof config === 'string' ? config : config.availability;
+}
+
+/**
  * Addons - Configuration for addon components
  *
  * Key: addon ID
- * Value: "required" (pre-checked, disabled) or "optional" (toggleable)
+ * Value: simple availability string or object with availability + source
  */
-export type Addons = Record<string, 'required' | 'optional'>;
+export type Addons = Record<string, AddonConfig>;
 
 /**
  * DemoPackage - A unified demo package definition

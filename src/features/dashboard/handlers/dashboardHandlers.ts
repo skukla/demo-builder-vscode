@@ -123,9 +123,13 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                 if (hasMeshDeploymentRecord(project)) {
                     // Read persisted status — card grid already computed full fidelity
                     const summary = project.meshStatusSummary;
-                    meshStatus = summary === 'stale' ? 'config-changed'
-                        : (summary === 'unknown' || !summary) ? 'deployed'
-                        : summary;
+                    if (summary === 'stale') {
+                        meshStatus = 'config-changed';
+                    } else if (summary === 'unknown' || !summary) {
+                        meshStatus = 'deployed';
+                    } else {
+                        meshStatus = summary;
+                    }
 
                     // Lightweight background verification (is the mesh still there?)
                     verifyMeshDeployment(context, project).catch(err => {
@@ -445,7 +449,7 @@ export const handleResetProject: MessageHandler = async (context) => {
     const { isEdsProject } = await import('@/types/typeGuards');
 
     if (isEdsProject(project)) {
-        const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetService');
+        const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetUI');
         return resetEdsProjectWithUI({
             project,
             context,

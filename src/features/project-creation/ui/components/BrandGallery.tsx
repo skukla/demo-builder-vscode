@@ -17,7 +17,7 @@ import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
 import { cn } from '@/core/ui/utils/classNames';
-import { DemoPackage } from '@/types/demoPackages';
+import { DemoPackage, getAddonAvailability } from '@/types/demoPackages';
 import type { Stack, StacksConfig } from '@/types/stacks';
 
 /** Addon display metadata from stacks.json */
@@ -272,7 +272,8 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                     {displayAddons.map((optionalAddon) => {
                         const addonMeta = ADDON_METADATA[optionalAddon.id];
                         if (!addonMeta) return null;
-                        const isRequired = pkg.addons?.[optionalAddon.id] === 'required';
+                        const addonConfig = pkg.addons?.[optionalAddon.id];
+                        const isRequired = addonConfig != null && getAddonAvailability(addonConfig) === 'required';
                         const isChecked = isRequired || selectedAddons.includes(optionalAddon.id);
                         return (
                             <Checkbox
@@ -331,7 +332,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     const getRequiredAddons = useCallback((pkg: DemoPackage): string[] => {
         if (!pkg.addons) return [];
         return Object.entries(pkg.addons)
-            .filter(([_, mode]) => mode === 'required')
+            .filter(([_, config]) => getAddonAvailability(config) === 'required')
             .map(([id]) => id);
     }, []);
 
