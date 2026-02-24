@@ -53,7 +53,7 @@ export interface StorefrontSetupStartPayload {
     backendComponentId?: string;
     /** Selected addon IDs (e.g., ['commerce-block-collection']) */
     selectedAddons?: string[];
-    /** Selected package ID (e.g., 'citisignal') for resolving addon sources */
+    /** Selected package ID (e.g., 'citisignal') */
     selectedPackage?: string;
     edsConfig: {
         repoName: string;
@@ -266,7 +266,6 @@ export async function handleStartStorefrontSetup(
             edsConfig,
             abortController.signal,
             payload.selectedAddons,
-            payload.selectedPackage,
         );
 
         if (result.success) {

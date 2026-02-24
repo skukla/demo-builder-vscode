@@ -219,7 +219,6 @@ async function executePhaseHelixConfig(
     repoInfo: RepoInfo,
     selectedAddons: string[] | undefined,
     useExistingRepo: boolean,
-    selectedPackage?: string,
 ): Promise<{ blockCollectionIds?: string[]; earlyReturn?: StorefrontSetupResult }> {
     const logger = context.logger;
     const { githubFileOps } = services;
@@ -249,24 +248,20 @@ async function executePhaseHelixConfig(
     // Phase 2.1: Commerce Block Collection (if selected)
     let blockCollectionIds: string[] | undefined;
     if (selectedAddons?.includes('commerce-block-collection')) {
-        if (!selectedPackage) {
-            logger.warn('[Storefront Setup] Block collection addon selected but selectedPackage is missing');
-        } else {
-            const addonSource = await getAddonSource(selectedPackage, 'commerce-block-collection');
-            if (addonSource) {
-                await context.sendMessage('storefront-setup-progress', {
-                    phase: 'helix-config', message: 'Installing Commerce Block Collection...', progress: 25,
-                });
-                const result = await installBlockCollection(githubFileOps, repoInfo.repoOwner, repoInfo.repoName, addonSource, logger);
-                if (result.success) {
-                    logger.info(`[Storefront Setup] Block collection: ${result.blocksCount} blocks installed`);
-                    blockCollectionIds = result.blockIds;
-                } else {
-                    logger.warn(`[Storefront Setup] Block collection failed: ${result.error}`);
-                }
+        const addonSource = getAddonSource('commerce-block-collection');
+        if (addonSource) {
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'helix-config', message: 'Installing Commerce Block Collection...', progress: 25,
+            });
+            const result = await installBlockCollection(githubFileOps, repoInfo.repoOwner, repoInfo.repoName, addonSource, logger);
+            if (result.success) {
+                logger.info(`[Storefront Setup] Block collection: ${result.blocksCount} blocks installed`);
+                blockCollectionIds = result.blockIds;
             } else {
-                logger.warn('[Storefront Setup] Block collection addon selected but no source configured');
+                logger.warn(`[Storefront Setup] Block collection failed: ${result.error}`);
             }
+        } else {
+            logger.warn('[Storefront Setup] Block collection addon selected but no source configured');
         }
     }
 
@@ -526,14 +521,13 @@ async function registerConfigurationService(
  * This runs the remote setup operations:
  * 1. Create GitHub repository from template
  * 2. Configure Helix 5 (push fstab.yaml to GitHub)
- * 3. Verify code bus synchronization
+ * 3. Code sync verification and CDN publishing
  * 4. Populate DA.live content
  *
  * @param context - Handler context
  * @param edsConfig - EDS configuration from wizard
  * @param signal - Abort signal for cancellation
  * @param selectedAddons - Selected addon IDs
- * @param selectedPackage - Selected package ID for addon source resolution
  * @returns Setup result with repo details
  */
 export async function executeStorefrontSetupPhases(
@@ -541,7 +535,6 @@ export async function executeStorefrontSetupPhases(
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     signal: AbortSignal,
     selectedAddons?: string[],
-    selectedPackage?: string,
 ): Promise<StorefrontSetupResult> {
     const logger = context.logger;
 
@@ -613,7 +606,7 @@ export async function executeStorefrontSetupPhases(
 
         // Phase 2: Helix Configuration
         const { blockCollectionIds, earlyReturn } = await executePhaseHelixConfig(
-            context, edsConfig, services, repoInfo, selectedAddons, useExistingRepo, selectedPackage,
+            context, edsConfig, services, repoInfo, selectedAddons, useExistingRepo,
         );
         if (earlyReturn) return earlyReturn;
 

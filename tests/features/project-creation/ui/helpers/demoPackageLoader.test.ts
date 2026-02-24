@@ -237,48 +237,64 @@ describe('demoPackageLoader', () => {
         });
     });
 
-    describe('getAddonSource', () => {
-        it('should return addon source for citisignal commerce-block-collection', async () => {
-            const source = await getAddonSource('citisignal', 'commerce-block-collection');
+    describe('getAddonSource (global, from stacks.json)', () => {
+        it('should return source for commerce-block-collection from stacks.json', () => {
+            const source = getAddonSource('commerce-block-collection');
 
             expect(source).toBeDefined();
-            expect(source?.owner).toBe('stephen-garner-adobe');
+            expect(source?.owner).toBe('skukla');
             expect(source?.repo).toBe('isle5');
             expect(source?.branch).toBe('main');
         });
 
-        it('should return addon source for custom commerce-block-collection', async () => {
-            const source = await getAddonSource('custom', 'commerce-block-collection');
-
-            expect(source).toBeDefined();
-            expect(source?.owner).toBe('stephen-garner-adobe');
-            expect(source?.repo).toBe('isle5');
-            expect(source?.branch).toBe('main');
-        });
-
-        it('should return undefined for addon without source (simple string config)', async () => {
-            const source = await getAddonSource('citisignal', 'demo-inspector');
+        it('should return undefined for addon without source (demo-inspector)', () => {
+            const source = getAddonSource('demo-inspector');
 
             expect(source).toBeUndefined();
         });
 
-        it('should return undefined for non-existent addon', async () => {
-            const source = await getAddonSource('citisignal', 'non-existent-addon');
+        it('should return undefined for nonexistent addon', () => {
+            const source = getAddonSource('nonexistent-addon');
 
             expect(source).toBeUndefined();
         });
 
-        it('should return undefined for non-existent package', async () => {
-            const source = await getAddonSource('nonexistent', 'commerce-block-collection');
+        it('should be synchronous (not return a Promise)', () => {
+            const result = getAddonSource('commerce-block-collection');
 
-            expect(source).toBeUndefined();
+            // If it were async, result would be a Promise object
+            expect(result).not.toBeInstanceOf(Promise);
         });
 
-        it('should return undefined for package with no addons', async () => {
-            // buildright has addons but not commerce-block-collection with source
-            const source = await getAddonSource('buildright', 'commerce-block-collection');
+        it('should not require packageId parameter', () => {
+            // getAddonSource should accept exactly 1 argument
+            expect(getAddonSource.length).toBeLessThanOrEqual(1);
+        });
+    });
 
-            expect(source).toBeUndefined();
+    describe('addon config validation (simplified string form)', () => {
+        it('should have citisignal commerce-block-collection as string "optional" (not object)', async () => {
+            const pkg = await getPackageById('citisignal');
+
+            expect(pkg?.addons?.['commerce-block-collection']).toBe('optional');
+        });
+
+        it('should have custom commerce-block-collection as string "optional" (not object)', async () => {
+            const pkg = await getPackageById('custom');
+
+            expect(pkg?.addons?.['commerce-block-collection']).toBe('optional');
+        });
+
+        it('should have all addon configs as strings (no object form)', async () => {
+            const packages = await loadDemoPackages();
+
+            packages.forEach(pkg => {
+                if (pkg.addons) {
+                    Object.values(pkg.addons).forEach((config) => {
+                        expect(typeof config).toBe('string');
+                    });
+                }
+            });
         });
     });
 });

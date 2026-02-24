@@ -170,6 +170,33 @@ describe('stacks.json', () => {
         });
     });
 
+    describe('addon definitions', () => {
+        it('should have source for commerce-block-collection addon', () => {
+            const addonDefs = stacksConfig.addonDefinitions as Record<string, Record<string, unknown>>;
+            const blockCollection = addonDefs['commerce-block-collection'];
+
+            expect(blockCollection).toBeDefined();
+            expect(blockCollection.source).toBeDefined();
+        });
+
+        it('should have correct source properties for commerce-block-collection', () => {
+            const addonDefs = stacksConfig.addonDefinitions as Record<string, Record<string, unknown>>;
+            const source = addonDefs['commerce-block-collection'].source as Record<string, string>;
+
+            expect(source.owner).toBe('skukla');
+            expect(source.repo).toBe('isle5');
+            expect(source.branch).toBe('main');
+        });
+
+        it('should NOT have source for demo-inspector addon (no external repo)', () => {
+            const addonDefs = stacksConfig.addonDefinitions as Record<string, Record<string, unknown>>;
+            const demoInspector = addonDefs['demo-inspector'];
+
+            expect(demoInspector).toBeDefined();
+            expect(demoInspector.source).toBeUndefined();
+        });
+    });
+
     describe('all stacks', () => {
         it('should have unique IDs', () => {
             const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;

@@ -5,6 +5,8 @@
  * combinations (Headless, Edge Delivery, etc.) that can be combined with any brand.
  */
 
+import type { AddonSource } from './demoPackages';
+
 /**
  * OptionalAddon - An addon that can be optionally enabled for a stack
  */
@@ -24,7 +26,7 @@ export interface OptionalAddon {
  * any brand to create a complete project configuration.
  */
 export interface Stack {
-    /** Unique identifier (e.g., 'headless', 'edge-delivery') */
+    /** Unique identifier (e.g., 'headless-paas', 'eds-paas') */
     id: string;
 
     /** Display name for the stack */
@@ -67,6 +69,9 @@ export interface AddonDefinition {
 
     /** Short description for UI display */
     description: string;
+
+    /** Optional source repository for addons that fetch external content */
+    source?: AddonSource;
 }
 
 /**

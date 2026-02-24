@@ -51,7 +51,7 @@ interface DemoPackage {
     description: string;
     icon?: string;
     featured?: boolean;
-    addons?: Record<string, 'required' | 'optional' | { availability: 'required' | 'optional'; source: { owner: string; repo: string; branch: string } }>;
+    addons?: Record<string, 'required' | 'optional' | 'excluded'>;
     configDefaults: Record<string, string>;
     storefronts: Record<string, Storefront>;
 }

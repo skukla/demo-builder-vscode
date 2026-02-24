@@ -268,23 +268,19 @@ async function resetRepoToTemplate(
     // Re-install block collection if project had it
     let blockCollectionIds: string[] | undefined;
     if (project.selectedAddons?.includes('commerce-block-collection')) {
-        if (!project.selectedPackage) {
-            context.logger.warn('[EdsReset] Block collection addon selected but selectedPackage is missing');
-        } else {
-            const addonSource = await getAddonSource(project.selectedPackage, 'commerce-block-collection');
-            if (addonSource) {
-                report(1, 'Re-installing Commerce Block Collection...');
-                const { installBlockCollection } = await import('./blockCollectionHelpers');
-                const blockResult = await installBlockCollection(githubFileOps, repoOwner, repoName, addonSource, context.logger);
-                if (blockResult.success) {
-                    blockCollectionIds = blockResult.blockIds;
-                    context.logger.info(`[EdsReset] Block collection reinstalled: ${blockResult.blocksCount} blocks`);
-                } else {
-                    context.logger.warn(`[EdsReset] Block collection reinstall failed: ${blockResult.error}`);
-                }
+        const addonSource = getAddonSource('commerce-block-collection');
+        if (addonSource) {
+            report(1, 'Re-installing Commerce Block Collection...');
+            const { installBlockCollection } = await import('./blockCollectionHelpers');
+            const blockResult = await installBlockCollection(githubFileOps, repoOwner, repoName, addonSource, context.logger);
+            if (blockResult.success) {
+                blockCollectionIds = blockResult.blockIds;
+                context.logger.info(`[EdsReset] Block collection reinstalled: ${blockResult.blocksCount} blocks`);
             } else {
-                context.logger.warn('[EdsReset] Block collection addon selected but no source configured');
+                context.logger.warn(`[EdsReset] Block collection reinstall failed: ${blockResult.error}`);
             }
+        } else {
+            context.logger.warn('[EdsReset] Block collection addon selected but no source configured');
         }
     }
 

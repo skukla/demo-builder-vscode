@@ -12,7 +12,12 @@
     },
     "commerce-block-collection": {
       "name": "Commerce Block Collection",
-      "description": "Custom EDS blocks: hero, carousel, newsletter, store locator, and more"
+      "description": "Custom EDS blocks: hero, carousel, newsletter, store locator, and more",
+      "source": {
+        "owner": "skukla",
+        "repo": "isle5",
+        "branch": "main"
+      }
     }
   },
   "stacks": [

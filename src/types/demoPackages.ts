@@ -1,7 +1,7 @@
 /**
  * Demo Package Type Definitions
  *
- * Types for the unified demo-packages.json structure (Option A: Nested Storefronts).
+ * Types for the unified demo-packages.json structure (nested storefronts keyed by stack ID).
  *
  * Structure:
  * - packages[] contain nested storefronts keyed by stack ID
@@ -125,37 +125,19 @@ export interface AddonSource {
 }
 
 /**
- * AddonConfig - Configuration for a single addon
+ * AddonConfig - Configuration for a single addon within a package
  *
- * Simple form: "required" or "optional" (availability only)
- * Object form: availability + source repository for content-fetching addons
+ * Simple string union: "required", "optional", or "excluded".
+ * Source repository information is now defined globally in stacks.json addon definitions.
  */
-export type AddonConfig = 'required' | 'optional' | {
-    availability: 'required' | 'optional';
-    source: AddonSource;
-};
+export type AddonConfig = 'required' | 'optional' | 'excluded';
 
-/**
- * Type guard to check if an addon config has a source repository.
- */
-export function isAddonWithSource(
-    config: AddonConfig,
-): config is { availability: 'required' | 'optional'; source: AddonSource } {
-    return typeof config === 'object' && 'source' in config;
-}
-
-/**
- * Get the availability of an addon config regardless of its form.
- */
-export function getAddonAvailability(config: AddonConfig): 'required' | 'optional' {
-    return typeof config === 'string' ? config : config.availability;
-}
 
 /**
  * Addons - Configuration for addon components
  *
  * Key: addon ID
- * Value: simple availability string or object with availability + source
+ * Value: availability string ('required' | 'optional' | 'excluded')
  */
 export type Addons = Record<string, AddonConfig>;
 

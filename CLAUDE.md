@@ -175,6 +175,7 @@ demo-builder-vscode/
 8. **src/features/prerequisites/config/prerequisites.json** - Prerequisite definitions
 9. **src/features/components/config/components.json** - Component registry
 10. **src/features/project-creation/config/demo-packages.json** - Demo package definitions (storefront configs, addons, content sources)
+11. **src/features/project-creation/config/stacks.json** - Stack definitions (frontend+backend combos, global addon definitions with source repos)
 
 ## Common Tasks
 

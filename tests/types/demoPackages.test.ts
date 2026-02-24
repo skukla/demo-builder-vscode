@@ -23,7 +23,6 @@ import type {
     DemoPackage,
     DemoPackagesConfig,
 } from '@/types/demoPackages';
-import { isAddonWithSource, getAddonAvailability } from '@/types/demoPackages';
 
 describe('GitOptions type', () => {
     it('should require shallow and recursive fields', () => {
@@ -219,33 +218,28 @@ describe('Addons type', () => {
         expect(addons['another-addon']).toBe('optional');
     });
 
-    it('should accept addon with source config (object form)', () => {
-        // Given: Addon with source configuration
+    it('should accept addon with excluded value', () => {
+        // Given: Addon with excluded availability
         const addons: Addons = {
-            'commerce-block-collection': {
-                availability: 'optional',
-                source: { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' },
-            },
+            'commerce-block-collection': 'excluded',
         };
 
-        // Then: object-form addon should be accessible
-        const config = addons['commerce-block-collection'];
-        expect(typeof config).toBe('object');
+        // Then: excluded addon should be accessible
+        expect(addons['commerce-block-collection']).toBe('excluded');
     });
 
-    it('should accept mixed simple and object addons', () => {
-        // Given: Mix of string and object addon configs
+    it('should accept mixed required, optional, and excluded addons', () => {
+        // Given: Mix of all addon config string values
         const addons: Addons = {
             'demo-inspector': 'required',
-            'commerce-block-collection': {
-                availability: 'optional',
-                source: { owner: 'org', repo: 'repo', branch: 'main' },
-            },
+            'commerce-block-collection': 'optional',
+            'some-addon': 'excluded',
         };
 
-        // Then: both forms should be accessible
+        // Then: all string forms should be accessible
         expect(addons['demo-inspector']).toBe('required');
-        expect(typeof addons['commerce-block-collection']).toBe('object');
+        expect(addons['commerce-block-collection']).toBe('optional');
+        expect(addons['some-addon']).toBe('excluded');
     });
 });
 
@@ -263,50 +257,31 @@ describe('AddonSource type', () => {
     });
 });
 
-describe('AddonConfig type', () => {
-    it('should accept simple string values', () => {
+describe('AddonConfig type (simplified string union)', () => {
+    it('should accept required string value', () => {
         const config: AddonConfig = 'required';
         expect(config).toBe('required');
     });
 
-    it('should accept object with availability and source', () => {
-        const config: AddonConfig = {
-            availability: 'optional',
-            source: { owner: 'org', repo: 'repo', branch: 'main' },
-        };
-        expect(typeof config).toBe('object');
+    it('should accept optional string value', () => {
+        const config: AddonConfig = 'optional';
+        expect(config).toBe('optional');
+    });
+
+    it('should accept excluded string value', () => {
+        const config: AddonConfig = 'excluded';
+        expect(config).toBe('excluded');
+    });
+
+    it('should only accept string values (no object form)', () => {
+        // All AddonConfig values should be strings
+        const configs: AddonConfig[] = ['required', 'optional', 'excluded'];
+        configs.forEach(config => {
+            expect(typeof config).toBe('string');
+        });
     });
 });
 
-describe('isAddonWithSource', () => {
-    it('should return true for object config with source', () => {
-        const config: AddonConfig = {
-            availability: 'optional',
-            source: { owner: 'org', repo: 'repo', branch: 'main' },
-        };
-        expect(isAddonWithSource(config)).toBe(true);
-    });
-
-    it('should return false for simple string config', () => {
-        const config: AddonConfig = 'required';
-        expect(isAddonWithSource(config)).toBe(false);
-    });
-});
-
-describe('getAddonAvailability', () => {
-    it('should return string value for simple config', () => {
-        expect(getAddonAvailability('required')).toBe('required');
-        expect(getAddonAvailability('optional')).toBe('optional');
-    });
-
-    it('should return availability from object config', () => {
-        const config: AddonConfig = {
-            availability: 'optional',
-            source: { owner: 'org', repo: 'repo', branch: 'main' },
-        };
-        expect(getAddonAvailability(config)).toBe('optional');
-    });
-});
 
 describe('DemoPackage type (nested storefronts structure)', () => {
     it('should accept minimal required fields', () => {
@@ -443,7 +418,7 @@ describe('DemoPackage type (nested storefronts structure)', () => {
     });
 
     it('should accept structure matching citisignal package pattern', () => {
-        // Given: Package matching citisignal from demo-packages.json
+        // Given: Package matching citisignal from demo-packages.json (simplified addon config)
         const pkg: DemoPackage = {
             id: 'citisignal',
             name: 'CitiSignal',
@@ -451,11 +426,8 @@ describe('DemoPackage type (nested storefronts structure)', () => {
             icon: 'citisignal',
             featured: true,
             addons: {
-                'demo-inspector': 'required',
-                'commerce-block-collection': {
-                    availability: 'optional',
-                    source: { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' },
-                },
+                'demo-inspector': 'optional',
+                'commerce-block-collection': 'optional',
             },
             configDefaults: {
                 ADOBE_COMMERCE_WEBSITE_CODE: 'citisignal',
@@ -662,10 +634,12 @@ describe('type exports from @/types/demoPackages', () => {
         expect(types).toBeDefined();
     });
 
-    it('should export runtime functions isAddonWithSource and getAddonAvailability', async () => {
+    it('should NOT export removed helper functions', async () => {
         const types = await import('@/types/demoPackages');
 
-        expect(typeof types.isAddonWithSource).toBe('function');
-        expect(typeof types.getAddonAvailability).toBe('function');
+        // getAddonAvailability removed (was identity function after type simplification)
+        expect((types as Record<string, unknown>).getAddonAvailability).toBeUndefined();
+        // isAddonWithSource removed (source moved to stacks.json)
+        expect((types as Record<string, unknown>).isAddonWithSource).toBeUndefined();
     });
 });

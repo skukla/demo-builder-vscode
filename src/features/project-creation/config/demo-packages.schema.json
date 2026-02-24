@@ -58,17 +58,10 @@
         "addons": {
           "type": "object",
           "additionalProperties": {
-            "oneOf": [
-              {
-                "type": "string",
-                "enum": ["required", "optional"]
-              },
-              {
-                "$ref": "#/definitions/addonWithSource"
-              }
-            ]
+            "type": "string",
+            "enum": ["required", "optional", "excluded"]
           },
-          "description": "Addon requirements (addon ID to requirement level or object with source)"
+          "description": "Addon availability overrides (blacklist model: unlisted addons allowed by default, set 'excluded' to hide)"
         },
         "configDefaults": {
           "type": "object",
@@ -85,43 +78,6 @@
           }
         }
       }
-    },
-    "addonWithSource": {
-      "type": "object",
-      "required": ["availability", "source"],
-      "properties": {
-        "availability": {
-          "type": "string",
-          "enum": ["required", "optional"],
-          "description": "Addon requirement level"
-        },
-        "source": {
-          "$ref": "#/definitions/addonSource"
-        }
-      },
-      "additionalProperties": false
-    },
-    "addonSource": {
-      "type": "object",
-      "required": ["owner", "repo", "branch"],
-      "properties": {
-        "owner": {
-          "type": "string",
-          "minLength": 1,
-          "description": "GitHub owner/organization of the addon source repository"
-        },
-        "repo": {
-          "type": "string",
-          "minLength": 1,
-          "description": "GitHub repository name"
-        },
-        "branch": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Branch to use from the source repository"
-        }
-      },
-      "additionalProperties": false
     },
     "storefront": {
       "type": "object",

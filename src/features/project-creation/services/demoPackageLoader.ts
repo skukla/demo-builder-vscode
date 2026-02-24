@@ -5,17 +5,19 @@
  * Provides functions to retrieve packages and their storefronts
  * for specific stack configurations.
  *
- * Structure: Option A (Nested Storefronts)
+ * Structure: Nested Storefronts
  * - Packages contain storefronts keyed by stack ID
- * - No contentSources (EDS URLs derivable from source.url)
+ * - EDS storefronts have explicit contentSource for DA.live content
+ * - Addon source repos defined globally in stacks.json addonDefinitions
  *
  * This replaces the separate brandStackLoader.ts and templateLoader.ts
  * with a unified loader for the simplified demo-packages architecture.
  */
 
 import demoPackagesConfig from '../config/demo-packages.json';
+import stacksConfig from '../config/stacks.json';
 import type { AddonSource, DemoPackage, DemoPackagesConfig, Storefront } from '@/types/demoPackages';
-import { isAddonWithSource } from '@/types/demoPackages';
+import type { StacksConfig } from '@/types/stacks';
 
 /**
  * Storefront with package and stack context
@@ -151,35 +153,23 @@ export async function getAllStorefronts(): Promise<StorefrontWithContext[]> {
 }
 
 /**
- * Get the source repository for an addon within a package
+ * Get the source repository for an addon from global stacks.json definitions
  *
  * Resolves the AddonSource for addons that have a configured source
- * repository (e.g., commerce-block-collection → isle5).
+ * repository (e.g., commerce-block-collection -> isle5).
+ * Source is defined globally in stacks.json, not per-package.
  *
- * @param packageId - The demo package ID (e.g., "citisignal")
  * @param addonId - The addon ID (e.g., "commerce-block-collection")
- * @returns Promise resolving to the AddonSource, or undefined if the addon
- *          doesn't exist or doesn't have a source configured
+ * @returns The AddonSource, or undefined if the addon doesn't exist or has no source
  *
  * @example
- * const source = await getAddonSource('citisignal', 'commerce-block-collection');
+ * const source = getAddonSource('commerce-block-collection');
  * if (source) {
  *   console.log(`Blocks from ${source.owner}/${source.repo}:${source.branch}`);
  * }
  */
-export async function getAddonSource(
-    packageId: string,
-    addonId: string,
-): Promise<AddonSource | undefined> {
-    const pkg = await getPackageById(packageId);
-    if (!pkg?.addons) {
-        return undefined;
-    }
-
-    const addonConfig = pkg.addons[addonId];
-    if (!addonConfig || !isAddonWithSource(addonConfig)) {
-        return undefined;
-    }
-
-    return addonConfig.source;
+export function getAddonSource(addonId: string): AddonSource | undefined {
+    const config = stacksConfig as unknown as StacksConfig;
+    const addonDef = config.addonDefinitions?.[addonId];
+    return addonDef?.source;
 }
