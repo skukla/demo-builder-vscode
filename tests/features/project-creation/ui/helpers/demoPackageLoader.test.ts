@@ -238,15 +238,6 @@ describe('demoPackageLoader', () => {
     });
 
     describe('getAddonSource (global, from stacks.json)', () => {
-        it('should return source for commerce-block-collection from stacks.json', () => {
-            const source = getAddonSource('commerce-block-collection');
-
-            expect(source).toBeDefined();
-            expect(source?.owner).toBe('skukla');
-            expect(source?.repo).toBe('isle5');
-            expect(source?.branch).toBe('main');
-        });
-
         it('should return undefined for addon without source (demo-inspector)', () => {
             const source = getAddonSource('demo-inspector');
 
@@ -260,7 +251,7 @@ describe('demoPackageLoader', () => {
         });
 
         it('should be synchronous (not return a Promise)', () => {
-            const result = getAddonSource('commerce-block-collection');
+            const result = getAddonSource('demo-inspector');
 
             // If it were async, result would be a Promise object
             expect(result).not.toBeInstanceOf(Promise);
@@ -273,16 +264,12 @@ describe('demoPackageLoader', () => {
     });
 
     describe('addon config validation (simplified string form)', () => {
-        it('should have citisignal commerce-block-collection as string "optional" (not object)', async () => {
-            const pkg = await getPackageById('citisignal');
+        it('should not have commerce-block-collection in package addons (moved to block-libraries.json)', async () => {
+            const packages = await loadDemoPackages();
 
-            expect(pkg?.addons?.['commerce-block-collection']).toBe('optional');
-        });
-
-        it('should have custom commerce-block-collection as string "optional" (not object)', async () => {
-            const pkg = await getPackageById('custom');
-
-            expect(pkg?.addons?.['commerce-block-collection']).toBe('optional');
+            packages.forEach(pkg => {
+                expect(pkg.addons?.['commerce-block-collection']).toBeUndefined();
+            });
         });
 
         it('should have all addon configs as strings (no object form)', async () => {

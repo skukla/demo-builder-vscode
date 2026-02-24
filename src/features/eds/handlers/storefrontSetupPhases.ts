@@ -14,7 +14,7 @@
  */
 
 import { installBlockCollection } from '../services/blockCollectionHelpers';
-import { getAddonSource } from '@/features/project-creation/services/demoPackageLoader';
+import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
 import { ConfigurationService } from '../services/configurationService';
 import { DaLiveAuthService } from '../services/daLiveAuthService';
 import { DaLiveContentOperations, createDaLiveTokenProvider } from '../services/daLiveContentOperations';
@@ -217,7 +217,7 @@ async function executePhaseHelixConfig(
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     services: SetupServices,
     repoInfo: RepoInfo,
-    selectedAddons: string[] | undefined,
+    selectedBlockLibraries: string[] | undefined,
     useExistingRepo: boolean,
 ): Promise<{ blockCollectionIds?: string[]; earlyReturn?: StorefrontSetupResult }> {
     const logger = context.logger;
@@ -245,25 +245,30 @@ async function executePhaseHelixConfig(
     );
     logger.info('[Storefront Setup] fstab.yaml pushed to GitHub');
 
-    // Phase 2.1: Commerce Block Collection (if selected)
-    let blockCollectionIds: string[] | undefined;
-    if (selectedAddons?.includes('commerce-block-collection')) {
-        const addonSource = getAddonSource('commerce-block-collection');
-        if (addonSource) {
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'helix-config', message: 'Installing Commerce Block Collection...', progress: 25,
-            });
-            const result = await installBlockCollection(githubFileOps, repoInfo.repoOwner, repoInfo.repoName, addonSource, logger);
-            if (result.success) {
-                logger.info(`[Storefront Setup] Block collection: ${result.blocksCount} blocks installed`);
-                blockCollectionIds = result.blockIds;
+    // Phase 2.1: Block Libraries (install each selected library sequentially)
+    const allBlockIds: string[] = [];
+    if (selectedBlockLibraries && selectedBlockLibraries.length > 0) {
+        for (const libraryId of selectedBlockLibraries) {
+            const source = getBlockLibrarySource(libraryId);
+            if (source) {
+                const libraryName = getBlockLibraryName(libraryId) || libraryId;
+                await context.sendMessage('storefront-setup-progress', {
+                    phase: 'helix-config', message: `Installing ${libraryName}...`, progress: 25,
+                });
+                const result = await installBlockCollection(githubFileOps, repoInfo.repoOwner, repoInfo.repoName, source, logger, libraryName);
+                if (result.success) {
+                    logger.info(`[Storefront Setup] ${libraryName}: ${result.blocksCount} blocks installed`);
+                    allBlockIds.push(...result.blockIds);
+                } else {
+                    logger.warn(`[Storefront Setup] ${libraryName} failed: ${result.error}`);
+                }
             } else {
-                logger.warn(`[Storefront Setup] Block collection failed: ${result.error}`);
+                logger.warn(`[Storefront Setup] Block library '${libraryId}' selected but no source configured`);
             }
-        } else {
-            logger.warn('[Storefront Setup] Block collection addon selected but no source configured');
         }
     }
+
+    const blockCollectionIds = allBlockIds.length > 0 ? allBlockIds : undefined;
 
     // Phase 2.5: GitHub App Check (EXISTING repos only)
     if (useExistingRepo) {
@@ -535,6 +540,7 @@ export async function executeStorefrontSetupPhases(
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     signal: AbortSignal,
     selectedAddons?: string[],
+    selectedBlockLibraries?: string[],
 ): Promise<StorefrontSetupResult> {
     const logger = context.logger;
 
@@ -605,8 +611,14 @@ export async function executeStorefrontSetupPhases(
         if (phase1Result) return phase1Result;
 
         // Phase 2: Helix Configuration
+        // Backward compat: if selectedBlockLibraries is empty but selectedAddons has
+        // commerce-block-collection, treat as ['isle5'] for pre-existing projects
+        const effectiveBlockLibraries = (selectedBlockLibraries && selectedBlockLibraries.length > 0)
+            ? selectedBlockLibraries
+            : selectedAddons?.includes('commerce-block-collection') ? ['isle5'] : undefined;
+
         const { blockCollectionIds, earlyReturn } = await executePhaseHelixConfig(
-            context, edsConfig, services, repoInfo, selectedAddons, useExistingRepo,
+            context, edsConfig, services, repoInfo, effectiveBlockLibraries, useExistingRepo,
         );
         if (earlyReturn) return earlyReturn;
 

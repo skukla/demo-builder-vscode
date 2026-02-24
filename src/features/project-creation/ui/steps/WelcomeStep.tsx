@@ -165,6 +165,14 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         [updateState],
     );
 
+    // Handler for block library selection changes
+    const handleBlockLibrariesChange = useCallback(
+        (libraries: string[]) => {
+            updateState({ selectedBlockLibraries: libraries });
+        },
+        [updateState],
+    );
+
     useEffect(() => {
         const isProjectNameValid =
             state.projectName.length >= 3 &&
@@ -270,6 +278,8 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 onPackageSelect={handlePackageSelect}
                 onStackSelect={handleStackSelect}
                 onAddonsChange={handleAddonsChange}
+                selectedBlockLibraries={state.selectedBlockLibraries}
+                onBlockLibrariesChange={handleBlockLibrariesChange}
                 headerContent={projectNameField}
             />
         );

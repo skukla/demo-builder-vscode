@@ -16,3 +16,10 @@ export {
 } from '../../services/demoPackageLoader';
 
 export type { StorefrontWithContext } from '../../services/demoPackageLoader';
+
+export {
+    getAvailableBlockLibraries,
+    getDefaultBlockLibraryIds,
+    getBlockLibrarySource,
+    getBlockLibraryName,
+} from '../../services/blockLibraryLoader';

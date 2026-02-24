@@ -48,6 +48,9 @@ describe('SOP: Inline Styles', () => {
 
         // Modal/dialog layout stability
         'GitHubRepoSelectionStep.tsx': 'Fixed height container prevents modal resize during status recheck',
+
+        // Block library modal step spacing
+        'BrandGallery.tsx': 'Spectrum UNSAFE_style for block library section spacing',
     };
 
     /**

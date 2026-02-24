@@ -1,0 +1,45 @@
+{
+  "$schema": "./block-libraries.schema.json",
+  "version": "1.0.0",
+  "libraries": [
+    {
+      "id": "isle5",
+      "name": "Commerce Block Collection",
+      "description": "Custom EDS blocks: hero, carousel, newsletter, store locator, and more",
+      "type": "standalone",
+      "source": {
+        "owner": "skukla",
+        "repo": "isle5",
+        "branch": "main"
+      },
+      "stackTypes": ["eds-storefront"],
+      "default": true
+    },
+    {
+      "id": "citisignal-blocks",
+      "name": "CitiSignal Blocks",
+      "description": "Branded blocks from the CitiSignal EDS storefront",
+      "type": "storefront",
+      "source": {
+        "owner": "skukla",
+        "repo": "citisignal-eds-boilerplate",
+        "branch": "main"
+      },
+      "excludeForPackages": ["citisignal"],
+      "stackTypes": ["eds-storefront"]
+    },
+    {
+      "id": "buildright-blocks",
+      "name": "BuildRight Blocks",
+      "description": "Branded blocks from the BuildRight EDS storefront",
+      "type": "storefront",
+      "source": {
+        "owner": "skukla",
+        "repo": "buildright-eds",
+        "branch": "main"
+      },
+      "excludeForPackages": ["buildright"],
+      "stackTypes": ["eds-storefront"]
+    }
+  ]
+}

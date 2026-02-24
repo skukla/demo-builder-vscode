@@ -9,8 +9,7 @@
       "icon": "citisignal",
       "featured": true,
       "addons": {
-        "demo-inspector": "optional",
-        "commerce-block-collection": "optional"
+        "demo-inspector": "optional"
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
@@ -156,9 +155,7 @@
       "description": "Unbranded Commerce storefront for custom demos",
       "icon": "custom",
       "featured": false,
-      "addons": {
-        "commerce-block-collection": "optional"
-      },
+      "addons": {},
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "website",
         "ADOBE_COMMERCE_STORE_CODE": "main_website_store",

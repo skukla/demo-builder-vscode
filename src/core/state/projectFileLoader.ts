@@ -28,6 +28,7 @@ export interface ProjectManifest {
     selectedPackage?: string;
     selectedStack?: string;
     selectedAddons?: string[];
+    selectedBlockLibraries?: string[];
 }
 
 export class ProjectFileLoader {
@@ -86,6 +87,7 @@ export class ProjectFileLoader {
                 selectedPackage: manifest.selectedPackage,
                 selectedStack: manifest.selectedStack,
                 selectedAddons: manifest.selectedAddons,
+                selectedBlockLibraries: manifest.selectedBlockLibraries,
             };
 
             // Detect if demo is actually running

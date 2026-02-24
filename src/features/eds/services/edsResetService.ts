@@ -20,7 +20,7 @@ import type { TokenProvider } from './daLiveOrgOperations';
 import { COMPONENT_IDS } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
-import { getAddonSource } from '@/features/project-creation/services/demoPackageLoader';
+import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -265,22 +265,37 @@ async function resetRepoToTemplate(
     context.logger.info(`[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
     report(1, `Reset ${resetResult.fileCount} files`);
 
-    // Re-install block collection if project had it
+    // Re-install block libraries if project had them
+    // Backward compat: if selectedBlockLibraries is empty but selectedAddons has
+    // commerce-block-collection, treat as ['isle5'] for pre-existing projects
+    const effectiveBlockLibraries = (project.selectedBlockLibraries && project.selectedBlockLibraries.length > 0)
+        ? project.selectedBlockLibraries
+        : project.selectedAddons?.includes('commerce-block-collection') ? ['isle5'] : [];
+
     let blockCollectionIds: string[] | undefined;
-    if (project.selectedAddons?.includes('commerce-block-collection')) {
-        const addonSource = getAddonSource('commerce-block-collection');
-        if (addonSource) {
-            report(1, 'Re-installing Commerce Block Collection...');
-            const { installBlockCollection } = await import('./blockCollectionHelpers');
-            const blockResult = await installBlockCollection(githubFileOps, repoOwner, repoName, addonSource, context.logger);
-            if (blockResult.success) {
-                blockCollectionIds = blockResult.blockIds;
-                context.logger.info(`[EdsReset] Block collection reinstalled: ${blockResult.blocksCount} blocks`);
+    if (effectiveBlockLibraries.length > 0) {
+        const { installBlockCollection } = await import('./blockCollectionHelpers');
+        const allBlockIds: string[] = [];
+
+        for (const libraryId of effectiveBlockLibraries) {
+            const source = getBlockLibrarySource(libraryId);
+            if (source) {
+                const libraryName = getBlockLibraryName(libraryId) || libraryId;
+                report(1, `Re-installing ${libraryName}...`);
+                const blockResult = await installBlockCollection(githubFileOps, repoOwner, repoName, source, context.logger, libraryName);
+                if (blockResult.success) {
+                    allBlockIds.push(...blockResult.blockIds);
+                    context.logger.info(`[EdsReset] ${libraryName} reinstalled: ${blockResult.blocksCount} blocks`);
+                } else {
+                    context.logger.warn(`[EdsReset] ${libraryName} reinstall failed: ${blockResult.error}`);
+                }
             } else {
-                context.logger.warn(`[EdsReset] Block collection reinstall failed: ${blockResult.error}`);
+                context.logger.warn(`[EdsReset] Block library '${libraryId}' selected but no source configured`);
             }
-        } else {
-            context.logger.warn('[EdsReset] Block collection addon selected but no source configured');
+        }
+
+        if (allBlockIds.length > 0) {
+            blockCollectionIds = allBlockIds;
         }
     }
 

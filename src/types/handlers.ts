@@ -51,6 +51,7 @@ export interface ProjectConfig {
     selectedPackage?: string;
     selectedStack?: string;
     selectedAddons?: string[];
+    selectedBlockLibraries?: string[];
     importedWorkspaceId?: string;
     importedMeshEndpoint?: string;
     frontendSource?: unknown;

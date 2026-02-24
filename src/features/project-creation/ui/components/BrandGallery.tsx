@@ -12,6 +12,10 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import stacksConfig from '../../config/stacks.json';
 import { sortPackages, filterPackagesBySearchQuery, filterAddonsByPackage } from './brandGalleryHelpers';
+import {
+    getAvailableBlockLibraries,
+    getDefaultBlockLibraryIds,
+} from '../../services/blockLibraryLoader';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -33,6 +37,8 @@ export interface BrandGalleryProps {
     onPackageSelect: (packageId: string) => void;
     onStackSelect: (stackId: string) => void;
     onAddonsChange?: (addons: string[]) => void;
+    selectedBlockLibraries?: string[];
+    onBlockLibrariesChange?: (libraries: string[]) => void;
     /** Optional content to render above the gallery (e.g., project name field) */
     headerContent?: React.ReactNode;
 }
@@ -135,13 +141,17 @@ const PackageCard: React.FC<PackageCardProps> = ({
 /**
  * ArchitectureModal - modal for selecting architecture/stack and optional addons
  */
+type ModalStep = 'architecture' | 'block-libraries';
+
 interface ArchitectureModalProps {
     pkg: DemoPackage;
     stacks: Stack[];
     selectedStackId?: string;
     selectedAddons?: string[];
+    selectedBlockLibraries?: string[];
     onStackSelect: (stackId: string) => void;
     onAddonsChange: (addons: string[]) => void;
+    onBlockLibrariesChange: (libraries: string[]) => void;
     onDone: () => void;
     onClose: () => void;
 }
@@ -151,11 +161,15 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     stacks,
     selectedStackId,
     selectedAddons = [],
+    selectedBlockLibraries = [],
     onStackSelect,
     onAddonsChange,
+    onBlockLibrariesChange,
     onDone,
     onClose,
 }) => {
+    const [modalStep, setModalStep] = useState<ModalStep>('architecture');
+
     // Filter stacks based on package's storefronts (available stacks are the storefront keys)
     const filteredStacks = useMemo(() => {
         const availableStackIds = Object.keys(pkg.storefronts || {});
@@ -198,6 +212,26 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         return stacks.find(s => s.id === selectedStackId) || null;
     }, [stacks, selectedStackId]);
 
+    // Determine if the selected stack is an EDS stack (has block libraries)
+    const isEdsStack = selectedStack?.frontend === 'eds-storefront';
+
+    // Get available block libraries for the current stack and package
+    const availableBlockLibraries = useMemo(() => {
+        if (!selectedStack || !isEdsStack) return [];
+        return getAvailableBlockLibraries(selectedStack, pkg.id);
+    }, [selectedStack, isEdsStack, pkg.id]);
+
+    const handleBlockLibraryToggle = useCallback(
+        (libraryId: string, isSelected: boolean) => {
+            if (isSelected) {
+                onBlockLibrariesChange([...selectedBlockLibraries, libraryId]);
+            } else {
+                onBlockLibrariesChange(selectedBlockLibraries.filter(id => id !== libraryId));
+            }
+        },
+        [selectedBlockLibraries, onBlockLibrariesChange],
+    );
+
     // Get available addons: stack defines possible addons, package restricts by brand
     const availableAddons = useMemo(() => {
         if (!selectedStack) return [];
@@ -212,10 +246,32 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     }
     const displayAddons = availableAddons.length > 0 ? availableAddons : lastAddonsRef.current;
 
-    // Build action buttons - only show Done when a stack is selected
-    const actionButtons = selectedStackId
-        ? [{ label: 'Done', variant: 'primary' as const, onPress: onDone }]
-        : [];
+    // Step 1 footer: "Next" for EDS stacks, "Done" for non-EDS
+    const handleArchitectureNext = useCallback(() => {
+        if (isEdsStack) {
+            setModalStep('block-libraries');
+        } else {
+            onDone();
+        }
+    }, [isEdsStack, onDone]);
+
+    const handleBlockLibrariesBack = useCallback(() => {
+        setModalStep('architecture');
+    }, []);
+
+    // Build action buttons based on current step
+    const actionButtons = useMemo(() => {
+        if (modalStep === 'architecture') {
+            if (!selectedStackId) return [];
+            const label = isEdsStack ? 'Next' : 'Done';
+            return [{ label, variant: 'primary' as const, onPress: handleArchitectureNext }];
+        }
+        // Block libraries step
+        return [
+            { label: 'Back', variant: 'secondary' as const, onPress: handleBlockLibrariesBack },
+            { label: 'Done', variant: 'primary' as const, onPress: onDone },
+        ];
+    }, [modalStep, selectedStackId, isEdsStack, handleArchitectureNext, handleBlockLibrariesBack, onDone]);
 
     return (
         <Modal
@@ -224,73 +280,102 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
             size="M"
             actionButtons={actionButtons}
         >
-            <Text UNSAFE_className="description-block">
-                How should it be built?
-            </Text>
-            <div className="architecture-modal-options" role="radiogroup" aria-label="Architecture options">
-                {filteredStacks.map((stack, index) => {
-                    const isSelected = selectedStackId === stack.id;
-                    const itemProps = getItemProps(index);
-                    return (
-                        <div
-                            key={stack.id}
-                            ref={itemProps.ref}
-                            role="radio"
-                            tabIndex={itemProps.tabIndex}
-                            aria-checked={isSelected}
-                            data-selected={isSelected ? 'true' : 'false'}
-                            className={cn(
-                                'architecture-modal-option',
-                                isSelected && 'selected',
-                            )}
-                            onClick={() => handleStackClick(stack.id)}
-                            onKeyDown={itemProps.onKeyDown}
-                        >
-                            <div className="architecture-radio">
-                                {isSelected && <div className="architecture-radio-dot" />}
-                            </div>
-                            <div className="architecture-content">
-                                <Text UNSAFE_className="architecture-name">
-                                    {stack.name}
-                                </Text>
-                                <Text UNSAFE_className="architecture-description">
-                                    {stack.description}
-                                </Text>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
+            {modalStep === 'architecture' && (
+                <>
+                    <Text UNSAFE_className="description-block">
+                        How should it be built?
+                    </Text>
+                    <div className="architecture-modal-options" role="radiogroup" aria-label="Architecture options">
+                        {filteredStacks.map((stack, index) => {
+                            const isSelected = selectedStackId === stack.id;
+                            const itemProps = getItemProps(index);
+                            return (
+                                <div
+                                    key={stack.id}
+                                    ref={itemProps.ref}
+                                    role="radio"
+                                    tabIndex={itemProps.tabIndex}
+                                    aria-checked={isSelected}
+                                    data-selected={isSelected ? 'true' : 'false'}
+                                    className={cn(
+                                        'architecture-modal-option',
+                                        isSelected && 'selected',
+                                    )}
+                                    onClick={() => handleStackClick(stack.id)}
+                                    onKeyDown={itemProps.onKeyDown}
+                                >
+                                    <div className="architecture-radio">
+                                        {isSelected && <div className="architecture-radio-dot" />}
+                                    </div>
+                                    <div className="architecture-content">
+                                        <Text UNSAFE_className="architecture-name">
+                                            {stack.name}
+                                        </Text>
+                                        <Text UNSAFE_className="architecture-description">
+                                            {stack.description}
+                                        </Text>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
 
-            {/* Services Section - always rendered, animated in/out via CSS */}
-            <div className={cn('addons-section', availableAddons.length > 0 && 'addons-visible')}>
-                <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-                <Text UNSAFE_className="description-block-sm">
-                    Optional Services
-                </Text>
-                <div className="architecture-addons">
-                    {displayAddons.map((optionalAddon) => {
-                        const addonMeta = ADDON_METADATA[optionalAddon.id];
-                        if (!addonMeta) return null;
-                        const addonConfig = pkg.addons?.[optionalAddon.id];
-                        const isRequired = addonConfig === 'required';
-                        const isChecked = isRequired || selectedAddons.includes(optionalAddon.id);
-                        return (
+                    {/* Services Section - always rendered, animated in/out via CSS */}
+                    <div className={cn('addons-section', availableAddons.length > 0 && 'addons-visible')}>
+                        <Divider size="S" marginTop="size-300" marginBottom="size-200" />
+                        <Text UNSAFE_className="description-block-sm">
+                            Optional Services
+                        </Text>
+                        <div className="architecture-addons">
+                            {displayAddons.map((optionalAddon) => {
+                                const addonMeta = ADDON_METADATA[optionalAddon.id];
+                                if (!addonMeta) return null;
+                                const addonConfig = pkg.addons?.[optionalAddon.id];
+                                const isRequired = addonConfig === 'required';
+                                const isChecked = isRequired || selectedAddons.includes(optionalAddon.id);
+                                return (
+                                    <Checkbox
+                                        key={optionalAddon.id}
+                                        isSelected={isChecked}
+                                        isDisabled={isRequired}
+                                        onChange={(isSelected) => handleAddonToggle(optionalAddon.id, isSelected)}
+                                    >
+                                        <span className="addon-label">
+                                            <span className="addon-name">{addonMeta.name}</span>
+                                            <span className="addon-description">{addonMeta.description}</span>
+                                        </span>
+                                    </Checkbox>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {modalStep === 'block-libraries' && (
+                <>
+                    <Text UNSAFE_className="description-block">
+                        Which block libraries should be included?
+                    </Text>
+                    <Text UNSAFE_className="description-block-sm" UNSAFE_style={{ marginBottom: 'var(--spectrum-global-dimension-size-200)' }}>
+                        Your storefront's native blocks are always included. These additional libraries add extra blocks to your project.
+                    </Text>
+                    <div className="architecture-addons">
+                        {availableBlockLibraries.map((lib) => (
                             <Checkbox
-                                key={optionalAddon.id}
-                                isSelected={isChecked}
-                                isDisabled={isRequired}
-                                onChange={(isSelected) => handleAddonToggle(optionalAddon.id, isSelected)}
+                                key={lib.id}
+                                isSelected={selectedBlockLibraries.includes(lib.id)}
+                                onChange={(isSelected) => handleBlockLibraryToggle(lib.id, isSelected)}
                             >
                                 <span className="addon-label">
-                                    <span className="addon-name">{addonMeta.name}</span>
-                                    <span className="addon-description">{addonMeta.description}</span>
+                                    <span className="addon-name">{lib.name}</span>
+                                    <span className="addon-description">{lib.description}</span>
                                 </span>
                             </Checkbox>
-                        );
-                    })}
-                </div>
-            </div>
+                        ))}
+                    </div>
+                </>
+            )}
         </Modal>
     );
 };
@@ -304,12 +389,16 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     onPackageSelect,
     onStackSelect,
     onAddonsChange,
+    selectedBlockLibraries = [],
+    onBlockLibrariesChange,
     headerContent,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [modalPackageId, setModalPackageId] = useState<string | null>(null);
     // Track modal-local addon state (synced to parent on Done)
     const [modalAddons, setModalAddons] = useState<string[]>(selectedAddons);
+    // Track modal-local block library state (synced to parent on Done)
+    const [modalBlockLibraries, setModalBlockLibraries] = useState<string[]>(selectedBlockLibraries);
 
     const filteredPackages = useMemo(
         () => sortPackages(filterPackagesBySearchQuery(packages, searchQuery)),
@@ -343,8 +432,10 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         const requiredAddons = getRequiredAddons(pkg);
         const initialAddons = [...new Set([...selectedAddons, ...requiredAddons])];
         setModalAddons(initialAddons);
+        // Initialize modal block libraries from parent state
+        setModalBlockLibraries(selectedBlockLibraries);
         setModalPackageId(pkg.id);
-    }, [onPackageSelect, selectedAddons, getRequiredAddons]);
+    }, [onPackageSelect, selectedAddons, selectedBlockLibraries, getRequiredAddons]);
 
     const handleStackSelect = useCallback((stackId: string) => {
         onStackSelect(stackId);
@@ -352,16 +443,27 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         setModalAddons(() => {
             const currentPackage = packages.find(p => p.id === modalPackageId);
             const requiredAddons = currentPackage ? getRequiredAddons(currentPackage) : [];
-            const selectedStack = stacks.find(s => s.id === stackId);
-            const defaultAddons = (selectedStack?.optionalAddons || [])
+            const stackObj = stacks.find(s => s.id === stackId);
+            const defaultAddons = (stackObj?.optionalAddons || [])
                 .filter(addon => addon.default)
                 .map(addon => addon.id);
             return [...new Set([...requiredAddons, ...defaultAddons])];
         });
+        // When stack changes, compute default block libraries for EDS stacks
+        const stackObj = stacks.find(s => s.id === stackId);
+        if (stackObj?.frontend === 'eds-storefront' && modalPackageId) {
+            setModalBlockLibraries(getDefaultBlockLibraryIds(stackObj, modalPackageId));
+        } else {
+            setModalBlockLibraries([]);
+        }
     }, [onStackSelect, packages, stacks, modalPackageId, getRequiredAddons]);
 
     const handleModalAddonsChange = useCallback((addons: string[]) => {
         setModalAddons(addons);
+    }, []);
+
+    const handleModalBlockLibrariesChange = useCallback((libraries: string[]) => {
+        setModalBlockLibraries(libraries);
     }, []);
 
     const handleModalDone = useCallback(() => {
@@ -370,8 +472,10 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         const requiredAddons = currentPackage ? getRequiredAddons(currentPackage) : [];
         const finalAddons = [...new Set([...modalAddons, ...requiredAddons])];
         onAddonsChange?.(finalAddons);
+        // Sync block libraries to parent state
+        onBlockLibrariesChange?.(modalBlockLibraries);
         setModalPackageId(null);
-    }, [modalAddons, onAddonsChange, packages, modalPackageId, getRequiredAddons]);
+    }, [modalAddons, modalBlockLibraries, onAddonsChange, onBlockLibrariesChange, packages, modalPackageId, getRequiredAddons]);
 
     const handleModalClose = useCallback(() => {
         setModalPackageId(null);
@@ -434,8 +538,10 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                         stacks={stacks}
                         selectedStackId={selectedPackage === modalPackage.id ? selectedStack : undefined}
                         selectedAddons={modalAddons}
+                        selectedBlockLibraries={modalBlockLibraries}
                         onStackSelect={handleStackSelect}
                         onAddonsChange={handleModalAddonsChange}
+                        onBlockLibrariesChange={handleModalBlockLibrariesChange}
                         onDone={handleModalDone}
                         onClose={handleModalClose}
                     />

@@ -297,9 +297,10 @@ export function StorefrontSetupStep({
             componentConfigs: state.componentConfigs,
             backendComponentId: state.components?.backend,
             selectedAddons: state.selectedAddons,
+            selectedBlockLibraries: state.selectedBlockLibraries,
             selectedPackage: state.selectedPackage,
         });
-    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.selectedAddons, state.selectedPackage]);
+    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.selectedAddons, state.selectedBlockLibraries, state.selectedPackage]);
 
     /**
      * Handle GitHub App installation detected
@@ -331,6 +332,7 @@ export function StorefrontSetupStep({
         componentConfigs: state.componentConfigs,
         backendComponentId: state.components?.backend,
         selectedAddons: state.selectedAddons,
+        selectedBlockLibraries: state.selectedBlockLibraries,
         selectedPackage: state.selectedPackage,
     });
 
@@ -413,6 +415,7 @@ export function StorefrontSetupStep({
             componentConfigs: initialConfigRef.current.componentConfigs,
             backendComponentId: initialConfigRef.current.backendComponentId,
             selectedAddons: initialConfigRef.current.selectedAddons,
+            selectedBlockLibraries: initialConfigRef.current.selectedBlockLibraries,
             selectedPackage: initialConfigRef.current.selectedPackage,
         });
     }, []);

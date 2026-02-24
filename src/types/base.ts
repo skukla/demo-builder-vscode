@@ -39,6 +39,8 @@ export interface Project {
     selectedStack?: string;
     /** Optional addons selected during project creation (e.g., ['demo-inspector']) */
     selectedAddons?: string[];
+    /** Block library IDs selected during project creation (e.g., ['isle5', 'citisignal-blocks']) */
+    selectedBlockLibraries?: string[];
     // Mesh staleness summary for card grid display
     meshStatusSummary?: 'deployed' | 'stale' | 'config-incomplete' | 'update-declined' | 'not-deployed' | 'error' | 'unknown';
     // API Mesh deployment state (tracks changes that require redeployment)

@@ -565,6 +565,35 @@ describe('installBlockCollection', () => {
             expect(commitMessage).toContain('5 blocks');
         });
 
+        it('should use libraryName in commit message when provided', async () => {
+            // Given: Source has 3 blocks
+            setupSuccessfulInstall(null, createDestComponentDef());
+
+            // When: libraryName is passed
+            await installBlockCollection(
+                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+                'Commerce Block Collection',
+            );
+
+            // Then: Commit message should use the library name
+            const commitMessage = mockGithubFileOps.createCommit.mock.calls[0][2] as string;
+            expect(commitMessage).toBe('chore: add Commerce Block Collection (3 blocks)');
+        });
+
+        it('should use default label in commit message when libraryName is omitted', async () => {
+            // Given: Source has 3 blocks
+            setupSuccessfulInstall(null, createDestComponentDef());
+
+            // When: no libraryName passed
+            await installBlockCollection(
+                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            );
+
+            // Then: Commit message should use the default 'block collection' label
+            const commitMessage = mockGithubFileOps.createCommit.mock.calls[0][2] as string;
+            expect(commitMessage).toBe('chore: add block collection (3 blocks)');
+        });
+
         it('should return discovered blockIds in result', async () => {
             // Given: Source has a specific set of blocks
             const differentBlocks = ['alpha-block', 'beta-block', 'gamma-block'];

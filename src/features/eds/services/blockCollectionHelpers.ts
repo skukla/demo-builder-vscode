@@ -6,8 +6,8 @@
  * into the destination's component-definition.json — all in a single
  * atomic commit using the Git Tree API.
  *
- * The source repository is configured globally in stacks.json
- * via addonDefinitions (e.g., addonDefinitions.commerce-block-collection.source).
+ * The source repository is configured in block-libraries.json
+ * (e.g., libraries[].source with owner/repo/branch).
  *
  * Block discovery is fully dynamic: the extension scans the source repo's
  * blocks/ directory and installs whatever it finds. Authoring metadata
@@ -37,7 +37,8 @@ interface InstallBlockCollectionResult {
  * 2. Merges block entries into the destination's component-definition.json
  * 3. Commits everything at once via the Git Tree API
  *
- * @param source - The addon source config (owner, repo, branch) from stacks.json addonDefinitions
+ * @param source - The source config (owner, repo, branch) from block-libraries.json or stacks.json
+ * @param libraryName - Optional display name for the library (used in commit message)
  */
 export async function installBlockCollection(
     githubFileOps: GitHubFileOperations,
@@ -45,6 +46,7 @@ export async function installBlockCollection(
     destRepo: string,
     source: AddonSource,
     logger: Logger,
+    libraryName?: string,
 ): Promise<InstallBlockCollectionResult> {
     try {
         // 1. List all files in the source repo
@@ -106,9 +108,10 @@ export async function installBlockCollection(
         const { treeSha, commitSha } = await githubFileOps.getBranchInfo(destOwner, destRepo, 'main');
 
         const newTreeSha = await githubFileOps.createTree(destOwner, destRepo, treeEntries, treeSha);
+        const commitLabel = libraryName || 'block collection';
         const newCommitSha = await githubFileOps.createCommit(
             destOwner, destRepo,
-            `chore: add Commerce Block Collection (${blockIds.length} blocks)`,
+            `chore: add ${commitLabel} (${blockIds.length} blocks)`,
             newTreeSha,
             commitSha,
         );

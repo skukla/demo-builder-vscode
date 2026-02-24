@@ -36,6 +36,7 @@ export interface WizardState {
     selectedPackage?: string;  // Selected package ID (e.g., 'citisignal', 'buildright')
     selectedStack?: string;  // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
     selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
+    selectedBlockLibraries?: string[];  // Selected block library IDs (e.g., ['isle5', 'citisignal-blocks'])
     packageConfigDefaults?: Record<string, string>;  // Package-specific config defaults (e.g., store codes)
     components?: ComponentSelection;
     componentConfigs?: ComponentConfigs;  // Component-specific environment configurations

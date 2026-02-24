@@ -9,15 +9,6 @@
     "adobe-commerce-aco": {
       "name": "Adobe Commerce Optimizer",
       "description": "Catalog optimization service for enhanced product discovery"
-    },
-    "commerce-block-collection": {
-      "name": "Commerce Block Collection",
-      "description": "Custom EDS blocks: hero, carousel, newsletter, store locator, and more",
-      "source": {
-        "owner": "skukla",
-        "repo": "isle5",
-        "branch": "main"
-      }
     }
   },
   "stacks": [
@@ -57,8 +48,7 @@
       "dependencies": ["eds-commerce-mesh"],
       "optionalAddons": [
         { "id": "demo-inspector", "default": true },
-        { "id": "adobe-commerce-aco" },
-        { "id": "commerce-block-collection", "default": true }
+        { "id": "adobe-commerce-aco" }
       ],
       "features": ["Ultra-fast delivery", "DA.live content", "Self-managed backend"],
       "requiresGitHub": true,
@@ -74,8 +64,7 @@
       "dependencies": ["eds-accs-mesh"],
       "optionalAddons": [
         { "id": "demo-inspector", "default": true },
-        { "id": "adobe-commerce-aco" },
-        { "id": "commerce-block-collection", "default": true }
+        { "id": "adobe-commerce-aco" }
       ],
       "features": ["Ultra-fast delivery", "DA.live content", "Managed backend"],
       "requiresGitHub": true,

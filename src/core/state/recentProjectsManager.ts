@@ -20,6 +20,7 @@ export interface RecentProject {
     selectedPackage?: string | null;
     selectedStack?: string | null;
     selectedAddons?: string[];
+    selectedBlockLibraries?: string[];
 }
 
 const MAX_RECENT_PROJECTS = 10;
@@ -110,6 +111,7 @@ export class RecentProjectsManager {
             selectedPackage: project.selectedPackage ?? null,
             selectedStack: project.selectedStack ?? null,
             selectedAddons: project.selectedAddons ?? [],
+            selectedBlockLibraries: project.selectedBlockLibraries ?? [],
         });
 
         // Keep only max recent

@@ -148,6 +148,8 @@ interface ProjectCreationConfig {
     selectedStack?: string;
     // Selected optional addons (e.g., ['demo-inspector'])
     selectedAddons?: string[];
+    // Selected block library IDs (e.g., ['isle5', 'citisignal-blocks'])
+    selectedBlockLibraries?: string[];
     // Frontend source from template (templates are source of truth for repos)
     frontendSource?: FrontendSource;
     // Edit mode: re-use existing project directory
@@ -278,6 +280,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         selectedPackage: typedConfig.selectedPackage,
         selectedStack: typedConfig.selectedStack,
         selectedAddons: typedConfig.selectedAddons,
+        selectedBlockLibraries: typedConfig.selectedBlockLibraries,
         // Note: componentVersions, meshState, etc. are NOT preserved during edit
         // - componentVersions: Regenerated from fresh component installation
         // - meshState: Must be clean slate - old sourceHash won't match fresh files

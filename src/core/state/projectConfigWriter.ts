@@ -107,6 +107,9 @@ export class ProjectConfigWriter {
             if (project.selectedAddons?.length) {
                 manifest.selectedAddons = project.selectedAddons;
             }
+            if (project.selectedBlockLibraries?.length) {
+                manifest.selectedBlockLibraries = project.selectedBlockLibraries;
+            }
 
             // Atomic write: write to temp file first, then rename
             await fs.writeFile(tempPath, JSON.stringify(manifest, null, 2));

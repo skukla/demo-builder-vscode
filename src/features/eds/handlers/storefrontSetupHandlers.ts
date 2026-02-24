@@ -51,8 +51,10 @@ export interface StorefrontSetupStartPayload {
     componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
     /** Backend component ID for environment-aware config generation */
     backendComponentId?: string;
-    /** Selected addon IDs (e.g., ['commerce-block-collection']) */
+    /** Selected addon IDs (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
+    /** Selected block library IDs (e.g., ['isle5', 'citisignal-blocks']) */
+    selectedBlockLibraries?: string[];
     /** Selected package ID (e.g., 'citisignal') */
     selectedPackage?: string;
     edsConfig: {
@@ -266,6 +268,7 @@ export async function handleStartStorefrontSetup(
             edsConfig,
             abortController.signal,
             payload.selectedAddons,
+            payload.selectedBlockLibraries,
         );
 
         if (result.success) {

@@ -180,6 +180,7 @@ export interface RecentProject {
     selectedPackage?: string | null;
     selectedStack?: string | null;
     selectedAddons?: string[];
+    selectedBlockLibraries?: string[];
 }
 
 /**
