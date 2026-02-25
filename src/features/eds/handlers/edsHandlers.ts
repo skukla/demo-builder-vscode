@@ -22,7 +22,6 @@
 import {
     handleVerifyDaLiveOrg,
     handleGetDaLiveSites,
-    handleDaLiveOAuth,
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,
@@ -59,7 +58,6 @@ export {
 export {
     handleVerifyDaLiveOrg,
     handleGetDaLiveSites,
-    handleDaLiveOAuth,
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,
@@ -182,7 +180,6 @@ export const edsHandlers = defineHandlers({
 
     // DA.live handlers
     'check-dalive-auth': handleCheckDaLiveAuth,
-    'dalive-oauth': handleDaLiveOAuth,
     'open-dalive-login': handleOpenDaLiveLogin,
     'store-dalive-token': handleStoreDaLiveToken,
     'store-dalive-token-with-org': handleStoreDaLiveTokenWithOrg,

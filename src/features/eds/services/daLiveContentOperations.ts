@@ -125,6 +125,22 @@ export function createDaLiveTokenProvider(authManager?: AuthManagerLike | null):
 }
 
 /**
+ * Create a TokenProvider that wraps a DaLiveAuthService instance.
+ * Use this when you have a DaLiveAuthService and need a TokenProvider
+ * for DaLiveContentOperations or DaLiveOrgOperations.
+ *
+ * @param authService - Any object with getAccessToken (e.g., DaLiveAuthService)
+ * @returns TokenProvider that delegates to the auth service
+ */
+export function createDaLiveServiceTokenProvider(
+    authService: { getAccessToken(): Promise<string | null> },
+): TokenProvider {
+    return {
+        getAccessToken: () => authService.getAccessToken(),
+    };
+}
+
+/**
  * DA.live Content Operations
  */
 export class DaLiveContentOperations {
@@ -438,6 +454,11 @@ export class DaLiveContentOperations {
 
                 if (response.ok) return true;
 
+                // Token expired — throw so caller can pause-and-prompt for re-auth
+                if (response.status === 401) {
+                    throw new DaLiveAuthError('DA.live token expired during content copy');
+                }
+
                 if (RETRYABLE_STATUS_CODES.includes(response.status) && attempt < MAX_RETRY_ATTEMPTS) {
                     await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
                     continue;
@@ -454,6 +475,9 @@ export class DaLiveContentOperations {
                 this.logger.warn(`[DA.live] Copy failed for ${destPath}: ${response.status}${errorDetail}`);
                 return false;
             } catch (error) {
+                // Auth errors must propagate immediately — never retry or swallow
+                if (error instanceof DaLiveAuthError) throw error;
+
                 if (attempt < MAX_RETRY_ATTEMPTS) {
                     await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
                     continue;
@@ -545,9 +569,15 @@ export class DaLiveContentOperations {
                 return true;
             }
 
+            // Token expired — throw so caller can pause-and-prompt for re-auth
+            if (response.status === 401) {
+                throw new DaLiveAuthError('DA.live token expired during spreadsheet copy');
+            }
+
             this.logger.warn(`[DA.live] Failed to upload spreadsheet ${destPath}: ${response.status}`);
             return false;
         } catch (error) {
+            if (error instanceof DaLiveAuthError) throw error;
             this.logger.error(`[DA.live] Spreadsheet copy error for ${destPath}`, error as Error);
             return false;
         }
@@ -1177,8 +1207,6 @@ export class DaLiveContentOperations {
         // Report initialization progress
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Fetching content index...' });
 
-        const token = await this.getImsToken();
-
         // Get content paths from index
         let contentPaths = await this.getContentPathsFromIndex(source);
 
@@ -1235,6 +1263,7 @@ export class DaLiveContentOperations {
         const contentStart = Date.now();
         for (let i = 0; i < contentPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
             const batch = contentPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
+            const token = await this.getImsToken();
             const batchNum = Math.floor(i / CONTENT_COPY_BATCH_SIZE) + 1;
             const batchStart = Date.now();
 
@@ -1312,7 +1341,6 @@ export class DaLiveContentOperations {
         contentPaths: string[],
         progressCallback?: DaLiveProgressCallback,
     ): Promise<DaLiveCopyResult> {
-        const token = await this.getImsToken();
         const baseUrl = `https://main--${source.site}--${source.org}.aem.live`;
 
         // Collect unique media references from all content pages
@@ -1366,6 +1394,7 @@ export class DaLiveContentOperations {
         const mediaStart = Date.now();
         for (let i = 0; i < mediaPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
             const batch = mediaPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
+            const token = await this.getImsToken();
             const batchNum = Math.floor(i / CONTENT_COPY_BATCH_SIZE) + 1;
             const batchStart = Date.now();
 
@@ -1618,6 +1647,11 @@ export class DaLiveContentOperations {
 
                 if (response.ok) return true;
 
+                // Token expired — throw so caller can pause-and-prompt for re-auth
+                if (response.status === 401) {
+                    throw new DaLiveAuthError('DA.live token expired during media upload');
+                }
+
                 if (RETRYABLE_STATUS_CODES.includes(response.status) && attempt < MAX_RETRY_ATTEMPTS) {
                     await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
                     continue;
@@ -1626,6 +1660,7 @@ export class DaLiveContentOperations {
                 this.logger.warn(`[DA.live] Upload failed for ${destPath}: ${response.status}`);
                 return false;
             } catch (error) {
+                if (error instanceof DaLiveAuthError) throw error;
                 if (attempt < MAX_RETRY_ATTEMPTS) {
                     await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
                     continue;

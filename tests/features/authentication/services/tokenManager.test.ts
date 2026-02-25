@@ -304,69 +304,6 @@ ${JSON.stringify({ token, expiry })}`;
         });
     });
 
-    describe('getTokenExpiry', () => {
-        it('should return expiry timestamp', async () => {
-            const expiry = Date.now() + (60 * 60 * 1000);
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: String(expiry),
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.getTokenExpiry();
-
-            expect(result).toBe(expiry);
-        });
-
-        it('should clean fnm messages from expiry output', async () => {
-            const expiry = Date.now() + (60 * 60 * 1000);
-            const outputWithFnm = `Using Node v20.10.0\n${expiry}`;
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: outputWithFnm,
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.getTokenExpiry();
-
-            expect(result).toBe(expiry);
-        });
-
-        it('should return undefined when command fails', async () => {
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 1,
-                stdout: '',
-                stderr: 'Error',
-            } as CommandResult);
-
-            const result = await tokenManager.getTokenExpiry();
-
-            expect(result).toBeUndefined();
-        });
-
-        it('should return undefined for invalid expiry value', async () => {
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: 'not-a-number',
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.getTokenExpiry();
-
-            expect(result).toBeUndefined();
-        });
-
-        it('should handle command execution errors', async () => {
-            mockCommandExecutor.execute.mockRejectedValue(new Error('Failed'));
-
-            const result = await tokenManager.getTokenExpiry();
-
-            expect(result).toBeUndefined();
-        });
-    });
-
     describe('edge cases', () => {
         it('should handle token at exactly 100 characters', async () => {
             const now = Date.now();

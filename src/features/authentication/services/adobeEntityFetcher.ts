@@ -102,7 +102,7 @@ export class AdobeEntityFetcher {
      * Validate CLI result exit code
      */
     private validateCLIResult(
-        result: { code: number; stderr: string },
+        result: { code: number | null; stderr: string },
         entityName: string,
     ): boolean {
         if (result.code === 0 || result.code === 2) return true;
@@ -266,14 +266,16 @@ export class AdobeEntityFetcher {
 
             const cachedOrg = this.cacheManager.getCachedOrganization();
             const cachedProject = this.cacheManager.getCachedProject();
-            const hasValidIds = cachedOrg?.id?.length > 0 && cachedProject?.id?.length > 0;
+            const orgId = cachedOrg?.id;
+            const projectId = cachedProject?.id;
+            const hasValidIds = !!orgId && orgId.length > 0 && !!projectId && projectId.length > 0;
 
             let mappedWorkspaces: AdobeWorkspace[] = [];
 
             if (hasValidIds) {
                 const client = this.sdkClient.getClient() as { getWorkspacesForProject: (orgId: string, projectId: string) => Promise<SDKResponse<RawAdobeWorkspace[]>> };
                 mappedWorkspaces = await this.trySDKFetch(
-                    () => client.getWorkspacesForProject(cachedOrg.id, cachedProject.id),
+                    () => client.getWorkspacesForProject(orgId, projectId),
                     mapWorkspaces, 'workspaces', startTime,
                 );
             } else if (this.sdkClient.isInitialized()) {

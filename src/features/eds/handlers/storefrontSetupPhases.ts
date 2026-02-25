@@ -16,16 +16,18 @@
 import { installBlockCollection } from '../services/blockCollectionHelpers';
 import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
 import { ConfigurationService } from '../services/configurationService';
-import { DaLiveAuthService } from '../services/daLiveAuthService';
-import { DaLiveContentOperations, createDaLiveTokenProvider } from '../services/daLiveContentOperations';
+import type { DaLiveAuthService } from '../services/daLiveAuthService';
+import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { generateFstabContent } from '../services/fstabGenerator';
 import { GitHubAppService } from '../services/githubAppService';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
-import { configureDaLivePermissions } from './edsHelpers';
+import { configureDaLivePermissions, ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
+import { DaLiveAuthError } from '../services/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
@@ -219,6 +221,7 @@ async function executePhaseHelixConfig(
     repoInfo: RepoInfo,
     selectedBlockLibraries: string[] | undefined,
     useExistingRepo: boolean,
+    customBlockLibraries?: CustomBlockLibrary[],
 ): Promise<{ blockCollectionIds?: string[]; earlyReturn?: StorefrontSetupResult }> {
     const logger = context.logger;
     const { githubFileOps } = services;
@@ -264,6 +267,25 @@ async function executePhaseHelixConfig(
                 }
             } else {
                 logger.warn(`[Storefront Setup] Block library '${libraryId}' selected but no source configured`);
+            }
+        }
+    }
+
+    // Phase 2.2: Custom Block Libraries (install from user-provided URLs)
+    if (customBlockLibraries && customBlockLibraries.length > 0) {
+        for (const lib of customBlockLibraries) {
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'helix-config', message: `Installing ${lib.name}...`, progress: 25,
+            });
+            const result = await installBlockCollection(
+                githubFileOps, repoInfo.repoOwner, repoInfo.repoName,
+                lib.source, logger, lib.name,
+            );
+            if (result.success) {
+                logger.info(`[Storefront Setup] Custom ${lib.name}: ${result.blocksCount} blocks installed`);
+                allBlockIds.push(...result.blockIds);
+            } else {
+                logger.warn(`[Storefront Setup] Custom ${lib.name} failed: ${result.error}`);
             }
         }
     }
@@ -541,23 +563,20 @@ export async function executeStorefrontSetupPhases(
     signal: AbortSignal,
     selectedAddons?: string[],
     selectedBlockLibraries?: string[],
+    customBlockLibraries?: CustomBlockLibrary[],
 ): Promise<StorefrontSetupResult> {
     const logger = context.logger;
 
     // Create service dependencies
     const githubTokenService = new GitHubTokenService(context.context.secrets, logger);
-    const daLiveAuthService = new DaLiveAuthService(context.context);
-    const daLiveTokenProvider = {
-        getAccessToken: async () => daLiveAuthService.getAccessToken(),
-    };
+    const daLiveAuthService = getDaLiveAuthService(context);
+    const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
 
     const services: SetupServices = {
         githubRepoOps: new GitHubRepoOperations(githubTokenService, logger),
         githubFileOps: new GitHubFileOperations(githubTokenService, logger),
         githubAppService: new GitHubAppService(githubTokenService, logger),
-        daLiveContentOps: new DaLiveContentOperations(
-            createDaLiveTokenProvider(context.authManager), logger,
-        ),
+        daLiveContentOps: new DaLiveContentOperations(daLiveTokenProvider, logger),
         helixService: new HelixService(logger, githubTokenService, daLiveTokenProvider),
         daLiveAuthService,
         daLiveTokenProvider,
@@ -619,6 +638,7 @@ export async function executeStorefrontSetupPhases(
 
         const { blockCollectionIds, earlyReturn } = await executePhaseHelixConfig(
             context, edsConfig, services, repoInfo, effectiveBlockLibraries, useExistingRepo,
+            customBlockLibraries,
         );
         if (earlyReturn) return earlyReturn;
 
@@ -628,57 +648,96 @@ export async function executeStorefrontSetupPhases(
         );
         if (phase3Result) return phase3Result;
 
-        // Phase 4-5: Content Pipeline
+        // Phase 4-5: Content Pipeline (with token expiry recovery)
         if (signal.aborted) throw new Error('Operation cancelled');
 
         const { executeEdsPipeline } = await import('../services/edsPipeline');
 
-        const pipelineResult = await executeEdsPipeline(
-            {
-                repoOwner: repoInfo.repoOwner,
-                repoName: repoInfo.repoName,
-                daLiveOrg: edsConfig.daLiveOrg,
-                daLiveSite: edsConfig.daLiveSite,
-                templateOwner,
-                templateRepo,
-                clearExistingContent: wantsToResetContent,
-                skipContent,
-                contentSource,
-                contentPatches: edsConfig.contentPatches,
-                contentPatchSource: edsConfig.contentPatchSource,
-                includeBlockLibrary: true,
-                blockCollectionIds,
-                purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
-            },
-            { daLiveContentOps: services.daLiveContentOps, githubFileOps: services.githubFileOps, helixService: services.helixService, logger },
-            (info) => {
-                const mapping: Record<string, { phase: string; progress: number }> = {
-                    'content-clear': { phase: 'content-copy', progress: 45 },
-                    'content-copy': { phase: 'content-copy', progress: 50 },
-                    'block-library': { phase: 'content-copy', progress: 61 },
-                    'eds-settings': { phase: 'content-copy', progress: 63 },
-                    'cache-purge': { phase: 'content-publish', progress: 66 },
-                    'content-publish': { phase: 'content-publish', progress: 67 },
-                    'library-publish': { phase: 'content-publish', progress: 91 },
-                };
-                const m = mapping[info.operation] ?? { phase: info.operation, progress: 50 };
-                let progress = m.progress;
+        let pipelineAttempt = 0;
+        const MAX_REAUTH_ATTEMPTS = 2;
+        let pipelineResult: { success: boolean; error?: string; libraryPaths: string[] };
 
-                if (info.operation === 'content-copy' && info.percentage !== undefined) {
-                    progress = 50 + Math.round(info.percentage * 0.1);
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            try {
+                pipelineResult = await executeEdsPipeline(
+                    {
+                        repoOwner: repoInfo.repoOwner,
+                        repoName: repoInfo.repoName,
+                        daLiveOrg: edsConfig.daLiveOrg,
+                        daLiveSite: edsConfig.daLiveSite,
+                        templateOwner,
+                        templateRepo,
+                        clearExistingContent: wantsToResetContent,
+                        skipContent,
+                        contentSource,
+                        contentPatches: edsConfig.contentPatches,
+                        contentPatchSource: edsConfig.contentPatchSource,
+                        includeBlockLibrary: true,
+                        blockCollectionIds,
+                        purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
+                    },
+                    { daLiveContentOps: services.daLiveContentOps, githubFileOps: services.githubFileOps, helixService: services.helixService, logger },
+                    (info) => {
+                        const mapping: Record<string, { phase: string; progress: number }> = {
+                            'content-clear': { phase: 'content-copy', progress: 45 },
+                            'content-copy': { phase: 'content-copy', progress: 50 },
+                            'block-library': { phase: 'content-copy', progress: 61 },
+                            'eds-settings': { phase: 'content-copy', progress: 63 },
+                            'cache-purge': { phase: 'content-publish', progress: 66 },
+                            'content-publish': { phase: 'content-publish', progress: 67 },
+                            'library-publish': { phase: 'content-publish', progress: 91 },
+                        };
+                        const m = mapping[info.operation] ?? { phase: info.operation, progress: 50 };
+                        let progress = m.progress;
+
+                        if (info.operation === 'content-copy' && info.percentage !== undefined) {
+                            progress = 50 + Math.round(info.percentage * 0.1);
+                        }
+                        if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
+                            progress = 67 + Math.round((info.current / info.total) * 23);
+                        }
+
+                        context.sendMessage('storefront-setup-progress', {
+                            phase: m.phase, message: info.message, subMessage: info.subMessage, progress,
+                        });
+                    },
+                );
+
+                if (!pipelineResult.success) {
+                    throw new Error(pipelineResult.error || 'Content pipeline failed');
                 }
-                if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
-                    progress = 67 + Math.round((info.current / info.total) * 23);
+
+                // Pipeline succeeded - break out of retry loop
+                break;
+            } catch (error) {
+                if (error instanceof DaLiveAuthError && pipelineAttempt < MAX_REAUTH_ATTEMPTS) {
+                    pipelineAttempt++;
+                    logger.warn(`[Storefront Setup] DA.live token expired mid-pipeline (attempt ${pipelineAttempt})`);
+
+                    await context.sendMessage('storefront-setup-progress', {
+                        phase: 'auth-recovery',
+                        message: 'DA.live session expired. Please re-authenticate to continue.',
+                        progress: -1,
+                    });
+
+                    const authResult = await ensureDaLiveAuth(context, '[Storefront Setup]');
+                    if (!authResult.authenticated) {
+                        throw new Error(
+                            authResult.cancelled
+                                ? 'Setup cancelled — DA.live re-authentication required'
+                                : `DA.live re-authentication failed: ${authResult.error}`,
+                        );
+                    }
+
+                    logger.info('[Storefront Setup] DA.live re-authenticated, resuming pipeline');
+                    await context.sendMessage('storefront-setup-progress', {
+                        phase: 'content-copy', message: 'Resuming content copy...', progress: 50,
+                    });
+                    continue;
                 }
-
-                context.sendMessage('storefront-setup-progress', {
-                    phase: m.phase, message: info.message, subMessage: info.subMessage, progress,
-                });
-            },
-        );
-
-        if (!pipelineResult.success) {
-            throw new Error(pipelineResult.error || 'Content pipeline failed');
+                throw error;
+            }
         }
 
         if (signal.aborted) throw new Error('Operation cancelled');

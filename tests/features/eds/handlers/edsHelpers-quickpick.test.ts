@@ -86,12 +86,16 @@ jest.mock('@/core/logging', () => ({
 
 // Mock DaLiveAuthService
 const mockStoreToken = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/eds/services/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        storeToken: mockStoreToken,
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-    })),
-}));
+jest.mock('@/features/eds/services/daLiveAuthService', () => {
+    const actual = jest.requireActual('@/features/eds/services/daLiveAuthService');
+    return {
+        ...actual,
+        DaLiveAuthService: jest.fn().mockImplementation(() => ({
+            storeToken: mockStoreToken,
+            isAuthenticated: jest.fn().mockResolvedValue(true),
+        })),
+    };
+});
 
 // Mock GitHub services (required by edsHelpers module)
 jest.mock('@/features/eds/services/githubTokenService');

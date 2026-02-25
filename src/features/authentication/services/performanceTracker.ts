@@ -1,6 +1,5 @@
 import { getLogger } from '@/core/logging';
 import { formatDuration } from '@/core/utils';
-import type { PerformanceMetric } from '@/features/authentication/services/types';
 
 /**
  * Tracks performance timing for authentication operations
@@ -68,28 +67,4 @@ export class PerformanceTracker {
         return duration;
     }
 
-    /**
-     * Get all tracked metrics
-     */
-    getMetrics(): PerformanceMetric[] {
-        const metrics: PerformanceMetric[] = [];
-        const now = Date.now();
-
-        this.timings.forEach((timestamp, operation) => {
-            metrics.push({
-                operation,
-                duration: now - timestamp,
-                timestamp,
-            });
-        });
-
-        return metrics;
-    }
-
-    /**
-     * Clear all timing data
-     */
-    clear(): void {
-        this.timings.clear();
-    }
 }

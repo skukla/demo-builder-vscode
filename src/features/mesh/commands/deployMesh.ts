@@ -2,6 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
+import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di';
 import { StateManager } from '@/core/state';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
@@ -50,45 +51,23 @@ export class DeployMeshCommand extends BaseCommand {
 
             // PRE-FLIGHT: Check authentication (inline sign-in if needed)
             const authManager = ServiceLocator.getAuthenticationService();
-            let isAuthenticated = await authManager.isAuthenticated();
-
-            if (!isAuthenticated) {
-                // Prompt for inline sign-in
-                const selection = await vscode.window.showWarningMessage(
-                    'Adobe sign-in required to deploy mesh.',
-                    'Sign In',
-                    'Cancel',
-                );
-
-                if (selection !== 'Sign In') {
-                    await ProjectDashboardWebviewCommand.refreshStatus();
-                    this.logger.debug('[Mesh Deployment] User cancelled sign-in');
-                    return;
-                }
-
-                // Perform inline login and restore project context
-                this.logger.info('[Mesh Deployment] Starting Adobe sign-in');
-                const loginSuccess = await authManager.loginAndRestoreProjectContext({
+            const authResult = await ensureAdobeIOAuth({
+                authManager,
+                logger: this.logger,
+                logPrefix: '[Mesh Deployment]',
+                projectContext: {
                     organization: project.adobe?.organization,
                     projectId: project.adobe?.projectId,
                     workspace: project.adobe?.workspace,
-                });
-
-                if (!loginSuccess) {
-                    await ProjectDashboardWebviewCommand.refreshStatus();
+                },
+                warningMessage: 'Adobe sign-in required to deploy mesh.',
+            });
+            if (!authResult.authenticated) {
+                await ProjectDashboardWebviewCommand.refreshStatus();
+                if (!authResult.cancelled) {
                     vscode.window.showErrorMessage('Sign-in failed or was cancelled. Please try again.');
-                    return;
                 }
-
-                // Verify authentication after login
-                isAuthenticated = await authManager.isAuthenticated();
-                if (!isAuthenticated) {
-                    await ProjectDashboardWebviewCommand.refreshStatus();
-                    vscode.window.showErrorMessage('Sign-in completed but authentication check failed. Please try again.');
-                    return;
-                }
-
-                this.logger.info('[Mesh Deployment] Sign-in successful, continuing with deployment');
+                return;
             }
 
             // Check org access (degraded mode detection)

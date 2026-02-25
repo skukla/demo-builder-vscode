@@ -84,42 +84,25 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         } else {
             // Auth check — prompt for inline sign-in if not authenticated
             const authManager = ServiceLocator.getAuthenticationService();
-            let isAuthenticated = await authManager.isAuthenticated();
+            const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
+            const authResult = await ensureAdobeIOAuth({
+                authManager,
+                logger: context.logger,
+                logPrefix: '[Dashboard]',
+                projectContext: {
+                    organization: project.adobe?.organization,
+                    projectId: project.adobe?.projectId,
+                    workspace: project.adobe?.workspace,
+                },
+                warningMessage: 'Adobe sign-in required to check mesh status.',
+            });
 
-            if (!isAuthenticated) {
-                context.logger.debug('[Dashboard] Auth check failed, prompting for sign-in');
-
-                // Prompt for inline sign-in (same pattern as Deploy Mesh)
-                const selection = await vscode.window.showWarningMessage(
-                    'Adobe sign-in required to check mesh status.',
-                    'Sign In',
-                    'Cancel',
-                );
-
-                if (selection === 'Sign In') {
-                    context.logger.info('[Dashboard] Starting Adobe sign-in for status check');
-                    const loginSuccess = await authManager.loginAndRestoreProjectContext({
-                        organization: project.adobe?.organization,
-                        projectId: project.adobe?.projectId,
-                        workspace: project.adobe?.workspace,
-                    });
-
-                    if (loginSuccess) {
-                        isAuthenticated = await authManager.isAuthenticated();
-                        context.logger.info('[Dashboard] Sign-in successful');
-                    } else {
-                        context.logger.warn('[Dashboard] Sign-in failed or cancelled');
-                    }
-                }
-
-                // If still not authenticated after prompt, show needs-auth status
-                if (!isAuthenticated) {
-                    meshStatus = 'needs-auth';
-                }
+            if (!authResult.authenticated) {
+                meshStatus = 'needs-auth';
             }
 
             // Only check deployment status if authenticated
-            if (isAuthenticated) {
+            if (authResult.authenticated) {
                 if (hasMeshDeploymentRecord(project)) {
                     // Read persisted status — card grid already computed full fidelity
                     const summary = project.meshStatusSummary;
@@ -203,14 +186,15 @@ export const handleOpenBrowser: MessageHandler = async (context) => {
 export const handleOpenLiveSite: MessageHandler = async (context, data) => {
     const payload = data as { url?: string };
 
-    if (!payload?.url) {
+    const url = payload?.url;
+    if (!url) {
         context.logger.warn('[Dashboard] openLiveSite called without URL');
         return { success: false, error: 'No URL provided', code: ErrorCode.CONFIG_INVALID };
     }
 
     // Validate URL before opening (security: prevents malicious URL injection)
     try {
-        validateURL(payload.url);
+        validateURL(url);
     } catch (validationError) {
         context.logger.error('[Dashboard] Live site URL validation failed', validationError as Error);
         return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
@@ -227,8 +211,8 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
         async () => {
             // Open in incognito mode for clean demo experience (no cached content/cookies)
             // Falls back to normal browser if incognito mode is not available
-            const openedIncognito = await openInIncognito(payload.url);
-            context.logger.debug(`[Dashboard] Opening live site: ${payload.url} (incognito: ${openedIncognito})`);
+            const openedIncognito = await openInIncognito(url);
+            context.logger.debug(`[Dashboard] Opening live site: ${url} (incognito: ${openedIncognito})`);
         },
     );
 

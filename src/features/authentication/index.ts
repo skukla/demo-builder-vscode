@@ -51,8 +51,5 @@ export type {
     AdobeConsoleWhereResponse,
     SDKResponse,
     AdobeCLIError,
-    AuthToken,
     AuthTokenValidation,
-    CacheEntry,
-    PerformanceMetric,
 } from './services/types';

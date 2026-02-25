@@ -202,76 +202,12 @@ export class TokenManager {
     }
 
     /**
-     * Get token expiry timestamp
-     * @deprecated Use inspectToken() for atomic access to token and expiry
-     */
-    async getTokenExpiry(): Promise<number | undefined> {
-        try {
-            const result = await this.commandManager.execute(
-                'aio config get ims.contexts.cli.access_token.expiry',
-                { encoding: 'utf8', timeout: TIMEOUTS.QUICK },
-            );
-
-            if (result.code !== 0 || !result.stdout) {
-                return undefined;
-            }
-
-            const expiryOutput = this.cleanCommandOutput(result.stdout);
-            const expiry = parseInt(expiryOutput);
-            return isNaN(expiry) ? undefined : expiry;
-        } catch (error) {
-            this.logger.error('[Token] Failed to get token expiry', error as Error);
-            return undefined;
-        }
-    }
-
-    /**
      * Check if token is valid and not expired
      * Uses atomic token inspection to prevent race conditions
      */
     async isTokenValid(): Promise<boolean> {
         const inspection = await this.inspectToken();
         return inspection.valid;
-    }
-
-    /**
-     * Verify that Adobe CLI successfully stored the token
-     * This method reads back the token to ensure it's available
-     *
-     * Use this after 'aio auth login' to verify Adobe CLI stored the token correctly.
-     * This is the preferred pattern - let Adobe CLI manage tokens, extension verifies.
-     *
-     * @param expectedToken - Token returned from 'aio auth login' stdout
-     * @returns true if token is stored and matches, false otherwise
-     */
-    async verifyTokenStored(expectedToken: string): Promise<boolean> {
-        try {
-            const inspection = await this.inspectToken();
-
-            if (!inspection.valid) {
-                this.logger.warn('[Token] Verification failed: token not valid');
-                return false;
-            }
-
-            if (!inspection.token) {
-                this.logger.warn('[Token] Verification failed: token not found in CLI config');
-                return false;
-            }
-
-            // Verify token matches what Adobe CLI returned
-            if (inspection.token !== expectedToken) {
-                this.logger.warn('[Token] Verification failed: token mismatch');
-                this.logger.trace('[Token] Expected length:', expectedToken.length);
-                this.logger.trace('[Token] Stored length:', inspection.token.length);
-                return false;
-            }
-
-            this.logger.debug('[Token] Verification successful: Adobe CLI stored token correctly');
-            return true;
-        } catch (error) {
-            this.logger.error('[Token] Verification failed with error', error as Error);
-            return false;
-        }
     }
 
 }

@@ -272,11 +272,14 @@ async function resetRepoToTemplate(
         ? project.selectedBlockLibraries
         : project.selectedAddons?.includes('commerce-block-collection') ? ['isle5'] : [];
 
-    let blockCollectionIds: string[] | undefined;
-    if (effectiveBlockLibraries.length > 0) {
-        const { installBlockCollection } = await import('./blockCollectionHelpers');
-        const allBlockIds: string[] = [];
+    const hasBuiltInLibs = effectiveBlockLibraries.length > 0;
+    const hasCustomLibs = (project.customBlockLibraries && project.customBlockLibraries.length > 0);
+    const allBlockIds: string[] = [];
 
+    if (hasBuiltInLibs || hasCustomLibs) {
+        const { installBlockCollection } = await import('./blockCollectionHelpers');
+
+        // Built-in block libraries
         for (const libraryId of effectiveBlockLibraries) {
             const source = getBlockLibrarySource(libraryId);
             if (source) {
@@ -294,10 +297,25 @@ async function resetRepoToTemplate(
             }
         }
 
-        if (allBlockIds.length > 0) {
-            blockCollectionIds = allBlockIds;
+        // Custom block libraries (user-provided URLs)
+        if (hasCustomLibs) {
+            for (const lib of project.customBlockLibraries ?? []) {
+                report(1, `Re-installing ${lib.name}...`);
+                const blockResult = await installBlockCollection(
+                    githubFileOps, repoOwner, repoName,
+                    lib.source, context.logger, lib.name,
+                );
+                if (blockResult.success) {
+                    allBlockIds.push(...blockResult.blockIds);
+                    context.logger.info(`[EdsReset] Custom ${lib.name} reinstalled: ${blockResult.blocksCount} blocks`);
+                } else {
+                    context.logger.warn(`[EdsReset] Custom ${lib.name} reinstall failed: ${blockResult.error}`);
+                }
+            }
         }
     }
+
+    const blockCollectionIds = allBlockIds.length > 0 ? allBlockIds : undefined;
 
     return { filesReset: resetResult.fileCount, blockCollectionIds };
 }

@@ -29,17 +29,38 @@ const STATE_KEYS = {
 // Types
 // ==========================================================
 
-export interface DaLiveAuthResult {
-    success: boolean;
-    accessToken?: string;
-    email?: string;
-    error?: string;
-}
-
 export interface DaLiveTokenInfo {
     accessToken: string;
     expiresAt: number;
     email?: string;
+}
+
+// ==========================================================
+// JWT Utilities
+// ==========================================================
+
+/**
+ * Parse a JWT token's payload section (base64-decode + JSON.parse).
+ *
+ * Returns the decoded payload as a plain object, or null if the token
+ * cannot be parsed (too few parts, invalid base64, or invalid JSON).
+ *
+ * Shared by storeToken (to extract email/expiry) and
+ * validateDaLiveToken in edsHelpers (to validate client_id/expiry).
+ *
+ * @param token - JWT token string
+ * @returns Decoded payload or null on failure
+ */
+export function parseJwtPayload(token: string): Record<string, unknown> | null {
+    try {
+        const parts = token.split('.');
+        if (parts.length < 2) {
+            return null;
+        }
+        return JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    } catch {
+        return null;
+    }
 }
 
 // ==========================================================
@@ -52,23 +73,6 @@ export class DaLiveAuthService {
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
-    }
-
-    /**
-     * Authenticate with DA.live
-     *
-     * OAuth PKCE flow is not available for VS Code extensions as it requires
-     * callbacks to the da.live domain. Returns an error directing users to
-     * use the bookmarklet flow instead.
-     *
-     * @returns Result indicating OAuth is not available
-     */
-    async authenticate(): Promise<DaLiveAuthResult> {
-        this.logger.warn('[DA.live Auth] OAuth flow not available - use bookmarklet flow');
-        return {
-            success: false,
-            error: 'OAuth flow not available. Please use the DA.live bookmarklet to obtain a token.',
-        };
     }
 
     /**
@@ -201,26 +205,22 @@ export class DaLiveAuthService {
 
         // Extract from JWT payload if not provided via opts
         if (!opts?.expiresAt || !opts?.email) {
-            try {
-                const parts = token.split('.');
-                if (parts.length >= 2) {
-                    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+            const payload = parseJwtPayload(token);
+            if (payload) {
+                if (!opts?.expiresAt && payload.created_at && payload.expires_in) {
+                    const createdAt = parseInt(String(payload.created_at), 10);
+                    const expiresIn = parseInt(String(payload.expires_in), 10);
+                    const expiresAt = createdAt + expiresIn;
+                    await this.context.globalState.update(STATE_KEYS.tokenExpiration, expiresAt);
+                }
 
-                    if (!opts?.expiresAt && payload.created_at && payload.expires_in) {
-                        const createdAt = parseInt(payload.created_at, 10);
-                        const expiresIn = parseInt(payload.expires_in, 10);
-                        const expiresAt = createdAt + expiresIn;
-                        await this.context.globalState.update(STATE_KEYS.tokenExpiration, expiresAt);
-                    }
-
-                    if (!opts?.email) {
-                        const email = payload.email || payload.preferred_username;
-                        if (email) {
-                            await this.context.globalState.update(STATE_KEYS.userEmail, email);
-                        }
+                if (!opts?.email) {
+                    const email = payload.email || payload.preferred_username;
+                    if (email) {
+                        await this.context.globalState.update(STATE_KEYS.userEmail, String(email));
                     }
                 }
-            } catch {
+            } else if (!opts?.expiresAt && !opts?.email) {
                 this.logger.warn('[DA.live Auth] Could not parse token payload for expiration/email');
             }
         }

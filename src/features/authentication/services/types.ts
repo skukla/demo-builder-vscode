@@ -74,11 +74,6 @@ export interface AdobeCLIError extends Error {
     stderr?: string;
 }
 
-export interface AuthToken {
-    token: string;
-    expiry: number;
-}
-
 export interface AuthTokenValidation {
     isValid: boolean;
     org: string;
@@ -90,8 +85,3 @@ export interface CacheEntry<T> {
     expiry: number;
 }
 
-export interface PerformanceMetric {
-    operation: string;
-    duration: number;
-    timestamp: number;
-}

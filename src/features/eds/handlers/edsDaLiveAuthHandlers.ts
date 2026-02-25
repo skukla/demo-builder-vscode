@@ -4,7 +4,6 @@
  * Message handlers for DA.live authentication operations.
  *
  * Handlers:
- * - `handleDaLiveOAuth`: Initiate OAuth flow with DA.live
  * - `handleCheckDaLiveAuth`: Check DA.live authentication status
  * - `handleOpenDaLiveLogin`: Open DA.live for login with bookmarklet info
  * - `handleStoreDaLiveToken`: Store a manually pasted DA.live token
@@ -48,60 +47,6 @@ interface StoreDaLiveTokenWithOrgPayload {
 // ==========================================================
 // Handlers
 // ==========================================================
-
-/**
- * Initiate DA.live OAuth flow
- *
- * Uses the darkalley OAuth client for authentication.
- *
- * @param context - Handler context with logging and messaging
- * @returns Success with auth status
- */
-export async function handleDaLiveOAuth(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
-    try {
-        context.logger.debug('[EDS] Starting DA.live OAuth with darkalley client');
-        const authService = getDaLiveAuthService(context);
-
-        // Check if already authenticated
-        const isAuth = await authService.isAuthenticated();
-        if (isAuth) {
-            const tokenInfo = await authService.getStoredToken();
-            context.logger.debug('[EDS] Already authenticated with DA.live');
-            await context.sendMessage('dalive-auth-complete', {
-                isAuthenticated: true,
-                email: tokenInfo?.email,
-            });
-            return { success: true };
-        }
-
-        // Initiate OAuth flow
-        const result = await authService.authenticate();
-
-        if (result.success) {
-            context.logger.debug('[EDS] DA.live OAuth completed for:', result.email);
-            await context.sendMessage('dalive-auth-complete', {
-                isAuthenticated: true,
-                email: result.email,
-            });
-        } else {
-            context.logger.error('[EDS] DA.live OAuth failed:', result.error);
-            await context.sendMessage('dalive-oauth-error', {
-                error: result.error || 'Authentication failed',
-            });
-        }
-
-        return { success: result.success, error: result.error };
-    } catch (error) {
-        const errorMessage = (error as Error).message;
-        context.logger.error('[EDS] DA.live OAuth error:', error as Error);
-        await context.sendMessage('dalive-oauth-error', {
-            error: errorMessage,
-        });
-        return { success: false, error: errorMessage };
-    }
-}
 
 /**
  * Check DA.live authentication status

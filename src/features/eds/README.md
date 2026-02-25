@@ -62,7 +62,7 @@ src/features/eds/
 │   ├── edsDaLiveOrgConfigHandlers.ts # DA.live org config handlers
 │   ├── storefrontSetupHandlers.ts  # Storefront setup orchestration + cleanup
 │   ├── storefrontSetupPhases.ts    # Storefront setup phase executors
-│   ├── edsHelpers.ts               # Shared handler utilities
+│   ├── edsHelpers.ts               # Shared handler utilities (ensureDaLiveAuth, service cache)
 │   └── cleanupDaLiveSitesHandler.ts # DA.live site cleanup handler
 └── index.ts                         # Public API exports
 ```
@@ -76,10 +76,15 @@ Orchestrates complete EDS project setup through phases:
 | Phase | Progress | Operations |
 |-------|----------|------------|
 | `github-repo` | 0-20% | Create/configure GitHub repository from template |
-| `helix-config` | 20-35% | Configure Helix 5 via Configuration Service API |
+| `helix-config` | 20-35% | Configure Helix 5, install block libraries (built-in + custom) |
 | `code-sync` | 35-55% | Verify Code Bus synchronization |
 | `dalive-content` | 55-85% | Copy demo content to DA.live |
+| `auth-recovery` | (paused) | DA.live token expired; prompts re-authentication (up to 2 attempts) |
 | `complete` | 100% | Setup complete |
+
+#### Mid-Pipeline Token Recovery
+
+If the DA.live token expires during content pipeline execution (phases 4-5), the pipeline catches `DaLiveAuthError` and pauses to prompt re-authentication via `ensureDaLiveAuth()`. Up to 2 re-auth attempts are allowed before failing. The UI receives an `auth-recovery` phase progress message during re-authentication.
 
 ### GitHub Services (extracted modules)
 
@@ -98,7 +103,7 @@ Orchestrates complete EDS project setup through phases:
 
 ### EDS Reset (edsResetService + edsResetUI)
 
-- **edsResetService** - Core reset logic: template reset, code sync, mesh redeploy
+- **edsResetService** - Core reset logic: template reset, block library reinstallation (built-in + custom), code sync, mesh redeploy
 - **edsResetUI** - UI orchestration: auth checks, progress notifications, confirmation dialogs
 
 ### Error Formatters

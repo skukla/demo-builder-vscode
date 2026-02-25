@@ -152,8 +152,7 @@ async function loadComponentDefinitionsFromProject(
 
         // Fallback: search all sections (e.g., mesh in "mesh" section)
         if (!componentDef) {
-            componentDef = await registryManager.getComponentById(comp.id) as
-                TransformedComponentDefinition | undefined;
+            componentDef = await registryManager.getComponentById(comp.id);
         }
 
         if (!componentDef) {
@@ -268,34 +267,24 @@ async function ensureAdobeAuth(
     project: Project,
     context: HandlerContext,
     logPrefix: string,
-    vscode: typeof import('vscode'),
 ): Promise<boolean> {
     const { ServiceLocator } = await import('@/core/di');
     const authService = ServiceLocator.getAuthenticationService();
-    const isAuthenticated = await authService.isAuthenticated();
 
-    if (!isAuthenticated) {
-        context.logger.info(`${logPrefix} Adobe I/O token expired, prompting sign-in`);
-        const signInButton = 'Sign In';
-        const selection = await vscode.window.showWarningMessage(
-            'Your Adobe I/O session has expired. Sign in to redeploy the API Mesh, or skip to finish without redeploying.',
-            signInButton,
-            'Skip',
-        );
+    const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
+    const authResult = await ensureAdobeIOAuth({
+        authManager: authService,
+        logger: context.logger,
+        logPrefix,
+        projectContext: {
+            organization: project.adobe?.organization,
+            projectId: project.adobe?.projectId,
+            workspace: project.adobe?.workspace,
+        },
+        warningMessage: 'Your Adobe I/O session has expired. Sign in to redeploy the API Mesh, or skip to finish without redeploying.',
+    });
 
-        if (selection === signInButton) {
-            const loginSuccess = await authService.loginAndRestoreProjectContext({
-                organization: project.adobe?.organization,
-                projectId: project.adobe?.projectId,
-                workspace: project.adobe?.workspace,
-            });
-            if (!loginSuccess) {
-                context.logger.warn(`${logPrefix} Sign-in failed, skipping mesh redeploy`);
-            }
-        }
-    }
-
-    return authService.isAuthenticated();
+    return authResult.authenticated;
 }
 
 /** Set Adobe org/project/workspace context for mesh deployment */
@@ -332,7 +321,7 @@ async function handleMeshRedeployment(
     if (!meshComponent?.path) return null;
 
     progress.report({ message: 'Checking Adobe I/O authentication...' });
-    const isAuthenticated = await ensureAdobeAuth(project, context, logPrefix, vscode);
+    const isAuthenticated = await ensureAdobeAuth(project, context, logPrefix);
 
     if (!isAuthenticated) {
         context.logger.info(`${logPrefix} Not authenticated, skipping mesh redeploy`);

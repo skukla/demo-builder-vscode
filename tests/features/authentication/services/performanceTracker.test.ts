@@ -1,6 +1,6 @@
 /**
  * Unit tests for PerformanceTracker
- * Tests performance metric tracking, timing measurements, and statistics aggregation
+ * Tests performance metric tracking, timing measurements, and slow operation warnings
  */
 
 import { PerformanceTracker } from '@/features/authentication/services/performanceTracker';
@@ -36,41 +36,44 @@ describe('PerformanceTracker', () => {
     });
 
     describe('startTiming', () => {
-        it('should start timing an operation', () => {
-            const now = Date.now();
-
+        it('should record timing that endTiming can retrieve', () => {
             tracker.startTiming('testOperation');
 
-            const metrics = tracker.getMetrics();
-            expect(metrics).toHaveLength(1);
-            expect(metrics[0].operation).toBe('testOperation');
-            expect(metrics[0].timestamp).toBe(now);
+            jest.advanceTimersByTime(500);
+            const duration = tracker.endTiming('testOperation');
+
+            expect(duration).toBe(500);
         });
 
-        it('should handle multiple operations', () => {
+        it('should handle multiple operations independently', () => {
             tracker.startTiming('operation1');
+            jest.advanceTimersByTime(100);
             tracker.startTiming('operation2');
+            jest.advanceTimersByTime(100);
             tracker.startTiming('operation3');
+            jest.advanceTimersByTime(100);
 
-            const metrics = tracker.getMetrics();
-            expect(metrics).toHaveLength(3);
-            expect(metrics.map(m => m.operation)).toEqual([
-                'operation1',
-                'operation2',
-                'operation3',
-            ]);
+            const duration3 = tracker.endTiming('operation3');
+            const duration2 = tracker.endTiming('operation2');
+            const duration1 = tracker.endTiming('operation1');
+
+            expect(duration1).toBe(300);
+            expect(duration2).toBe(200);
+            expect(duration3).toBe(100);
         });
 
         it('should override previous timing for same operation', () => {
             tracker.startTiming('operation');
-
             jest.advanceTimersByTime(1000);
-            const time2 = Date.now();
-            tracker.startTiming('operation');
 
-            const metrics = tracker.getMetrics();
-            expect(metrics).toHaveLength(1);
-            expect(metrics[0].timestamp).toBe(time2);
+            // Re-start resets the timer
+            tracker.startTiming('operation');
+            jest.advanceTimersByTime(500);
+
+            const duration = tracker.endTiming('operation');
+
+            // Duration should be from the second startTiming, not the first
+            expect(duration).toBe(500);
         });
     });
 
@@ -95,12 +98,14 @@ describe('PerformanceTracker', () => {
             expect(mockDebug).not.toHaveBeenCalled();
         });
 
-        it('should remove timing after ending', () => {
+        it('should remove timing after ending so second end returns 0', () => {
             tracker.startTiming('operation');
+            jest.advanceTimersByTime(500);
             tracker.endTiming('operation');
 
-            const metrics = tracker.getMetrics();
-            expect(metrics).toHaveLength(0);
+            // Second endTiming should return 0 (timing was removed)
+            const secondDuration = tracker.endTiming('operation');
+            expect(secondDuration).toBe(0);
         });
 
         it('should log warning for slow operations', () => {
@@ -125,7 +130,7 @@ describe('PerformanceTracker', () => {
 
         it('should use correct expected times for different operations', () => {
             // Operations with actual durations that exceed expected thresholds
-            // formatDuration converts: 5000ms → "5.0s", 4000ms → "4.0s", etc.
+            // formatDuration converts: 5000ms -> "5.0s", 4000ms -> "4.0s", etc.
             // Thresholds updated 2025-11 based on observed production performance
             const operations = [
                 { name: 'isFullyAuthenticated', expectedFormatted: '4.0s', actualFormatted: '5.0s', actual: 5000 },
@@ -170,86 +175,6 @@ describe('PerformanceTracker', () => {
         });
     });
 
-    describe('getMetrics', () => {
-        it('should return empty array when no operations tracked', () => {
-            const metrics = tracker.getMetrics();
-            expect(metrics).toEqual([]);
-        });
-
-        it('should return metrics for ongoing operations', () => {
-            tracker.startTiming('operation1');
-            tracker.startTiming('operation2');
-
-            jest.advanceTimersByTime(500);
-
-            const metrics = tracker.getMetrics();
-            expect(metrics).toHaveLength(2);
-            expect(metrics[0].duration).toBe(500);
-            expect(metrics[1].duration).toBe(500);
-        });
-
-        it('should calculate duration from start to now', () => {
-            tracker.startTiming('operation');
-
-            jest.advanceTimersByTime(1500);
-            const metrics = tracker.getMetrics();
-
-            expect(metrics[0].duration).toBe(1500);
-        });
-
-        it('should include operation name and timestamp', () => {
-            const startTime = Date.now();
-
-            tracker.startTiming('testOp');
-
-            const metrics = tracker.getMetrics();
-            expect(metrics[0]).toEqual({
-                operation: 'testOp',
-                duration: 0,
-                timestamp: startTime,
-            });
-        });
-
-        it('should not include ended operations', () => {
-            tracker.startTiming('operation1');
-            tracker.startTiming('operation2');
-            tracker.endTiming('operation1');
-
-            const metrics = tracker.getMetrics();
-            expect(metrics).toHaveLength(1);
-            expect(metrics[0].operation).toBe('operation2');
-        });
-    });
-
-    describe('clear', () => {
-        it('should remove all timing data', () => {
-            tracker.startTiming('operation1');
-            tracker.startTiming('operation2');
-            tracker.startTiming('operation3');
-
-            tracker.clear();
-
-            const metrics = tracker.getMetrics();
-            expect(metrics).toEqual([]);
-        });
-
-        it('should allow starting new operations after clear', () => {
-            tracker.startTiming('operation1');
-            tracker.clear();
-            tracker.startTiming('operation2');
-
-            const metrics = tracker.getMetrics();
-            expect(metrics).toHaveLength(1);
-            expect(metrics[0].operation).toBe('operation2');
-        });
-
-        it('should handle clear with no operations', () => {
-            tracker.clear();
-            const metrics = tracker.getMetrics();
-            expect(metrics).toEqual([]);
-        });
-    });
-
     describe('integration scenarios', () => {
         it('should track complete operation lifecycle', () => {
             tracker.startTiming('getOrganizations');
@@ -257,7 +182,8 @@ describe('PerformanceTracker', () => {
             const duration = tracker.endTiming('getOrganizations');
 
             expect(duration).toBe(1000);
-            expect(tracker.getMetrics()).toEqual([]);
+            // After ending, the operation should no longer be tracked
+            expect(tracker.endTiming('getOrganizations')).toBe(0);
         });
 
         it('should handle concurrent operations', () => {
@@ -265,9 +191,6 @@ describe('PerformanceTracker', () => {
             jest.advanceTimersByTime(100);
             tracker.startTiming('operation2');
             jest.advanceTimersByTime(400);  // Now at 500ms total
-
-            const metrics = tracker.getMetrics();
-            expect(metrics).toHaveLength(2);
 
             jest.advanceTimersByTime(300);  // Now at 800ms
             const duration1 = tracker.endTiming('operation1');
@@ -286,7 +209,8 @@ describe('PerformanceTracker', () => {
                 expect(duration).toBe(500);
             }
 
-            expect(tracker.getMetrics()).toEqual([]);
+            // All operations ended, so re-ending any should return 0
+            expect(tracker.endTiming('operation0')).toBe(0);
         });
     });
 });

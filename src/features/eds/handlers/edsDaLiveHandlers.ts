@@ -10,7 +10,6 @@
  * Handlers:
  * - `handleVerifyDaLiveOrg`: Check user access to DA.live organization
  * - `handleGetDaLiveSites`: List sites in a DA.live organization
- * - `handleDaLiveOAuth`: Initiate OAuth flow with DA.live
  * - `handleCheckDaLiveAuth`: Check DA.live authentication status
  * - `handleOpenDaLiveLogin`: Open DA.live for login with bookmarklet info
  * - `handleStoreDaLiveToken`: Store a manually pasted DA.live token
@@ -28,7 +27,6 @@ export {
 
 // Re-export all DA.live auth handlers
 export {
-    handleDaLiveOAuth,
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,

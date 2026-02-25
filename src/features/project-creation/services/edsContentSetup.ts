@@ -127,15 +127,14 @@ export async function ensureEdsContent(
     // Service dependencies shared by remaining operations
     const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
     const { DaLiveAuthService } = await import('@/features/eds/services/daLiveAuthService');
+    const { createDaLiveServiceTokenProvider } = await import('@/features/eds/services/daLiveContentOperations');
     const { HelixService } = await import('@/features/eds/services/helixService');
     const { configureDaLivePermissions, applyDaLiveOrgConfigSettings, bulkPreviewAndPublish } =
         await import('@/features/eds/handlers/edsHelpers');
 
     const githubTokenService = new GitHubTokenService(deps.secrets, logger);
     const daLiveAuthService = new DaLiveAuthService(deps.extensionContext);
-    const daLiveTokenProvider = {
-        getAccessToken: async () => daLiveAuthService.getAccessToken(),
-    };
+    const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
     const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
 
     // DA.live permissions (non-fatal)

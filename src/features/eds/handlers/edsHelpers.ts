@@ -13,9 +13,9 @@
  */
 
 import * as vscode from 'vscode';
-import { DaLiveAuthService } from '../services/daLiveAuthService';
+import { DaLiveAuthService, parseJwtPayload } from '../services/daLiveAuthService';
 import { DaLiveConfigService } from '../services/daLiveConfigService';
-import { DaLiveContentOperations } from '../services/daLiveContentOperations';
+import { DaLiveContentOperations, createDaLiveTokenProvider } from '../services/daLiveContentOperations';
 import { DaLiveOrgOperations, type TokenProvider } from '../services/daLiveOrgOperations';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubOAuthService } from '../services/githubOAuthService';
@@ -23,6 +23,7 @@ import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
 import { getLogger } from '@/core/logging';
+import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -96,17 +97,7 @@ export function getDaLiveServices(context: HandlerContext): DaLiveServices {
             throw new Error('Authentication service not available');
         }
 
-        // Create token provider adapter from AuthenticationService
-        const tokenProvider: TokenProvider = {
-            getAccessToken: async () => {
-                const tokenManager = context.authManager?.getTokenManager();
-                if (!tokenManager) {
-                    return null;
-                }
-                const token = await tokenManager.getAccessToken();
-                return token ?? null;  // Convert undefined to null for TokenProvider interface
-            },
-        };
+        const tokenProvider = createDaLiveTokenProvider(context.authManager);
 
         const orgOperations = new DaLiveOrgOperations(tokenProvider, logger);
         const contentOperations = new DaLiveContentOperations(tokenProvider, logger);
@@ -199,47 +190,40 @@ export function validateDaLiveToken(token: string): DaLiveTokenValidationResult 
     }
 
     // Try to decode and validate the token
-    try {
-        const parts = token.split('.');
-        if (parts.length >= 2) {
-            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    const payload = parseJwtPayload(token);
+    if (payload) {
+        // Extract email (prefer email field, fallback to preferred_username)
+        const email = (payload.email || payload.preferred_username) as string | undefined;
 
-            // Extract email (prefer email field, fallback to preferred_username)
-            const email = payload.email || payload.preferred_username;
+        // Calculate expiry from created_at + expires_in
+        let expiresAt: number | undefined;
+        if (payload.created_at && payload.expires_in) {
+            const createdAt = parseInt(String(payload.created_at), 10);
+            const expiresIn = parseInt(String(payload.expires_in), 10);
+            expiresAt = createdAt + expiresIn;
 
-            // Calculate expiry from created_at + expires_in
-            let expiresAt: number | undefined;
-            if (payload.created_at && payload.expires_in) {
-                const createdAt = parseInt(payload.created_at, 10);
-                const expiresIn = parseInt(payload.expires_in, 10);
-                expiresAt = createdAt + expiresIn;
-
-                // Check if token has expired
-                if (Date.now() > expiresAt) {
-                    return {
-                        valid: false,
-                        error: 'Token has expired. Please get a fresh token from DA.live.',
-                    };
-                }
-            }
-
-            // Verify it's a darkalley token (DA.live client)
-            if (payload.client_id && payload.client_id !== 'darkalley') {
+            // Check if token has expired
+            if (Date.now() > expiresAt) {
                 return {
                     valid: false,
-                    error: 'This token is not from DA.live. Please use the bookmarklet on da.live.',
+                    error: 'Token has expired. Please get a fresh token from DA.live.',
                 };
             }
+        }
 
+        // Verify it's a darkalley token (DA.live client)
+        if (payload.client_id && payload.client_id !== 'darkalley') {
             return {
-                valid: true,
-                email,
-                expiresAt,
+                valid: false,
+                error: 'This token is not from DA.live. Please use the bookmarklet on da.live.',
             };
         }
-    } catch {
-        // Token parsing failed, but format looks valid - continue without extracted info
-        // This matches the original behavior where parsing errors don't invalidate the token
+
+        return {
+            valid: true,
+            email,
+            expiresAt,
+        };
     }
 
     // Token format is valid but couldn't extract details
@@ -269,34 +253,26 @@ export function offerSaveDefaultOrg(
     orgName: string,
 ): void {
     const config = vscode.workspace.getConfiguration('demoBuilder');
-    const existingDefault = config.get<string>('daLive.defaultOrg', '');
 
     // Already configured — nothing to do
-    if (existingDefault) {
+    if (config.get<string>('daLive.defaultOrg', '')) {
         return;
     }
 
-    const tipShown = context.context.globalState.get<boolean>('daLive.defaultOrgTipShown', false);
-    if (tipShown) {
-        return;
-    }
-
-    // Mark as shown immediately so concurrent calls don't double-fire
-    context.context.globalState.update('daLive.defaultOrgTipShown', true);
-
-    vscode.window.showInformationMessage(
-        `Tip: Save "${orgName}" as your default DA.live org so it auto-fills next time.`,
-        `Save "${orgName}"`,
-        'Open Settings',
-    ).then(selection => {
-        if (selection === `Save "${orgName}"`) {
-            config.update('daLive.defaultOrg', orgName, vscode.ConfigurationTarget.Global);
-        } else if (selection === 'Open Settings') {
-            vscode.commands.executeCommand(
-                'workbench.action.openSettings',
-                'demoBuilder.daLive.defaultOrg',
-            );
-        }
+    showOneTimeTip(context.context.globalState, {
+        stateKey: 'daLive.defaultOrgTipShown',
+        message: `Tip: Save "${orgName}" as your default DA.live org so it auto-fills next time.`,
+        actions: [`Save "${orgName}"`, 'Open Settings'],
+        onAction: (selection) => {
+            if (selection === `Save "${orgName}"`) {
+                config.update('daLive.defaultOrg', orgName, vscode.ConfigurationTarget.Global);
+            } else if (selection === 'Open Settings') {
+                vscode.commands.executeCommand(
+                    'workbench.action.openSettings',
+                    'demoBuilder.daLive.defaultOrg',
+                );
+            }
+        },
     });
 }
 
@@ -312,6 +288,57 @@ export interface QuickPickAuthResult {
     cancelled?: boolean;
     email?: string;
     error?: string;
+}
+
+export interface DaLiveGuardResult {
+    /** Whether the user is now authenticated */
+    authenticated: boolean;
+    /** User dismissed the dialog without signing in */
+    cancelled?: boolean;
+    /** Error message if auth failed */
+    error?: string;
+}
+
+/**
+ * Ensure DA.live authentication, prompting sign-in if expired.
+ *
+ * Shared pause-and-prompt guard used by:
+ * - EDS project reset (edsResetUI.ts)
+ * - Storefront setup pre-flight (storefrontSetupHandlers.ts)
+ * - Storefront setup mid-pipeline recovery (storefrontSetupPhases.ts)
+ */
+export async function ensureDaLiveAuth(
+    context: HandlerContext,
+    logPrefix = '[Auth]',
+): Promise<DaLiveGuardResult> {
+    const daLiveAuthService = getDaLiveAuthService(context);
+
+    if (await daLiveAuthService.isAuthenticated()) {
+        return { authenticated: true };
+    }
+
+    context.logger.warn(`${logPrefix} DA.live token expired or missing`);
+
+    const selection = await vscode.window.showWarningMessage(
+        'Your DA.live session has expired. Please sign in to continue.',
+        'Sign In',
+    );
+
+    if (selection !== 'Sign In') {
+        return { authenticated: false, cancelled: true };
+    }
+
+    const authResult = await showDaLiveAuthQuickPick(context);
+
+    if (!authResult.cancelled && authResult.success) {
+        return { authenticated: true };
+    }
+
+    return {
+        authenticated: false,
+        cancelled: authResult.cancelled,
+        error: authResult.error || 'DA.live authentication required',
+    };
 }
 
 /**

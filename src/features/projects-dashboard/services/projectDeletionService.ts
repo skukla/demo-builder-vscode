@@ -11,10 +11,10 @@
 
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
-import { TIMEOUTS } from '@/core/utils';
-import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
+import { TIMEOUTS, showOneTimeTip } from '@/core/utils';
+import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
-import { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
 import { HelixService } from '@/features/eds/services/helixService';
 import {
     isEdsProject,
@@ -47,14 +47,6 @@ interface CleanupOptions {
 }
 
 /**
- * Auth status for cleanup operations
- */
-interface CleanupAuthStatus {
-    gitHubAuthenticated: boolean;
-    daLiveAuthenticated: boolean;
-}
-
-/**
  * Delete a project with confirmation and cleanup
  *
  * Shows confirmation dialog, stops demo if running, deletes files,
@@ -75,13 +67,8 @@ export async function deleteProject(
     // This avoids slow auth checks before showing the confirmation dialog
     let cleanupOptions: CleanupOptions | null = null;
     if (isEds && edsMetadata) {
-        // Pass default auth status showing "Sign-in required" hints
-        // Actual auth prompting happens in performEdsCleanup if needed
-        const defaultAuthStatus: CleanupAuthStatus = {
-            gitHubAuthenticated: false,
-            daLiveAuthenticated: false,
-        };
-        cleanupOptions = await showCleanupConfirmation(project, edsMetadata, defaultAuthStatus);
+        // Auth is checked lazily in performEdsCleanup when user selects an option
+        cleanupOptions = await showCleanupConfirmation(project, edsMetadata);
 
         // User cancelled the cleanup dialog
         if (cleanupOptions === null) {
@@ -174,58 +161,25 @@ export async function deleteProject(
 
     // Show one-time tip about cleanup settings (only if we showed the QuickPick)
     if (isEds && cleanupResults.length > 0) {
-        const tipShown = context.context.globalState.get<boolean>('edsCleanup.settingsTipShown', false);
-
-        if (!tipShown) {
-            // Mark tip as shown so we don't show it again
-            await context.context.globalState.update('edsCleanup.settingsTipShown', true);
-
-            // Show non-blocking tip with link to settings
-            vscode.window.showInformationMessage(
-                'Tip: You can customize cleanup behavior in Settings → Demo Builder',
-                'Open Settings',
-            ).then(selection => {
+        showOneTimeTip(context.context.globalState, {
+            stateKey: 'edsCleanup.settingsTipShown',
+            message: 'Tip: You can customize cleanup behavior in Settings → Demo Builder',
+            actions: ['Open Settings'],
+            onAction: (selection) => {
                 if (selection === 'Open Settings') {
                     vscode.commands.executeCommand(
                         'workbench.action.openSettings',
                         'demoBuilder.cleanupBehavior',
                     );
                 }
-            });
-        }
+            },
+        });
     }
 
     return {
         success: true,
         data: { success: true, projectName: project.name, cleanupResults },
     };
-}
-
-/**
- * Check authentication status for cleanup operations
- */
-async function _checkCleanupAuth(context: HandlerContext): Promise<CleanupAuthStatus> {
-    // Check GitHub auth
-    let gitHubAuthenticated = false;
-    try {
-        const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-        const { tokenService } = getGitHubServices(context);
-        const token = await tokenService.getToken();
-        gitHubAuthenticated = !!token;
-    } catch {
-        context.logger.debug('[Delete Project] GitHub auth check failed');
-    }
-
-    // Check DA.live auth
-    let daLiveAuthenticated = false;
-    try {
-        const daLiveAuthService = new DaLiveAuthService(context.context);
-        daLiveAuthenticated = await daLiveAuthService.isAuthenticated();
-    } catch {
-        context.logger.debug('[Delete Project] DA.live auth check failed');
-    }
-
-    return { gitHubAuthenticated, daLiveAuthenticated };
 }
 
 /**
@@ -240,19 +194,16 @@ async function _checkCleanupAuth(context: HandlerContext): Promise<CleanupAuthSt
 async function showCleanupConfirmation(
     project: Project,
     edsMetadata: ReturnType<typeof extractEdsMetadata>,
-    authStatus: CleanupAuthStatus,
 ): Promise<CleanupOptions | null> {
     // Check cleanup behavior configuration setting
     const config = vscode.workspace.getConfiguration('demoBuilder');
     const behavior = config.get<string>('cleanupBehavior', 'ask');
 
     if (behavior === 'deleteAll') {
-        // Auto-delete all: return all available options without showing QuickPick
-        // Only delete resources where we have valid authentication and metadata
+        // Auto-delete all available resources (auth is checked lazily during cleanup)
         return {
-            deleteGitHubRepo: authStatus.gitHubAuthenticated && !!edsMetadata?.githubRepo,
-            deleteDaLiveSite:
-                authStatus.daLiveAuthenticated && !!edsMetadata?.daLiveOrg && !!edsMetadata?.daLiveSite,
+            deleteGitHubRepo: !!edsMetadata?.githubRepo,
+            deleteDaLiveSite: !!edsMetadata?.daLiveOrg && !!edsMetadata?.daLiveSite,
         };
     }
 
@@ -288,11 +239,9 @@ async function showCleanupConfirmation(
             id: 'github',
             label: '$(github) Delete Repository',
             description: edsMetadata.githubRepo,
-            detail: authStatus.gitHubAuthenticated
-                ? undefined
-                : '$(key) Sign-in required',
+            detail: '$(key) Sign-in required',
             picked: false,
-            enabled: true, // Always selectable - will prompt for auth if needed
+            enabled: true,
         });
     }
 
@@ -302,11 +251,9 @@ async function showCleanupConfirmation(
             id: 'daLive',
             label: '$(file-text) Delete DA.live Site',
             description: `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`,
-            detail: authStatus.daLiveAuthenticated
-                ? undefined
-                : '$(key) Sign-in required',
+            detail: '$(key) Sign-in required',
             picked: false,
-            enabled: true, // Always selectable - will prompt for auth if needed
+            enabled: true,
         });
     }
 
@@ -381,29 +328,19 @@ async function showCleanupConfirmation(
 /**
  * Ensure DA.live authentication, prompting user if needed.
  * Returns the auth service if authenticated, or null if auth was declined/failed.
+ *
+ * Delegates to the shared ensureDaLiveAuth guard from edsHelpers,
+ * then wraps the result to match the caller's expected signature.
  */
 async function ensureDaLiveAuth(
     context: HandlerContext,
     resourceName: string,
     results: CleanupResultItem[],
 ): Promise<DaLiveAuthService | null> {
-    const daLiveAuthService = new DaLiveAuthService(context.context);
-    const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
+    const authResult = await ensureDaLiveAuthShared(context, '[Delete Project]');
 
-    if (isDaLiveAuthenticated) {
-        return daLiveAuthService;
-    }
-
-    const selection = await vscode.window.showWarningMessage(
-        'Your DA.live session has expired. Sign in to delete the DA.live site.',
-        'Sign In',
-    );
-
-    if (selection === 'Sign In') {
-        const authResult = await showDaLiveAuthQuickPick(context);
-        if (authResult.success) {
-            return daLiveAuthService;
-        }
+    if (authResult.authenticated) {
+        return getDaLiveAuthService(context);
     }
 
     results.push({
@@ -411,7 +348,7 @@ async function ensureDaLiveAuth(
         name: resourceName,
         success: false,
         skipped: true,
-        error: 'Authentication required',
+        error: authResult.error || 'Authentication required',
     });
     return null;
 }
@@ -479,9 +416,7 @@ async function performDaLiveCleanup(
         const daLiveAuthService = await ensureDaLiveAuth(context, resourceName, results);
         if (!daLiveAuthService) return;
 
-        const daLiveTokenProvider = {
-            getAccessToken: async () => daLiveAuthService.getAccessToken(),
-        };
+        const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
 
         const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, context.logger);
 

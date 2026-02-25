@@ -20,6 +20,12 @@ const mockLoginAndRestoreProjectContext = jest.fn();
 const mockLogin = jest.fn();
 const mockIsAuthenticated = jest.fn();
 
+// Mock ensureAdobeIOAuth (used by refactored checkAdobeAuth)
+const mockEnsureAdobeIOAuth = jest.fn();
+jest.mock('@/core/auth/adobeAuthGuard', () => ({
+    ensureAdobeIOAuth: (...args: unknown[]) => mockEnsureAdobeIOAuth(...args),
+}));
+
 jest.mock('vscode', () => ({
     window: {
         showWarningMessage: jest.fn(),
@@ -103,7 +109,11 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => ({
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn().mockReturnValue({ tokenService: {} }),
+    getDaLiveAuthService: jest.fn().mockReturnValue({
+        getAccessToken: jest.fn().mockResolvedValue('mock-dalive-token'),
+    }),
     showDaLiveAuthQuickPick: jest.fn(),
+    ensureDaLiveAuth: jest.fn().mockResolvedValue({ authenticated: true }),
 }));
 
 jest.mock('@/features/eds/services/githubAppService', () => ({
@@ -194,7 +204,7 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
         });
     });
 
-    it('should call loginAndRestoreProjectContext with project adobe context when re-auth needed', async () => {
+    it('should call ensureAdobeIOAuth with project adobe context when mesh project resets', async () => {
         // Given: Project with mesh and Adobe context
         const project = createProjectWithMesh({
             organization: 'org-123',
@@ -203,29 +213,28 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
         });
         const context = createMockContext(project);
 
-        // And: Adobe I/O auth has expired
-        mockIsAuthenticated.mockResolvedValue(false);
+        // And: ensureAdobeIOAuth returns failed (causes early return)
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
 
-        // And: Login fails (causes early return so we don't need to mock executeEdsReset)
-        mockLoginAndRestoreProjectContext.mockResolvedValue(false);
-
-        // And: User confirms reset, then clicks Sign In
+        // And: User confirms reset
         (vscode.window.showWarningMessage as jest.Mock)
-            .mockResolvedValueOnce('Reset Project')  // Confirmation dialog
-            .mockResolvedValueOnce('Sign In');        // Adobe I/O auth prompt
+            .mockResolvedValueOnce('Reset Project');
 
         // When
         const result = await resetEdsProjectWithUI({ project, context });
 
-        // Then: Should call loginAndRestoreProjectContext (not bare login())
-        expect(mockLoginAndRestoreProjectContext).toHaveBeenCalledWith({
-            organization: 'org-123',
-            projectId: 'proj-456',
-            workspace: 'workspace-789',
-        });
-        expect(mockLogin).not.toHaveBeenCalled();
+        // Then: Should call ensureAdobeIOAuth with project context
+        expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
+            expect.objectContaining({
+                projectContext: expect.objectContaining({
+                    organization: 'org-123',
+                    projectId: 'proj-456',
+                    workspace: 'workspace-789',
+                }),
+            }),
+        );
 
-        // And: Should return auth error since login failed
+        // And: Should return auth error since auth failed
         expect(result.success).toBe(false);
         expect(result.errorType).toBe('ADOBE_AUTH_REQUIRED');
     });
@@ -235,48 +244,45 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
         const project = createProjectWithMesh();
         const context = createMockContext(project);
 
-        // And: Adobe I/O auth expired, login fails
-        mockIsAuthenticated.mockResolvedValue(false);
-        mockLoginAndRestoreProjectContext.mockResolvedValue(false);
+        // And: ensureAdobeIOAuth returns failed
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
 
         (vscode.window.showWarningMessage as jest.Mock)
-            .mockResolvedValueOnce('Reset Project')
-            .mockResolvedValueOnce('Sign In');
+            .mockResolvedValueOnce('Reset Project');
 
         // When
         await resetEdsProjectWithUI({ project, context });
 
-        // Then: Should call loginAndRestoreProjectContext with undefined fields
-        expect(mockLoginAndRestoreProjectContext).toHaveBeenCalledWith({
-            organization: undefined,
-            projectId: undefined,
-            workspace: undefined,
-        });
-        expect(mockLogin).not.toHaveBeenCalled();
+        // Then: Should call ensureAdobeIOAuth with undefined fields
+        expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
+            expect.objectContaining({
+                projectContext: expect.objectContaining({
+                    organization: undefined,
+                    projectId: undefined,
+                    workspace: undefined,
+                }),
+            }),
+        );
     });
 
-    it('should return ADOBE_AUTH_REQUIRED when user dismisses sign-in prompt', async () => {
+    it('should return ADOBE_AUTH_REQUIRED when ensureAdobeIOAuth returns cancelled', async () => {
         // Given: Project with mesh
         const project = createProjectWithMesh({ organization: 'org-1' });
         const context = createMockContext(project);
 
-        // And: Adobe I/O auth expired
-        mockIsAuthenticated.mockResolvedValue(false);
+        // And: ensureAdobeIOAuth returns cancelled
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, cancelled: true });
 
-        // And: User confirms reset but dismisses auth prompt
+        // And: User confirms reset
         (vscode.window.showWarningMessage as jest.Mock)
-            .mockResolvedValueOnce('Reset Project')
-            .mockResolvedValueOnce(undefined);  // Dismissed
+            .mockResolvedValueOnce('Reset Project');
 
         // When
         const result = await resetEdsProjectWithUI({ project, context });
 
-        // Then: Should not attempt login at all
-        expect(mockLoginAndRestoreProjectContext).not.toHaveBeenCalled();
-        expect(mockLogin).not.toHaveBeenCalled();
-
-        // And: Should return auth error
+        // Then: Should return auth error
         expect(result.success).toBe(false);
         expect(result.errorType).toBe('ADOBE_AUTH_REQUIRED');
+        expect(result.cancelled).toBe(true);
     });
 });

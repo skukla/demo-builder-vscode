@@ -61,15 +61,22 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
         tokenProvider,
         mockType: 'DaLiveContentOperations',
     })),
+    createDaLiveTokenProvider: jest.fn().mockReturnValue({
+        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
+    }),
 }));
 
-jest.mock('@/features/eds/services/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation((context) => ({
-        context,
-        mockType: 'DaLiveAuthService',
-        dispose: jest.fn(),
-    })),
-}));
+jest.mock('@/features/eds/services/daLiveAuthService', () => {
+    const actual = jest.requireActual('@/features/eds/services/daLiveAuthService');
+    return {
+        ...actual,
+        DaLiveAuthService: jest.fn().mockImplementation((context) => ({
+            context,
+            mockType: 'DaLiveAuthService',
+            dispose: jest.fn(),
+        })),
+    };
+});
 
 // Mock logging
 jest.mock('@/core/logging', () => ({

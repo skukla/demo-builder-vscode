@@ -27,8 +27,7 @@ import { openInIncognito, TIMEOUTS } from '@/core/utils';
 import { validateProjectPath, validateProjectNameSecurity, validateURL } from '@/core/validation';
 import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
 import { republishStorefrontConfig } from '@/features/eds';
-import { showDaLiveAuthQuickPick, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -790,40 +789,19 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
 
                 // Check DA.live authentication (inside progress for immediate feedback)
                 progress.report({ message: 'Checking authentication...' });
-                const daLiveAuthService = new DaLiveAuthService(context.context);
-                const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
+                const { ensureDaLiveAuth, getDaLiveAuthService } = await import('@/features/eds/handlers/edsHelpers');
+                const daLiveAuthResult = await ensureDaLiveAuth(context, '[ProjectsList]');
 
-                if (!isDaLiveAuthenticated) {
-                    context.logger.info('[ProjectsList] republishContent: DA.live token expired or missing');
-
-                    // Show notification with Sign In action
-                    const signInButton = 'Sign In';
-                    const selection = await vscode.window.showWarningMessage(
-                        'Your DA.live session has expired. Please sign in to continue.',
-                        signInButton,
-                    );
-
-                    if (selection === signInButton) {
-                        // User clicked "Sign In" - invoke QuickPick auth flow
-                        const authResult = await showDaLiveAuthQuickPick(context);
-                        if (authResult.cancelled || !authResult.success) {
-                            return {
-                                success: false,
-                                error: authResult.error || 'DA.live authentication required',
-                                errorType: 'DALIVE_AUTH_REQUIRED',
-                                cancelled: authResult.cancelled,
-                            };
-                        }
-                        // Token is now valid - continue with republish
-                    } else {
-                        // User dismissed notification - abort operation
-                        return {
-                            success: false,
-                            error: 'DA.live authentication required',
-                            errorType: 'DALIVE_AUTH_REQUIRED',
-                        };
-                    }
+                if (!daLiveAuthResult.authenticated) {
+                    return {
+                        success: false,
+                        error: daLiveAuthResult.error || 'DA.live authentication required',
+                        errorType: 'DALIVE_AUTH_REQUIRED',
+                        cancelled: daLiveAuthResult.cancelled,
+                    };
                 }
+
+                const daLiveAuthService = getDaLiveAuthService(context);
 
                 // Initialize services
                 const { HelixService } = await import('@/features/eds/services/helixService');
@@ -833,11 +811,8 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
 
                 // Create TokenProvider adapter for DA.live operations
                 // Required to list and publish content from DA.live
-                const daLiveTokenProvider = {
-                    getAccessToken: async () => {
-                        return daLiveAuthService.getAccessToken();
-                    },
-                };
+                const { createDaLiveServiceTokenProvider } = await import('@/features/eds/services/daLiveContentOperations');
+                const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
 
                 // Create HelixService with GitHub token for Admin API and DA.live token for content operations
                 const helixService = new HelixService(context.logger, githubTokenService, daLiveTokenProvider);

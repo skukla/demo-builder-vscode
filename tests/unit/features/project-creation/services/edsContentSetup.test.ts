@@ -17,6 +17,9 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
         createBlockLibraryFromTemplate: mockCreateBlockLibraryFromTemplate,
     })),
     createDaLiveTokenProvider: (...args: unknown[]) => mockCreateDaLiveTokenProvider(...args),
+    createDaLiveServiceTokenProvider: jest.fn().mockImplementation((service: { getAccessToken: () => Promise<string> }) => ({
+        getAccessToken: () => service.getAccessToken(),
+    })),
 }));
 
 const mockPublishAllSiteContent = jest.fn();

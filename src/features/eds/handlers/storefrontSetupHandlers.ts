@@ -14,15 +14,17 @@
 
 import * as vscode from 'vscode';
 import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
+import { ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
 import { CleanupService } from '../services/cleanupService';
 import { ConfigurationService } from '../services/configurationService';
-import { DaLiveAuthService } from '../services/daLiveAuthService';
-import { createDaLiveTokenProvider } from '../services/daLiveContentOperations';
+import { createDaLiveTokenProvider, createDaLiveServiceTokenProvider } from '../services/daLiveContentOperations';
 import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { ToolManager } from '../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
+import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
+import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 // ==========================================================
@@ -55,6 +57,8 @@ export interface StorefrontSetupStartPayload {
     selectedAddons?: string[];
     /** Selected block library IDs (e.g., ['isle5', 'citisignal-blocks']) */
     selectedBlockLibraries?: string[];
+    /** Custom block libraries added by URL */
+    customBlockLibraries?: CustomBlockLibrary[];
     /** Selected package ID (e.g., 'citisignal') */
     selectedPackage?: string;
     edsConfig: {
@@ -261,6 +265,35 @@ export async function handleStartStorefrontSetup(
         return { success: false, error: 'AuthenticationService not available' };
     }
 
+    // Pre-flight: Check Adobe I/O authentication (with inline re-auth)
+    const adobeResult = await ensureAdobeIOAuth({
+        authManager: context.authManager,
+        logger: context.logger,
+        logPrefix: '[Storefront Setup]',
+        warningMessage: 'Adobe sign-in required for storefront setup.',
+    });
+    if (!adobeResult.authenticated) {
+        await context.sendMessage('storefront-setup-error', {
+            message: 'Authentication required',
+            error: adobeResult.cancelled
+                ? 'Adobe sign-in was cancelled.'
+                : 'Adobe sign-in failed. Please try again.',
+        });
+        return { success: false, error: 'Adobe authentication required' };
+    }
+
+    // Pre-flight: Check DA.live authentication (with inline re-auth)
+    const daLiveResult = await ensureDaLiveAuth(context, '[Storefront Setup]');
+    if (!daLiveResult.authenticated) {
+        await context.sendMessage('storefront-setup-error', {
+            message: 'DA.live authentication expired',
+            error: daLiveResult.cancelled
+                ? 'DA.live sign-in was cancelled.'
+                : (daLiveResult.error || 'Your DA.live session has expired.'),
+        });
+        return { success: false, error: 'DA.live authentication required' };
+    }
+
     try {
         // Execute storefront setup phases
         const result = await executeStorefrontSetupPhases(
@@ -269,6 +302,7 @@ export async function handleStartStorefrontSetup(
             abortController.signal,
             payload.selectedAddons,
             payload.selectedBlockLibraries,
+            payload.customBlockLibraries,
         );
 
         if (result.success) {
@@ -405,12 +439,8 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
 
     // IMPORTANT: HelixService also needs DA.live token provider for x-content-source-authorization
     // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
-    const daLiveAuthService = new DaLiveAuthService(context.context);
-    const daLiveTokenProvider = {
-        getAccessToken: async () => {
-            return daLiveAuthService.getAccessToken();
-        },
-    };
+    const daLiveAuthService = getDaLiveAuthService(context);
+    const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
     const toolManager = new ToolManager(context.logger);
     const configurationService = new ConfigurationService(daLiveTokenProvider, context.logger);
 

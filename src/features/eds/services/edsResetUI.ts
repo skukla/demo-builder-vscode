@@ -19,8 +19,7 @@
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
-import { executeEdsReset, extractResetParams } from './edsResetService';
-import type { EdsResetParams, EdsResetResult } from './edsResetService';
+import { executeEdsReset, extractResetParams, type EdsResetParams, type EdsResetResult } from './edsResetService';
 
 // ==========================================================
 // Types
@@ -55,43 +54,24 @@ export interface ResetWithUIOptions {
  * @returns null if authenticated, or an EdsResetResult if auth failed/cancelled.
  */
 async function checkDaLiveAuth(
-    vscode: typeof import('vscode'),
-    daLiveAuthService: { isAuthenticated: () => Promise<boolean> },
-    showDaLiveAuthQuickPick: (ctx: HandlerContext) => Promise<{ success: boolean; cancelled?: boolean; error?: string }>,
     context: HandlerContext,
     project: Project,
     originalStatus: ProjectStatus,
     logPrefix: string,
 ): Promise<EdsResetResult | null> {
-    const isDaLiveAuthenticated = await daLiveAuthService.isAuthenticated();
-    if (isDaLiveAuthenticated) {
-        return null;
-    }
+    const { ensureDaLiveAuth } = await import('../handlers/edsHelpers');
+    const result = await ensureDaLiveAuth(context, logPrefix);
 
-    context.logger.info(`${logPrefix} resetEds: DA.live token expired or missing`);
-    const selection = await vscode.window.showWarningMessage(
-        'Your DA.live session has expired. Please sign in to continue.',
-        'Sign In',
-    );
-
-    if (selection === 'Sign In') {
-        const authResult = await showDaLiveAuthQuickPick(context);
-        if (!authResult.cancelled && authResult.success) {
-            return null;
-        }
-        project.status = originalStatus;
-        await context.stateManager.saveProject(project);
-        return {
-            success: false,
-            error: authResult.error || 'DA.live authentication required',
-            errorType: 'DALIVE_AUTH_REQUIRED',
-            cancelled: authResult.cancelled,
-        };
-    }
+    if (result.authenticated) return null;
 
     project.status = originalStatus;
     await context.stateManager.saveProject(project);
-    return { success: false, error: 'DA.live authentication required', errorType: 'DALIVE_AUTH_REQUIRED' };
+    return {
+        success: false,
+        error: result.error || 'DA.live authentication required',
+        errorType: 'DALIVE_AUTH_REQUIRED',
+        cancelled: result.cancelled,
+    };
 }
 
 /**
@@ -99,42 +79,37 @@ async function checkDaLiveAuth(
  * @returns null if authenticated (or no mesh), or an EdsResetResult if auth failed/cancelled.
  */
 async function checkAdobeAuth(
-    vscode: typeof import('vscode'),
     project: Project,
     context: HandlerContext,
     originalStatus: ProjectStatus,
     logPrefix: string,
 ): Promise<EdsResetResult | null> {
+    const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
     const { ServiceLocator } = await import('@/core/di');
     const authService = ServiceLocator.getAuthenticationService();
-    const isAdobeAuthenticated = await authService.isAuthenticated();
-    if (isAdobeAuthenticated) {
-        return null;
-    }
 
-    context.logger.info(`${logPrefix} resetEds: Adobe I/O token expired or missing`);
-    const selection = await vscode.window.showWarningMessage(
-        'Your Adobe I/O session has expired. Please sign in to continue.',
-        'Sign In',
-    );
-
-    if (selection === 'Sign In') {
-        const loginSuccess = await authService.loginAndRestoreProjectContext({
+    const result = await ensureAdobeIOAuth({
+        authManager: authService,
+        logger: context.logger,
+        logPrefix,
+        projectContext: {
             organization: project.adobe?.organization,
             projectId: project.adobe?.projectId,
             workspace: project.adobe?.workspace,
-        });
-        if (loginSuccess) {
-            return null;
-        }
-        project.status = originalStatus;
-        await context.stateManager.saveProject(project);
-        return { success: false, error: 'Adobe I/O authentication required', errorType: 'ADOBE_AUTH_REQUIRED', cancelled: true };
-    }
+        },
+        warningMessage: 'Your Adobe I/O session has expired. Please sign in to continue.',
+    });
+
+    if (result.authenticated) return null;
 
     project.status = originalStatus;
     await context.stateManager.saveProject(project);
-    return { success: false, error: 'Adobe I/O authentication required', errorType: 'ADOBE_AUTH_REQUIRED' };
+    return {
+        success: false,
+        error: 'Adobe I/O authentication required',
+        errorType: 'ADOBE_AUTH_REQUIRED',
+        cancelled: result.cancelled,
+    };
 }
 
 /**
@@ -266,8 +241,8 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     } = options;
 
     const vscode = await import('vscode');
-    const { DaLiveAuthService } = await import('./daLiveAuthService');
-    const { showDaLiveAuthQuickPick } = await import('../handlers/edsHelpers');
+    const { getDaLiveAuthService } = await import('../handlers/edsHelpers');
+    const { createDaLiveServiceTokenProvider } = await import('./daLiveContentOperations');
     const { getMeshComponentInstance } = await import('@/types/typeGuards');
 
     const paramsResult = extractResetParams(project);
@@ -301,18 +276,16 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
 
                 // Pre-flight auth checks
                 progress.report({ message: 'Checking authentication...' });
-                const daLiveAuthService = new DaLiveAuthService(context.context);
-                const daLiveResult = await checkDaLiveAuth(
-                    vscode, daLiveAuthService, showDaLiveAuthQuickPick, context, project, originalStatus, logPrefix,
-                );
+                const daLiveResult = await checkDaLiveAuth(context, project, originalStatus, logPrefix);
                 if (daLiveResult) return daLiveResult;
+                const daLiveAuthService = getDaLiveAuthService(context);
 
                 const meshComponent = getMeshComponentInstance(project);
                 const hasMesh = !!meshComponent?.path;
 
                 if (hasMesh) {
                     progress.report({ message: 'Checking Adobe I/O authentication...' });
-                    const adobeResult = await checkAdobeAuth(vscode, project, context, originalStatus, logPrefix);
+                    const adobeResult = await checkAdobeAuth(project, context, originalStatus, logPrefix);
                     if (adobeResult) return adobeResult;
                 }
 
@@ -323,7 +296,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                 if (appResult) return appResult;
 
                 // Execute reset
-                const tokenProvider = { getAccessToken: () => daLiveAuthService.getAccessToken() };
+                const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
                 const resetParams: EdsResetParams = {
                     ...paramsResult.params,
                     includeBlockLibrary, verifyCdn, redeployMesh: redeployMesh ?? hasMesh,

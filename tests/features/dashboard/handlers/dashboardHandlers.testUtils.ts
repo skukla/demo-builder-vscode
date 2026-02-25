@@ -22,6 +22,7 @@ jest.mock('@/core/validation', () => ({
 jest.mock('vscode', () => ({
     window: {
         activeColorTheme: { kind: 1 }, // Light theme
+        showWarningMessage: jest.fn().mockResolvedValue('Cancel'), // Default: user cancels
     },
     ColorThemeKind: { Dark: 2, Light: 1 },
     commands: {

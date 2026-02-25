@@ -653,44 +653,26 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         operationDescription: string,
     ): Promise<boolean> {
         const authManager = ServiceLocator.getAuthenticationService();
-        let isAuthenticated = await authManager.isAuthenticated();
+        const project = await this.stateManager.getCurrentProject();
 
-        if (!isAuthenticated) {
-            // Prompt for inline sign-in
-            const selection = await vscode.window.showWarningMessage(
-                `Adobe sign-in required to ${operationDescription}.`,
-                'Sign In',
-                'Cancel',
-            );
-
-            if (selection !== 'Sign In') {
-                return false;
-            }
-
-            // Get project context for restoration after login
-            const project = await this.stateManager.getCurrentProject();
-
-            // Perform inline login and restore project context
-            this.logger.info(`[Configure] Starting Adobe sign-in to ${operationDescription}`);
-            const loginSuccess = await authManager.loginAndRestoreProjectContext({
+        const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
+        const authResult = await ensureAdobeIOAuth({
+            authManager,
+            logger: this.logger,
+            logPrefix: '[Configure]',
+            projectContext: {
                 organization: project?.adobe?.organization,
                 projectId: project?.adobe?.projectId,
                 workspace: project?.adobe?.workspace,
-            });
+            },
+            warningMessage: `Adobe sign-in required to ${operationDescription}.`,
+        });
 
-            if (!loginSuccess) {
+        if (!authResult.authenticated) {
+            if (!authResult.cancelled) {
                 vscode.window.showErrorMessage('Sign-in failed or was cancelled. Please try again.');
-                return false;
             }
-
-            // Verify auth after login
-            isAuthenticated = await authManager.isAuthenticated();
-            if (!isAuthenticated) {
-                vscode.window.showErrorMessage('Sign-in completed but authentication check failed. Please try again.');
-                return false;
-            }
-
-            this.logger.info('[Configure] Adobe sign-in successful, continuing with operation');
+            return false;
         }
 
         // Auth confirmed, run the operation

@@ -37,7 +37,6 @@ describe('edsHandlers', () => {
             // When: Checking for DA.live message types
             // Then: DA.live handlers present
             expect(hasHandler(edsHandlers, 'check-dalive-auth')).toBe(true);
-            expect(hasHandler(edsHandlers, 'dalive-oauth')).toBe(true);
             expect(hasHandler(edsHandlers, 'open-dalive-login')).toBe(true);
             expect(hasHandler(edsHandlers, 'store-dalive-token')).toBe(true);
             expect(hasHandler(edsHandlers, 'store-dalive-token-with-org')).toBe(true);
@@ -62,13 +61,13 @@ describe('edsHandlers', () => {
             expect(hasHandler(edsHandlers, 'storefront-setup-resume')).toBe(true);
         });
 
-        it('should have exactly 18 handlers', () => {
+        it('should have exactly 17 handlers', () => {
             // Given: edsHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(edsHandlers);
 
-            // Then: Exactly 18 handlers (6 GitHub + 8 DA.live + 1 ACCS + 3 Storefront Setup)
-            expect(types).toHaveLength(18);
+            // Then: Exactly 17 handlers (6 GitHub + 7 DA.live + 1 ACCS + 3 Storefront Setup)
+            expect(types).toHaveLength(17);
         });
 
         it('should have handlers as functions', () => {

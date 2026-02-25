@@ -17,7 +17,6 @@ export {
     handleVerifyDaLiveOrg,
     handleVerifyGitHubRepo,
     handleValidateAccsCredentials,
-    handleDaLiveOAuth,
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,
