@@ -27,32 +27,7 @@ export class TokenManager {
         logger?: Logger,
     ) {
         this.logger = logger ?? getLogger();
-        // Use provided cacheManager, or try to get from ServiceLocator
-        if (cacheManager) {
-            this.cacheManager = cacheManager;
-        } else {
-            // Attempt to get shared cache from AuthenticationService via ServiceLocator
-            this.cacheManager = this.getSharedCacheManager();
-        }
-    }
-
-    /**
-     * Get shared cache manager from ServiceLocator
-     * Allows all TokenManager instances to use the same cache
-     */
-    private getSharedCacheManager(): AuthCacheManager | undefined {
-        try {
-            // Dynamic import to avoid circular dependency at module load time
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const { ServiceLocator } = require('@/core/di');
-            const authService = ServiceLocator.getAuthenticationService();
-            return authService.getCacheManager();
-        } catch {
-            // ServiceLocator not initialized yet, or AuthenticationService not registered
-            // This is OK - caching will be disabled for this instance
-            this.logger.debug('[Token] Shared cache not available, caching disabled');
-            return undefined;
-        }
+        this.cacheManager = cacheManager;
     }
 
     /**

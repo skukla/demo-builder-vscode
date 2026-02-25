@@ -1,5 +1,6 @@
 // Shared types for the webview application
 
+import type { CustomBlockLibrary } from './blockLibraries';
 import { ErrorCode } from './errorCodes';
 
 export type ThemeMode = 'light' | 'dark';
@@ -37,6 +38,7 @@ export interface WizardState {
     selectedStack?: string;  // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
     selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
     selectedBlockLibraries?: string[];  // Selected block library IDs (e.g., ['isle5', 'citisignal-blocks'])
+    customBlockLibraries?: CustomBlockLibrary[];  // Custom block libraries added by URL
     packageConfigDefaults?: Record<string, string>;  // Package-specific config defaults (e.g., store codes)
     components?: ComponentSelection;
     componentConfigs?: ComponentConfigs;  // Component-specific environment configurations

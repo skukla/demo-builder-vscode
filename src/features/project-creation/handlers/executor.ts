@@ -35,6 +35,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
+import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import type { Stack } from '@/types/stacks';
 import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
@@ -150,6 +151,8 @@ interface ProjectCreationConfig {
     selectedAddons?: string[];
     // Selected block library IDs (e.g., ['isle5', 'citisignal-blocks'])
     selectedBlockLibraries?: string[];
+    // Custom block libraries added by URL
+    customBlockLibraries?: CustomBlockLibrary[];
     // Frontend source from template (templates are source of truth for repos)
     frontendSource?: FrontendSource;
     // Edit mode: re-use existing project directory
@@ -226,7 +229,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     // Determine project path based on edit mode
     const isEditMode = typedConfig.editMode && typedConfig.editProjectPath;
-    const projectPath = isEditMode
+    const projectPath = isEditMode && typedConfig.editProjectPath
         ? typedConfig.editProjectPath
         : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
 
@@ -281,6 +284,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         selectedStack: typedConfig.selectedStack,
         selectedAddons: typedConfig.selectedAddons,
         selectedBlockLibraries: typedConfig.selectedBlockLibraries,
+        customBlockLibraries: typedConfig.customBlockLibraries,
         // Note: componentVersions, meshState, etc. are NOT preserved during edit
         // - componentVersions: Regenerated from fresh component installation
         // - meshState: Must be clean slate - old sourceHash won't match fresh files
@@ -910,7 +914,7 @@ async function lookupComponentDef(
 
     // Fallback: search all sections (e.g., mesh components in "mesh" section)
     if (!componentDef) {
-        componentDef = await registryManager.getComponentById(compId) as TransformedComponentDefinition | undefined;
+        componentDef = await registryManager.getComponentById(compId);
     }
 
     return componentDef;

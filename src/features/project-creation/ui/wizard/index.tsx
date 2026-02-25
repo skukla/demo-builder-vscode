@@ -3,6 +3,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { WizardContainer, ImportedSettings, EditProjectConfig } from './WizardContainer';
 import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
+import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { ComponentSelection } from '@/types/webview';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
@@ -16,6 +17,8 @@ interface WizardInitData extends WebviewInitData {
     importedSettings?: ImportedSettings | null;
     editProject?: EditProjectConfig | null;
     projectsViewMode?: 'cards' | 'rows';
+    blockLibraryDefaults?: string[];
+    customBlockLibraryDefaults?: CustomBlockLibrary[];
 }
 
 // Get root element
@@ -49,6 +52,8 @@ root.render(
                     importedSettings={data?.importedSettings}
                     editProject={data?.editProject ?? undefined}
                     projectsViewMode={data?.projectsViewMode}
+                    blockLibraryDefaults={data?.blockLibraryDefaults}
+                    customBlockLibraryDefaults={data?.customBlockLibraryDefaults}
                 />
             );
         }}

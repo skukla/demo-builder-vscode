@@ -110,6 +110,9 @@ export class ProjectConfigWriter {
             if (project.selectedBlockLibraries?.length) {
                 manifest.selectedBlockLibraries = project.selectedBlockLibraries;
             }
+            if (project.customBlockLibraries?.length) {
+                manifest.customBlockLibraries = project.customBlockLibraries;
+            }
 
             // Atomic write: write to temp file first, then rename
             await fs.writeFile(tempPath, JSON.stringify(manifest, null, 2));

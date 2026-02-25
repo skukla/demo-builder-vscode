@@ -278,7 +278,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                 progress.report({ message: 'Checking authentication...' });
                 const daLiveResult = await checkDaLiveAuth(context, project, originalStatus, logPrefix);
                 if (daLiveResult) return daLiveResult;
-                const daLiveAuthService = getDaLiveAuthService(context);
+                const daLiveAuthService = getDaLiveAuthService(context.context);
 
                 const meshComponent = getMeshComponentInstance(project);
                 const hasMesh = !!meshComponent?.path;

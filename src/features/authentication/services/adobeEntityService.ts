@@ -1,29 +1,17 @@
 /**
- * AdobeEntityService
+ * Adobe Entity Service Factory
  *
- * Facade for managing Adobe entities (organizations, projects, workspaces).
- * Composes specialized services for fetching, context resolution, and selection.
+ * Creates and wires the three specialized services for managing Adobe entities
+ * (organizations, projects, workspaces). Handles the initialization order
+ * required by their cross-dependencies.
  *
- * Architecture (SOP §10 - God File Decomposition):
+ * Architecture:
  * ```
- * ┌─────────────────────────────────────────────────────────────┐
- * │                    AdobeEntityService                        │
- * │                      (Facade/Orchestrator)                   │
- * └──────────────┬────────────────┬────────────────┬────────────┘
- *                │                │                │
- *     ┌──────────▼─────┐   ┌──────▼──────┐   ┌────▼──────────┐
- *     │ EntityFetcher  │   │ContextResolver│   │EntitySelector │
- *     │                │◄──│              │   │               │
- *     │ getOrgs()      │   │ getCurrentOrg│◄──│ selectOrg()   │
- *     │ getProjects()  │   │ getCurrentProj│  │ selectProject()│
- *     │ getWorkspaces()│   │ getCurrentWs │   │ selectWs()    │
- *     └────────────────┘   └──────────────┘   └───────────────┘
+ * createEntityServices()
+ * ├── AdobeEntityFetcher   — Fetch via SDK with CLI fallback
+ * ├── AdobeContextResolver — Resolve current CLI context
+ * └── AdobeEntitySelector  — Select entities via CLI commands
  * ```
- *
- * Responsibilities:
- * - Compose specialized services
- * - Delegate operations to appropriate service
- * - Maintain backward-compatible API
  */
 
 import { AdobeContextResolver } from './adobeContextResolver';
@@ -32,166 +20,67 @@ import { AdobeEntitySelector } from './adobeEntitySelector';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import type { OrganizationValidator } from './organizationValidator';
-import type {
-    AdobeOrg,
-    AdobeProject,
-    AdobeWorkspace,
-    AdobeContext,
-} from './types';
-import { StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/types/logger';
 
+export interface EntityServices {
+    fetcher: AdobeEntityFetcher;
+    resolver: AdobeContextResolver;
+    selector: AdobeEntitySelector;
+}
+
 /**
- * Facade service for managing Adobe entities
- * Composes fetcher, resolver, and selector for clean separation of concerns
+ * Create and wire the entity sub-services.
+ *
+ * Handles the Fetcher↔Selector cross-dependency: Fetcher needs a callback
+ * to Selector.clearConsoleContext() (when no orgs are accessible), while
+ * Selector depends on Fetcher (to populate cache after selection). A mutable
+ * reference resolves this initialization-order constraint.
  */
-export class AdobeEntityService {
-    private fetcher: AdobeEntityFetcher;
-    private resolver: AdobeContextResolver;
-    private selector: AdobeEntitySelector;
+export function createEntityServices(
+    commandManager: CommandExecutor,
+    sdkClient: AdobeSDKClient,
+    cacheManager: AuthCacheManager,
+    organizationValidator: OrganizationValidator,
+    logger: Logger,
+    stepLogger: StepLogger,
+): EntityServices {
+    // Mutable reference for the Fetcher → Selector callback
+    const selectorContainer: { ref?: AdobeEntitySelector } = {};
 
-    constructor(
-        commandManager: CommandExecutor,
-        sdkClient: AdobeSDKClient,
-        cacheManager: AuthCacheManager,
-        organizationValidator: OrganizationValidator,
-        logger: Logger,
-        stepLogger: StepLogger,
-    ) {
-        // Create selector reference container (needed for clearConsoleContext callback).
-        // Uses an object so the closure captures the mutable reference.
-        const selectorContainer: { ref?: AdobeEntitySelector } = {};
-
-        // Create fetcher with callback to selector's clearConsoleContext
-        this.fetcher = new AdobeEntityFetcher(
-            commandManager,
-            sdkClient,
-            cacheManager,
-            logger,
-            stepLogger,
-            {
-                onNoOrgsAccessible: async () => {
-                    if (selectorContainer.ref) {
-                        await selectorContainer.ref.clearConsoleContext();
-                    }
-                },
+    const fetcher = new AdobeEntityFetcher(
+        commandManager,
+        sdkClient,
+        cacheManager,
+        logger,
+        stepLogger,
+        {
+            onNoOrgsAccessible: async () => {
+                if (selectorContainer.ref) {
+                    await selectorContainer.ref.clearConsoleContext();
+                }
             },
-        );
+        },
+    );
 
-        // Create resolver (depends on fetcher)
-        this.resolver = new AdobeContextResolver(
-            commandManager,
-            cacheManager,
-            this.fetcher,
-        );
+    const resolver = new AdobeContextResolver(
+        commandManager,
+        cacheManager,
+        fetcher,
+    );
 
-        // Create selector (depends on fetcher and resolver)
-        this.selector = new AdobeEntitySelector(
-            commandManager,
-            cacheManager,
-            organizationValidator,
-            this.fetcher,
-            this.resolver,
-            logger,
-            stepLogger,
-        );
+    const selector = new AdobeEntitySelector(
+        commandManager,
+        cacheManager,
+        organizationValidator,
+        fetcher,
+        resolver,
+        logger,
+        stepLogger,
+    );
 
-        // Set the reference for the callback
-        selectorContainer.ref = this.selector;
-    }
+    selectorContainer.ref = selector;
 
-    // =========================================================================
-    // Fetcher Delegations
-    // =========================================================================
-
-    /**
-     * Get list of organizations (SDK with CLI fallback)
-     */
-    getOrganizations(): Promise<AdobeOrg[]> {
-        return this.fetcher.getOrganizations();
-    }
-
-    /**
-     * Get list of projects for current org (SDK with CLI fallback)
-     * @param options.silent - If true, suppress user-facing log messages
-     */
-    getProjects(options?: { silent?: boolean }): Promise<AdobeProject[]> {
-        return this.fetcher.getProjects(options);
-    }
-
-    /**
-     * Get list of workspaces for current project (SDK with CLI fallback)
-     */
-    getWorkspaces(): Promise<AdobeWorkspace[]> {
-        return this.fetcher.getWorkspaces();
-    }
-
-    // =========================================================================
-    // Context Resolver Delegations
-    // =========================================================================
-
-    /**
-     * Get current organization from CLI
-     */
-    getCurrentOrganization(): Promise<AdobeOrg | undefined> {
-        return this.resolver.getCurrentOrganization();
-    }
-
-    /**
-     * Get current project from CLI
-     */
-    getCurrentProject(): Promise<AdobeProject | undefined> {
-        return this.resolver.getCurrentProject();
-    }
-
-    /**
-     * Get current workspace from CLI
-     */
-    getCurrentWorkspace(): Promise<AdobeWorkspace | undefined> {
-        return this.resolver.getCurrentWorkspace();
-    }
-
-    /**
-     * Get current context (org, project, workspace)
-     */
-    getCurrentContext(): Promise<AdobeContext> {
-        return this.resolver.getCurrentContext();
-    }
-
-    // =========================================================================
-    // Selector Delegations
-    // =========================================================================
-
-    /**
-     * Select organization
-     */
-    selectOrganization(orgId: string): Promise<boolean> {
-        return this.selector.selectOrganization(orgId);
-    }
-
-    /**
-     * Select project with organization context guard
-     * @param projectId - The project ID to select
-     * @param orgId - Org ID to ensure context before selection
-     */
-    selectProject(projectId: string, orgId: string): Promise<boolean> {
-        return this.selector.selectProject(projectId, orgId);
-    }
-
-    /**
-     * Select workspace with project context guard
-     * @param workspaceId - The workspace ID to select
-     * @param projectId - Project ID to ensure context before selection
-     */
-    selectWorkspace(workspaceId: string, projectId: string): Promise<boolean> {
-        return this.selector.selectWorkspace(workspaceId, projectId);
-    }
-
-    /**
-     * Auto-select organization if only one is available
-     */
-    autoSelectOrganizationIfNeeded(skipCurrentCheck = false): Promise<AdobeOrg | undefined> {
-        return this.selector.autoSelectOrganizationIfNeeded(skipCurrentCheck);
-    }
+    return { fetcher, resolver, selector };
 }

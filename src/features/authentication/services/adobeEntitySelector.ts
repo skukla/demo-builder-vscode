@@ -2,7 +2,7 @@
  * AdobeEntitySelector
  *
  * Handles selection operations for Adobe entities (organizations, projects, workspaces).
- * Part of the AdobeEntityService decomposition for SOP §10 compliance.
+ * Part of the EntityServices decomposition (created via createEntityServices).
  *
  * Responsibilities:
  * - Selecting org/project/workspace via CLI

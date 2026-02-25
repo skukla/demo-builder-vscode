@@ -69,7 +69,7 @@ export interface ExecuteOptions extends Omit<ExecOptions, 'shell'> {
  */
 export interface CommandRequest {
     command: string;
-    options?: ExecOptions;
+    options?: ExecuteOptions;
     resolve: (value: CommandResult) => void;
     reject: (error: Error) => void;
     retryCount?: number;
@@ -81,7 +81,7 @@ export interface CommandRequest {
  */
 export interface CommandConfig {
     command: string;
-    options?: ExecOptions;
+    options?: ExecuteOptions;
     resource?: string;
     name?: string;
 }

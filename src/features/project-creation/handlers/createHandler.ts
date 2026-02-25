@@ -244,7 +244,8 @@ export async function handleCreateProject(
     }
 
     const startTime = Date.now();
-    const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', config.projectName);
+    const projectName = config.projectName as string; // validated by validateProjectConfig above
+    const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', projectName);
 
     // FIRST: Check workspace trust and offer one-time tip
     const hasShownTrustTip = context.context.globalState.get('demoBuilder.trustTipShown', false);

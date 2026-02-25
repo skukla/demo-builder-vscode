@@ -39,3 +39,5 @@ export { parseGitHubUrl } from './githubUrlParser';
 export type { GitHubRepoInfo } from './githubUrlParser';
 
 export { openInIncognito } from './browserUtils';
+
+export { showOneTimeTip } from './oneTimeTip';

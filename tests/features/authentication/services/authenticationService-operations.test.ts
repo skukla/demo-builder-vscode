@@ -28,7 +28,7 @@ jest.mock('@/features/authentication/services/adobeEntityService');
 
 import { getLogger } from '@/core/logging';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
-import { AdobeEntityService } from '@/features/authentication/services/adobeEntityService';
+import { createEntityServices } from '@/features/authentication/services/adobeEntityService';
 
 describe('AuthenticationService - Login/Logout Operations', () => {
     let authService: AuthenticationService;
@@ -36,7 +36,6 @@ describe('AuthenticationService - Login/Logout Operations', () => {
     let mockLogger: jest.Mocked<Logger>;
     let mockStepLogger: jest.Mocked<StepLogger>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
-    let mockEntityService: jest.Mocked<AdobeEntityService>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -59,14 +58,13 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             clear: jest.fn(),
         } as any;
 
-        // Create mock entity service
-        mockEntityService = {
-            getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
-        } as any;
-
         // Mock constructors
         (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(() => mockSDKClient);
-        (AdobeEntityService as jest.MockedClass<typeof AdobeEntityService>).mockImplementation(() => mockEntityService);
+        (createEntityServices as jest.Mock).mockReturnValue({
+            fetcher: { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
+            resolver: {},
+            selector: {},
+        });
 
         authService = new AuthenticationService('/mock/extension/path', mockLogger, mockCommandExecutor);
     });

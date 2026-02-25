@@ -9,6 +9,7 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
 import { createBundleUris } from '@/core/utils/bundleUri';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
+import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { ProgressUnifier } from '@/core/utils/progressUnifier';
 import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
@@ -21,6 +22,7 @@ import {
     getEndpoint as getEndpointHelper,
     deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
+import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import type { SettingsFile } from '@/features/projects-dashboard';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { parseJSON } from '@/types/typeGuards';
@@ -80,6 +82,8 @@ interface InitialWizardData {
     importedSettings: SettingsFile | null;
     editProject: EditProjectConfig | null;
     projectsViewMode: 'cards' | 'rows';
+    blockLibraryDefaults: string[];
+    customBlockLibraryDefaults: import('@/types/blockLibraries').CustomBlockLibrary[];
 }
 
 export class CreateProjectWebviewCommand extends BaseWebviewCommand {
@@ -282,6 +286,14 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         const config = vscode.workspace.getConfiguration('demoBuilder');
         const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
 
+        // Get block library default settings (single array setting)
+        const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', ['isle5']);
+
+        // Get custom block library defaults from settings
+        const customBlockLibraryDefaults = parseCustomBlockLibrarySettings(
+            config.get<Array<{ name: string; url: string }>>('blockLibraries.custom', []),
+        );
+
         // Debug: Log EDS config being sent to webview
         if (this.editProject?.settings?.edsConfig) {
             this.logger.debug(`[getInitialData] Sending edsConfig to webview: ${JSON.stringify({
@@ -303,6 +315,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             importedSettings: this.importedSettings,
             editProject: this.editProject,
             projectsViewMode,
+            blockLibraryDefaults,
+            customBlockLibraryDefaults,
         };
     }
 
@@ -357,6 +371,37 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             if (payload?.step) {
                 this.updateSidebarWizardContext(payload.step, payload.completedSteps, payload.confirmedSteps, payload.steps, payload.isEditMode);
             }
+            return { success: true };
+        });
+
+        // Handle one-time tip to save block library defaults
+        // Fires once when user first confirms block library selection in the architecture modal.
+        // Tracked via globalState. Uses shared showOneTimeTip utility.
+        comm.on('offer-save-block-library-defaults', (data: unknown) => {
+            const payload = data as { selectedLibraries?: string[] };
+            const selectedLibraries = payload?.selectedLibraries;
+            if (!selectedLibraries || selectedLibraries.length === 0) {
+                return { success: true };
+            }
+
+            const config = vscode.workspace.getConfiguration('demoBuilder');
+
+            showOneTimeTip(this.context.globalState, {
+                stateKey: 'blockLibraries.defaultsTipShown',
+                message: 'Tip: Save your block library selections as defaults for future EDS projects.',
+                actions: ['Save as Defaults', 'Open Settings'],
+                onAction: (selection) => {
+                    if (selection === 'Save as Defaults') {
+                        config.update('blockLibraries.defaults', selectedLibraries, vscode.ConfigurationTarget.Global);
+                    } else if (selection === 'Open Settings') {
+                        vscode.commands.executeCommand(
+                            'workbench.action.openSettings',
+                            'demoBuilder.blockLibraries',
+                        );
+                    }
+                },
+            });
+
             return { success: true };
         });
 

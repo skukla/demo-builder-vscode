@@ -167,7 +167,7 @@ export function SearchableList<T extends SearchableListItem>({
             // Find scrollable container by checking which element is actually scrollable
             const findScrollable = (): HTMLElement | null => {
                 const grid = listContainerRef.current?.querySelector('[role="grid"]') as HTMLElement | null;
-                if (grid?.scrollHeight > grid?.clientHeight) return grid;
+                if (grid && grid.scrollHeight > grid.clientHeight) return grid;
                 const parent = grid?.parentElement;
                 if (parent && parent.scrollHeight > parent.clientHeight) {
                     return parent;

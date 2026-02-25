@@ -114,13 +114,14 @@ export function getDaLiveServices(context: HandlerContext): DaLiveServices {
 }
 
 /**
- * Get or create DaLiveAuthService instance (for darkalley OAuth)
+ * Get or create DaLiveAuthService instance (for darkalley OAuth).
+ * Accepts ExtensionContext directly so callers without HandlerContext can use it.
  */
-export function getDaLiveAuthService(context: HandlerContext): DaLiveAuthService {
+export function getDaLiveAuthService(extensionContext: vscode.ExtensionContext): DaLiveAuthService {
     // Initialize Helix key persistence alongside DA.live auth (idempotent)
-    HelixService.initKeyStore(context.context.globalState);
+    HelixService.initKeyStore(extensionContext.globalState);
     if (!cachedDaLiveAuthService) {
-        cachedDaLiveAuthService = new DaLiveAuthService(context.context);
+        cachedDaLiveAuthService = new DaLiveAuthService(extensionContext);
     }
     return cachedDaLiveAuthService;
 }
@@ -311,7 +312,7 @@ export async function ensureDaLiveAuth(
     context: HandlerContext,
     logPrefix = '[Auth]',
 ): Promise<DaLiveGuardResult> {
-    const daLiveAuthService = getDaLiveAuthService(context);
+    const daLiveAuthService = getDaLiveAuthService(context.context);
 
     if (await daLiveAuthService.isAuthenticated()) {
         return { authenticated: true };
@@ -486,7 +487,7 @@ export async function showDaLiveAuthQuickPick(
 
                 // Success! Store via service (handles all keys including setupComplete)
                 const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
-                const authService = getDaLiveAuthService(context);
+                const authService = getDaLiveAuthService(context.context);
                 await authService.storeToken(trimmedToken, {
                     expiresAt: tokenExpiry,
                     email: validation.email,

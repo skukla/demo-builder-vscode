@@ -100,6 +100,8 @@ export class AdobeSDKClient {
             // CRITICAL FIX: Pre-check token validity before calling getToken('cli')
             // This prevents Adobe IMS library from opening browser if token not ready
             // getToken('cli') can trigger browser auth if token is missing/invalid/expired
+            // Dynamic imports: deferred to avoid module loading chain in tests
+            // (TokenManager → loadingHTML → vscode not available during test setup)
             const { TokenManager } = await import('./tokenManager');
             const { ServiceLocator } = await import('@/core/di');
             const commandManager = ServiceLocator.getCommandExecutor();

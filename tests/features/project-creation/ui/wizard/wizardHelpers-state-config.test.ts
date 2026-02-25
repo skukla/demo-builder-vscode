@@ -375,6 +375,40 @@ describe('wizardHelpers - state & config', () => {
             });
         });
 
+        it('should include customBlockLibraries in the config', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+                customBlockLibraries: [
+                    {
+                        name: 'my-blocks',
+                        source: { type: 'git', url: 'https://github.com/user/blocks', branch: 'main' },
+                    },
+                ],
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.customBlockLibraries).toEqual([
+                {
+                    name: 'my-blocks',
+                    source: { type: 'git', url: 'https://github.com/user/blocks', branch: 'main' },
+                },
+            ]);
+        });
+
+        it('should default customBlockLibraries to empty array when not set', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+                // No customBlockLibraries
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.customBlockLibraries).toEqual([]);
+        });
+
         it('should handle missing frontendSource and contentSource gracefully', () => {
             const state: WizardState = {
                 currentStep: 'review',

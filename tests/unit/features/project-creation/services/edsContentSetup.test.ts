@@ -62,6 +62,10 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     configureDaLivePermissions: (...args: unknown[]) => mockConfigureDaLivePermissions(...args),
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
     bulkPreviewAndPublish: (...args: unknown[]) => mockBulkPreviewAndPublish(...args),
+    getDaLiveAuthService: jest.fn().mockReturnValue({
+        getAccessToken: mockGetAccessToken,
+        getUserEmail: mockGetUserEmail,
+    }),
 }));
 
 jest.mock('@/core/utils', () => ({

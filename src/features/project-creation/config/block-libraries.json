@@ -3,9 +3,22 @@
   "version": "1.0.0",
   "libraries": [
     {
+      "id": "citisignal-blocks",
+      "name": "Demo Team Block Collection",
+      "description": "General-purpose blocks built by the Demo Team, usable in any EDS storefront",
+      "type": "storefront",
+      "source": {
+        "owner": "skukla",
+        "repo": "citisignal-eds-boilerplate",
+        "branch": "main"
+      },
+      "nativeForPackages": ["citisignal"],
+      "stackTypes": ["eds-storefront"]
+    },
+    {
       "id": "isle5",
-      "name": "Commerce Block Collection",
-      "description": "Custom EDS blocks: hero, carousel, newsletter, store locator, and more",
+      "name": "Garner Block Collection",
+      "description": "Stephen Garner's custom EDS blocks: hero, carousel, newsletter, store locator, and more",
       "type": "standalone",
       "source": {
         "owner": "skukla",
@@ -14,19 +27,6 @@
       },
       "stackTypes": ["eds-storefront"],
       "default": true
-    },
-    {
-      "id": "citisignal-blocks",
-      "name": "CitiSignal Blocks",
-      "description": "Branded blocks from the CitiSignal EDS storefront",
-      "type": "storefront",
-      "source": {
-        "owner": "skukla",
-        "repo": "citisignal-eds-boilerplate",
-        "branch": "main"
-      },
-      "excludeForPackages": ["citisignal"],
-      "stackTypes": ["eds-storefront"]
     },
     {
       "id": "buildright-blocks",
@@ -38,7 +38,8 @@
         "repo": "buildright-eds",
         "branch": "main"
       },
-      "excludeForPackages": ["buildright"],
+      "nativeForPackages": ["buildright"],
+      "onlyForPackages": ["buildright"],
       "stackTypes": ["eds-storefront"]
     }
   ]

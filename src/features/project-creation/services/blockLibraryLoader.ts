@@ -33,23 +33,57 @@ export function getAvailableBlockLibraries(
 ): BlockLibrary[] {
     return config.libraries.filter(lib => {
         if (!lib.stackTypes.includes(stack.frontend)) return false;
-        if (lib.excludeForPackages?.includes(packageId)) return false;
+        if (lib.nativeForPackages?.includes(packageId)) return false;
+        if (lib.onlyForPackages && !lib.onlyForPackages.includes(packageId)) return false;
         return true;
+    });
+}
+
+/**
+ * Get block libraries that are native to the given package.
+ *
+ * Native libraries have blocks that ship with the package's storefront,
+ * so they're always included. Shown as disabled checkboxes in the UI
+ * to inform the user without allowing removal.
+ *
+ * @param stack - The selected stack object
+ * @param packageId - The selected package ID
+ * @returns Array of native block libraries (empty if none)
+ */
+export function getNativeBlockLibraries(
+    stack: Stack,
+    packageId: string,
+): BlockLibrary[] {
+    return config.libraries.filter(lib => {
+        if (!lib.stackTypes.includes(stack.frontend)) return false;
+        return lib.nativeForPackages?.includes(packageId) ?? false;
     });
 }
 
 /**
  * Get the IDs of block libraries that should be pre-selected by default.
  *
+ * When `userDefaults` is provided (from VS Code settings), uses those
+ * preferences instead of the `default` field from block-libraries.json.
+ * Only libraries that are available for the given stack/package are returned.
+ *
  * @param stack - The selected stack object
  * @param packageId - The selected package ID
- * @returns Array of library IDs with `default: true`
+ * @param userDefaults - Optional array of enabled library IDs from VS Code settings
+ * @returns Array of library IDs that should be pre-selected
  */
 export function getDefaultBlockLibraryIds(
     stack: Stack,
     packageId: string,
+    userDefaults?: string[],
 ): string[] {
-    return getAvailableBlockLibraries(stack, packageId)
+    const available = getAvailableBlockLibraries(stack, packageId);
+    if (userDefaults) {
+        return available
+            .filter(lib => userDefaults.includes(lib.id))
+            .map(lib => lib.id);
+    }
+    return available
         .filter(lib => lib.default)
         .map(lib => lib.id);
 }

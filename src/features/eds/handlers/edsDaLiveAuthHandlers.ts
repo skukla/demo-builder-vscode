@@ -59,7 +59,7 @@ export async function handleCheckDaLiveAuth(
 ): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Checking DA.live auth status');
-        const authService = getDaLiveAuthService(context);
+        const authService = getDaLiveAuthService(context.context);
 
         // Check if user has completed bookmarklet setup before
         const setupComplete = authService.isSetupComplete();
@@ -183,7 +183,7 @@ export async function handleStoreDaLiveToken(
 
         // Store token via service (handles expiry, email, and setupComplete)
         const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
-        const authService = getDaLiveAuthService(context);
+        const authService = getDaLiveAuthService(context.context);
         await authService.storeToken(token, {
             expiresAt: tokenExpiry,
             email: validation.email,
@@ -301,7 +301,7 @@ export async function handleStoreDaLiveTokenWithOrg(
 
         // Org verified! Store via service (handles all keys including setupComplete)
         const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
-        const authService = getDaLiveAuthService(context);
+        const authService = getDaLiveAuthService(context.context);
         await authService.storeToken(token, {
             expiresAt: tokenExpiry,
             email: validation.email,
@@ -355,7 +355,7 @@ export async function handleClearDaLiveAuth(
 
         // Clear stored token and related data via service
         // Note: logout() preserves setupComplete so user doesn't re-learn the bookmarklet flow
-        const authService = getDaLiveAuthService(context);
+        const authService = getDaLiveAuthService(context.context);
         await authService.logout();
 
         context.logger.info('[EDS] DA.live auth cleared');

@@ -160,45 +160,35 @@ cacheManager.setCachedAuthStatus(true);
 cacheManager.setCachedAuthStatus(false, 30000); // 30 seconds
 ```
 
-### AdobeEntityService
+### EntityServices (via createEntityServices)
 
 **Purpose**: Manages Adobe organizations, projects, and workspaces with SDK acceleration
 
-**Key Methods**:
-- `getOrganizations()` - Fetch organizations (SDK-accelerated when available, clears CLI context if zero orgs found)
-- `getProjects()` - Fetch projects in current org
-- `getWorkspaces()` - Fetch workspaces in current project
-- `getCurrentOrganization()` - Get current org context
-- `getCurrentProject()` - Get current project context
-- `getCurrentWorkspace()` - Get current workspace context
-- `selectOrganization(orgId)` - Select organization and update CLI context
-- `selectProject(projectId)` - Select project and update CLI context
-- `selectWorkspace(workspaceId)` - Select workspace and update CLI context
-- `autoSelectOrganizationIfNeeded(skipCurrentCheck?)` - Auto-select single org
+**Sub-services**:
+- `fetcher` (AdobeEntityFetcher) — `getOrganizations()`, `getProjects()`, `getWorkspaces()`
+- `resolver` (AdobeContextResolver) — `getCurrentOrganization()`, `getCurrentProject()`, `getCurrentWorkspace()`, `getCurrentContext()`
+- `selector` (AdobeEntitySelector) — `selectOrganization()`, `selectProject()`, `selectWorkspace()`, `autoSelectOrganizationIfNeeded()`
 
 **Zero-Organization Behavior**:
 When `getOrganizations()` returns an empty array (user has no accessible organizations), the service automatically clears stale Adobe CLI console context (org/project/workspace selections) while preserving the authentication token. This prevents showing outdated organization selections from previous sessions.
 
 **Example Usage**:
 ```typescript
-import { AdobeEntityService } from '@/features/authentication';
+import { createEntityServices } from '@/features/authentication';
 
-const entityService = new AdobeEntityService(
-    commandManager,
-    sdkClient,
-    cacheManager,
-    logger,
-    stepLogger
+const { fetcher, resolver, selector } = createEntityServices(
+    commandManager, sdkClient, cacheManager,
+    organizationValidator, logger, stepLogger
 );
 
 // Get organizations (SDK-accelerated if available, falls back to CLI)
-const orgs = await entityService.getOrganizations();
+const orgs = await fetcher.getOrganizations();
 
 // Select organization
-await entityService.selectOrganization(orgId);
+await selector.selectOrganization(orgId);
 
 // Get projects in selected org
-const projects = await entityService.getProjects();
+const projects = await fetcher.getProjects();
 ```
 
 ### OrganizationValidator
@@ -225,27 +215,21 @@ await validator.validateAndClearInvalidOrgContext();
 await validator.validateAndClearInvalidOrgContext(true);
 ```
 
-### PerformanceTracker
+### withTiming
 
-**Purpose**: Tracks operation timing for performance optimization
+**Purpose**: Wraps async operations with automatic performance monitoring
 
-**Key Methods**:
-- `startTiming(operation)` - Start timing an operation
-- `endTiming(operation)` - End timing and log duration
-- `getMetrics()` - Get all tracked performance metrics
+Logs a debug warning when an operation exceeds its expected duration threshold.
+Used internally by `AuthenticationService` to monitor all entity operations.
 
 **Example Usage**:
 ```typescript
-import { PerformanceTracker } from '@/features/authentication';
+import { withTiming } from '@/features/authentication';
 
-const tracker = new PerformanceTracker();
-
-tracker.startTiming('getOrganizations');
-// ... perform operation
-tracker.endTiming('getOrganizations');
-
-// Get metrics for analysis
-const metrics = tracker.getMetrics();
+const orgs = await withTiming('getOrganizations', async () => {
+    return fetcher.getOrganizations();
+});
+// Automatically logs warning if operation exceeds 5s threshold
 ```
 
 ## Types
@@ -301,11 +285,11 @@ AuthenticationService (orchestrator)
 ├── AdobeSDKClient (high-performance SDK operations)
 ├── AuthCacheManager (multi-layer caching)
 ├── OrganizationValidator (org access validation)
-├── AdobeEntityService (org/project/workspace management)
-│   ├── AdobeSDKClient (SDK acceleration)
-│   ├── AuthCacheManager (caching)
-│   └── StepLogger (user-facing logs)
-└── PerformanceTracker (metrics)
+├── EntityServices (org/project/workspace management via createEntityServices)
+│   ├── AdobeEntityFetcher (SDK-accelerated fetching)
+│   ├── AdobeContextResolver (CLI context resolution)
+│   └── AdobeEntitySelector (entity selection)
+└── withTiming (performance monitoring)
 ```
 
 ## Integration Points

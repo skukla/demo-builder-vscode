@@ -10,7 +10,7 @@
 
 import { handleAuthenticate } from '@/features/authentication/handlers/authenticationHandlers';
 import type { HandlerContext } from '@/types/handlers';
-import { createMockHandlerContext } from './authenticationHandlers-authenticate.testUtils';
+import { createMockHandlerContext } from './testUtils';
 
 describe('authenticationHandlers - handleAuthenticate - Error Handling', () => {
 	let mockContext: jest.Mocked<HandlerContext>;

@@ -16,7 +16,6 @@ import * as path from 'path';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { validateNodeVersion } from '@/core/validation';
 import {
-    ComponentDefinition,
     ComponentRegistry,
     TransformedComponentDefinition,
     RawComponentRegistry,
@@ -330,7 +329,7 @@ export class ComponentRegistryManager {
         return registry.services?.[id];
     }
 
-    async getComponentById(id: string): Promise<ComponentDefinition | undefined> {
+    async getComponentById(id: string): Promise<TransformedComponentDefinition | undefined> {
         const registry = await this.loadRegistry();
         const allComponents = [
             ...registry.components.frontends,
@@ -340,7 +339,7 @@ export class ComponentRegistryManager {
             ...(registry.components.integrations || []),
             ...(registry.components.appBuilder || []),
         ];
-        return allComponents.find(c => c.id === id) as ComponentDefinition | undefined;
+        return allComponents.find(c => c.id === id);
     }
 
     async getPresets(): Promise<PresetDefinition[]> {

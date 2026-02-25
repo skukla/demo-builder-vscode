@@ -7,7 +7,8 @@
 import { Flex, Text, Button } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import Import from '@spectrum-icons/workflow/Import';
-import React, { useEffect, useRef } from 'react';
+import type { FocusableRefValue } from '@react-types/shared';
+import React, { useCallback } from 'react';
 
 export interface DashboardEmptyStateProps {
     /** Callback when the create button is clicked */
@@ -32,13 +33,10 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
     buttonText = 'New',
     autoFocus = false,
 }) => {
-    const buttonRef = useRef<HTMLButtonElement>(null);
-
-    // Note: Focus trap is handled by parent ProjectsDashboard component
-
-    useEffect(() => {
-        if (autoFocus && buttonRef.current) {
-            buttonRef.current.focus();
+    const focusRef = useCallback((node: FocusableRefValue<HTMLElement, HTMLElement> | null) => {
+        if (autoFocus && node) {
+            const domNode = node.UNSAFE_getDOMNode?.() ?? node as unknown as HTMLElement;
+            domNode?.focus();
         }
     }, [autoFocus]);
 
@@ -63,7 +61,7 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
                 </Text>
                 <Flex gap="size-200" alignItems="center">
                     <Button
-                        ref={buttonRef as unknown as React.RefObject<HTMLElement>}
+                        ref={focusRef}
                         variant="cta"
                         onPress={onCreate}
                     >

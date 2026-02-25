@@ -2,7 +2,7 @@
  * AdobeContextResolver
  *
  * Resolves current Adobe CLI context (organization, project, workspace).
- * Part of the AdobeEntityService decomposition for SOP §10 compliance.
+ * Part of the EntityServices decomposition (created via createEntityServices).
  *
  * Responsibilities:
  * - Fetching and caching console.where context

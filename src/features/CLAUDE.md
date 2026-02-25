@@ -145,6 +145,8 @@ features/my-feature/
 - Code sync verification with polling
 - Tool installation for data population
 - Partial state tracking for recovery
+- Pre-flight authentication checks (Adobe I/O and DA.live)
+- Mid-pipeline DA.live token expiry recovery with re-authentication
 - Project cleanup (GitHub repo, DA.live content, Helix site)
 
 **Path Alias**: `@/features/eds`
@@ -210,6 +212,7 @@ features/my-feature/
 
 **Key Services:**
 - Demo package loading and storefront resolution (`services/demoPackageLoader.ts`)
+- Custom block library URL parsing and validation (`services/customBlockLibraryUtils.ts`)
 - Project template application
 - Environment file generation
 - Directory structure creation
@@ -217,6 +220,7 @@ features/my-feature/
 
 **Responsibilities:**
 - Demo template selection on WelcomeStep
+- Custom block library management (URL parsing, deduplication, VS Code settings integration)
 - Applying template defaults to component selections
 - Creating project directory structure
 - Applying component templates

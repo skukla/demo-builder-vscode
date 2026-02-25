@@ -346,8 +346,8 @@ async function syncCodeAndPermissions(
     }
 
     report(2, 'Configuring site permissions...');
-    const { DaLiveAuthService } = await import('./daLiveAuthService');
-    const daLiveAuthService = new DaLiveAuthService(context.context);
+    const { getDaLiveAuthService } = await import('../handlers/edsHelpers');
+    const daLiveAuthService = getDaLiveAuthService(context.context);
     const userEmail = await daLiveAuthService.getUserEmail();
     if (userEmail) {
         await configureDaLivePermissions(tokenProvider, daLiveOrg, daLiveSite, userEmail, context.logger);

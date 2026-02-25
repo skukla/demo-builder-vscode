@@ -801,7 +801,7 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                     };
                 }
 
-                const daLiveAuthService = getDaLiveAuthService(context);
+                const daLiveAuthService = getDaLiveAuthService(context.context);
 
                 // Initialize services
                 const { HelixService } = await import('@/features/eds/services/helixService');

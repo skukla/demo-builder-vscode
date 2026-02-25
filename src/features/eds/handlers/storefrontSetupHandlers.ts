@@ -439,7 +439,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
 
     // IMPORTANT: HelixService also needs DA.live token provider for x-content-source-authorization
     // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
-    const daLiveAuthService = getDaLiveAuthService(context);
+    const daLiveAuthService = getDaLiveAuthService(context.context);
     const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
     const toolManager = new ToolManager(context.logger);
     const configurationService = new ConfigurationService(daLiveTokenProvider, context.logger);

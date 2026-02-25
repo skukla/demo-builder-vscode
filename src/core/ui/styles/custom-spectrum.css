@@ -1127,7 +1127,7 @@ button[class*="spectrum-Button"][disabled],
     }
     to {
         opacity: 1;
-        max-height: 100px;
+        max-height: 200px;
         margin-top: 12px;
         padding-top: 12px;
     }
@@ -1143,12 +1143,42 @@ button[class*="spectrum-Button"][disabled],
     margin-bottom: 4px !important;
 }
 
+/* Smooth grow/shrink for block libraries section on card tile.
+   Expand: height + margin grow, then content fades in.
+   Collapse: content fades out fully, then height + margin shrink. */
+.brand-card-libraries-wrapper {
+    display: grid !important;
+    grid-template-rows: 0fr !important;
+    margin-top: 0 !important;
+    transition: grid-template-rows 0.25s ease-in-out 0.05s,
+                margin-top 0.25s ease-in-out 0.05s !important;
+}
+
+.brand-card-libraries-wrapper.has-libraries {
+    grid-template-rows: 1fr !important;
+    margin-top: 10px !important;
+    transition: grid-template-rows 0.25s ease-out,
+                margin-top 0.25s ease-out !important;
+}
+
+.brand-card-libraries-inner {
+    overflow: hidden !important;
+    opacity: 0 !important;
+    transition: opacity 0.2s ease-out !important;
+}
+
+.brand-card-libraries-wrapper.has-libraries .brand-card-libraries-inner {
+    opacity: 1 !important;
+    transition: opacity 0.15s ease-in 0.15s !important;
+}
+
 .brand-card-selection-value {
     display: block !important;
     font-size: 13px !important;
     font-weight: 500 !important;
     color: var(--spectrum-global-color-gray-900) !important;
 }
+
 
 /* Edit hint for expanded card */
 .brand-card-edit-hint {
@@ -1162,6 +1192,25 @@ button[class*="spectrum-Button"][disabled],
 
 .expandable-brand-card.expanded:hover .brand-card-edit-hint {
     opacity: 1 !important;
+}
+
+/* Modal step crossfade transition (architecture ↔ block libraries) */
+.modal-step-content {
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+    transition: opacity 0.2s ease, transform 0.2s ease !important;
+}
+
+.modal-step-content.transitioning {
+    opacity: 0 !important;
+}
+
+.modal-step-content.transitioning.forward {
+    transform: translateX(-20px) !important;
+}
+
+.modal-step-content.transitioning.backward {
+    transform: translateX(20px) !important;
 }
 
 /* Addons section wrapper - animated show/hide */

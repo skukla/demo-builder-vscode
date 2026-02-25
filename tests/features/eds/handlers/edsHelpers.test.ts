@@ -230,11 +230,11 @@ describe('edsHelpers', () => {
 
     describe('Service Cache - getDaLiveAuthService', () => {
         it('should create DaLiveAuthService on first call', () => {
-            // Given: A fresh context
+            // Given: A fresh extension context
             const context = createMockHandlerContext();
 
-            // When: Getting the DaLive auth service
-            const service = getDaLiveAuthService(context);
+            // When: Getting the DaLive auth service with ExtensionContext
+            const service = getDaLiveAuthService(context.context);
 
             // Then: Should return a DaLiveAuthService instance
             expect(service).toBeDefined();
@@ -244,10 +244,10 @@ describe('edsHelpers', () => {
         it('should return cached DaLiveAuthService on subsequent calls', () => {
             // Given: A context with previously created service
             const context = createMockHandlerContext();
-            const firstService = getDaLiveAuthService(context);
+            const firstService = getDaLiveAuthService(context.context);
 
             // When: Getting the service again
-            const secondService = getDaLiveAuthService(context);
+            const secondService = getDaLiveAuthService(context.context);
 
             // Then: Should return the same cached instance
             expect(secondService).toBe(firstService);
@@ -258,7 +258,7 @@ describe('edsHelpers', () => {
             const context = createMockHandlerContext();
 
             // When: Getting the DaLive auth service
-            const service = getDaLiveAuthService(context);
+            const service = getDaLiveAuthService(context.context);
 
             // Then: Should pass extension context to the service
             expect((service as unknown as { context: unknown }).context).toBe(context.context);

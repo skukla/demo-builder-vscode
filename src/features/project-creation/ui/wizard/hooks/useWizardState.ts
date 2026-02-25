@@ -223,6 +223,7 @@ function buildEditModeState(
         selectedStack: editSettings.selectedStack,
         selectedAddons: editSettings.selectedAddons,
         selectedBlockLibraries: editSettings.selectedBlockLibraries,
+        customBlockLibraries: editSettings.customBlockLibraries,
         edsConfig: editSettings.edsConfig
             ? buildEditModeEdsConfig(editSettings.edsConfig)
             : undefined,
@@ -276,6 +277,7 @@ function computeInitialState(
         selectedStack: importedSettings?.selectedStack,
         selectedAddons: importedSettings?.selectedAddons,
         selectedBlockLibraries: importedSettings?.selectedBlockLibraries,
+        customBlockLibraries: importedSettings?.customBlockLibraries,
         edsConfig: importedSettings?.edsConfig
             ? buildImportModeEdsConfig(importedSettings.edsConfig)
             : undefined,

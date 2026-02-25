@@ -340,7 +340,7 @@ async function ensureDaLiveAuth(
     const authResult = await ensureDaLiveAuthShared(context, '[Delete Project]');
 
     if (authResult.authenticated) {
-        return getDaLiveAuthService(context);
+        return getDaLiveAuthService(context.context);
     }
 
     results.push({

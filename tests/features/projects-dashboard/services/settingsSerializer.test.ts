@@ -8,6 +8,7 @@ import {
 } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Project } from '@/types/base';
 import { SETTINGS_FILE_VERSION } from '@/features/projects-dashboard/types/settingsFile';
+import type { CustomBlockLibrary } from '@/types/blockLibraries';
 
 describe('settingsSerializer', () => {
     describe('parseSettingsFile', () => {
@@ -227,6 +228,84 @@ describe('settingsSerializer', () => {
 
             expect(result.selections).toEqual({});
             expect(result.configs).toEqual({});
+        });
+    });
+
+    describe('extractSettingsFromProject - customBlockLibraries handling', () => {
+        it('should include customBlockLibraries when present in project', () => {
+            const customLibs: CustomBlockLibrary[] = [
+                {
+                    name: 'my-blocks',
+                    source: { type: 'git', url: 'https://github.com/user/blocks', branch: 'main' },
+                },
+            ];
+
+            const project: Project = {
+                name: 'project-with-custom-libs',
+                created: new Date(),
+                lastModified: new Date(),
+                path: '/path/to/project',
+                status: 'ready',
+                componentSelections: {},
+                componentConfigs: {},
+                customBlockLibraries: customLibs,
+            };
+
+            const result = extractSettingsFromProject(project);
+
+            expect(result.customBlockLibraries).toEqual(customLibs);
+        });
+
+        it('should omit customBlockLibraries when absent from project', () => {
+            const project: Project = {
+                name: 'project-without-custom-libs',
+                created: new Date(),
+                lastModified: new Date(),
+                path: '/path/to/project',
+                status: 'ready',
+                componentSelections: {},
+                componentConfigs: {},
+                // No customBlockLibraries
+            };
+
+            const result = extractSettingsFromProject(project);
+
+            expect(result.customBlockLibraries).toBeUndefined();
+        });
+
+        it('should round-trip: export then parse preserves customBlockLibraries', () => {
+            const customLibs: CustomBlockLibrary[] = [
+                {
+                    name: 'partner-blocks',
+                    source: { type: 'git', url: 'https://github.com/partner/blocks', branch: 'develop' },
+                },
+                {
+                    name: 'internal-blocks',
+                    source: { type: 'git', url: 'https://github.com/corp/blocks', branch: 'main' },
+                },
+            ];
+
+            const project: Project = {
+                name: 'roundtrip-project',
+                created: new Date(),
+                lastModified: new Date(),
+                path: '/path/to/project',
+                status: 'ready',
+                componentSelections: {},
+                componentConfigs: {},
+                customBlockLibraries: customLibs,
+            };
+
+            // Export (serialize)
+            const exported = extractSettingsFromProject(project);
+            const json = JSON.stringify(exported);
+
+            // Import (parse)
+            const parseResult = parseSettingsFile(json);
+            expect(parseResult.success).toBe(true);
+            if (parseResult.success) {
+                expect(parseResult.settings.customBlockLibraries).toEqual(customLibs);
+            }
         });
     });
 

@@ -69,7 +69,6 @@ const StackCard: React.FC<StackCardProps> = ({ stack, isSelected, onSelect, onNa
             data-testid="stack-card"
             data-selected={isSelected ? 'true' : 'false'}
             data-requires-setup={requiresSetup ? 'true' : 'false'}
-            aria-pressed={isSelected ? 'true' : 'false'}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
             className="selector-card"

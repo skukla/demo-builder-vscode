@@ -150,6 +150,51 @@
         }
       },
       {
+        "title": "Block Libraries",
+        "properties": {
+          "demoBuilder.blockLibraries.defaults": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "citisignal-blocks",
+                "isle5",
+                "buildright-blocks"
+              ],
+              "enumDescriptions": [
+                "Demo Team Block Collection — general-purpose blocks built by the Demo Team, usable in any EDS storefront",
+                "Garner Block Collection — Stephen Garner's custom EDS blocks: hero, carousel, newsletter, store locator, and more",
+                "BuildRight Blocks — branded blocks from the BuildRight EDS storefront"
+              ]
+            },
+            "uniqueItems": true,
+            "default": [
+              "isle5"
+            ],
+            "description": "Block libraries to include by default for new EDS projects"
+          },
+          "demoBuilder.blockLibraries.custom": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Display name for the block library"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
+                }
+              },
+              "required": ["name", "url"]
+            },
+            "default": [],
+            "description": "Custom block libraries to include by default for new EDS projects. Each entry needs a display name and a public GitHub repository URL containing a blocks/ directory."
+          }
+        }
+      },
+      {
         "title": "DA.live",
         "properties": {
           "demoBuilder.daLive.defaultOrg": {

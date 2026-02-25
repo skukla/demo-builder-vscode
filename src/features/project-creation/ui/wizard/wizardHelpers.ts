@@ -5,6 +5,7 @@
 import { getStackById } from '../hooks/useSelectedStack';
 import { hasMeshInDependencies } from '@/core/constants';
 import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
+import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
 
@@ -262,6 +263,8 @@ export interface ImportedSettings {
     selectedAddons?: string[];
     /** Selected block library IDs (e.g., ['isle5', 'citisignal-blocks']) */
     selectedBlockLibraries?: string[];
+    /** Custom block libraries added by URL */
+    customBlockLibraries?: CustomBlockLibrary[];
     /** EDS configuration (for Edge Delivery Services stacks) */
     edsConfig?: SettingsEdsConfig;
 }
@@ -666,6 +669,7 @@ export function buildProjectConfig(
         selectedStack: wizardState.selectedStack,
         selectedAddons: wizardState.selectedAddons || [],
         selectedBlockLibraries: wizardState.selectedBlockLibraries || [],
+        customBlockLibraries: wizardState.customBlockLibraries || [],
         frontendSource,
         editMode: wizardState.editMode,
         editProjectPath: wizardState.editProjectPath,

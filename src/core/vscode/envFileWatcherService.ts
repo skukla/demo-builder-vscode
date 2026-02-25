@@ -69,7 +69,7 @@ export class EnvFileWatcherService implements vscode.Disposable {
 
     constructor(
         private _context: vscode.ExtensionContext,
-        private stateManager: { getCurrentProject(): Promise<{ status?: string } | null> },
+        private stateManager: { getCurrentProject(): Promise<{ status?: string } | undefined> },
         private watcherManager: WorkspaceWatcherManager,
         private logger: Logger,
     ) {

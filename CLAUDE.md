@@ -32,7 +32,8 @@ The Adobe Demo Builder is a VS Code extension that streamlines the creation of A
 │  ├── Error Logging System                                │
 │  ├── StepLogger (Configuration-driven logging)           │
 │  ├── ExternalCommandManager (Race-safe commands)         │
-│  └── StateCoordinator (Adobe CLI state sync)             │
+│  ├── StateCoordinator (Adobe CLI state sync)             │
+│  └── Auth Guards (Shared re-auth prompts)                │
 ├─────────────────────────────────────────────────────────┤
 │          Communication & Messaging Layer                 │
 │  ├── WebviewCommunicationManager (Handshake protocol)    │
@@ -189,7 +190,7 @@ demo-builder-vscode/
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
   - `src/features/mesh/ui/steps/` - API Mesh step
   - `src/features/project-creation/ui/steps/` - WelcomeStep (with template selection), ReviewStep, ProjectCreationStep
--> Note: WelcomeStep includes demo package selection (see `src/features/project-creation/config/demo-packages.json`)
+-> Note: WelcomeStep includes demo package selection and custom block library URL input (see `src/features/project-creation/config/demo-packages.json` and `src/types/blockLibraries.ts`)
 -> See feature documentation for wizard orchestration details
 
 ### Debugging Width Issues

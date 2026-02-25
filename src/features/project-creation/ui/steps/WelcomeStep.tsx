@@ -8,6 +8,7 @@ import {
     normalizeProjectName,
     getProjectNameError,
 } from '@/core/validation/normalizers';
+import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { DemoPackage } from '@/types/demoPackages';
 import { Stack } from '@/types/stacks';
 import { BaseStepProps } from '@/types/wizard';
@@ -26,9 +27,13 @@ interface WelcomeStepProps extends BaseStepProps {
      * for components that exist in both stacks.
      */
     onArchitectureChange?: (oldStackId: string, newStackId: string) => void;
+    /** User's saved block library default preferences (from settings) */
+    blockLibraryDefaults?: string[];
+    /** Custom block libraries from VS Code settings */
+    customBlockLibraryDefaults?: CustomBlockLibrary[];
 }
 
-export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], initialViewMode: _initialViewMode, packages, stacks, onArchitectureChange }: WelcomeStepProps) {
+export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], initialViewMode: _initialViewMode, packages, stacks, onArchitectureChange, blockLibraryDefaults, customBlockLibraryDefaults }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
 
@@ -173,6 +178,14 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         [updateState],
     );
 
+    // Handler for custom block library changes (from BrandGallery modal)
+    const handleCustomBlockLibrariesChange = useCallback(
+        (libs: CustomBlockLibrary[]) => {
+            updateState({ customBlockLibraries: libs });
+        },
+        [updateState],
+    );
+
     useEffect(() => {
         const isProjectNameValid =
             state.projectName.length >= 3 &&
@@ -280,6 +293,10 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 onAddonsChange={handleAddonsChange}
                 selectedBlockLibraries={state.selectedBlockLibraries}
                 onBlockLibrariesChange={handleBlockLibrariesChange}
+                blockLibraryDefaults={blockLibraryDefaults}
+                customBlockLibraries={state.customBlockLibraries}
+                onCustomBlockLibrariesChange={handleCustomBlockLibrariesChange}
+                customBlockLibraryDefaults={customBlockLibraryDefaults}
                 headerContent={projectNameField}
             />
         );

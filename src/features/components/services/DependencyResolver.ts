@@ -11,9 +11,7 @@
 
 import type { ComponentRegistryManager } from './ComponentRegistryManager';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
-import {
-    ComponentDefinition,
-} from '@/types';
+import type { TransformedComponentDefinition } from '@/types';
 import { ProjectConfig } from '@/types/handlers';
 
 /**
@@ -34,10 +32,10 @@ export class DependencyResolver {
         backendId: string,
         selectedOptional: string[] = [],
     ): Promise<{
-        required: ComponentDefinition[];
-        optional: ComponentDefinition[];
-        selected: ComponentDefinition[];
-        all: ComponentDefinition[];
+        required: TransformedComponentDefinition[];
+        optional: TransformedComponentDefinition[];
+        selected: TransformedComponentDefinition[];
+        all: TransformedComponentDefinition[];
     }> {
         const frontend = await this.registryManager.getComponentById(frontendId);
         const backend = await this.registryManager.getComponentById(backendId);
@@ -83,8 +81,8 @@ export class DependencyResolver {
     /**
      * Resolve component IDs to their definitions
      */
-    private async resolveComponentIds(ids: string[]): Promise<ComponentDefinition[]> {
-        const components: ComponentDefinition[] = [];
+    private async resolveComponentIds(ids: string[]): Promise<TransformedComponentDefinition[]> {
+        const components: TransformedComponentDefinition[] = [];
         for (const id of ids) {
             const component = await this.registryManager.getComponentById(id);
             if (component) {
@@ -99,7 +97,7 @@ export class DependencyResolver {
      * @param dependencies - Array of component definitions to validate
      * @returns Validation result with errors and warnings
      */
-    async validateDependencyChain(dependencies: ComponentDefinition[]): Promise<{
+    async validateDependencyChain(dependencies: TransformedComponentDefinition[]): Promise<{
         valid: boolean;
         errors: string[];
         warnings: string[];
@@ -169,9 +167,9 @@ export class DependencyResolver {
      * @returns Project configuration object
      */
     async generateConfiguration(
-        frontend: ComponentDefinition,
-        backend: ComponentDefinition,
-        dependencies: ComponentDefinition[],
+        frontend: TransformedComponentDefinition,
+        backend: TransformedComponentDefinition,
+        dependencies: TransformedComponentDefinition[],
     ): Promise<ProjectConfig> {
         const config: Partial<ProjectConfig> = {};
 
@@ -179,8 +177,8 @@ export class DependencyResolver {
         const envVars: Record<string, string> = {};
 
         // Frontend env vars
-        if (frontend.configuration?.envVars) {
-            frontend.configuration.envVars.forEach(varName => {
+        if (frontend.configuration?.requiredEnvVars) {
+            frontend.configuration.requiredEnvVars.forEach(varName => {
                 envVars[varName] = '${' + varName + '}';
             });
         }
@@ -196,8 +194,8 @@ export class DependencyResolver {
             }
 
             // Add any dependency-specific env vars
-            if (dep.configuration?.envVars) {
-                dep.configuration.envVars.forEach(varName => {
+            if (dep.configuration?.requiredEnvVars) {
+                dep.configuration.requiredEnvVars.forEach(varName => {
                     envVars[varName] = '${' + varName + '}';
                 });
             }

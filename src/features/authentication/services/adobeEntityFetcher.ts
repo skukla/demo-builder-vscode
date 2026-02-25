@@ -2,8 +2,8 @@
  * AdobeEntityFetcher
  *
  * Handles fetching Adobe entities (organizations, projects, workspaces) with
- * SDK-first strategy and CLI fallback. Part of the AdobeEntityService decomposition
- * for SOP §10 compliance (god file reduction).
+ * SDK-first strategy and CLI fallback. Part of the EntityServices decomposition
+ * (created via createEntityServices).
  *
  * Responsibilities:
  * - SDK-first fetching with automatic CLI fallback

@@ -5,6 +5,8 @@
  * These files allow users to share and reuse configuration across projects.
  */
 
+import type { CustomBlockLibrary } from '@/types/blockLibraries';
+
 /**
  * Component selections - which components are chosen
  */
@@ -95,6 +97,8 @@ export interface SettingsFile {
     selectedAddons?: string[];
     /** Selected block library IDs (e.g., ['isle5', 'citisignal-blocks']) */
     selectedBlockLibraries?: string[];
+    /** Custom block libraries added by URL */
+    customBlockLibraries?: CustomBlockLibrary[];
     /** EDS configuration (for Edge Delivery Services stacks) */
     edsConfig?: SettingsEdsConfig;
 }

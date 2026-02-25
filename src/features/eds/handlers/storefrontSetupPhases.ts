@@ -569,7 +569,7 @@ export async function executeStorefrontSetupPhases(
 
     // Create service dependencies
     const githubTokenService = new GitHubTokenService(context.context.secrets, logger);
-    const daLiveAuthService = getDaLiveAuthService(context);
+    const daLiveAuthService = getDaLiveAuthService(context.context);
     const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
 
     const services: SetupServices = {

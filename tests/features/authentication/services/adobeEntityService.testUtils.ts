@@ -1,8 +1,8 @@
 /**
- * Shared test utilities for AdobeEntityService tests
+ * Shared test utilities for Adobe entity service tests
  */
 
-import { AdobeEntityService } from '@/features/authentication/services/adobeEntityService';
+import { createEntityServices, type EntityServices } from '@/features/authentication/services/adobeEntityService';
 import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
@@ -21,7 +21,7 @@ export const mockProjects: AdobeProject[] = [
         name: 'Project 1',
         title: 'Project 1 Title',
         description: 'Test project',
-        org_id: '123456', // String ID as per AdobeProject interface
+        org_id: '123456',
     },
 ];
 
@@ -30,8 +30,27 @@ export const mockWorkspaces: AdobeWorkspace[] = [
     { id: 'ws2', name: 'Stage', title: 'Stage' },
 ];
 
+/**
+ * Convenience facade that delegates to entity sub-services.
+ * Preserves the test API so existing test files need no changes.
+ */
+export interface EntityServiceFacade {
+    getOrganizations: EntityServices['fetcher']['getOrganizations'];
+    getProjects: EntityServices['fetcher']['getProjects'];
+    getWorkspaces: EntityServices['fetcher']['getWorkspaces'];
+    getCurrentOrganization: EntityServices['resolver']['getCurrentOrganization'];
+    getCurrentProject: EntityServices['resolver']['getCurrentProject'];
+    getCurrentWorkspace: EntityServices['resolver']['getCurrentWorkspace'];
+    getCurrentContext: EntityServices['resolver']['getCurrentContext'];
+    selectOrganization: EntityServices['selector']['selectOrganization'];
+    selectProject: EntityServices['selector']['selectProject'];
+    selectWorkspace: EntityServices['selector']['selectWorkspace'];
+    autoSelectOrganizationIfNeeded: EntityServices['selector']['autoSelectOrganizationIfNeeded'];
+}
+
 export interface TestMocks {
-    service: AdobeEntityService;
+    service: EntityServiceFacade;
+    entities: EntityServices;
     mockCommandExecutor: jest.Mocked<CommandExecutor>;
     mockSDKClient: jest.Mocked<AdobeSDKClient>;
     mockCacheManager: jest.Mocked<AuthCacheManager>;
@@ -43,7 +62,6 @@ export interface TestMocks {
 export function setupMocks(): TestMocks {
     jest.clearAllMocks();
 
-    // Mock external dependencies only
     const mockCommandExecutor: jest.Mocked<CommandExecutor> = {
         execute: jest.fn(),
     } as unknown as jest.Mocked<CommandExecutor>;
@@ -54,7 +72,6 @@ export function setupMocks(): TestMocks {
         ensureInitialized: jest.fn(),
     } as unknown as jest.Mocked<AdobeSDKClient>;
 
-    // These are internal but part of constructor, mock minimally
     const mockCacheManager: jest.Mocked<AuthCacheManager> = {
         getCachedOrgList: jest.fn().mockReturnValue(undefined),
         setCachedOrgList: jest.fn(),
@@ -73,8 +90,8 @@ export function setupMocks(): TestMocks {
     const mockOrgValidator: jest.Mocked<OrganizationValidator> = {
         testDeveloperPermissions: jest.fn().mockResolvedValue({
             hasPermissions: true,
-            message: 'Has Developer role'
-        })
+            message: 'Has Developer role',
+        }),
     } as unknown as jest.Mocked<OrganizationValidator>;
 
     const mockLogger: jest.Mocked<Logger> = {
@@ -88,22 +105,38 @@ export function setupMocks(): TestMocks {
         logTemplate: jest.fn(),
     } as unknown as jest.Mocked<StepLogger>;
 
-    const service = new AdobeEntityService(
+    const entities = createEntityServices(
         mockCommandExecutor,
         mockSDKClient,
         mockCacheManager,
         mockOrgValidator,
         mockLogger,
-        mockStepLogger
+        mockStepLogger,
     );
+
+    // Build a convenience facade so tests can call service.getOrganizations() etc.
+    const service: EntityServiceFacade = {
+        getOrganizations: (...args) => entities.fetcher.getOrganizations(...args),
+        getProjects: (...args) => entities.fetcher.getProjects(...args),
+        getWorkspaces: (...args) => entities.fetcher.getWorkspaces(...args),
+        getCurrentOrganization: (...args) => entities.resolver.getCurrentOrganization(...args),
+        getCurrentProject: (...args) => entities.resolver.getCurrentProject(...args),
+        getCurrentWorkspace: (...args) => entities.resolver.getCurrentWorkspace(...args),
+        getCurrentContext: (...args) => entities.resolver.getCurrentContext(...args),
+        selectOrganization: (...args) => entities.selector.selectOrganization(...args),
+        selectProject: (...args) => entities.selector.selectProject(...args),
+        selectWorkspace: (...args) => entities.selector.selectWorkspace(...args),
+        autoSelectOrganizationIfNeeded: (...args) => entities.selector.autoSelectOrganizationIfNeeded(...args),
+    };
 
     return {
         service,
+        entities,
         mockCommandExecutor,
         mockSDKClient,
         mockCacheManager,
         mockOrgValidator,
         mockLogger,
-        mockStepLogger
+        mockStepLogger,
     };
 }

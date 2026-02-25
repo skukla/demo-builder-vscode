@@ -182,5 +182,37 @@ describe('ProjectConfigWriter atomic writes', () => {
             expect(parsed.selectedStack).toBe('eds-paas');
             expect(parsed.selectedAddons).toEqual(['demo-inspector', 'adobe-commerce-aco']);
         });
+
+        it('should include customBlockLibraries in manifest', async () => {
+            // Given: A project with custom block libraries
+            const project = createTestProject({
+                name: 'project-with-custom-blocks',
+                customBlockLibraries: [
+                    {
+                        name: 'my-blocks',
+                        source: { type: 'git', url: 'https://github.com/user/blocks', branch: 'main' },
+                    },
+                ],
+            });
+
+            // When: Saving project config
+            await writer.saveProjectConfig(project, project.path);
+
+            // Then: Written content should include customBlockLibraries
+            const writeCall = mockFs.writeFile.mock.calls.find(
+                (call) => call[0].toString().endsWith('.tmp'),
+            );
+            expect(writeCall).toBeDefined();
+
+            const writtenContent = writeCall![1] as string;
+            const parsed = JSON.parse(writtenContent);
+
+            expect(parsed.customBlockLibraries).toEqual([
+                {
+                    name: 'my-blocks',
+                    source: { type: 'git', url: 'https://github.com/user/blocks', branch: 'main' },
+                },
+            ]);
+        });
     });
 });

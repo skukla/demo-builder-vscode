@@ -9,7 +9,7 @@ import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging, validatePathSafety } from '@/core/validation';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
-import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 
 export class ResetAllCommand extends BaseCommand {
@@ -106,7 +106,7 @@ export class ResetAllCommand extends BaseCommand {
 
             // 7. Reset DA.live auth (clears everything including setupComplete)
             try {
-                const daLiveAuthService = new DaLiveAuthService(this.context);
+                const daLiveAuthService = getDaLiveAuthService(this.context);
                 await daLiveAuthService.resetAll();
                 this.logger.info('DA.live auth reset successful');
             } catch (error) {

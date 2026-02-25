@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import type { CustomBlockLibrary } from './blockLibraries';
 import { ComponentSelection, ComponentConfigs } from './components';
 import { Logger } from './logger';
 import { StateManager } from './state';
@@ -52,6 +53,7 @@ export interface ProjectConfig {
     selectedStack?: string;
     selectedAddons?: string[];
     selectedBlockLibraries?: string[];
+    customBlockLibraries?: CustomBlockLibrary[];
     importedWorkspaceId?: string;
     importedMeshEndpoint?: string;
     frontendSource?: unknown;

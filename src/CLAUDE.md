@@ -20,6 +20,7 @@ src/
 │   ├── project-creation/# Project creation workflow
 │   └── updates/         # Auto-update system (extension & components)
 ├── core/                # Core infrastructure (→ core/CLAUDE.md)
+│   ├── auth/            # Authentication guards (ensureAdobeIOAuth)
 │   ├── base/            # Base classes & types
 │   ├── commands/        # Command infrastructure
 │   ├── communication/   # Webview communication protocol

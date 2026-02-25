@@ -5,6 +5,7 @@
  * that don't depend on other type files, breaking circular dependencies.
  */
 
+import type { CustomBlockLibrary } from './blockLibraries';
 import type { ServiceDefinition } from './components';
 
 /**
@@ -41,6 +42,8 @@ export interface Project {
     selectedAddons?: string[];
     /** Block library IDs selected during project creation (e.g., ['isle5', 'citisignal-blocks']) */
     selectedBlockLibraries?: string[];
+    /** Custom block libraries added by URL */
+    customBlockLibraries?: CustomBlockLibrary[];
     // Mesh staleness summary for card grid display
     meshStatusSummary?: 'deployed' | 'stale' | 'config-incomplete' | 'update-declined' | 'not-deployed' | 'error' | 'unknown';
     // API Mesh deployment state (tracks changes that require redeployment)

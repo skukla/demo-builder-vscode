@@ -46,6 +46,7 @@ import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/Prerequisit
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
+import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import { ComponentSelection } from '@/types/webview';
@@ -66,6 +67,10 @@ interface WizardContainerProps {
     editProject?: EditProjectConfig;
     /** Initial view mode for template gallery (from settings) */
     projectsViewMode?: 'cards' | 'rows';
+    /** User's saved block library default preferences (from settings) */
+    blockLibraryDefaults?: string[];
+    /** Custom block libraries from VS Code settings */
+    customBlockLibraryDefaults?: CustomBlockLibrary[];
 }
 
 export function WizardContainer({
@@ -75,6 +80,8 @@ export function WizardContainer({
     importedSettings,
     editProject,
     projectsViewMode,
+    blockLibraryDefaults,
+    customBlockLibraryDefaults,
 }: WizardContainerProps) {
     // Packages and stacks - loaded once on mount
     // NOTE: Must be declared BEFORE useWizardState so stacks can be passed for step filtering
@@ -242,7 +249,7 @@ export function WizardContainer({
 
         switch (state.currentStep) {
             case 'welcome':
-                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} initialViewMode={projectsViewMode} packages={packages} stacks={stacks} onArchitectureChange={handleArchitectureChange} />;
+                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} initialViewMode={projectsViewMode} packages={packages} stacks={stacks} onArchitectureChange={handleArchitectureChange} blockLibraryDefaults={blockLibraryDefaults} customBlockLibraryDefaults={customBlockLibraryDefaults} />;
             case 'component-selection':
                 return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
             case 'prerequisites':

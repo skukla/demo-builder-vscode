@@ -6,7 +6,7 @@
  *
  * Public API:
  * - AuthenticationService: Main service for Adobe authentication
- * - AdobeEntityService: Organization, project, workspace operations
+ * - EntityServices: Organization, project, workspace operations (via createEntityServices)
  * - TokenManager: Token validation and caching
  * - Handler functions for HandlerRegistry use
  *
@@ -18,13 +18,13 @@
 export { AuthenticationService } from './services/authenticationService';
 
 // Sub-services
-export { AdobeEntityService } from './services/adobeEntityService';
+export { createEntityServices, type EntityServices } from './services/adobeEntityService';
 export { TokenManager } from './services/tokenManager';
 export { OrganizationValidator } from './services/organizationValidator';
 export { AdobeSDKClient } from './services/adobeSDKClient';
 export { AuthCacheManager } from './services/authCacheManager';
 export { AuthenticationErrorFormatter } from './services/authenticationErrorFormatter';
-export { PerformanceTracker } from './services/performanceTracker';
+export { withTiming } from './services/performanceTracker';
 
 // Handlers - Explicit named exports (no wildcards)
 export { handleCheckAuth, handleAuthenticate } from './handlers/authenticationHandlers';

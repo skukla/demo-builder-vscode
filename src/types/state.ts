@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import { Project, ProcessInfo } from './base';
+import type { CustomBlockLibrary } from './blockLibraries';
 
 /**
  * StateKey - Valid state keys for persistence
@@ -181,6 +182,7 @@ export interface RecentProject {
     selectedStack?: string | null;
     selectedAddons?: string[];
     selectedBlockLibraries?: string[];
+    customBlockLibraries?: CustomBlockLibrary[];
 }
 
 /**

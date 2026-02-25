@@ -19,6 +19,8 @@ The `core/` directory contains foundational infrastructure code used throughout 
 
 ```
 core/
+├── auth/               # Authentication guards
+│   └── adobeAuthGuard.ts  # Shared ensureAdobeIOAuth utility
 ├── base/                # Base classes & types (→ base/README.md)
 │   ├── BaseCommand.ts
 │   ├── BaseWebviewCommand.ts
@@ -72,6 +74,23 @@ core/
 ```
 
 ## Module Descriptions
+
+### auth/
+
+**Purpose**: Shared authentication guard utilities for pause-and-prompt sign-in flows
+
+**Key Exports:**
+- `ensureAdobeIOAuth()` - Check Adobe I/O auth, prompt sign-in if expired
+- `AdobeAuthResult` - Result type for auth guard
+- `AdobeAuthManager` - Interface for auth service compatibility
+
+**Responsibilities:**
+- Shared "check → warn → Sign In → loginAndRestoreProjectContext → verify" pattern
+- Used by: Mesh deployment, EDS project reset, Storefront setup
+
+**Path Alias**: `@/core/auth`
+
+---
 
 ### base/
 
