@@ -244,6 +244,11 @@ export class DaLiveOrgOperations {
             try {
                 const response = await fetch(url, { ...options, signal: AbortSignal.timeout(TIMEOUTS.NORMAL) });
 
+                // Token expired — throw immediately so callers can trigger re-auth
+                if (response.status === 401) {
+                    throw new DaLiveAuthError('DA.live token expired during operation');
+                }
+
                 if (response.status === 429) {
                     const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
                     throw new DaLiveNetworkError('Rate limited. Please wait before making more requests.', retryAfter);
@@ -280,8 +285,7 @@ export class DaLiveOrgOperations {
         let message: string;
 
         switch (status) {
-            case 401:
-                throw new DaLiveAuthError('Authentication expired. Please log in again.');
+            // Note: 401 is handled by fetchWithRetry (throws DaLiveAuthError immediately)
             case 403:
                 message = `Access denied when trying to ${operation}. Check your permissions.`;
                 break;

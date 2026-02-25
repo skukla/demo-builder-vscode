@@ -124,12 +124,13 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetupPhases';
-import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
+import { ensureDaLiveAuth, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 
 // Get mock references
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
 const mockExecuteEdsPipeline = executeEdsPipeline as jest.MockedFunction<typeof executeEdsPipeline>;
+const mockConfigurePerms = configureDaLivePermissions as jest.MockedFunction<typeof configureDaLivePermissions>;
 
 // =============================================================================
 // Helpers
@@ -403,5 +404,111 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
 
         // And: Pipeline should not have been called
         expect(mockExecuteEdsPipeline).not.toHaveBeenCalled();
+    });
+});
+
+// =============================================================================
+// Phase 2-3 Configuration Recovery Tests
+// =============================================================================
+
+describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () => {
+    let mockContext: HandlerContext;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockContext = createMockContext();
+        // Default: pipeline succeeds
+        mockExecuteEdsPipeline.mockResolvedValue({ success: true, libraryPaths: [] });
+    });
+
+    it('should recover when configureDaLivePermissions throws DaLiveAuthError', async () => {
+        // Given: configureDaLivePermissions throws DaLiveAuthError on first call
+        mockConfigurePerms
+            .mockRejectedValueOnce(new DaLiveAuthError('DA.live token expired during operation'))
+            .mockResolvedValueOnce({ success: true });
+
+        // And: Re-auth succeeds
+        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
+
+        // When
+        const result = await executeStorefrontSetupPhases(
+            mockContext,
+            createEdsConfig(),
+            new AbortController().signal,
+        );
+
+        // Then: Should succeed after recovery
+        expect(result.success).toBe(true);
+        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(mockContext, '[Storefront Setup]');
+        // configureDaLivePermissions called twice (fail + retry)
+        expect(mockConfigurePerms).toHaveBeenCalledTimes(2);
+    });
+
+    it('should send auth-recovery progress during phase 2-3 recovery', async () => {
+        // Given: Phase 3 throws DaLiveAuthError
+        mockConfigurePerms
+            .mockRejectedValueOnce(new DaLiveAuthError('Token expired'))
+            .mockResolvedValueOnce({ success: true });
+        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
+
+        // When
+        await executeStorefrontSetupPhases(
+            mockContext,
+            createEdsConfig(),
+            new AbortController().signal,
+        );
+
+        // Then: Should send auth-recovery progress for phase 2-3
+        expect(mockContext.sendMessage).toHaveBeenCalledWith(
+            'storefront-setup-progress',
+            expect.objectContaining({
+                phase: 'auth-recovery',
+                progress: -1,
+            }),
+        );
+        // And: Should send resume progress
+        expect(mockContext.sendMessage).toHaveBeenCalledWith(
+            'storefront-setup-progress',
+            expect.objectContaining({
+                phase: 'code-sync',
+                message: expect.stringContaining('Resuming'),
+            }),
+        );
+    });
+
+    it('should fail when phase 2-3 re-auth is cancelled', async () => {
+        // Given: Phase 3 throws DaLiveAuthError
+        mockConfigurePerms.mockRejectedValue(new DaLiveAuthError('Token expired'));
+        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: false, cancelled: true });
+
+        // When
+        const result = await executeStorefrontSetupPhases(
+            mockContext,
+            createEdsConfig(),
+            new AbortController().signal,
+        );
+
+        // Then: Should return error
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('cancelled');
+    });
+
+    it('should fail after max re-auth attempts in phases 2-3', async () => {
+        // Given: configureDaLivePermissions always throws DaLiveAuthError
+        mockConfigurePerms.mockRejectedValue(new DaLiveAuthError('Token expired'));
+        // Re-auth always succeeds but token keeps expiring
+        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
+
+        // When
+        const result = await executeStorefrontSetupPhases(
+            mockContext,
+            createEdsConfig(),
+            new AbortController().signal,
+        );
+
+        // Then: configureDaLivePermissions called 3 times (initial + 2 retries)
+        expect(mockConfigurePerms).toHaveBeenCalledTimes(3);
+        expect(mockEnsureDaLiveAuth).toHaveBeenCalledTimes(2);
+        expect(result.success).toBe(false);
     });
 });

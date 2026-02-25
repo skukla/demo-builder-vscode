@@ -629,24 +629,64 @@ export async function executeStorefrontSetupPhases(
         );
         if (phase1Result) return phase1Result;
 
-        // Phase 2: Helix Configuration
         // Backward compat: if selectedBlockLibraries is empty but selectedAddons has
         // commerce-block-collection, treat as ['isle5'] for pre-existing projects
         const effectiveBlockLibraries = (selectedBlockLibraries && selectedBlockLibraries.length > 0)
             ? selectedBlockLibraries
             : selectedAddons?.includes('commerce-block-collection') ? ['isle5'] : undefined;
 
-        const { blockCollectionIds, earlyReturn } = await executePhaseHelixConfig(
-            context, edsConfig, services, repoInfo, effectiveBlockLibraries, useExistingRepo,
-            customBlockLibraries,
-        );
-        if (earlyReturn) return earlyReturn;
+        const MAX_REAUTH_ATTEMPTS = 2;
 
-        // Phase 3: Code Sync Verification + CDN publish + permissions + config service
-        const phase3Result = await executePhaseCodeSync(
-            context, edsConfig, services, repoInfo, signal,
-        );
-        if (phase3Result) return phase3Result;
+        // Phase 2-3: Helix Config + Code Sync (with token expiry recovery)
+        // Phase 3 uses DA.live token for permissions and config service registration,
+        // which can throw DaLiveAuthError if the token expires mid-operation.
+        let blockCollectionIds: string[] = [];
+        let configAttempt = 0;
+
+        while (true) {
+            try {
+                const phase2Result = await executePhaseHelixConfig(
+                    context, edsConfig, services, repoInfo, effectiveBlockLibraries, useExistingRepo,
+                    customBlockLibraries,
+                );
+                blockCollectionIds = phase2Result.blockCollectionIds ?? [];
+                if (phase2Result.earlyReturn) return phase2Result.earlyReturn;
+
+                const phase3Result = await executePhaseCodeSync(
+                    context, edsConfig, services, repoInfo, signal,
+                );
+                if (phase3Result) return phase3Result;
+
+                break;
+            } catch (error) {
+                if (error instanceof DaLiveAuthError && configAttempt < MAX_REAUTH_ATTEMPTS) {
+                    configAttempt++;
+                    logger.warn(`[Storefront Setup] DA.live token expired during configuration (attempt ${configAttempt})`);
+
+                    await context.sendMessage('storefront-setup-progress', {
+                        phase: 'auth-recovery',
+                        message: 'DA.live session expired. Please re-authenticate to continue.',
+                        progress: -1,
+                    });
+
+                    const authResult = await ensureDaLiveAuth(context, '[Storefront Setup]');
+                    if (!authResult.authenticated) {
+                        throw new Error(
+                            authResult.cancelled
+                                ? 'Setup cancelled — DA.live re-authentication required'
+                                : `DA.live re-authentication failed: ${authResult.error}`,
+                        );
+                    }
+
+                    logger.info('[Storefront Setup] DA.live re-authenticated, resuming configuration');
+                    await context.sendMessage('storefront-setup-progress', {
+                        phase: 'code-sync', message: 'Resuming site configuration...', progress: 40,
+                    });
+                    continue;
+                }
+                throw error;
+            }
+        }
 
         // Phase 4-5: Content Pipeline (with token expiry recovery)
         if (signal.aborted) throw new Error('Operation cancelled');
@@ -654,10 +694,8 @@ export async function executeStorefrontSetupPhases(
         const { executeEdsPipeline } = await import('../services/edsPipeline');
 
         let pipelineAttempt = 0;
-        const MAX_REAUTH_ATTEMPTS = 2;
         let pipelineResult: { success: boolean; error?: string; libraryPaths: string[] };
 
-        // eslint-disable-next-line no-constant-condition
         while (true) {
             try {
                 pipelineResult = await executeEdsPipeline(
