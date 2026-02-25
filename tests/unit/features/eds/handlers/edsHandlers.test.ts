@@ -34,14 +34,6 @@ const mockGitHubOAuthService = {
     startOAuthFlow: jest.fn(),
 };
 
-const mockDaLiveOrgOps = {
-    verifyOrgAccess: jest.fn(),
-};
-
-const mockDaLiveContentOps = {
-    listDirectory: jest.fn(),
-};
-
 // Mock the services as used by edsHelpers
 const mockGitHubServices = {
     tokenService: mockGitHubTokenService,
@@ -50,15 +42,9 @@ const mockGitHubServices = {
     oauthService: mockGitHubOAuthService,
 };
 
-const mockDaLiveServices = {
-    orgOperations: mockDaLiveOrgOps,
-    contentOperations: mockDaLiveContentOps,
-};
-
 // Mock edsHelpers - service getters use caching pattern
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn(() => mockGitHubServices),
-    getDaLiveServices: jest.fn(() => mockDaLiveServices),
     getDaLiveAuthService: jest.fn(() => ({})),
     validateDaLiveToken: jest.fn(() => ({ valid: true })),
     clearServiceCache: jest.fn(),

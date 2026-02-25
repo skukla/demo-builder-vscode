@@ -4,7 +4,7 @@
  * Helper functions for EDS handlers, extracted from edsHandlers.ts for better modularity.
  *
  * Contains:
- * - Service instance cache management (getGitHubServices, getDaLiveServices, getDaLiveAuthService)
+ * - Service instance cache management (getGitHubServices, getDaLiveAuthService)
  * - clearServiceCache for cleanup
  * - validateDaLiveToken for JWT validation
  * - showDaLiveAuthQuickPick for dashboard re-authentication
@@ -15,8 +15,8 @@
 import * as vscode from 'vscode';
 import { DaLiveAuthService, parseJwtPayload } from '../services/daLiveAuthService';
 import { DaLiveConfigService } from '../services/daLiveConfigService';
-import { DaLiveContentOperations, createDaLiveTokenProvider } from '../services/daLiveContentOperations';
-import { DaLiveOrgOperations, type TokenProvider } from '../services/daLiveOrgOperations';
+import { DaLiveContentOperations } from '../services/daLiveContentOperations';
+import { type TokenProvider } from '../services/daLiveOrgOperations';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubOAuthService } from '../services/githubOAuthService';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
@@ -42,19 +42,8 @@ export interface GitHubServices {
     oauthService: GitHubOAuthService;
 }
 
-/**
- * DA.live Services - composed from extracted modules
- */
-export interface DaLiveServices {
-    orgOperations: DaLiveOrgOperations;
-    contentOperations: DaLiveContentOperations;
-}
-
 /** Cached GitHub services (per extension context) */
 let cachedGitHubServices: GitHubServices | null = null;
-
-/** Cached DA.live services */
-let cachedDaLiveServices: DaLiveServices | null = null;
 
 /** Cached DaLiveAuthService instance (for darkalley OAuth) */
 let cachedDaLiveAuthService: DaLiveAuthService | null = null;
@@ -86,34 +75,6 @@ export function getGitHubServices(context: HandlerContext): GitHubServices {
 }
 
 /**
- * Get or create DA.live services
- * Returns all DA.live-related services with explicit dependencies
- */
-export function getDaLiveServices(context: HandlerContext): DaLiveServices {
-    const logger = getLogger();
-    if (!cachedDaLiveServices) {
-        logger.debug('[EDS:ServiceCache] Creating NEW DA.live services (no cache)');
-        if (!context.authManager) {
-            throw new Error('Authentication service not available');
-        }
-
-        const tokenProvider = createDaLiveTokenProvider(context.authManager);
-
-        const orgOperations = new DaLiveOrgOperations(tokenProvider, logger);
-        const contentOperations = new DaLiveContentOperations(tokenProvider, logger);
-
-        cachedDaLiveServices = {
-            orgOperations,
-            contentOperations,
-        };
-        logger.debug('[EDS:ServiceCache] DA.live services created and cached');
-    } else {
-        logger.debug('[EDS:ServiceCache] Returning CACHED DA.live services');
-    }
-    return cachedDaLiveServices;
-}
-
-/**
  * Get or create DaLiveAuthService instance (for darkalley OAuth).
  * Accepts ExtensionContext directly so callers without HandlerContext can use it.
  */
@@ -135,12 +96,10 @@ export function clearServiceCache(): void {
     const logger = getLogger();
     logger.debug('[EDS:ServiceCache] CLEARING all service caches', {
         hadGitHubServices: !!cachedGitHubServices,
-        hadDaLiveServices: !!cachedDaLiveServices,
         hadDaLiveAuthService: !!cachedDaLiveAuthService,
         timestamp: new Date().toISOString(),
     });
     cachedGitHubServices = null;
-    cachedDaLiveServices = null;
     if (cachedDaLiveAuthService) {
         cachedDaLiveAuthService.dispose();
         cachedDaLiveAuthService = null;

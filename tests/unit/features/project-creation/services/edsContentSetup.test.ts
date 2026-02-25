@@ -9,14 +9,12 @@ import { ensureEdsContent } from '@/features/project-creation/services/edsConten
 
 const mockCopyContentFromSource = jest.fn();
 const mockCreateBlockLibraryFromTemplate = jest.fn();
-const mockCreateDaLiveTokenProvider = jest.fn();
 
 jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
         copyContentFromSource: mockCopyContentFromSource,
         createBlockLibraryFromTemplate: mockCreateBlockLibraryFromTemplate,
     })),
-    createDaLiveTokenProvider: (...args: unknown[]) => mockCreateDaLiveTokenProvider(...args),
     createDaLiveServiceTokenProvider: jest.fn().mockImplementation((service: { getAccessToken: () => Promise<string> }) => ({
         getAccessToken: () => service.getAccessToken(),
     })),
@@ -104,16 +102,12 @@ function makeDeps() {
             error: jest.fn(),
         },
         secrets: {} as any,
-        authManager: {
-            getTokenManager: () => ({ getAccessToken: () => Promise.resolve('mock-token') }),
-        },
         extensionContext: {} as any,
     };
 }
 
 function setupDefaultMocks() {
     mockFetch.mockResolvedValue({ ok: false, status: 404 });
-    mockCreateDaLiveTokenProvider.mockReturnValue({ getAccessToken: jest.fn() });
     mockCopyContentFromSource.mockResolvedValue({ success: true, totalFiles: 10, failedFiles: [] });
     mockGetUserEmail.mockResolvedValue('user@example.com');
     mockConfigureDaLivePermissions.mockResolvedValue({ success: true });

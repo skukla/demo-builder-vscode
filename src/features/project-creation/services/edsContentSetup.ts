@@ -40,7 +40,6 @@ interface EdsContentConfig {
 interface EdsContentDeps {
     logger: Logger;
     secrets: import('vscode').SecretStorage;
-    authManager?: { getTokenManager(): { getAccessToken(): Promise<string | undefined> } } | null;
     extensionContext: import('vscode').ExtensionContext;
 }
 
@@ -68,9 +67,20 @@ export async function ensureEdsContent(
         return false;
     }
 
+    // Create DA.live services upfront — all DA.live API calls require the DA.live token
+    // (separate IMS auth from Adobe Console, see storefrontSetupHandlers.ts:440)
+    const { DaLiveContentOperations, createDaLiveServiceTokenProvider } = await import(
+        '@/features/eds/services/daLiveContentOperations'
+    );
+    const { getDaLiveAuthService } = await import('@/features/eds/handlers/edsHelpers');
+
+    const daLiveAuthService = getDaLiveAuthService(deps.extensionContext);
+    const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
+    const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, logger);
+
     // Quick check: does content already exist in DA.live?
     // Check DA.live source API directly — it's the source of truth and avoids CDN caching issues.
-    const token = await deps.authManager?.getTokenManager().getAccessToken();
+    const token = await daLiveAuthService.getAccessToken();
     const checkUrl = `https://admin.da.live/source/${config.daLiveOrg}/${config.daLiveSite}/index.html`;
     logger.debug(`[EDS Content] Checking DA.live: ${checkUrl}`);
 
@@ -91,13 +101,6 @@ export async function ensureEdsContent(
 
     logger.info('[EDS Content] Content not found in DA.live, copying from template source...');
     onProgress?.('Setting up storefront content...', 'Copying content from template');
-
-    // Copy content from template source
-    const { DaLiveContentOperations, createDaLiveTokenProvider } = await import(
-        '@/features/eds/services/daLiveContentOperations'
-    );
-    const tokenProvider = createDaLiveTokenProvider(deps.authManager);
-    const daLiveContentOps = new DaLiveContentOperations(tokenProvider, logger);
 
     const contentSource = config.contentSource;
     const indexPath = contentSource.indexPath || '/full-index.json';
@@ -124,16 +127,13 @@ export async function ensureEdsContent(
         logger.info(`[EDS Content] Content copied: ${contentResult.totalFiles} files`);
     }
 
-    // Service dependencies shared by remaining operations
+    // Service dependencies for remaining operations (daLiveAuthService + daLiveTokenProvider created above)
     const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
-    const { createDaLiveServiceTokenProvider } = await import('@/features/eds/services/daLiveContentOperations');
     const { HelixService } = await import('@/features/eds/services/helixService');
-    const { configureDaLivePermissions, applyDaLiveOrgConfigSettings, bulkPreviewAndPublish, getDaLiveAuthService } =
+    const { configureDaLivePermissions, applyDaLiveOrgConfigSettings, bulkPreviewAndPublish } =
         await import('@/features/eds/handlers/edsHelpers');
 
     const githubTokenService = new GitHubTokenService(deps.secrets, logger);
-    const daLiveAuthService = getDaLiveAuthService(deps.extensionContext);
-    const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
     const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
 
     // DA.live permissions (non-fatal)
@@ -141,7 +141,7 @@ export async function ensureEdsContent(
     try {
         const userEmail = await daLiveAuthService.getUserEmail();
         if (userEmail) {
-            await configureDaLivePermissions(tokenProvider, config.daLiveOrg, config.daLiveSite, userEmail, logger);
+            await configureDaLivePermissions(daLiveTokenProvider, config.daLiveOrg, config.daLiveSite, userEmail, logger);
         } else {
             logger.warn('[EDS Content] No user email available for permissions');
         }

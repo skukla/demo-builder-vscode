@@ -5,14 +5,13 @@
  * Follows TDD methodology - tests written BEFORE implementation.
  *
  * Tested functions:
- * - Service cache getters (getGitHubServices, getDaLiveServices, getDaLiveAuthService)
+ * - Service cache getters (getGitHubServices, getDaLiveAuthService)
  * - clearServiceCache
  * - validateDaLiveToken (JWT validation for DA.live tokens)
  */
 
 import {
     getGitHubServices,
-    getDaLiveServices,
     getDaLiveAuthService,
     clearServiceCache,
     validateDaLiveToken,
@@ -183,51 +182,6 @@ describe('edsHelpers', () => {
         });
     });
 
-    describe('Service Cache - getDaLiveServices', () => {
-        it('should create DA.live services on first call', () => {
-            // Given: A fresh context with authManager that has getTokenManager
-            const mockTokenManager = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };
-            const context = createMockHandlerContext({
-                authManager: {
-                    getTokenManager: jest.fn().mockReturnValue(mockTokenManager),
-                } as unknown as HandlerContext['authManager'],
-            });
-
-            // When: Getting the DA.live services
-            const services = getDaLiveServices(context);
-
-            // Then: Should return an object with all DA.live services
-            expect(services).toBeDefined();
-            expect(services.orgOperations).toBeDefined();
-            expect(services.contentOperations).toBeDefined();
-        });
-
-        it('should return cached DA.live services on subsequent calls', () => {
-            // Given: A context with previously created services
-            const mockTokenManager = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };
-            const context = createMockHandlerContext({
-                authManager: {
-                    getTokenManager: jest.fn().mockReturnValue(mockTokenManager),
-                } as unknown as HandlerContext['authManager'],
-            });
-            const firstServices = getDaLiveServices(context);
-
-            // When: Getting the services again
-            const secondServices = getDaLiveServices(context);
-
-            // Then: Should return the same cached instance
-            expect(secondServices).toBe(firstServices);
-        });
-
-        it('should throw error when authManager is not available', () => {
-            // Given: A context without authManager
-            const context = createMockHandlerContext({ authManager: undefined });
-
-            // When/Then: Getting the services should throw
-            expect(() => getDaLiveServices(context)).toThrow('Authentication service not available');
-        });
-    });
-
     describe('Service Cache - getDaLiveAuthService', () => {
         it('should create DaLiveAuthService on first call', () => {
             // Given: A fresh extension context
@@ -276,24 +230,6 @@ describe('edsHelpers', () => {
 
             // Then: Next call should create new instances
             const secondServices = getGitHubServices(context);
-            expect(secondServices).not.toBe(firstServices);
-        });
-
-        it('should clear cached DaLiveServices', () => {
-            // Given: Cached DA.live services
-            const mockTokenManager = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };
-            const context = createMockHandlerContext({
-                authManager: {
-                    getTokenManager: jest.fn().mockReturnValue(mockTokenManager),
-                } as unknown as HandlerContext['authManager'],
-            });
-            const firstServices = getDaLiveServices(context);
-
-            // When: Clearing the cache
-            clearServiceCache();
-
-            // Then: Next call should create new instances
-            const secondServices = getDaLiveServices(context);
             expect(secondServices).not.toBe(firstServices);
         });
 

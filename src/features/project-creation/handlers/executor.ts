@@ -830,7 +830,6 @@ async function setupEdsContent(
             {
                 logger: context.logger,
                 secrets: context.context.secrets,
-                authManager: context.authManager,
                 extensionContext: context.context,
             },
             (message, subMessage) => progressTracker('Setting Up Content', 95, subMessage || message),
