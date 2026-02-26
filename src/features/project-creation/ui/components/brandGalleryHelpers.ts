@@ -25,14 +25,14 @@ export function filterAddonsByPackage(stackAddons: OptionalAddon[], pkg: DemoPac
 }
 
 /**
- * Sorts packages alphabetically by name, with "coming-soon" packages last.
+ * Sorts packages preserving JSON config order, with "coming-soon" packages last.
  */
 export function sortPackages(packages: DemoPackage[]): DemoPackage[] {
     return [...packages].sort((a, b) => {
         const aComingSoon = a.status === 'coming-soon';
         const bComingSoon = b.status === 'coming-soon';
         if (aComingSoon !== bComingSoon) return aComingSoon ? 1 : -1;
-        return a.name.localeCompare(b.name);
+        return 0;
     });
 }
 

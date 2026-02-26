@@ -418,8 +418,8 @@ describe('brandGalleryHelpers', () => {
     });
 
     describe('sortPackages', () => {
-        it('should sort packages alphabetically by name', () => {
-            // Given: Unsorted packages
+        it('should preserve input order for active packages', () => {
+            // Given: Packages in a specific order (matching JSON config order)
             const packages: DemoPackage[] = [
                 { id: 'c', name: 'Zebra Co', description: '', configDefaults: {}, storefronts: {} },
                 { id: 'a', name: 'Alpha Inc', description: '', configDefaults: {}, storefronts: {} },
@@ -429,8 +429,8 @@ describe('brandGalleryHelpers', () => {
             // When: Sorting packages
             const result = sortPackages(packages);
 
-            // Then: Sorted alphabetically by name
-            expect(result.map(p => p.name)).toEqual(['Alpha Inc', 'Middle Corp', 'Zebra Co']);
+            // Then: Original order preserved (not alphabetical)
+            expect(result.map(p => p.name)).toEqual(['Zebra Co', 'Alpha Inc', 'Middle Corp']);
         });
 
         it('should place coming-soon packages after active packages', () => {
@@ -446,6 +446,21 @@ describe('brandGalleryHelpers', () => {
             // Then: Active (Beta) comes first, coming-soon (Alpha) comes last
             expect(result[0].id).toBe('active');
             expect(result[1].id).toBe('cs');
+        });
+
+        it('should preserve relative order among coming-soon packages', () => {
+            // Given: Multiple coming-soon packages in a specific order
+            const packages: DemoPackage[] = [
+                { id: 'active1', name: 'Active', description: '', configDefaults: {}, storefronts: {} },
+                { id: 'cs2', name: 'Zebra Soon', description: '', status: 'coming-soon', configDefaults: {}, storefronts: {} },
+                { id: 'cs1', name: 'Alpha Soon', description: '', status: 'coming-soon', configDefaults: {}, storefronts: {} },
+            ];
+
+            // When: Sorting packages
+            const result = sortPackages(packages);
+
+            // Then: Active first, then coming-soon in original relative order
+            expect(result.map(p => p.id)).toEqual(['active1', 'cs2', 'cs1']);
         });
 
         it('should return empty array for empty input', () => {
