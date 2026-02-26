@@ -157,7 +157,7 @@
             "items": {
               "type": "string",
               "enum": [
-                "citisignal-blocks",
+                "demo-team-blocks",
                 "isle5",
                 "buildright-blocks"
               ],

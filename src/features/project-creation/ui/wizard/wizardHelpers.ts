@@ -261,7 +261,7 @@ export interface ImportedSettings {
     selectedStack?: string;
     /** Selected optional addons (e.g., ['demo-inspector']) */
     selectedAddons?: string[];
-    /** Selected block library IDs (e.g., ['isle5', 'citisignal-blocks']) */
+    /** Selected block library IDs (e.g., ['isle5', 'demo-team-blocks']) */
     selectedBlockLibraries?: string[];
     /** Custom block libraries added by URL */
     customBlockLibraries?: CustomBlockLibrary[];

@@ -61,7 +61,7 @@ describe('blockLibraryLoader', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'citisignal');
 
-            const citisignalLib = libs.find(l => l.id === 'citisignal-blocks');
+            const citisignalLib = libs.find(l => l.id === 'demo-team-blocks');
             expect(citisignalLib).toBeUndefined();
         });
 
@@ -69,7 +69,7 @@ describe('blockLibraryLoader', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'custom');
 
-            const citisignalLib = libs.find(l => l.id === 'citisignal-blocks');
+            const citisignalLib = libs.find(l => l.id === 'demo-team-blocks');
             expect(citisignalLib).toBeDefined();
             expect(citisignalLib?.type).toBe('storefront');
         });
@@ -106,7 +106,7 @@ describe('blockLibraryLoader', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'custom');
 
-            // Custom sees: citisignal-blocks, isle5 (not buildright-blocks — pinned to buildright)
+            // Custom sees: demo-team-blocks, isle5 (not buildright-blocks — pinned to buildright)
             expect(libs).toHaveLength(2);
         });
 
@@ -114,19 +114,19 @@ describe('blockLibraryLoader', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'citisignal');
 
-            // CitiSignal sees: isle5 (not citisignal-blocks — native, not buildright-blocks — pinned)
+            // CitiSignal sees: isle5 (not demo-team-blocks — native, not buildright-blocks — pinned)
             expect(libs).toHaveLength(1);
             expect(libs[0].id).toBe('isle5');
         });
     });
 
     describe('getNativeBlockLibraries', () => {
-        it('should return citisignal-blocks as native for CitiSignal package', () => {
+        it('should return demo-team-blocks as native for CitiSignal package', () => {
             const edsStack = makeStack();
             const natives = getNativeBlockLibraries(edsStack, 'citisignal');
 
             expect(natives).toHaveLength(1);
-            expect(natives[0].id).toBe('citisignal-blocks');
+            expect(natives[0].id).toBe('demo-team-blocks');
         });
 
         it('should return buildright-blocks as native for BuildRight package', () => {
@@ -167,7 +167,7 @@ describe('blockLibraryLoader', () => {
             const edsStack = makeStack();
             const defaults = getDefaultBlockLibraryIds(edsStack, 'custom');
 
-            expect(defaults).not.toContain('citisignal-blocks');
+            expect(defaults).not.toContain('demo-team-blocks');
             expect(defaults).not.toContain('buildright-blocks');
         });
 
@@ -183,21 +183,21 @@ describe('blockLibraryLoader', () => {
 
         it('should use userDefaults when provided instead of config defaults', () => {
             const edsStack = makeStack();
-            const userDefaults = ['citisignal-blocks'];
+            const userDefaults = ['demo-team-blocks'];
             const defaults = getDefaultBlockLibraryIds(edsStack, 'custom', userDefaults);
 
             expect(defaults).not.toContain('isle5');
-            expect(defaults).toContain('citisignal-blocks');
+            expect(defaults).toContain('demo-team-blocks');
         });
 
         it('should filter out native libraries even with userDefaults', () => {
             const edsStack = makeStack();
-            const userDefaults = ['isle5', 'citisignal-blocks'];
-            // CitiSignal package should not see citisignal-blocks even if userDefaults includes it
+            const userDefaults = ['isle5', 'demo-team-blocks'];
+            // CitiSignal package should not see demo-team-blocks even if userDefaults includes it
             const defaults = getDefaultBlockLibraryIds(edsStack, 'citisignal', userDefaults);
 
             expect(defaults).toContain('isle5');
-            expect(defaults).not.toContain('citisignal-blocks');
+            expect(defaults).not.toContain('demo-team-blocks');
         });
 
         it('should fall back to config defaults when userDefaults is undefined', () => {
@@ -206,7 +206,7 @@ describe('blockLibraryLoader', () => {
 
             // Same as without userDefaults — isle5 has default: true in config
             expect(defaults).toContain('isle5');
-            expect(defaults).not.toContain('citisignal-blocks');
+            expect(defaults).not.toContain('demo-team-blocks');
         });
     });
 
@@ -220,8 +220,8 @@ describe('blockLibraryLoader', () => {
             expect(source?.branch).toBe('main');
         });
 
-        it('should return source for citisignal-blocks', () => {
-            const source = getBlockLibrarySource('citisignal-blocks');
+        it('should return source for demo-team-blocks', () => {
+            const source = getBlockLibrarySource('demo-team-blocks');
 
             expect(source).toBeDefined();
             expect(source?.owner).toBe('skukla');
@@ -246,7 +246,7 @@ describe('blockLibraryLoader', () => {
     describe('getBlockLibraryName', () => {
         it('should return display name for known library', () => {
             expect(getBlockLibraryName('isle5')).toBe('Garner Block Collection');
-            expect(getBlockLibraryName('citisignal-blocks')).toBe('Demo Team Block Collection');
+            expect(getBlockLibraryName('demo-team-blocks')).toBe('Demo Team Block Collection');
             expect(getBlockLibraryName('buildright-blocks')).toBe('BuildRight Blocks');
         });
 

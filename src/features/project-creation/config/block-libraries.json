@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "libraries": [
     {
-      "id": "citisignal-blocks",
+      "id": "demo-team-blocks",
       "name": "Demo Team Block Collection",
       "description": "General-purpose blocks built by the Demo Team, usable in any EDS storefront",
       "type": "storefront",

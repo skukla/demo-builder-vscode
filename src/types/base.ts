@@ -40,7 +40,7 @@ export interface Project {
     selectedStack?: string;
     /** Optional addons selected during project creation (e.g., ['demo-inspector']) */
     selectedAddons?: string[];
-    /** Block library IDs selected during project creation (e.g., ['isle5', 'citisignal-blocks']) */
+    /** Block library IDs selected during project creation (e.g., ['isle5', 'demo-team-blocks']) */
     selectedBlockLibraries?: string[];
     /** Custom block libraries added by URL */
     customBlockLibraries?: CustomBlockLibrary[];
