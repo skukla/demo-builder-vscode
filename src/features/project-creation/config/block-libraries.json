@@ -21,7 +21,7 @@
       "description": "Custom EDS blocks: hero, carousel, newsletter, store locator, and more",
       "type": "standalone",
       "source": {
-        "owner": "skukla",
+        "owner": "stephen-garner-adobe",
         "repo": "isle5",
         "branch": "main"
       },

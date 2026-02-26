@@ -215,7 +215,7 @@ describe('blockLibraryLoader', () => {
             const source = getBlockLibrarySource('isle5');
 
             expect(source).toBeDefined();
-            expect(source?.owner).toBe('skukla');
+            expect(source?.owner).toBe('stephen-garner-adobe');
             expect(source?.repo).toBe('isle5');
             expect(source?.branch).toBe('main');
         });
