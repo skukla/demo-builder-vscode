@@ -21,6 +21,7 @@ jest.mock('vscode', () => ({
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollection: jest.fn(),
+    installBlockCollections: jest.fn(),
 }));
 
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
@@ -112,13 +113,14 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true }) as jest.Mock;
 // =============================================================================
 
 import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetupPhases';
-import { installBlockCollection } from '@/features/eds/services/blockCollectionHelpers';
+import { installBlockCollection, installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetupHandlers';
 import type { HandlerContext } from '@/types/handlers';
 
 // Cast imported mocks for type-safe access
 const mockInstallBlockCollection = installBlockCollection as jest.MockedFunction<typeof installBlockCollection>;
+const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<typeof installBlockCollections>;
 const mockGetBlockLibrarySource = getBlockLibrarySource as jest.MockedFunction<typeof getBlockLibrarySource>;
 const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<typeof getBlockLibraryName>;
 
@@ -183,9 +185,12 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         mockInstallBlockCollection.mockResolvedValue({
             success: true, blocksCount: 3, blockIds: ['block-1', 'block-2', 'block-3'],
         });
+        mockInstallBlockCollections.mockResolvedValue({
+            success: true, blocksCount: 5, blockIds: ['block-1', 'block-2', 'block-3', 'block-4', 'block-5'],
+        });
     });
 
-    it('should install custom block libraries after built-in libraries', async () => {
+    it('should install all block libraries in a single deduped call via installBlockCollections', async () => {
         // Given: Both built-in and custom block libraries selected
         const context = createMockContext();
         const edsConfig = createEdsConfig();
@@ -198,37 +203,24 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
             CUSTOM_LIBS, // customBlockLibraries (NEW parameter)
         );
 
-        // Then: installBlockCollection should be called for both built-in and custom
-        // Built-in call (isle5)
-        expect(mockInstallBlockCollection).toHaveBeenCalledWith(
+        // Then: installBlockCollections (plural) should be called ONCE with all sources combined
+        expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
+        expect(mockInstallBlockCollections).toHaveBeenCalledWith(
             expect.anything(), // githubFileOps
             'test-owner', 'test-repo',
-            { owner: 'adobe', repo: 'isle5', branch: 'main' }, // built-in source
+            [
+                { source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' },
+                { source: { owner: 'user', repo: 'custom-blocks', branch: 'main' }, name: 'My Custom Blocks' },
+                { source: { owner: 'partner', repo: 'blocks-lib', branch: 'v2' }, name: 'Partner Blocks' },
+            ],
             expect.anything(), // logger
-            'isle5', // built-in name
         );
 
-        // Custom calls - verify source and name from CustomBlockLibrary
-        expect(mockInstallBlockCollection).toHaveBeenCalledWith(
-            expect.anything(), // githubFileOps
-            'test-owner', 'test-repo',
-            { owner: 'user', repo: 'custom-blocks', branch: 'main' }, // custom source
-            expect.anything(), // logger
-            'My Custom Blocks', // user-provided name
-        );
-        expect(mockInstallBlockCollection).toHaveBeenCalledWith(
-            expect.anything(),
-            'test-owner', 'test-repo',
-            { owner: 'partner', repo: 'blocks-lib', branch: 'v2' },
-            expect.anything(),
-            'Partner Blocks',
-        );
-
-        // Total: 1 built-in + 2 custom = 3 calls
-        expect(mockInstallBlockCollection).toHaveBeenCalledTimes(3);
+        // installBlockCollection (singular) should NOT be called
+        expect(mockInstallBlockCollection).not.toHaveBeenCalled();
     });
 
-    it('should skip custom libraries when array is empty or undefined', async () => {
+    it('should call installBlockCollections with only built-in sources when custom is undefined', async () => {
         // Given: Only built-in block libraries, no custom
         const context = createMockContext();
         const edsConfig = createEdsConfig();
@@ -241,18 +233,18 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
             undefined, // no customBlockLibraries
         );
 
-        // Then: Only built-in library should be installed (1 call)
-        expect(mockInstallBlockCollection).toHaveBeenCalledTimes(1);
-        expect(mockInstallBlockCollection).toHaveBeenCalledWith(
+        // Then: installBlockCollections (plural) called with only built-in source
+        expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
+        expect(mockInstallBlockCollections).toHaveBeenCalledWith(
             expect.anything(), 'test-owner', 'test-repo',
-            { owner: 'adobe', repo: 'isle5', branch: 'main' },
-            expect.anything(), 'isle5',
+            [{ source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' }],
+            expect.anything(),
         );
 
         // When: Executing with empty custom libraries array
         jest.clearAllMocks();
         mockGetBlockLibrarySource.mockReturnValue({ owner: 'adobe', repo: 'isle5', branch: 'main' });
-        mockInstallBlockCollection.mockResolvedValue({
+        mockInstallBlockCollections.mockResolvedValue({
             success: true, blocksCount: 3, blockIds: ['block-1', 'block-2', 'block-3'],
         });
 
@@ -263,11 +255,16 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
             [], // empty custom libraries
         );
 
-        // Then: Still only built-in library installed
-        expect(mockInstallBlockCollection).toHaveBeenCalledTimes(1);
+        // Then: Still only built-in library in the call
+        expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
+        expect(mockInstallBlockCollections).toHaveBeenCalledWith(
+            expect.anything(), 'test-owner', 'test-repo',
+            [{ source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' }],
+            expect.anything(),
+        );
     });
 
-    it('should use user-provided name in progress messages for custom libraries', async () => {
+    it('should send progress message mentioning library count', async () => {
         // Given: Custom block libraries with specific names
         const context = createMockContext();
         const edsConfig = createEdsConfig();
@@ -275,7 +272,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
             { name: 'My Fancy Blocks', source: { owner: 'user', repo: 'fancy', branch: 'main' } },
         ];
 
-        // When: Executing setup with custom libraries
+        // When: Executing setup with only custom libraries
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
             undefined, // selectedAddons
@@ -283,13 +280,21 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
             customLibs, // customBlockLibraries
         );
 
-        // Then: Progress message should include the custom library name
+        // Then: Progress message should mention the library count
         expect(context.sendMessage).toHaveBeenCalledWith(
             'storefront-setup-progress',
             expect.objectContaining({
                 phase: 'helix-config',
-                message: expect.stringContaining('My Fancy Blocks'),
+                message: expect.stringContaining('1'),
             }),
+        );
+
+        // And: installBlockCollections should be called with the custom library
+        expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
+        expect(mockInstallBlockCollections).toHaveBeenCalledWith(
+            expect.anything(), 'test-owner', 'test-repo',
+            [{ source: { owner: 'user', repo: 'fancy', branch: 'main' }, name: 'My Fancy Blocks' }],
+            expect.anything(),
         );
     });
 });

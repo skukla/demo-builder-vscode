@@ -265,53 +265,42 @@ async function resetRepoToTemplate(
     context.logger.info(`[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
     report(1, `Reset ${resetResult.fileCount} files`);
 
-    // Re-install block libraries if project had them
+    // Re-install block libraries if project had them (deduped, single commit)
     // Backward compat: if selectedBlockLibraries is empty but selectedAddons has
     // commerce-block-collection, treat as ['isle5'] for pre-existing projects
     const effectiveBlockLibraries = (project.selectedBlockLibraries && project.selectedBlockLibraries.length > 0)
         ? project.selectedBlockLibraries
         : project.selectedAddons?.includes('commerce-block-collection') ? ['isle5'] : [];
 
-    const hasBuiltInLibs = effectiveBlockLibraries.length > 0;
-    const hasCustomLibs = (project.customBlockLibraries && project.customBlockLibraries.length > 0);
-    const allBlockIds: string[] = [];
+    const allLibraries: Array<{ source: import('@/types/demoPackages').AddonSource; name: string }> = [];
 
-    if (hasBuiltInLibs || hasCustomLibs) {
-        const { installBlockCollection } = await import('./blockCollectionHelpers');
-
-        // Built-in block libraries
-        for (const libraryId of effectiveBlockLibraries) {
-            const source = getBlockLibrarySource(libraryId);
-            if (source) {
-                const libraryName = getBlockLibraryName(libraryId) || libraryId;
-                report(1, `Re-installing ${libraryName}...`);
-                const blockResult = await installBlockCollection(githubFileOps, repoOwner, repoName, source, context.logger, libraryName);
-                if (blockResult.success) {
-                    allBlockIds.push(...blockResult.blockIds);
-                    context.logger.info(`[EdsReset] ${libraryName} reinstalled: ${blockResult.blocksCount} blocks`);
-                } else {
-                    context.logger.warn(`[EdsReset] ${libraryName} reinstall failed: ${blockResult.error}`);
-                }
-            } else {
-                context.logger.warn(`[EdsReset] Block library '${libraryId}' selected but no source configured`);
-            }
+    // Collect built-in library sources
+    for (const libraryId of effectiveBlockLibraries) {
+        const source = getBlockLibrarySource(libraryId);
+        if (source) {
+            allLibraries.push({ source, name: getBlockLibraryName(libraryId) || libraryId });
+        } else {
+            context.logger.warn(`[EdsReset] Block library '${libraryId}' selected but no source configured`);
         }
+    }
 
-        // Custom block libraries (user-provided URLs)
-        if (hasCustomLibs) {
-            for (const lib of project.customBlockLibraries ?? []) {
-                report(1, `Re-installing ${lib.name}...`);
-                const blockResult = await installBlockCollection(
-                    githubFileOps, repoOwner, repoName,
-                    lib.source, context.logger, lib.name,
-                );
-                if (blockResult.success) {
-                    allBlockIds.push(...blockResult.blockIds);
-                    context.logger.info(`[EdsReset] Custom ${lib.name} reinstalled: ${blockResult.blocksCount} blocks`);
-                } else {
-                    context.logger.warn(`[EdsReset] Custom ${lib.name} reinstall failed: ${blockResult.error}`);
-                }
-            }
+    // Collect custom library sources
+    if (project.customBlockLibraries && project.customBlockLibraries.length > 0) {
+        for (const lib of project.customBlockLibraries) {
+            allLibraries.push({ source: lib.source, name: lib.name });
+        }
+    }
+
+    let allBlockIds: string[] = [];
+    if (allLibraries.length > 0) {
+        const { installBlockCollections } = await import('./blockCollectionHelpers');
+        report(1, `Re-installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`);
+        const blockResult = await installBlockCollections(githubFileOps, repoOwner, repoName, allLibraries, context.logger);
+        if (blockResult.success) {
+            allBlockIds = blockResult.blockIds;
+            context.logger.info(`[EdsReset] Reinstalled ${blockResult.blocksCount} unique blocks from ${allLibraries.length} libraries`);
+        } else {
+            context.logger.warn(`[EdsReset] Block library reinstall failed: ${blockResult.error}`);
         }
     }
 

@@ -13,7 +13,7 @@
  * @module features/eds/handlers/storefrontSetupPhases
  */
 
-import { installBlockCollection } from '../services/blockCollectionHelpers';
+import { installBlockCollections, type BlockLibraryEntry } from '../services/blockCollectionHelpers';
 import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
 import { ConfigurationService } from '../services/configurationService';
 import type { DaLiveAuthService } from '../services/daLiveAuthService';
@@ -248,49 +248,46 @@ async function executePhaseHelixConfig(
     );
     logger.info('[Storefront Setup] fstab.yaml pushed to GitHub');
 
-    // Phase 2.1: Block Libraries (install each selected library sequentially)
-    const allBlockIds: string[] = [];
+    // Phase 2.1: Block Libraries (collect all sources, install unique blocks in one commit)
+    const allLibraries: BlockLibraryEntry[] = [];
+
+    // Collect built-in library sources
     if (selectedBlockLibraries && selectedBlockLibraries.length > 0) {
         for (const libraryId of selectedBlockLibraries) {
             const source = getBlockLibrarySource(libraryId);
             if (source) {
-                const libraryName = getBlockLibraryName(libraryId) || libraryId;
-                await context.sendMessage('storefront-setup-progress', {
-                    phase: 'helix-config', message: `Installing ${libraryName}...`, progress: 25,
-                });
-                const result = await installBlockCollection(githubFileOps, repoInfo.repoOwner, repoInfo.repoName, source, logger, libraryName);
-                if (result.success) {
-                    logger.info(`[Storefront Setup] ${libraryName}: ${result.blocksCount} blocks installed`);
-                    allBlockIds.push(...result.blockIds);
-                } else {
-                    logger.warn(`[Storefront Setup] ${libraryName} failed: ${result.error}`);
-                }
+                allLibraries.push({ source, name: getBlockLibraryName(libraryId) || libraryId });
             } else {
                 logger.warn(`[Storefront Setup] Block library '${libraryId}' selected but no source configured`);
             }
         }
     }
 
-    // Phase 2.2: Custom Block Libraries (install from user-provided URLs)
+    // Collect custom library sources
     if (customBlockLibraries && customBlockLibraries.length > 0) {
         for (const lib of customBlockLibraries) {
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'helix-config', message: `Installing ${lib.name}...`, progress: 25,
-            });
-            const result = await installBlockCollection(
-                githubFileOps, repoInfo.repoOwner, repoInfo.repoName,
-                lib.source, logger, lib.name,
-            );
-            if (result.success) {
-                logger.info(`[Storefront Setup] Custom ${lib.name}: ${result.blocksCount} blocks installed`);
-                allBlockIds.push(...result.blockIds);
-            } else {
-                logger.warn(`[Storefront Setup] Custom ${lib.name} failed: ${result.error}`);
-            }
+            allLibraries.push({ source: lib.source, name: lib.name });
         }
     }
 
-    const blockCollectionIds = allBlockIds.length > 0 ? allBlockIds : undefined;
+    // Install all blocks in a single atomic commit (deduped across libraries)
+    let blockCollectionIdsResult: string[] = [];
+    if (allLibraries.length > 0) {
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'helix-config',
+            message: `Installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`,
+            progress: 25,
+        });
+        const result = await installBlockCollections(githubFileOps, repoInfo.repoOwner, repoInfo.repoName, allLibraries, logger);
+        if (result.success) {
+            logger.info(`[Storefront Setup] Installed ${result.blocksCount} unique blocks from ${allLibraries.length} libraries`);
+            blockCollectionIdsResult = result.blockIds;
+        } else {
+            logger.warn(`[Storefront Setup] Block library installation failed: ${result.error}`);
+        }
+    }
+
+    const blockCollectionIds = blockCollectionIdsResult.length > 0 ? blockCollectionIdsResult : undefined;
 
     // Phase 2.5: GitHub App Check (EXISTING repos only)
     if (useExistingRepo) {

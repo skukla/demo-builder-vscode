@@ -59,6 +59,7 @@ jest.mock('@/features/eds/services/configGenerator', () => ({
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollection: jest.fn(),
+    installBlockCollections: jest.fn(),
 }));
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -108,11 +109,12 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 // =============================================================================
 
 import { executeEdsReset } from '@/features/eds/services/edsResetService';
-import { installBlockCollection } from '@/features/eds/services/blockCollectionHelpers';
+import { installBlockCollection, installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
 
 // Cast imported mocks
 const mockInstallBlockCollection = installBlockCollection as jest.MockedFunction<typeof installBlockCollection>;
+const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<typeof installBlockCollections>;
 const mockGetBlockLibrarySource = getBlockLibrarySource as jest.MockedFunction<typeof getBlockLibrarySource>;
 const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<typeof getBlockLibraryName>;
 
@@ -192,9 +194,12 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
         mockInstallBlockCollection.mockResolvedValue({
             success: true, blocksCount: 3, blockIds: ['block-1', 'block-2', 'block-3'],
         });
+        mockInstallBlockCollections.mockResolvedValue({
+            success: true, blocksCount: 5, blockIds: ['block-1', 'block-2', 'block-3', 'block-4', 'block-5'],
+        });
     });
 
-    it('should reinstall custom block libraries during reset when project has customBlockLibraries', async () => {
+    it('should reinstall all block libraries in a single deduped call via installBlockCollections', async () => {
         // Given: Project with both built-in and custom block libraries
         const project = createProject({
             selectedBlockLibraries: ['isle5'],
@@ -217,30 +222,23 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
             mockTokenProvider,
         );
 
-        // Then: installBlockCollection should be called for built-in (isle5)
-        expect(mockInstallBlockCollection).toHaveBeenCalledWith(
+        // Then: installBlockCollections (plural) called ONCE with all sources combined
+        expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
+        expect(mockInstallBlockCollections).toHaveBeenCalledWith(
             expect.anything(), 'test-owner', 'test-repo',
-            { owner: 'adobe', repo: 'isle5', branch: 'main' },
-            expect.anything(), 'isle5',
+            [
+                { source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' },
+                { source: { owner: 'user', repo: 'custom-blocks', branch: 'main' }, name: 'My Custom Blocks' },
+                { source: { owner: 'partner', repo: 'blocks-lib', branch: 'v2' }, name: 'Partner Blocks' },
+            ],
+            expect.anything(), // logger
         );
 
-        // And: installBlockCollection should be called for each custom library
-        expect(mockInstallBlockCollection).toHaveBeenCalledWith(
-            expect.anything(), 'test-owner', 'test-repo',
-            { owner: 'user', repo: 'custom-blocks', branch: 'main' },
-            expect.anything(), 'My Custom Blocks',
-        );
-        expect(mockInstallBlockCollection).toHaveBeenCalledWith(
-            expect.anything(), 'test-owner', 'test-repo',
-            { owner: 'partner', repo: 'blocks-lib', branch: 'v2' },
-            expect.anything(), 'Partner Blocks',
-        );
-
-        // Total: 1 built-in + 2 custom = 3 calls
-        expect(mockInstallBlockCollection).toHaveBeenCalledTimes(3);
+        // installBlockCollection (singular) should NOT be called
+        expect(mockInstallBlockCollection).not.toHaveBeenCalled();
     });
 
-    it('should skip custom libraries when customBlockLibraries is empty or undefined', async () => {
+    it('should call installBlockCollections with only built-in sources when customBlockLibraries is undefined', async () => {
         // Given: Project without custom block libraries
         const project = createProject({
             selectedBlockLibraries: ['isle5'],
@@ -263,12 +261,12 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
             mockTokenProvider,
         );
 
-        // Then: Only built-in library installed (1 call)
-        expect(mockInstallBlockCollection).toHaveBeenCalledTimes(1);
-        expect(mockInstallBlockCollection).toHaveBeenCalledWith(
+        // Then: installBlockCollections (plural) called with only built-in source
+        expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
+        expect(mockInstallBlockCollections).toHaveBeenCalledWith(
             expect.anything(), 'test-owner', 'test-repo',
-            { owner: 'adobe', repo: 'isle5', branch: 'main' },
-            expect.anything(), 'isle5',
+            [{ source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' }],
+            expect.anything(),
         );
     });
 });
