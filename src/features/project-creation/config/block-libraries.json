@@ -17,8 +17,8 @@
     },
     {
       "id": "isle5",
-      "name": "Garner Block Collection",
-      "description": "Stephen Garner's custom EDS blocks: hero, carousel, newsletter, store locator, and more",
+      "name": "Isle5 Block Collection",
+      "description": "Custom EDS blocks: hero, carousel, newsletter, store locator, and more",
       "type": "standalone",
       "source": {
         "owner": "skukla",

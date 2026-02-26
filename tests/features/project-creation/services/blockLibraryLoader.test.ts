@@ -245,7 +245,7 @@ describe('blockLibraryLoader', () => {
 
     describe('getBlockLibraryName', () => {
         it('should return display name for known library', () => {
-            expect(getBlockLibraryName('isle5')).toBe('Garner Block Collection');
+            expect(getBlockLibraryName('isle5')).toBe('Isle5 Block Collection');
             expect(getBlockLibraryName('demo-team-blocks')).toBe('Demo Team Block Collection');
             expect(getBlockLibraryName('buildright-blocks')).toBe('BuildRight Blocks');
         });
