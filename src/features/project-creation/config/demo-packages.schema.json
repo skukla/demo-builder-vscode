@@ -16,7 +16,7 @@
     },
     "packages": {
       "type": "array",
-      "description": "Array of demo packages (e.g., citisignal, buildright)",
+      "description": "Array of demo packages (e.g., citisignal, isle5, buildright)",
       "items": {
         "$ref": "#/definitions/package"
       },

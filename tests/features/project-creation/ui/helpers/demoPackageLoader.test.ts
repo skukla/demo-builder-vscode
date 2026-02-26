@@ -5,8 +5,8 @@
  * demo packages from demo-packages.json and retrieve storefronts for specific stacks.
  *
  * Structure: Option A (Nested Storefronts)
- * - 3 packages (citisignal, buildright, custom)
- * - 6 storefronts total (citisignal 3, buildright 1, custom 2)
+ * - 4 packages (citisignal, isle5, buildright, custom)
+ * - 8 storefronts total (citisignal 3, isle5 2, buildright 1, custom 2)
  * - EDS storefronts have explicit contentSource for DA.live content (except Custom)
  *
  * TDD: Tests written FIRST to define expected behavior.
@@ -30,13 +30,14 @@ describe('demoPackageLoader', () => {
             expect(packages.length).toBeGreaterThan(0);
         });
 
-        it('should return exactly 3 packages (citisignal, buildright, and custom)', async () => {
+        it('should return exactly 4 packages (citisignal, isle5, buildright, and custom)', async () => {
             const packages = await loadDemoPackages();
 
-            expect(packages.length).toBe(3);
+            expect(packages.length).toBe(4);
 
             const ids = packages.map(p => p.id);
             expect(ids).toContain('citisignal');
+            expect(ids).toContain('isle5');
             expect(ids).toContain('buildright');
             expect(ids).toContain('custom');
         });
@@ -159,6 +160,15 @@ describe('demoPackageLoader', () => {
             expect(storefront?.submodules?.['demo-inspector'].repository).toBe('skukla/demo-inspector-universal');
         });
 
+        it('should return isle5 eds-paas storefront', async () => {
+            const storefront = await getStorefrontForStack('isle5', 'eds-paas');
+
+            expect(storefront).toBeDefined();
+            expect(storefront?.name).toBe('Isle5 EDS + PaaS');
+            expect(storefront?.source.url).toBe('https://github.com/stephen-garner-adobe/isle5');
+            expect(storefront?.contentSource?.org).toBe('stephen-garner-adobe');
+        });
+
         it('should return undefined for unknown stack', async () => {
             const storefront = await getStorefrontForStack('citisignal', 'nonexistent-stack');
 
@@ -188,6 +198,14 @@ describe('demoPackageLoader', () => {
             expect(stacks).toContain('eds-accs');
         });
 
+        it('should return eds-paas and eds-accs for isle5', async () => {
+            const stacks = await getAvailableStacksForPackage('isle5');
+
+            expect(stacks).toHaveLength(2);
+            expect(stacks).toContain('eds-paas');
+            expect(stacks).toContain('eds-accs');
+        });
+
         it('should return eds-paas for buildright', async () => {
             const stacks = await getAvailableStacksForPackage('buildright');
 
@@ -203,10 +221,10 @@ describe('demoPackageLoader', () => {
     });
 
     describe('getAllStorefronts', () => {
-        it('should return all 6 storefronts with package and stack info', async () => {
+        it('should return all 8 storefronts with package and stack info', async () => {
             const storefronts = await getAllStorefronts();
 
-            expect(storefronts).toHaveLength(6);
+            expect(storefronts).toHaveLength(8);
         });
 
         it('should include package ID and stack ID with each storefront', async () => {
@@ -226,6 +244,16 @@ describe('demoPackageLoader', () => {
             const citisignalStorefronts = storefronts.filter(s => s.packageId === 'citisignal');
 
             expect(citisignalStorefronts).toHaveLength(3);
+        });
+
+        it('should have 2 isle5 storefronts', async () => {
+            const storefronts = await getAllStorefronts();
+            const isle5Storefronts = storefronts.filter(s => s.packageId === 'isle5');
+
+            expect(isle5Storefronts).toHaveLength(2);
+            const stackIds = isle5Storefronts.map(s => s.stackId);
+            expect(stackIds).toContain('eds-paas');
+            expect(stackIds).toContain('eds-accs');
         });
 
         it('should have 1 buildright storefront', async () => {

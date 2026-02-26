@@ -14,7 +14,7 @@
  * Step 5a: Add pre-flight auth checks using shared guards.
  */
 
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { HandlerContext } from '@/types/handlers';
 
 jest.setTimeout(5000);
 

@@ -82,7 +82,7 @@ describe('blockLibraryLoader', () => {
             expect(buildrightLib).toBeUndefined();
         });
 
-        it('should include standalone libraries (isle5) for all packages', () => {
+        it('should include isle5 as available for non-Isle5 packages', () => {
             const edsStack = makeStack();
 
             for (const pkg of ['citisignal', 'buildright', 'custom']) {
@@ -91,6 +91,23 @@ describe('blockLibraryLoader', () => {
                 expect(isle5).toBeDefined();
                 expect(isle5?.type).toBe('standalone');
             }
+        });
+
+        it('should not include isle5 in available list for Isle5 package (native)', () => {
+            const edsStack = makeStack();
+            const libs = getAvailableBlockLibraries(edsStack, 'isle5');
+
+            const isle5 = libs.find(l => l.id === 'isle5');
+            expect(isle5).toBeUndefined();
+        });
+
+        it('should return demo-team-blocks as the only available library for Isle5 on EDS', () => {
+            const edsStack = makeStack();
+            const libs = getAvailableBlockLibraries(edsStack, 'isle5');
+
+            // Isle5 sees: demo-team-blocks (not isle5 — native, not buildright-blocks — pinned)
+            expect(libs).toHaveLength(1);
+            expect(libs[0].id).toBe('demo-team-blocks');
         });
 
         it('should not include pinned libraries for other packages', () => {
@@ -137,6 +154,14 @@ describe('blockLibraryLoader', () => {
             expect(natives[0].id).toBe('buildright-blocks');
         });
 
+        it('should return isle5 as native for Isle5 package', () => {
+            const edsStack = makeStack();
+            const natives = getNativeBlockLibraries(edsStack, 'isle5');
+
+            expect(natives).toHaveLength(1);
+            expect(natives[0].id).toBe('isle5');
+        });
+
         it('should return no native libraries for Custom package', () => {
             const edsStack = makeStack();
             const natives = getNativeBlockLibraries(edsStack, 'custom');
@@ -161,6 +186,13 @@ describe('blockLibraryLoader', () => {
             const defaults = getDefaultBlockLibraryIds(edsStack, 'custom');
 
             expect(defaults).toContain('isle5');
+        });
+
+        it('should not return isle5 as default for Isle5 package (native, not available)', () => {
+            const edsStack = makeStack();
+            const defaults = getDefaultBlockLibraryIds(edsStack, 'isle5');
+
+            expect(defaults).not.toContain('isle5');
         });
 
         it('should not include storefront libraries as defaults', () => {

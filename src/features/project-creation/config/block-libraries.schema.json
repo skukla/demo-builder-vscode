@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Demo Builder Block Libraries Schema",
+  "description": "Schema for defining EDS block libraries with package associations and source repositories",
+  "type": "object",
+  "required": ["version", "libraries"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Schema version (e.g., '1.0.0')"
+    },
+    "libraries": {
+      "type": "array",
+      "description": "Array of block libraries (e.g., demo-team-blocks, isle5, buildright-blocks)",
+      "items": {
+        "$ref": "#/definitions/blockLibrary"
+      },
+      "minItems": 1
+    }
+  },
+  "definitions": {
+    "blockLibrary": {
+      "type": "object",
+      "required": ["id", "name", "description", "type", "source", "stackTypes"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Unique identifier for the library (lowercase, hyphen-separated)"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display name for the library"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of what the library provides"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["standalone", "storefront"],
+          "description": "Library type: 'standalone' for independent block repos, 'storefront' for blocks extracted from a storefront repo"
+        },
+        "source": {
+          "$ref": "#/definitions/gitHubSource"
+        },
+        "stackTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Stack frontend types this library is compatible with (e.g., 'eds-storefront')"
+        },
+        "nativeForPackages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Package IDs for which this library is native (always included, not shown as optional)"
+        },
+        "onlyForPackages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "If set, this library is only available for these package IDs (pinned/exclusive)"
+        },
+        "default": {
+          "type": "boolean",
+          "description": "Whether this library should be pre-selected by default for non-native packages"
+        }
+      }
+    },
+    "gitHubSource": {
+      "type": "object",
+      "required": ["owner", "repo", "branch"],
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub owner/organization"
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub repository name"
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Branch to fetch from"
+        }
+      }
+    }
+  }
+}

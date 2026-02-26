@@ -3,6 +3,123 @@
   "version": "1.0.0",
   "packages": [
     {
+      "id": "isle5",
+      "name": "Isle5",
+      "description": "Commerce demo with Isle5 branding and custom EDS blocks",
+      "icon": "isle5",
+      "featured": true,
+      "addons": {
+        "demo-inspector": "optional",
+        "adobe-commerce-aco": "excluded"
+      },
+      "configDefaults": {
+        "ADOBE_COMMERCE_WEBSITE_CODE": "base",
+        "ADOBE_COMMERCE_STORE_CODE": "main_website_store",
+        "ADOBE_COMMERCE_STORE_VIEW_CODE": "default",
+        "ACCS_WEBSITE_CODE": "base",
+        "ACCS_STORE_CODE": "main_website_store",
+        "ACCS_STORE_VIEW_CODE": "default"
+      },
+      "storefronts": {
+        "eds-paas": {
+          "name": "Isle5 EDS + PaaS",
+          "description": "Edge Delivery Services storefront with Commerce PaaS backend",
+          "icon": "eds",
+          "featured": true,
+          "tags": ["eds", "isle5", "paas"],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/stephen-garner-adobe/isle5",
+            "branch": "main",
+            "gitOptions": { "shallow": true, "recursive": false }
+          },
+          "templateOwner": "stephen-garner-adobe",
+          "templateRepo": "isle5",
+          "contentSource": {
+            "org": "stephen-garner-adobe",
+            "site": "isle5"
+          }
+        },
+        "eds-accs": {
+          "name": "Isle5 EDS + ACCS",
+          "description": "Edge Delivery Services storefront with Commerce Cloud Service backend",
+          "icon": "eds",
+          "featured": false,
+          "tags": ["eds", "isle5", "accs"],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/stephen-garner-adobe/isle5",
+            "branch": "main",
+            "gitOptions": { "shallow": true, "recursive": false }
+          },
+          "templateOwner": "stephen-garner-adobe",
+          "templateRepo": "isle5",
+          "contentSource": {
+            "org": "stephen-garner-adobe",
+            "site": "isle5"
+          }
+        }
+      }
+    },
+    {
+      "id": "custom",
+      "name": "Custom",
+      "description": "Unbranded Commerce storefront for custom demos",
+      "icon": "custom",
+      "featured": false,
+      "addons": {
+        "adobe-commerce-aco": "excluded"
+      },
+      "configDefaults": {
+        "ADOBE_COMMERCE_WEBSITE_CODE": "website",
+        "ADOBE_COMMERCE_STORE_CODE": "main_website_store",
+        "ADOBE_COMMERCE_STORE_VIEW_CODE": "default",
+        "ACCS_WEBSITE_CODE": "website",
+        "ACCS_STORE_CODE": "main_website_store",
+        "ACCS_STORE_VIEW_CODE": "default"
+      },
+      "storefronts": {
+        "eds-paas": {
+          "name": "Custom EDS + PaaS",
+          "description": "Unbranded EDS storefront with Commerce PaaS backend",
+          "icon": "eds",
+          "featured": true,
+          "tags": ["eds", "custom", "paas"],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
+            "branch": "main",
+            "gitOptions": { "shallow": true, "recursive": false }
+          },
+          "templateOwner": "hlxsites",
+          "templateRepo": "aem-boilerplate-commerce",
+          "contentSource": {
+            "org": "hlxsites",
+            "site": "aem-boilerplate-commerce"
+          }
+        },
+        "eds-accs": {
+          "name": "Custom EDS + ACCS",
+          "description": "Unbranded EDS storefront with Commerce Cloud Service backend",
+          "icon": "eds",
+          "featured": true,
+          "tags": ["eds", "custom", "accs"],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
+            "branch": "main",
+            "gitOptions": { "shallow": true, "recursive": false }
+          },
+          "templateOwner": "hlxsites",
+          "templateRepo": "aem-boilerplate-commerce",
+          "contentSource": {
+            "org": "hlxsites",
+            "site": "aem-boilerplate-commerce"
+          }
+        }
+      }
+    },
+    {
       "id": "citisignal",
       "name": "CitiSignal",
       "description": "Telecommunications demo with CitiSignal branding",
@@ -147,64 +264,6 @@
           },
           "templateOwner": "skukla",
           "templateRepo": "buildright-eds"
-        }
-      }
-    },
-    {
-      "id": "custom",
-      "name": "Custom",
-      "description": "Unbranded Commerce storefront for custom demos",
-      "icon": "custom",
-      "featured": false,
-      "addons": {
-        "adobe-commerce-aco": "excluded"
-      },
-      "configDefaults": {
-        "ADOBE_COMMERCE_WEBSITE_CODE": "website",
-        "ADOBE_COMMERCE_STORE_CODE": "main_website_store",
-        "ADOBE_COMMERCE_STORE_VIEW_CODE": "default",
-        "ACCS_WEBSITE_CODE": "website",
-        "ACCS_STORE_CODE": "main_website_store",
-        "ACCS_STORE_VIEW_CODE": "default"
-      },
-      "storefronts": {
-        "eds-paas": {
-          "name": "Custom EDS + PaaS",
-          "description": "Unbranded EDS storefront with Commerce PaaS backend",
-          "icon": "eds",
-          "featured": true,
-          "tags": ["eds", "custom", "paas"],
-          "source": {
-            "type": "git",
-            "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
-            "branch": "main",
-            "gitOptions": { "shallow": true, "recursive": false }
-          },
-          "templateOwner": "hlxsites",
-          "templateRepo": "aem-boilerplate-commerce",
-          "contentSource": {
-            "org": "hlxsites",
-            "site": "aem-boilerplate-commerce"
-          }
-        },
-        "eds-accs": {
-          "name": "Custom EDS + ACCS",
-          "description": "Unbranded EDS storefront with Commerce Cloud Service backend",
-          "icon": "eds",
-          "featured": true,
-          "tags": ["eds", "custom", "accs"],
-          "source": {
-            "type": "git",
-            "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
-            "branch": "main",
-            "gitOptions": { "shallow": true, "recursive": false }
-          },
-          "templateOwner": "hlxsites",
-          "templateRepo": "aem-boilerplate-commerce",
-          "contentSource": {
-            "org": "hlxsites",
-            "site": "aem-boilerplate-commerce"
-          }
         }
       }
     }

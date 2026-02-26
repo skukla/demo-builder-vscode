@@ -25,6 +25,7 @@
         "repo": "isle5",
         "branch": "main"
       },
+      "nativeForPackages": ["isle5"],
       "stackTypes": ["eds-storefront"],
       "default": true
     },

@@ -10,7 +10,7 @@
  * - Git source validation
  * - Cross-reference validation
  * - Featured packages/storefronts
- * - Package details (citisignal, buildright)
+ * - Package details (citisignal, isle5, buildright)
  * - Submodules and tags validation
  */
 
@@ -100,9 +100,9 @@ describe('demo-packages.json', () => {
     });
 
     describe('structure validation - packages', () => {
-        it('should have packages array with exactly 3 packages', () => {
+        it('should have packages array with exactly 4 packages', () => {
             expect(Array.isArray(packagesConfig.packages)).toBe(true);
-            expect(packagesConfig.packages.length).toBe(3);
+            expect(packagesConfig.packages.length).toBe(4);
         });
 
         it('should have unique package IDs', () => {
@@ -111,21 +111,28 @@ describe('demo-packages.json', () => {
             expect(uniqueIds.size).toBe(ids.length);
         });
 
-        it('should have citisignal, buildright, and custom packages', () => {
+        it('should have citisignal, isle5, buildright, and custom packages', () => {
             const ids = packagesConfig.packages.map(p => p.id);
             expect(ids).toContain('citisignal');
+            expect(ids).toContain('isle5');
             expect(ids).toContain('buildright');
             expect(ids).toContain('custom');
         });
     });
 
     describe('structure validation - storefronts', () => {
-        it('should have 6 storefronts total across all packages', () => {
+        it('should have 8 storefronts total across all packages', () => {
             let totalStorefronts = 0;
             packagesConfig.packages.forEach(pkg => {
                 totalStorefronts += Object.keys(pkg.storefronts).length;
             });
-            expect(totalStorefronts).toBe(6);
+            expect(totalStorefronts).toBe(8);
+        });
+
+        it('should have isle5 with 2 storefronts', () => {
+            const isle5 = packagesConfig.packages.find(p => p.id === 'isle5');
+            expect(isle5).toBeDefined();
+            expect(Object.keys(isle5!.storefronts).length).toBe(2);
         });
 
         it('should have citisignal with 3 storefronts', () => {
@@ -403,6 +410,45 @@ describe('demo-packages.json', () => {
             const pkg = packagesConfig.packages.find(p => p.id === 'citisignal');
             expect(pkg!.storefronts['eds-paas']).toBeDefined();
             expect(pkg!.storefronts['eds-accs']).toBeDefined();
+        });
+    });
+
+    describe('isle5 package details', () => {
+        it('should exist and be featured', () => {
+            const pkg = packagesConfig.packages.find(p => p.id === 'isle5');
+            expect(pkg).toBeDefined();
+            expect(pkg!.featured).toBe(true);
+        });
+
+        it('should have eds-paas and eds-accs storefronts', () => {
+            const pkg = packagesConfig.packages.find(p => p.id === 'isle5');
+            expect(pkg!.storefronts['eds-paas']).toBeDefined();
+            expect(pkg!.storefronts['eds-accs']).toBeDefined();
+        });
+
+        it('should have generic configDefaults', () => {
+            const pkg = packagesConfig.packages.find(p => p.id === 'isle5');
+            expect(pkg!.configDefaults.ADOBE_COMMERCE_WEBSITE_CODE).toBe('base');
+            expect(pkg!.configDefaults.ADOBE_COMMERCE_STORE_CODE).toBe('main_website_store');
+            expect(pkg!.configDefaults.ADOBE_COMMERCE_STORE_VIEW_CODE).toBe('default');
+        });
+
+        it('should have contentSource pointing to stephen-garner-adobe org', () => {
+            const pkg = packagesConfig.packages.find(p => p.id === 'isle5');
+            Object.values(pkg!.storefronts).forEach(storefront => {
+                const sf = storefront as Record<string, unknown>;
+                const contentSource = sf.contentSource as { org: string; site: string };
+                expect(contentSource.org).toBe('stephen-garner-adobe');
+                expect(contentSource.site).toBe('isle5');
+            });
+        });
+
+        it('should use stephen-garner-adobe/isle5 as source repo', () => {
+            const pkg = packagesConfig.packages.find(p => p.id === 'isle5');
+            Object.values(pkg!.storefronts).forEach(storefront => {
+                expect(storefront.source.url).toBe('https://github.com/stephen-garner-adobe/isle5');
+                expect(storefront.source.branch).toBe('main');
+            });
         });
     });
 
