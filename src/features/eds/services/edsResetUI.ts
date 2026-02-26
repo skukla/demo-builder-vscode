@@ -16,10 +16,10 @@
  * @module features/eds/services/edsResetUI
  */
 
+import { executeEdsReset, extractResetParams, type EdsResetParams, type EdsResetResult } from './edsResetService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
-import { executeEdsReset, extractResetParams, type EdsResetParams, type EdsResetResult } from './edsResetService';
 
 // ==========================================================
 // Types

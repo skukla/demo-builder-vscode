@@ -14,7 +14,6 @@
  */
 
 import { installBlockCollections, type BlockLibraryEntry } from '../services/blockCollectionHelpers';
-import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
 import { ConfigurationService } from '../services/configurationService';
 import type { DaLiveAuthService } from '../services/daLiveAuthService';
 import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '../services/daLiveContentOperations';
@@ -24,13 +23,14 @@ import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
-import { configureDaLivePermissions, ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
 import { DaLiveAuthError } from '../services/types';
+import { configureDaLivePermissions, ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
+import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
-import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 
 // ==========================================================
 // Types
@@ -282,6 +282,22 @@ async function executePhaseHelixConfig(
         if (result.success) {
             logger.info(`[Storefront Setup] Installed ${result.blocksCount} unique blocks from ${allLibraries.length} libraries`);
             blockCollectionIdsResult = result.blockIds;
+
+            // Save block library install tracking to project state
+            if (result.libraryVersions && result.libraryVersions.length > 0) {
+                const currentProject = await context.stateManager.getCurrentProject();
+                if (currentProject) {
+                    currentProject.installedBlockLibraries = result.libraryVersions.map(lv => ({
+                        name: lv.name,
+                        source: lv.source,
+                        commitSha: lv.commitSha,
+                        blockIds: lv.blockIds,
+                        installedAt: new Date().toISOString(),
+                    }));
+                    await context.stateManager.saveProject(currentProject);
+                    logger.info(`[Storefront Setup] Saved install tracking for ${result.libraryVersions.length} block libraries`);
+                }
+            }
         } else {
             logger.warn(`[Storefront Setup] Block library installation failed: ${result.error}`);
         }

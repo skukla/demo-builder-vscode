@@ -5,7 +5,7 @@
  * These files allow users to share and reuse configuration across projects.
  */
 
-import type { CustomBlockLibrary } from '@/types/blockLibraries';
+import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
 
 /**
  * Component selections - which components are chosen
@@ -99,6 +99,8 @@ export interface SettingsFile {
     selectedBlockLibraries?: string[];
     /** Custom block libraries added by URL */
     customBlockLibraries?: CustomBlockLibrary[];
+    /** Installed block library tracking data (commit SHA at install time) */
+    installedBlockLibraries?: InstalledBlockLibrary[];
     /** EDS configuration (for Edge Delivery Services stacks) */
     edsConfig?: SettingsEdsConfig;
 }

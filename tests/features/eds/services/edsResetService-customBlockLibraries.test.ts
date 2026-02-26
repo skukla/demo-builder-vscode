@@ -58,7 +58,6 @@ jest.mock('@/features/eds/services/configGenerator', () => ({
 }));
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollection: jest.fn(),
     installBlockCollections: jest.fn(),
 }));
 
@@ -109,11 +108,10 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 // =============================================================================
 
 import { executeEdsReset } from '@/features/eds/services/edsResetService';
-import { installBlockCollection, installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
+import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
 
 // Cast imported mocks
-const mockInstallBlockCollection = installBlockCollection as jest.MockedFunction<typeof installBlockCollection>;
 const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<typeof installBlockCollections>;
 const mockGetBlockLibrarySource = getBlockLibrarySource as jest.MockedFunction<typeof getBlockLibrarySource>;
 const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<typeof getBlockLibraryName>;
@@ -191,9 +189,6 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
             return undefined;
         });
         mockGetBlockLibraryName.mockImplementation((id: string) => id);
-        mockInstallBlockCollection.mockResolvedValue({
-            success: true, blocksCount: 3, blockIds: ['block-1', 'block-2', 'block-3'],
-        });
         mockInstallBlockCollections.mockResolvedValue({
             success: true, blocksCount: 5, blockIds: ['block-1', 'block-2', 'block-3', 'block-4', 'block-5'],
         });
@@ -234,8 +229,6 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
             expect.anything(), // logger
         );
 
-        // installBlockCollection (singular) should NOT be called
-        expect(mockInstallBlockCollection).not.toHaveBeenCalled();
     });
 
     it('should call installBlockCollections with only built-in sources when customBlockLibraries is undefined', async () => {

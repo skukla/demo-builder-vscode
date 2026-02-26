@@ -241,10 +241,8 @@ See `services/types.ts` for type definitions:
 - `AdobeProject` - Adobe Developer Console project
 - `AdobeWorkspace` - Project workspace
 - `AdobeContext` - Complete org/project/workspace context
-- `AuthToken` - Access token with expiry
 - `AuthTokenValidation` - Token validation result with org and expiry
 - `CacheEntry<T>` - Generic cache entry with data and expiry
-- `PerformanceMetric` - Operation timing data
 
 ### Raw CLI Response Types
 - `RawAdobeOrg` - Adobe CLI organization response
@@ -265,11 +263,17 @@ features/authentication/
 ├── services/
 │   ├── authenticationService.ts    # Main orchestration
 │   ├── adobeSDKClient.ts          # SDK management
-│   ├── tokenManager.ts            # Token validation
-│   ├── authCacheManager.ts        # Multi-layer caching
+│   ├── adobeContextResolver.ts    # CLI context resolution
+│   ├── adobeEntityFetcher.ts      # SDK-accelerated fetching
+│   ├── adobeEntityMapper.ts       # Entity data mapping
+│   ├── adobeEntitySelector.ts     # Entity selection logic
 │   ├── adobeEntityService.ts      # Orgs/projects/workspaces
+│   ├── authCacheManager.ts        # Multi-layer caching
+│   ├── authPredicates.ts          # Auth state predicates
+│   ├── authenticationErrorFormatter.ts # Error formatting
 │   ├── organizationValidator.ts   # Org access validation
 │   ├── performanceTracker.ts      # Performance metrics
+│   ├── tokenManager.ts            # Token validation
 │   └── types.ts                   # Type definitions
 ├── handlers/
 │   ├── authenticationHandlers.ts  # Auth message handlers
@@ -295,10 +299,10 @@ AuthenticationService (orchestrator)
 ## Integration Points
 
 ### Dependencies
-- `@/shared/command-execution` - ExternalCommandManager for CLI operations
-- `@/shared/logging` - Logger, StepLogger for consistent logging
-- `@/shared/validation` - validateAccessToken for security
-- `@/utils/timeoutConfig` - TIMEOUTS, CACHE_TTL constants
+- `@/core/shell` - CommandExecutor for CLI operations
+- `@/core/logging` - Logger, StepLogger for consistent logging
+- `@/core/validation` - validateAccessToken for security
+- `@/core/utils/timeoutConfig` - TIMEOUTS, CACHE_TTL constants
 - `@adobe/aio-lib-console` - Adobe Console SDK (optional, falls back to CLI)
 - `@adobe/aio-lib-ims` - Adobe IMS token management
 
@@ -307,7 +311,7 @@ AuthenticationService (orchestrator)
 - `src/features/dashboard` - Quick auth status for dashboard loads
 - `src/features/project-creation` - Wizard authentication step
 - `src/commands/deployMesh.ts` - Auth verification before deployment
-- `src/webviews/components/wizard/steps/AdobeSetupStep.tsx` - Authentication UI
+- `src/features/authentication/ui/steps/` - Authentication UI steps
 
 ## Usage Examples
 
@@ -555,10 +559,10 @@ try {
 - **[Adobe Setup Architecture](../../docs/architecture/adobe-setup.md)** - Two-column setup flow design
 - **[Mesh Feature](../mesh/README.md)** - Pre-flight auth checks
 - **[Dashboard Feature](../dashboard/README.md)** - Quick auth status
-- **[Shared State](../shared/state/CLAUDE.md)** - StateManager integration
-- **[Timeout Configuration](../../utils/timeoutConfig.ts)** - TIMEOUTS and CACHE_TTL constants
+- **[Core State](../../core/state/README.md)** - StateManager integration
+- **[Timeout Configuration](../../core/utils/timeoutConfig.ts)** - TIMEOUTS and CACHE_TTL constants
 
 ---
 
 For overall architecture, see `../../CLAUDE.md`
-For shared infrastructure, see `../shared/CLAUDE.md`
+For core infrastructure, see `../../core/CLAUDE.md`

@@ -108,7 +108,6 @@ jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
 }));
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollection: jest.fn(),
     installBlockCollections: jest.fn().mockResolvedValue({ success: true, blocksCount: 0, blockIds: [] }),
 }));
 

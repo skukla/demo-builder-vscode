@@ -291,7 +291,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
         // Get custom block library defaults from settings
         const customBlockLibraryDefaults = parseCustomBlockLibrarySettings(
-            config.get<Array<{ name: string; url: string }>>('blockLibraries.custom', []),
+            config.get<string[]>('blockLibraries.custom', []),
         );
 
         // Debug: Log EDS config being sent to webview
@@ -402,6 +402,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 },
             });
 
+            return { success: true };
+        });
+
+        // Open VS Code settings for custom block libraries
+        comm.on('open-block-library-settings', () => {
+            vscode.commands.executeCommand(
+                'workbench.action.openSettings',
+                'demoBuilder.blockLibraries.custom',
+            );
             return { success: true };
         });
 

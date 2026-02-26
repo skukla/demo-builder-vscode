@@ -1,8 +1,8 @@
 /**
- * Storefront Setup Phases - Custom Block Libraries Tests
+ * Storefront Setup Phases - Block Library Install Tracking Tests
  *
- * Tests that custom block libraries (user-provided GitHub URLs) are installed
- * during the Helix config phase, after built-in block libraries.
+ * Tests that block library install tracking data (commit SHA, blockIds)
+ * is saved to project state after successful block collection installation.
  *
  * TDD RED Phase: Tests written BEFORE implementation.
  */
@@ -126,11 +126,23 @@ const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<typeo
 // Helpers
 // =============================================================================
 
-function createMockContext(): HandlerContext {
+function createMockContext(overrides?: {
+    currentProject?: Record<string, unknown> | null;
+}): HandlerContext {
+    const mockProject = overrides?.currentProject !== undefined
+        ? overrides.currentProject
+        : {
+            name: 'test-project',
+            path: '/path/to/test-project',
+            status: 'configuring',
+            created: new Date(),
+            lastModified: new Date(),
+        };
+
     return {
         panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
         stateManager: {
-            getCurrentProject: jest.fn().mockResolvedValue(null),
+            getCurrentProject: jest.fn().mockResolvedValue(mockProject),
             saveProject: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
         logger: {
@@ -166,128 +178,143 @@ function createEdsConfig(overrides?: Partial<StorefrontSetupStartPayload['edsCon
 // Tests
 // =============================================================================
 
-describe('Storefront Setup Phases - Custom Block Libraries', () => {
-    const CUSTOM_LIBS: CustomBlockLibrary[] = [
-        { name: 'My Custom Blocks', source: { owner: 'user', repo: 'custom-blocks', branch: 'main' } },
-        { name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks-lib', branch: 'v2' } },
+describe('Storefront Setup Phases - Block Library Install Tracking', () => {
+    const LIBRARY_VERSIONS = [
+        {
+            source: { owner: 'adobe', repo: 'isle5', branch: 'main' },
+            name: 'Isle5',
+            commitSha: 'abc123def456',
+            blockIds: ['hero-cta', 'newsletter', 'search-bar'],
+        },
+        {
+            source: { owner: 'partner', repo: 'blocks', branch: 'v2' },
+            name: 'Partner Blocks',
+            commitSha: '789xyz000aaa',
+            blockIds: ['product-grid'],
+        },
     ];
 
     beforeEach(() => {
         jest.clearAllMocks();
-        // Built-in library source lookup returns a valid source for 'isle5'
         mockGetBlockLibrarySource.mockImplementation((id: string) => {
             if (id === 'isle5') return { owner: 'adobe', repo: 'isle5', branch: 'main' };
             return undefined;
         });
         mockGetBlockLibraryName.mockImplementation((id: string) => id);
-        mockInstallBlockCollections.mockResolvedValue({
-            success: true, blocksCount: 5, blockIds: ['block-1', 'block-2', 'block-3', 'block-4', 'block-5'],
-        });
     });
 
-    it('should install all block libraries in a single deduped call via installBlockCollections', async () => {
-        // Given: Both built-in and custom block libraries selected
-        const context = createMockContext();
-        const edsConfig = createEdsConfig();
-
-        // When: Executing setup with both built-in and custom libraries
-        await executeStorefrontSetupPhases(
-            context, edsConfig, AbortSignal.timeout(30000),
-            undefined, // selectedAddons
-            ['isle5'], // selectedBlockLibraries (built-in)
-            CUSTOM_LIBS, // customBlockLibraries (NEW parameter)
-        );
-
-        // Then: installBlockCollections (plural) should be called ONCE with all sources combined
-        expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
-        expect(mockInstallBlockCollections).toHaveBeenCalledWith(
-            expect.anything(), // githubFileOps
-            'test-owner', 'test-repo',
-            [
-                { source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' },
-                { source: { owner: 'user', repo: 'custom-blocks', branch: 'main' }, name: 'My Custom Blocks' },
-                { source: { owner: 'partner', repo: 'blocks-lib', branch: 'v2' }, name: 'Partner Blocks' },
-            ],
-            expect.anything(), // logger
-        );
-
-    });
-
-    it('should call installBlockCollections with only built-in sources when custom is undefined', async () => {
-        // Given: Only built-in block libraries, no custom
-        const context = createMockContext();
-        const edsConfig = createEdsConfig();
-
-        // When: Executing setup without custom libraries
-        await executeStorefrontSetupPhases(
-            context, edsConfig, AbortSignal.timeout(30000),
-            undefined, // selectedAddons
-            ['isle5'], // selectedBlockLibraries
-            undefined, // no customBlockLibraries
-        );
-
-        // Then: installBlockCollections (plural) called with only built-in source
-        expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
-        expect(mockInstallBlockCollections).toHaveBeenCalledWith(
-            expect.anything(), 'test-owner', 'test-repo',
-            [{ source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' }],
-            expect.anything(),
-        );
-
-        // When: Executing with empty custom libraries array
-        jest.clearAllMocks();
-        mockGetBlockLibrarySource.mockReturnValue({ owner: 'adobe', repo: 'isle5', branch: 'main' });
+    it('should save installedBlockLibraries to project after successful install', async () => {
+        // Given: installBlockCollections returns success with libraryVersions
         mockInstallBlockCollections.mockResolvedValue({
-            success: true, blocksCount: 3, blockIds: ['block-1', 'block-2', 'block-3'],
+            success: true,
+            blocksCount: 4,
+            blockIds: ['hero-cta', 'newsletter', 'search-bar', 'product-grid'],
+            libraryVersions: LIBRARY_VERSIONS,
         });
 
+        const context = createMockContext();
+        const edsConfig = createEdsConfig();
+        const customLibs: CustomBlockLibrary[] = [
+            { name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks', branch: 'v2' } },
+        ];
+
+        // When: Executing storefront setup with block libraries
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
             undefined,
             ['isle5'],
-            [], // empty custom libraries
+            customLibs,
         );
 
-        // Then: Still only built-in library in the call
-        expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
-        expect(mockInstallBlockCollections).toHaveBeenCalledWith(
-            expect.anything(), 'test-owner', 'test-repo',
-            [{ source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' }],
-            expect.anything(),
+        // Then: stateManager.saveProject should have been called with installedBlockLibraries
+        const saveProjectMock = context.stateManager.saveProject as jest.Mock;
+        expect(saveProjectMock).toHaveBeenCalled();
+
+        // Find the call that saved installedBlockLibraries
+        const savedProject = saveProjectMock.mock.calls.find(
+            (call: unknown[]) => (call[0] as Record<string, unknown>).installedBlockLibraries !== undefined,
         );
+        expect(savedProject).toBeDefined();
+
+        const project = savedProject![0] as Record<string, unknown>;
+        const installedLibs = project.installedBlockLibraries as Array<Record<string, unknown>>;
+        expect(installedLibs).toHaveLength(2);
     });
 
-    it('should send progress message mentioning library count', async () => {
-        // Given: Custom block libraries with specific names
+    it('should include correct commit SHA, blockIds, and installedAt per library', async () => {
+        // Given: installBlockCollections returns success with libraryVersions
+        mockInstallBlockCollections.mockResolvedValue({
+            success: true,
+            blocksCount: 4,
+            blockIds: ['hero-cta', 'newsletter', 'search-bar', 'product-grid'],
+            libraryVersions: LIBRARY_VERSIONS,
+        });
+
         const context = createMockContext();
         const edsConfig = createEdsConfig();
-        const customLibs: CustomBlockLibrary[] = [
-            { name: 'My Fancy Blocks', source: { owner: 'user', repo: 'fancy', branch: 'main' } },
-        ];
 
-        // When: Executing setup with only custom libraries
+        // When: Executing storefront setup
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            undefined, // selectedAddons
-            undefined, // no built-in block libraries
-            customLibs, // customBlockLibraries
+            undefined,
+            ['isle5'],
+            [{ name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks', branch: 'v2' } }],
         );
 
-        // Then: Progress message should mention the library count
-        expect(context.sendMessage).toHaveBeenCalledWith(
-            'storefront-setup-progress',
-            expect.objectContaining({
-                phase: 'helix-config',
-                message: expect.stringContaining('1'),
-            }),
+        // Then: Saved data should match expected structure
+        const saveProjectMock = context.stateManager.saveProject as jest.Mock;
+        const savedProject = saveProjectMock.mock.calls.find(
+            (call: unknown[]) => (call[0] as Record<string, unknown>).installedBlockLibraries !== undefined,
+        );
+        expect(savedProject).toBeDefined();
+
+        const installedLibs = (savedProject![0] as Record<string, unknown>).installedBlockLibraries as Array<{
+            name: string;
+            source: { owner: string; repo: string; branch: string };
+            commitSha: string;
+            blockIds: string[];
+            installedAt: string;
+        }>;
+
+        // Verify first library
+        expect(installedLibs[0].name).toBe('Isle5');
+        expect(installedLibs[0].source).toEqual({ owner: 'adobe', repo: 'isle5', branch: 'main' });
+        expect(installedLibs[0].commitSha).toBe('abc123def456');
+        expect(installedLibs[0].blockIds).toEqual(['hero-cta', 'newsletter', 'search-bar']);
+        expect(installedLibs[0].installedAt).toBeDefined();
+        // installedAt should be a valid ISO date string
+        expect(new Date(installedLibs[0].installedAt).toISOString()).toBe(installedLibs[0].installedAt);
+
+        // Verify second library
+        expect(installedLibs[1].name).toBe('Partner Blocks');
+        expect(installedLibs[1].commitSha).toBe('789xyz000aaa');
+        expect(installedLibs[1].blockIds).toEqual(['product-grid']);
+    });
+
+    it('should not save tracking data when install fails', async () => {
+        // Given: installBlockCollections returns failure
+        mockInstallBlockCollections.mockResolvedValue({
+            success: false,
+            blocksCount: 0,
+            blockIds: [],
+            error: 'Network error',
+        });
+
+        const context = createMockContext();
+        const edsConfig = createEdsConfig();
+
+        // When: Executing storefront setup with block libraries that fail to install
+        await executeStorefrontSetupPhases(
+            context, edsConfig, AbortSignal.timeout(30000),
+            undefined,
+            ['isle5'],
         );
 
-        // And: installBlockCollections should be called with the custom library
-        expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
-        expect(mockInstallBlockCollections).toHaveBeenCalledWith(
-            expect.anything(), 'test-owner', 'test-repo',
-            [{ source: { owner: 'user', repo: 'fancy', branch: 'main' }, name: 'My Fancy Blocks' }],
-            expect.anything(),
+        // Then: saveProject should NOT have been called with installedBlockLibraries
+        const saveProjectMock = context.stateManager.saveProject as jest.Mock;
+        const savedWithTracking = saveProjectMock.mock.calls.find(
+            (call: unknown[]) => (call[0] as Record<string, unknown>).installedBlockLibraries !== undefined,
         );
+        expect(savedWithTracking).toBeUndefined();
     });
 });

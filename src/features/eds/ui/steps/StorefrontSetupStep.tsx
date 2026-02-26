@@ -298,9 +298,10 @@ export function StorefrontSetupStep({
             backendComponentId: state.components?.backend,
             selectedAddons: state.selectedAddons,
             selectedBlockLibraries: state.selectedBlockLibraries,
+            customBlockLibraries: state.customBlockLibraries,
             selectedPackage: state.selectedPackage,
         });
-    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.selectedAddons, state.selectedBlockLibraries, state.selectedPackage]);
+    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.selectedAddons, state.selectedBlockLibraries, state.customBlockLibraries, state.selectedPackage]);
 
     /**
      * Handle GitHub App installation detected
@@ -333,6 +334,7 @@ export function StorefrontSetupStep({
         backendComponentId: state.components?.backend,
         selectedAddons: state.selectedAddons,
         selectedBlockLibraries: state.selectedBlockLibraries,
+        customBlockLibraries: state.customBlockLibraries,
         selectedPackage: state.selectedPackage,
     });
 
@@ -359,7 +361,6 @@ export function StorefrontSetupStep({
                 });
             }
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Empty deps - cleanup only runs on unmount, reads from refs
 
     // Set up message listeners (stable callbacks, no re-subscription needed)
@@ -416,6 +417,7 @@ export function StorefrontSetupStep({
             backendComponentId: initialConfigRef.current.backendComponentId,
             selectedAddons: initialConfigRef.current.selectedAddons,
             selectedBlockLibraries: initialConfigRef.current.selectedBlockLibraries,
+            customBlockLibraries: initialConfigRef.current.customBlockLibraries,
             selectedPackage: initialConfigRef.current.selectedPackage,
         });
     }, []);

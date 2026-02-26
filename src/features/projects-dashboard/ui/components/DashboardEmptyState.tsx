@@ -5,9 +5,9 @@
  */
 
 import { Flex, Text, Button } from '@adobe/react-spectrum';
+import type { FocusableRefValue } from '@react-types/shared';
 import Add from '@spectrum-icons/workflow/Add';
 import Import from '@spectrum-icons/workflow/Import';
-import type { FocusableRefValue } from '@react-types/shared';
 import React, { useCallback } from 'react';
 
 export interface DashboardEmptyStateProps {

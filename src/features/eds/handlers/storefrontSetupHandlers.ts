@@ -13,8 +13,6 @@
  */
 
 import * as vscode from 'vscode';
-import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
-import { ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
 import { CleanupService } from '../services/cleanupService';
 import { ConfigurationService } from '../services/configurationService';
 import { createDaLiveTokenProvider, createDaLiveServiceTokenProvider } from '../services/daLiveContentOperations';
@@ -23,6 +21,8 @@ import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { ToolManager } from '../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
+import { ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
+import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';

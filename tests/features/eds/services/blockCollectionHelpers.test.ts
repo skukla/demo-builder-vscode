@@ -1,8 +1,7 @@
 /**
  * Block Collection Helpers Tests
  *
- * Tests for dynamic block discovery and component-definition.json merging
- * (exercised via installBlockCollection).
+ * Tests for dynamic block discovery and component-definition.json merging.
  *
  * The source repo's component-definition.json is the sole authority for
  * authoring metadata. Blocks without entries in the source still get their
@@ -10,79 +9,72 @@
  */
 
 import {
-    installBlockCollection,
     installBlockCollections,
 } from '@/features/eds/services/blockCollectionHelpers';
 import type { Logger } from '@/types/logger';
 import type { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
 import type { AddonSource } from '@/types/demoPackages';
 
-describe('installBlockCollection', () => {
+// --- Shared test helpers ---
+
+/** Create a component-definition.json with specified blocks */
+function createComponentDef(
+    blocks: Array<{ title: string; id: string; unsafeHTML?: string }>,
+): string {
+    return JSON.stringify({
+        groups: [{
+            id: 'blocks',
+            title: 'Blocks',
+            components: blocks.map(b => ({
+                title: b.title,
+                id: b.id,
+                plugins: b.unsafeHTML ? { da: { unsafeHTML: b.unsafeHTML } } : undefined,
+            })),
+        }],
+    });
+}
+
+/** Create a destination component-definition.json with existing blocks */
+function createDestComponentDef(
+    blocks: Array<{ title: string; id: string }> = [
+        { title: 'Hero', id: 'hero' },
+        { title: 'Cards', id: 'cards' },
+    ],
+): string {
+    return JSON.stringify({
+        groups: [{
+            id: 'blocks',
+            title: 'Blocks',
+            components: blocks.map(b => ({ title: b.title, id: b.id })),
+        }],
+    });
+}
+
+/** Create mock file entries for blocks/ directories */
+function createBlockFileEntries(
+    blockIds: string[],
+    extraFiles: Array<{ path: string; sha: string }> = [],
+): Array<{ path: string; mode: string; type: 'blob'; sha: string }> {
+    const blockEntries = blockIds.map(id => ({
+        path: `blocks/${id}/${id}.js`,
+        mode: '100644',
+        type: 'blob' as const,
+        sha: `sha-${id}`,
+    }));
+    const extras = extraFiles.map(f => ({
+        path: f.path,
+        mode: '100644',
+        type: 'blob' as const,
+        sha: f.sha,
+    }));
+    return [...blockEntries, ...extras];
+}
+
+describe('installBlockCollections (single library)', () => {
     const TEST_SOURCE: AddonSource = { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' };
     const DEFAULT_BLOCKS = ['hero-cta', 'newsletter', 'search-bar'];
     let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
     let mockLogger: jest.Mocked<Logger>;
-
-    /**
-     * Helper to create a component-definition.json with specified blocks
-     */
-    function createComponentDef(
-        blocks: Array<{ title: string; id: string; unsafeHTML?: string }>,
-    ): string {
-        return JSON.stringify({
-            groups: [{
-                id: 'blocks',
-                title: 'Blocks',
-                components: blocks.map(b => ({
-                    title: b.title,
-                    id: b.id,
-                    plugins: b.unsafeHTML ? { da: { unsafeHTML: b.unsafeHTML } } : undefined,
-                })),
-            }],
-        });
-    }
-
-    /**
-     * Helper to create a destination component-definition.json with existing blocks
-     */
-    function createDestComponentDef(
-        blocks: Array<{ title: string; id: string }> = [
-            { title: 'Hero', id: 'hero' },
-            { title: 'Cards', id: 'cards' },
-        ],
-    ): string {
-        return JSON.stringify({
-            groups: [{
-                id: 'blocks',
-                title: 'Blocks',
-                components: blocks.map(b => ({ title: b.title, id: b.id })),
-            }],
-        });
-    }
-
-    /**
-     * Helper to create mock file entries for blocks/ directories.
-     * Accepts an array of block IDs and returns file entries as if
-     * each block has a single .js file in its directory.
-     */
-    function createBlockFileEntries(
-        blockIds: string[],
-        extraFiles: Array<{ path: string; sha: string }> = [],
-    ): Array<{ path: string; mode: string; type: 'blob'; sha: string }> {
-        const blockEntries = blockIds.map(id => ({
-            path: `blocks/${id}/${id}.js`,
-            mode: '100644',
-            type: 'blob' as const,
-            sha: `sha-${id}`,
-        }));
-        const extras = extraFiles.map(f => ({
-            path: f.path,
-            mode: '100644',
-            type: 'blob' as const,
-            sha: f.sha,
-        }));
-        return [...blockEntries, ...extras];
-    }
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -106,7 +98,7 @@ describe('installBlockCollection', () => {
     });
 
     /**
-     * Set up mocks for a successful installBlockCollection call.
+     * Set up mocks for a successful single-library install call.
      * Accepts variable block lists for testing dynamic discovery.
      */
     function setupSuccessfulInstall(
@@ -151,8 +143,10 @@ describe('installBlockCollection', () => {
 
             setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), ['circle-carousel']);
 
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             expect(result.success).toBe(true);
@@ -178,8 +172,10 @@ describe('installBlockCollection', () => {
 
             setupSuccessfulInstall(sourceComponentDef);
 
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             expect(result.success).toBe(true);
@@ -204,8 +200,10 @@ describe('installBlockCollection', () => {
 
             setupSuccessfulInstall(sourceComponentDef);
 
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             expect(result.success).toBe(true);
@@ -233,8 +231,10 @@ describe('installBlockCollection', () => {
         it('should not add component-definition.json when source file is missing', async () => {
             setupSuccessfulInstall(null);
 
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             expect(result.success).toBe(true);
@@ -252,8 +252,10 @@ describe('installBlockCollection', () => {
 
             setupSuccessfulInstall(sourceComponentDef);
 
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             expect(result.success).toBe(true);
@@ -285,8 +287,10 @@ describe('installBlockCollection', () => {
             const blocks = ['circle-carousel', 'store-locator', 'hero-cta'];
             setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), blocks);
 
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             expect(result.success).toBe(true);
@@ -326,8 +330,10 @@ describe('installBlockCollection', () => {
             mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
             mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
 
-            await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', customSource, mockLogger,
+            await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: customSource, name: 'block collection' }],
+                mockLogger,
             );
 
             expect(mockGithubFileOps.listRepoFiles).toHaveBeenCalledWith('my-org', 'my-blocks', 'develop');
@@ -348,8 +354,10 @@ describe('installBlockCollection', () => {
 
             setupSuccessfulInstall(sourceComponentDef, destDef, ['hero-cta']);
 
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             expect(result.success).toBe(true);
@@ -373,8 +381,10 @@ describe('installBlockCollection', () => {
 
             setupSuccessfulInstall(sourceComponentDef, destDef, ['hero-cta', 'newsletter']);
 
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             expect(result.success).toBe(true);
@@ -409,8 +419,10 @@ describe('installBlockCollection', () => {
 
             setupSuccessfulInstall(sourceComponentDef, destDef, ['hero-cta', 'newsletter']);
 
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             expect(result.success).toBe(true);
@@ -432,8 +444,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null, createDestComponentDef(), threeBlocks);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: blocksCount should be 3 (discovered)
@@ -447,8 +461,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null, createDestComponentDef(), unsortedBlocks);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: blockIds should be sorted alphabetically
@@ -471,8 +487,10 @@ describe('installBlockCollection', () => {
             mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Should discover 2 blocks and install all 4 files
@@ -497,8 +515,10 @@ describe('installBlockCollection', () => {
             mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Only hero-cta should be discovered (not README.md as a "block")
@@ -515,8 +535,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null, createDestComponentDef(), novelBlocks);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Both blocks should be discovered and installed
@@ -532,8 +554,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null, createDestComponentDef(), blocks);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: All 3 block files should be fetched
@@ -557,8 +581,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null, createDestComponentDef(), fiveBlocks);
 
             // When
-            await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Commit message should say "5 blocks"
@@ -571,9 +597,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null, createDestComponentDef());
 
             // When: libraryName is passed
-            await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
-                'Commerce Block Collection',
+            await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'Commerce Block Collection' }],
+                mockLogger,
             );
 
             // Then: Commit message should use the library name
@@ -586,8 +613,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null, createDestComponentDef());
 
             // When: no libraryName passed
-            await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Commit message should use the default 'block collection' label
@@ -601,8 +630,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null, createDestComponentDef(), differentBlocks);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: blockIds should be the discovered blocks
@@ -616,10 +647,13 @@ describe('installBlockCollection', () => {
                 { path: 'README.md', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
                 { path: 'package.json', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
             ]);
+            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Should fail with "No block files found"
@@ -632,10 +666,13 @@ describe('installBlockCollection', () => {
         it('should handle completely empty source repo', async () => {
             // Given: Source repo has no files at all
             mockGithubFileOps.listRepoFiles.mockResolvedValue([]);
+            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Should fail gracefully
@@ -660,8 +697,10 @@ describe('installBlockCollection', () => {
             mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Should discover 2 unique blocks (not 4)
@@ -674,8 +713,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null, createDestComponentDef(), ['top-banner']);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then
@@ -700,8 +741,10 @@ describe('installBlockCollection', () => {
             mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Only 1 block file fetched, non-blocks/ files excluded
@@ -720,17 +763,16 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null, createDestComponentDef(), fourBlocks);
 
             // When
-            await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Log message should reference 4 blocks
             const infoCalls = (mockLogger.info as jest.Mock).mock.calls.map(
                 (c: unknown[]) => c[0] as string,
             );
-            const installLog = infoCalls.find(msg => msg.includes('Installing'));
-            expect(installLog).toContain('4 blocks');
-
             const completedLog = infoCalls.find(msg => msg.includes('Installed'));
             expect(completedLog).toContain('4 blocks');
         });
@@ -746,8 +788,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null, createDestComponentDef(), blocks);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Files installed, but no component-def entry
@@ -765,8 +809,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null, createDestComponentDef(), blocks);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Files installed, but no component-def entry for product-grid
@@ -794,8 +840,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), blocks);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: product-grid should appear in merged component-def via source
@@ -824,8 +872,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), blocks);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: All 3 blocks discovered, but only hero-cta gets a comp-def entry
@@ -865,8 +915,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), blocks);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Both parent and sub-component should be in merged comp-def
@@ -895,8 +947,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), blocks);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Source entry metadata should be used verbatim
@@ -924,8 +978,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), twoBlocks);
 
             // When
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             // Then: Only 2 entries added (matching discovered blocks)
@@ -958,8 +1014,10 @@ describe('installBlockCollection', () => {
         it('should return error result on API failure', async () => {
             mockGithubFileOps.listRepoFiles.mockRejectedValue(new Error('API rate limit'));
 
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             expect(result.success).toBe(false);
@@ -972,8 +1030,10 @@ describe('installBlockCollection', () => {
             setupSuccessfulInstall(null);
             mockGithubFileOps.createCommit.mockRejectedValue(new Error('Commit failed'));
 
-            const result = await installBlockCollection(
-                mockGithubFileOps, 'dest-owner', 'dest-repo', TEST_SOURCE, mockLogger,
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
             );
 
             expect(result.success).toBe(false);
@@ -990,57 +1050,6 @@ describe('installBlockCollections', () => {
     const SOURCE_B: AddonSource = { owner: 'partner', repo: 'custom-blocks', branch: 'v2' };
     let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
     let mockLogger: jest.Mocked<Logger>;
-
-    /**
-     * Helper to create a component-definition.json with specified blocks
-     */
-    function createComponentDef(
-        blocks: Array<{ title: string; id: string; unsafeHTML?: string }>,
-    ): string {
-        return JSON.stringify({
-            groups: [{
-                id: 'blocks',
-                title: 'Blocks',
-                components: blocks.map(b => ({
-                    title: b.title,
-                    id: b.id,
-                    plugins: b.unsafeHTML ? { da: { unsafeHTML: b.unsafeHTML } } : undefined,
-                })),
-            }],
-        });
-    }
-
-    /**
-     * Helper to create a destination component-definition.json with existing blocks
-     */
-    function createDestComponentDef(
-        blocks: Array<{ title: string; id: string }> = [
-            { title: 'Hero', id: 'hero' },
-            { title: 'Cards', id: 'cards' },
-        ],
-    ): string {
-        return JSON.stringify({
-            groups: [{
-                id: 'blocks',
-                title: 'Blocks',
-                components: blocks.map(b => ({ title: b.title, id: b.id })),
-            }],
-        });
-    }
-
-    /**
-     * Helper to create mock file entries for blocks/ directories.
-     */
-    function createBlockFileEntries(
-        blockIds: string[],
-    ): Array<{ path: string; mode: string; type: 'blob'; sha: string }> {
-        return blockIds.map(id => ({
-            path: `blocks/${id}/${id}.js`,
-            mode: '100644',
-            type: 'blob' as const,
-            sha: `sha-${id}`,
-        }));
-    }
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -1434,11 +1443,122 @@ describe('installBlockCollections', () => {
                 mockLogger,
             );
 
-            // Then: Should work identically to installBlockCollection (singular)
+            // Then: Should produce the same result as a single-library call
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(2);
             expect(result.blockIds).toEqual(['hero-cta', 'newsletter']);
             expect(mockGithubFileOps.createCommit).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    // ---------------------------------------------------------------
+    // Library version tracking (commit SHA capture)
+    // ---------------------------------------------------------------
+    describe('libraryVersions tracking', () => {
+        it('should return libraryVersions with source commit SHAs when install succeeds', async () => {
+            // Given: Two libraries, each with blocks, and distinct source commit SHAs
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce(createBlockFileEntries(['hero-cta', 'newsletter']))
+                .mockResolvedValueOnce(createBlockFileEntries(['product-grid']));
+
+            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
+            mockGithubFileOps.getFileContent.mockResolvedValue(null);
+
+            // getBranchInfo returns different SHAs for source repos vs destination
+            mockGithubFileOps.getBranchInfo.mockImplementation(
+                async (owner: string, repo: string) => {
+                    if (owner === SOURCE_A.owner && repo === SOURCE_A.repo) {
+                        return { treeSha: 'tree-sha-a', commitSha: 'source-commit-sha-a' };
+                    }
+                    if (owner === SOURCE_B.owner && repo === SOURCE_B.repo) {
+                        return { treeSha: 'tree-sha-b', commitSha: 'source-commit-sha-b' };
+                    }
+                    // Destination repo
+                    return { treeSha: 'dest-tree-sha', commitSha: 'dest-commit-sha' };
+                },
+            );
+            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
+            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
+            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+
+            // When
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [
+                    { source: SOURCE_A, name: 'Isle5' },
+                    { source: SOURCE_B, name: 'Custom Blocks' },
+                ],
+                mockLogger,
+            );
+
+            // Then: libraryVersions should be present with entries for each library
+            expect(result.success).toBe(true);
+            expect(result.libraryVersions).toBeDefined();
+            expect(result.libraryVersions).toHaveLength(2);
+        });
+
+        it('should map libraryVersions correctly to each library (name, source, commitSha, blockIds)', async () => {
+            // Given: Two libraries with distinct blocks
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce(createBlockFileEntries(['hero-cta', 'newsletter']))
+                .mockResolvedValueOnce(createBlockFileEntries(['product-grid']));
+
+            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
+            mockGithubFileOps.getFileContent.mockResolvedValue(null);
+
+            mockGithubFileOps.getBranchInfo.mockImplementation(
+                async (owner: string, repo: string) => {
+                    if (owner === SOURCE_A.owner && repo === SOURCE_A.repo) {
+                        return { treeSha: 'tree-sha-a', commitSha: 'abc123' };
+                    }
+                    if (owner === SOURCE_B.owner && repo === SOURCE_B.repo) {
+                        return { treeSha: 'tree-sha-b', commitSha: 'def456' };
+                    }
+                    return { treeSha: 'dest-tree', commitSha: 'dest-sha' };
+                },
+            );
+            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
+            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
+            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+
+            // When
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [
+                    { source: SOURCE_A, name: 'Isle5' },
+                    { source: SOURCE_B, name: 'Custom Blocks' },
+                ],
+                mockLogger,
+            );
+
+            // Then: Each entry should have correct name, source, commitSha, and blockIds
+            expect(result.libraryVersions).toEqual([
+                {
+                    source: SOURCE_A,
+                    name: 'Isle5',
+                    commitSha: 'abc123',
+                    blockIds: ['hero-cta', 'newsletter'],
+                },
+                {
+                    source: SOURCE_B,
+                    name: 'Custom Blocks',
+                    commitSha: 'def456',
+                    blockIds: ['product-grid'],
+                },
+            ]);
+        });
+
+        it('should return empty libraryVersions when library list is empty', async () => {
+            // When: Called with empty libraries array
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [],
+                mockLogger,
+            );
+
+            // Then: Success with empty/undefined libraryVersions
+            expect(result.success).toBe(true);
+            expect(result.libraryVersions ?? []).toEqual([]);
         });
     });
 });

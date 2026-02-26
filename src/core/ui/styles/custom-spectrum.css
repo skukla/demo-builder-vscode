@@ -478,10 +478,10 @@ button[class*="spectrum-Button"][disabled],
    Border Styles
    =========================================== */
 .border-none { border: none !important; }
-.border-t { border-top: 1px solid #1a1a1a !important; }
-.border-r { border-right: 1px solid #1a1a1a !important; }
-.border-b { border-bottom: 1px solid #1a1a1a !important; }
-.border-l { border-left: 1px solid #1a1a1a !important; }
+.border-t { border-top: 1px solid var(--spectrum-global-color-gray-200) !important; }
+.border-r { border-right: 1px solid var(--spectrum-global-color-gray-200) !important; }
+.border-b { border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important; }
+.border-l { border-left: 1px solid var(--spectrum-global-color-gray-200) !important; }
 
 .border-2 { border-width: 2px !important; }
 .border-3 { border-width: 3px !important; }
@@ -775,8 +775,8 @@ button[class*="spectrum-Button"][disabled],
     position: sticky !important;
     top: 0 !important;
     z-index: 10 !important;
-    background-color: #050505 !important;
-    border-bottom: 1px solid #2a2a2a !important;
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
     margin-bottom: 16px !important;
 }
 
@@ -895,7 +895,7 @@ button[class*="spectrum-Button"][disabled],
     outline: 2px solid var(--spectrum-global-color-blue-400) !important;
     outline-offset: 2px !important;
     transform: none !important;
-    cursor: default !important;
+    cursor: pointer !important;
 }
 
 .expandable-brand-card.expanded:hover {
@@ -1024,7 +1024,6 @@ button[class*="spectrum-Button"][disabled],
 }
 
 .architecture-option.selected {
-    background: var(--spectrum-global-color-blue-400) !important;
     background: rgba(38, 128, 235, 0.15) !important;
     border-color: var(--spectrum-global-color-blue-400) !important;
 }
@@ -1271,6 +1270,15 @@ button[class*="spectrum-Button"][disabled],
     letter-spacing: 0.3px !important;
 }
 
+.block-libraries-intro {
+    margin-bottom: var(--spectrum-global-dimension-size-200);
+}
+
+.settings-link {
+    margin-top: var(--spectrum-global-dimension-size-200);
+    font-size: var(--spectrum-global-dimension-font-size-75);
+}
+
 /* Architecture modal footer with Done button */
 .architecture-modal-footer {
     display: flex !important;
@@ -1280,11 +1288,7 @@ button[class*="spectrum-Button"][disabled],
     border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
 }
 
-/* Make expanded card look clickable on hover */
-.expandable-brand-card.expanded {
-    cursor: pointer !important;
-}
-
+/* Expanded card hover - re-open modal */
 .expandable-brand-card.expanded:hover {
     background: var(--spectrum-global-color-gray-75) !important;
 }
@@ -1602,8 +1606,8 @@ button[class*="spectrum-Button"][disabled],
 
 /* Dashboard status header - middle layer between header and content for depth */
 .dashboard-status-header {
-    background-color: #050505 !important;
-    border-bottom: 1px solid #2a2a2a !important;
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
     margin-bottom: 16px !important;
 }
 

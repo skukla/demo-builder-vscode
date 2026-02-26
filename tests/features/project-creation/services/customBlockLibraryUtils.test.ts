@@ -101,13 +101,13 @@ describe('customBlockLibraryUtils', () => {
     });
 
     describe('parseCustomBlockLibrarySettings', () => {
-        it('should parse valid URLs from settings into CustomBlockLibrary[]', () => {
-            const settings = [
-                { name: 'My Blocks', url: 'https://github.com/acme/my-blocks' },
-                { name: 'Other Lib', url: 'https://github.com/acme/other-lib' },
+        it('should parse URL strings with derived names', () => {
+            const urls = [
+                'https://github.com/acme/my-blocks',
+                'https://github.com/acme/other-lib',
             ];
 
-            const result = parseCustomBlockLibrarySettings(settings);
+            const result = parseCustomBlockLibrarySettings(urls);
 
             expect(result).toEqual([
                 { name: 'My Blocks', source: { owner: 'acme', repo: 'my-blocks', branch: 'main' } },
@@ -116,22 +116,32 @@ describe('customBlockLibraryUtils', () => {
         });
 
         it('should silently filter out entries with invalid URLs', () => {
-            const settings = [
-                { name: 'Valid', url: 'https://github.com/acme/valid-repo' },
-                { name: 'Invalid', url: 'https://gitlab.com/acme/not-github' },
-                { name: 'Broken', url: 'not-a-url' },
+            const urls = [
+                'https://github.com/acme/valid-repo',
+                'https://gitlab.com/acme/not-github',
+                'not-a-url',
             ];
 
-            const result = parseCustomBlockLibrarySettings(settings);
+            const result = parseCustomBlockLibrarySettings(urls);
 
             expect(result).toHaveLength(1);
-            expect(result[0].name).toBe('Valid');
+            expect(result[0].name).toBe('Valid Repo');
         });
 
         it('should return empty array when settings is empty', () => {
             const result = parseCustomBlockLibrarySettings([]);
 
             expect(result).toEqual([]);
+        });
+
+        it('should trim whitespace from URLs', () => {
+            const urls = ['  https://github.com/acme/my-lib  '];
+
+            const result = parseCustomBlockLibrarySettings(urls);
+
+            expect(result).toEqual([
+                { name: 'My Lib', source: { owner: 'acme', repo: 'my-lib', branch: 'main' } },
+            ]);
         });
     });
 });

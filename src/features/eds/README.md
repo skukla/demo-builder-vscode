@@ -31,7 +31,7 @@ src/features/eds/
 │   ├── resourceCleanupHelpers.ts   # Shared cleanup helper functions
 │   ├── toolManager.ts              # Commerce demo ingestion tool management
 │   ├── contentPatchRegistry.ts     # Content patch definitions for demo customization
-│   ├── blockCollectionHelpers.ts   # Block collection installation from source repo
+│   ├── blockCollectionHelpers.ts   # Block collection installation from source repo with version tracking
 │   ├── edsResetService.ts          # Core reset logic (template reset, code sync)
 │   ├── edsResetUI.ts               # Reset UI orchestration (auth, progress, notifications)
 │   ├── edsPipeline.ts              # EDS setup pipeline orchestration
@@ -42,6 +42,19 @@ src/features/eds/
 │   ├── codeSyncErrors.ts           # Code sync error hierarchy
 │   └── types.ts                    # TypeScript type definitions
 ├── ui/
+│   ├── components/
+│   │   ├── DaLiveOrgConfigSection.tsx   # DA.live org configuration
+│   │   ├── DaLiveServiceCard.tsx        # DA.live service card
+│   │   ├── GitHubAppInstallDialog.tsx   # GitHub App install dialog
+│   │   ├── GitHubServiceCard.tsx        # GitHub service card
+│   │   ├── VerifiedField.tsx            # Verified field indicator
+│   │   └── index.ts                     # Component exports
+│   ├── helpers/
+│   │   ├── bookmarkletSetupPage.ts  # Bookmarklet setup HTML
+│   │   └── validationHelpers.ts     # Form validation helpers
+│   ├── hooks/
+│   │   ├── useGitHubAuth.ts         # GitHub authentication hook
+│   │   └── useDaLiveAuth.ts         # DA.live authentication hook
 │   ├── steps/
 │   │   ├── ConnectServicesStep.tsx      # GitHub + DA.live auth connection
 │   │   ├── GitHubRepoSelectionStep.tsx  # Repository selection/creation
@@ -49,9 +62,9 @@ src/features/eds/
 │   │   ├── DaLiveSetupStep.tsx          # DA.live site configuration
 │   │   ├── DataSourceConfigStep.tsx     # Commerce data source config
 │   │   └── StorefrontSetupStep.tsx      # Storefront setup execution
-│   └── hooks/
-│       ├── useGitHubAuth.ts         # GitHub authentication hook
-│       └── useDaLiveAuth.ts         # DA.live authentication hook
+│   └── styles/
+│       ├── connect-services.css     # Connect services step styles
+│       └── eds-steps.css            # EDS step shared styles
 ├── handlers/
 │   ├── index.ts                     # Handler exports
 │   ├── edsHandlers.ts              # Core EDS message handlers
@@ -75,10 +88,11 @@ Orchestrates complete EDS project setup through phases:
 
 | Phase | Progress | Operations |
 |-------|----------|------------|
-| `github-repo` | 0-20% | Create/configure GitHub repository from template |
-| `helix-config` | 20-35% | Configure Helix 5, install block libraries (built-in + custom) |
-| `code-sync` | 35-55% | Verify Code Bus synchronization |
-| `dalive-content` | 55-85% | Copy demo content to DA.live |
+| `github-repo` | 0-15% | Create/configure GitHub repository from template |
+| `helix-config` | 20-35% | Configure Helix 5, install block libraries (built-in + custom), save install tracking data |
+| `code-sync` | 35-49% | Verify code synchronization, publish to CDN, configure site permissions, register with Configuration Service |
+| `content-copy` | 45-65% | Copy demo content to DA.live, install block library content and settings |
+| `content-publish` | 66-95% | Publish content and libraries to CDN |
 | `auth-recovery` | (paused) | DA.live token expired; prompts re-authentication (up to 2 attempts) |
 | `complete` | 100% | Setup complete |
 

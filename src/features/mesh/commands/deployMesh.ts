@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/core/base';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
+import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { StateManager } from '@/core/state';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';

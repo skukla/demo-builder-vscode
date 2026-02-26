@@ -177,6 +177,7 @@ demo-builder-vscode/
 9. **src/features/components/config/components.json** - Component registry
 10. **src/features/project-creation/config/demo-packages.json** - Demo package definitions (storefront configs, addons, content sources)
 11. **src/features/project-creation/config/stacks.json** - Stack definitions (frontend+backend combos, global addon definitions with source repos)
+12. **src/features/project-creation/config/block-libraries.json** - Block library definitions (EDS block collections, sources, package associations)
 
 ## Common Tasks
 
@@ -190,7 +191,8 @@ demo-builder-vscode/
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
   - `src/features/mesh/ui/steps/` - API Mesh step
   - `src/features/project-creation/ui/steps/` - WelcomeStep (with template selection), ReviewStep, ProjectCreationStep
--> Note: WelcomeStep includes demo package selection and custom block library URL input (see `src/features/project-creation/config/demo-packages.json` and `src/types/blockLibraries.ts`)
+  - `src/features/project-creation/ui/components/ArchitectureModal.tsx` - Multi-step modal for architecture + block library selection (extracted from BrandGallery)
+-> Note: WelcomeStep includes demo package selection. Architecture and block library selection happens via ArchitectureModal (multi-step modal in BrandGallery). Custom block libraries are configured in VS Code settings and selected via checkboxes. (see `src/features/project-creation/config/demo-packages.json`, `src/features/project-creation/config/block-libraries.json`, and `src/types/blockLibraries.ts`)
 -> See feature documentation for wizard orchestration details
 
 ### Debugging Width Issues

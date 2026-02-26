@@ -37,14 +37,14 @@ export function isDuplicateCustomLibrary(
     );
 }
 
-/** Convert VS Code settings entries into CustomBlockLibrary[], silently skipping invalid URLs */
+/** Convert VS Code settings URL strings into CustomBlockLibrary[], silently skipping invalid URLs */
 export function parseCustomBlockLibrarySettings(
-    settings: Array<{ name: string; url: string }>,
+    urls: string[],
 ): CustomBlockLibrary[] {
-    return settings.reduce<CustomBlockLibrary[]>((acc, entry) => {
-        const source = parseCustomBlockLibraryUrl(entry.url);
+    return urls.reduce<CustomBlockLibrary[]>((acc, url) => {
+        const source = parseCustomBlockLibraryUrl(url.trim());
         if (source) {
-            acc.push({ name: entry.name, source });
+            acc.push({ name: deriveBlockLibraryName(source.repo), source });
         }
         return acc;
     }, []);

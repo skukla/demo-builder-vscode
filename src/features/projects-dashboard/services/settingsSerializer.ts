@@ -146,6 +146,7 @@ export function extractSettingsFromProject(
         selectedAddons: project.selectedAddons,
         selectedBlockLibraries: project.selectedBlockLibraries,
         customBlockLibraries: project.customBlockLibraries,
+        installedBlockLibraries: project.installedBlockLibraries,
         // EDS configuration (for Edge Delivery Services stacks)
         edsConfig,
     };

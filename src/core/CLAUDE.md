@@ -49,8 +49,13 @@ core/
 │   └── rateLimiter.ts
 ├── state/              # State management (→ state/README.md)
 │   ├── stateManager.ts
-│   ├── stateCoordinator.ts
-│   └── types.ts
+│   ├── projectConfigWriter.ts
+│   ├── projectDirectoryScanner.ts
+│   ├── projectFileLoader.ts
+│   ├── projectStateSync.ts
+│   ├── recentProjectsManager.ts
+│   ├── sessionUIState.ts
+│   └── transientStateManager.ts
 ├── ui/                 # UI components & patterns
 │   ├── FormField.tsx
 │   ├── LoadingDisplay.tsx
@@ -60,9 +65,11 @@ core/
 │   ├── errorHandling.ts
 │   └── index.ts
 ├── utils/              # Core utilities
-│   ├── progressUnifier.ts
-│   ├── fileSystemUtils.ts
+│   ├── progressUnifier/
+│   ├── disposableStore.ts
+│   ├── githubUrlParser.ts
 │   ├── loadingHTML.ts
+│   ├── oneTimeTip.ts
 │   └── timeoutConfig.ts
 ├── validation/         # Validation barrel (re-exports from @/shared/validation)
 │   └── index.ts
@@ -308,15 +315,16 @@ await ProcessCleanup.killProcessTree(pid, { timeoutMs: 10000 });
 
 **Key Services:**
 - `StateManager` - VS Code globalState persistence
-- `StateCoordinator` - Adobe CLI state synchronization
+- `ProjectStateSync` - Project state synchronization
+- `ProjectConfigWriter` - Atomic project config file writes
+- `RecentProjectsManager` - Recent project tracking
 
 **Responsibilities:**
 - Persistent state storage (survives extension reload)
 - State migration between versions
-- Adobe CLI state synchronization
-- Project state tracking
-- Cache management with TTL
-- State change events
+- Project state tracking and synchronization
+- Session UI state management
+- Transient (non-persisted) state management
 
 **Path Alias**: `@/core/state`
 
@@ -348,7 +356,9 @@ await ProcessCleanup.killProcessTree(pid, { timeoutMs: 10000 });
 - `DisposableStore` - VS Code-style disposable collection with LIFO ordering
 - `ProgressUnifier` - Unified progress tracking
 - `fileSystemUtils` - File operations
+- `githubUrlParser` - GitHub URL parsing (owner/repo/branch extraction)
 - `loadingHTML` - Webview loading states
+- `oneTimeTip` - Show-once tips via VS Code globalState
 - `timeoutConfig` - Centralized timeout configuration
 
 **Responsibilities:**

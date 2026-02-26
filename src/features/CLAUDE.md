@@ -53,20 +53,20 @@ features/my-feature/
 ## Import Rules
 
 **✅ Features CAN import:**
-- `@/shared/*` - Shared infrastructure (logging, state, communication, etc.)
+- `@/core/*` - Core infrastructure (logging, state, communication, etc.)
 - `@/types` - Global type definitions
 - `@/types/*` - Specific type modules
 
 **⚠️ Features SHOULD AVOID:**
 - Importing from other features (keep loosely coupled)
 - If cross-feature dependencies are needed, consider:
-  - Moving shared code to `@/shared/*`
+  - Moving shared code to `@/core/*`
   - Using events/messages for communication
   - Refactoring feature boundaries
 
 **✅ Commands CAN import:**
 - Any feature (commands orchestrate features)
-- `@/shared/*`
+- `@/core/*`
 - `@/types`
 
 ## Feature Descriptions
@@ -77,7 +77,9 @@ features/my-feature/
 
 **Key Services:**
 - `AuthenticationService` - Adobe I/O authentication with SDK
+- `createEntityServices` / `EntityServices` - Factory for org/project/workspace operations
 - `AuthCacheManager` - Token and org/project caching with TTL
+- `TokenManager` - Token validation and refresh
 
 **Responsibilities:**
 - Adobe I/O CLI authentication (browser-based login)
@@ -298,7 +300,7 @@ features/my-feature/
 3. **Add services/**: Business logic goes here
 4. **Add types.ts**: Feature-specific types
 5. **Update this documentation**: Add feature description
-6. **Follow import rules**: Only import from `@/shared/*` and `@/types`
+6. **Follow import rules**: Only import from `@/core/*` and `@/types`
 7. **Add README.md**: Feature-specific documentation
 
 ## Migration from utils/

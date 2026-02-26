@@ -176,21 +176,11 @@
           "demoBuilder.blockLibraries.custom": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "Display name for the block library"
-                },
-                "url": {
-                  "type": "string",
-                  "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
-                }
-              },
-              "required": ["name", "url"]
+              "type": "string",
+              "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
             },
             "default": [],
-            "description": "Custom block libraries to include by default for new EDS projects. Each entry needs a display name and a public GitHub repository URL containing a blocks/ directory."
+            "description": "Custom block libraries to include for new EDS projects. Each entry is a public GitHub repository URL containing a blocks/ directory."
           }
         }
       },

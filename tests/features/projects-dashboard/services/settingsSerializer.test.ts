@@ -309,6 +309,51 @@ describe('settingsSerializer', () => {
         });
     });
 
+    describe('extractSettingsFromProject - installedBlockLibraries handling', () => {
+        it('should include installedBlockLibraries when present in project', () => {
+            const installedLibs = [
+                {
+                    name: 'Isle5',
+                    source: { owner: 'adobe', repo: 'isle5', branch: 'main' },
+                    commitSha: 'abc123',
+                    blockIds: ['hero-cta', 'newsletter'],
+                    installedAt: '2025-06-15T10:30:00.000Z',
+                },
+            ];
+
+            const project: Project = {
+                name: 'project-with-installed-libs',
+                created: new Date(),
+                lastModified: new Date(),
+                path: '/path/to/project',
+                status: 'ready',
+                componentSelections: {},
+                componentConfigs: {},
+                installedBlockLibraries: installedLibs,
+            };
+
+            const result = extractSettingsFromProject(project);
+
+            expect(result.installedBlockLibraries).toEqual(installedLibs);
+        });
+
+        it('should omit installedBlockLibraries when absent from project', () => {
+            const project: Project = {
+                name: 'project-without-installed-libs',
+                created: new Date(),
+                lastModified: new Date(),
+                path: '/path/to/project',
+                status: 'ready',
+                componentSelections: {},
+                componentConfigs: {},
+            };
+
+            const result = extractSettingsFromProject(project);
+
+            expect(result.installedBlockLibraries).toBeUndefined();
+        });
+    });
+
     describe('createExportSettings', () => {
         const project: Project = {
             name: 'export-test',

@@ -2,7 +2,7 @@
  * BrandGallery Component Tests
  *
  * Tests for the coming-soon package status feature and
- * custom block library URL input.
+ * custom block library checkbox UX (settings-based selection).
  */
 
 import React from 'react';
@@ -14,8 +14,11 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 
 // Mock vscode API to prevent errors from postMessage calls
 jest.mock('@/core/ui/utils/vscode-api', () => ({
-    vscode: { postMessage: jest.fn(), request: jest.fn() },
+    vscode: { postMessage: jest.fn(), request: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
 }));
+
+// Import the mock for assertions
+import { vscode as mockVscode } from '@/core/ui/utils/vscode-api';
 
 // Mock blockLibraryLoader used by ArchitectureModal
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
@@ -188,127 +191,101 @@ describe('BrandGallery', () => {
         });
     });
 
-    describe('custom block libraries', () => {
-        it('should show URL and name inputs in block libraries step for EDS stacks', () => {
-            openBlockLibrariesStep();
+    describe('custom block libraries (checkbox UX)', () => {
+        const mockCustomDefaults: CustomBlockLibrary[] = [
+            { name: 'Acme Blocks', source: { owner: 'acme', repo: 'custom-blocks', branch: 'main' } },
+            { name: 'Beta Lib', source: { owner: 'beta-org', repo: 'beta-blocks', branch: 'main' } },
+        ];
 
-            // Custom block library section should have URL and Name inputs
-            expect(screen.getByPlaceholderText('https://github.com/owner/repo')).toBeInTheDocument();
-            expect(screen.getByPlaceholderText('Library Name')).toBeInTheDocument();
+        it('should show custom section when customBlockLibraryDefaults has entries', () => {
+            openBlockLibrariesStep({ customBlockLibraryDefaults: mockCustomDefaults });
+
+            expect(screen.getByText('Custom Libraries')).toBeInTheDocument();
         });
 
-        it('should auto-fill name field when valid URL is entered', () => {
-            openBlockLibrariesStep();
+        it('should hide custom section when customBlockLibraryDefaults is empty', () => {
+            openBlockLibrariesStep({ customBlockLibraryDefaults: [] });
 
-            const urlInput = screen.getByPlaceholderText('https://github.com/owner/repo');
-            fireEvent.change(urlInput, { target: { value: 'https://github.com/acme/my-blocks' } });
-
-            const nameInput = screen.getByPlaceholderText('Library Name') as HTMLInputElement;
-            expect(nameInput.value).toBe('My Blocks');
+            expect(screen.queryByText('Custom Libraries')).not.toBeInTheDocument();
         });
 
-        it('should allow editing the auto-filled name', () => {
-            openBlockLibrariesStep();
+        it('should show settings link in custom section', () => {
+            openBlockLibrariesStep({ customBlockLibraryDefaults: mockCustomDefaults });
 
-            const urlInput = screen.getByPlaceholderText('https://github.com/owner/repo');
-            fireEvent.change(urlInput, { target: { value: 'https://github.com/acme/my-blocks' } });
-
-            const nameInput = screen.getByPlaceholderText('Library Name');
-            fireEvent.change(nameInput, { target: { value: 'Custom Name' } });
-
-            expect((nameInput as HTMLInputElement).value).toBe('Custom Name');
+            expect(screen.getByText('Configure custom libraries in Settings')).toBeInTheDocument();
         });
 
-        it('should add entry when Add button is clicked with valid URL and name', () => {
-            const { onCustomBlockLibrariesChange } = openBlockLibrariesStep();
+        it('should send open-block-library-settings message when settings link is clicked', () => {
+            openBlockLibrariesStep({ customBlockLibraryDefaults: mockCustomDefaults });
 
-            const urlInput = screen.getByPlaceholderText('https://github.com/owner/repo');
-            fireEvent.change(urlInput, { target: { value: 'https://github.com/acme/my-blocks' } });
+            const settingsLink = screen.getByText('Configure custom libraries in Settings');
+            fireEvent.click(settingsLink);
 
-            const nameInput = screen.getByPlaceholderText('Library Name');
-            fireEvent.change(nameInput, { target: { value: 'My Blocks' } });
-
-            const addButton = screen.getByText('Add');
-            fireEvent.click(addButton);
-
-            expect(onCustomBlockLibrariesChange).toHaveBeenCalledWith([
-                { name: 'My Blocks', source: { owner: 'acme', repo: 'my-blocks', branch: 'main' } },
-            ]);
+            expect(mockVscode.postMessage).toHaveBeenCalledWith(
+                'open-block-library-settings',
+            );
         });
 
-        it('should show validation error for invalid URL', () => {
-            openBlockLibrariesStep();
+        it('should render each custom library default as a checkbox', () => {
+            openBlockLibrariesStep({ customBlockLibraryDefaults: mockCustomDefaults });
 
-            const urlInput = screen.getByPlaceholderText('https://github.com/owner/repo');
-            fireEvent.change(urlInput, { target: { value: 'https://gitlab.com/acme/repo' } });
-
-            expect(screen.getByText('Enter a valid GitHub URL')).toBeInTheDocument();
+            // Each library should appear as a checkbox with its name
+            expect(screen.getByText('Acme Blocks')).toBeInTheDocument();
+            expect(screen.getByText('Beta Lib')).toBeInTheDocument();
+            // Should also show owner/repo as description
+            expect(screen.getByText('acme/custom-blocks')).toBeInTheDocument();
+            expect(screen.getByText('beta-org/beta-blocks')).toBeInTheDocument();
         });
 
-        it('should show duplicate error when repo is already added', () => {
-            const existingLibraries: CustomBlockLibrary[] = [
-                { name: 'Existing', source: { owner: 'acme', repo: 'my-blocks', branch: 'main' } },
-            ];
-
-            openBlockLibrariesStep({ customBlockLibraries: existingLibraries });
-
-            const urlInput = screen.getByPlaceholderText('https://github.com/owner/repo');
-            fireEvent.change(urlInput, { target: { value: 'https://github.com/acme/my-blocks' } });
-
-            const nameInput = screen.getByPlaceholderText('Library Name');
-            fireEvent.change(nameInput, { target: { value: 'Duplicate' } });
-
-            const addButton = screen.getByText('Add');
-            fireEvent.click(addButton);
-
-            expect(screen.getByText('This repository is already added')).toBeInTheDocument();
-        });
-
-        it('should disable Add button when name is empty', () => {
-            openBlockLibrariesStep();
-
-            const urlInput = screen.getByPlaceholderText('https://github.com/owner/repo');
-            fireEvent.change(urlInput, { target: { value: 'https://github.com/acme/my-blocks' } });
-
-            // Clear the auto-filled name
-            const nameInput = screen.getByPlaceholderText('Library Name');
-            fireEvent.change(nameInput, { target: { value: '' } });
-
-            const addButton = screen.getByText('Add');
-            expect(addButton).toBeDisabled();
-        });
-
-        it('should remove custom library when remove button is clicked', () => {
-            const existingLibraries: CustomBlockLibrary[] = [
-                { name: 'My Blocks', source: { owner: 'acme', repo: 'my-blocks', branch: 'main' } },
-            ];
-
+        it('should toggle individual custom library on check/uncheck', () => {
             const { onCustomBlockLibrariesChange } = openBlockLibrariesStep({
-                customBlockLibraries: existingLibraries,
+                customBlockLibraryDefaults: mockCustomDefaults,
+                customBlockLibraries: [mockCustomDefaults[0]],
             });
 
-            // Find the remove button for the existing library
-            const removeButton = screen.getByTestId('remove-custom-library-0');
-            fireEvent.click(removeButton);
+            // Find the checkbox for Acme Blocks inside the modal (may appear in card too)
+            const acmeElements = screen.getAllByText('Acme Blocks');
+            // Get the one inside a label (checkbox) - the modal checkbox
+            const acmeInCheckbox = acmeElements.find(el => el.closest('label'));
+            expect(acmeInCheckbox).toBeTruthy();
+            fireEvent.click(acmeInCheckbox!.closest('label')!);
 
+            // Should have been called with the library removed
             expect(onCustomBlockLibrariesChange).toHaveBeenCalledWith([]);
         });
 
-        it('should pass custom libraries through on modal done', () => {
-            const existingLibraries: CustomBlockLibrary[] = [
-                { name: 'My Blocks', source: { owner: 'acme', repo: 'my-blocks', branch: 'main' } },
-            ];
-
-            const { onCustomBlockLibrariesChange } = openBlockLibrariesStep({
-                customBlockLibraries: existingLibraries,
+        it('should pre-select custom defaults when modal opens with no existing selections', () => {
+            openBlockLibrariesStep({
+                customBlockLibraryDefaults: mockCustomDefaults,
+                // No customBlockLibraries passed = empty, should fall back to defaults
             });
 
-            // Click "Done" on the block-libraries step
+            // Both defaults should be pre-checked (names visible as checked checkboxes)
+            const acmeText = screen.getByText('Acme Blocks');
+            const betaText = screen.getByText('Beta Lib');
+            expect(acmeText).toBeInTheDocument();
+            expect(betaText).toBeInTheDocument();
+
+            // The checkboxes should be selected (defaults used as initial value)
+            // Find the checkbox inputs within the custom section
+            const acmeCheckbox = acmeText.closest('label')?.querySelector('input[type="checkbox"]');
+            const betaCheckbox = betaText.closest('label')?.querySelector('input[type="checkbox"]');
+            expect(acmeCheckbox).toBeChecked();
+            expect(betaCheckbox).toBeChecked();
+        });
+
+        it('should sync selected custom libraries to parent on Done', () => {
+            const { onCustomBlockLibrariesChange } = openBlockLibrariesStep({
+                customBlockLibraryDefaults: mockCustomDefaults,
+                // Defaults will be pre-selected (fallback behavior)
+            });
+
+            // Click Done on the block-libraries step
             const doneButton = screen.getByText('Done');
             fireEvent.click(doneButton);
 
             // Custom libraries should be synced to parent
-            expect(onCustomBlockLibrariesChange).toHaveBeenCalled();
+            expect(onCustomBlockLibrariesChange).toHaveBeenCalledWith(mockCustomDefaults);
         });
     });
 });

@@ -5,7 +5,7 @@
  * that don't depend on other type files, breaking circular dependencies.
  */
 
-import type { CustomBlockLibrary } from './blockLibraries';
+import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
 import type { ServiceDefinition } from './components';
 
 /**
@@ -44,6 +44,8 @@ export interface Project {
     selectedBlockLibraries?: string[];
     /** Custom block libraries added by URL */
     customBlockLibraries?: CustomBlockLibrary[];
+    /** Installed block library snapshot — source commit SHA captured at install time */
+    installedBlockLibraries?: InstalledBlockLibrary[];
     // Mesh staleness summary for card grid display
     meshStatusSummary?: 'deployed' | 'stale' | 'config-incomplete' | 'update-declined' | 'not-deployed' | 'error' | 'unknown';
     // API Mesh deployment state (tracks changes that require redeployment)
