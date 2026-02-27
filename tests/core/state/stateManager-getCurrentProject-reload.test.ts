@@ -279,7 +279,7 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
                 componentVersions: {},
                 selectedPackage: 'luma',
                 selectedStack: 'headless-paas',
-                selectedAddons: ['demo-inspector'],
+                selectedAddons: ['adobe-commerce-aco'],
             };
 
             (fs.readFile as jest.Mock)
@@ -297,7 +297,7 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
             expect(result).not.toBeNull();
             expect(result?.selectedPackage).toBe('luma');
             expect(result?.selectedStack).toBe('headless-paas');
-            expect(result?.selectedAddons).toEqual(['demo-inspector']);
+            expect(result?.selectedAddons).toEqual(['adobe-commerce-aco']);
         });
 
         it('should return undefined for missing fields if manifest lacks them', async () => {

@@ -188,7 +188,7 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
             expect(screen.queryByRole('checkbox', { name: /mesh/i })).not.toBeInTheDocument();
         });
 
-        it('should render Demo Inspector checkbox when frontend selected', () => {
+        it('should NOT render Demo Inspector checkbox (removed from extension)', () => {
             // Given: Component rendered with frontend selected
             const stateWithFrontend = createStateWithFrontend();
             render(
@@ -202,8 +202,8 @@ describe('ComponentSelectionStep - Simplified (Sections Removed)', () => {
                 </Provider>
             );
 
-            // Then: Demo Inspector checkbox should be present
-            expect(screen.getByRole('checkbox', { name: /Demo Inspector/i })).toBeInTheDocument();
+            // Then: Demo Inspector checkbox should NOT be present (removed)
+            expect(screen.queryByRole('checkbox', { name: /Demo Inspector/i })).not.toBeInTheDocument();
         });
     });
 

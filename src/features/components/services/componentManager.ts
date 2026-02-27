@@ -167,8 +167,7 @@ export class ComponentManager {
         componentInstance.status = 'installing';
         componentInstance.version = options.version || componentDef.source.version || 'latest';
 
-        // For npm packages, we typically install them into a specific component
-        // (e.g., demo-inspector gets installed into the frontend component)
+        // For npm packages, we install them into a specific component
         // This is a reference/metadata entry, actual installation happens during frontend setup
 
         componentInstance.status = 'ready';

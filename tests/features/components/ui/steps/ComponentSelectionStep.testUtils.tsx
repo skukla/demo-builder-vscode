@@ -43,7 +43,6 @@ export const mockComponentsData = {
     ],
     dependencies: [
         { id: 'eds-commerce-mesh', name: 'EDS API Mesh', description: 'API Mesh for EDS', subType: 'mesh' },
-        { id: 'demo-inspector', name: 'Demo Inspector', description: 'Visual inspector overlay' }
     ],
     // Services registry for mapping IDs to display names
     services: {

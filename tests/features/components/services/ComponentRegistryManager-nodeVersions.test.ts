@@ -42,8 +42,8 @@ describe('Component Registry Manager - Node Version Resolution', () => {
         });
 
         it('should return empty for dependencies without nodeVersion', async () => {
-            // Given: demo-inspector is a browser overlay without Node requirement
-            const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas', ['demo-inspector']);
+            // Given: test-tool is a browser overlay without Node requirement
+            const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas', ['test-tool']);
 
             // Then: No Node versions required
             expect(versions.size).toBe(0);
@@ -110,8 +110,8 @@ describe('Component Registry Manager - Node Version Resolution', () => {
             mockLoader.load.mockResolvedValue({
                 ...mockRawRegistry,
                 dependencies: {
-                    'demo-inspector': {
-                        ...mockRawRegistry.dependencies!['demo-inspector'],
+                    'test-tool': {
+                        ...mockRawRegistry.dependencies!['test-tool'],
                         configuration: { nodeVersion: '20' },
                     },
                     'another-dep': {
@@ -124,7 +124,7 @@ describe('Component Registry Manager - Node Version Resolution', () => {
                 },
                 selectionGroups: {
                     ...mockRawRegistry.selectionGroups,
-                    dependencies: ['demo-inspector', 'another-dep'],
+                    dependencies: ['test-tool', 'another-dep'],
                 },
             });
 
@@ -132,11 +132,11 @@ describe('Component Registry Manager - Node Version Resolution', () => {
             const mapping = await manager.getNodeVersionToComponentMapping(
                 undefined,
                 undefined,
-                ['demo-inspector', 'another-dep']
+                ['test-tool', 'another-dep']
             );
 
             // Then: Both component names should be listed for Node 20
-            expect(mapping['20']).toBe('Demo Inspector, Another Dependency');
+            expect(mapping['20']).toBe('Test Tool, Another Dependency');
         });
 
         it('should keep separate versions distinct', async () => {

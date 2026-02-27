@@ -10,7 +10,7 @@
  */
 
 import type { ComponentRegistryManager } from './ComponentRegistryManager';
-import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
+import { isMeshComponentId } from '@/core/constants';
 import type { TransformedComponentDefinition } from '@/types';
 import { ProjectConfig } from '@/types/handlers';
 
@@ -187,10 +187,6 @@ export class DependencyResolver {
         for (const dep of dependencies) {
             if (isMeshComponentId(dep.id) && dep.configuration?.providesEndpoint) {
                 envVars.MESH_ENDPOINT = '${MESH_ENDPOINT}';
-            }
-
-            if (dep.id === COMPONENT_IDS.DEMO_INSPECTOR) {
-                envVars.DEMO_INSPECTOR_ENABLED = dep.configuration?.defaultEnabled ? 'true' : 'false';
             }
 
             // Add any dependency-specific env vars

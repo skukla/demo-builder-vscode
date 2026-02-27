@@ -71,7 +71,7 @@
 
 **Reading Time**: 10 minutes
 
-**Related**: `src/utils/componentManager.ts`, `templates/components.json`
+**Related**: `src/features/components/services/componentManager.ts`, `src/features/components/config/components.json`
 
 ---
 
@@ -176,7 +176,7 @@
 ### Common Questions
 
 **Q: Where do I find the wizard step definitions?**  
-A: `templates/wizard-steps.json` (config) and `src/webviews/components/steps/` (React components)
+A: `src/features/project-creation/config/wizard-steps.json` (config) and feature-specific `ui/steps/` directories (React components)
 
 **Q: How does Adobe authentication work?**  
 A: See [`adobe-setup.md`](adobe-setup.md) for the flow, and `src/utils/adobeAuthManager.ts` for implementation
@@ -202,7 +202,7 @@ A: See [`adobe-setup.md`](adobe-setup.md) and `docs/patterns/selection-pattern.m
 - **`src/commands/CLAUDE.md`** - Command implementations
 - **`src/utils/CLAUDE.md`** - Utility functions and systems
 - **`src/webviews/CLAUDE.md`** - React UI components
-- **`templates/CLAUDE.md`** - Configuration file formats
+- **`src/features/*/config/`** - Configuration files (per feature)
 
 ### System Documentation
 - **`docs/systems/prerequisites-system.md`** - Prerequisite checking and installation
@@ -221,13 +221,13 @@ A: See [`adobe-setup.md`](adobe-setup.md) and `docs/patterns/selection-pattern.m
 
 ### Document Status
 
-| Document | Status | Last Updated | Next Review |
-|----------|--------|--------------|-------------|
-| overview.md | ✅ Current | Jan 2025 | Apr 2025 |
-| adobe-setup.md | ✅ Current | Jan 2024 | Apr 2025 |
-| component-system.md | ⚠️ Needs minor updates | Oct 2024 | Feb 2025 |
-| graph-based-dependencies.md | ✅ Current | Oct 2024 | Jul 2025 |
-| working-directory-and-node-version.md | ✅ Current | Dec 2024 | Jun 2025 |
+| Document | Status | Last Updated |
+|----------|--------|--------------|
+| overview.md | ✅ Current | Feb 2026 |
+| adobe-setup.md | ✅ Current | Jan 2024 |
+| component-system.md | ✅ Current | Feb 2026 |
+| graph-based-dependencies.md | ✅ Current | Oct 2024 |
+| working-directory-and-node-version.md | ✅ Current | Dec 2024 |
 
 ### Update Process
 
@@ -248,6 +248,6 @@ Found outdated information? Please:
 
 ---
 
-**Index Last Updated**: January 2025  
+**Index Last Updated**: February 2026
 **Index Maintained By**: Development Team
 

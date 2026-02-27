@@ -39,8 +39,8 @@ The Prerequisites System is a comprehensive, configuration-driven framework for 
 
 ### Key Files
 
-- **`templates/prerequisites.json`** - Main configuration file
-- **`templates/prerequisites.schema.json`** - JSON schema for validation
+- **`src/features/prerequisites/config/prerequisites.json`** - Main configuration file
+- **`src/features/prerequisites/config/prerequisites.schema.json`** - JSON schema for validation
 - **`src/utils/prerequisitesManager.ts`** - Core prerequisite management
 - **`src/utils/progressUnifier.ts`** - Unified progress tracking
 - **`src/commands/createProjectWebview.ts`** - Installation orchestration
@@ -239,7 +239,7 @@ interface UnifiedProgress {
 
 #### Step 1: Define the Prerequisite
 
-Add to `templates/prerequisites.json`:
+Add to `src/features/prerequisites/config/prerequisites.json`:
 
 ```json
 {

@@ -11,7 +11,6 @@ Create and manage Adobe Commerce demos with ease directly from Visual Studio Cod
 - 🎯 **Guided Setup** - Step-by-step wizard for configuration
 - 🔧 **Prerequisites Management** - Automatic detection and installation guidance
 - ☁️ **API Mesh Integration** - Deploy and manage Adobe API Mesh
-- 🎨 **Demo Inspector** - Optional debugging overlay for demos
 
 ## Requirements
 

@@ -1,7 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
-import { COMPONENT_IDS } from '@/core/constants';
 import { Project } from '@/types';
 import { getComponentInstancesByType } from '@/types/typeGuards';
 
@@ -14,20 +13,14 @@ export class ConfigureCommand extends BaseCommand {
                 return;
             }
 
-            const inspectorComponent = project.componentInstances?.[COMPONENT_IDS.DEMO_INSPECTOR];
             // Find frontend component dynamically by type (not hardcoded ID)
             const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
-            
+
             const options = [
                 {
                     label: '$(edit) Edit Environment Variables',
                     description: 'Open .env file',
                     value: 'env',
-                },
-                {
-                    label: '$(eye) Toggle Demo Inspector',
-                    description: `Currently: ${inspectorComponent ? 'Enabled' : 'Disabled'}`,
-                    value: 'inspector',
                 },
                 {
                     label: '$(cloud) Update Mesh Configuration',
@@ -58,9 +51,6 @@ export class ConfigureCommand extends BaseCommand {
                 case 'env':
                     await this.editEnvironmentFile(project);
                     break;
-                case 'inspector':
-                    await this.toggleInspector(project);
-                    break;
                 case 'mesh':
                     await this.updateMesh(project);
                     break;
@@ -81,39 +71,6 @@ export class ConfigureCommand extends BaseCommand {
         const envPath = path.join(project.path, '.env');
         const document = await vscode.workspace.openTextDocument(envPath);
         await vscode.window.showTextDocument(document);
-    }
-
-    private async toggleInspector(project: Project): Promise<void> {
-        const inspectorComponent = project.componentInstances?.[COMPONENT_IDS.DEMO_INSPECTOR];
-        if (!inspectorComponent) {
-            await this.showWarning('Inspector component not found in project');
-            return;
-        }
-
-        // Toggle the inspector component status
-        const newStatus = inspectorComponent.status === 'running' ? 'stopped' : 'running';
-        inspectorComponent.status = newStatus;
-        await this.stateManager.saveProject(project);
-
-        const status = newStatus === 'running' ? 'enabled' : 'disabled';
-        await this.showInfo(`Demo Inspector ${status}`);
-
-        // Find frontend component dynamically by type (not hardcoded ID)
-        const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
-        if (frontendComponent?.status === 'running') {
-            const selection = await vscode.window.showInformationMessage(
-                'Restart the demo to apply changes',
-                'Restart Now',
-            );
-            if (selection === 'Restart Now') {
-                try {
-                    await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                    await vscode.commands.executeCommand('demoBuilder.startDemo');
-                } catch (error) {
-                    await this.showError(`Failed to restart demo: ${error instanceof Error ? error.message : 'Unknown error'}`);
-                }
-            }
-        }
     }
 
     private async updateMesh(_project: Project): Promise<void> {

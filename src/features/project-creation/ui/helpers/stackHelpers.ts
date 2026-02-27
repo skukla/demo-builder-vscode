@@ -41,7 +41,7 @@ export function getStackComponentIds(stack: Stack): string[] {
  * // Switching from headless-paas to headless-accs
  * // - frontend: "headless" → "headless" → KEEP config
  * // - backend: "adobe-commerce-paas" → "adobe-commerce-accs" → CLEAR config
- * // - dependencies: ["commerce-mesh", "demo-inspector"] → same → KEEP configs
+ * // - dependencies: ["commerce-mesh"] → same → KEEP configs
  */
 export function filterComponentConfigsForStackChange<T extends Record<string, unknown>>(
     oldStack: Stack | undefined,

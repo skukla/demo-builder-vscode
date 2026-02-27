@@ -1,7 +1,7 @@
 # Adobe Demo Builder - Architecture Overview
 
-**Last Updated**: January 2025  
-**Version**: 1.6.0  
+**Last Updated**: February 2026
+**Version**: 1.6.0
 **Status**: Current Production Architecture
 
 ## Executive Summary
@@ -361,10 +361,6 @@ demo-builder-vscode/
 │   │   ├── dashboard/               # Project dashboard
 │   │   └── components/              # Shared components
 │   └── types/                    # TypeScript definitions
-├── templates/                    # Configuration templates
-│   ├── components.json              # Component registry
-│   ├── prerequisites.json           # Prerequisites
-│   └── wizard-steps.json            # Wizard config
 ├── docs/                         # Documentation
 │   ├── architecture/                # Architecture docs
 │   ├── patterns/                    # Design patterns
@@ -476,6 +472,6 @@ For detailed information about specific areas:
 ---
 
 **Document Status**: Current and maintained  
-**Last Review**: January 2025  
-**Next Review**: April 2025 or after major architectural changes
+**Last Review**: February 2026
+**Next Review**: May 2026 or after major architectural changes
 

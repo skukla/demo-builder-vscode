@@ -36,9 +36,9 @@ export interface EnvVarDefinition {
  * SubmoduleConfig - Git submodule configuration within a component
  */
 export interface SubmoduleConfig {
-    /** Relative path within parent component (e.g., "packages/demo-inspector") */
+    /** Relative path within parent component (e.g., "packages/my-addon") */
     path: string;
-    /** GitHub repository in owner/repo format (e.g., "skukla/demo-inspector") */
+    /** GitHub repository in owner/repo format (e.g., "owner/repo-name") */
     repository: string;
 }
 
@@ -96,7 +96,7 @@ export interface RawComponentDefinition {
     id: string;
     name: string;
     type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder';
-    subType?: 'mesh' | 'inspector' | 'utility' | 'service';
+    subType?: 'mesh' | 'utility' | 'service';
     description?: string;
     icon?: string | { light: string; dark: string };
     source?: {
@@ -189,7 +189,7 @@ export interface RawComponentRegistry {
     backends?: Record<string, RawComponentDefinition>;
     /** v3.0.0: Mesh components (e.g., eds-commerce-mesh, headless-commerce-mesh) */
     mesh?: Record<string, RawComponentDefinition>;
-    /** v3.0.0: Dependencies (e.g., demo-inspector) */
+    /** v3.0.0: Dependencies */
     dependencies?: Record<string, RawComponentDefinition>;
     /** v3.0.0: App Builder apps (e.g., integration-service) */
     appBuilderApps?: Record<string, RawComponentDefinition>;

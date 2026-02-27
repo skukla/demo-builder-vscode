@@ -198,7 +198,6 @@ class ComponentFolder extends vscode.TreeItem {
             // Fallback: use subType-based icon if no custom icon
             const iconMap: Record<string, string> = {
                 'mesh': 'server-process',
-                'inspector': 'eye',
                 'service': 'link',
                 'utility': 'tools',
             };

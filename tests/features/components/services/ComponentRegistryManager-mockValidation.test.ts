@@ -96,8 +96,8 @@ describe('Mock Structure Validation', () => {
         });
 
         it('should NOT have nodeVersion for browser-only components', () => {
-            // demo-inspector is a browser overlay, not a Node.js tool
-            expect(mockRawRegistry.dependencies?.['demo-inspector']?.configuration?.nodeVersion).toBeUndefined();
+            // test-tool is a browser overlay, not a Node.js tool
+            expect(mockRawRegistry.dependencies?.['test-tool']?.configuration?.nodeVersion).toBeUndefined();
         });
 
         it('should NOT have nodeVersion for remote services', () => {

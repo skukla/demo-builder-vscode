@@ -140,24 +140,12 @@ describe('demoPackageLoader', () => {
             expect(storefront?.source.gitOptions).toBeDefined();
         });
 
-        it('should return storefront with submodules when defined', async () => {
+        it('should return storefront without demo-inspector submodules (removed)', async () => {
             const storefront = await getStorefrontForStack('citisignal', 'headless-paas');
 
             expect(storefront).toBeDefined();
-            expect(storefront?.submodules).toBeDefined();
-            expect(storefront?.submodules?.['demo-inspector']).toBeDefined();
-            expect(storefront?.submodules?.['demo-inspector'].path).toBe('src/demo-inspector-universal');
-            expect(storefront?.submodules?.['demo-inspector'].repository).toBe('skukla/demo-inspector-universal');
-        });
-
-        it('should return storefront with submodules for EDS storefronts', async () => {
-            const storefront = await getStorefrontForStack('citisignal', 'eds-paas');
-
-            expect(storefront).toBeDefined();
-            expect(storefront?.submodules).toBeDefined();
-            expect(storefront?.submodules?.['demo-inspector']).toBeDefined();
-            expect(storefront?.submodules?.['demo-inspector'].path).toBe('demo-inspector');
-            expect(storefront?.submodules?.['demo-inspector'].repository).toBe('skukla/demo-inspector-universal');
+            // demo-inspector submodules were removed
+            expect(storefront?.submodules?.['demo-inspector']).toBeUndefined();
         });
 
         it('should return isle5 eds-paas storefront', async () => {
@@ -266,7 +254,7 @@ describe('demoPackageLoader', () => {
     });
 
     describe('getAddonSource (global, from stacks.json)', () => {
-        it('should return undefined for addon without source (demo-inspector)', () => {
+        it('should return undefined for nonexistent addon (demo-inspector removed)', () => {
             const source = getAddonSource('demo-inspector');
 
             expect(source).toBeUndefined();
@@ -279,7 +267,7 @@ describe('demoPackageLoader', () => {
         });
 
         it('should be synchronous (not return a Promise)', () => {
-            const result = getAddonSource('demo-inspector');
+            const result = getAddonSource('nonexistent-addon');
 
             // If it were async, result would be a Promise object
             expect(result).not.toBeInstanceOf(Promise);

@@ -130,12 +130,12 @@ describe('Component Registry Manager - Security Validation', () => {
 
         it('should validate nodeVersion in dependencies', async () => {
             // Given: Dependency with malicious version
-            const maliciousRegistry = createMaliciousRegistry('dependencies.demo-inspector', '20; rm -rf /');
+            const maliciousRegistry = createMaliciousRegistry('dependencies.test-tool', '20; rm -rf /');
             mockLoader.load.mockResolvedValue(maliciousRegistry);
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getRequiredNodeVersions(undefined, undefined, ['demo-inspector'])
+                manager.getRequiredNodeVersions(undefined, undefined, ['test-tool'])
             ).rejects.toThrow(/Invalid Node/);
         });
 
@@ -187,12 +187,12 @@ describe('Component Registry Manager - Security Validation', () => {
 
         it('should validate versions in dependencies mapping', async () => {
             // Given: Dependency with malicious version
-            const maliciousRegistry = createMaliciousRegistry('dependencies.demo-inspector', '20; rm -rf /');
+            const maliciousRegistry = createMaliciousRegistry('dependencies.test-tool', '20; rm -rf /');
             mockLoader.load.mockResolvedValue(maliciousRegistry);
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getNodeVersionToComponentMapping(undefined, undefined, ['demo-inspector'])
+                manager.getNodeVersionToComponentMapping(undefined, undefined, ['test-tool'])
             ).rejects.toThrow(/Invalid Node/);
         });
 

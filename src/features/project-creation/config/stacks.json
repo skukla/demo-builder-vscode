@@ -2,10 +2,6 @@
   "$schema": "./stacks.schema.json",
   "version": "1.0.0",
   "addonDefinitions": {
-    "demo-inspector": {
-      "name": "Demo Inspector",
-      "description": "Interactive overlay for exploring demo components and features"
-    },
     "adobe-commerce-aco": {
       "name": "Adobe Commerce Optimizer",
       "description": "Catalog optimization service for enhanced product discovery"
@@ -20,9 +16,7 @@
       "frontend": "headless",
       "backend": "adobe-commerce-paas",
       "dependencies": ["headless-commerce-mesh"],
-      "optionalAddons": [
-        { "id": "demo-inspector", "default": true }
-      ],
+      "optionalAddons": [],
       "features": ["Server-side rendering", "API Mesh integration", "Full customization"]
     },
     {
@@ -33,9 +27,7 @@
       "frontend": "headless",
       "backend": "adobe-commerce-accs",
       "dependencies": ["headless-commerce-mesh"],
-      "optionalAddons": [
-        { "id": "demo-inspector", "default": true }
-      ],
+      "optionalAddons": [],
       "features": ["Server-side rendering", "API Mesh integration", "Managed backend"]
     },
     {
@@ -47,7 +39,6 @@
       "backend": "adobe-commerce-paas",
       "dependencies": ["eds-commerce-mesh"],
       "optionalAddons": [
-        { "id": "demo-inspector", "default": true },
         { "id": "adobe-commerce-aco" }
       ],
       "features": ["Ultra-fast delivery", "DA.live content", "Self-managed backend"],
@@ -63,7 +54,6 @@
       "backend": "adobe-commerce-accs",
       "dependencies": ["eds-accs-mesh"],
       "optionalAddons": [
-        { "id": "demo-inspector", "default": true },
         { "id": "adobe-commerce-aco" }
       ],
       "features": ["Ultra-fast delivery", "DA.live content", "Managed backend"],

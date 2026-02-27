@@ -154,13 +154,13 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
         });
 
         it('should validate nodeVersion in dependencies', async () => {
-            // Given: Dependency with malicious version (demo-inspector has no nodeVersion, add one)
+            // Given: Dependency with malicious version (test-tool has no nodeVersion, add one)
             const maliciousRegistry = {
                 ...mockRawRegistry,
                 dependencies: {
                     ...mockRawRegistry.dependencies,
-                    'demo-inspector': {
-                        ...mockRawRegistry.dependencies!['demo-inspector'],
+                    'test-tool': {
+                        ...mockRawRegistry.dependencies!['test-tool'],
                         configuration: {
                             nodeVersion: '20; rm -rf /'
                         }
@@ -171,7 +171,7 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getRequiredNodeVersions(undefined, undefined, ['demo-inspector'])
+                manager.getRequiredNodeVersions(undefined, undefined, ['test-tool'])
             ).rejects.toThrow(/Invalid Node/);
         });
 
@@ -222,13 +222,13 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
         });
 
         it('should validate versions in dependencies mapping', async () => {
-            // Given: Dependency with malicious version (demo-inspector has no nodeVersion, add one)
+            // Given: Dependency with malicious version (test-tool has no nodeVersion, add one)
             const maliciousRegistry = {
                 ...mockRawRegistry,
                 dependencies: {
                     ...mockRawRegistry.dependencies,
-                    'demo-inspector': {
-                        ...mockRawRegistry.dependencies!['demo-inspector'],
+                    'test-tool': {
+                        ...mockRawRegistry.dependencies!['test-tool'],
                         configuration: {
                             nodeVersion: '20; rm -rf /'
                         }
@@ -239,7 +239,7 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getNodeVersionToComponentMapping(undefined, undefined, ['demo-inspector'])
+                manager.getNodeVersionToComponentMapping(undefined, undefined, ['test-tool'])
             ).rejects.toThrow(/Invalid Node/);
         });
 

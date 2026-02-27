@@ -35,26 +35,22 @@ function resolveServices(
     return { missingServices };
 }
 
-/** Component option for required dependencies or services */
-interface ComponentOption {
-    id: string;
-    name: string;
-}
-
 interface ComponentsData {
     backends?: RawComponentDefinition[];
     addons?: RawComponentDefinition[];
     services?: Record<string, { id: string; name: string }>;
 }
 
+/** Component option for services displayed in UI */
+interface ComponentOption {
+    id: string;
+    name: string;
+}
+
 interface UseComponentSelectionProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
     setCanProceed: (canProceed: boolean) => void;
-    /** Required frontend dependencies (always selected, locked) */
-    frontendDependencies: ComponentOption[];
-    /** Optional frontend addons (pre-selected by default, user can uncheck) */
-    frontendAddons: ComponentOption[];
     /** Components data from registry (for service resolution) */
     componentsData?: ComponentsData;
     /** Selected addons from state (for service resolution) */
@@ -66,11 +62,9 @@ interface UseComponentSelectionReturn {
     setSelectedFrontend: (value: string) => void;
     selectedBackend: string;
     setSelectedBackend: (value: string) => void;
-    selectedDependencies: Set<string>;
     selectedServices: Set<string>;
     selectedIntegrations: Set<string>;
     selectedAppBuilder: Set<string>;
-    handleDependencyToggle: (id: string, selected: boolean) => void;
     handleServiceToggle: (id: string, selected: boolean) => void;
     handleIntegrationToggle: (id: string, selected: boolean) => void;
     handleAppBuilderToggle: (id: string, selected: boolean) => void;
@@ -85,8 +79,6 @@ export function useComponentSelection({
     state,
     updateState,
     setCanProceed,
-    frontendDependencies,
-    frontendAddons,
     componentsData,
     selectedAddons,
 }: UseComponentSelectionProps): UseComponentSelectionReturn {
@@ -98,7 +90,7 @@ export function useComponentSelection({
     const [selectedBackend, setSelectedBackend] = useState<string>(state.components?.backend || '');
 
     // Use useSetToggle for multi-select state - provides Set + toggle handler in one
-    const [selectedDependencies, handleDependencyToggle, setSelectedDependencies] = useSetToggle<string>(
+    const [selectedDependencies] = useSetToggle<string>(
         state.components?.dependencies || [],
     );
     const [selectedServices, handleServiceToggle, setSelectedServices] = useSetToggle<string>(
@@ -148,22 +140,6 @@ export function useComponentSelection({
     const debouncedServices = useDebouncedValue(selectedServices, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
     const debouncedIntegrations = useDebouncedValue(selectedIntegrations, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
     const debouncedAppBuilder = useDebouncedValue(selectedAppBuilder, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
-
-    // Initialize dependencies and addons when frontend changes
-    useEffect(() => {
-        if (selectedFrontend) {
-            // Add all required dependencies (locked) + all addons (pre-selected but optional)
-            const depsToAdd = [
-                ...frontendDependencies.map(d => d.id),
-                ...frontendAddons.map(a => a.id),
-            ];
-            setSelectedDependencies(prev => {
-                const newSet = new Set(prev);
-                depsToAdd.forEach(dep => newSet.add(dep));
-                return newSet;
-            });
-        }
-    }, [selectedFrontend, frontendDependencies, frontendAddons, setSelectedDependencies]);
 
     // Initialize required services when backend changes or addons change
     // Services are now dynamically determined based on what's missing
@@ -222,11 +198,9 @@ export function useComponentSelection({
         setSelectedFrontend,
         selectedBackend,
         setSelectedBackend,
-        selectedDependencies,
         selectedServices,
         selectedIntegrations,
         selectedAppBuilder,
-        handleDependencyToggle,
         handleServiceToggle,
         handleIntegrationToggle,
         handleAppBuilderToggle,

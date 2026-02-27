@@ -120,7 +120,7 @@ describe('ComponentSelectionStep - Dependencies', () => {
     });
 
     describe('Optional Components', () => {
-        it('should allow toggling optional dependencies', () => {
+        it('should NOT render external integrations (simplified UI)', () => {
             const stateWithFrontend = createStateWithFrontend();
 
             render(
@@ -138,8 +138,9 @@ describe('ComponentSelectionStep - Dependencies', () => {
                 jest.runAllTimers();
             });
 
-            const demoInspectorCheckbox = screen.getByRole('checkbox', { name: /Demo Inspector/i });
-            expect(demoInspectorCheckbox).not.toBeDisabled();
+            // Demo Inspector was removed from the extension
+            const demoInspectorCheckbox = screen.queryByRole('checkbox', { name: /Demo Inspector/i });
+            expect(demoInspectorCheckbox).not.toBeInTheDocument();
         });
 
         it('should NOT render external integrations (simplified UI)', () => {

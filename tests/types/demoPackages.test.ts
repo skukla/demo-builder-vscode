@@ -76,25 +76,25 @@ describe('Submodule type', () => {
     it('should require path and repository fields', () => {
         // Given: A submodule definition
         const submodule: Submodule = {
-            path: 'src/demo-inspector',
-            repository: 'skukla/demo-inspector',
+            path: 'src/custom-module',
+            repository: 'skukla/custom-module',
         };
 
         // Then: all fields should be accessible
-        expect(submodule.path).toBe('src/demo-inspector');
-        expect(submodule.repository).toBe('skukla/demo-inspector');
+        expect(submodule.path).toBe('src/custom-module');
+        expect(submodule.repository).toBe('skukla/custom-module');
     });
 
     it('should match actual demo-packages.json submodule structure', () => {
-        // Given: Submodule matching demo-inspector from headless-paas storefront
+        // Given: Submodule matching custom-module from headless-paas storefront
         const submodule: Submodule = {
-            path: 'src/demo-inspector',
-            repository: 'skukla/demo-inspector',
+            path: 'src/custom-module',
+            repository: 'skukla/custom-module',
         };
 
         // Then: fields match expected values
-        expect(submodule.path).toBe('src/demo-inspector');
-        expect(submodule.repository).toBe('skukla/demo-inspector');
+        expect(submodule.path).toBe('src/custom-module');
+        expect(submodule.repository).toBe('skukla/custom-module');
     });
 });
 
@@ -133,9 +133,9 @@ describe('Storefront type', () => {
                 gitOptions: { shallow: false, recursive: false },
             },
             submodules: {
-                'demo-inspector': {
-                    path: 'src/demo-inspector',
-                    repository: 'skukla/demo-inspector',
+                'custom-module': {
+                    path: 'src/custom-module',
+                    repository: 'skukla/custom-module',
                 },
             },
         };
@@ -144,7 +144,7 @@ describe('Storefront type', () => {
         expect(storefront.icon).toBe('nextjs');
         expect(storefront.featured).toBe(true);
         expect(storefront.tags).toContain('headless');
-        expect(storefront.submodules?.['demo-inspector']?.path).toBe('src/demo-inspector');
+        expect(storefront.submodules?.['custom-module']?.path).toBe('src/custom-module');
     });
 
     it('should accept structure matching headless-paas storefront pattern', () => {
@@ -165,9 +165,9 @@ describe('Storefront type', () => {
                 },
             },
             submodules: {
-                'demo-inspector': {
-                    path: 'src/demo-inspector',
-                    repository: 'skukla/demo-inspector',
+                'custom-module': {
+                    path: 'src/custom-module',
+                    repository: 'skukla/custom-module',
                 },
             },
         };
@@ -175,7 +175,7 @@ describe('Storefront type', () => {
         // Then: all fields should match expected values
         expect(storefront.name).toBe('CitiSignal Headless');
         expect(storefront.source.branch).toBe('master');
-        expect(storefront.submodules?.['demo-inspector']).toBeDefined();
+        expect(storefront.submodules?.['custom-module']).toBeDefined();
     });
 });
 
@@ -225,13 +225,13 @@ describe('Addons type', () => {
     it('should accept mixed required, optional, and excluded addons', () => {
         // Given: Mix of all addon config string values
         const addons: Addons = {
-            'demo-inspector': 'required',
+            'adobe-commerce-aco': 'required',
             'commerce-block-collection': 'optional',
             'some-addon': 'excluded',
         };
 
         // Then: all string forms should be accessible
-        expect(addons['demo-inspector']).toBe('required');
+        expect(addons['adobe-commerce-aco']).toBe('required');
         expect(addons['commerce-block-collection']).toBe('optional');
         expect(addons['some-addon']).toBe('excluded');
     });

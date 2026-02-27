@@ -29,7 +29,7 @@ export const mockRawRegistry: RawComponentRegistry = {
     selectionGroups: {
         frontends: ['eds', 'headless'],
         backends: ['adobe-commerce-paas'],
-        dependencies: ['demo-inspector'],
+        dependencies: ['test-tool'],
         integrations: ['experience-platform'],
         appBuilderApps: ['integration-service'],
     },
@@ -41,7 +41,7 @@ export const mockRawRegistry: RawComponentRegistry = {
             type: 'frontend',
             compatibleBackends: ['adobe-commerce-paas'],
             dependencies: {
-                required: ['demo-inspector'],
+                required: ['test-tool'],
                 optional: [],
             },
             configuration: {
@@ -85,13 +85,13 @@ export const mockRawRegistry: RawComponentRegistry = {
         },
     },
     dependencies: {
-        'demo-inspector': {
-            id: 'demo-inspector',
-            name: 'Demo Inspector',
-            description: 'Interactive inspector overlay',
+        'test-tool': {
+            id: 'test-tool',
+            name: 'Test Tool',
+            description: 'Generic test dependency tool',
             type: 'dependency',
-            subType: 'inspector',
-            // No nodeVersion - demo-inspector is a browser overlay, not a Node.js tool
+            subType: 'tool',
+            // No nodeVersion - test-tool is a browser overlay, not a Node.js tool
         },
     },
     appBuilderApps: {

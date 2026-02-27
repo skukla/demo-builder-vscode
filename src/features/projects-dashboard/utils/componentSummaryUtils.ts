@@ -23,7 +23,6 @@ const COMPONENT_DISPLAY_NAMES: Record<string, string> = {
     // Mesh & Dependencies
     [COMPONENT_IDS.EDS_COMMERCE_MESH]: 'API Mesh',
     [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: 'API Mesh',
-    [COMPONENT_IDS.DEMO_INSPECTOR]: 'Inspector',
 };
 
 /**

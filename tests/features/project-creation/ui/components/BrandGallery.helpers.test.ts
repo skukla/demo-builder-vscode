@@ -245,7 +245,7 @@ describe('brandGalleryHelpers', () => {
     describe('filterAddonsByPackage (blacklist logic)', () => {
         const stackAddons: OptionalAddon[] = [
             { id: 'commerce-block-collection' },
-            { id: 'demo-inspector' },
+            { id: 'custom-addon' },
             { id: 'adobe-commerce-aco' },
         ];
 
@@ -266,7 +266,7 @@ describe('brandGalleryHelpers', () => {
             expect(result).toHaveLength(3);
             expect(result.map(a => a.id)).toEqual([
                 'commerce-block-collection',
-                'demo-inspector',
+                'custom-addon',
                 'adobe-commerce-aco',
             ]);
         });
@@ -289,7 +289,7 @@ describe('brandGalleryHelpers', () => {
             expect(result).toHaveLength(2);
             expect(result.map(a => a.id)).toEqual([
                 'commerce-block-collection',
-                'demo-inspector',
+                'custom-addon',
             ]);
         });
 
@@ -301,14 +301,14 @@ describe('brandGalleryHelpers', () => {
                 description: 'Hardware demo',
                 configDefaults: {},
                 storefronts: {},
-                addons: { 'demo-inspector': 'required' },
+                addons: { 'custom-addon': 'required' },
             };
 
             // When: Filtering stack addons by package
             const result = filterAddonsByPackage(stackAddons, pkg);
 
             // Then: Required addon passes through along with unmentioned addons
-            expect(result.map(a => a.id)).toContain('demo-inspector');
+            expect(result.map(a => a.id)).toContain('custom-addon');
         });
 
         it('should pass through addons marked as optional', () => {
@@ -338,7 +338,7 @@ describe('brandGalleryHelpers', () => {
                 description: 'Hardware demo',
                 configDefaults: {},
                 storefronts: {},
-                addons: { 'demo-inspector': 'optional' },
+                addons: { 'custom-addon': 'optional' },
             };
 
             // When: Filtering stack addons by package
@@ -360,7 +360,7 @@ describe('brandGalleryHelpers', () => {
                 storefronts: {},
                 addons: {
                     'commerce-block-collection': 'required',
-                    'demo-inspector': 'excluded',
+                    'custom-addon': 'excluded',
                     // adobe-commerce-aco not mentioned
                 },
             };
@@ -384,7 +384,7 @@ describe('brandGalleryHelpers', () => {
                 description: 'Telecom',
                 configDefaults: {},
                 storefronts: {},
-                addons: { 'demo-inspector': 'optional' },
+                addons: { 'custom-addon': 'optional' },
             };
 
             // When: Filtering empty stack addons
@@ -404,7 +404,7 @@ describe('brandGalleryHelpers', () => {
                 storefronts: {},
                 addons: {
                     'commerce-block-collection': 'excluded',
-                    'demo-inspector': 'excluded',
+                    'custom-addon': 'excluded',
                     'adobe-commerce-aco': 'excluded',
                 },
             };

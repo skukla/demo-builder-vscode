@@ -93,7 +93,7 @@ export interface SettingsFile {
     selectedPackage?: string;
     /** Stack ID selected during project creation (e.g., 'headless-paas') */
     selectedStack?: string;
-    /** Optional addons selected during project creation (e.g., ['demo-inspector']) */
+    /** Optional addons selected during project creation (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
     /** Selected block library IDs (e.g., ['isle5', 'demo-team-blocks']) */
     selectedBlockLibraries?: string[];

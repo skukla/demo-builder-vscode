@@ -232,11 +232,6 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
         [state.selectedStack],
     );
 
-    const hasDemoInspector =
-        stack?.dependencies?.includes(COMPONENT_IDS.DEMO_INSPECTOR) ||
-        state.selectedAddons?.includes(COMPONENT_IDS.DEMO_INSPECTOR) ||
-        false;
-
     const backendServiceNames = useMemo(
         () => resolveServiceNames(stack?.backend, componentsData?.backends, componentsData?.services),
         [stack?.backend, componentsData?.backends, componentsData?.services],
@@ -247,8 +242,8 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
     } : undefined, [stack]);
 
     const componentInfo = useMemo(
-        () => buildComponentInfoList(componentSelection, state.apiMesh?.meshStatus, componentsData, hasDemoInspector, backendServiceNames),
-        [componentSelection, state.apiMesh?.meshStatus, componentsData, hasDemoInspector, backendServiceNames],
+        () => buildComponentInfoList(componentSelection, state.apiMesh?.meshStatus, componentsData, backendServiceNames),
+        [componentSelection, state.apiMesh?.meshStatus, componentsData, backendServiceNames],
     );
 
     const adobeOrgName = state.adobeOrg?.name;

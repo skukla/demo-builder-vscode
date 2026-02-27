@@ -142,7 +142,7 @@ describe('DemoPackage type (nested storefronts structure)', () => {
             icon: 'citisignal',
             featured: true,
             addons: {
-                'demo-inspector': 'optional',
+                'custom-addon': 'optional',
                 'commerce-block-collection': 'optional',
             },
             configDefaults: {
@@ -164,9 +164,9 @@ describe('DemoPackage type (nested storefronts structure)', () => {
                         gitOptions: { shallow: false, recursive: false },
                     },
                     submodules: {
-                        'demo-inspector': {
-                            path: 'src/demo-inspector',
-                            repository: 'skukla/demo-inspector',
+                        'custom-addon': {
+                            path: 'src/custom-module',
+                            repository: 'skukla/custom-module',
                         },
                     },
                 },

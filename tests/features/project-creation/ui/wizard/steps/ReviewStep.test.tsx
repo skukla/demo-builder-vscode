@@ -20,9 +20,7 @@ describe('ReviewStep', () => {
         backends: [
             { id: 'adobe-commerce-paas', name: 'Commerce PaaS', description: 'Commerce backend' }
         ],
-        dependencies: [
-            { id: 'demo-inspector', name: 'Demo Inspector', description: 'Inspector tool' }
-        ],
+        dependencies: [],
         mesh: [
             { id: 'headless-commerce-mesh', name: 'Headless Commerce API Mesh', description: 'GraphQL mesh', subType: 'mesh' },
         ],
@@ -287,9 +285,7 @@ describe('ReviewStep', () => {
             const edsComponentsData = {
                 ...mockComponentsData,
                 frontends: [{ id: 'eds-storefront', name: 'Edge Delivery Storefront', description: 'EDS frontend' }],
-                dependencies: [
-                    { id: 'demo-inspector', name: 'Demo Inspector', description: 'Inspector tool' }
-                ],
+                dependencies: [],
                 mesh: [
                     { id: 'eds-commerce-mesh', name: 'EDS Commerce API Mesh', description: 'GraphQL mesh', subType: 'mesh' },
                 ],
@@ -398,39 +394,17 @@ describe('ReviewStep', () => {
         });
     });
 
-    describe('Demo Inspector display', () => {
-        it('should show Demo Inspector when in selectedAddons', () => {
-            // Demo Inspector is enabled via selectedAddons (stack optionalAddons can default it)
-            const stateWithDemoInspectorInAddons: Partial<WizardState> = {
+    describe('Demo Inspector display (removed)', () => {
+        it('should not show Demo Inspector (removed from extension)', () => {
+            const stateWithNoAddons: Partial<WizardState> = {
                 ...completeState,
-                selectedAddons: ['demo-inspector'],
+                selectedAddons: [],
             };
 
             render(
                 <Provider theme={defaultTheme}>
                     <ReviewStep
-                        state={stateWithDemoInspectorInAddons as WizardState}
-                        updateState={mockUpdateState}
-                        setCanProceed={mockSetCanProceed}
-                        componentsData={mockComponentsData}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText('Demo Inspector')).toBeInTheDocument();
-        });
-
-        it('should not show Demo Inspector when not in selectedAddons', () => {
-            // Demo Inspector requires explicit selection via selectedAddons
-            const stateWithoutDemoInspector: Partial<WizardState> = {
-                ...completeState,
-                selectedAddons: [], // No addons selected
-            };
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <ReviewStep
-                        state={stateWithoutDemoInspector as WizardState}
+                        state={stateWithNoAddons as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
                         componentsData={mockComponentsData}

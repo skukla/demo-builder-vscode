@@ -53,8 +53,8 @@ describe('ComponentRegistryManager - Configuration', () => {
         });
 
         it('should return empty for dependencies without nodeVersion', async () => {
-            // demo-inspector is a browser overlay without Node requirement
-            const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas', ['demo-inspector']);
+            // test-tool is a browser overlay without Node requirement
+            const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas', ['test-tool']);
 
             expect(versions.size).toBe(0);
         });

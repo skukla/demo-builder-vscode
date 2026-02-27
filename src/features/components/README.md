@@ -85,7 +85,7 @@ const resolver = new DependencyResolver(registryManager);
 const result = await resolver.resolveDependencies(
     'citisignal-nextjs',
     'commerce-cloud',
-    ['demo-inspector']  // Optional dependencies selected by user
+    []  // Optional dependencies selected by user
 );
 
 // Result contains:
@@ -232,7 +232,7 @@ const resolver = new DependencyResolver(registry);
 const result = await resolver.resolveDependencies(
     'citisignal-nextjs',
     'commerce-cloud',
-    ['demo-inspector']
+    []
 );
 
 console.log('Required dependencies:');
@@ -303,7 +303,7 @@ const backend = await registry.getComponentById('commerce-cloud');
 const result = await resolver.resolveDependencies(
     frontend!.id,
     backend!.id,
-    ['demo-inspector']
+    []
 );
 
 // Generate configuration
@@ -332,7 +332,7 @@ const resolver = new DependencyResolver(registry);
 const result = await resolver.resolveDependencies(
     'citisignal-nextjs',
     'commerce-cloud',
-    ['demo-inspector']
+    []
 );
 
 // Validate for circular dependencies and conflicts
@@ -372,7 +372,7 @@ if (validation.warnings.length > 0) {
             "compatibleBackends": ["commerce-cloud"],
             "dependencies": {
                 "required": [],
-                "optional": ["demo-inspector"]
+                "optional": []
             },
             "configuration": {
                 "nodeVersion": "20",
@@ -433,7 +433,7 @@ if (validation.warnings.length > 0) {
     "selectionGroups": {
         "frontend": ["citisignal-nextjs"],
         "backend": ["commerce-cloud"],
-        "dependencies": ["eds-commerce-mesh", "headless-commerce-mesh", "demo-inspector"],
+        "dependencies": ["eds-commerce-mesh", "headless-commerce-mesh"],
         "externalSystems": [],
         "appBuilder": ["cif-actions-app"]
     },
@@ -511,7 +511,7 @@ if (validation.warnings.length > 0) {
 
 - **[Prerequisites Feature](../prerequisites/README.md)** - Component requirements mapping
 - **[Project Creation Feature](../project-creation/README.md)** - Component installation
-- **[Components JSON](../../templates/components.json)** - Component registry configuration
+- **[Components JSON](config/components.json)** - Component registry configuration
 - **[Component Types](../../types/index.ts)** - Type definitions
 - **[Component Tree Provider](../../providers/componentTreeProvider.ts)** - File browser integration
 

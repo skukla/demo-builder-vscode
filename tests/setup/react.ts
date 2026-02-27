@@ -17,6 +17,15 @@ global.requestAnimationFrame = mockRAF;
 global.cancelAnimationFrame = mockCancelRAF;
 
 // =============================================================================
+// ResizeObserver Mock (for BrandGallery grid layout)
+// =============================================================================
+global.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+} as unknown as typeof ResizeObserver;
+
+// =============================================================================
 // VS Code API Mock
 // =============================================================================
 const mockVSCodeApi = {

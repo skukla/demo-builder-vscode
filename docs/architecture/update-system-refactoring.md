@@ -14,7 +14,6 @@ private readonly COMPONENT_REPOS: Record<string, string> = {
     'headless': 'skukla/citisignal-nextjs',
     'commerce-mesh': 'skukla/headless-citisignal-mesh',
     'integration-service': 'skukla/kukla-integration-service',
-    'demo-inspector': 'skukla/demo-inspector',
 };
 ```
 

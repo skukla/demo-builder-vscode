@@ -44,9 +44,9 @@ describe('Executor - Component Version Initialization', () => {
                     lastUpdated: new Date(),
                     version: '2.5.3', // Version from package.json
                 },
-                'demo-inspector': {
-                    id: 'demo-inspector',
-                    name: 'Demo Inspector',
+                'adobe-commerce-aco': {
+                    id: 'adobe-commerce-aco',
+                    name: 'Adobe Commerce ACO',
                     type: 'dependency',
                     status: 'ready',
                     lastUpdated: new Date(),
@@ -79,7 +79,7 @@ describe('Executor - Component Version Initialization', () => {
             // Verify versions were copied correctly
             expect(project.componentVersions['headless'].version).toBe('1.0.0');
             expect(project.componentVersions['commerce-mesh'].version).toBe('2.5.3');
-            expect(project.componentVersions['demo-inspector'].version).toBe('^1.0.0');
+            expect(project.componentVersions['adobe-commerce-aco'].version).toBe('^1.0.0');
         });
 
         it('should use "unknown" for components without detected version', () => {

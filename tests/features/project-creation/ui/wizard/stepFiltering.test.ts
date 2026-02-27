@@ -18,7 +18,7 @@ const headlessStack: Stack = {
     description: 'NextJS storefront with API Mesh and Commerce PaaS',
     frontend: 'headless',
     backend: 'adobe-commerce-paas',
-    dependencies: ['commerce-mesh', 'demo-inspector'],
+    dependencies: ['commerce-mesh'],
     // Note: NO requiresGitHub or requiresDaLive
 };
 
@@ -28,7 +28,7 @@ const edgeDeliveryStack: Stack = {
     description: 'EDS storefront with Commerce Drop-ins and ACCS',
     frontend: 'eds-storefront',
     backend: 'adobe-commerce-accs',
-    dependencies: ['demo-inspector'],
+    dependencies: [],
     requiresGitHub: true,
     requiresDaLive: true,
 };

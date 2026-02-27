@@ -89,12 +89,12 @@ describe('typeGuards - Mesh Component Accessors', () => {
         it('should return multiple components with same subType', () => {
             const project = {
                 componentInstances: {
-                    'demo-inspector': { id: 'demo-inspector', subType: 'inspector' },
-                    'another-inspector': { id: 'another-inspector', subType: 'inspector' },
+                    'adobe-commerce-aco': { id: 'adobe-commerce-aco', subType: 'addon' },
+                    'another-addon': { id: 'another-addon', subType: 'addon' },
                 },
             } as unknown as Project;
-            const inspectors = getComponentInstancesBySubType(project, 'inspector');
-            expect(inspectors).toHaveLength(2);
+            const addons = getComponentInstancesBySubType(project, 'addon');
+            expect(addons).toHaveLength(2);
         });
     });
 

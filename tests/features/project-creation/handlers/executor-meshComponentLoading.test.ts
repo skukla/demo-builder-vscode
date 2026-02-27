@@ -74,12 +74,6 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
         // headless-commerce-mesh is in dependencies section for stack-based resolution
         getDependencies: jest.fn().mockResolvedValue([
             {
-                id: 'demo-inspector',
-                name: 'Demo Inspector',
-                type: 'dependency',
-                source: { type: 'git', url: 'https://github.com/test/demo-inspector' },
-            },
-            {
                 id: 'headless-commerce-mesh',
                 name: 'Headless Commerce API Mesh',
                 type: 'mesh',
@@ -204,7 +198,7 @@ describe('Executor - Mesh Component Loading', () => {
                 projectName: 'test-project',
                 projectPath: '/tmp/test-project',
                 selectedStack: 'headless-paas',
-                selectedAddons: ['demo-inspector'],
+                selectedAddons: ['adobe-commerce-aco'],
                 adobeConfig: {
                     organization: { id: 'org-123', name: 'Test Org' },
                     project: { id: 'proj-123', name: 'Test Project' },

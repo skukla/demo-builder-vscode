@@ -147,7 +147,7 @@ interface ProjectCreationConfig {
     // Package/Stack selections
     selectedPackage?: string;
     selectedStack?: string;
-    // Selected optional addons (e.g., ['demo-inspector'])
+    // Selected optional addons (e.g., ['adobe-commerce-aco'])
     selectedAddons?: string[];
     // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
     selectedBlockLibraries?: string[];

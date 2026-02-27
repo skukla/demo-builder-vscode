@@ -91,7 +91,7 @@ features/prerequisites/
 ```
 
 **JSON Configuration**:
-The feature is driven by `templates/prerequisites.json`:
+The feature is driven by `config/prerequisites.json`:
 ```json
 {
   "prerequisites": [
@@ -498,7 +498,7 @@ if (!status.installed) {
 - **[Prerequisites System Documentation](../../docs/systems/prerequisites-system.md)** - Detailed system design
 - **[Components Feature](../components/README.md)** - Component requirements mapping
 - **[Project Creation Feature](../project-creation/README.md)** - Prerequisites integration
-- **[Prerequisites JSON](../../templates/prerequisites.json)** - Configuration file
+- **[Prerequisites JSON](config/prerequisites.json)** - Configuration file
 - **[Timeout Configuration](../../utils/timeoutConfig.ts)** - TIMEOUTS.PREREQUISITE_CHECK constant
 
 ---

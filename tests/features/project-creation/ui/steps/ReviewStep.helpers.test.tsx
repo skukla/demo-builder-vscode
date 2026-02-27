@@ -110,7 +110,6 @@ describe('reviewStepHelpers', () => {
             ],
             backends: mockBackends,
             dependencies: [
-                { id: 'demo-inspector', name: 'Demo Inspector' },
                 { id: 'other-dep', name: 'Other Dependency' },
             ],
             mesh: [
@@ -139,7 +138,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined, // meshStatus
                     mockComponentsData,
-                    false, // hasDemoInspector
                     [], // backendServiceNames
                 );
 
@@ -149,31 +147,8 @@ describe('reviewStepHelpers', () => {
                 expect(frontendItem?.value).toBe('Venia Storefront');
             });
 
-            it('should include Demo Inspector sub-item when enabled', () => {
-                // Given: State with frontend and demo inspector
-                const state = {
-                    components: {
-                        frontend: 'venia',
-                        dependencies: ['demo-inspector'],
-                    },
-                };
-
-                // When: Building component info list
-                const result = buildComponentInfoList(
-                    state.components,
-                    undefined,
-                    mockComponentsData,
-                    true, // hasDemoInspector
-                    [],
-                );
-
-                // Then: Frontend should have Demo Inspector sub-item
-                const frontendItem = result.find((item) => item.label === 'Frontend');
-                expect(frontendItem?.subItems).toEqual(['Demo Inspector']);
-            });
-
-            it('should NOT include Demo Inspector sub-item when not enabled', () => {
-                // Given: State with frontend but no demo inspector
+            it('should NOT include Demo Inspector sub-item (removed from extension)', () => {
+                // Given: State with frontend
                 const state = {
                     components: {
                         frontend: 'venia',
@@ -185,11 +160,10 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    false, // hasDemoInspector
                     [],
                 );
 
-                // Then: Frontend should have no sub-items
+                // Then: Frontend should have no sub-items (demo-inspector removed)
                 const frontendItem = result.find((item) => item.label === 'Frontend');
                 expect(frontendItem?.subItems).toBeUndefined();
             });
@@ -209,7 +183,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    false,
                     [],
                 );
 
@@ -231,7 +204,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     'deployed', // meshStatus
                     mockComponentsData,
-                    false,
                     [],
                 );
 
@@ -255,7 +227,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    false,
                     [],
                 );
 
@@ -279,7 +250,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    false,
                     [],
                 );
 
@@ -302,7 +272,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    false,
                     ['Catalog Service', 'Live Search'], // backendServiceNames
                 );
 
@@ -337,11 +306,11 @@ describe('reviewStepHelpers', () => {
         });
 
         describe('other dependencies', () => {
-            it('should include other dependencies excluding mesh and demo-inspector', () => {
+            it('should include other dependencies excluding mesh', () => {
                 // Given: State with multiple dependencies
                 const state = {
                     components: {
-                        dependencies: ['eds-commerce-mesh', 'demo-inspector', 'other-dep'],
+                        dependencies: ['eds-commerce-mesh', 'other-dep'],
                     },
                 };
 
@@ -350,21 +319,20 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    true,
                     [],
                 );
 
-                // Then: Dependencies should only include 'other-dep'
+                // Then: Dependencies should only include 'other-dep' (mesh shown separately)
                 const depsItem = result.find((item) => item.label === 'Dependencies');
                 expect(depsItem).toBeDefined();
                 expect(depsItem?.value).toBe('Other Dependency');
             });
 
-            it('should NOT include Dependencies section if only mesh and demo-inspector selected', () => {
-                // Given: State with only mesh and demo-inspector
+            it('should NOT include Dependencies section if only mesh selected', () => {
+                // Given: State with only mesh
                 const state = {
                     components: {
-                        dependencies: ['eds-commerce-mesh', 'demo-inspector'],
+                        dependencies: ['eds-commerce-mesh'],
                     },
                 };
 
@@ -373,7 +341,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    true,
                     [],
                 );
 
@@ -397,7 +364,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    false,
                     [],
                 );
 
@@ -418,7 +384,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    false,
                     [],
                 );
 
@@ -442,7 +407,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    false,
                     [],
                 );
 
@@ -463,7 +427,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    false,
                     [],
                 );
 
@@ -480,7 +443,6 @@ describe('reviewStepHelpers', () => {
                     undefined,
                     undefined,
                     mockComponentsData,
-                    false,
                     [],
                 );
 
@@ -515,7 +477,6 @@ describe('reviewStepHelpers', () => {
                     {},
                     undefined,
                     mockComponentsData,
-                    false,
                     [],
                 );
 
@@ -542,7 +503,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    false,
                     [],
                 );
 

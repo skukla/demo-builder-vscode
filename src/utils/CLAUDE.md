@@ -44,7 +44,7 @@ utils/
 **Purpose**: Manages tool detection, installation, and version checking
 
 **Configuration-Driven**:
-- Reads from `templates/prerequisites.json`
+- Reads from `src/features/prerequisites/config/prerequisites.json`
 - Supports multiple installation strategies
 - Handles complex dependencies
 
@@ -1004,5 +1004,5 @@ const result = await executeCommand(command, {
 
 ---
 
-For configuration details, see `../../templates/CLAUDE.md`
+For configuration details, see `../../docs/CLAUDE.md`
 For usage in commands, see `../commands/CLAUDE.md`

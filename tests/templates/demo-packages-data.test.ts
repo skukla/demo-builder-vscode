@@ -395,15 +395,13 @@ describe('demo-packages.json', () => {
             expect(pkg!.featured).toBe(true);
         });
 
-        it('should have headless-paas storefront with submodules', () => {
+        it('should have headless-paas storefront', () => {
             const pkg = packagesConfig.packages.find(p => p.id === 'citisignal');
             const headless = pkg!.storefronts['headless-paas'];
 
             expect(headless).toBeDefined();
-            expect(headless.submodules).toBeDefined();
-            expect(headless.submodules!['demo-inspector']).toBeDefined();
-            expect(headless.submodules!['demo-inspector'].path).toBe('src/demo-inspector-universal');
-            expect(headless.submodules!['demo-inspector'].repository).toBe('skukla/demo-inspector-universal');
+            expect(headless.name).toBeDefined();
+            expect(headless.source).toBeDefined();
         });
 
         it('should have eds-paas and eds-accs storefronts', () => {

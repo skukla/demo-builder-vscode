@@ -9,7 +9,6 @@
       "icon": "isle5",
       "featured": true,
       "addons": {
-        "demo-inspector": "optional",
         "adobe-commerce-aco": "excluded"
       },
       "configDefaults": {
@@ -128,7 +127,6 @@
       "icon": "citisignal",
       "featured": true,
       "addons": {
-        "demo-inspector": "optional",
         "adobe-commerce-aco": "excluded"
       },
       "configDefaults": {
@@ -154,12 +152,6 @@
               "shallow": false,
               "recursive": false
             }
-          },
-          "submodules": {
-            "demo-inspector": {
-              "path": "src/demo-inspector-universal",
-              "repository": "skukla/demo-inspector-universal"
-            }
           }
         },
         "eds-paas": {
@@ -182,12 +174,6 @@
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
-          },
-          "submodules": {
-            "demo-inspector": {
-              "path": "demo-inspector",
-              "repository": "skukla/demo-inspector-universal"
-            }
           },
           "contentPatches": ["index-product-teaser-sku", "phones-product-teaser-sku", "phones-heading-reorder", "smart-watches-category-id", "smart-watches-url-path"],
           "contentPatchSource": {
@@ -217,12 +203,6 @@
             "org": "demo-system-stores",
             "site": "accs-citisignal"
           },
-          "submodules": {
-            "demo-inspector": {
-              "path": "demo-inspector",
-              "repository": "skukla/demo-inspector-universal"
-            }
-          },
           "contentPatches": ["phones-heading-reorder", "smart-watches-category-id-accs"],
           "contentPatchSource": {
             "owner": "skukla",
@@ -240,7 +220,6 @@
       "featured": false,
       "status": "coming-soon",
       "addons": {
-        "demo-inspector": "optional",
         "adobe-commerce-aco": "required"
       },
       "configDefaults": {

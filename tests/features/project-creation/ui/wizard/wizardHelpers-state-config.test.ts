@@ -205,7 +205,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
-                selectedAddons: ['demo-inspector'],
+                selectedAddons: ['adobe-commerce-aco'],
                 components: {
                     frontend: 'headless',
                     backend: 'adobe-commerce-paas',
@@ -214,7 +214,7 @@ describe('wizardHelpers - state & config', () => {
 
             const config = buildProjectConfig(state);
 
-            expect(config.selectedAddons).toEqual(['demo-inspector']);
+            expect(config.selectedAddons).toEqual(['adobe-commerce-aco']);
         });
 
         it('should default to empty array when no addons selected', () => {

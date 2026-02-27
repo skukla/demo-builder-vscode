@@ -9,7 +9,7 @@ import { Flex, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
 import type { ComponentData, ComponentsData } from './ReviewStep';
-import { COMPONENT_IDS, hasMeshInDependencies, isMeshComponentId } from '@/core/constants';
+import { hasMeshInDependencies, isMeshComponentId } from '@/core/constants';
 import { cn } from '@/core/ui/utils/classNames';
 
 /**
@@ -81,14 +81,12 @@ export function resolveServiceNames(
  * @param components - Selected components from wizard state
  * @param meshStatus - Current API mesh deployment status
  * @param componentsData - Full components registry data
- * @param hasDemoInspector - Whether demo inspector is enabled
  * @returns Array of component info items for display
  */
 export function buildComponentInfoList(
     components: ComponentsState | undefined,
     meshStatus: string | undefined,
     componentsData: ComponentsData | undefined,
-    hasDemoInspector: boolean,
     backendServiceNames?: string[],
 ): ComponentInfoItem[] {
     if (!components || !componentsData) {
@@ -97,14 +95,13 @@ export function buildComponentInfoList(
 
     const info: ComponentInfoItem[] = [];
 
-    // Frontend with Demo Inspector indicator
+    // Frontend
     if (components.frontend && componentsData.frontends) {
         const frontend = componentsData.frontends.find((f) => f.id === components.frontend);
         if (frontend) {
             info.push({
                 label: 'Frontend',
                 value: frontend.name,
-                subItems: hasDemoInspector ? ['Demo Inspector'] : undefined,
             });
         }
     }
@@ -144,10 +141,10 @@ export function buildComponentInfoList(
         }
     }
 
-    // Other dependencies (not mesh, not demo-inspector which is frontend-associated)
+    // Other dependencies (not mesh)
     if (components.dependencies && componentsData.dependencies) {
         const otherDeps = components.dependencies
-            .filter((id) => !isMeshComponentId(id) && id !== COMPONENT_IDS.DEMO_INSPECTOR)
+            .filter((id) => !isMeshComponentId(id))
             .map((id) => componentsData.dependencies?.find((d) => d.id === id))
             .filter((d): d is NonNullable<typeof d> => Boolean(d));
 

@@ -158,12 +158,12 @@ describe('ProjectConfigWriter atomic writes', () => {
         });
 
         it('should include selectedAddons in manifest', async () => {
-            // Given: A project with selectedAddons (e.g., demo-inspector)
+            // Given: A project with selectedAddons (e.g., adobe-commerce-aco)
             const project = createTestProject({
                 name: 'project-with-addons',
                 selectedPackage: 'citisignal',
                 selectedStack: 'eds-paas',
-                selectedAddons: ['demo-inspector', 'adobe-commerce-aco'],
+                selectedAddons: ['adobe-commerce-aco', 'adobe-commerce-aco'],
             });
 
             // When: Saving project config
@@ -180,7 +180,7 @@ describe('ProjectConfigWriter atomic writes', () => {
 
             expect(parsed.selectedPackage).toBe('citisignal');
             expect(parsed.selectedStack).toBe('eds-paas');
-            expect(parsed.selectedAddons).toEqual(['demo-inspector', 'adobe-commerce-aco']);
+            expect(parsed.selectedAddons).toEqual(['adobe-commerce-aco', 'adobe-commerce-aco']);
         });
 
         it('should include customBlockLibraries in manifest', async () => {

@@ -56,7 +56,7 @@ describe('ComponentRegistryManager - Registration', () => {
             const dependencies = await manager.getDependencies();
 
             expect(dependencies).toHaveLength(1);
-            expect(dependencies[0].id).toBe('demo-inspector');
+            expect(dependencies[0].id).toBe('test-tool');
         });
 
         it('should return integrations', async () => {
@@ -109,10 +109,10 @@ describe('ComponentRegistryManager - Registration', () => {
         });
 
         it('should find dependency by ID', async () => {
-            const component = await manager.getComponentById('demo-inspector');
+            const component = await manager.getComponentById('test-tool');
 
             expect(component).toBeDefined();
-            expect(component?.id).toBe('demo-inspector');
+            expect(component?.id).toBe('test-tool');
         });
 
         it('should return undefined for non-existent component', async () => {

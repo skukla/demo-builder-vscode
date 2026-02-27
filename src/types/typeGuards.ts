@@ -391,7 +391,7 @@ export function getEdsDaLiveUrl(project: Project | undefined | null): string | u
 /**
  * Get component instances by subType
  *
- * Filters components by their subType property (e.g., 'mesh', 'inspector').
+ * Filters components by their subType property (e.g., 'mesh', 'service').
  * SOP §4: Extracted inline object operation with filter to named helper
  *
  * @param project - Project to search

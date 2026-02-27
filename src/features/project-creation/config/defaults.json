@@ -2,7 +2,7 @@
   "componentSelection": {
     "frontend": "headless",
     "backend": "adobe-commerce-paas",
-    "dependencies": ["demo-inspector"],
+    "dependencies": [],
     "services": [],
     "externalSystems": [],
     "appBuilderApps": []

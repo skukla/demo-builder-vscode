@@ -69,7 +69,7 @@ describe('WelcomeStep - Package + Stack Selection', () => {
             icon: 'nextjs',
             frontend: 'headless',
             backend: 'adobe-commerce-paas',
-            dependencies: ['commerce-mesh', 'demo-inspector'],
+            dependencies: ['commerce-mesh'],
             features: ['Server-side rendering', 'API Mesh integration', 'Full customization'],
         },
         {
@@ -79,7 +79,7 @@ describe('WelcomeStep - Package + Stack Selection', () => {
             icon: 'eds',
             frontend: 'eds-storefront',
             backend: 'adobe-commerce-accs',
-            dependencies: ['demo-inspector'],
+            dependencies: [],
             features: ['Ultra-fast delivery', 'DA.live content', 'Commerce Drop-ins'],
             requiresGitHub: true,
             requiresDaLive: true,

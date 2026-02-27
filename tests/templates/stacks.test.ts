@@ -176,12 +176,9 @@ describe('stacks.json', () => {
             expect(addonDefs['commerce-block-collection']).toBeUndefined();
         });
 
-        it('should NOT have source for demo-inspector addon (no external repo)', () => {
+        it('should NOT have demo-inspector addon definition (removed)', () => {
             const addonDefs = stacksConfig.addonDefinitions as Record<string, Record<string, unknown>>;
-            const demoInspector = addonDefs['demo-inspector'];
-
-            expect(demoInspector).toBeDefined();
-            expect(demoInspector.source).toBeUndefined();
+            expect(addonDefs['demo-inspector']).toBeUndefined();
         });
     });
 

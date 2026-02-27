@@ -16,8 +16,6 @@ export const LAST_UPDATE_CHECK_VERSION = 'lastUpdateCheckVersion';
 export const COMPONENT_IDS = {
     /** Edge Delivery Services storefront component */
     EDS_STOREFRONT: 'eds-storefront',
-    /** Demo inspector overlay component */
-    DEMO_INSPECTOR: 'demo-inspector',
     /** EDS-specific API Mesh (for EDS PaaS storefronts) */
     EDS_COMMERCE_MESH: 'eds-commerce-mesh',
     /** EDS-specific API Mesh (for EDS ACCS storefronts) */

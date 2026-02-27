@@ -19,7 +19,7 @@ const _headlessStack: Stack = {
     icon: 'nextjs',
     frontend: 'headless',
     backend: 'adobe-commerce-paas',
-    dependencies: ['commerce-mesh', 'demo-inspector'],
+    dependencies: ['commerce-mesh'],
     features: ['Server-side rendering', 'API Mesh integration', 'Full customization'],
 };
 
@@ -30,7 +30,7 @@ const _edgeDeliveryStack: Stack = {
     icon: 'eds',
     frontend: 'eds-storefront',
     backend: 'adobe-commerce-accs',
-    dependencies: ['demo-inspector'],
+    dependencies: [],
     features: ['Ultra-fast delivery', 'DA.live content', 'Commerce Drop-ins'],
     requiresGitHub: true,
     requiresDaLive: true,
@@ -54,7 +54,7 @@ describe('stackHelpers', () => {
             description: 'NextJS storefront with API Mesh and Commerce PaaS',
             frontend: 'headless',
             backend: 'adobe-commerce-paas',
-            dependencies: ['commerce-mesh', 'demo-inspector'],
+            dependencies: ['commerce-mesh'],
             optionalAddons: [{ id: 'adobe-commerce-aco' }],
         };
 
@@ -64,7 +64,7 @@ describe('stackHelpers', () => {
             description: 'EDS storefront with Commerce Drop-ins and PaaS',
             frontend: 'eds',
             backend: 'adobe-commerce-paas',
-            dependencies: ['commerce-mesh', 'demo-inspector'],
+            dependencies: ['commerce-mesh'],
             optionalAddons: [{ id: 'adobe-commerce-aco' }],
             requiresGitHub: true,
             requiresDaLive: true,
@@ -83,7 +83,6 @@ describe('stackHelpers', () => {
         it('should include all dependencies in component IDs', () => {
             const result = getStackComponentIds(headlessPaasStack);
             expect(result).toContain('commerce-mesh');
-            expect(result).toContain('demo-inspector');
         });
 
         it('should include optional addons in component IDs', () => {
@@ -112,7 +111,6 @@ describe('stackHelpers', () => {
                 'headless',
                 'adobe-commerce-paas',
                 'commerce-mesh',
-                'demo-inspector',
                 'adobe-commerce-aco',
             ]);
         });
@@ -126,7 +124,7 @@ describe('stackHelpers', () => {
             description: 'NextJS storefront with API Mesh and Commerce PaaS',
             frontend: 'headless',
             backend: 'adobe-commerce-paas',
-            dependencies: ['commerce-mesh', 'demo-inspector'],
+            dependencies: ['commerce-mesh'],
             optionalAddons: [{ id: 'adobe-commerce-aco' }],
         };
 
@@ -136,7 +134,7 @@ describe('stackHelpers', () => {
             description: 'NextJS storefront with API Mesh and Commerce ACCS',
             frontend: 'headless',
             backend: 'adobe-commerce-accs',
-            dependencies: ['commerce-mesh', 'demo-inspector'],
+            dependencies: ['commerce-mesh'],
             optionalAddons: [{ id: 'adobe-commerce-aco' }],
         };
 
@@ -146,7 +144,7 @@ describe('stackHelpers', () => {
             description: 'EDS storefront with Commerce Drop-ins and PaaS',
             frontend: 'eds',
             backend: 'adobe-commerce-paas',
-            dependencies: ['commerce-mesh', 'demo-inspector'],
+            dependencies: ['commerce-mesh'],
             optionalAddons: [{ id: 'adobe-commerce-aco' }],
             requiresGitHub: true,
             requiresDaLive: true,
@@ -158,7 +156,7 @@ describe('stackHelpers', () => {
             description: 'EDS storefront with Commerce Drop-ins and ACCS',
             frontend: 'eds',
             backend: 'adobe-commerce-accs',
-            dependencies: ['commerce-mesh', 'demo-inspector'],
+            dependencies: ['commerce-mesh'],
             optionalAddons: [{ id: 'adobe-commerce-aco' }],
             requiresGitHub: true,
             requiresDaLive: true,
@@ -204,7 +202,7 @@ describe('stackHelpers', () => {
             it('should retain shared dependency configs', () => {
                 const currentConfigs = {
                     'commerce-mesh': { MESH_ID: 'mesh-123', MESH_API_KEY: 'key-xyz' },
-                    'demo-inspector': { ENABLED: true },
+                    'adobe-commerce-aco': { ENABLED: true },
                 };
 
                 const result = filterComponentConfigsForStackChange(
@@ -215,7 +213,7 @@ describe('stackHelpers', () => {
 
                 // Dependencies are the same between stacks
                 expect(result['commerce-mesh']).toEqual({ MESH_ID: 'mesh-123', MESH_API_KEY: 'key-xyz' });
-                expect(result['demo-inspector']).toEqual({ ENABLED: true });
+                expect(result['adobe-commerce-aco']).toEqual({ ENABLED: true });
             });
         });
 
@@ -258,10 +256,10 @@ describe('stackHelpers', () => {
                 const currentConfigs = {
                     headless: { PORT: 3000 },
                     'commerce-mesh': { MESH_ID: 'mesh-456' },
-                    'demo-inspector': { ENABLED: false },
+                    'adobe-commerce-aco': { ENABLED: false },
                 };
 
-                // Both headless-paas and eds-paas have commerce-mesh and demo-inspector
+                // Both headless-paas and eds-paas have commerce-mesh
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     edsPaasStack,
@@ -269,7 +267,7 @@ describe('stackHelpers', () => {
                 );
 
                 expect(result['commerce-mesh']).toEqual({ MESH_ID: 'mesh-456' });
-                expect(result['demo-inspector']).toEqual({ ENABLED: false });
+                expect(result['adobe-commerce-aco']).toEqual({ ENABLED: false });
             });
         });
 
@@ -296,7 +294,7 @@ describe('stackHelpers', () => {
                     headless: { PORT: 3000 },
                     'adobe-commerce-paas': { STORE_URL: 'https://store.com' },
                     'commerce-mesh': { MESH_ID: 'mesh-789' },
-                    'demo-inspector': { DEBUG: true },
+                    'adobe-commerce-aco': { DEBUG: true },
                 };
 
                 const result = filterComponentConfigsForStackChange(
@@ -307,7 +305,7 @@ describe('stackHelpers', () => {
 
                 // Shared dependencies are retained
                 expect(result['commerce-mesh']).toEqual({ MESH_ID: 'mesh-789' });
-                expect(result['demo-inspector']).toEqual({ DEBUG: true });
+                expect(result['adobe-commerce-aco']).toEqual({ DEBUG: true });
             });
         });
 
@@ -411,7 +409,7 @@ describe('stackHelpers', () => {
                 frontend: 'headless',
                 backend: 'adobe-commerce-paas',
                 dependencies: ['headless-commerce-mesh'],
-                optionalAddons: [{ id: 'demo-inspector', default: true }],
+                optionalAddons: [{ id: 'adobe-commerce-aco', default: true }],
             };
 
             it('should migrate mesh config when switching eds-paas → headless-paas', () => {
@@ -497,7 +495,7 @@ describe('stackHelpers', () => {
                         MESH_ID: 'user-mesh-id',
                         MESH_API_KEY: 'user-mesh-key',
                     },
-                    'demo-inspector': {
+                    'adobe-commerce-aco': {
                         ENABLED: true,
                         LOG_LEVEL: 'debug',
                     },
@@ -525,7 +523,7 @@ describe('stackHelpers', () => {
                     MESH_ID: 'user-mesh-id',
                     MESH_API_KEY: 'user-mesh-key',
                 });
-                expect(result['demo-inspector']).toEqual({
+                expect(result['adobe-commerce-aco']).toEqual({
                     ENABLED: true,
                     LOG_LEVEL: 'debug',
                 });

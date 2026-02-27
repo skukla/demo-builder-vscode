@@ -38,7 +38,7 @@ export interface Project {
     selectedPackage?: string;
     /** Stack ID selected during project creation (e.g., 'headless-paas') */
     selectedStack?: string;
-    /** Optional addons selected during project creation (e.g., ['demo-inspector']) */
+    /** Optional addons selected during project creation (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
     /** Block library IDs selected during project creation (e.g., ['isle5', 'demo-team-blocks']) */
     selectedBlockLibraries?: string[];
@@ -91,7 +91,7 @@ export interface ComponentInstance {
     id: string;              // Component ID (e.g., "headless")
     name: string;            // Human-readable name
     type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder'; // Legacy field, not used with selectionGroups
-    subType?: 'mesh' | 'inspector' | 'utility' | 'service';
+    subType?: 'mesh' | 'utility' | 'service';
     icon?: string | CustomIconPaths;  // VSCode ThemeIcon name OR custom icon paths
     path?: string;           // Full path to cloned repo (if applicable)
     repoUrl?: string;        // Git repository URL
@@ -175,7 +175,7 @@ export interface ComponentDefinition {
     id: string;
     name: string;
     type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder'; // Legacy field, not used with selectionGroups
-    subType?: 'mesh' | 'inspector' | 'utility' | 'service';
+    subType?: 'mesh' | 'utility' | 'service';
     icon?: string | CustomIconPaths;  // VSCode ThemeIcon name OR custom icon paths
     description?: string;
     source?: ComponentSource;

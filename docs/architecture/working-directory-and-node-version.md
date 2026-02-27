@@ -207,7 +207,6 @@ await fs.access(packageJsonPath);
 | Commerce PaaS | 20 | `components.json` |
 | API Mesh | 20 | `components.json` |
 | Integration Service | 22 | `components.json` (App Builder runtime) |
-| Demo Inspector | (npm package) | N/A |
 
 ---
 

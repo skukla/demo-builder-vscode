@@ -16,7 +16,7 @@ The Demo Builder VSCode Extension uses a flexible component-based architecture t
 
 ### Component Registry
 
-All components are defined in `templates/components.json`, which serves as the single source of truth for available components and their relationships.
+All components are defined in `src/features/components/config/components.json`, which serves as the single source of truth for available components and their relationships.
 
 ## Component Definition Structure
 
@@ -34,7 +34,7 @@ All components are defined in `templates/components.json`, which serves as the s
   },
   "dependencies": {
     "required": ["commerce-mesh"],
-    "optional": ["demo-inspector"]
+    "optional": []
   },
   "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-saas"],
   "configuration": {
@@ -159,7 +159,7 @@ These apps are deployed to Adobe I/O Runtime and provide custom business logic a
 
 ### Step 1: Define Component in Registry
 
-Add the component definition to `templates/components.json`:
+Add the component definition to `src/features/components/config/components.json`:
 
 ```json
 {
@@ -247,8 +247,7 @@ The component system generates a configuration object that includes:
 ```typescript
 {
   envVars: {
-    MESH_ENDPOINT: "${MESH_ENDPOINT}",
-    DEMO_INSPECTOR_ENABLED: "true"
+    MESH_ENDPOINT: "${MESH_ENDPOINT}"
   },
   frontend: {
     id: "citisignal-nextjs",

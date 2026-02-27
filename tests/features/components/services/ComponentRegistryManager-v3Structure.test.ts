@@ -61,7 +61,7 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
             const registry = await manager.loadRegistry();
 
             expect(registry.components.dependencies).toHaveLength(1);
-            expect(registry.components.dependencies[0].id).toBe('demo-inspector');
+            expect(registry.components.dependencies[0].id).toBe('test-tool');
         });
 
         it('should load app builder apps from separate "appBuilderApps" section', async () => {
@@ -118,13 +118,13 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
             expect(component?.name).toBe('Adobe Commerce PaaS');
         });
 
-        it('should find dependency by id (demo-inspector)', async () => {
+        it('should find dependency by id (test-tool)', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
-            const component = await manager.getComponentById('demo-inspector');
+            const component = await manager.getComponentById('test-tool');
 
             expect(component).toBeDefined();
-            expect(component?.name).toBe('Demo Inspector');
+            expect(component?.name).toBe('Test Tool');
         });
 
         it('should find app builder app by id (integration-service)', async () => {

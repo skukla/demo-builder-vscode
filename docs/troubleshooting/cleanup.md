@@ -97,8 +97,7 @@ When you retry creating a project with an existing name:
 │   ├── my-commerce-demo/
 │   │   ├── components/
 │   │   │   ├── citisignal-nextjs/       # Frontend (Git clone)
-│   │   │   ├── commerce-mesh/            # API Mesh (Git clone)
-│   │   │   └── demo-inspector/           # Dependency (Git clone)
+│   │   │   └── commerce-mesh/            # API Mesh (Git clone)
 │   │   ├── logs/
 │   │   ├── .env                          # Environment vars
 │   │   └── .demo-builder.json            # Project manifest

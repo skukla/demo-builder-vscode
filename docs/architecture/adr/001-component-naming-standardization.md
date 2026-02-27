@@ -13,7 +13,7 @@
 
 Prior to this change, there was a naming inconsistency between the JSON configuration layer and the TypeScript implementation:
 
-**JSON Layer** (`templates/components.json`):
+**JSON Layer** (`src/features/components/config/components.json`):
 ```json
 {
   "selectionGroups": {
@@ -200,7 +200,7 @@ None identified. Change was purely positive from consistency and clarity perspec
 
 - **Plan**: `.rptc/complete/standardize-component-naming/overview.md`
 - **Related Components**:
-  - `templates/components.json` - JSON source of truth
+  - `src/features/components/config/components.json` - JSON source of truth
   - `src/types/components.ts` - Core type definitions
   - `src/features/components/services/ComponentRegistryManager.ts` - Transformation logic
 - **Related ADRs**: None (first ADR)

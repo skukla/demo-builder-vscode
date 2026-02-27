@@ -134,10 +134,10 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
                     type: 'frontend',
                     icon: 'symbol-color',
                 },
-                'demo-inspector': {
-                    name: 'Demo Inspector',
+                'adobe-commerce-aco': {
+                    name: 'Adobe Commerce ACO',
                     type: 'utility',
-                    subType: 'inspector',
+                    subType: 'addon',
                 },
             });
             // Set up mocks BEFORE creating provider (cache reads during constructor)

@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
-import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import { getComponentInstancesByType, getMeshComponentInstance, getMeshEndpointUrl } from '@/types/typeGuards';
 
@@ -36,7 +35,6 @@ export class ViewStatusCommand extends BaseCommand {
         const frontendComponent = getComponentInstancesByType(project, 'frontend')[0];
         // Use getMeshComponentInstance which finds by subType === 'mesh' (not hardcoded ID)
         const meshComponent = getMeshComponentInstance(project);
-        const inspectorComponent = project.componentInstances?.[COMPONENT_IDS.DEMO_INSPECTOR];
 
         return [
             `**Project:** ${project.name}`,
@@ -55,10 +53,6 @@ export class ViewStatusCommand extends BaseCommand {
             '### Commerce',
             `- **Type:** ${project.commerce?.type || 'Not configured'}`,
             `- **URL:** ${project.commerce?.instance.url || 'N/A'}`,
-            '',
-            '### Demo Inspector',
-            `- **Enabled:** ${inspectorComponent ? 'Yes' : 'No'}`,
-            `- **Status:** ${inspectorComponent?.status || 'Not installed'}`,
         ].join('\n');
     }
 

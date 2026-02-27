@@ -47,7 +47,7 @@
             "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
             "dependencies": {
                 "required": [],
-                "optional": ["demo-inspector"]
+                "optional": []
             }
         },
         "headless": {
@@ -74,12 +74,6 @@
             "dependencies": {
                 "required": ["headless-commerce-mesh"],
                 "optional": []
-            },
-            "submodules": {
-                "demo-inspector": {
-                    "path": "src/demo-inspector-universal",
-                    "repository": "skukla/demo-inspector-universal"
-                }
             }
         }
     },
@@ -276,7 +270,7 @@
             "frontend": "eds-storefront",
             "backend": "adobe-commerce-paas",
             "requiredComponents": ["eds-commerce-mesh"],
-            "optionalComponents": ["demo-inspector", "integration-service"]
+            "optionalComponents": ["integration-service"]
         },
         "eds-accs": {
             "name": "EDS + Commerce Cloud Service",
@@ -284,7 +278,7 @@
             "frontend": "eds-storefront",
             "backend": "adobe-commerce-accs",
             "requiredComponents": ["eds-accs-mesh"],
-            "optionalComponents": ["demo-inspector"]
+            "optionalComponents": []
         },
         "headless-paas": {
             "name": "Headless + Commerce PaaS",
@@ -292,18 +286,11 @@
             "frontend": "headless",
             "backend": "adobe-commerce-paas",
             "requiredComponents": ["headless-commerce-mesh"],
-            "optionalComponents": ["demo-inspector", "integration-service"]
+            "optionalComponents": ["integration-service"]
         }
     },
 
-    "dependencies": {
-        "demo-inspector": {
-            "name": "Demo Inspector",
-            "description": "Universal inspector overlay for API Mesh sources and EDS block structure",
-            "subType": "inspector",
-            "icon": "eye"
-        }
-    },
+    "dependencies": {},
 
     "appBuilderApps": {
         "integration-service": {
@@ -725,7 +712,7 @@
         "backends": ["adobe-commerce-paas", "adobe-commerce-accs"],
         "stacks": ["headless-paas"],
         "brands": ["citisignal", "buildright"],
-        "dependencies": ["demo-inspector"],
+        "dependencies": [],
         "appBuilderApps": ["integration-service"],
         "integrations": ["experience-platform"],
         "addons": ["adobe-commerce-aco"],

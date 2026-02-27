@@ -101,21 +101,6 @@ Create a unified `entities.json` file:
       }
     },
     {
-      "id": "demo-inspector",
-      "type": "component",
-      "name": "Demo Inspector",
-      "description": "Visual debugging overlay",
-      "source": {
-        "type": "npm",
-        "package": "@adobe/demo-inspector",
-        "version": "^1.0.0"
-      },
-      "configuration": {
-        "defaultEnabled": true,
-        "position": "right"
-      }
-    },
-    {
       "id": "citisignal-nextjs",
       "type": "frontend",
       "name": "Headless CitiSignal",
@@ -157,12 +142,6 @@ Create a unified `entities.json` file:
     },
     {
       "from": "citisignal-nextjs",
-      "to": "demo-inspector",
-      "type": "includes",
-      "optional": true
-    },
-    {
-      "from": "demo-inspector",
       "to": "aep-websdk",
       "type": "enhanced-by",
       "optional": true,
@@ -170,27 +149,6 @@ Create a unified `entities.json` file:
     }
   ],
   "capabilities": {
-    "demo-inspector": {
-      "provides": ["debugging-api", "performance-metrics", "api-tracking"],
-      "consumes": ["dom-access", "network-interceptor"],
-      "features": {
-        "base": ["basic-inspection", "api-tracking"],
-        "conditional": [
-          {
-            "when": ["aep-websdk"],
-            "provides": ["aep-data-visualization", "segment-tracking", "experience-events"]
-          },
-          {
-            "when": ["commerce-mesh"],
-            "provides": ["graphql-debugging", "mesh-performance", "query-analysis"]
-          },
-          {
-            "when": ["aep-websdk", "commerce-mesh"],
-            "provides": ["unified-analytics-dashboard"]
-          }
-        ]
-      }
-    },
     "aep-websdk": {
       "provides": ["analytics-provider", "event-tracking", "audience-management"],
       "consumes": ["network-access", "storage-access"]
@@ -402,36 +360,36 @@ abstract class SmartComponent {
   }
 }
 
-// Example: Demo Inspector as a smart component
-class DemoInspector extends SmartComponent {
-  private inspectionTargets: Map<string, InspectionTarget> = new Map();
-  
+// Example: Integration Service as a smart component
+class IntegrationServiceComponent extends SmartComponent {
+  private endpoints: Map<string, EndpointConfig> = new Map();
+
   protected registerCapabilities() {
-    this.context.provide('debugging-api', {
-      inspect: this.inspect.bind(this),
-      trace: this.trace.bind(this),
-      profile: this.profile.bind(this)
+    this.context.provide('integration-api', {
+      configure: this.configure.bind(this),
+      sync: this.sync.bind(this),
+      validate: this.validate.bind(this)
     });
   }
-  
+
   protected subscribeToEvents() {
     this.context.on('component:loaded', this.onComponentLoaded.bind(this));
     this.context.on('api:called', this.onAPICall.bind(this));
   }
-  
+
   private onComponentLoaded(component: Entity) {
     // Dynamically adapt to new components
     const capabilities = this.context.graph.capabilities.get(component.id);
-    
+
     if (capabilities?.provides.includes('api-endpoint')) {
-      this.addAPIMonitor(component);
+      this.addEndpointConfig(component);
     }
-    
+
     if (capabilities?.provides.includes('analytics-provider')) {
       this.addAnalyticsIntegration(component);
     }
   }
-  
+
   private async addAnalyticsIntegration(provider: Entity) {
     // Check if we have the extension for this provider
     const extension = this.extensions.get(provider.id);
@@ -505,22 +463,22 @@ function DependencyTree({ graph, selected }: Props) {
 
 ## Example Use Cases
 
-### Use Case 1: Demo Inspector with Conditional Features
+### Use Case 1: Integration Service with Conditional Features
 
 ```json
 {
   "relationships": [
     {
-      "from": "demo-inspector",
+      "from": "integration-service",
       "to": "aep-websdk",
       "type": "enhanced-by",
-      "enables": ["aep-data-tracking", "segment-visualization"]
+      "enables": ["aep-data-sync", "segment-targeting"]
     },
     {
-      "from": "demo-inspector",
+      "from": "integration-service",
       "to": "commerce-mesh",
       "type": "enhanced-by",
-      "enables": ["graphql-debugging", "mesh-performance"]
+      "enables": ["graphql-proxy", "mesh-routing"]
     }
   ]
 }

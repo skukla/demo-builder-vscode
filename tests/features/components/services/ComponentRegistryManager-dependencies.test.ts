@@ -40,7 +40,7 @@ describe('DependencyResolver', () => {
             const result = await resolver.resolveDependencies('eds', 'adobe-commerce-paas');
 
             expect(result.required).toHaveLength(1);
-            expect(result.required[0].id).toBe('demo-inspector');
+            expect(result.required[0].id).toBe('test-tool');
         });
 
         it('should resolve optional dependencies when selected', async () => {
@@ -51,7 +51,7 @@ describe('DependencyResolver', () => {
                     eds: {
                         ...mockRawRegistry.frontends!.eds,
                         dependencies: {
-                            required: ['demo-inspector'],
+                            required: ['test-tool'],
                             optional: ['experience-platform'],
                         },
                     },
@@ -70,7 +70,7 @@ describe('DependencyResolver', () => {
             const result = await resolver.resolveDependencies('eds', 'adobe-commerce-paas');
 
             expect(result.all).toHaveLength(1);
-            expect(result.all[0].id).toBe('demo-inspector');
+            expect(result.all[0].id).toBe('test-tool');
         });
 
         it('should throw error for invalid frontend', async () => {
@@ -90,8 +90,8 @@ describe('DependencyResolver', () => {
         it('should validate dependency chain without errors', async () => {
             const deps = [
                 {
-                    id: 'demo-inspector',
-                    name: 'Demo Inspector',
+                    id: 'test-tool',
+                    name: 'Test Tool',
                     type: 'dependency' as const,
                     source: { type: 'git' as const, url: 'url', version: '1.0.0' },
                 },
@@ -108,10 +108,10 @@ describe('DependencyResolver', () => {
                 ...mockRawRegistry,
                 dependencies: {
                     ...mockRawRegistry.dependencies,
-                    'demo-inspector': {
-                        ...mockRawRegistry.dependencies!['demo-inspector'],
+                    'test-tool': {
+                        ...mockRawRegistry.dependencies!['test-tool'],
                         dependencies: {
-                            required: ['demo-inspector'], // Self-reference
+                            required: ['test-tool'], // Self-reference
                             optional: [],
                         },
                     },
@@ -121,12 +121,12 @@ describe('DependencyResolver', () => {
 
             const deps = [
                 {
-                    id: 'demo-inspector',
-                    name: 'Demo Inspector',
+                    id: 'test-tool',
+                    name: 'Test Tool',
                     type: 'dependency' as const,
                     source: { type: 'git' as const, url: 'url', version: '1.0.0' },
                     dependencies: {
-                        required: ['demo-inspector'],
+                        required: ['test-tool'],
                         optional: [],
                     },
                 },
@@ -142,14 +142,14 @@ describe('DependencyResolver', () => {
         it('should warn about version conflicts', async () => {
             const deps = [
                 {
-                    id: 'demo-inspector',
-                    name: 'Demo Inspector',
+                    id: 'test-tool',
+                    name: 'Test Tool',
                     type: 'dependency' as const,
                     source: { type: 'git' as const, url: 'url', version: '1.0.0' },
                 },
                 {
-                    id: 'demo-inspector',
-                    name: 'Demo Inspector',
+                    id: 'test-tool',
+                    name: 'Test Tool',
                     type: 'dependency' as const,
                     source: { type: 'git' as const, url: 'url', version: '2.0.0' },
                 },

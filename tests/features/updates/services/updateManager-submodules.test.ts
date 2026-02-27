@@ -46,10 +46,10 @@ jest.mock('@/features/updates/services/componentRepositoryResolver', () => ({
     ComponentRepositoryResolver: jest.fn().mockImplementation(() => ({
         getRepositoryInfo: jest.fn((componentId: string) => {
             const knownComponents: Record<string, any> = {
-                'demo-inspector': {
-                    id: 'demo-inspector',
-                    repository: 'skukla/demo-inspector',
-                    name: 'Demo Inspector',
+                'adobe-commerce-aco': {
+                    id: 'adobe-commerce-aco',
+                    repository: 'skukla/adobe-commerce-aco-module',
+                    name: 'Adobe Commerce ACO',
                 },
                 'commerce-mesh': {
                     id: 'commerce-mesh',
@@ -110,9 +110,9 @@ describe('UpdateManager - Submodule Updates', () => {
     describe('checkSubmoduleUpdates', () => {
         const parentPath = '/test/project/components/headless';
         const submodules: Record<string, SubmoduleConfig> = {
-            'demo-inspector': {
-                path: 'src/demo-inspector',
-                repository: 'skukla/demo-inspector',
+            'adobe-commerce-aco': {
+                path: 'src/adobe-commerce-aco',
+                repository: 'skukla/adobe-commerce-aco-module',
             },
         };
 
@@ -138,9 +138,9 @@ describe('UpdateManager - Submodule Updates', () => {
             const results = await updateManager.checkSubmoduleUpdates(parentPath, submodules);
 
             expect(results.size).toBe(1);
-            expect(results.get('demo-inspector')?.hasUpdate).toBe(true);
-            expect(results.get('demo-inspector')?.current).toBe('abc12345');
-            expect(results.get('demo-inspector')?.latest).toBe('1.1.0');
+            expect(results.get('adobe-commerce-aco')?.hasUpdate).toBe(true);
+            expect(results.get('adobe-commerce-aco')?.current).toBe('abc12345');
+            expect(results.get('adobe-commerce-aco')?.latest).toBe('1.1.0');
         });
 
         it('should report no update when commit matches release version', async () => {
@@ -163,7 +163,7 @@ describe('UpdateManager - Submodule Updates', () => {
 
             const results = await updateManager.checkSubmoduleUpdates(parentPath, submodules);
 
-            expect(results.get('demo-inspector')?.hasUpdate).toBe(false);
+            expect(results.get('adobe-commerce-aco')?.hasUpdate).toBe(false);
         });
 
         it('should handle git command failure gracefully', async () => {
@@ -186,8 +186,8 @@ describe('UpdateManager - Submodule Updates', () => {
 
             const results = await updateManager.checkSubmoduleUpdates(parentPath, submodules);
 
-            expect(results.get('demo-inspector')?.hasUpdate).toBe(true);
-            expect(results.get('demo-inspector')?.current).toBe('unknown');
+            expect(results.get('adobe-commerce-aco')?.hasUpdate).toBe(true);
+            expect(results.get('adobe-commerce-aco')?.current).toBe('unknown');
         });
 
         it('should skip submodules without repository mapping', async () => {
@@ -218,15 +218,15 @@ describe('UpdateManager - Submodule Updates', () => {
 
             const results = await updateManager.checkSubmoduleUpdates(parentPath, submodules);
 
-            expect(results.get('demo-inspector')?.hasUpdate).toBe(false);
-            expect(results.get('demo-inspector')?.latest).toBe('unknown');
+            expect(results.get('adobe-commerce-aco')?.hasUpdate).toBe(false);
+            expect(results.get('adobe-commerce-aco')?.latest).toBe('unknown');
         });
 
         it('should check multiple submodules', async () => {
             const multipleSubmodules: Record<string, SubmoduleConfig> = {
-                'demo-inspector': {
-                    path: 'src/demo-inspector',
-                    repository: 'skukla/demo-inspector',
+                'adobe-commerce-aco': {
+                    path: 'src/adobe-commerce-aco',
+                    repository: 'skukla/adobe-commerce-aco-module',
                 },
                 'commerce-mesh': {
                     path: 'src/mesh',
@@ -251,7 +251,7 @@ describe('UpdateManager - Submodule Updates', () => {
             const results = await updateManager.checkSubmoduleUpdates(parentPath, multipleSubmodules);
 
             expect(results.size).toBe(2);
-            expect(results.has('demo-inspector')).toBe(true);
+            expect(results.has('adobe-commerce-aco')).toBe(true);
             expect(results.has('commerce-mesh')).toBe(true);
         });
 
@@ -273,7 +273,7 @@ describe('UpdateManager - Submodule Updates', () => {
             expect(mockExecute).toHaveBeenCalledWith(
                 'git rev-parse HEAD',
                 expect.objectContaining({
-                    cwd: '/test/project/components/headless/src/demo-inspector',
+                    cwd: '/test/project/components/headless/src/adobe-commerce-aco',
                 })
             );
         });
