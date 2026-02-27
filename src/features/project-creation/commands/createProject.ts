@@ -445,6 +445,23 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 });
             }
         }
+
+        // Listen for block library settings changes and propagate to webview
+        const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
+            if (e.affectsConfiguration('demoBuilder.blockLibraries.custom')) {
+                const config = vscode.workspace.getConfiguration('demoBuilder');
+                const updated = parseCustomBlockLibrarySettings(
+                    config.get<string[]>('blockLibraries.custom', []),
+                );
+                this.sendMessage('customBlockLibraryDefaultsUpdated', { customBlockLibraryDefaults: updated });
+            }
+            if (e.affectsConfiguration('demoBuilder.blockLibraries.defaults')) {
+                const config = vscode.workspace.getConfiguration('demoBuilder');
+                const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', ['isle5']);
+                this.sendMessage('blockLibraryDefaultsUpdated', { blockLibraryDefaults });
+            }
+        });
+        this.disposables.add(configListener);
     }
 
     /**

@@ -1,7 +1,8 @@
 /**
  * Tests for WizardContainer helper functions (SOP §3 compliance)
  */
-import { getNextButtonText } from '@/features/project-creation/ui/wizard/wizardHelpers';
+import { getNextButtonText, filterRemovedCustomLibraries } from '@/features/project-creation/ui/wizard/wizardHelpers';
+import type { CustomBlockLibrary } from '@/types/blockLibraries';
 
 describe('getNextButtonText', () => {
     it('returns Continue when confirming selection', () => {
@@ -27,5 +28,50 @@ describe('getNextButtonText', () => {
         expect(getNextButtonText(false, 4, 5)).toBe('Continue');
         // First step
         expect(getNextButtonText(false, 0, 10)).toBe('Continue');
+    });
+});
+
+/**
+ * Regression test for: custom block libraries removed from VS Code settings
+ * still appearing on brand tiles despite disappearing from the modal.
+ */
+describe('filterRemovedCustomLibraries', () => {
+    const buildright: CustomBlockLibrary = {
+        name: 'Buildright Eds',
+        source: { owner: 'skukla', repo: 'buildright-eds', branch: 'main' },
+    };
+    const myBlocks: CustomBlockLibrary = {
+        name: 'My Blocks',
+        source: { owner: 'acme', repo: 'my-blocks', branch: 'main' },
+    };
+
+    it('should remove libraries no longer in defaults', () => {
+        const selected = [buildright, myBlocks];
+        const defaults = [myBlocks]; // buildright removed from settings
+        expect(filterRemovedCustomLibraries(selected, defaults)).toEqual([myBlocks]);
+    });
+
+    it('should keep all libraries when defaults unchanged', () => {
+        const selected = [buildright, myBlocks];
+        const defaults = [buildright, myBlocks];
+        expect(filterRemovedCustomLibraries(selected, defaults)).toEqual([buildright, myBlocks]);
+    });
+
+    it('should return empty array when all removed', () => {
+        const selected = [buildright];
+        const defaults: CustomBlockLibrary[] = [];
+        expect(filterRemovedCustomLibraries(selected, defaults)).toEqual([]);
+    });
+
+    it('should return empty array when selected is empty', () => {
+        expect(filterRemovedCustomLibraries([], [myBlocks])).toEqual([]);
+    });
+
+    it('should return empty array when selected is undefined', () => {
+        expect(filterRemovedCustomLibraries(undefined, [myBlocks])).toEqual([]);
+    });
+
+    it('should return selected unchanged when defaults is undefined', () => {
+        expect(filterRemovedCustomLibraries([buildright], undefined)).toEqual([buildright]);
     });
 });

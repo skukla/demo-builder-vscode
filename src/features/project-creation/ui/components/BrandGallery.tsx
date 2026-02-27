@@ -1,15 +1,15 @@
 /**
  * BrandGallery Component
  *
- * Hybrid approach: Modal for architecture selection + expanded card for confirmation.
+ * Hybrid approach: Modal for architecture selection + detail panel for confirmation.
  * 1. Click brand -> Modal opens with architecture options (room for descriptions)
  * 2. Select architecture -> Modal closes
- * 3. Card expands to show the confirmed selection (at-a-glance confirmation)
+ * 3. Detail panel below grid shows the confirmed selection (no layout shift)
  */
 
 import { Text, DialogContainer } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
     getNativeBlockLibraries,
     getDefaultBlockLibraryIds,
@@ -55,12 +55,13 @@ interface PackageCardProps {
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
     isSelected: boolean;
+    isComplete: boolean;
     isDimmed: boolean;
     onCardClick: () => void;
 }
 
 /**
- * PackageCard - displays package info, expands to show selected architecture
+ * PackageCard - displays package info with selection indicator
  */
 const PackageCard: React.FC<PackageCardProps> = ({
     pkg,
@@ -68,6 +69,7 @@ const PackageCard: React.FC<PackageCardProps> = ({
     selectedBlockLibraries = [],
     customBlockLibraries,
     isSelected,
+    isComplete,
     isDimmed,
     onCardClick,
 }) => {
@@ -89,13 +91,12 @@ const PackageCard: React.FC<PackageCardProps> = ({
         [onCardClick, isComingSoon],
     );
 
-    // Card is "complete" when package is selected AND has a stack
-    const isComplete = isSelected && selectedStack;
+    const libraryCount = selectedBlockLibraries.length + (customBlockLibraries?.length ?? 0);
 
     const cardClasses = cn(
         'expandable-brand-card',
-        isSelected && 'selected',      // Blue border when package selected
-        isComplete && 'expanded',       // Expanded when stack also selected
+        isSelected && 'selected',
+        isComplete && 'expanded',
         isComplete && 'complete',
         isDimmed && 'dimmed',
         isComingSoon && 'coming-soon',
@@ -118,7 +119,6 @@ const PackageCard: React.FC<PackageCardProps> = ({
             {isComingSoon && (
                 <span className="architecture-badge">Coming Soon</span>
             )}
-            {/* Package header - always visible */}
             <div className="brand-card-header">
                 <div className="brand-card-title-row">
                     <Text UNSAFE_className="brand-card-name">
@@ -133,8 +133,8 @@ const PackageCard: React.FC<PackageCardProps> = ({
                 </Text>
             </div>
 
-            {/* Selected architecture - shown when complete */}
-            {isComplete && (
+            {/* Compact selection: architecture name + hover tooltip for libraries */}
+            {isComplete && selectedStack && (
                 <div className="brand-card-selection">
                     <Text UNSAFE_className="brand-card-selection-label">
                         Architecture
@@ -142,26 +142,28 @@ const PackageCard: React.FC<PackageCardProps> = ({
                     <Text UNSAFE_className="brand-card-selection-value">
                         {selectedStack.name}
                     </Text>
-                    <div className={cn(
-                        'brand-card-libraries-wrapper',
-                        (selectedBlockLibraries.length > 0 || (customBlockLibraries?.length ?? 0) > 0) && 'has-libraries',
-                    )}>
-                        <div className="brand-card-libraries-inner">
-                            <Text UNSAFE_className="brand-card-selection-label">
-                                Block Libraries
+                    {libraryCount > 0 && (
+                        <div className="brand-card-detail-trigger">
+                            <Text UNSAFE_className="brand-card-detail-link">
+                                {libraryCount} block {libraryCount === 1 ? 'library' : 'libraries'}
                             </Text>
-                            {selectedBlockLibraries.map(id => (
-                                <Text key={id} UNSAFE_className="brand-card-selection-value">
-                                    {getBlockLibraryName(id)}
+                            <div className="brand-card-detail-tooltip">
+                                <Text UNSAFE_className="brand-card-selection-label">
+                                    Block Libraries
                                 </Text>
-                            ))}
-                            {customBlockLibraries?.map(lib => (
-                                <Text key={`${lib.source.owner}/${lib.source.repo}`} UNSAFE_className="brand-card-selection-value">
-                                    {lib.name}
-                                </Text>
-                            ))}
+                                {selectedBlockLibraries.map(id => (
+                                    <Text key={id} UNSAFE_className="brand-card-selection-value">
+                                        {getBlockLibraryName(id)}
+                                    </Text>
+                                ))}
+                                {customBlockLibraries?.map(lib => (
+                                    <Text key={`${lib.source.owner}/${lib.source.repo}`} UNSAFE_className="brand-card-selection-value">
+                                        {lib.name}
+                                    </Text>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             )}
         </div>
@@ -198,6 +200,31 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         () => sortPackages(filterPackagesBySearchQuery(packages, searchQuery)),
         [packages, searchQuery],
     );
+
+    // Responsive column count based on container width (matches old grid minmax(220px, 1fr))
+    const gridRef = useRef<HTMLDivElement>(null);
+    const [columnCount, setColumnCount] = useState(3);
+    useEffect(() => {
+        const el = gridRef.current;
+        if (!el) return;
+        const observer = new ResizeObserver(entries => {
+            const width = entries[0].contentRect.width;
+            const minCardWidth = 220;
+            const gap = 20;
+            setColumnCount(Math.max(1, Math.floor((width + gap) / (minCardWidth + gap))));
+        });
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
+
+    // Distribute packages into columns (left-to-right, then wrap to next row)
+    const columns = useMemo(() => {
+        const cols: DemoPackage[][] = Array.from({ length: columnCount }, () => []);
+        filteredPackages.forEach((pkg, i) => {
+            cols[i % columnCount].push(pkg);
+        });
+        return cols;
+    }, [filteredPackages, columnCount]);
 
     // Get the package object for the modal
     const modalPackage = useMemo(() => {
@@ -334,23 +361,28 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                 hasLoadedOnce={true}
             />
 
-            <div className="expandable-brand-grid">
-                {filteredPackages.map(pkg => {
-                    const isSelected = selectedPackage === pkg.id;
-                    const isDimmed = selectedPackage !== undefined && !isSelected;
-                    return (
-                        <PackageCard
-                            key={pkg.id}
-                            pkg={pkg}
-                            selectedStack={isSelected ? selectedStackObj : undefined}
-                            selectedBlockLibraries={isSelected ? selectedBlockLibraries : undefined}
-                            customBlockLibraries={isSelected ? customBlockLibraries : undefined}
-                            isSelected={isSelected}
-                            isDimmed={isDimmed}
-                            onCardClick={() => handleCardClick(pkg)}
-                        />
-                    );
-                })}
+            <div ref={gridRef} className="expandable-brand-grid">
+                {columns.map((colItems, colIndex) => (
+                    <div key={colIndex} className="brand-grid-column">
+                        {colItems.map(pkg => {
+                            const isSelected = selectedPackage === pkg.id;
+                            const isDimmed = selectedPackage !== undefined && !isSelected;
+                            return (
+                                <PackageCard
+                                    key={pkg.id}
+                                    pkg={pkg}
+                                    selectedStack={isSelected ? selectedStackObj : undefined}
+                                    selectedBlockLibraries={isSelected ? selectedBlockLibraries : undefined}
+                                    customBlockLibraries={isSelected ? customBlockLibraries : undefined}
+                                    isSelected={isSelected}
+                                    isComplete={isSelected && !!selectedStackObj}
+                                    isDimmed={isDimmed}
+                                    onCardClick={() => handleCardClick(pkg)}
+                                />
+                            );
+                        })}
+                    </div>
+                ))}
             </div>
 
             {searchQuery && filteredPackages.length === 0 && (

@@ -37,7 +37,8 @@
           "templateRepo": "isle5",
           "contentSource": {
             "org": "stephen-garner-adobe",
-            "site": "isle5"
+            "site": "isle5",
+            "indexPath": "/sitemap.json"
           }
         },
         "eds-accs": {
@@ -56,7 +57,8 @@
           "templateRepo": "isle5",
           "contentSource": {
             "org": "stephen-garner-adobe",
-            "site": "isle5"
+            "site": "isle5",
+            "indexPath": "/sitemap.json"
           }
         }
       }

@@ -10,6 +10,27 @@ import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
 
 /**
+ * Filters committed custom block library selections to remove any that
+ * are no longer present in the current VS Code settings defaults.
+ *
+ * When a user removes a custom library URL from settings, the modal
+ * correctly re-initializes from defaults. But the wizard state (shown
+ * on brand tiles) must also be reconciled.
+ */
+export function filterRemovedCustomLibraries(
+    selected: CustomBlockLibrary[] | undefined,
+    defaults: CustomBlockLibrary[] | undefined,
+): CustomBlockLibrary[] {
+    if (!selected?.length) return [];
+    if (!defaults) return selected;
+
+    const validKeys = new Set(
+        defaults.map(d => `${d.source.owner}/${d.source.repo}`),
+    );
+    return selected.filter(lib => validKeys.has(`${lib.source.owner}/${lib.source.repo}`));
+}
+
+/**
  * Step configuration for wizard navigation
  */
 export interface WizardStepConfig {

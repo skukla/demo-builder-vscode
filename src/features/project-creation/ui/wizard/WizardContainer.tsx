@@ -20,6 +20,7 @@ import {
     getNavigationDirection,
     shouldShowWizardFooter,
     getWizardTitle,
+    filterRemovedCustomLibraries,
     ImportedSettings,
     EditProjectConfig,
     WizardStepConfigWithRequirements,
@@ -29,6 +30,7 @@ import { LoadingOverlay } from '@/core/ui/components/feedback';
 import { PageHeader, PageFooter } from '@/core/ui/components/layout';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
+import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
@@ -80,9 +82,29 @@ export function WizardContainer({
     importedSettings,
     editProject,
     projectsViewMode,
-    blockLibraryDefaults,
-    customBlockLibraryDefaults,
+    blockLibraryDefaults: initialBlockLibraryDefaults,
+    customBlockLibraryDefaults: initialCustomBlockLibraryDefaults,
 }: WizardContainerProps) {
+    // Block library defaults — live state that updates when VS Code settings change
+    const [blockLibraryDefaults, setBlockLibraryDefaults] = useState(initialBlockLibraryDefaults);
+    const [customBlockLibraryDefaults, setCustomBlockLibraryDefaults] = useState(initialCustomBlockLibraryDefaults);
+
+    useEffect(() => {
+        const unsubCustom = vscode.onMessage(
+            'customBlockLibraryDefaultsUpdated',
+            (data: { customBlockLibraryDefaults: CustomBlockLibrary[] }) => {
+                setCustomBlockLibraryDefaults(data.customBlockLibraryDefaults);
+            },
+        );
+        const unsubDefaults = vscode.onMessage(
+            'blockLibraryDefaultsUpdated',
+            (data: { blockLibraryDefaults: string[] }) => {
+                setBlockLibraryDefaults(data.blockLibraryDefaults);
+            },
+        );
+        return () => { unsubCustom(); unsubDefaults(); };
+    }, []);
+
     // Packages and stacks - loaded once on mount
     // NOTE: Must be declared BEFORE useWizardState so stacks can be passed for step filtering
     const [packages, setPackages] = useState<DemoPackage[]>([]);
@@ -123,6 +145,17 @@ export function WizardContainer({
         editProject,
         stacks,
     });
+
+    // Reconcile committed custom library selections against current settings.
+    // Runs on mount (edit mode may have stale saved libraries) and when
+    // settings change mid-session. The modal re-initializes from defaults
+    // on open, but the brand tile renders state.customBlockLibraries.
+    useEffect(() => {
+        const filtered = filterRemovedCustomLibraries(state.customBlockLibraries, customBlockLibraryDefaults);
+        if (filtered.length !== (state.customBlockLibraries?.length ?? 0)) {
+            updateState({ customBlockLibraries: filtered });
+        }
+    }, [customBlockLibraryDefaults, state.customBlockLibraries, updateState]);
 
     // Navigation hook
     const {
