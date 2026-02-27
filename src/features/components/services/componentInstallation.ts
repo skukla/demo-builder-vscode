@@ -3,7 +3,6 @@
  *
  * Handles Git-based component installation including:
  * - Repository cloning with automatic latest release detection
- * - Submodule initialization
  * - Version detection (git tag, package.json, commit hash)
  * - Node version file creation
  *
@@ -99,11 +98,6 @@ export class ComponentInstallation {
             cloneFlags.push('--depth=1');
         }
 
-        // Recursive (submodules)
-        if (componentDef.source.gitOptions?.recursive) {
-            cloneFlags.push('--recursive');
-        }
-
         const cloneCommand = `git clone ${cloneFlags.join(' ')} "${componentDef.source.url}" "${componentPath}"`.trim();
 
         this.logger.trace(`[ComponentManager] Executing: ${cloneCommand}`);
@@ -129,9 +123,6 @@ export class ComponentInstallation {
 
         this.logger.debug(`[ComponentManager] Clone completed for ${componentDef.name} in ${cloneDuration}ms`);
 
-        // Initialize submodules if needed
-        await this.initializeSubmodules(componentDef, componentPath, options);
-
         // Detect component version
         const detectedVersion = await this.detectVersion(componentDef, componentPath);
         if (detectedVersion) {
@@ -156,70 +147,6 @@ export class ComponentInstallation {
             success: true,
             component: componentInstance,
         };
-    }
-
-    /**
-     * Initialize selected submodules
-     */
-    private async initializeSubmodules(
-        componentDef: TransformedComponentDefinition,
-        componentPath: string,
-        options: ComponentInstallOptions,
-    ): Promise<void> {
-        if (!componentDef.submodules || !options.selectedSubmodules?.length) {
-            if (componentDef.submodules) {
-                this.logger.debug(`[ComponentManager] Skipping submodule initialization for ${componentDef.name} (none selected)`);
-            }
-            return;
-        }
-
-        const submodulesToInit: string[] = [];
-
-        for (const submoduleId of options.selectedSubmodules) {
-            const submoduleConfig = componentDef.submodules[submoduleId];
-            if (submoduleConfig?.path) {
-                submodulesToInit.push(submoduleConfig.path);
-            }
-        }
-
-        if (submodulesToInit.length === 0) {
-            return;
-        }
-
-        this.logger.debug(`[ComponentManager] Initializing selected submodules for ${componentDef.name}: ${submodulesToInit.join(', ')}`);
-
-        const commandManager = ServiceLocator.getCommandExecutor();
-
-        // Initialize each selected submodule
-        for (const submodulePath of submodulesToInit) {
-            const submoduleCommand = `git submodule update --init "${submodulePath}"`;
-            this.logger.trace(`[ComponentManager] Executing submodule command: ${submoduleCommand}`);
-            this.logger.trace(`[ComponentManager] Working directory: ${componentPath}`);
-
-            const submoduleStart = Date.now();
-            const submoduleResult = await commandManager.execute(
-                submoduleCommand,
-                {
-                    cwd: componentPath,
-                    timeout: TIMEOUTS.LONG,
-                    enhancePath: true,
-                    shell: DEFAULT_SHELL,
-                },
-            );
-            const submoduleDuration = Date.now() - submoduleStart;
-
-            if (submoduleResult.code !== 0) {
-                this.logger.warn(`[ComponentManager] Failed to initialize submodule ${submodulePath}`);
-                this.logger.debug(`[ComponentManager] Submodule init failed: code=${submoduleResult.code}, duration=${submoduleDuration}ms`);
-                this.logger.trace(`[ComponentManager] Submodule stderr: ${submoduleResult.stderr}`);
-                this.logger.trace(`[ComponentManager] Submodule stdout: ${submoduleResult.stdout}`);
-                // Continue with other submodules even if one fails
-            } else {
-                this.logger.debug(`[ComponentManager] Submodule ${submodulePath} initialized in ${submoduleDuration}ms`);
-            }
-        }
-
-        this.logger.debug(`[ComponentManager] Submodules initialized for ${componentDef.name}`);
     }
 
     /**

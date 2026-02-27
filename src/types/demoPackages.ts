@@ -15,8 +15,6 @@
 export interface GitOptions {
     /** Perform a shallow clone (git clone --depth 1) */
     shallow: boolean;
-    /** Initialize and update submodules recursively */
-    recursive: boolean;
 }
 
 /**
@@ -31,16 +29,6 @@ export interface GitSource {
     branch: string;
     /** Git clone options */
     gitOptions: GitOptions;
-}
-
-/**
- * Submodule - Definition for a submodule to be included
- */
-export interface Submodule {
-    /** Path within the project where submodule should be placed */
-    path: string;
-    /** Repository reference (e.g., 'org/repo-name') */
-    repository: string;
 }
 
 /**
@@ -93,8 +81,6 @@ export interface Storefront {
     tags?: string[];
     /** Git source configuration for cloning */
     source: GitSource;
-    /** Submodule definitions to include */
-    submodules?: Record<string, Submodule>;
     /** DA.live content source for EDS storefronts (required for EDS stacks) */
     contentSource?: DaLiveContentSource;
     /** GitHub owner of the template repository (for reset-to-template operations) */

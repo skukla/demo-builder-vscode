@@ -198,7 +198,6 @@ export interface ComponentSource {
     // Git-specific options
     gitOptions?: {
         shallow?: boolean;           // Use --depth=1 for faster clones
-        recursive?: boolean;          // Clone submodules (--recursive)
         tag?: string;                 // Clone specific tag
         commit?: string;              // Clone specific commit hash
     };

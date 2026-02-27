@@ -6,7 +6,7 @@ import { ComponentRepositoryResolver } from './componentRepositoryResolver';
 import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { Project, SubmoduleConfig } from '@/types';
+import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { getComponentIds, getComponentVersion } from '@/types/typeGuards';
@@ -186,58 +186,6 @@ export class UpdateManager {
                     outdatedProjects,
                 });
             }
-        }
-
-        return results;
-    }
-
-    /**
-     * Check for updates to submodules within a parent component
-     *
-     * @param parentComponentPath - Path to the parent component directory
-     * @param submodules - Submodule configurations from component definition
-     * @returns Map of submodule IDs to their update status
-     */
-    async checkSubmoduleUpdates(
-        parentComponentPath: string,
-        submodules: Record<string, SubmoduleConfig>,
-    ): Promise<Map<string, UpdateCheckResult>> {
-        const results = new Map<string, UpdateCheckResult>();
-        const channel = this.getUpdateChannel();
-
-        for (const [submoduleId, submoduleConfig] of Object.entries(submodules)) {
-            // Get repository from components.json (submodules may also be registered as components)
-            const repoInfo = await this.repositoryResolver.getRepositoryInfo(submoduleId);
-            if (!repoInfo) {
-                continue;
-            }
-
-            // Get current submodule commit
-            const submodulePath = path.join(parentComponentPath, submoduleConfig.path);
-            const currentCommit = await this.getGitCommit(submodulePath);
-
-            // Fetch latest release from GitHub
-            const latestRelease = await this.fetchLatestRelease(repoInfo.repository, channel);
-
-            if (!latestRelease) {
-                results.set(submoduleId, {
-                    hasUpdate: false,
-                    current: currentCommit?.substring(0, 8) || 'unknown',
-                    latest: 'unknown',
-                });
-                continue;
-            }
-
-            // For submodules, we compare commit-based versions
-            // If current commit is unknown or different from latest tag, an update may be available
-            const hasUpdate = !currentCommit || currentCommit !== latestRelease.version;
-
-            results.set(submoduleId, {
-                hasUpdate,
-                current: currentCommit?.substring(0, 8) || 'unknown',
-                latest: latestRelease.version,
-                releaseInfo: hasUpdate ? latestRelease : undefined,
-            });
         }
 
         return results;

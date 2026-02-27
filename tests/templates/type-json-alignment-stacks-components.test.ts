@@ -27,7 +27,7 @@ const COMPONENTS_ROOT_FIELDS = new Set([
 const COMPONENT_DEFINITION_FIELDS = new Set([
     'name', 'description', 'type', 'subType', 'icon', 'source', 'dependencies',
     'configuration', 'compatibleBackends', 'features', 'requiresApiKey', 'endpoint',
-    'requiresDeployment', 'submodules', 'metadata', 'addonFor', 'category', 'hidden',
+    'requiresDeployment', 'metadata', 'addonFor', 'category', 'hidden',
     'dataRepository', 'installPath', 'configDefaults', 'contentSource', 'frontend',
     'backend', 'requiredComponents', 'optionalComponents', 'requiredEnvVars',
 ]);
@@ -45,7 +45,7 @@ const COMPONENT_SOURCE_FIELDS = new Set([
 ]);
 
 const COMPONENT_GIT_OPTIONS_FIELDS = new Set([
-    'shallow', 'recursive', 'tag', 'commit',
+    'shallow', 'tag', 'commit',
 ]);
 
 const ENV_VAR_DEFINITION_FIELDS = new Set([

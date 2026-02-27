@@ -32,7 +32,7 @@ const mockGitSource: GitSource = {
     type: 'git',
     url: 'https://github.com/test/repo',
     branch: 'main',
-    gitOptions: { shallow: true, recursive: false },
+    gitOptions: { shallow: true },
 };
 
 const mockStacks: Stack[] = [

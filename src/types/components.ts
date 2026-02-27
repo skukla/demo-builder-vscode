@@ -33,16 +33,6 @@ export interface EnvVarDefinition {
 }
 
 /**
- * SubmoduleConfig - Git submodule configuration within a component
- */
-export interface SubmoduleConfig {
-    /** Relative path within parent component (e.g., "packages/my-addon") */
-    path: string;
-    /** GitHub repository in owner/repo format (e.g., "owner/repo-name") */
-    repository: string;
-}
-
-/**
  * ServiceDefinition - Service definition from registry
  */
 export interface ServiceDefinition {
@@ -107,7 +97,6 @@ export interface RawComponentDefinition {
         branch?: string;
         gitOptions?: {
             shallow?: boolean;
-            recursive?: boolean;
             tag?: string;
             commit?: string;
         };
@@ -159,8 +148,6 @@ export interface RawComponentDefinition {
     requiresApiKey?: boolean;
     endpoint?: string;
     requiresDeployment?: boolean;
-    /** Git submodules contained within this component */
-    submodules?: Record<string, SubmoduleConfig>;
     /** Runtime metadata populated during project creation (e.g., EDS URLs) */
     metadata?: Record<string, unknown>;
 }

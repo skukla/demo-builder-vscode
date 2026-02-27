@@ -140,14 +140,6 @@ describe('demoPackageLoader', () => {
             expect(storefront?.source.gitOptions).toBeDefined();
         });
 
-        it('should return storefront without demo-inspector submodules (removed)', async () => {
-            const storefront = await getStorefrontForStack('citisignal', 'headless-paas');
-
-            expect(storefront).toBeDefined();
-            // demo-inspector submodules were removed
-            expect(storefront?.submodules?.['demo-inspector']).toBeUndefined();
-        });
-
         it('should return isle5 eds-paas storefront', async () => {
             const storefront = await getStorefrontForStack('isle5', 'eds-paas');
 

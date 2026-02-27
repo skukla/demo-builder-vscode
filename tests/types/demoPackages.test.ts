@@ -1,7 +1,7 @@
 /**
  * DemoPackage Primitive Type Tests
  *
- * Tests for primitive types: GitOptions, GitSource, Submodule, Storefront,
+ * Tests for primitive types: GitOptions, GitSource, Storefront,
  * Addons, AddonSource, AddonConfig.
  *
  * Composite types (DemoPackage, DemoPackagesConfig, exports) are in
@@ -11,7 +11,6 @@
 import type {
     GitOptions,
     GitSource,
-    Submodule,
     Storefront,
     Addons,
     AddonSource,
@@ -19,16 +18,14 @@ import type {
 } from '@/types/demoPackages';
 
 describe('GitOptions type', () => {
-    it('should require shallow and recursive fields', () => {
-        // Given: Git options with both fields (now required)
+    it('should require shallow field', () => {
+        // Given: Git options with shallow field
         const options: GitOptions = {
             shallow: true,
-            recursive: false,
         };
 
-        // Then: both should be accessible
+        // Then: shallow should be accessible
         expect(options.shallow).toBe(true);
-        expect(options.recursive).toBe(false);
     });
 });
 
@@ -41,7 +38,6 @@ describe('GitSource type', () => {
             branch: 'main',
             gitOptions: {
                 shallow: true,
-                recursive: false,
             },
         };
 
@@ -60,7 +56,6 @@ describe('GitSource type', () => {
             branch: 'master',
             gitOptions: {
                 shallow: false,
-                recursive: false,
             },
         };
 
@@ -69,32 +64,6 @@ describe('GitSource type', () => {
         expect(source.url).toBe('https://github.com/skukla/citisignal-nextjs');
         expect(source.branch).toBe('master');
         expect(source.gitOptions).toBeDefined();
-    });
-});
-
-describe('Submodule type', () => {
-    it('should require path and repository fields', () => {
-        // Given: A submodule definition
-        const submodule: Submodule = {
-            path: 'src/custom-module',
-            repository: 'skukla/custom-module',
-        };
-
-        // Then: all fields should be accessible
-        expect(submodule.path).toBe('src/custom-module');
-        expect(submodule.repository).toBe('skukla/custom-module');
-    });
-
-    it('should match actual demo-packages.json submodule structure', () => {
-        // Given: Submodule matching custom-module from headless-paas storefront
-        const submodule: Submodule = {
-            path: 'src/custom-module',
-            repository: 'skukla/custom-module',
-        };
-
-        // Then: fields match expected values
-        expect(submodule.path).toBe('src/custom-module');
-        expect(submodule.repository).toBe('skukla/custom-module');
     });
 });
 
@@ -108,7 +77,7 @@ describe('Storefront type', () => {
                 type: 'git',
                 url: 'https://github.com/test/repo',
                 branch: 'main',
-                gitOptions: { shallow: true, recursive: false },
+                gitOptions: { shallow: true },
             },
         };
 
@@ -130,13 +99,7 @@ describe('Storefront type', () => {
                 type: 'git',
                 url: 'https://github.com/skukla/citisignal-nextjs',
                 branch: 'master',
-                gitOptions: { shallow: false, recursive: false },
-            },
-            submodules: {
-                'custom-module': {
-                    path: 'src/custom-module',
-                    repository: 'skukla/custom-module',
-                },
+                gitOptions: { shallow: false },
             },
         };
 
@@ -144,7 +107,6 @@ describe('Storefront type', () => {
         expect(storefront.icon).toBe('nextjs');
         expect(storefront.featured).toBe(true);
         expect(storefront.tags).toContain('headless');
-        expect(storefront.submodules?.['custom-module']?.path).toBe('src/custom-module');
     });
 
     it('should accept structure matching headless-paas storefront pattern', () => {
@@ -161,13 +123,6 @@ describe('Storefront type', () => {
                 branch: 'master',
                 gitOptions: {
                     shallow: false,
-                    recursive: false,
-                },
-            },
-            submodules: {
-                'custom-module': {
-                    path: 'src/custom-module',
-                    repository: 'skukla/custom-module',
                 },
             },
         };
@@ -175,7 +130,6 @@ describe('Storefront type', () => {
         // Then: all fields should match expected values
         expect(storefront.name).toBe('CitiSignal Headless');
         expect(storefront.source.branch).toBe('master');
-        expect(storefront.submodules?.['custom-module']).toBeDefined();
     });
 });
 

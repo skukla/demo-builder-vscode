@@ -117,7 +117,6 @@ interface FrontendSource {
     branch: string;
     gitOptions?: {
         shallow?: boolean;
-        recursive?: boolean;
     };
 }
 
@@ -973,21 +972,9 @@ async function loadComponentDefinitions(
 
     context.logger.info(`[Project Creation] Stack "${stack.id}" components: frontend=${frontend}, dependencies=[${dependencies.join(', ')}]`);
 
-    // Get frontend's submodule IDs to skip them in the dependency loop
-    const frontendSubmoduleIds = new Set<string>();
-    if (frontend) {
-        const frontends = await registryManager.getFrontends();
-        const frontendDef = frontends.find((f: { id: string }) => f.id === frontend);
-        if (frontendDef?.submodules) {
-            Object.keys(frontendDef.submodules).forEach(id => frontendSubmoduleIds.add(id));
-        }
-    }
-
-    const filteredDependencies = dependencies.filter((id: string) => !frontendSubmoduleIds.has(id));
-
     const allComponents = [
         ...(frontend ? [{ id: frontend, type: 'frontend' }] : []),
-        ...filteredDependencies.map((id: string) => ({ id, type: 'dependency' })),
+        ...dependencies.map((id: string) => ({ id, type: 'dependency' })),
         ...appBuilder.map((id: string) => ({ id, type: 'app-builder' })),
     ];
 
@@ -1017,18 +1004,7 @@ async function loadComponentDefinitions(
             throw new Error(errorMsg);
         }
 
-        // Determine submodules for frontend components
-        const installOptions: { selectedSubmodules?: string[]; skipDependencies?: boolean } = { skipDependencies: true };
-        if (comp.type === 'frontend' && componentDef.submodules && stack) {
-            const allSelected = [...(stack.dependencies || []), ...(typedConfig.selectedAddons || [])];
-            const selectedSubmodules = allSelected.filter(
-                (depId: string) => componentDef?.submodules?.[depId] !== undefined,
-            );
-            if (selectedSubmodules.length > 0) {
-                installOptions.selectedSubmodules = selectedSubmodules;
-                context.logger.debug(`[Project Creation] Selected submodules for ${componentDef.name}: ${selectedSubmodules.join(', ')}`);
-            }
-        }
+        const installOptions: { skipDependencies?: boolean } = { skipDependencies: true };
 
         componentDef = { ...componentDef, type: comp.type as TransformedComponentDefinition['type'] };
         componentDefinitions.set(comp.id, { definition: componentDef, type: comp.type, installOptions });

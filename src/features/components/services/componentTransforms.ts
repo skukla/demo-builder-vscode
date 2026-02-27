@@ -25,7 +25,6 @@ interface RegistryComponent {
         deploymentTarget?: string;
         [key: string]: unknown;
     };
-    submodules?: Record<string, { path: string; repository?: string }>;
 }
 
 /**

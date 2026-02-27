@@ -5,7 +5,6 @@
  * - Basic Git clone
  * - Shallow clone
  * - Tag/branch selection
- * - Recursive clone
  * - Commit hash retrieval
  * - Clone failures and timeouts
  *
@@ -119,28 +118,6 @@ describe('ComponentManager - Installation (Git Clone)', () => {
 
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 expect.stringContaining('--branch v1.0.0'),
-                expect.any(Object)
-            );
-        });
-
-        it('should use recursive clone when specified', async () => {
-            const componentDef: TransformedComponentDefinition = {
-                id: 'test-component',
-                name: 'Test Component',
-                type: 'frontend',
-                source: {
-                    type: 'git',
-                    url: 'https://github.com/test/repo.git',
-                    gitOptions: {
-                        recursive: true
-                    }
-                }
-            };
-
-            await componentManager.installComponent(mockProject, componentDef);
-
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                expect.stringContaining('--recursive'),
                 expect.any(Object)
             );
         });

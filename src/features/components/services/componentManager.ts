@@ -5,7 +5,7 @@
  * within a Demo Builder project.
  *
  * This service composes specialized modules:
- * - ComponentInstallation: Git cloning, version detection, submodule handling
+ * - ComponentInstallation: Git cloning, version detection
  * - ComponentDependencies: npm install, build scripts
  *
  * Provides a simple constructor interface (just Logger) while delegating

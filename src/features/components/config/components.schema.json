@@ -257,10 +257,6 @@
                             "type": "string",
                             "description": "Git tag to clone (preferred over branch for stability)"
                         },
-                        "recursive": {
-                            "type": "boolean",
-                            "description": "Whether to clone submodules recursively"
-                        }
                     }
                 }
             }

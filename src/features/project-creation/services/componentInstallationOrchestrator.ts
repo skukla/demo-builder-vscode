@@ -17,7 +17,6 @@ export interface ComponentDefinitionEntry {
     definition: TransformedComponentDefinition;
     type: string;
     installOptions: {
-        selectedSubmodules?: string[];
         skipDependencies?: boolean;
     };
 }

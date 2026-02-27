@@ -123,7 +123,6 @@ constructor(context: vscode.ExtensionContext, logger: Logger) {
 **Updated methods**:
 - `checkComponentUpdates()` - Uses resolver instead of hardcoded map
 - `checkAllProjectsForUpdates()` - Uses resolver for multi-project checks
-- `checkSubmoduleUpdates()` - Uses resolver for submodule updates
 
 ### 3. Added Tests
 

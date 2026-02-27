@@ -40,7 +40,7 @@ describe('demo-packages.schema.json - validation rules', () => {
                                     type: 'git',
                                     url: 'https://github.com/test/repo',
                                     branch: 'main',
-                                    gitOptions: { shallow: true, recursive: false }
+                                    gitOptions: { shallow: true }
                                 }
                             }
                         }
@@ -93,7 +93,7 @@ describe('demo-packages.schema.json - validation rules', () => {
                                     type: 'git',
                                     url: 'https://github.com/test/repo',
                                     branch: 'main',
-                                    gitOptions: { shallow: true, recursive: false }
+                                    gitOptions: { shallow: true }
                                 }
                             }
                         }
@@ -154,7 +154,7 @@ describe('demo-packages.schema.json - validation rules', () => {
                                     type: 'svn', // Invalid: only 'git' is allowed
                                     url: 'https://github.com/test/repo',
                                     branch: 'main',
-                                    gitOptions: { shallow: true, recursive: false }
+                                    gitOptions: { shallow: true }
                                 }
                             }
                         }
@@ -188,7 +188,7 @@ describe('demo-packages.schema.json - validation rules', () => {
                                     type: 'git',
                                     url: 'https://github.com/test/repo',
                                     branch: 'main',
-                                    gitOptions: { shallow: true, recursive: false }
+                                    gitOptions: { shallow: true }
                                 }
                             }
                         }
@@ -220,7 +220,7 @@ describe('demo-packages.schema.json - validation rules', () => {
                                     type: 'git',
                                     url: 'https://github.com/test/repo',
                                     branch: 'main',
-                                    gitOptions: { shallow: true, recursive: false }
+                                    gitOptions: { shallow: true }
                                 }
                             },
                             'headless-paas': {
@@ -230,7 +230,7 @@ describe('demo-packages.schema.json - validation rules', () => {
                                     type: 'git',
                                     url: 'https://github.com/test/nextjs-repo',
                                     branch: 'master',
-                                    gitOptions: { shallow: false, recursive: false }
+                                    gitOptions: { shallow: false }
                                 }
                             }
                         }
@@ -272,13 +272,7 @@ describe('demo-packages.schema.json - validation rules', () => {
                                     type: 'git',
                                     url: 'https://github.com/test/repo',
                                     branch: 'main',
-                                    gitOptions: { shallow: true, recursive: false }
-                                },
-                                submodules: {
-                                    'my-submodule': {
-                                        path: 'src/submodule',
-                                        repository: 'owner/repo'
-                                    }
+                                    gitOptions: { shallow: true }
                                 }
                             }
                         }

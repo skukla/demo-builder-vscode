@@ -36,7 +36,7 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 'headless': {
                     name: 'Default Headless',
                     description: 'Default NextJS storefront',
-                    source: { type: 'git', url: 'https://github.com/test/default', branch: 'main', gitOptions: { shallow: true, recursive: false } },
+                    source: { type: 'git', url: 'https://github.com/test/default', branch: 'main', gitOptions: { shallow: true } },
                 },
             },
         },
@@ -55,7 +55,7 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 'headless': {
                     name: 'CitiSignal Headless',
                     description: 'CitiSignal NextJS storefront',
-                    source: { type: 'git', url: 'https://github.com/test/citisignal', branch: 'main', gitOptions: { shallow: true, recursive: false } },
+                    source: { type: 'git', url: 'https://github.com/test/citisignal', branch: 'main', gitOptions: { shallow: true } },
                 },
             },
         },

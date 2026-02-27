@@ -81,37 +81,17 @@ async function findComponentByType(
 function buildComponentList(
     stack: Stack,
     project: Project,
-    frontendSubmoduleIds: Set<string>,
 ): { id: string; type: string }[] {
     const frontend = stack.frontend;
     const dependencies = stack.dependencies || [];
-    const filteredDependencies = dependencies.filter(
-        (id: string) => !frontendSubmoduleIds.has(id),
-    );
     const appBuilder = (project.selectedAddons || []).filter(
         addon => !stack.optionalAddons?.some(opt => opt.id === addon),
     );
     return [
         ...(frontend ? [{ id: frontend, type: 'frontend' }] : []),
-        ...filteredDependencies.map((id: string) => ({ id, type: 'dependency' })),
+        ...dependencies.map((id: string) => ({ id, type: 'dependency' })),
         ...appBuilder.map((id: string) => ({ id, type: 'app-builder' })),
     ];
-}
-
-/** Get frontend submodule IDs to exclude from dependency loop */
-async function getFrontendSubmoduleIds(
-    registryManager: { getFrontends: () => Promise<TransformedComponentDefinition[]> },
-    frontend: string | undefined,
-): Promise<Set<string>> {
-    const ids = new Set<string>();
-    if (frontend) {
-        const frontends = await registryManager.getFrontends();
-        const frontendDef = frontends.find((f: { id: string }) => f.id === frontend);
-        if (frontendDef?.submodules) {
-            Object.keys(frontendDef.submodules).forEach(id => ids.add(id));
-        }
-    }
-    return ids;
 }
 
 /**
@@ -142,8 +122,7 @@ async function loadComponentDefinitionsFromProject(
         );
     }
 
-    const frontendSubmoduleIds = await getFrontendSubmoduleIds(registryManager, stack.frontend);
-    const allComponents = buildComponentList(stack, project, frontendSubmoduleIds);
+    const allComponents = buildComponentList(stack, project);
 
     const componentDefinitions: Map<string, ComponentDefinitionEntry> = new Map();
 
@@ -182,24 +161,7 @@ async function loadComponentDefinitionsFromProject(
             continue;
         }
 
-        // Determine submodules from stack + saved addons
-        const installOptions: {
-            selectedSubmodules?: string[];
-            skipDependencies?: boolean;
-        } = { skipDependencies: true };
-
-        if (comp.type === 'frontend' && componentDef.submodules && stack) {
-            const allSelected = [
-                ...(stack.dependencies || []),
-                ...(project.selectedAddons || []),
-            ];
-            const selectedSubmodules = allSelected.filter(
-                (depId: string) => componentDef?.submodules?.[depId] !== undefined,
-            );
-            if (selectedSubmodules.length > 0) {
-                installOptions.selectedSubmodules = selectedSubmodules;
-            }
-        }
+        const installOptions: { skipDependencies?: boolean } = { skipDependencies: true };
 
         componentDef = {
             ...componentDef,

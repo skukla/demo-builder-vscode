@@ -11,7 +11,7 @@
  * - Cross-reference validation
  * - Featured packages/storefronts
  * - Package details (citisignal, isle5, buildright)
- * - Submodules and tags validation
+ * - Tags validation
  */
 
 import * as fs from 'fs';
@@ -20,7 +20,6 @@ import Ajv from 'ajv';
 
 interface GitOptions {
     shallow: boolean;
-    recursive: boolean;
 }
 
 interface GitSource {
@@ -30,11 +29,6 @@ interface GitSource {
     gitOptions: GitOptions;
 }
 
-interface Submodule {
-    path: string;
-    repository: string;
-}
-
 interface Storefront {
     name: string;
     description: string;
@@ -42,7 +36,6 @@ interface Storefront {
     featured?: boolean;
     tags?: string[];
     source: GitSource;
-    submodules?: Record<string, Submodule>;
 }
 
 interface DemoPackage {
@@ -333,12 +326,11 @@ describe('demo-packages.json', () => {
             });
         });
 
-        it('should have gitOptions with shallow and recursive booleans', () => {
+        it('should have gitOptions with shallow boolean', () => {
             packagesConfig.packages.forEach(pkg => {
                 Object.values(pkg.storefronts).forEach(storefront => {
                     expect(storefront.source.gitOptions).toBeDefined();
                     expect(typeof storefront.source.gitOptions.shallow).toBe('boolean');
-                    expect(typeof storefront.source.gitOptions.recursive).toBe('boolean');
                 });
             });
         });
@@ -466,23 +458,6 @@ describe('demo-packages.json', () => {
         it('should have eds-paas storefront', () => {
             const pkg = packagesConfig.packages.find(p => p.id === 'buildright');
             expect(pkg!.storefronts['eds-paas']).toBeDefined();
-        });
-    });
-
-    describe('submodules validation', () => {
-        it('should have valid path and repository for all submodules', () => {
-            packagesConfig.packages.forEach(pkg => {
-                Object.values(pkg.storefronts).forEach(storefront => {
-                    if (storefront.submodules) {
-                        Object.entries(storefront.submodules).forEach(([_name, config]) => {
-                            expect(config.path).toBeDefined();
-                            expect(typeof config.path).toBe('string');
-                            expect(config.repository).toBeDefined();
-                            expect(typeof config.repository).toBe('string');
-                        });
-                    }
-                });
-            });
         });
     });
 

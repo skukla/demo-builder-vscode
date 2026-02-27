@@ -30,7 +30,7 @@
             "type": "git",
             "url": "https://github.com/stephen-garner-adobe/isle5",
             "branch": "main",
-            "gitOptions": { "shallow": true, "recursive": false }
+            "gitOptions": { "shallow": true }
           },
           "templateOwner": "stephen-garner-adobe",
           "templateRepo": "isle5",
@@ -50,7 +50,7 @@
             "type": "git",
             "url": "https://github.com/stephen-garner-adobe/isle5",
             "branch": "main",
-            "gitOptions": { "shallow": true, "recursive": false }
+            "gitOptions": { "shallow": true }
           },
           "templateOwner": "stephen-garner-adobe",
           "templateRepo": "isle5",
@@ -90,7 +90,7 @@
             "type": "git",
             "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
             "branch": "main",
-            "gitOptions": { "shallow": true, "recursive": false }
+            "gitOptions": { "shallow": true }
           },
           "templateOwner": "hlxsites",
           "templateRepo": "aem-boilerplate-commerce",
@@ -109,7 +109,7 @@
             "type": "git",
             "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
             "branch": "main",
-            "gitOptions": { "shallow": true, "recursive": false }
+            "gitOptions": { "shallow": true }
           },
           "templateOwner": "hlxsites",
           "templateRepo": "aem-boilerplate-commerce",
@@ -149,8 +149,7 @@
             "url": "https://github.com/skukla/citisignal-nextjs",
             "branch": "master",
             "gitOptions": {
-              "shallow": false,
-              "recursive": false
+              "shallow": false
             }
           }
         },
@@ -165,8 +164,7 @@
             "url": "https://github.com/skukla/citisignal-eds-boilerplate",
             "branch": "main",
             "gitOptions": {
-              "shallow": true,
-              "recursive": false
+              "shallow": true
             }
           },
           "templateOwner": "skukla",
@@ -193,8 +191,7 @@
             "url": "https://github.com/skukla/citisignal-eds-boilerplate",
             "branch": "main",
             "gitOptions": {
-              "shallow": true,
-              "recursive": false
+              "shallow": true
             }
           },
           "templateOwner": "skukla",
@@ -239,8 +236,7 @@
             "url": "https://github.com/skukla/buildright-eds",
             "branch": "main",
             "gitOptions": {
-              "shallow": true,
-              "recursive": false
+              "shallow": true
             }
           },
           "templateOwner": "skukla",

@@ -110,13 +110,6 @@
         "source": {
           "$ref": "#/definitions/gitSource"
         },
-        "submodules": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/submodule"
-          },
-          "description": "Git submodules to include in the project"
-        },
         "contentSource": {
           "$ref": "#/definitions/daLiveContentSource",
           "description": "DA.live content source for EDS storefronts (required for EDS stacks)"
@@ -209,31 +202,13 @@
         },
         "gitOptions": {
           "type": "object",
-          "required": ["shallow", "recursive"],
+          "required": ["shallow"],
           "properties": {
             "shallow": {
               "type": "boolean",
               "description": "Whether to use shallow clone"
-            },
-            "recursive": {
-              "type": "boolean",
-              "description": "Whether to clone submodules recursively"
             }
           }
-        }
-      }
-    },
-    "submodule": {
-      "type": "object",
-      "required": ["path", "repository"],
-      "properties": {
-        "path": {
-          "type": "string",
-          "description": "Path within project where submodule should be placed"
-        },
-        "repository": {
-          "type": "string",
-          "description": "GitHub repository in 'owner/repo' format"
         }
       }
     }
