@@ -117,6 +117,7 @@ export interface RawComponentDefinition {
         port?: number;
         nodeVersion?: string;
         buildScript?: string;
+        skipNpmInstall?: boolean;
         required?: Record<string, {
             type: 'string' | 'url' | 'password' | 'number' | 'boolean';
             label: string;

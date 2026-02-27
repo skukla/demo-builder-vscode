@@ -209,19 +209,73 @@ describe('ComponentUpdater - Core Workflow', () => {
     });
 
     describe('runPostUpdateBuild() - Configuration-driven builds', () => {
-        it('should skip build when component has no buildScript configured', async () => {
+        it('should run npm install after update even when no buildScript is configured', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const newVersion = '1.0.0';
+
+            // Default mock has no buildScript (like the headless frontend)
+            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+
+            // npm install MUST run even without buildScript — the zipball has no node_modules
+            const executeCalls = mockExecutor.execute.mock.calls;
+            const installCalls = executeCalls.filter((call: unknown[]) =>
+                (call[0] as string).includes('npm install')
+            );
+            expect(installCalls.length).toBe(1);
+        });
+
+        it('should skip build step but still install deps when no buildScript configured', async () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
 
             // Default mock has no buildScript
             await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
 
-            // Verify npm install and npm run build were NOT called (only unzip)
+            // npm run build should NOT be called
             const executeCalls = mockExecutor.execute.mock.calls;
             const buildCalls = executeCalls.filter((call: unknown[]) =>
-                (call[0] as string).includes('npm install') || (call[0] as string).includes('npm run')
+                (call[0] as string).includes('npm run')
             );
             expect(buildCalls.length).toBe(0);
+        });
+
+        it('should skip npm install when skipNpmInstall is true', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const newVersion = '1.0.0';
+
+            // Override mock to return component with skipNpmInstall (like eds-storefront)
+            const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
+            ComponentRegistryManager.mockImplementation(() => ({
+                getComponentById: jest.fn().mockResolvedValue({
+                    id: 'eds-storefront',
+                    name: 'EDS Storefront',
+                    configuration: {
+                        skipNpmInstall: true,
+                    }
+                })
+            }));
+
+            const skipUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
+
+            const edsProject = {
+                ...mockProject,
+                componentInstances: {
+                    'eds-storefront': {
+                        id: 'eds-storefront',
+                        path: '/path/to/project/components/eds-storefront',
+                        port: 3000
+                    }
+                }
+            } as unknown as Project;
+
+            await skipUpdater.updateComponent(edsProject, 'eds-storefront', downloadUrl, newVersion);
+
+            // Neither npm install nor npm run should be called
+            const executeCalls = mockExecutor.execute.mock.calls;
+            const npmCalls = executeCalls.filter((call: unknown[]) =>
+                (call[0] as string).includes('npm install') || (call[0] as string).includes('npm run')
+            );
+            expect(npmCalls.length).toBe(0);
         });
 
         it('should run npm install and build script when buildScript is configured', async () => {
@@ -283,10 +337,35 @@ describe('ComponentUpdater - Core Workflow', () => {
 
             await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
 
-            // Verify extraction command includes rmdir cleanup
+            // Verify extraction command uses rm -rf for cleanup (handles hidden files)
             expect(mockExecutor.execute).toHaveBeenCalledWith(
-                expect.stringMatching(/unzip.*&&.*mv.*&&.*rmdir/),
+                expect.stringMatching(/unzip.*&&.*mv.*&&.*rm -rf/),
                 expect.any(Object)
+            );
+        });
+
+        it('should throw on extraction failure (non-zero exit code)', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const newVersion = '1.0.0';
+
+            // Simulate extraction command failing with exit code 1
+            mockExecutor.execute.mockResolvedValueOnce({
+                stdout: '',
+                stderr: 'unzip: cannot open file',
+                code: 1,
+                duration: 533,
+            });
+
+            await expect(
+                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
+            ).rejects.toThrow();
+
+            // Verify the extraction failure was logged before rollback
+            expect(mockLogger.error).toHaveBeenCalledWith(
+                '[Updates] Update failed, rolling back to snapshot',
+                expect.objectContaining({
+                    message: expect.stringContaining('Extraction failed'),
+                })
             );
         });
 
@@ -330,7 +409,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             ).rejects.toThrow();
 
             expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] Post-update build failed',
+                '[Updates] Post-update setup failed',
                 expect.any(Error)
             );
         });
@@ -376,7 +455,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             ).rejects.toThrow();
 
             expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] Post-update build failed',
+                '[Updates] Post-update setup failed',
                 expect.any(Error)
             );
         });

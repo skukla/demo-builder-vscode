@@ -227,6 +227,7 @@ export interface ComponentConfiguration {
     port?: number;
     nodeVersion?: string;
     buildScript?: string;  // npm script to run after install (e.g., "build")
+    skipNpmInstall?: boolean;  // Skip npm install after update (e.g., EDS storefronts)
     required?: Record<string, ConfigField>;
     services?: ServiceDefinition[];
     meshIntegration?: {

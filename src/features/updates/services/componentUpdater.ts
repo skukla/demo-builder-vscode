@@ -266,11 +266,11 @@ export class ComponentUpdater {
     }
 
     /**
-     * Run post-update build for components that require compilation/processing
+     * Run post-update setup: install dependencies and optionally build
      *
-     * Uses component registry configuration (buildScript, nodeVersion) to determine
-     * what build steps are required. This makes the system extensible - any component
-     * with a buildScript in components.json will be built after updates.
+     * After extracting a new component version from a zipball, node_modules is missing.
+     * This method always installs dependencies (unless skipNpmInstall is set), then
+     * runs the build script if one is configured.
      */
     private async runPostUpdateBuild(componentPath: string, componentId: string): Promise<void> {
         // Get component configuration from registry
@@ -278,53 +278,70 @@ export class ComponentUpdater {
         const registryManager = new ComponentRegistryManager(this.extensionPath);
         const componentDef = await registryManager.getComponentById(componentId);
 
-        // Skip if component has no buildScript configured
+        const nodeVersion = componentDef?.configuration?.nodeVersion || null;
+        const skipNpmInstall = componentDef?.configuration?.skipNpmInstall === true;
         const buildScript = componentDef?.configuration?.buildScript;
-        if (!buildScript) {
-            this.logger.debug(`[Updates] No buildScript configured for ${componentId}, skipping build`);
-            return;
-        }
 
-        this.logger.debug(`[Updates] Running post-update setup for ${componentId}...`);
+        // Check if package.json exists (no package.json = nothing to install)
+        const hasPackageJson = await this.fileExists(path.join(componentPath, 'package.json'));
+
+        if (!hasPackageJson || skipNpmInstall) {
+            this.logger.debug(`[Updates] Skipping npm install for ${componentId} (packageJson=${hasPackageJson}, skipNpmInstall=${skipNpmInstall})`);
+            // If there's also no build script, nothing left to do
+            if (!buildScript) return;
+            // Otherwise fall through to run the build step only
+        }
 
         const { ServiceLocator } = await import('@/core/di');
         const commandManager = ServiceLocator.getCommandExecutor();
-        const nodeVersion = componentDef.configuration?.nodeVersion || null;
 
         try {
-            // 1. Install dependencies (build scripts may require dev dependencies)
-            this.logger.debug('[Updates] Installing dependencies...');
-            const installResult = await commandManager.execute('npm install --no-fund', {
-                cwd: componentPath,
-                timeout: TIMEOUTS.VERY_LONG,
-                shell: DEFAULT_SHELL,
-                enhancePath: true,
-                useNodeVersion: nodeVersion,
-            });
+            // 1. Install dependencies (always after zipball extraction, unless skipped)
+            if (hasPackageJson && !skipNpmInstall) {
+                this.logger.debug(`[Updates] Installing dependencies for ${componentId}...`);
+                const installResult = await commandManager.execute('npm install --no-fund', {
+                    cwd: componentPath,
+                    timeout: TIMEOUTS.VERY_LONG,
+                    shell: DEFAULT_SHELL,
+                    enhancePath: true,
+                    useNodeVersion: nodeVersion,
+                });
 
-            if (installResult.code !== 0) {
-                throw new Error(`npm install failed: ${installResult.stderr || installResult.stdout}`);
-            }
-            this.logger.debug('[Updates] ✓ Dependencies installed');
-
-            // 2. Run configured build script (force rebuild for updates)
-            this.logger.debug(`[Updates] Running build script: ${buildScript}`);
-            const buildResult = await commandManager.execute(`npm run ${buildScript} -- --force`, {
-                cwd: componentPath,
-                timeout: TIMEOUTS.VERY_LONG,
-                shell: DEFAULT_SHELL,
-                enhancePath: true,
-                useNodeVersion: nodeVersion,
-            });
-
-            if (buildResult.code !== 0) {
-                throw new Error(`Build failed: ${buildResult.stderr || buildResult.stdout}`);
+                if (installResult.code !== 0) {
+                    throw new Error(`npm install failed: ${installResult.stderr || installResult.stdout}`);
+                }
+                this.logger.debug('[Updates] ✓ Dependencies installed');
             }
 
-            this.logger.debug('[Updates] ✓ Post-update build completed successfully');
+            // 2. Run configured build script (only if buildScript is set)
+            if (buildScript) {
+                this.logger.debug(`[Updates] Running build script: ${buildScript}`);
+                const buildResult = await commandManager.execute(`npm run ${buildScript} -- --force`, {
+                    cwd: componentPath,
+                    timeout: TIMEOUTS.VERY_LONG,
+                    shell: DEFAULT_SHELL,
+                    enhancePath: true,
+                    useNodeVersion: nodeVersion,
+                });
+
+                if (buildResult.code !== 0) {
+                    throw new Error(`Build failed: ${buildResult.stderr || buildResult.stdout}`);
+                }
+                this.logger.debug('[Updates] ✓ Post-update build completed successfully');
+            }
         } catch (error) {
-            this.logger.error('[Updates] Post-update build failed', error as Error);
-            throw new Error(`Post-update build failed for ${componentId}: ${(error as Error).message}`);
+            this.logger.error('[Updates] Post-update setup failed', error as Error);
+            throw new Error(`Post-update setup failed for ${componentId}: ${(error as Error).message}`);
+        }
+    }
+
+    /** Check if a file exists without throwing */
+    private async fileExists(filePath: string): Promise<boolean> {
+        try {
+            await fs.access(filePath);
+            return true;
+        } catch {
+            return false;
         }
     }
 
@@ -401,15 +418,22 @@ export class ComponentUpdater {
             // - All paths are controlled by the extension (no user-supplied paths)
             //
             // GitHub archives have a root folder (e.g., "skukla-commerce-mesh-abc123/")
-            // We need to: 1) extract, 2) move contents up, 3) remove the empty root folder
-            await commandManager.execute(
-                `unzip -q "${tempZip}" -d "${targetPath}" && mv "${targetPath}"/*/* "${targetPath}"/ && rmdir "${targetPath}"/*/`,
+            // We need to: 1) extract, 2) move contents up, 3) remove the root folder
+            // Uses rm -rf (not rmdir) because hidden files like .github/ may remain after mv
+            const extractResult = await commandManager.execute(
+                `unzip -q "${tempZip}" -d "${targetPath}" && mv "${targetPath}"/*/* "${targetPath}"/ && rm -rf "${targetPath}"/*/`,
                 {
                     shell: DEFAULT_SHELL,    // CRITICAL FIX: Required for command chaining (&&) and glob expansion (*/*)
                     timeout: TIMEOUTS.NORMAL,
                     enhancePath: true,
                 },
             );
+
+            if (extractResult.code !== 0) {
+                throw new Error(
+                    `Extraction failed (exit code ${extractResult.code}): ${extractResult.stderr || 'unknown error'}`,
+                );
+            }
 
             this.logger.debug(`[Updates] Extracted to ${targetPath}`);
         } finally {
