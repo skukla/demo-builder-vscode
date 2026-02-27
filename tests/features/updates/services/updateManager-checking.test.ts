@@ -38,7 +38,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 
 // Mock security validation
 jest.mock('@/core/validation', () => ({
-    validateGitHubDownloadURL: jest.fn(),
+    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
     sanitizeErrorForLogging: jest.fn((msg: string) => msg),
 }));
 
@@ -72,7 +72,7 @@ describe('UpdateManager - Update Checking', () => {
 
         // Setup workspace config
         (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(
-            createMockWorkspaceConfig('stable')()
+            createMockWorkspaceConfig('stable')
         );
 
         updateManager = new UpdateManager(mockContext, mockLogger);

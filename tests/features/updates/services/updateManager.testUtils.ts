@@ -37,19 +37,17 @@ export function createMockLogger(): any {
 }
 
 /**
- * Creates a mock workspace configuration
- * CRITICAL: Returns a function that creates fresh config on each call
- * This prevents closure issues where config values get stale
+ * Creates a mock workspace configuration object
  */
 export function createMockWorkspaceConfig(updateChannel: string = 'stable') {
-    return () => ({
+    return {
         get: jest.fn((key: string, defaultValue?: any) => {
             if (key === 'demoBuilder.updateChannel' || key === 'updateChannel') {
                 return updateChannel;
             }
             return defaultValue;
         }),
-    });
+    };
 }
 
 /**
@@ -81,6 +79,7 @@ export function createMockRelease(options: {
                 },
             ];
         } else if (assetType === 'zipball') {
+            release.assets = [];
             release.zipball_url = `https://api.github.com/repos/test/repo/zipball/v${version}`;
         }
     } else {
@@ -93,12 +92,17 @@ export function createMockRelease(options: {
 /**
  * Creates a mock project with components
  */
-export function createMockProject(components: { id: string; version: string }[]): any {
+export function createMockProject(components: { id: string; version: string; repoUrl?: string; path?: string; name?: string }[]): any {
     const componentInstances: any = {};
     const componentVersions: any = {};
 
     components.forEach(comp => {
-        componentInstances[comp.id] = { id: comp.id };
+        componentInstances[comp.id] = {
+            id: comp.id,
+            ...(comp.repoUrl && { repoUrl: comp.repoUrl }),
+            ...(comp.path && { path: comp.path }),
+            ...(comp.name && { name: comp.name }),
+        };
         componentVersions[comp.id] = { version: comp.version };
     });
 
@@ -140,7 +144,7 @@ export function mockFetchNetworkError(message: string = 'Network timeout'): void
  */
 export function mockSecurityValidationPass(): void {
     const { validateGitHubDownloadURL } = require('@/core/validation');
-    validateGitHubDownloadURL.mockImplementation(() => {});
+    validateGitHubDownloadURL.mockReturnValue(true);
 }
 
 /**
@@ -148,7 +152,5 @@ export function mockSecurityValidationPass(): void {
  */
 export function mockSecurityValidationFail(): void {
     const { validateGitHubDownloadURL } = require('@/core/validation');
-    validateGitHubDownloadURL.mockImplementation(() => {
-        throw new Error('Invalid URL');
-    });
+    validateGitHubDownloadURL.mockReturnValue(false);
 }

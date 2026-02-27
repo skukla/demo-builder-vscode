@@ -8,8 +8,10 @@
  * - Unknown version handling
  * - Zipball URL usage
  * - Missing component instances
+ * - repoUrl fallback for components without resolver entry
+ * - Multi-project repoUrl fallback (checkAllProjectsForUpdates)
  *
- * Total tests: 6
+ * Total tests: 13
  */
 
 // Mock vscode
@@ -38,8 +40,13 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 
 // Mock security validation
 jest.mock('@/core/validation', () => ({
-    validateGitHubDownloadURL: jest.fn(),
+    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
     sanitizeErrorForLogging: jest.fn((msg: string) => msg),
+}));
+
+// Mock fs/promises for checkAllProjectsForUpdates (which checks component paths)
+jest.mock('fs/promises', () => ({
+    access: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock ComponentRepositoryResolver to avoid loading actual components.json
@@ -62,6 +69,11 @@ jest.mock('@/features/updates/services/componentRepositoryResolver', () => ({
         }),
         getAllRepositories: jest.fn(() => Promise.resolve(new Map())),
         clearCache: jest.fn(),
+        extractRepositoryFromUrl: jest.fn((url: string) => {
+            const cleanUrl = url.replace(/\.git$/, '');
+            const match = cleanUrl.match(/github\.com\/([a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+)/);
+            return match?.[1] || null;
+        }),
     })),
 }));
 
@@ -92,7 +104,7 @@ describe('UpdateManager - Component Updates', () => {
 
         // Setup workspace config
         (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(
-            createMockWorkspaceConfig('stable')()
+            createMockWorkspaceConfig('stable')
         );
 
         updateManager = new UpdateManager(mockContext, mockLogger);
@@ -219,7 +231,173 @@ describe('UpdateManager - Component Updates', () => {
             const results = await updateManager.checkComponentUpdates(mockProject as any);
 
             // Should still check for update even without version info
-            expect(results.size).toBeGreaterThanOrEqual(0);
+            expect(results.size).toBe(1);
+        });
+    });
+
+    describe('repoUrl fallback for components without resolver entry', () => {
+        it('should use componentInstance.repoUrl when resolver returns null', async () => {
+            // Given: A component not in the resolver (no source in components.json)
+            // but with repoUrl stored on the component instance from installation
+            const mockProject = createMockProject([
+                { id: 'eds-storefront', version: '1.0.0', repoUrl: 'https://github.com/skukla/citisignal-eds' },
+            ]);
+
+            const mockRelease = createMockRelease({
+                version: '1.1.0',
+                assetType: 'zipball',
+            });
+
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => mockRelease,
+            });
+
+            mockSecurityValidationPass();
+
+            // When: checking for component updates
+            const results = await updateManager.checkComponentUpdates(mockProject as any);
+
+            // Then: should detect the update via repoUrl fallback
+            expect(results.size).toBe(1);
+            expect(results.get('eds-storefront')?.hasUpdate).toBe(true);
+            expect(results.get('eds-storefront')?.latest).toBe('1.1.0');
+        });
+
+        it('should still skip components with no resolver entry and no repoUrl', async () => {
+            // Given: A component with neither resolver entry nor repoUrl
+            const mockProject = createMockProject([
+                { id: 'unknown-component', version: '1.0.0' },
+            ]);
+
+            const results = await updateManager.checkComponentUpdates(mockProject as any);
+
+            // Then: should skip (no fallback available)
+            expect(results.size).toBe(0);
+        });
+
+        it('should use repoUrl fallback alongside resolver-known components', async () => {
+            // Given: Mix of resolver-known and repoUrl-only components
+            const mockProject = createMockProject([
+                { id: 'commerce-mesh', version: '1.0.0' },
+                { id: 'eds-storefront', version: '1.0.0', repoUrl: 'https://github.com/skukla/citisignal-eds' },
+            ]);
+
+            const mockRelease = createMockRelease({
+                version: '1.1.0',
+                assetType: 'zipball',
+            });
+
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => mockRelease,
+            });
+
+            mockSecurityValidationPass();
+
+            const results = await updateManager.checkComponentUpdates(mockProject as any);
+
+            // Then: both components should get update checks
+            expect(results.size).toBe(2);
+            expect(results.get('commerce-mesh')?.hasUpdate).toBe(true);
+            expect(results.get('eds-storefront')?.hasUpdate).toBe(true);
+        });
+
+        it('should skip repoUrl fallback when URL is not a GitHub URL', async () => {
+            // Given: A component with a non-GitHub repoUrl
+            const mockProject = createMockProject([
+                { id: 'custom-component', version: '1.0.0', repoUrl: 'https://gitlab.com/org/repo' },
+            ]);
+
+            const results = await updateManager.checkComponentUpdates(mockProject as any);
+
+            // Then: should skip (URL parsing returns null for non-GitHub URLs)
+            expect(results.size).toBe(0);
+        });
+    });
+
+    describe('multi-project repoUrl fallback (checkAllProjectsForUpdates)', () => {
+        it('should use repoUrl fallback when checking across multiple projects', async () => {
+            // Given: Two projects with a repoUrl-only component
+            const project1 = {
+                name: 'Project 1',
+                ...createMockProject([
+                    { id: 'eds-storefront', version: '1.0.0', repoUrl: 'https://github.com/skukla/citisignal-eds', path: '/mock/path/eds' },
+                ]),
+            };
+            const project2 = {
+                name: 'Project 2',
+                ...createMockProject([
+                    { id: 'eds-storefront', version: '0.9.0', repoUrl: 'https://github.com/skukla/citisignal-eds', path: '/mock/path/eds2' },
+                ]),
+            };
+
+            const mockRelease = createMockRelease({
+                version: '1.1.0',
+                assetType: 'zipball',
+            });
+
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => mockRelease,
+            });
+
+            mockSecurityValidationPass();
+
+            // When: checking all projects for updates
+            const results = await updateManager.checkAllProjectsForUpdates([project1, project2] as any);
+
+            // Then: should detect update for the repoUrl-only component
+            expect(results.length).toBe(1);
+            expect(results[0].componentId).toBe('eds-storefront');
+            expect(results[0].latestVersion).toBe('1.1.0');
+            expect(results[0].outdatedProjects.length).toBe(2);
+        });
+
+        it('should skip repoUrl-only components without paths in multi-project check', async () => {
+            // Given: A component with repoUrl but no path (should be skipped by resilience check)
+            const project = {
+                name: 'Project 1',
+                ...createMockProject([
+                    { id: 'eds-storefront', version: '1.0.0', repoUrl: 'https://github.com/skukla/citisignal-eds' },
+                ]),
+            };
+
+            const results = await updateManager.checkAllProjectsForUpdates([project] as any);
+
+            // Then: should skip (no path registered)
+            expect(results.length).toBe(0);
+        });
+
+        it('should handle mix of resolver-known and repoUrl-only in multi-project', async () => {
+            // Given: A project with both resolver-known and repoUrl-only components
+            const project = {
+                name: 'Project 1',
+                ...createMockProject([
+                    { id: 'commerce-mesh', version: '1.0.0', path: '/mock/path/mesh' },
+                    { id: 'eds-storefront', version: '1.0.0', repoUrl: 'https://github.com/skukla/citisignal-eds', path: '/mock/path/eds' },
+                ]),
+            };
+
+            const mockRelease = createMockRelease({
+                version: '1.1.0',
+                assetType: 'zipball',
+            });
+
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => mockRelease,
+            });
+
+            mockSecurityValidationPass();
+
+            const results = await updateManager.checkAllProjectsForUpdates([project] as any);
+
+            // Then: both components should have updates detected
+            expect(results.length).toBe(2);
+            const componentIds = results.map(r => r.componentId);
+            expect(componentIds).toContain('commerce-mesh');
+            expect(componentIds).toContain('eds-storefront');
         });
     });
 });

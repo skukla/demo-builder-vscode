@@ -1,14 +1,12 @@
 import * as fs from 'fs/promises';
-import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { ComponentRepositoryResolver } from './componentRepositoryResolver';
+import { ComponentRepositoryResolver, type ComponentRepositoryInfo } from './componentRepositoryResolver';
 import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
-import { ServiceLocator } from '@/core/di';
+import { validateGitHubDownloadURL } from '@/core/validation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
 import { getComponentIds, getComponentVersion } from '@/types/typeGuards';
 
 export type { UpdateCheckResult };
@@ -45,8 +43,8 @@ export class UpdateManager {
     }
 
     /**
-   * Check for extension updates (respects stable/beta channel)
-   */
+     * Check for extension updates (respects stable/beta channel)
+     */
     async checkExtensionUpdate(): Promise<UpdateCheckResult> {
         const currentVersion = this.context.extension.packageJSON.version;
         const channel = this.getUpdateChannel();
@@ -68,8 +66,8 @@ export class UpdateManager {
     }
 
     /**
-   * Check for component updates in current project (respects stable/beta channel)
-   */
+     * Check for component updates in current project (respects stable/beta channel)
+     */
     async checkComponentUpdates(project: Project): Promise<Map<string, UpdateCheckResult>> {
         const results = new Map<string, UpdateCheckResult>();
         const channel = this.getUpdateChannel();
@@ -81,8 +79,10 @@ export class UpdateManager {
         const componentIds = getComponentIds(project.componentInstances);
 
         for (const componentId of componentIds) {
-            // Get repository from components.json
-            const repoInfo = await this.repositoryResolver.getRepositoryInfo(componentId);
+            const repoInfo = await this.resolveComponentRepository(
+                componentId, project.componentInstances[componentId],
+            );
+
             if (!repoInfo) {
                 continue;
             }
@@ -160,8 +160,15 @@ export class UpdateManager {
 
         // For each unique component, fetch latest version once and check all projects
         for (const [componentId, projectVersions] of componentProjectMap.entries()) {
-            // Get repository from components.json
-            const repoInfo = await this.repositoryResolver.getRepositoryInfo(componentId);
+            // Resolve repository: try components.json first, then any project's instance repoUrl
+            let repoInfo: ComponentRepositoryInfo | null = null;
+            for (const { project: proj } of projectVersions) {
+                repoInfo = await this.resolveComponentRepository(
+                    componentId, proj.componentInstances?.[componentId],
+                );
+                if (repoInfo) break;
+            }
+
             if (!repoInfo) {
                 continue;
             }
@@ -178,7 +185,6 @@ export class UpdateManager {
             });
 
             if (outdatedProjects.length > 0) {
-
                 results.push({
                     componentId,
                     latestVersion: latestRelease.version,
@@ -192,27 +198,10 @@ export class UpdateManager {
     }
 
     /**
-     * Get the current HEAD commit hash from a git repository
+     * Fetch latest release from GitHub based on channel
+     * Stable: Latest non-prerelease
+     * Beta: Latest release (including prereleases)
      */
-    private async getGitCommit(repoPath: string): Promise<string | null> {
-        try {
-            const executor = ServiceLocator.getCommandExecutor();
-            const result = await executor.execute('git rev-parse HEAD', {
-                cwd: repoPath,
-                timeout: TIMEOUTS.QUICK,
-                shell: DEFAULT_SHELL,
-            });
-            return result.code === 0 ? result.stdout.trim() : null;
-        } catch {
-            return null;
-        }
-    }
-
-    /**
-   * Fetch latest release from GitHub based on channel
-   * Stable: Latest non-prerelease
-   * Beta: Latest release (including prereleases)
-   */
     private async fetchLatestRelease(repo: string, channel: 'stable' | 'beta'): Promise<ReleaseInfo | null> {
         try {
             // For stable: use /releases/latest (non-prereleases only)
@@ -281,12 +270,9 @@ export class UpdateManager {
                     : release.zipball_url;
 
                 // SECURITY: Validate GitHub download URL before returning
-                const { validateGitHubDownloadURL } = await import('@/core/validation');
-                try {
-                    validateGitHubDownloadURL(downloadUrl);
-                } catch (error) {
-                    this.logger.warn(`[Updates] Security check failed for download URL from ${repo}: ${(error as Error).message}`);
-                    return null; // Treat as no update available if URL is invalid
+                if (!validateGitHubDownloadURL(downloadUrl)) {
+                    this.logger.warn(`[Updates] Security check failed for download URL from ${repo}: ${downloadUrl}`);
+                    return null;
                 }
 
                 const version = this.parseVersionFromTag(release.tag_name);
@@ -301,13 +287,32 @@ export class UpdateManager {
             } finally {
                 clearTimeout(timeout);
             }
-        } catch {
-            // INTENTIONALLY SILENT: Network/API errors should not alarm users.
+        } catch (error) {
             // Graceful degradation: returning null means "no update available" which
-            // is better UX than showing "update check failed" errors for transient
-            // network issues, rate limits, or GitHub outages.
+            // is better UX than showing errors for transient network issues or GitHub outages.
+            this.logger.debug(`[Updates] Release check failed for ${repo}: ${(error as Error).message}`);
             return null;
         }
+    }
+
+    /**
+     * Resolve a component's GitHub repository using components.json (primary)
+     * or the instance's stored repoUrl (fallback for components defined in demo-packages.json)
+     */
+    private async resolveComponentRepository(
+        componentId: string,
+        instance?: { repoUrl?: string; name?: string },
+    ): Promise<ComponentRepositoryInfo | null> {
+        const repoInfo = await this.repositoryResolver.getRepositoryInfo(componentId);
+        if (repoInfo) return repoInfo;
+
+        if (!instance?.repoUrl) return null;
+
+        const repository = this.repositoryResolver.extractRepositoryFromUrl(instance.repoUrl);
+        if (!repository) return null;
+
+        const name = typeof instance.name === 'string' ? instance.name : componentId;
+        return { id: componentId, repository, name };
     }
 
     private getUpdateChannel(): 'stable' | 'beta' {

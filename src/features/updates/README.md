@@ -29,6 +29,7 @@ The Updates feature manages extension and component updates via GitHub Releases.
 **Key Methods**:
 - `getRepositoryInfo(componentId)` - Get repository info for specific component
 - `getAllRepositories()` - Get all component repositories (cached)
+- `extractRepositoryFromUrl(url)` - Extract owner/repo from GitHub URL
 - `clearCache()` - Clear the repository cache
 
 **Example Usage**:
@@ -56,9 +57,12 @@ for (const [id, info] of allRepos.entries()) {
 **Key Methods**:
 - `checkExtensionUpdate()` - Check for extension updates (respects channel)
 - `checkComponentUpdates(project)` - Check for component updates in current project (respects channel)
-- `fetchLatestRelease(repo, channel)` - Fetch latest release from GitHub for given channel
-- `getUpdateChannel()` - Get configured update channel (stable/beta)
-- `isNewerVersion(latest, current)` - Compare versions using semver
+- `checkAllProjectsForUpdates(projects)` - Check for updates across all projects, grouped by component
+
+**Repository Resolution**:
+Both `checkComponentUpdates` and `checkAllProjectsForUpdates` resolve component repositories using a two-tier strategy:
+1. **Primary**: `ComponentRepositoryResolver` reads `components.json` for components with `source.type === 'git'`
+2. **Fallback**: Uses `componentInstance.repoUrl` stored during installation for components not in `components.json` (e.g., frontends whose git URLs are defined in `demo-packages.json`)
 
 **Example Usage**:
 ```typescript
@@ -154,15 +158,16 @@ See `services/types.ts` for type definitions:
 **Directory Structure**:
 ```
 features/updates/
-├── index.ts                    # Public API exports
+├── index.ts                             # Public API exports
 ├── services/
-│   ├── updateManager.ts       # GitHub Releases integration
-│   ├── componentUpdater.ts    # Component updates with rollback
-│   ├── extensionUpdater.ts    # Extension VSIX updates
-│   └── types.ts               # Type definitions
+│   ├── updateManager.ts                # GitHub Releases integration
+│   ├── componentRepositoryResolver.ts  # Dynamic repo resolution from components.json
+│   ├── componentUpdater.ts             # Component updates with rollback
+│   ├── extensionUpdater.ts             # Extension VSIX updates
+│   └── types.ts                        # Type definitions
 ├── commands/
-│   └── checkUpdates.ts        # Manual update check command
-└── README.md                  # This file
+│   └── checkUpdates.ts                 # Manual update check command
+└── README.md                           # This file
 ```
 
 **Update Flow**:
@@ -206,9 +211,9 @@ Return latest version for channel
 ## Integration Points
 
 ### Dependencies
-- `@/shared/logging` - Logger for update operations
-- `@/types/typeGuards` - parseJSON for safe JSON parsing
-- `@/utils/timeoutConfig` - TIMEOUTS.UPDATE_CHECK, TIMEOUTS.UPDATE_DOWNLOAD, TIMEOUTS.UPDATE_EXTRACT
+- `@/core/logging` - Logger for update operations
+- `@/types/typeGuards` - getComponentIds, getComponentVersion for safe component access
+- `@/core/utils/timeoutConfig` - TIMEOUTS.QUICK for API call timeouts
 - `vscode` - ExtensionContext, workspace configuration, commands
 - `semver` - Version comparison (supports prereleases)
 - `fetch` - GitHub API calls and download

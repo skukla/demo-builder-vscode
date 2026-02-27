@@ -37,7 +37,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 
 // Mock security validation
 jest.mock('@/core/validation', () => ({
-    validateGitHubDownloadURL: jest.fn(),
+    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
     sanitizeErrorForLogging: jest.fn((msg: string) => msg),
 }));
 
@@ -69,7 +69,7 @@ describe('UpdateManager - Update Channels', () => {
         it('should use stable channel by default', async () => {
             // Setup stable channel config
             (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(
-                createMockWorkspaceConfig('stable')()
+                createMockWorkspaceConfig('stable')
             );
 
             const updateManager = new UpdateManager(mockContext, mockLogger);
@@ -93,7 +93,7 @@ describe('UpdateManager - Update Channels', () => {
         it('should use beta channel when configured', async () => {
             // Setup beta channel config
             (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(
-                createMockWorkspaceConfig('beta')()
+                createMockWorkspaceConfig('beta')
             );
 
             const mockReleases = [
@@ -142,7 +142,7 @@ describe('UpdateManager - Update Channels', () => {
         it('should filter out draft releases in beta channel', async () => {
             // Setup beta channel config
             (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(
-                createMockWorkspaceConfig('beta')()
+                createMockWorkspaceConfig('beta')
             );
 
             const mockReleases = [

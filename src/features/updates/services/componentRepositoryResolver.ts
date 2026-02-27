@@ -125,21 +125,13 @@ export class ComponentRepositoryResolver {
      * @param url - GitHub repository URL
      * @returns Repository in owner/repo format, or null if invalid
      */
-    private extractRepositoryFromUrl(url: string): string | null {
-        try {
-            // Remove .git suffix if present
-            const cleanUrl = url.replace(/\.git$/, '');
+    extractRepositoryFromUrl(url: string): string | null {
+        // Remove .git suffix if present
+        const cleanUrl = url.replace(/\.git$/, '');
 
-            // Extract owner/repo from URL
-            // Matches: https://github.com/owner/repo
-            const match = cleanUrl.match(/github\.com\/([^/]+\/[^/]+)/);
-            if (match && match[1]) {
-                return match[1];
-            }
-
-            return null;
-        } catch {
-            return null;
-        }
+        // Extract owner/repo from URL
+        // Matches: https://github.com/owner/repo (anchored to protocol, valid chars only)
+        const match = cleanUrl.match(/^https?:\/\/github\.com\/([a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+)/);
+        return match?.[1] ?? null;
     }
 }

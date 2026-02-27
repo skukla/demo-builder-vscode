@@ -62,6 +62,11 @@ export class ComponentRepositoryResolver {
     async getAllRepositories(): Promise<Map<string, ComponentRepositoryInfo>>;
 
     /**
+     * Extract owner/repo from GitHub URL
+     */
+    extractRepositoryFromUrl(url: string): string | null;
+
+    /**
      * Clear the cache (useful for testing or when components.json changes)
      */
     clearCache(): void;
@@ -75,10 +80,24 @@ UpdateManager now uses the resolver for all component lookups:
 ```typescript
 // Check for updates
 for (const componentId of componentIds) {
-    // Dynamically resolve repository
-    const repoInfo = await this.repositoryResolver.getRepositoryInfo(componentId);
+    // Primary: resolve repository from components.json
+    let repoInfo = await this.repositoryResolver.getRepositoryInfo(componentId);
+
+    // Fallback: use repoUrl stored on the component instance during installation
+    // This handles components whose git URLs are defined in demo-packages.json
+    // rather than components.json (e.g., frontend storefronts)
     if (!repoInfo) {
-        continue; // Component doesn't have Git source
+        const instance = project.componentInstances[componentId];
+        if (instance?.repoUrl) {
+            const repository = this.repositoryResolver.extractRepositoryFromUrl(instance.repoUrl);
+            if (repository) {
+                repoInfo = { id: componentId, repository, name: instance.name || componentId };
+            }
+        }
+    }
+
+    if (!repoInfo) {
+        continue; // No repository source available
     }
 
     // Fetch latest release from GitHub
@@ -121,8 +140,11 @@ constructor(context: vscode.ExtensionContext, logger: Logger) {
 ```
 
 **Updated methods**:
-- `checkComponentUpdates()` - Uses resolver instead of hardcoded map
-- `checkAllProjectsForUpdates()` - Uses resolver for multi-project checks
+- `checkComponentUpdates()` - Uses resolver with repoUrl fallback
+- `checkAllProjectsForUpdates()` - Uses resolver with repoUrl fallback for multi-project checks
+
+**Removed methods**:
+- `getGitCommit()` - Dead code removed (was unused after refactoring)
 
 ### 3. Added Tests
 

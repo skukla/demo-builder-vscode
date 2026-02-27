@@ -119,6 +119,28 @@ describe('ComponentRepositoryResolver', () => {
         });
     });
 
+    describe('extractRepositoryFromUrl (public API)', () => {
+        it('should parse owner/repo from standard GitHub URL', () => {
+            const result = resolver.extractRepositoryFromUrl('https://github.com/skukla/citisignal-nextjs');
+            expect(result).toBe('skukla/citisignal-nextjs');
+        });
+
+        it('should handle URLs with .git suffix', () => {
+            const result = resolver.extractRepositoryFromUrl('https://github.com/skukla/citisignal-nextjs.git');
+            expect(result).toBe('skukla/citisignal-nextjs');
+        });
+
+        it('should return null for non-GitHub URLs', () => {
+            const result = resolver.extractRepositoryFromUrl('https://gitlab.com/org/repo');
+            expect(result).toBeNull();
+        });
+
+        it('should return null for invalid URLs', () => {
+            const result = resolver.extractRepositoryFromUrl('not-a-url');
+            expect(result).toBeNull();
+        });
+    });
+
     describe('Integration with UpdateManager', () => {
         it('should provide data in format expected by UpdateManager', async () => {
             const repositories = await resolver.getAllRepositories();
