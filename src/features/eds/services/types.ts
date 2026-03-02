@@ -104,6 +104,26 @@ export interface GitHubTreeEntry {
 }
 
 /**
+ * Input entry for creating a Git tree via the API.
+ *
+ * Provide either `sha` (reference an existing blob) or `content`
+ * (create a new blob inline). Used by createTree, installBlockCollections,
+ * and installInspectorTagging.
+ */
+export interface GitHubTreeInput {
+    /** File path relative to repo root */
+    path: string;
+    /** Unix file mode */
+    mode: '100644' | '100755' | '040000' | '160000' | '120000';
+    /** Object type */
+    type: 'blob' | 'tree' | 'commit';
+    /** Existing blob SHA (mutually exclusive with content) */
+    sha?: string;
+    /** Inline content for a new blob (mutually exclusive with sha) */
+    content?: string;
+}
+
+/**
  * OAuth callback parameters
  */
 export interface OAuthCallbackParams {

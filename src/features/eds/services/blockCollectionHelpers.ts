@@ -19,6 +19,7 @@
  */
 
 import type { GitHubFileOperations } from './githubFileOperations';
+import type { GitHubTreeInput } from './types';
 import type { LibraryVersionInfo } from '@/types/blockLibraries';
 import type { AddonSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -45,6 +46,9 @@ export interface BlockLibraryEntry {
  * merges component-definition.json entries from all sources, and creates one commit.
  *
  * @param libraries - Array of library entries (source + name), processed in order
+ * @param additionalTreeEntries - Extra tree entries to include in the same atomic commit
+ *   (e.g. inspector tagging files). Keeps the repo history clean by combining
+ *   related setup files into a single commit.
  */
 export async function installBlockCollections(
     githubFileOps: GitHubFileOperations,
@@ -52,6 +56,7 @@ export async function installBlockCollections(
     destRepo: string,
     libraries: BlockLibraryEntry[],
     logger: Logger,
+    additionalTreeEntries?: GitHubTreeInput[],
 ): Promise<InstallBlockCollectionResult> {
     if (libraries.length === 0) {
         return { success: true, blocksCount: 0, blockIds: [], libraryVersions: [] };
@@ -138,12 +143,7 @@ export async function installBlockCollections(
         }
 
         // 2. Fetch file content for all unique block files
-        const treeEntries: Array<{
-            path: string;
-            mode: '100644' | '100755' | '040000' | '160000' | '120000';
-            type: 'blob' | 'tree' | 'commit';
-            content?: string;
-        }> = [];
+        const treeEntries: GitHubTreeInput[] = [];
 
         for (const libData of libraryBlockFiles) {
             for (const file of libData.files) {
@@ -172,7 +172,12 @@ export async function installBlockCollections(
             });
         }
 
-        // 4. Create a single atomic commit
+        // 4. Append any additional tree entries (e.g. inspector tagging files)
+        if (additionalTreeEntries && additionalTreeEntries.length > 0) {
+            treeEntries.push(...additionalTreeEntries);
+        }
+
+        // 5. Create a single atomic commit
         const { treeSha, commitSha } = await githubFileOps.getBranchInfo(destOwner, destRepo, 'main');
         const newTreeSha = await githubFileOps.createTree(destOwner, destRepo, treeEntries, treeSha);
 

@@ -303,6 +303,7 @@ export async function handleStartStorefrontSetup(
             payload.selectedAddons,
             payload.selectedBlockLibraries,
             payload.customBlockLibraries,
+            payload.selectedPackage,
         );
 
         if (result.success) {

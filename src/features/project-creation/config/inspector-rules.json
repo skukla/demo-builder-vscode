@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "packageOverrides": {
+    "buildright": {
+      "level1": {
+        "product-detail": "catalog",
+        "product-gallery": "catalog",
+        "product-tile": "catalog",
+        "product-grid": "catalog",
+        "filters-sidebar": "search",
+        "cart-summary": "commerce",
+        "mini-cart": "commerce",
+        "pricing-display": "catalog",
+        "inventory-status": "catalog",
+        "project-builder": "commerce",
+        "project-bundle": "commerce"
+      },
+      "level2": {
+        "product-gallery": [
+          { "selector": ".product-gallery-image-wrapper", "source": "catalog" }
+        ],
+        "product-tile": [
+          { "selector": ".product-tile-image", "source": "catalog" },
+          { "selector": ".product-tile-price", "source": "catalog" },
+          { "selector": ".product-tile-add-to-cart", "source": "commerce" }
+        ]
+      }
+    }
+  }
+}

@@ -14,6 +14,7 @@
  */
 
 import { installBlockCollections, type BlockLibraryEntry } from '../services/blockCollectionHelpers';
+import { generateInspectorTreeEntries, installInspectorTagging } from '../services/inspectorHelpers';
 import { ConfigurationService } from '../services/configurationService';
 import type { DaLiveAuthService } from '../services/daLiveAuthService';
 import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '../services/daLiveContentOperations';
@@ -23,7 +24,7 @@ import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
-import { DaLiveAuthError } from '../services/types';
+import { DaLiveAuthError, type GitHubTreeInput } from '../services/types';
 import { configureDaLivePermissions, ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -222,6 +223,7 @@ async function executePhaseHelixConfig(
     selectedBlockLibraries: string[] | undefined,
     useExistingRepo: boolean,
     customBlockLibraries?: CustomBlockLibrary[],
+    packageId?: string,
 ): Promise<{ blockCollectionIds?: string[]; earlyReturn?: StorefrontSetupResult }> {
     const logger = context.logger;
     const { githubFileOps } = services;
@@ -248,7 +250,12 @@ async function executePhaseHelixConfig(
     );
     logger.info('[Storefront Setup] fstab.yaml pushed to GitHub');
 
-    // Phase 2.1: Block Libraries (collect all sources, install unique blocks in one commit)
+    // Phase 2.1: Block Libraries + Inspector Tagging
+    //
+    // Inspector tree entries are generated first, then merged into the block
+    // collection commit for a single atomic commit. If no block libraries are
+    // selected, inspector tagging makes its own standalone commit.
+
     const allLibraries: BlockLibraryEntry[] = [];
 
     // Collect built-in library sources
@@ -270,17 +277,36 @@ async function executePhaseHelixConfig(
         }
     }
 
-    // Install all blocks in a single atomic commit (deduped across libraries)
+    // Generate inspector tree entries (always, regardless of block libraries)
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'helix-config',
+        message: 'Preparing inspector tagging...',
+        progress: 27,
+    });
+    let inspectorEntries: GitHubTreeInput[];
+    try {
+        inspectorEntries = await generateInspectorTreeEntries(
+            githubFileOps, repoInfo.repoOwner, repoInfo.repoName, packageId, logger,
+        );
+    } catch (error) {
+        logger.warn(`[Storefront Setup] Inspector tagging skipped: ${(error as Error).message}`);
+        inspectorEntries = [];
+    }
+
+    // Install blocks + inspector in a single atomic commit (deduped across libraries)
     let blockCollectionIdsResult: string[] = [];
     if (allLibraries.length > 0) {
         await context.sendMessage('storefront-setup-progress', {
             phase: 'helix-config',
             message: `Installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`,
-            progress: 25,
+            progress: 28,
         });
-        const result = await installBlockCollections(githubFileOps, repoInfo.repoOwner, repoInfo.repoName, allLibraries, logger);
+        const result = await installBlockCollections(
+            githubFileOps, repoInfo.repoOwner, repoInfo.repoName,
+            allLibraries, logger, inspectorEntries,
+        );
         if (result.success) {
-            logger.info(`[Storefront Setup] Installed ${result.blocksCount} unique blocks from ${allLibraries.length} libraries`);
+            logger.info(`[Storefront Setup] Installed ${result.blocksCount} unique blocks from ${allLibraries.length} libraries (+ inspector tagging)`);
             blockCollectionIdsResult = result.blockIds;
 
             // Save block library install tracking to project state
@@ -300,6 +326,16 @@ async function executePhaseHelixConfig(
             }
         } else {
             logger.warn(`[Storefront Setup] Block library installation failed: ${result.error}`);
+        }
+    } else if (inspectorEntries.length > 0) {
+        // No block libraries — inspector makes its own standalone commit
+        const inspectorResult = await installInspectorTagging(
+            githubFileOps, repoInfo.repoOwner, repoInfo.repoName, packageId, logger,
+        );
+        if (inspectorResult.success) {
+            logger.info('[Storefront Setup] Inspector tagging installed (standalone)');
+        } else {
+            logger.warn(`[Storefront Setup] Inspector tagging skipped: ${inspectorResult.error}`);
         }
     }
 
@@ -577,6 +613,7 @@ export async function executeStorefrontSetupPhases(
     selectedAddons?: string[],
     selectedBlockLibraries?: string[],
     customBlockLibraries?: CustomBlockLibrary[],
+    packageId?: string,
 ): Promise<StorefrontSetupResult> {
     const logger = context.logger;
 
@@ -660,7 +697,7 @@ export async function executeStorefrontSetupPhases(
             try {
                 const phase2Result = await executePhaseHelixConfig(
                     context, edsConfig, services, repoInfo, effectiveBlockLibraries, useExistingRepo,
-                    customBlockLibraries,
+                    customBlockLibraries, packageId,
                 );
                 blockCollectionIds = phase2Result.blockCollectionIds ?? [];
                 if (phase2Result.earlyReturn) return phase2Result.earlyReturn;

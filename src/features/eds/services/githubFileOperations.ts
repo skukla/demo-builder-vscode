@@ -17,6 +17,7 @@ import type {
     GitHubFileResult,
     GitHubApiError,
     GitHubTreeEntry,
+    GitHubTreeInput,
 } from './types';
 import { getLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
@@ -320,13 +321,7 @@ export class GitHubFileOperations {
     async createTree(
         owner: string,
         repo: string,
-        treeEntries: Array<{
-            path: string;
-            mode: '100644' | '100755' | '040000' | '160000' | '120000';
-            type: 'blob' | 'tree' | 'commit';
-            sha?: string;      // Use existing blob SHA
-            content?: string;  // Or provide content for new blob
-        }>,
+        treeEntries: GitHubTreeInput[],
         baseTree?: string,
     ): Promise<string> {
         const octokit = await this.ensureAuthenticated();
@@ -530,12 +525,7 @@ export class GitHubFileOperations {
         const templateContents = await this.downloadRepoContents(templateOwner, templateRepo, branch);
 
         // Step 3: Build tree entries with content
-        const treeEntries: Array<{
-            path: string;
-            mode: '100644' | '100755' | '040000' | '160000' | '120000';
-            type: 'blob' | 'tree' | 'commit';
-            content: string;
-        }> = [];
+        const treeEntries: GitHubTreeInput[] = [];
 
         for (const [path, content] of templateContents) {
             const override = fileOverrides.get(path);
