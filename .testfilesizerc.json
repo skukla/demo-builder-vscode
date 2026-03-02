@@ -1,0 +1,5 @@
+{
+  "exclude": [
+    "blockCollectionHelpers.test.ts"
+  ]
+}

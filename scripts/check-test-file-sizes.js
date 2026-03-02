@@ -19,7 +19,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { globSync } = require('glob');
 
 const MAX_LINES = 750; // Error threshold (blocks CI/CD)
 const WARN_LINES = 500; // Warning threshold (review recommended)
@@ -124,11 +123,15 @@ function reportSuccess(totalFiles, warnings) {
  */
 function checkTestFileSizes(searchDir) {
     const targetDir = getTargetDir(searchDir);
-    const testFiles = globSync('tests/**/*.test.{ts,tsx}', {
-        cwd: targetDir,
-        ignore: ['**/node_modules/**', '**/dist/**'],
-        absolute: true,
-    });
+    const testsDir = path.join(targetDir, 'tests');
+    if (!fs.existsSync(testsDir)) {
+        console.log('No tests/ directory found in', targetDir);
+        return 0;
+    }
+
+    const testFiles = fs.readdirSync(testsDir, { recursive: true })
+        .map(f => path.join(testsDir, f))
+        .filter(f => /\.test\.tsx?$/.test(f) && !f.includes('node_modules') && !f.includes('dist'));
 
     if (testFiles.length === 0) {
         console.log('No test files found in', targetDir);
