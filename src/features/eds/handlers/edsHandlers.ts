@@ -22,6 +22,7 @@
 import {
     handleVerifyDaLiveOrg,
     handleGetDaLiveSites,
+    handleListDaLiveOrgs,
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,
@@ -58,6 +59,7 @@ export {
 export {
     handleVerifyDaLiveOrg,
     handleGetDaLiveSites,
+    handleListDaLiveOrgs,
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,
@@ -186,6 +188,7 @@ export const edsHandlers = defineHandlers({
     'clear-dalive-auth': handleClearDaLiveAuth,
     'get-dalive-sites': handleGetDaLiveSites,
     'verify-dalive-org': handleVerifyDaLiveOrg,
+    'list-dalive-orgs': handleListDaLiveOrgs,
 
     // ACCS handlers
     'validate-accs-credentials': handleValidateAccsCredentials,

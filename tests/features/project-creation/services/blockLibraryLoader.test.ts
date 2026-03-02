@@ -17,6 +17,7 @@ import {
     getDefaultBlockLibraryIds,
     getBlockLibrarySource,
     getBlockLibraryName,
+    isBlockLibraryAvailableForPackage,
 } from '@/features/project-creation/services/blockLibraryLoader';
 import type { Stack } from '@/types/stacks';
 
@@ -272,6 +273,26 @@ describe('blockLibraryLoader', () => {
             const source = getBlockLibrarySource('nonexistent');
 
             expect(source).toBeUndefined();
+        });
+    });
+
+    describe('isBlockLibraryAvailableForPackage', () => {
+        it('should return false for buildright-blocks when package is isle5', () => {
+            expect(isBlockLibraryAvailableForPackage('buildright-blocks', 'isle5')).toBe(false);
+        });
+
+        it('should return true for buildright-blocks when package is buildright', () => {
+            expect(isBlockLibraryAvailableForPackage('buildright-blocks', 'buildright')).toBe(true);
+        });
+
+        it('should return true for isle5 for any package (no onlyForPackages)', () => {
+            expect(isBlockLibraryAvailableForPackage('isle5', 'isle5')).toBe(true);
+            expect(isBlockLibraryAvailableForPackage('isle5', 'buildright')).toBe(true);
+            expect(isBlockLibraryAvailableForPackage('isle5', 'citisignal')).toBe(true);
+        });
+
+        it('should return false for unknown library', () => {
+            expect(isBlockLibraryAvailableForPackage('nonexistent', 'isle5')).toBe(false);
         });
     });
 

@@ -61,6 +61,7 @@ export function ConnectServicesStep({
     };
 
     const handleDaLiveReset = () => {
+        daLiveAuth.resetAuth();
         setShowDaLiveInput(true);
     };
 

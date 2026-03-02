@@ -86,6 +86,7 @@ export const projectCreationHandlers = defineHandlers({
     'clear-dalive-auth': eds.handleClearDaLiveAuth,
     'get-dalive-sites': eds.handleGetDaLiveSites,
     'verify-dalive-org': eds.handleVerifyDaLiveOrg,
+    'list-dalive-orgs': eds.handleListDaLiveOrgs,
 
     // EDS handlers - ACCS
     'validate-accs-credentials': eds.handleValidateAccsCredentials,

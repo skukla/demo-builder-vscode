@@ -10,6 +10,7 @@
  * Handlers:
  * - `handleVerifyDaLiveOrg`: Check user access to DA.live organization
  * - `handleGetDaLiveSites`: List sites in a DA.live organization
+ * - `handleListDaLiveOrgs`: List writable DA.live organizations for a token
  * - `handleCheckDaLiveAuth`: Check DA.live authentication status
  * - `handleOpenDaLiveLogin`: Open DA.live for login with bookmarklet info
  * - `handleStoreDaLiveToken`: Store a manually pasted DA.live token
@@ -23,6 +24,8 @@
 export {
     handleVerifyDaLiveOrg,
     handleGetDaLiveSites,
+    handleListDaLiveOrgs,
+    hasWriteAccess,
 } from './edsDaLiveOrgHandlers';
 
 // Re-export all DA.live auth handlers

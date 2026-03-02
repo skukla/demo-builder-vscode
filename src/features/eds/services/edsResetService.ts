@@ -17,10 +17,11 @@
  */
 
 import type { TokenProvider } from './daLiveOrgOperations';
+import type { GitHubTreeInput } from './types';
 import { COMPONENT_IDS } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
-import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
+import { getBlockLibrarySource, getBlockLibraryName, isBlockLibraryAvailableForPackage } from '@/features/project-creation/services/blockLibraryLoader';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -265,17 +266,36 @@ async function resetRepoToTemplate(
     context.logger.info(`[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
     report(1, `Reset ${resetResult.fileCount} files`);
 
+    // Generate inspector tree entries (always, for consistency with storefront setup)
+    let inspectorEntries: GitHubTreeInput[] = [];
+    try {
+        const { generateInspectorTreeEntries } = await import('./inspectorHelpers');
+        inspectorEntries = await generateInspectorTreeEntries(
+            githubFileOps, repoOwner, repoName, project.selectedPackage, context.logger,
+        );
+    } catch (error) {
+        context.logger.warn(`[EdsReset] Inspector tagging skipped: ${(error as Error).message}`);
+    }
+
     // Re-install block libraries if project had them (deduped, single commit)
-    // Backward compat: if selectedBlockLibraries is empty but selectedAddons has
-    // commerce-block-collection, treat as ['isle5'] for pre-existing projects
-    const effectiveBlockLibraries = (project.selectedBlockLibraries && project.selectedBlockLibraries.length > 0)
-        ? project.selectedBlockLibraries
-        : project.selectedAddons?.includes('commerce-block-collection') ? ['isle5'] : [];
+    // Only install what's explicitly configured. No fallbacks.
+    const effectiveBlockLibraries = project.selectedBlockLibraries ?? [];
+
+    context.logger.info('[EdsReset] Block library config', {
+        selectedBlockLibraries: project.selectedBlockLibraries,
+        customBlockLibraries: project.customBlockLibraries?.map(l => `${l.source.owner}/${l.source.repo}`),
+        package: project.selectedPackage,
+    });
 
     const allLibraries: Array<{ source: import('@/types/demoPackages').AddonSource; name: string }> = [];
 
-    // Collect built-in library sources
+    // Collect built-in library sources (filter by package compatibility)
+    const packageId = project.selectedPackage ?? '';
     for (const libraryId of effectiveBlockLibraries) {
+        if (!isBlockLibraryAvailableForPackage(libraryId, packageId)) {
+            context.logger.info(`[EdsReset] Skipping block library '${libraryId}' — not available for package '${packageId}' (onlyForPackages)`);
+            continue;
+        }
         const source = getBlockLibrarySource(libraryId);
         if (source) {
             allLibraries.push({ source, name: getBlockLibraryName(libraryId) || libraryId });
@@ -291,16 +311,33 @@ async function resetRepoToTemplate(
         }
     }
 
+    context.logger.info('[EdsReset] Installing blocks from', allLibraries.map(l => `${l.source.owner}/${l.source.repo}`));
+
+    const { installBlockCollections } = await import('./blockCollectionHelpers');
+    const { installInspectorTagging } = await import('./inspectorHelpers');
+
     let allBlockIds: string[] = [];
     if (allLibraries.length > 0) {
-        const { installBlockCollections } = await import('./blockCollectionHelpers');
         report(1, `Re-installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`);
-        const blockResult = await installBlockCollections(githubFileOps, repoOwner, repoName, allLibraries, context.logger);
+        const blockResult = await installBlockCollections(
+            githubFileOps, repoOwner, repoName, allLibraries, context.logger, inspectorEntries,
+        );
         if (blockResult.success) {
             allBlockIds = blockResult.blockIds;
-            context.logger.info(`[EdsReset] Reinstalled ${blockResult.blocksCount} unique blocks from ${allLibraries.length} libraries`);
+            context.logger.info(`[EdsReset] Reinstalled ${blockResult.blocksCount} unique blocks from ${allLibraries.length} libraries (+ inspector tagging)`);
         } else {
             context.logger.warn(`[EdsReset] Block library reinstall failed: ${blockResult.error}`);
+        }
+    } else if (inspectorEntries.length > 0) {
+        // No block libraries — inspector makes its own standalone commit
+        report(1, 'Installing inspector tagging...');
+        const inspectorResult = await installInspectorTagging(
+            githubFileOps, repoOwner, repoName, project.selectedPackage, context.logger,
+        );
+        if (inspectorResult.success) {
+            context.logger.info('[EdsReset] Inspector tagging installed (standalone)');
+        } else {
+            context.logger.warn(`[EdsReset] Inspector tagging skipped: ${inspectorResult.error}`);
         }
     }
 
@@ -366,7 +403,35 @@ async function redeployApiMesh(
         return null;
     }
 
+    // Re-validate Adobe I/O auth — the token may have expired during the reset pipeline
+    const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
     const authService = ServiceLocator.getAuthenticationService();
+
+    report(7, 'Checking Adobe I/O authentication...');
+    const authResult = await ensureAdobeIOAuth({
+        authManager: authService,
+        logger: context.logger,
+        logPrefix: '[EdsReset]',
+        projectContext: {
+            organization: project.adobe?.organization,
+            projectId: project.adobe?.projectId,
+            workspace: project.adobe?.workspace,
+        },
+        warningMessage: 'Your Adobe I/O session has expired. Please sign in to continue the mesh redeployment.',
+    });
+
+    if (!authResult.authenticated) {
+        context.logger.warn('[EdsReset] Adobe I/O auth failed before mesh redeployment');
+        return {
+            success: true,
+            filesReset,
+            contentCopied,
+            meshRedeployed: false,
+            error: 'Reset completed but mesh redeployment skipped: Adobe I/O authentication required',
+            errorType: 'MESH_REDEPLOY_FAILED',
+        };
+    }
+
     report(7, 'Setting Adobe context...');
     if (project.adobe?.organization) {
         await authService.selectOrganization(project.adobe.organization);
@@ -464,6 +529,28 @@ export async function executeEdsReset(
 
         // Step 2: Sync code to CDN + configure permissions
         await syncCodeAndPermissions(params, context, githubTokenService, tokenProvider, report);
+
+        // Step 2.5: Update Configuration Service with current content source
+        try {
+            const { ConfigurationService } = await import('./configurationService');
+            const configService = new ConfigurationService(tokenProvider, context.logger);
+            const contentSourceUrl = `https://content.da.live/${daLiveOrg}/${daLiveSite}/`;
+            const configResult = await configService.updateSiteConfig({
+                org: repoOwner, site: repoName,
+                codeOwner: repoOwner, codeRepo: repoName, contentSourceUrl,
+            });
+            if (configResult.success) {
+                context.logger.info('[EdsReset] Configuration Service updated');
+                // Also update folder mapping
+                await configService.setFolderMapping(
+                    repoOwner, repoName, { '/products/': '/products/default' },
+                );
+            } else {
+                context.logger.warn(`[EdsReset] Configuration Service update warning: ${configResult.error}`);
+            }
+        } catch (configError) {
+            context.logger.warn(`[EdsReset] Configuration Service update skipped: ${(configError as Error).message}`);
+        }
 
         // Step 3: Publish config.json to CDN
         report(3, 'Publishing config.json to CDN...');

@@ -132,11 +132,12 @@ features/my-feature/
 - `GitHubTokenService`, `GitHubRepoOperations`, `GitHubFileOperations`, `GitHubOAuthService` - GitHub integration (extracted modules)
 - `DaLiveAuthService`, `DaLiveContentOperations`, `DaLiveOrgOperations` - DA.live integration (extracted modules)
 - `ConfigurationService` - AEM Configuration Service (site registration)
-- `HelixService` - Helix 5 Configuration Service integration
+- `HelixService` - Helix Admin API (preview/publish/unpublish, API key management)
 - `CleanupService` - External resource cleanup on project deletion
 - `ToolManager` - Commerce demo ingestion tool management
 - `edsResetService` + `edsResetUI` - Project reset (core logic + UI orchestration)
 - `blockCollectionHelpers` - Block collection installation from config-driven source
+- `inspectorHelpers` - Demo Inspector SDK vendoring and tagging
 - Error formatters for user-friendly error messages
 
 **Responsibilities:**

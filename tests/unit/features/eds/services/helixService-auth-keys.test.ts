@@ -287,9 +287,13 @@ describe('HelixService - Auth & Keys', () => {
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'bad-key', expiration: '2027-01-01T00:00:00Z' }) });
             mockFetch.mockResolvedValueOnce({ ok: false, status: 401, statusText: 'Unauthorized' });
             mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Internal Server Error' });
+            // Page-by-page fallback: unpublish live and delete preview both return 403
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
 
             const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/page']);
-            expect(result).toEqual({ success: false, count: 0 });
+            expect(result).toMatchObject({ success: false, count: 0 });
+            expect(result.reason).toBeDefined();
         });
 
         it('should not retry on non-auth errors (e.g., 500)', async () => {
@@ -298,6 +302,23 @@ describe('HelixService - Auth & Keys', () => {
 
             await expect(service.unpublishPages('testorg', 'testsite', 'main', ['/page'])).rejects.toThrow(/500/);
             expect(mockFetch).toHaveBeenCalledTimes(2);
+        });
+
+        it('should bail immediately on primary-site restriction (no retry or page-by-page)', async () => {
+            const restrictionMsg = '[admin] delete is restricted to the primary site: stephen-garner-adobe/isle5';
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'key', expiration: '2027-01-01T00:00:00Z' }) });
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 403,
+                statusText: 'Forbidden',
+                headers: { get: (k: string) => (k === 'x-error' ? restrictionMsg : null) },
+                text: () => Promise.resolve(''),
+            });
+
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/a', '/b', '/c']);
+
+            expect(result).toEqual({ success: false, count: 0, reason: `Bulk unpublish failed: ${restrictionMsg}` });
+            expect(mockFetch).toHaveBeenCalledTimes(2); // API key + one bulk attempt, no retry, no page-by-page
         });
     });
 });

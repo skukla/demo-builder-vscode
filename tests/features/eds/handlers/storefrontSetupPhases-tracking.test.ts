@@ -26,10 +26,16 @@ jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
+    isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
 jest.mock('@/features/eds/services/fstabGenerator', () => ({
     generateFstabContent: jest.fn().mockReturnValue('mock-fstab-content'),
+}));
+
+jest.mock('@/features/eds/services/inspectorHelpers', () => ({
+    generateInspectorTreeEntries: jest.fn().mockResolvedValue([]),
+    installInspectorTagging: jest.fn().mockResolvedValue({ success: true }),
 }));
 
 jest.mock('@/features/eds/services/githubTokenService', () => ({
@@ -80,6 +86,8 @@ jest.mock('@/features/eds/services/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         registerSite: jest.fn().mockResolvedValue({ success: true }),
         setFolderMapping: jest.fn().mockResolvedValue({ success: true }),
+        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
+        deleteSiteConfig: jest.fn().mockResolvedValue({ success: true }),
     })),
 }));
 

@@ -26,6 +26,7 @@ jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
+    isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
 jest.mock('@/features/eds/services/fstabGenerator', () => ({
@@ -80,6 +81,8 @@ jest.mock('@/features/eds/services/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         registerSite: jest.fn().mockResolvedValue({ success: true }),
         setFolderMapping: jest.fn().mockResolvedValue({ success: true }),
+        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
+        deleteSiteConfig: jest.fn().mockResolvedValue({ success: true }),
     })),
 }));
 
@@ -209,6 +212,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
                 { source: { owner: 'partner', repo: 'blocks-lib', branch: 'v2' }, name: 'Partner Blocks' },
             ],
             expect.anything(), // logger
+            expect.anything(), // inspectorEntries
         );
 
     });
@@ -232,6 +236,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
             expect.anything(), 'test-owner', 'test-repo',
             [{ source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' }],
             expect.anything(),
+            expect.anything(), // inspectorEntries
         );
 
         // When: Executing with empty custom libraries array
@@ -254,6 +259,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
             expect.anything(), 'test-owner', 'test-repo',
             [{ source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' }],
             expect.anything(),
+            expect.anything(), // inspectorEntries
         );
     });
 
@@ -288,6 +294,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
             expect.anything(), 'test-owner', 'test-repo',
             [{ source: { owner: 'user', repo: 'fancy', branch: 'main' }, name: 'My Fancy Blocks' }],
             expect.anything(),
+            expect.anything(), // inspectorEntries
         );
     });
 });

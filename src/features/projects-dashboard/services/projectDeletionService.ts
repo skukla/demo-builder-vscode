@@ -386,6 +386,8 @@ async function unpublishCdnContent(
                 name: `${githubOwner}/${githubRepo}`,
                 success: true,
             });
+        } else if (!unpublishResult.success && unpublishResult.reason) {
+            context.logger.warn(`[Delete Project] CDN unpublish skipped: ${unpublishResult.reason}`);
         }
 
         const keyDeleteResult = await helixService.deleteAdminApiKey(daOrg, daSite);

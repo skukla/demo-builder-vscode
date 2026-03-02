@@ -147,10 +147,17 @@ async function pipelineClearContent(
         });
 
         try {
-            await helixService.unpublishPages(repoOwner, repoName, 'main', webPaths);
+            const unpublishResult = await helixService.unpublishPages(repoOwner, repoName, 'main', webPaths);
+            if (!unpublishResult.success || unpublishResult.count === 0) {
+                const reason = unpublishResult.reason ?? 'unknown';
+                logger.warn(
+                    `[EdsPipeline] CDN unpublish failed (0/${webPaths.length} pages). ` +
+                    `${reason} Source content was cleared; publish again to sync the CDN.`,
+                );
+            }
         } catch (unpublishError) {
             // Non-fatal -- source content is cleared, CDN will eventually sync
-            logger.warn(`[EdsPipeline] Bulk unpublish failed: ${(unpublishError as Error).message}`);
+            logger.warn(`[EdsPipeline] CDN unpublish failed: ${(unpublishError as Error).message}. Source cleared; publish again to sync.`);
         }
     }
 

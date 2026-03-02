@@ -19,6 +19,7 @@ import {
     validateDaLiveToken,
     offerSaveDefaultOrg,
 } from './edsHelpers';
+import { hasWriteAccess } from './edsDaLiveOrgHandlers';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -299,7 +300,17 @@ export async function handleStoreDaLiveTokenWithOrg(
             return { success: false, error: 'Verification failed' };
         }
 
-        // Org verified! Store via service (handles all keys including setupComplete)
+        // Verify write access before storing
+        const writable = await hasWriteAccess(orgName, token);
+        if (!writable) {
+            await context.sendMessage('dalive-token-with-org-result', {
+                success: false,
+                error: `You have read-only access to "${orgName}". Please enter an organization you own.`,
+            });
+            return { success: false, error: 'Read-only access' };
+        }
+
+        // Org verified with write access! Store via service
         const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
         const authService = getDaLiveAuthService(context.context);
         await authService.storeToken(token, {

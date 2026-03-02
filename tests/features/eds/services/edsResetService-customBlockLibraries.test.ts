@@ -45,6 +45,7 @@ jest.mock('@/features/project-creation/config/demo-packages.json', () => ({
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
+    isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
 // Mock dynamic imports used by resetRepoToTemplate
@@ -98,6 +99,13 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
 
 jest.mock('@/features/eds/services/storefrontStalenessDetector', () => ({
     updateStorefrontState: jest.fn(),
+}));
+
+jest.mock('@/features/eds/services/configurationService', () => ({
+    ConfigurationService: jest.fn().mockImplementation(() => ({
+        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
+        setFolderMapping: jest.fn().mockResolvedValue({ success: true }),
+    })),
 }));
 
 // Mock fetch for placeholder files
@@ -227,6 +235,7 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
                 { source: { owner: 'partner', repo: 'blocks-lib', branch: 'v2' }, name: 'Partner Blocks' },
             ],
             expect.anything(), // logger
+            expect.anything(), // inspectorEntries
         );
 
     });
@@ -260,6 +269,7 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
             expect.anything(), 'test-owner', 'test-repo',
             [{ source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' }],
             expect.anything(),
+            expect.anything(), // inspectorEntries
         );
     });
 });

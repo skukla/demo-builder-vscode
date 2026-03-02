@@ -154,9 +154,9 @@ function applyRules() {
     // Level 2: tag sub-elements by CSS selector within this block
     const l2 = RULES.level2[name];
     if (l2) {
-      for (const rule of l2) {
+      l2.forEach((rule) => {
         tagMeshSources(block.querySelectorAll(rule.selector), rule.source);
-      }
+      });
     }
 
     // Level 1: tag the block container, but skip if Level 2 already tagged it

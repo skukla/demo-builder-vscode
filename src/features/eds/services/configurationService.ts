@@ -152,6 +152,33 @@ export class ConfigurationService {
     }
 
     // ==========================================================
+    // Site Update
+    // ==========================================================
+
+    /**
+     * Update an existing site's configuration.
+     *
+     * Deletes the current config and re-registers with the provided values.
+     * Handles the case where the config was auto-created by the GitHub App
+     * with stale content source (e.g., from the template's fstab.yaml).
+     *
+     * @param params - Site registration parameters with correct values
+     * @returns Result with success/error status
+     */
+    async updateSiteConfig(params: SiteRegistrationParams): Promise<ConfigServiceResult> {
+        const { org, site } = params;
+        this.logger.info(`[ConfigService] Updating site config: ${org}/${site}`);
+
+        const deleteResult = await this.deleteSiteConfig(org, site);
+        if (!deleteResult.success && deleteResult.statusCode !== 404) {
+            this.logger.error(`[ConfigService] Failed to clear existing config: ${deleteResult.error}`);
+            return { success: false, error: `Failed to clear existing config: ${deleteResult.error}` };
+        }
+
+        return this.registerSite(params);
+    }
+
+    // ==========================================================
     // Site Deletion
     // ==========================================================
 
@@ -187,9 +214,6 @@ export class ConfigurationService {
     ): Promise<ConfigServiceResult> {
         try {
             const token = await this.getImsToken();
-
-            // Debug: log token prefix to diagnose auth type
-            this.logger.debug(`[ConfigService] Token prefix: ${token.substring(0, 10)}...`);
 
             const headers: Record<string, string> = {
                 Authorization: `Bearer ${token}`,

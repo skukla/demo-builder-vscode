@@ -202,17 +202,23 @@ This script tests:
 
 ## Future Considerations
 
-### Potential Improvements
+### Status Update (March 2026)
 
-1. **User notification**: Inform users when fallback is triggered with suggestion to contact Adobe
-2. **API_KEY support**: If Adobe provides a way to use API_KEY in our integration, implement it
-3. **Batch optimization**: For fallback mode, implement parallel page publishing (with rate limiting)
+API keys are now **self-provisioned** by `HelixService` via `POST /config/{org}/sites/{site}/apiKeys.json`. Keys are cached in memory and persisted in `globalState` for reuse across sessions.
 
-### Questions for Adobe
+**Bulk preview/publish works** with the self-provisioned API key. However, **bulk unpublish still fails** with `[admin] not authenticated` even when the API key header is present. The unpublish endpoint may require different authentication or Adobe-side provisioning. The current workaround logs a warning and continues — content is re-published over the stale data.
 
-1. Can Demo Builder projects be auto-provisioned with API_KEY?
-2. Is there a programmatic way to request API_KEY provisioning?
-3. Are there plans to make bulk endpoints work with GitHub token auth?
+### Remaining Improvements
+
+1. **Bulk unpublish authentication**: Investigate why `DELETE` bulk operations reject self-provisioned API keys
+2. **User notification**: Inform users when fallback is triggered
+3. **Batch optimization**: For page-by-page fallback, implement parallel publishing (with rate limiting)
+
+### Resolved Questions
+
+1. ~~Can Demo Builder projects be auto-provisioned with API_KEY?~~ → **Yes**, self-provisioned via Admin API
+2. ~~Is there a programmatic way to request API_KEY provisioning?~~ → **Yes**, `POST /config/{org}/sites/{site}/apiKeys.json`
+3. Are there plans to make bulk endpoints work with GitHub token auth? → **Unknown**
 
 ---
 

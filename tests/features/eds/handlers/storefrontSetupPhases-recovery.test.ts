@@ -95,6 +95,8 @@ jest.mock('@/features/eds/services/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         registerSite: jest.fn().mockResolvedValue({ success: true }),
         setFolderMapping: jest.fn().mockResolvedValue({ success: true }),
+        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
+        deleteSiteConfig: jest.fn().mockResolvedValue({ success: true }),
     })),
 }));
 

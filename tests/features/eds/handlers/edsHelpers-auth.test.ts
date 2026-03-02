@@ -103,6 +103,12 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => {
     };
 });
 
+// Mock hasWriteAccess (imported by edsHelpers from edsDaLiveOrgHandlers)
+const mockHasWriteAccess = jest.fn();
+jest.mock('@/features/eds/handlers/edsDaLiveOrgHandlers', () => ({
+    hasWriteAccess: (...args: unknown[]) => mockHasWriteAccess(...args),
+}));
+
 // Mock remaining service imports required by edsHelpers module
 jest.mock('@/features/eds/services/githubTokenService');
 jest.mock('@/features/eds/services/githubRepoOperations');
@@ -172,6 +178,7 @@ function resetMockState(): void {
     mockIsAuthenticated.mockReset().mockResolvedValue(false);
     mockStoreToken.mockReset().mockResolvedValue(undefined);
     mockFetch.mockReset();
+    mockHasWriteAccess.mockReset();
 }
 
 // =============================================================================
@@ -213,12 +220,12 @@ describe('ensureDaLiveAuth', () => {
         mockIsAuthenticated.mockResolvedValue(false);
         showWarningMessageResponse = 'Sign In';
 
-        // Set up QuickPick mocks for successful auth
-        // (org input, info message, token input, fetch success)
+        // Set up token-first flow mocks: info message → token → org → verify
         const validToken = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiOTk5OTk5OTk5OTk5OSIsImV4cGlyZXNfaW4iOiIzNjAwMDAwIiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIn0.sig';
-        showInputBoxResponses = ['my-org', validToken];
         showInfoMessageResponse = 'I have my token';
+        showInputBoxResponses = [validToken, 'my-org'];
         mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+        mockHasWriteAccess.mockResolvedValueOnce(true);
 
         // When: ensureDaLiveAuth is called
         const result = await ensureDaLiveAuth(mockContext);
@@ -228,13 +235,13 @@ describe('ensureDaLiveAuth', () => {
     });
 
     it('should return authenticated false with error when QuickPick fails', async () => {
-        // Given: Token expired, user clicks "Sign In", but QuickPick auth fails (invalid token)
+        // Given: Token expired, user clicks "Sign In", but token is invalid
         mockIsAuthenticated.mockResolvedValue(false);
         showWarningMessageResponse = 'Sign In';
 
-        // QuickPick: org input succeeds, token input gives invalid format
-        showInputBoxResponses = ['my-org', 'not-a-jwt'];
+        // Token-first flow: info message → invalid token
         showInfoMessageResponse = 'I have my token';
+        showInputBoxResponses = ['not-a-jwt'];
 
         // When: ensureDaLiveAuth is called
         const result = await ensureDaLiveAuth(mockContext);
@@ -245,12 +252,12 @@ describe('ensureDaLiveAuth', () => {
     });
 
     it('should return cancelled when QuickPick is cancelled', async () => {
-        // Given: Token expired, user clicks "Sign In", then cancels QuickPick at org step
+        // Given: Token expired, user clicks "Sign In", then dismisses info message
         mockIsAuthenticated.mockResolvedValue(false);
         showWarningMessageResponse = 'Sign In';
 
-        // QuickPick: user cancels at org input
-        showInputBoxResponses = [undefined];
+        // Token-first flow: user dismisses the info message
+        showInfoMessageResponse = undefined;
 
         // When: ensureDaLiveAuth is called
         const result = await ensureDaLiveAuth(mockContext);
@@ -350,13 +357,19 @@ describe('ensureDaLiveAuth', () => {
         mockIsAuthenticated.mockResolvedValue(false);
         showWarningMessageResponse = 'Sign In';
 
-        // QuickPick will be entered (user cancels at first step)
-        showInputBoxResponses = [undefined];
+        // Token-first flow: user dismisses info message (cancels)
+        showInfoMessageResponse = undefined;
 
         // When: ensureDaLiveAuth is called
         await ensureDaLiveAuth(mockContext);
 
-        // Then: showInputBox should have been called (first step of QuickPick)
-        expect(vscode.window.showInputBox).toHaveBeenCalled();
+        // Then: showInformationMessage should have been called (first step of QuickPick)
+        // Called twice: once for ensureDaLiveAuth warning, once for QuickPick info message
+        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+            expect.stringContaining('token from DA.live'),
+            expect.anything(),
+            'Open DA.live',
+            'I have my token',
+        );
     });
 });

@@ -89,6 +89,24 @@ export function getDefaultBlockLibraryIds(
 }
 
 /**
+ * Check whether a built-in block library is available for the given package.
+ *
+ * Respects onlyForPackages: libraries with onlyForPackages are available only
+ * for those packages (e.g. buildright-blocks only for buildright). Prevents
+ * installing package-incompatible libraries from stale project config.
+ *
+ * @param libraryId - The block library ID (e.g., "buildright-blocks")
+ * @param packageId - The project package ID (e.g., "isle5")
+ * @returns True if the library may be installed for this package
+ */
+export function isBlockLibraryAvailableForPackage(libraryId: string, packageId: string): boolean {
+    const lib = config.libraries.find(l => l.id === libraryId);
+    if (!lib) return false;
+    if (lib.onlyForPackages && !lib.onlyForPackages.includes(packageId)) return false;
+    return true;
+}
+
+/**
  * Resolve a block library ID to its source configuration.
  *
  * @param libraryId - The block library ID (e.g., "isle5")

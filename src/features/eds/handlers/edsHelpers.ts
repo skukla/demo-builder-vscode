@@ -17,6 +17,7 @@ import { DaLiveAuthService, parseJwtPayload } from '../services/daLiveAuthServic
 import { DaLiveConfigService } from '../services/daLiveConfigService';
 import { DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { type TokenProvider } from '../services/daLiveOrgOperations';
+import { hasWriteAccess } from './edsDaLiveOrgHandlers';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubOAuthService } from '../services/githubOAuthService';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
@@ -237,7 +238,7 @@ export function offerSaveDefaultOrg(
 }
 
 // ==========================================================
-// DA.live Multi-Step Input Authentication
+// DA.live Token-First Authentication
 // ==========================================================
 
 /**
@@ -302,13 +303,12 @@ export async function ensureDaLiveAuth(
 }
 
 /**
- * Show multi-step input DA.live authentication flow
+ * Show multi-step DA.live authentication flow (token-first)
  *
- * Mirrors the wizard DA.live auth form with two input fields:
- * 1. Organization name input (with stored default)
- * 2. Token input (password-masked)
- * 3. Validates token format and verifies org access
- * 4. Stores token and org on success
+ * Flow:
+ * 1. Info message → token input (password-masked)
+ * 2. Org name InputBox
+ * 3. Validates token → verifies org access + write permissions → stores
  *
  * Used by both project dashboard and projects list for EDS reset operations.
  *
@@ -318,39 +318,9 @@ export async function ensureDaLiveAuth(
 export async function showDaLiveAuthQuickPick(
     context: HandlerContext,
 ): Promise<QuickPickAuthResult> {
-    context.logger.info('[DA.live Auth] Starting multi-step authentication flow');
+    context.logger.info('[DA.live Auth] Starting token-first authentication flow');
 
-    // Get stored org name as default value for returning users
-    const storedOrgName = context.context.globalState.get<string>('daLive.orgName')
-        || vscode.workspace.getConfiguration('demoBuilder').get<string>('daLive.defaultOrg', '')
-        || '';
-
-    // Step 1: Ask for organization name
-    const orgName = await vscode.window.showInputBox({
-        title: 'Sign in to DA.live (Step 1/2)',
-        prompt: 'Enter your DA.live organization name',
-        placeHolder: 'e.g., my-organization',
-        value: storedOrgName,
-        ignoreFocusOut: true,
-        validateInput: (value) => {
-            if (!value?.trim()) {
-                return 'Organization name is required';
-            }
-            // Basic validation: no spaces, reasonable characters
-            if (!/^[a-zA-Z0-9_-]+$/.test(value.trim())) {
-                return 'Organization name can only contain letters, numbers, hyphens, and underscores';
-            }
-            return null;
-        },
-    });
-
-    // User cancelled
-    if (orgName === undefined) {
-        context.logger.info('[DA.live Auth] User cancelled at organization step');
-        return { success: false, cancelled: true };
-    }
-
-    // Step 2a: Show info message with option to open DA.live
+    // Step 1: Show info message with option to open DA.live
     const openDaLiveChoice = await vscode.window.showInformationMessage(
         'You\'ll need a token from DA.live. Click "Open DA.live" to get one, or continue if you already have it.',
         { modal: false },
@@ -360,7 +330,7 @@ export async function showDaLiveAuthQuickPick(
 
     // User dismissed the message (clicked X or pressed Escape)
     if (openDaLiveChoice === undefined) {
-        context.logger.info('[DA.live Auth] User cancelled at token prompt');
+        context.logger.info('[DA.live Auth] User cancelled at info message');
         return { success: false, cancelled: true };
     }
 
@@ -370,9 +340,9 @@ export async function showDaLiveAuthQuickPick(
         await vscode.env.openExternal(vscode.Uri.parse('https://da.live'));
     }
 
-    // Step 2b: Ask for token (password-masked)
+    // Step 2: Ask for token (password-masked)
     const token = await vscode.window.showInputBox({
-        title: 'Sign in to DA.live (Step 2/2)',
+        title: 'Sign in to DA.live (Step 1/2)',
         prompt: 'Paste your DA.live token (use the bookmarklet on da.live to copy it)',
         placeHolder: 'Paste token here',
         password: true,
@@ -394,7 +364,29 @@ export async function showDaLiveAuthQuickPick(
         return { success: false, cancelled: true };
     }
 
-    // Show progress while validating
+    // Step 3: Ask for org name
+    const defaultOrg = vscode.workspace.getConfiguration('demoBuilder').get<string>('daLive.defaultOrg', '');
+    const orgName = await vscode.window.showInputBox({
+        title: 'Sign in to DA.live (Step 2/2)',
+        prompt: 'Enter your DA.live organization name',
+        placeHolder: 'e.g. my-org',
+        value: defaultOrg,
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+            if (!value?.trim()) {
+                return 'Organization name is required';
+            }
+            return null;
+        },
+    });
+
+    // User cancelled
+    if (orgName === undefined) {
+        context.logger.info('[DA.live Auth] User cancelled at org step');
+        return { success: false, cancelled: true };
+    }
+
+    // Step 4: Validate token, verify org access + write permissions, store
     return vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
@@ -414,37 +406,40 @@ export async function showDaLiveAuthQuickPick(
                     return { success: false, error: validation.error };
                 }
 
-                // Verify org access with the token
+                // Verify org access
                 context.logger.debug(`[DA.live Auth] Verifying org access: ${trimmedOrg}`);
                 const orgResponse = await fetch(`https://admin.da.live/list/${trimmedOrg}/`, {
                     method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${trimmedToken}`,
-                    },
+                    headers: { 'Authorization': `Bearer ${trimmedToken}` },
                 });
 
                 if (orgResponse.status === 403) {
                     const error = `Access denied to organization "${trimmedOrg}". Please check the name or your permissions.`;
-                    context.logger.warn(`[DA.live Auth] Org access denied: ${trimmedOrg}`);
                     await vscode.window.showErrorMessage(error);
                     return { success: false, error };
                 }
 
                 if (orgResponse.status === 404) {
                     const error = `Organization "${trimmedOrg}" not found. Please check the name.`;
-                    context.logger.warn(`[DA.live Auth] Org not found: ${trimmedOrg}`);
                     await vscode.window.showErrorMessage(error);
                     return { success: false, error };
                 }
 
                 if (!orgResponse.ok) {
                     const error = `Failed to verify organization: ${orgResponse.status}`;
-                    context.logger.error(`[DA.live Auth] Org verification failed: ${orgResponse.status}`);
                     await vscode.window.showErrorMessage(error);
                     return { success: false, error };
                 }
 
-                // Success! Store via service (handles all keys including setupComplete)
+                // Verify write access
+                const writable = await hasWriteAccess(trimmedOrg, trimmedToken);
+                if (!writable) {
+                    const error = `You have read-only access to "${trimmedOrg}". Please enter an organization you own.`;
+                    await vscode.window.showErrorMessage(error);
+                    return { success: false, error };
+                }
+
+                // Store token with verified org
                 const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
                 const authService = getDaLiveAuthService(context.context);
                 await authService.storeToken(trimmedToken, {
@@ -454,7 +449,6 @@ export async function showDaLiveAuthQuickPick(
                 });
 
                 context.logger.info(`[DA.live Auth] Successfully authenticated to org: ${trimmedOrg}`);
-                // Auto-dismissing notification for non-blocking feedback
                 vscode.window.setStatusBarMessage(`✅ Connected to DA.live (${trimmedOrg})`, TIMEOUTS.STATUS_BAR_INFO);
 
                 // Offer to save org as default (one-time, non-blocking)

@@ -692,10 +692,9 @@ export class DaLiveContentOperations {
      * Finally deletes the site root entry so the site disappears from
      * the org listing.
      *
-     * Note: Only DA.live *source* content is deleted. Published CDN
-     * content cannot be unpublished from a VS Code extension (the Helix
-     * Admin API requires browser-based _AuthCookie_ auth). The caller
-     * should purge the CDN cache separately after clearing content.
+     * Note: Only DA.live *source* content is deleted. The caller is
+     * responsible for unpublishing CDN content separately (via
+     * HelixService.unpublishPages, which uses Admin API Keys).
      *
      * @param org - Organization name
      * @param site - Site name

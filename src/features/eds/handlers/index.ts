@@ -14,6 +14,7 @@ export {
     handleGitHubChangeAccount,
     handleGetGitHubRepos,
     handleGetDaLiveSites,
+    handleListDaLiveOrgs,
     handleVerifyDaLiveOrg,
     handleVerifyGitHubRepo,
     handleValidateAccsCredentials,

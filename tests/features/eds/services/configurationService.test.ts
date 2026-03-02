@@ -271,6 +271,79 @@ describe('ConfigurationService', () => {
     });
 
     // ==========================================================
+    // updateSiteConfig
+    // ==========================================================
+
+    describe('updateSiteConfig', () => {
+        const params: SiteRegistrationParams = {
+            org: 'test-user',
+            site: 'my-site',
+            codeOwner: 'test-user',
+            codeRepo: 'my-site',
+            contentSourceUrl: 'https://content.da.live/test-user/my-site/',
+        };
+
+        it('should delete existing config then re-register', async () => {
+            // Both delete and register succeed
+            fetchSpy
+                .mockResolvedValueOnce(new Response(null, { status: 200 })) // DELETE
+                .mockResolvedValueOnce(new Response(null, { status: 200 })); // PUT
+
+            const result = await service.updateSiteConfig(params);
+
+            expect(result.success).toBe(true);
+            expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+            // First call: DELETE
+            expect(fetchSpy.mock.calls[0][1].method).toBe('DELETE');
+            expect(fetchSpy.mock.calls[0][0]).toBe(
+                'https://admin.hlx.page/config/test-user/sites/my-site.json',
+            );
+
+            // Second call: PUT (register)
+            expect(fetchSpy.mock.calls[1][1].method).toBe('PUT');
+        });
+
+        it('should proceed with register when delete returns 404', async () => {
+            // Config does not exist yet (404) — register anyway
+            fetchSpy
+                .mockResolvedValueOnce(new Response('Not Found', { status: 404 })) // DELETE 404
+                .mockResolvedValueOnce(new Response(null, { status: 200 })); // PUT
+
+            const result = await service.updateSiteConfig(params);
+
+            expect(result.success).toBe(true);
+            expect(fetchSpy).toHaveBeenCalledTimes(2);
+        });
+
+        it('should return error when delete fails with non-404 status', async () => {
+            // Delete fails with 403
+            fetchSpy.mockResolvedValueOnce(
+                new Response('Forbidden', { status: 403 }),
+            );
+
+            const result = await service.updateSiteConfig(params);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('Failed to clear existing config');
+            // Should not attempt register
+            expect(fetchSpy).toHaveBeenCalledTimes(1);
+        });
+
+        it('should return register error when delete succeeds but register fails', async () => {
+            fetchSpy
+                .mockResolvedValueOnce(new Response(null, { status: 200 })) // DELETE
+                .mockResolvedValueOnce(new Response('Unauthorized', { status: 401 })); // PUT fails
+
+            const result = await service.updateSiteConfig(params);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('auth failed');
+            expect(result.statusCode).toBe(401);
+        });
+    });
+
+    // ==========================================================
     // Authentication
     // ==========================================================
 

@@ -28,7 +28,7 @@ import { DaLiveAuthError, type GitHubTreeInput } from '../services/types';
 import { configureDaLivePermissions, ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
+import { getBlockLibrarySource, getBlockLibraryName, isBlockLibraryAvailableForPackage } from '@/features/project-creation/services/blockLibraryLoader';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -258,9 +258,14 @@ async function executePhaseHelixConfig(
 
     const allLibraries: BlockLibraryEntry[] = [];
 
-    // Collect built-in library sources
+    // Collect built-in library sources (filter by package compatibility)
+    const pkgId = packageId ?? '';
     if (selectedBlockLibraries && selectedBlockLibraries.length > 0) {
         for (const libraryId of selectedBlockLibraries) {
+            if (!isBlockLibraryAvailableForPackage(libraryId, pkgId)) {
+                logger.info(`[Storefront Setup] Skipping block library '${libraryId}' — not available for package '${pkgId}' (onlyForPackages)`);
+                continue;
+            }
             const source = getBlockLibrarySource(libraryId);
             if (source) {
                 allLibraries.push({ source, name: getBlockLibraryName(libraryId) || libraryId });
@@ -333,6 +338,11 @@ async function executePhaseHelixConfig(
             githubFileOps, repoInfo.repoOwner, repoInfo.repoName, packageId, logger,
         );
         if (inspectorResult.success) {
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'helix-config',
+                message: 'Inspector tagging installed',
+                progress: 28,
+            });
             logger.info('[Storefront Setup] Inspector tagging installed (standalone)');
         } else {
             logger.warn(`[Storefront Setup] Inspector tagging skipped: ${inspectorResult.error}`);
@@ -561,7 +571,16 @@ async function registerConfigurationService(
         if (registerResult.success) {
             logger.info('[Storefront Setup] Site registered with Configuration Service');
         } else if (registerResult.statusCode === 409) {
-            logger.info('[Storefront Setup] Site config already exists (409), continuing');
+            logger.info('[Storefront Setup] Site config exists, updating with current values...');
+            const updateResult = await configurationService.updateSiteConfig({
+                org: repoInfo.repoOwner, site: repoInfo.repoName,
+                codeOwner: repoInfo.repoOwner, codeRepo: repoInfo.repoName, contentSourceUrl,
+            });
+            if (updateResult.success) {
+                logger.info('[Storefront Setup] Site config updated via Configuration Service');
+            } else {
+                logger.warn(`[Storefront Setup] Site config update warning: ${updateResult.error}`);
+            }
         } else if (registerResult.statusCode === 401) {
             logger.warn(`[Storefront Setup] Config Service requires org admin setup: ${registerResult.error}`);
             await context.sendMessage('storefront-setup-progress', {
@@ -679,11 +698,8 @@ export async function executeStorefrontSetupPhases(
         );
         if (phase1Result) return phase1Result;
 
-        // Backward compat: if selectedBlockLibraries is empty but selectedAddons has
-        // commerce-block-collection, treat as ['isle5'] for pre-existing projects
-        const effectiveBlockLibraries = (selectedBlockLibraries && selectedBlockLibraries.length > 0)
-            ? selectedBlockLibraries
-            : selectedAddons?.includes('commerce-block-collection') ? ['isle5'] : undefined;
+        // Only install what's explicitly configured. No fallbacks.
+        const effectiveBlockLibraries = selectedBlockLibraries ?? [];
 
         const MAX_REAUTH_ATTEMPTS = 2;
 

@@ -216,6 +216,65 @@ export class HelixService {
     }
 
     // ==========================================================
+    // Path & Auth Helpers
+    // ==========================================================
+
+    /** Normalize web path: ensure leading slash, remove trailing slash (except for root). */
+    private normalizeWebPath(path: string): string {
+        const p = path.startsWith('/') ? path : `/${path}`;
+        return p.endsWith('/') && p !== '/' ? p.slice(0, -1) : p;
+    }
+
+    /** Build auth headers: API key or GitHub + IMS for content operations. */
+    private async getAuthHeaders(apiKey?: string): Promise<Record<string, string>> {
+        if (apiKey) {
+            return { 'Authorization': `token ${apiKey}` };
+        }
+        return {
+            'x-auth-token': await this.getGitHubToken(),
+            'x-content-source-authorization': `Bearer ${await this.getDaLiveToken()}`,
+        };
+    }
+
+    /** Capture error response body for diagnostics (403, 401, 5xx). */
+    private async captureErrorBody(response: Response): Promise<string | null> {
+        try {
+            const text = await response.text();
+            if (!text || text.length > 500) return text ? text.slice(0, 500) + '...' : null;
+            return text;
+        } catch {
+            return null;
+        }
+    }
+
+    /** AEM returns error details in x-error header; body is often empty for 403. */
+    private getXError(response: Response): string | null {
+        return response?.headers?.get?.('x-error') ?? null;
+    }
+
+    /** Build diagnostic string from body and x-error for 403/401. */
+    private async captureErrorDetail(response: Response): Promise<string> {
+        const body = await this.captureErrorBody(response);
+        const xError = this.getXError(response);
+        const parts = [xError, body].filter(Boolean);
+        return parts.length ? parts.join(' — ') : `${response.status} ${response.statusText}`;
+    }
+
+    /** Parse 202 bulk job response. */
+    private async parseBulkJobResponse(response: Response, defaultTopic: string): Promise<{ jobName?: string; jobTopic: string }> {
+        let jobInfo: BulkJobResponse | undefined;
+        try {
+            jobInfo = await response.json();
+        } catch {
+            this.logger.warn('[Helix] Could not parse job info from 202 response');
+        }
+        return {
+            jobName: jobInfo?.job?.name || jobInfo?.name,
+            jobTopic: jobInfo?.job?.topic || jobInfo?.topic || defaultTopic,
+        };
+    }
+
+    // ==========================================================
     // Token Management
     // ==========================================================
 
@@ -389,11 +448,7 @@ export class HelixService {
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
         const imsToken = await this.getDaLiveToken();
-        // Normalize path - ensure it starts with / and doesn't end with /
-        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-        const cleanPath = normalizedPath.endsWith('/') && normalizedPath !== '/'
-            ? normalizedPath.slice(0, -1)
-            : normalizedPath;
+        const cleanPath = this.normalizeWebPath(path);
         const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}${cleanPath}`;
 
         this.logger.debug(`[Helix] Previewing page: ${url}`);
@@ -442,11 +497,7 @@ export class HelixService {
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
         const imsToken = await this.getDaLiveToken();
-        // Normalize path
-        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-        const cleanPath = normalizedPath.endsWith('/') && normalizedPath !== '/'
-            ? normalizedPath.slice(0, -1)
-            : normalizedPath;
+        const cleanPath = this.normalizeWebPath(path);
         const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}${cleanPath}`;
 
         this.logger.debug(`[Helix] Publishing page: ${url}`);
@@ -526,8 +577,8 @@ export class HelixService {
                     'content-type': 'application/json',
                 },
                 body: JSON.stringify({
-                    description: 'Demo Builder publish key',
-                    roles: ['publish'],
+                    description: 'Demo Builder publish/unpublish key',
+                    roles: ['admin'],
                 }),
                 signal: AbortSignal.timeout(TIMEOUTS.LONG),
             });
@@ -651,6 +702,48 @@ export class HelixService {
     }
 
     /**
+     * Delete a resource from preview or live CDN partition.
+     * Shared implementation for deletePreview and unpublishPage.
+     */
+    private async deleteResource(
+        partition: 'live' | 'preview',
+        org: string,
+        site: string,
+        path: string,
+        branch: string,
+        apiKey?: string,
+    ): Promise<boolean> {
+        const cleanPath = this.normalizeWebPath(path);
+        const url = `${HELIX_ADMIN_URL}/${partition}/${org}/${site}/${branch}${cleanPath}`;
+        const action = partition === 'live' ? 'Unpublishing' : 'Deleting preview';
+        const successLog = partition === 'live' ? 'Unpublished' : 'Preview deleted';
+        const errorPrefix = partition === 'live' ? 'unpublish' : 'delete preview';
+
+        this.logger.debug(`[Helix] ${action}: ${url}`);
+
+        const headers = await this.getAuthHeaders(apiKey);
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers,
+            signal: AbortSignal.timeout(TIMEOUTS.LONG),
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            const detail = await this.captureErrorDetail(response);
+            this.logger.debug(`[Helix] ${action} failed (${response.status}): ${detail}`);
+            return false;
+        }
+        if (response.status === 204 || response.status === 404) {
+            this.logger.debug(`[Helix] ${successLog}: ${cleanPath}`);
+            return true;
+        }
+        if (!response.ok) {
+            throw new Error(`Failed to ${errorPrefix}: ${response.status} ${response.statusText}`);
+        }
+        return true;
+    }
+
+    /**
      * Delete preview for a resource.
      *
      * Sends DELETE /preview/{org}/{site}/{ref}/{path} to remove the page
@@ -671,43 +764,7 @@ export class HelixService {
         branch: string = DEFAULT_BRANCH,
         apiKey?: string,
     ): Promise<boolean> {
-        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-        const cleanPath = normalizedPath.endsWith('/') && normalizedPath !== '/'
-            ? normalizedPath.slice(0, -1)
-            : normalizedPath;
-        const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}${cleanPath}`;
-
-        this.logger.debug(`[Helix] Deleting preview: ${url}`);
-
-        // Use Admin API Key if available, otherwise fall back to GitHub + IMS tokens
-        const headers: Record<string, string> = apiKey
-            ? { 'Authorization': `token ${apiKey}` }
-            : {
-                'x-auth-token': await this.getGitHubToken(),
-                'x-content-source-authorization': `Bearer ${await this.getDaLiveToken()}`,
-            };
-
-        const response = await fetch(url, {
-            method: 'DELETE',
-            headers,
-            signal: AbortSignal.timeout(TIMEOUTS.LONG),
-        });
-
-        if (response.status === 401 || response.status === 403) {
-            this.logger.debug(`[Helix] Delete preview auth failed: ${response.status}`);
-            return false;
-        }
-
-        if (response.status === 204 || response.status === 404) {
-            this.logger.debug(`[Helix] Preview deleted: ${cleanPath}`);
-            return true;
-        }
-
-        if (!response.ok) {
-            throw new Error(`Failed to delete preview: ${response.status} ${response.statusText}`);
-        }
-
-        return true;
+        return this.deleteResource('preview', org, site, path, branch, apiKey);
     }
 
     /**
@@ -731,42 +788,51 @@ export class HelixService {
         branch: string = DEFAULT_BRANCH,
         apiKey?: string,
     ): Promise<boolean> {
-        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-        const cleanPath = normalizedPath.endsWith('/') && normalizedPath !== '/'
-            ? normalizedPath.slice(0, -1)
-            : normalizedPath;
-        const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}${cleanPath}`;
+        return this.deleteResource('live', org, site, path, branch, apiKey);
+    }
 
-        this.logger.debug(`[Helix] Unpublishing: ${url}`);
+    /**
+     * Bulk delete pages from live or preview CDN partition.
+     * Shared implementation for bulkUnpublish and bulkDeletePreview.
+     */
+    private async bulkDelete(
+        partition: 'live' | 'preview',
+        org: string,
+        site: string,
+        branch: string,
+        paths: string[],
+        apiKey: string,
+    ): Promise<void> {
+        const url = `${HELIX_ADMIN_URL}/${partition}/${org}/${site}/${branch}/*`;
+        const defaultTopic = partition === 'live' ? 'live-remove' : 'preview-remove';
+        const action = partition === 'live' ? 'Bulk unpublish' : 'Bulk delete preview';
 
-        const headers: Record<string, string> = apiKey
-            ? { 'Authorization': `token ${apiKey}` }
-            : {
-                'x-auth-token': await this.getGitHubToken(),
-                'x-content-source-authorization': `Bearer ${await this.getDaLiveToken()}`,
-            };
+        this.logger.debug(`[Helix] ${action}: ${paths.length} pages`);
 
         const response = await fetch(url, {
-            method: 'DELETE',
-            headers,
-            signal: AbortSignal.timeout(TIMEOUTS.LONG),
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ paths, delete: true }),
+            signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
         });
 
-        if (response.status === 401 || response.status === 403) {
-            this.logger.debug(`[Helix] Unpublish auth failed: ${response.status}`);
-            return false;
+        if (response.status === 202) {
+            const { jobName, jobTopic } = await this.parseBulkJobResponse(response, defaultTopic);
+            if (jobName) {
+                await this.pollJobCompletion(org, site, branch, jobName, jobTopic, undefined, apiKey);
+            }
+            return;
         }
 
-        if (response.status === 204 || response.status === 404) {
-            this.logger.debug(`[Helix] Unpublished: ${cleanPath}`);
-            return true;
+        if (response.ok) {
+            return;
         }
 
-        if (!response.ok) {
-            throw new Error(`Failed to unpublish: ${response.status} ${response.statusText}`);
-        }
-
-        return true;
+        const detail = await this.captureErrorDetail(response);
+        throw new Error(`${action} failed: ${detail}`);
     }
 
     /**
@@ -790,42 +856,7 @@ export class HelixService {
         paths: string[],
         apiKey: string,
     ): Promise<void> {
-        const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}/*`;
-
-        this.logger.debug(`[Helix] Bulk unpublish: ${paths.length} pages`);
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ paths, delete: true }),
-            signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
-        });
-
-        if (response.status === 202) {
-            let jobInfo: BulkJobResponse | undefined;
-            try {
-                jobInfo = await response.json();
-            } catch {
-                this.logger.warn('[Helix] Could not parse job info from bulk unpublish response');
-            }
-
-            const jobName = jobInfo?.job?.name || jobInfo?.name;
-            const jobTopic = jobInfo?.job?.topic || jobInfo?.topic || 'live-remove';
-
-            if (jobName) {
-                await this.pollJobCompletion(org, site, branch, jobName, jobTopic, undefined, apiKey);
-            }
-            return;
-        }
-
-        if (response.ok) {
-            return;
-        }
-
-        throw new Error(`Bulk unpublish failed: ${response.status} ${response.statusText}`);
+        return this.bulkDelete('live', org, site, branch, paths, apiKey);
     }
 
     /**
@@ -849,42 +880,7 @@ export class HelixService {
         paths: string[],
         apiKey: string,
     ): Promise<void> {
-        const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}/*`;
-
-        this.logger.debug(`[Helix] Bulk delete preview: ${paths.length} pages`);
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ paths, delete: true }),
-            signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
-        });
-
-        if (response.status === 202) {
-            let jobInfo: BulkJobResponse | undefined;
-            try {
-                jobInfo = await response.json();
-            } catch {
-                this.logger.warn('[Helix] Could not parse job info from bulk delete preview response');
-            }
-
-            const jobName = jobInfo?.job?.name || jobInfo?.name;
-            const jobTopic = jobInfo?.job?.topic || jobInfo?.topic || 'preview-remove';
-
-            if (jobName) {
-                await this.pollJobCompletion(org, site, branch, jobName, jobTopic, undefined, apiKey);
-            }
-            return;
-        }
-
-        if (response.ok) {
-            return;
-        }
-
-        throw new Error(`Bulk delete preview failed: ${response.status} ${response.statusText}`);
+        return this.bulkDelete('preview', org, site, branch, paths, apiKey);
     }
 
     /**
@@ -898,51 +894,93 @@ export class HelixService {
      * @param site - GitHub repository name
      * @param branch - Branch name
      * @param webPaths - Web paths to unpublish (e.g., ['/about', '/products'])
-     * @returns Whether unpublish succeeded and how many paths were processed
+     * @returns Whether unpublish succeeded, count processed, and optional reason on failure
      */
     async unpublishPages(
         org: string,
         site: string,
         branch: string,
         webPaths: string[],
-    ): Promise<{ success: boolean; count: number }> {
+    ): Promise<{ success: boolean; count: number; reason?: string }> {
         if (webPaths.length === 0) {
             return { success: true, count: 0 };
         }
 
         let apiKey = await this.createAdminApiKey(org, site);
         if (!apiKey) {
-            this.logger.warn('[Helix] Admin API Key creation failed, CDN pages not unpublished');
-            return { success: false, count: 0 };
+            this.logger.warn('[Helix] Admin API Key creation failed, trying page-by-page unpublish');
+            return this.unpublishPagesPageByPage(org, site, branch, webPaths);
         }
 
         try {
             await this.bulkUnpublish(org, site, branch, webPaths, apiKey);
         } catch (error) {
             const msg = (error as Error).message;
-            if (msg.includes('401') || msg.includes('403')) {
-                // Cached key was rejected — invalidate and retry once with a fresh key
+            const isPrimarySiteRestriction = /primary\s+site|restricted\s+to/i.test(msg);
+
+            if (isPrimarySiteRestriction) {
+                this.logger.warn(`[Helix] Unpublish not supported for this site: ${msg}`);
+                return { success: false, count: 0, reason: msg };
+            }
+
+            const isAuthError = msg.includes('401') || msg.includes('403');
+            if (isAuthError) {
                 this.logger.warn(`[Helix] API key rejected (${msg}), retrying with fresh key`);
                 const cacheKey = `${org}/${site}`;
                 HelixService.apiKeyCache.delete(cacheKey);
                 HelixService.deletePersistedKey(cacheKey);
 
-                apiKey = await this.createAdminApiKey(org, site);
-                if (!apiKey) {
-                    this.logger.warn('[Helix] Fresh API Key creation failed, CDN pages not unpublished');
-                    return { success: false, count: 0 };
+                try {
+                    apiKey = await this.createAdminApiKey(org, site);
+                } catch {
+                    this.logger.warn('[Helix] Could not get fresh key, falling back to page-by-page');
+                    return this.unpublishPagesPageByPage(org, site, branch, webPaths);
                 }
-
-                await this.bulkUnpublish(org, site, branch, webPaths, apiKey);
-            } else {
-                throw error;
+                if (apiKey) {
+                    try {
+                        await this.bulkUnpublish(org, site, branch, webPaths, apiKey);
+                        await this.bulkDeletePreview(org, site, branch, webPaths, apiKey);
+                        this.logger.info(`[Helix] Unpublished ${webPaths.length} CDN pages`);
+                        return { success: true, count: webPaths.length };
+                    } catch {
+                        // Fall through to page-by-page fallback
+                    }
+                }
+                this.logger.warn(`[Helix] Bulk unpublish failed (${msg}), falling back to page-by-page`);
+                const result = await this.unpublishPagesPageByPage(org, site, branch, webPaths);
+                return { ...result, reason: result.count === 0 ? msg : undefined };
             }
+
+            throw error;
         }
 
         await this.bulkDeletePreview(org, site, branch, webPaths, apiKey);
 
         this.logger.info(`[Helix] Unpublished ${webPaths.length} CDN pages`);
         return { success: true, count: webPaths.length };
+    }
+
+    /**
+     * Unpublish pages one at a time using GitHub + IMS auth.
+     * Fallback when bulk unpublish returns 403 (API key permission issue).
+     */
+    private async unpublishPagesPageByPage(
+        org: string,
+        site: string,
+        branch: string,
+        webPaths: string[],
+    ): Promise<{ success: boolean; count: number }> {
+        let successCount = 0;
+        for (const path of webPaths) {
+            const unpublished = await this.unpublishPage(org, site, path, branch);
+            if (unpublished) successCount++;
+        }
+        const deleted = await Promise.all(
+            webPaths.map(path => this.deletePreview(org, site, path, branch)),
+        );
+        const previewCount = deleted.filter(Boolean).length;
+        this.logger.info(`[Helix] Page-by-page unpublish: ${successCount}/${webPaths.length} live, ${previewCount}/${webPaths.length} preview`);
+        return { success: successCount > 0 || previewCount > 0, count: Math.max(successCount, previewCount) };
     }
 
     /**
@@ -1039,18 +1077,7 @@ export class HelixService {
         if (response.status === 202) {
             this.logger.debug('[Helix] Bulk preview job created, polling for completion...');
 
-            // Parse job info from response
-            let jobInfo: BulkJobResponse | undefined;
-            try {
-                jobInfo = await response.json();
-            } catch {
-                this.logger.warn('[Helix] Could not parse job info from 202 response');
-            }
-
-            // If we have job info, poll for completion
-            // Handle both nested (job.name) and top-level (name) response formats
-            const jobName = jobInfo?.job?.name || jobInfo?.name;
-            const jobTopic = jobInfo?.job?.topic || jobInfo?.topic || 'preview';
+            const { jobName, jobTopic } = await this.parseBulkJobResponse(response, 'preview');
 
             if (jobName) {
                 await this.pollJobCompletion(
@@ -1153,18 +1180,7 @@ export class HelixService {
         if (response.status === 202) {
             this.logger.debug('[Helix] Bulk publish job created, polling for completion...');
 
-            // Parse job info from response
-            let jobInfo: BulkJobResponse | undefined;
-            try {
-                jobInfo = await response.json();
-            } catch {
-                this.logger.warn('[Helix] Could not parse job info from 202 response');
-            }
-
-            // If we have job info, poll for completion
-            // Handle both nested (job.name) and top-level (name) response formats
-            const jobName = jobInfo?.job?.name || jobInfo?.name;
-            const jobTopic = jobInfo?.job?.topic || jobInfo?.topic || 'live';
+            const { jobName, jobTopic } = await this.parseBulkJobResponse(response, 'live');
 
             if (jobName) {
                 await this.pollJobCompletion(
@@ -1587,9 +1603,8 @@ export class HelixService {
         branch: string = DEFAULT_BRANCH,
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
-        // Normalize path - ensure it starts with /
-        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-        const url = `${HELIX_ADMIN_URL}/code/${org}/${site}/${branch}${normalizedPath}`;
+        const cleanPath = this.normalizeWebPath(path);
+        const url = `${HELIX_ADMIN_URL}/code/${org}/${site}/${branch}${cleanPath}`;
 
         this.logger.debug(`[Helix] Previewing code: ${url}`);
 
@@ -1613,7 +1628,7 @@ export class HelixService {
             throw new Error(`Failed to preview code: ${response.status} ${response.statusText}`);
         }
 
-        this.logger.debug(`[Helix] Successfully previewed code: ${normalizedPath}`);
+        this.logger.debug(`[Helix] Successfully previewed code: ${cleanPath}`);
     }
     // ==========================================================
     // Helpers

@@ -6,10 +6,12 @@
  * Handlers:
  * - `handleVerifyDaLiveOrg`: Check user access to DA.live organization
  * - `handleGetDaLiveSites`: List sites in a DA.live organization
+ * - `handleListDaLiveOrgs`: List writable DA.live organizations for a token
  *
  * @module features/eds/handlers/edsDaLiveOrgHandlers
  */
 
+import { validateDaLiveToken } from './edsHelpers';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 // ==========================================================
@@ -28,6 +30,13 @@ interface GetDaLiveSitesPayload {
  */
 interface VerifyDaLiveOrgPayload {
     orgName: string;
+}
+
+/**
+ * Payload for handleListDaLiveOrgs
+ */
+interface ListDaLiveOrgsPayload {
+    token: string;
 }
 
 // ==========================================================
@@ -231,6 +240,148 @@ export async function handleGetDaLiveSites(
         const errorMessage = (error as Error).message;
         context.logger.error('[EDS] Error fetching DA.live sites:', error as Error);
         await context.sendMessage('get-dalive-sites-error', {
+            error: errorMessage,
+        });
+        return { success: false, error: errorMessage };
+    }
+}
+
+// ==========================================================
+// Write-Access Helpers
+// ==========================================================
+
+/**
+ * Check whether a DA.live org grants write access to the token holder.
+ *
+ * Sends `HEAD /list/{org}` and reads the `X-da-actions` response header.
+ * The header value looks like `/=read,write` or `/=read`.
+ *
+ * @returns `true` if the header contains "write", `false` otherwise.
+ */
+export async function hasWriteAccess(orgName: string, token: string): Promise<boolean> {
+    try {
+        const res = await fetch(`https://admin.da.live/list/${orgName}/`, {
+            method: 'HEAD',
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) {
+            return false;
+        }
+        const actions = res.headers.get('x-da-actions') ?? '';
+        return actions.includes('write');
+    } catch {
+        return false;
+    }
+}
+
+// ==========================================================
+// List Orgs Handler
+// ==========================================================
+
+/**
+ * List DA.live organizations the user can write to.
+ *
+ * Flow:
+ * 1. Validate the provided token (format, expiry, client_id).
+ * 2. `GET /list/` — returns every org the token has access to.
+ * 3. `HEAD /list/{org}` per org — check `X-da-actions` for write access.
+ * 4. Send `dalive-orgs-listed` with the writable orgs (or error).
+ *
+ * @param context - Handler context
+ * @param payload - Contains the DA.live token
+ */
+export async function handleListDaLiveOrgs(
+    context: HandlerContext,
+    payload?: ListDaLiveOrgsPayload,
+): Promise<HandlerResponse> {
+    const { token } = payload || {};
+
+    if (!token) {
+        context.logger.error('[EDS] handleListDaLiveOrgs missing token');
+        await context.sendMessage('dalive-orgs-listed', {
+            orgs: [],
+            error: 'Token is required',
+        });
+        return { success: false, error: 'Token is required' };
+    }
+
+    try {
+        // Step 1: Validate token format
+        const validation = validateDaLiveToken(token);
+        if (!validation.valid) {
+            await context.sendMessage('dalive-orgs-listed', {
+                orgs: [],
+                error: validation.error,
+            });
+            return { success: false, error: validation.error };
+        }
+
+        context.logger.debug('[EDS] Fetching DA.live org list');
+
+        // Step 2: Fetch all accessible orgs
+        const response = await fetch('https://admin.da.live/list/', {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (!response.ok) {
+            // 403 means the root /list/ endpoint is restricted (normal for
+            // non-admin users). Signal the UI to fall back to manual org entry.
+            if (response.status === 403) {
+                context.logger.info('[EDS] Root /list/ returned 403 — falling back to manual org entry');
+                await context.sendMessage('dalive-orgs-listed', {
+                    orgs: [],
+                    fallbackToManual: true,
+                    email: validation.email,
+                });
+                return { success: true };
+            }
+
+            const msg = `Failed to fetch organizations: ${response.status}`;
+            context.logger.error('[EDS]', msg);
+            await context.sendMessage('dalive-orgs-listed', {
+                orgs: [],
+                error: msg,
+            });
+            return { success: false, error: msg };
+        }
+
+        const entries: { name: string; ext?: string }[] = await response.json();
+
+        // Orgs are folders (no ext), same filter as handleGetDaLiveSites
+        const orgNames = entries
+            .filter((e) => !e.ext)
+            .map((e) => e.name);
+
+        context.logger.debug(`[EDS] Found ${orgNames.length} accessible orgs`);
+
+        // Step 3: Filter to writable orgs (parallel HEAD checks)
+        const writeChecks = await Promise.all(
+            orgNames.map(async (name) => ({
+                name,
+                writable: await hasWriteAccess(name, token),
+            })),
+        );
+
+        const writableOrgs = writeChecks
+            .filter((o) => o.writable)
+            .map((o) => ({ name: o.name }));
+
+        context.logger.info(
+            `[EDS] DA.live orgs: ${orgNames.length} accessible, ${writableOrgs.length} writable`,
+        );
+
+        await context.sendMessage('dalive-orgs-listed', {
+            orgs: writableOrgs,
+            email: validation.email,
+        });
+
+        return { success: true };
+    } catch (error) {
+        const errorMessage = (error as Error).message;
+        context.logger.error('[EDS] Error listing DA.live orgs:', error as Error);
+        await context.sendMessage('dalive-orgs-listed', {
+            orgs: [],
             error: errorMessage,
         });
         return { success: false, error: errorMessage };

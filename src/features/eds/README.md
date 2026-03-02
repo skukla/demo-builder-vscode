@@ -23,7 +23,8 @@ src/features/eds/
 │   ├── daLiveConstants.ts          # DA.live shared constants
 │   ├── daLiveMimeTypes.ts          # MIME type mapping for DA.live uploads
 │   ├── daLiveSpreadsheetUtils.ts   # Spreadsheet parsing utilities
-│   ├── helixService.ts             # Helix 5 Configuration Service API
+│   ├── helixService.ts             # Helix Admin API (preview/publish/unpublish, API key management)
+│   ├── inspectorHelpers.ts         # Demo Inspector SDK vendoring and tagging
 │   ├── configurationService.ts     # AEM Configuration Service (site registration)
 │   ├── configGenerator.ts          # config.json generation for storefronts
 │   ├── configSyncService.ts        # Config.json sync between DA.live and repo
@@ -89,7 +90,7 @@ Orchestrates complete EDS project setup through phases:
 | Phase | Progress | Operations |
 |-------|----------|------------|
 | `github-repo` | 0-15% | Create/configure GitHub repository from template |
-| `helix-config` | 20-35% | Configure Helix 5, install block libraries (built-in + custom), save install tracking data |
+| `helix-config` | 20-35% | Configure Helix 5, install block libraries (built-in + custom) with inspector tagging, save install tracking data |
 | `code-sync` | 35-49% | Verify code synchronization, publish to CDN, configure site permissions, register with Configuration Service |
 | `content-copy` | 45-65% | Copy demo content to DA.live, install block library content and settings |
 | `content-publish` | 66-95% | Publish content and libraries to CDN |
@@ -117,7 +118,7 @@ If the DA.live token expires during content pipeline execution (phases 4-5), the
 
 ### EDS Reset (edsResetService + edsResetUI)
 
-- **edsResetService** - Core reset logic: template reset, block library reinstallation (built-in + custom), code sync, mesh redeploy
+- **edsResetService** - Core reset logic: template reset, block library reinstallation (built-in + custom), inspector tagging, code sync, config service update, mesh redeploy
 - **edsResetUI** - UI orchestration: auth checks, progress notifications, confirmation dialogs
 
 ### Error Formatters
