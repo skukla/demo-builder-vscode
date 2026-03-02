@@ -204,21 +204,22 @@ This script tests:
 
 ### Status Update (March 2026)
 
-API keys are now **self-provisioned** by `HelixService` via `POST /config/{org}/sites/{site}/apiKeys.json`. Keys are cached in memory and persisted in `globalState` for reuse across sessions.
+API keys are now **self-provisioned** by `HelixService` via `POST /config/{org}/sites/{site}/apiKeys.json`. Keys are cached in memory and persisted in `globalState` for reuse across sessions. Bulk preview/publish uses these keys successfully.
 
-**Bulk preview/publish works** with the self-provisioned API key. However, **bulk unpublish still fails** with `[admin] not authenticated` even when the API key header is present. The unpublish endpoint may require different authentication or Adobe-side provisioning. The current workaround logs a warning and continues — content is re-published over the stale data.
+**Bulk unpublish does not exist.** After extensive investigation (multiple auth header formats, API key roles, retry strategies), the Helix Admin API's bulk endpoint (`POST /{partition}/{org}/{site}/{ref}/*`) does not support `delete: true`. Every combination returns `[admin] not authenticated` regardless of credentials. The bulk endpoint only supports `forceUpdate: true` (preview/publish).
+
+**Resolution**: Unpublish uses page-by-page DELETE requests with standard GitHub + IMS auth. The bulk unpublish infrastructure (`bulkDelete`, `bulkUnpublish`, `bulkDeletePreview`) was removed as dead code. Page-by-page DELETE works reliably.
 
 ### Remaining Improvements
 
-1. **Bulk unpublish authentication**: Investigate why `DELETE` bulk operations reject self-provisioned API keys
-2. **User notification**: Inform users when fallback is triggered
-3. **Batch optimization**: For page-by-page fallback, implement parallel publishing (with rate limiting)
+1. **User notification**: Inform users when fallback is triggered for bulk preview/publish
+2. **Parallel unpublish**: Page-by-page unpublish runs sequentially; could parallelize with rate limiting
 
 ### Resolved Questions
 
 1. ~~Can Demo Builder projects be auto-provisioned with API_KEY?~~ → **Yes**, self-provisioned via Admin API
 2. ~~Is there a programmatic way to request API_KEY provisioning?~~ → **Yes**, `POST /config/{org}/sites/{site}/apiKeys.json`
-3. Are there plans to make bulk endpoints work with GitHub token auth? → **Unknown**
+3. ~~Does the bulk API support delete operations?~~ → **No**. The `delete: true` flag is not functional on the bulk endpoint. Use page-by-page DELETE instead.
 
 ---
 

@@ -239,86 +239,81 @@ describe('HelixService - Auth & Keys', () => {
         });
     });
 
-    describe('unpublishPages retry on auth failure', () => {
-        let HelixServiceClass: typeof import('@/features/eds/services/helixService').HelixService;
-
-        beforeEach(async () => {
-            const module = await import('@/features/eds/services/helixService');
-            HelixServiceClass = module.HelixService;
-            HelixServiceClass.clearApiKeyCache();
+    describe('unpublishPages (page-by-page)', () => {
+        it('should return early for empty paths', async () => {
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', []);
+            expect(result).toEqual({ success: true, count: 0 });
+            expect(mockFetch).not.toHaveBeenCalled();
         });
 
-        it('should retry with fresh key when bulkUnpublish fails with 401', async () => {
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'stale-key', expiration: '2027-01-01T00:00:00Z' }) });
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 401, statusText: 'Unauthorized' });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-2', value: 'fresh-key', expiration: '2027-01-01T00:00:00Z' }) });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+        it('should unpublish live and delete preview for each path', async () => {
+            // DELETE /live/.../about → 204 (unpublished)
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
+            // DELETE /preview/.../about → 204 (deleted)
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
 
             const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about']);
             expect(result).toEqual({ success: true, count: 1 });
-            expect(mockFetch).toHaveBeenCalledTimes(5);
-        });
-
-        it('should retry with fresh key when bulkUnpublish fails with 403', async () => {
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'stale-key', expiration: '2027-01-01T00:00:00Z' }) });
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-2', value: 'fresh-key', expiration: '2027-01-01T00:00:00Z' }) });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-
-            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about']);
-            expect(result).toEqual({ success: true, count: 1 });
-        });
-
-        it('should invalidate cache entry on auth failure before retrying', async () => {
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'cached-stale-key', expiration: '2027-01-01T00:00:00Z' }) });
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 401, statusText: 'Unauthorized' });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-2', value: 'new-key-after-invalidation', expiration: '2027-01-01T00:00:00Z' }) });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-
-            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/page']);
-            expect(result.success).toBe(true);
-            expect(mockFetch).toHaveBeenCalledTimes(5);
-        });
-
-        it('should return failure when retry also fails', async () => {
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'bad-key', expiration: '2027-01-01T00:00:00Z' }) });
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 401, statusText: 'Unauthorized' });
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Internal Server Error' });
-            // Page-by-page fallback: unpublish live and delete preview both return 403
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
-
-            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/page']);
-            expect(result).toMatchObject({ success: false, count: 0 });
-            expect(result.reason).toBeDefined();
-        });
-
-        it('should not retry on non-auth errors (e.g., 500)', async () => {
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'valid-key', expiration: '2027-01-01T00:00:00Z' }) });
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Internal Server Error' });
-
-            await expect(service.unpublishPages('testorg', 'testsite', 'main', ['/page'])).rejects.toThrow(/500/);
             expect(mockFetch).toHaveBeenCalledTimes(2);
+
+            // Verify live DELETE uses GitHub + IMS auth (no API key)
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/live/testorg/testsite/main/about'),
+                expect.objectContaining({
+                    method: 'DELETE',
+                    headers: expect.objectContaining({
+                        'x-auth-token': 'valid-github-token',
+                        'x-content-source-authorization': 'Bearer valid-dalive-ims-token',
+                    }),
+                }),
+            );
         });
 
-        it('should bail immediately on primary-site restriction (no retry or page-by-page)', async () => {
-            const restrictionMsg = '[admin] delete is restricted to the primary site: stephen-garner-adobe/isle5';
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'key', expiration: '2027-01-01T00:00:00Z' }) });
-            mockFetch.mockResolvedValueOnce({
-                ok: false,
-                status: 403,
-                statusText: 'Forbidden',
-                headers: { get: (k: string) => (k === 'x-error' ? restrictionMsg : null) },
-                text: () => Promise.resolve(''),
-            });
+        it('should handle multiple paths', async () => {
+            // Live DELETE for /about and /products
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
+            // Preview DELETE for /about and /products
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
 
-            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/a', '/b', '/c']);
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
+            expect(result).toEqual({ success: true, count: 2 });
+            expect(mockFetch).toHaveBeenCalledTimes(4);
+        });
 
-            expect(result).toEqual({ success: false, count: 0, reason: `Bulk unpublish failed: ${restrictionMsg}` });
-            expect(mockFetch).toHaveBeenCalledTimes(2); // API key + one bulk attempt, no retry, no page-by-page
+        it('should report partial success when some pages fail', async () => {
+            // Live DELETE: /about succeeds, /products fails (403)
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
+            // Preview DELETE: both succeed
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
+
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
+            expect(result).toEqual({ success: true, count: 2 });
+        });
+
+        it('should return failure when all pages fail', async () => {
+            // Live DELETE: both fail (403)
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
+            // Preview DELETE: both fail (403)
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
+
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
+            expect(result).toEqual({ success: false, count: 0 });
+        });
+
+        it('should treat 404 as successful (already deleted)', async () => {
+            // Live DELETE returns 404 (already gone)
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+            // Preview DELETE returns 404
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about']);
+            expect(result).toEqual({ success: true, count: 1 });
         });
     });
 });

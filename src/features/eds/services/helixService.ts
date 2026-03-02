@@ -792,103 +792,12 @@ export class HelixService {
     }
 
     /**
-     * Bulk delete pages from live or preview CDN partition.
-     * Shared implementation for bulkUnpublish and bulkDeletePreview.
-     */
-    private async bulkDelete(
-        partition: 'live' | 'preview',
-        org: string,
-        site: string,
-        branch: string,
-        paths: string[],
-        apiKey: string,
-    ): Promise<void> {
-        const url = `${HELIX_ADMIN_URL}/${partition}/${org}/${site}/${branch}/*`;
-        const defaultTopic = partition === 'live' ? 'live-remove' : 'preview-remove';
-        const action = partition === 'live' ? 'Bulk unpublish' : 'Bulk delete preview';
-
-        this.logger.debug(`[Helix] ${action}: ${paths.length} pages`);
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ paths, delete: true }),
-            signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
-        });
-
-        if (response.status === 202) {
-            const { jobName, jobTopic } = await this.parseBulkJobResponse(response, defaultTopic);
-            if (jobName) {
-                await this.pollJobCompletion(org, site, branch, jobName, jobTopic, undefined, apiKey);
-            }
-            return;
-        }
-
-        if (response.ok) {
-            return;
-        }
-
-        const detail = await this.captureErrorDetail(response);
-        throw new Error(`${action} failed: ${detail}`);
-    }
-
-    /**
-     * Bulk unpublish pages from the live CDN.
-     *
-     * Sends POST /live/{org}/{site}/{ref}/* with { paths, delete: true }
-     * to remove multiple pages from the live content bus in one operation.
-     * Returns 202 with an async job (topic: "live-remove") that is polled
-     * to completion.
-     *
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @param branch - Branch name
-     * @param paths - Web paths to unpublish (e.g., ['/about', '/products'])
-     * @param apiKey - Admin API Key for authentication
-     */
-    async bulkUnpublish(
-        org: string,
-        site: string,
-        branch: string,
-        paths: string[],
-        apiKey: string,
-    ): Promise<void> {
-        return this.bulkDelete('live', org, site, branch, paths, apiKey);
-    }
-
-    /**
-     * Bulk delete preview for pages.
-     *
-     * Sends POST /preview/{org}/{site}/{ref}/* with { paths, delete: true }
-     * to remove multiple pages from the preview content bus in one operation.
-     * Returns 202 with an async job (topic: "preview-remove") that is polled
-     * to completion.
-     *
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @param branch - Branch name
-     * @param paths - Web paths to unpreview (e.g., ['/about', '/products'])
-     * @param apiKey - Admin API Key for authentication
-     */
-    async bulkDeletePreview(
-        org: string,
-        site: string,
-        branch: string,
-        paths: string[],
-        apiKey: string,
-    ): Promise<void> {
-        return this.bulkDelete('preview', org, site, branch, paths, apiKey);
-    }
-
-    /**
      * Unpublish pages from both live and preview CDN.
      *
-     * Gets (or creates) an Admin API Key, then bulk-removes the given
-     * web paths from live and preview. If the cached key is rejected,
-     * invalidates the cache and retries once with a fresh key.
+     * Uses page-by-page DELETE with GitHub + IMS authentication.
+     * The Helix Admin API does not support bulk delete operations —
+     * the `delete: true` flag on the bulk endpoint is not functional.
+     * See ADR-002 for investigation history.
      *
      * @param org - GitHub organization/owner
      * @param site - GitHub repository name
@@ -906,80 +815,20 @@ export class HelixService {
             return { success: true, count: 0 };
         }
 
-        let apiKey = await this.createAdminApiKey(org, site);
-        if (!apiKey) {
-            this.logger.warn('[Helix] Admin API Key creation failed, trying page-by-page unpublish');
-            return this.unpublishPagesPageByPage(org, site, branch, webPaths);
-        }
+        this.logger.info(`[Helix] Unpublishing ${webPaths.length} pages (page-by-page)`);
 
-        try {
-            await this.bulkUnpublish(org, site, branch, webPaths, apiKey);
-        } catch (error) {
-            const msg = (error as Error).message;
-            const isPrimarySiteRestriction = /primary\s+site|restricted\s+to/i.test(msg);
-
-            if (isPrimarySiteRestriction) {
-                this.logger.warn(`[Helix] Unpublish not supported for this site: ${msg}`);
-                return { success: false, count: 0, reason: msg };
-            }
-
-            const isAuthError = msg.includes('401') || msg.includes('403');
-            if (isAuthError) {
-                this.logger.warn(`[Helix] API key rejected (${msg}), retrying with fresh key`);
-                const cacheKey = `${org}/${site}`;
-                HelixService.apiKeyCache.delete(cacheKey);
-                HelixService.deletePersistedKey(cacheKey);
-
-                try {
-                    apiKey = await this.createAdminApiKey(org, site);
-                } catch {
-                    this.logger.warn('[Helix] Could not get fresh key, falling back to page-by-page');
-                    return this.unpublishPagesPageByPage(org, site, branch, webPaths);
-                }
-                if (apiKey) {
-                    try {
-                        await this.bulkUnpublish(org, site, branch, webPaths, apiKey);
-                        await this.bulkDeletePreview(org, site, branch, webPaths, apiKey);
-                        this.logger.info(`[Helix] Unpublished ${webPaths.length} CDN pages`);
-                        return { success: true, count: webPaths.length };
-                    } catch {
-                        // Fall through to page-by-page fallback
-                    }
-                }
-                this.logger.warn(`[Helix] Bulk unpublish failed (${msg}), falling back to page-by-page`);
-                const result = await this.unpublishPagesPageByPage(org, site, branch, webPaths);
-                return { ...result, reason: result.count === 0 ? msg : undefined };
-            }
-
-            throw error;
-        }
-
-        await this.bulkDeletePreview(org, site, branch, webPaths, apiKey);
-
-        this.logger.info(`[Helix] Unpublished ${webPaths.length} CDN pages`);
-        return { success: true, count: webPaths.length };
-    }
-
-    /**
-     * Unpublish pages one at a time using GitHub + IMS auth.
-     * Fallback when bulk unpublish returns 403 (API key permission issue).
-     */
-    private async unpublishPagesPageByPage(
-        org: string,
-        site: string,
-        branch: string,
-        webPaths: string[],
-    ): Promise<{ success: boolean; count: number }> {
         let successCount = 0;
         for (const path of webPaths) {
             const unpublished = await this.unpublishPage(org, site, path, branch);
             if (unpublished) successCount++;
         }
+
         const deleted = await Promise.all(
             webPaths.map(path => this.deletePreview(org, site, path, branch)),
         );
         const previewCount = deleted.filter(Boolean).length;
-        this.logger.info(`[Helix] Page-by-page unpublish: ${successCount}/${webPaths.length} live, ${previewCount}/${webPaths.length} preview`);
+
+        this.logger.info(`[Helix] Unpublish complete: ${successCount}/${webPaths.length} live, ${previewCount}/${webPaths.length} preview`);
         return { success: successCount > 0 || previewCount > 0, count: Math.max(successCount, previewCount) };
     }
 

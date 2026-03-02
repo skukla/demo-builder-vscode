@@ -167,7 +167,7 @@ export async function getLinkedEdsProjects(
  * content intact and the site remains in the org listing.
  *
  * CDN unpublish is handled separately by the caller (projectDeletionService)
- * via HelixService.bulkUnpublish/bulkDeletePreview using an Admin API Key.
+ * via HelixService.unpublishPages (page-by-page DELETE with GitHub + IMS auth).
  *
  * @param contentOps - DaLiveContentOperations for recursive content deletion
  * @param daLiveOrg - DA.live organization name

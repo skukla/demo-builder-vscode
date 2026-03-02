@@ -6,7 +6,6 @@
  * - Skip expired keys
  * - Persist new keys
  * - Delete old keys before creating new
- * - Auth failure cache clearing
  * - In-memory fallback
  * - Delete admin API key
  * - Idempotent initialization
@@ -237,23 +236,6 @@ describe('HelixService - Persistent Key Store', () => {
         } finally {
             Date.now = originalDateNow;
         }
-    });
-
-    it('should clear persistent store on auth failure retry', async () => {
-        HelixServiceClass.initKeyStore(mockGlobalState as unknown as import('vscode').Memento);
-
-        mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'stale-key', expiration: '2027-01-01T00:00:00Z' }) });
-        mockFetch.mockResolvedValueOnce({ ok: false, status: 401, statusText: 'Unauthorized' });
-        mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-2', value: 'fresh-key', expiration: '2027-01-01T00:00:00Z' }) });
-        mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-        mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-
-        await service.unpublishPages('testorg', 'testsite', 'main', ['/page']);
-
-        const persisted = (stateStore['helix.apiKeys'] as Record<string, { id: string; value: string }>)?.['testorg/testsite'];
-        expect(persisted).toBeDefined();
-        expect(persisted.id).toBe('key-2');
-        expect(persisted.value).toBe('fresh-key');
     });
 
     it('should fall back to in-memory only when no store initialized', async () => {

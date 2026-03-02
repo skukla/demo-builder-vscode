@@ -209,7 +209,7 @@ describe('executeEdsPipeline - integration', () => {
                 services,
             );
 
-            // Pipeline succeeds -- bulk unpublish failure is non-fatal
+            // Pipeline succeeds -- unpublish failure is non-fatal
             expect(result.success).toBe(true);
         });
 
