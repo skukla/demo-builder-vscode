@@ -5,6 +5,8 @@
  * the setup flow (storefrontSetupHandlers) and the reset flow (edsResetService).
  *
  * Operations executed in order:
+ * 0. Clear existing DA.live content and unpublish CDN pages (gated by clearExistingContent)
+ *    - Uses DA.live Bearer token auth which bypasses "source exists" restriction
  * 1. Copy DA.live content from source (gated by skipContent)
  * 2. Create block library from component-definition.json
  * 3. Apply EDS settings (AEM Assets, Universal Editor config)
@@ -101,27 +103,29 @@ function toWebPaths(daLivePaths: string[]): string[] {
 
 /**
  * Step 0: Clear all existing DA.live content and unpublish from CDN.
+ *
+ * Uses DA.live Bearer token auth for DELETE operations, which bypasses
+ * the Helix Admin API's "source exists" restriction. No fstab.yaml
+ * manipulation or Configuration Service config changes needed.
  */
 async function pipelineClearContent(
-    daLiveContentOps: DaLiveContentOperations,
-    helixService: HelixService,
-    daLiveOrg: string,
-    daLiveSite: string,
-    repoOwner: string,
-    repoName: string,
-    logger: Logger,
+    services: EdsPipelineServices,
+    context: {
+        daLiveOrg: string;
+        daLiveSite: string;
+        repoOwner: string;
+        repoName: string;
+    },
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<void> {
-    onProgress?.({
-        operation: 'content-clear',
-        message: 'Clearing existing DA.live content...',
-    });
+    const { daLiveContentOps, helixService, logger } = services;
+    const { daLiveOrg, daLiveSite, repoOwner, repoName } = context;
 
+    onProgress?.({ operation: 'content-clear', message: 'Clearing existing DA.live content...' });
     logger.info(`[EdsPipeline] Clearing all DA.live content for ${daLiveOrg}/${daLiveSite}`);
 
     const clearResult = await daLiveContentOps.deleteAllSiteContent(
-        daLiveOrg,
-        daLiveSite,
+        daLiveOrg, daLiveSite,
         (info) => {
             onProgress?.({
                 operation: 'content-clear',
@@ -147,24 +151,13 @@ async function pipelineClearContent(
         });
 
         try {
-            const unpublishResult = await helixService.unpublishPages(repoOwner, repoName, 'main', webPaths);
-            if (!unpublishResult.success || unpublishResult.count === 0) {
-                const reason = unpublishResult.reason ?? 'unknown';
-                logger.warn(
-                    `[EdsPipeline] CDN unpublish failed (0/${webPaths.length} pages). ` +
-                    `${reason} Source content was cleared; publish again to sync the CDN.`,
-                );
-            }
-        } catch (unpublishError) {
-            // Non-fatal -- source content is cleared, CDN will eventually sync
-            logger.warn(`[EdsPipeline] CDN unpublish failed: ${(unpublishError as Error).message}. Source cleared; publish again to sync.`);
+            await helixService.unpublishPages(repoOwner, repoName, 'main', webPaths);
+        } catch (error) {
+            logger.warn(`[EdsPipeline] CDN unpublish failed (non-fatal): ${(error as Error).message}`);
         }
     }
 
-    onProgress?.({
-        operation: 'content-clear',
-        message: `Cleared ${clearResult.deletedCount} files`,
-    });
+    onProgress?.({ operation: 'content-clear', message: `Cleared ${clearResult.deletedCount} files` });
 }
 
 /**
@@ -323,8 +316,9 @@ export async function executeEdsPipeline(
         // Step 0: Clear Existing Content (if requested)
         if (clearExistingContent) {
             await pipelineClearContent(
-                daLiveContentOps, helixService, daLiveOrg, daLiveSite,
-                repoOwner, repoName, logger, onProgress,
+                services,
+                { daLiveOrg, daLiveSite, repoOwner, repoName },
+                onProgress,
             );
         }
 

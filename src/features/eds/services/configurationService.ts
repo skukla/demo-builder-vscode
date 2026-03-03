@@ -54,6 +54,25 @@ export interface SiteRegistrationParams {
  */
 export type FolderMapping = Record<string, string>;
 
+/** Default folder mapping for EDS storefronts — routes /products/ to /products/default */
+export const DEFAULT_FOLDER_MAPPING: FolderMapping = { '/products/': '/products/default' };
+
+/** Build the DA.live content source URL for a given org and site */
+function buildContentSourceUrl(daLiveOrg: string, daLiveSite: string): string {
+    return `https://content.da.live/${daLiveOrg}/${daLiveSite}/`;
+}
+
+/** Build site config params from repo and DA.live identifiers */
+export function buildSiteConfigParams(
+    repoOwner: string, repoName: string, daLiveOrg: string, daLiveSite: string,
+): SiteRegistrationParams {
+    return {
+        org: repoOwner, site: repoName,
+        codeOwner: repoOwner, codeRepo: repoName,
+        contentSourceUrl: buildContentSourceUrl(daLiveOrg, daLiveSite),
+    };
+}
+
 /**
  * Result of a Configuration Service operation
  */

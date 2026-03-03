@@ -18,6 +18,7 @@
 
 import type { TokenProvider } from './daLiveOrgOperations';
 import type { GitHubTreeInput } from './types';
+import { DEFAULT_FOLDER_MAPPING, buildSiteConfigParams, ConfigurationService } from './configurationService';
 import { COMPONENT_IDS } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
@@ -531,19 +532,16 @@ export async function executeEdsReset(
         await syncCodeAndPermissions(params, context, githubTokenService, tokenProvider, report);
 
         // Step 2.5: Update Configuration Service with current content source
+        const configService = new ConfigurationService(tokenProvider, context.logger);
         try {
-            const { ConfigurationService } = await import('./configurationService');
-            const configService = new ConfigurationService(tokenProvider, context.logger);
-            const contentSourceUrl = `https://content.da.live/${daLiveOrg}/${daLiveSite}/`;
-            const configResult = await configService.updateSiteConfig({
-                org: repoOwner, site: repoName,
-                codeOwner: repoOwner, codeRepo: repoName, contentSourceUrl,
-            });
+            const configResult = await configService.updateSiteConfig(
+                buildSiteConfigParams(repoOwner, repoName, daLiveOrg, daLiveSite),
+            );
             if (configResult.success) {
                 context.logger.info('[EdsReset] Configuration Service updated');
                 // Also update folder mapping
                 await configService.setFolderMapping(
-                    repoOwner, repoName, { '/products/': '/products/default' },
+                    repoOwner, repoName, DEFAULT_FOLDER_MAPPING,
                 );
             } else {
                 context.logger.warn(`[EdsReset] Configuration Service update warning: ${configResult.error}`);
@@ -580,7 +578,9 @@ export async function executeEdsReset(
                 blockCollectionIds: repoResetResult.blockCollectionIds,
                 purgeCache: true, skipPublish: false,
             },
-            { daLiveContentOps, githubFileOps, helixService, logger: context.logger },
+            {
+                daLiveContentOps, githubFileOps, helixService, logger: context.logger,
+            },
             (info) => {
                 const stepMap: Record<string, number> = {
                     'content-clear': 4, 'content-copy': 4, 'block-library': 4,

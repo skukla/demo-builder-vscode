@@ -225,15 +225,21 @@ export class HelixService {
         return p.endsWith('/') && p !== '/' ? p.slice(0, -1) : p;
     }
 
-    /** Build auth headers: API key or GitHub + IMS for content operations. */
-    private async getAuthHeaders(apiKey?: string): Promise<Record<string, string>> {
-        if (apiKey) {
-            return { 'Authorization': `token ${apiKey}` };
-        }
-        return {
-            'x-auth-token': await this.getGitHubToken(),
-            'x-content-source-authorization': `Bearer ${await this.getDaLiveToken()}`,
-        };
+    /**
+     * Build auth headers for DELETE operations (unpublish/delete preview).
+     *
+     * Uses `Authorization: Bearer ${daLiveToken}` which bypasses the Helix Admin API's
+     * "delete not allowed while source exists" restriction. GitHub token and API key
+     * auth are both blocked by this restriction when a content source is configured
+     * via fstab.yaml.
+     *
+     * Discovered via diagnostic testing (scripts/test-fstab-codesync-timing.ts):
+     * - DELETE /live + GitHub token (x-auth-token) → 403 "source exists"
+     * - DELETE /live + API key (Authorization: token) → 403 "source exists"
+     * - DELETE /live + DA.live Bearer (Authorization: Bearer) → 204 SUCCESS
+     */
+    private async getDeleteAuthHeaders(): Promise<Record<string, string>> {
+        return { 'Authorization': `Bearer ${await this.getDaLiveToken()}` };
     }
 
     /** Capture error response body for diagnostics (403, 401, 5xx). */
@@ -704,6 +710,11 @@ export class HelixService {
     /**
      * Delete a resource from preview or live CDN partition.
      * Shared implementation for deletePreview and unpublishPage.
+     *
+     * Uses DA.live Bearer token auth which bypasses the "source exists" restriction.
+     * See `getDeleteAuthHeaders()` for auth strategy details.
+     *
+     * @returns `{ success }` — false on auth failure (401/403)
      */
     private async deleteResource(
         partition: 'live' | 'preview',
@@ -711,8 +722,7 @@ export class HelixService {
         site: string,
         path: string,
         branch: string,
-        apiKey?: string,
-    ): Promise<boolean> {
+    ): Promise<{ success: boolean }> {
         const cleanPath = this.normalizeWebPath(path);
         const url = `${HELIX_ADMIN_URL}/${partition}/${org}/${site}/${branch}${cleanPath}`;
         const action = partition === 'live' ? 'Unpublishing' : 'Deleting preview';
@@ -721,7 +731,7 @@ export class HelixService {
 
         this.logger.debug(`[Helix] ${action}: ${url}`);
 
-        const headers = await this.getAuthHeaders(apiKey);
+        const headers = await this.getDeleteAuthHeaders();
         const response = await fetch(url, {
             method: 'DELETE',
             headers,
@@ -730,30 +740,29 @@ export class HelixService {
 
         if (response.status === 401 || response.status === 403) {
             const detail = await this.captureErrorDetail(response);
-            this.logger.debug(`[Helix] ${action} failed (${response.status}): ${detail}`);
-            return false;
+            this.logger.warn(`[Helix] ${action} failed (${response.status}): ${detail}`);
+            return { success: false };
         }
         if (response.status === 204 || response.status === 404) {
             this.logger.debug(`[Helix] ${successLog}: ${cleanPath}`);
-            return true;
+            return { success: true };
         }
         if (!response.ok) {
             throw new Error(`Failed to ${errorPrefix}: ${response.status} ${response.statusText}`);
         }
-        return true;
+        return { success: true };
     }
 
     /**
      * Delete preview for a resource.
      *
      * Sends DELETE /preview/{org}/{site}/{ref}/{path} to remove the page
-     * from the preview CDN partition.
+     * from the preview CDN partition. Uses DA.live Bearer token auth.
      *
      * @param org - Organization/owner name
      * @param site - Site/repository name
      * @param path - Content path (e.g., '/' for homepage, '/products')
      * @param branch - Branch name (default: main)
-     * @param apiKey - Optional Admin API Key for DELETE auth (preferred over GitHub token)
      * @returns true if deleted (204) or not found (404), false if auth failed
      * @throws Error on non-auth failures (5xx, network)
      */
@@ -762,9 +771,9 @@ export class HelixService {
         site: string,
         path: string = '/',
         branch: string = DEFAULT_BRANCH,
-        apiKey?: string,
     ): Promise<boolean> {
-        return this.deleteResource('preview', org, site, path, branch, apiKey);
+        const result = await this.deleteResource('preview', org, site, path, branch);
+        return result.success;
     }
 
     /**
@@ -772,12 +781,12 @@ export class HelixService {
      *
      * Sends DELETE /live/{org}/{site}/{ref}/{path} to remove the page
      * from the live CDN partition and purge associated caches.
+     * Uses DA.live Bearer token auth which bypasses the "source exists" restriction.
      *
      * @param org - Organization/owner name
      * @param site - Site/repository name
      * @param path - Content path (e.g., '/' for homepage, '/products')
      * @param branch - Branch name (default: main)
-     * @param apiKey - Optional Admin API Key for DELETE auth (preferred over GitHub token)
      * @returns true if unpublished (204) or not found (404), false if auth failed
      * @throws Error on non-auth failures (5xx, network)
      */
@@ -786,50 +795,54 @@ export class HelixService {
         site: string,
         path: string = '/',
         branch: string = DEFAULT_BRANCH,
-        apiKey?: string,
     ): Promise<boolean> {
-        return this.deleteResource('live', org, site, path, branch, apiKey);
+        const result = await this.deleteResource('live', org, site, path, branch);
+        return result.success;
     }
 
     /**
      * Unpublish pages from both live and preview CDN.
      *
-     * Uses page-by-page DELETE with GitHub + IMS authentication.
-     * The Helix Admin API does not support bulk delete operations —
-     * the `delete: true` flag on the bulk endpoint is not functional.
-     * See ADR-002 for investigation history.
+     * Uses page-by-page DELETE with DA.live Bearer token authentication,
+     * which bypasses the "source exists" restriction. No need to manipulate
+     * fstab.yaml or Configuration Service config before unpublishing.
+     *
+     * See ADR-002 for auth strategy investigation history.
      *
      * @param org - GitHub organization/owner
      * @param site - GitHub repository name
      * @param branch - Branch name
      * @param webPaths - Web paths to unpublish (e.g., ['/about', '/products'])
-     * @returns Whether unpublish succeeded, count processed, and optional reason on failure
+     * @returns Whether unpublish succeeded and count processed
      */
     async unpublishPages(
         org: string,
         site: string,
         branch: string,
         webPaths: string[],
-    ): Promise<{ success: boolean; count: number; reason?: string }> {
+    ): Promise<{ success: boolean; count: number }> {
         if (webPaths.length === 0) {
             return { success: true, count: 0 };
         }
 
         this.logger.info(`[Helix] Unpublishing ${webPaths.length} pages (page-by-page)`);
 
-        let successCount = 0;
+        let liveCount = 0;
         for (const path of webPaths) {
-            const unpublished = await this.unpublishPage(org, site, path, branch);
-            if (unpublished) successCount++;
+            const result = await this.deleteResource('live', org, site, path, branch);
+            if (result.success) {
+                liveCount++;
+            }
         }
 
+        // Delete preview CDN entries
         const deleted = await Promise.all(
             webPaths.map(path => this.deletePreview(org, site, path, branch)),
         );
         const previewCount = deleted.filter(Boolean).length;
 
-        this.logger.info(`[Helix] Unpublish complete: ${successCount}/${webPaths.length} live, ${previewCount}/${webPaths.length} preview`);
-        return { success: successCount > 0 || previewCount > 0, count: Math.max(successCount, previewCount) };
+        this.logger.info(`[Helix] Unpublish complete: ${liveCount}/${webPaths.length} live, ${previewCount}/${webPaths.length} preview`);
+        return { success: liveCount > 0 || previewCount > 0, count: Math.max(liveCount, previewCount) };
     }
 
     /**

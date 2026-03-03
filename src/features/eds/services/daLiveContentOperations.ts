@@ -694,7 +694,7 @@ export class DaLiveContentOperations {
      *
      * Note: Only DA.live *source* content is deleted. The caller is
      * responsible for unpublishing CDN content separately (via
-     * HelixService.unpublishPages, which uses Admin API Keys).
+     * HelixService.unpublishPages, which uses DA.live Bearer token auth).
      *
      * @param org - Organization name
      * @param site - Site name

@@ -15,7 +15,7 @@
 
 import { installBlockCollections, type BlockLibraryEntry } from '../services/blockCollectionHelpers';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../services/inspectorHelpers';
-import { ConfigurationService } from '../services/configurationService';
+import { ConfigurationService, DEFAULT_FOLDER_MAPPING, buildSiteConfigParams } from '../services/configurationService';
 import type { DaLiveAuthService } from '../services/daLiveAuthService';
 import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { generateFstabContent } from '../services/fstabGenerator';
@@ -561,21 +561,17 @@ async function registerConfigurationService(
     });
 
     try {
-        const contentSourceUrl = `https://content.da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}/`;
-        const registerResult = await configurationService.registerSite({
-            org: repoInfo.repoOwner, site: repoInfo.repoName,
-            codeOwner: repoInfo.repoOwner, codeRepo: repoInfo.repoName, contentSourceUrl,
-        });
+        const siteParams = buildSiteConfigParams(
+            repoInfo.repoOwner, repoInfo.repoName, edsConfig.daLiveOrg, edsConfig.daLiveSite,
+        );
+        const registerResult = await configurationService.registerSite(siteParams);
 
         let skipFolderMapping = false;
         if (registerResult.success) {
             logger.info('[Storefront Setup] Site registered with Configuration Service');
         } else if (registerResult.statusCode === 409) {
             logger.info('[Storefront Setup] Site config exists, updating with current values...');
-            const updateResult = await configurationService.updateSiteConfig({
-                org: repoInfo.repoOwner, site: repoInfo.repoName,
-                codeOwner: repoInfo.repoOwner, codeRepo: repoInfo.repoName, contentSourceUrl,
-            });
+            const updateResult = await configurationService.updateSiteConfig(siteParams);
             if (updateResult.success) {
                 logger.info('[Storefront Setup] Site config updated via Configuration Service');
             } else {
@@ -593,7 +589,7 @@ async function registerConfigurationService(
 
         if (!skipFolderMapping) {
             const folderResult = await configurationService.setFolderMapping(
-                repoInfo.repoOwner, repoInfo.repoName, { '/products/': '/products/default' },
+                repoInfo.repoOwner, repoInfo.repoName, DEFAULT_FOLDER_MAPPING,
             );
             if (folderResult.success) {
                 logger.info('[Storefront Setup] Folder mapping configured via Configuration Service');
@@ -781,7 +777,12 @@ export async function executeStorefrontSetupPhases(
                         blockCollectionIds,
                         purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
                     },
-                    { daLiveContentOps: services.daLiveContentOps, githubFileOps: services.githubFileOps, helixService: services.helixService, logger },
+                    {
+                        daLiveContentOps: services.daLiveContentOps,
+                        githubFileOps: services.githubFileOps,
+                        helixService: services.helixService,
+                        logger,
+                    },
                     (info) => {
                         const mapping: Record<string, { phase: string; progress: number }> = {
                             'content-clear': { phase: 'content-copy', progress: 45 },

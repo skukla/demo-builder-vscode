@@ -386,8 +386,8 @@ async function unpublishCdnContent(
                 name: `${githubOwner}/${githubRepo}`,
                 success: true,
             });
-        } else if (!unpublishResult.success && unpublishResult.reason) {
-            context.logger.warn(`[Delete Project] CDN unpublish skipped: ${unpublishResult.reason}`);
+        } else if (!unpublishResult.success) {
+            context.logger.warn(`[Delete Project] CDN unpublish failed for ${githubOwner}/${githubRepo}`);
         }
 
         const keyDeleteResult = await helixService.deleteAdminApiKey(daOrg, daSite);
@@ -422,7 +422,8 @@ async function performDaLiveCleanup(
 
         const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, context.logger);
 
-        // Bulk unpublish CDN content before deleting the site
+        // Unpublish CDN content before deleting the site
+        // Uses DA.live Bearer token auth which bypasses the "source exists" restriction
         await unpublishCdnContent(context, edsMetadata, daLiveTokenProvider, results, progress);
 
         progress.report({ message: 'Deleting DA.live site content...' });

@@ -3,7 +3,7 @@
  *
  * Tests for pipeline integration behavior:
  * - Progress callback
- * - Content clear + CDN overwrite
+ * - Content clear + CDN unpublish (uses DA.live Bearer token auth)
  * - Full pipeline execution order
  */
 
@@ -48,7 +48,7 @@ describe('executeEdsPipeline - integration', () => {
         } as unknown as EdsPipelineServices['daLiveContentOps'];
 
         mockGithubFileOps = {
-            getFileContent: jest.fn().mockResolvedValue({ content: '{}', sha: 'abc' }),
+            getFileContent: jest.fn().mockResolvedValue(null),
         } as unknown as EdsPipelineServices['githubFileOps'];
 
         mockHelixService = {
@@ -202,7 +202,7 @@ describe('executeEdsPipeline - integration', () => {
                 deletedCount: 2,
                 deletedPaths: ['/index.html', '/about.html'],
             });
-            (mockHelixService as Record<string, unknown>).unpublishPages = jest.fn().mockRejectedValue(new Error('Bulk job timeout'));
+            (mockHelixService as Record<string, unknown>).unpublishPages = jest.fn().mockRejectedValue(new Error('auth error'));
 
             const result = await executeEdsPipeline(
                 { ...baseParams, clearExistingContent: true, skipContent: true },
@@ -267,6 +267,48 @@ describe('executeEdsPipeline - integration', () => {
             expect(mockHelixService.unpublishPages).toHaveBeenCalledWith(
                 'test-owner', 'test-repo', 'main',
                 ['/', '/phones'],
+            );
+        });
+
+        it('should unpublish directly without fstab or config manipulation', async () => {
+            (mockDaLiveContentOps as Record<string, unknown>).deleteAllSiteContent = jest.fn().mockResolvedValue({
+                success: true,
+                deletedCount: 3,
+                deletedPaths: ['/index.html', '/about.html', '/products/default.html'],
+            });
+            (mockHelixService as Record<string, unknown>).unpublishPages = jest.fn().mockResolvedValue({ success: true, count: 3 });
+
+            const result = await executeEdsPipeline(
+                { ...baseParams, clearExistingContent: true, skipContent: true },
+                services,
+            );
+
+            expect(result.success).toBe(true);
+            // Should call unpublishPages directly (no fstab removal, no config deletion)
+            expect(mockHelixService.unpublishPages).toHaveBeenCalledWith(
+                'test-owner', 'test-repo', 'main',
+                expect.arrayContaining(['/', '/about', '/products/default']),
+            );
+            // No GitHub file operations needed for unpublish
+            expect(mockGithubFileOps.getFileContent).not.toHaveBeenCalled();
+        });
+
+        it('should log warning when unpublish fails (non-fatal)', async () => {
+            (mockDaLiveContentOps as Record<string, unknown>).deleteAllSiteContent = jest.fn().mockResolvedValue({
+                success: true,
+                deletedCount: 2,
+                deletedPaths: ['/index.html', '/about.html'],
+            });
+            (mockHelixService as Record<string, unknown>).unpublishPages = jest.fn().mockRejectedValue(new Error('auth error'));
+
+            const result = await executeEdsPipeline(
+                { ...baseParams, clearExistingContent: true, skipContent: true },
+                services,
+            );
+
+            expect(result.success).toBe(true);
+            expect(mockLogger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('CDN unpublish failed (non-fatal)'),
             );
         });
     });

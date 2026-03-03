@@ -84,6 +84,11 @@ jest.mock('@/features/eds/services/configurationService', () => ({
         updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
         deleteSiteConfig: jest.fn().mockResolvedValue({ success: true }),
     })),
+    DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
+    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
+        org: owner, site: repo, codeOwner: owner, codeRepo: repo,
+        contentSourceUrl: `https://content.da.live/${org}/${site}/`,
+    }),
 }));
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({

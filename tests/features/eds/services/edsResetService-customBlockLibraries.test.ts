@@ -91,6 +91,20 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => ({
     })),
 }));
 
+jest.mock('@/features/eds/services/configurationService', () => ({
+    ConfigurationService: jest.fn().mockImplementation(() => ({
+        registerSite: jest.fn().mockResolvedValue({ success: true }),
+        setFolderMapping: jest.fn().mockResolvedValue({ success: true }),
+        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
+        deleteSiteConfig: jest.fn().mockResolvedValue({ success: true }),
+    })),
+    DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
+    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
+        org: owner, site: repo, codeOwner: owner, codeRepo: repo,
+        contentSourceUrl: `https://content.da.live/${org}/${site}/`,
+    }),
+}));
+
 jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: jest.fn().mockResolvedValue({
         success: true, contentFilesCopied: 5, libraryPaths: [],
@@ -99,13 +113,6 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
 
 jest.mock('@/features/eds/services/storefrontStalenessDetector', () => ({
     updateStorefrontState: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/configurationService', () => ({
-    ConfigurationService: jest.fn().mockImplementation(() => ({
-        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-        setFolderMapping: jest.fn().mockResolvedValue({ success: true }),
-    })),
 }));
 
 // Mock fetch for placeholder files

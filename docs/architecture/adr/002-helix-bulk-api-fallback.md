@@ -60,8 +60,8 @@ Without this understanding, the fallback behavior appeared mysterious. Developer
 **We implement a "try bulk first, fallback to page-by-page" strategy** that:
 
 1. Attempts bulk preview/publish operations first (optimal performance)
-2. Catches 404 errors specifically
-3. Falls back to page-by-page publishing when bulk is unavailable
+2. Catches any bulk API failure
+3. Falls back to reliable page-by-page publishing on any bulk failure
 4. Logs the fallback for debugging visibility
 
 ### Rationale
@@ -99,15 +99,9 @@ async publishAllSiteContent(
     try {
         await this.publishAllSiteContentBulk(githubOrg, githubSite, branch, pages, onProgress);
     } catch (error) {
-        const errorMessage = (error as Error).message;
-
-        // 404 means bulk endpoint not available - fall back to page-by-page
-        if (errorMessage.includes('404')) {
-            this.logger.warn('[Helix] Bulk API not available, falling back to page-by-page publishing');
-            await this.publishAllSiteContentPageByPage(githubOrg, githubSite, branch, pages, onProgress);
-        } else {
-            throw error;
-        }
+        // Bulk API is a fast path — any failure falls back to reliable page-by-page
+        this.logger.warn(`[Helix] Bulk publish failed: ${(error as Error).message}, falling back to page-by-page`);
+        await this.publishAllSiteContentPageByPage(githubOrg, githubSite, branch, pages, onProgress);
     }
 }
 ```
@@ -206,9 +200,33 @@ This script tests:
 
 API keys are now **self-provisioned** by `HelixService` via `POST /config/{org}/sites/{site}/apiKeys.json`. Keys are cached in memory and persisted in `globalState` for reuse across sessions. Bulk preview/publish uses these keys successfully.
 
-**Bulk unpublish does not exist.** After extensive investigation (multiple auth header formats, API key roles, retry strategies), the Helix Admin API's bulk endpoint (`POST /{partition}/{org}/{site}/{ref}/*`) does not support `delete: true`. Every combination returns `[admin] not authenticated` regardless of credentials. The bulk endpoint only supports `forceUpdate: true` (preview/publish).
+#### CDN Unpublish Auth Strategy (Definitive)
 
-**Resolution**: Unpublish uses page-by-page DELETE requests with standard GitHub + IMS auth. The bulk unpublish infrastructure (`bulkDelete`, `bulkUnpublish`, `bulkDeletePreview`) was removed as dead code. Page-by-page DELETE works reliably.
+**Problem**: The Helix Admin API returns `403 [admin] delete not allowed while source exists` on `DELETE /live/{path}` when a content source is registered via `fstab.yaml`. This blocks CDN unpublish during content clear (brand switch) and project deletion.
+
+**Root cause**: The "source exists" check is against the **fstab.yaml content source** mountpoint, NOT the AEM Configuration Service config. The restriction is enforced per-auth-method.
+
+**Investigation** (`scripts/test-fstab-codesync-timing.ts`):
+
+| Auth Method | Header | DELETE /live Result |
+|---|---|---|
+| GitHub token | `x-auth-token: <token>` | 403 "source exists" |
+| Admin API key | `Authorization: token <apiKey>` | 403 "source exists" |
+| **DA.live Bearer** | **`Authorization: Bearer <daLiveToken>`** | **204 SUCCESS** |
+
+The DA.live IMS token (Adobe IMS with client_id "darkalley") **bypasses the "source exists" restriction entirely**. Both individual DELETE and bulk POST with `delete: true` work with this auth method.
+
+**Approaches that DO NOT work:**
+- Deleting AEM Configuration Service site config before unpublish → pages still fail with 403 for 16+ seconds after config deletion
+- Temporarily removing fstab.yaml mountpoints (empty or delete) → code sync never deregisters the source within 2+ minutes
+- Using Admin API key for DELETE → blocked by "source exists" same as GitHub token
+
+**Solution**: `HelixService.deleteResource()` uses `Authorization: Bearer ${daLiveToken}` via `getDeleteAuthHeaders()`. No fstab.yaml manipulation, no Configuration Service config changes, no retry loops, no propagation delays needed.
+
+**Implementation**:
+- `helixService.ts`: `getDeleteAuthHeaders()` returns `{ Authorization: Bearer ${daLiveToken} }` for all DELETE operations
+- `edsPipeline.ts`: `pipelineClearContent()` directly calls `unpublishPages()` without any pre-unpublish workarounds
+- `projectDeletionService.ts`: `performDaLiveCleanup()` calls `unpublishCdnContent()` directly
 
 ### Remaining Improvements
 
@@ -219,7 +237,8 @@ API keys are now **self-provisioned** by `HelixService` via `POST /config/{org}/
 
 1. ~~Can Demo Builder projects be auto-provisioned with API_KEY?~~ → **Yes**, self-provisioned via Admin API
 2. ~~Is there a programmatic way to request API_KEY provisioning?~~ → **Yes**, `POST /config/{org}/sites/{site}/apiKeys.json`
-3. ~~Does the bulk API support delete operations?~~ → **No**. The `delete: true` flag is not functional on the bulk endpoint. Use page-by-page DELETE instead.
+3. ~~Does the bulk API support delete operations?~~ → **Partially.** Bulk `POST /live/* { delete: true }` works with DA.live Bearer token (returns 202 job). Does NOT work with API key auth (returns 403 "not authorized"). Page-by-page DELETE with DA.live Bearer is the current approach.
+4. ~~Does page-by-page DELETE work with standard auth?~~ → **Not with GitHub token or API key when a content source is registered.** The `Authorization: Bearer ${daLiveToken}` (DA.live IMS token) bypasses the "source exists" restriction. This is the definitive solution.
 
 ---
 
@@ -227,7 +246,7 @@ API keys are now **self-provisioned** by `HelixService` via `POST /config/{org}/
 
 - **Adobe Documentation**: [Publishing from Authoring](https://www.aem.live/docs/publishing-from-authoring)
 - **Helix Admin API**: [admin.hlx.page docs](https://www.aem.live/docs/admin.html)
-- **Diagnostic Script**: `scripts/test-bulk-helix-api.ts`
+- **Auth Diagnostic Script**: `scripts/test-fstab-codesync-timing.ts`
 - **Implementation**: `src/features/eds/services/helixService.ts`
 - **Commit**: `b10456d9` - "feat: add Helix bulk API integration with page-by-page fallback"
 
@@ -238,8 +257,8 @@ API keys are now **self-provisioned** by `HelixService` via `POST /config/{org}/
 | Term | Definition |
 |------|------------|
 | **Bulk API** | Helix Admin endpoint that processes multiple pages in one request |
-| **API_KEY** | Adobe-provisioned key required for bulk operations |
-| **IMS Token** | Adobe Identity Management System token for DA.live content access |
+| **API_KEY** | Adobe-provisioned key required for bulk preview/publish operations |
+| **DA.live IMS Token** | Adobe IMS token with client_id "darkalley", obtained via DA.live browser flow. Required for DELETE operations to bypass "source exists" restriction |
 | **GitHub Token** | Personal access token for repository write verification |
 | **Job Polling** | Checking async job status endpoint until operation completes |
 
