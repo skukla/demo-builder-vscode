@@ -23,6 +23,13 @@
             "replacement": "  <h1 id=\"phones\">Phones</h1>\n  <div class=\"product-list-page\">\n    <div>\n      <div>category</div>\n      <div>41</div>\n    </div>\n    <div>\n      <div>urlPath</div>\n      <div>phones</div>\n    </div>\n  </div>"
         },
         {
+            "id": "index-product-teaser-sku-accs",
+            "pagePath": "/",
+            "description": "Replace Orchard7 SKU with Orchard1-1 in the product teaser on the homepage (ACCS)",
+            "searchPattern": "Orchard7",
+            "replacement": "Orchard1-1"
+        },
+        {
             "id": "smart-watches-category-id",
             "pagePath": "/smart-watches",
             "description": "Replace category 38 with category 5 in the product-list-page block on the smart-watches page (PaaS)",

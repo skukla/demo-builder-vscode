@@ -28,7 +28,7 @@ beforeEach(() => {
 
 describe('CONTENT_PATCHES', () => {
     it('loads all patches from config', () => {
-        expect(CONTENT_PATCHES.length).toBe(6);
+        expect(CONTENT_PATCHES.length).toBe(7);
     });
 
     it('each patch has required fields', () => {
@@ -48,6 +48,7 @@ describe('CONTENT_PATCHES', () => {
         expect(patch!.searchPattern).toBe('Orchard7');
         expect(patch!.replacement).toBe('apple-iphone-se/iphone-se');
     });
+
 });
 
 describe('getContentPatchById', () => {
