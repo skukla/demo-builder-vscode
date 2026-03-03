@@ -256,14 +256,13 @@ describe('HelixService - Auth & Keys', () => {
             expect(result).toEqual({ success: true, count: 1 });
             expect(mockFetch).toHaveBeenCalledTimes(2);
 
-            // Verify live DELETE uses GitHub + IMS auth (no API key)
+            // Verify live DELETE uses DA.live Bearer token auth
             expect(mockFetch).toHaveBeenCalledWith(
                 expect.stringContaining('/live/testorg/testsite/main/about'),
                 expect.objectContaining({
                     method: 'DELETE',
                     headers: expect.objectContaining({
-                        'x-auth-token': 'valid-github-token',
-                        'x-content-source-authorization': 'Bearer valid-dalive-ims-token',
+                        'Authorization': 'Bearer valid-dalive-ims-token',
                     }),
                 }),
             );

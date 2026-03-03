@@ -1,7 +1,7 @@
 /**
  * HelixService Tests - Persistent Key Store
  *
- * Tests for persistent API key storage:
+ * Tests for persistent API key storage via SecretStorage (OS keychain):
  * - Restore from persistent store
  * - Skip expired keys
  * - Persist new keys
@@ -9,6 +9,7 @@
  * - In-memory fallback
  * - Delete admin API key
  * - Idempotent initialization
+ * - Legacy globalState migration
  */
 
 // Mock vscode module
@@ -67,13 +68,13 @@ describe('HelixService - Persistent Key Store', () => {
     let mockDaLiveTokenProvider: MockDaLiveTokenProvider;
     let mockFetch: jest.Mock;
     let HelixServiceClass: typeof import('@/features/eds/services/helixService').HelixService;
-    let mockGlobalState: {
+    let mockSecretStorage: {
         get: jest.Mock;
-        update: jest.Mock;
-        keys: jest.Mock;
-        setKeysForSync: jest.Mock;
+        store: jest.Mock;
+        delete: jest.Mock;
+        onDidChange: jest.Mock;
     };
-    let stateStore: Record<string, unknown>;
+    let secretStore: Record<string, string>;
     const originalFetch = global.fetch;
 
     beforeEach(async () => {
@@ -99,15 +100,18 @@ describe('HelixService - Persistent Key Store', () => {
 
         service = new module.HelixService(undefined, mockGitHubTokenService, mockDaLiveTokenProvider);
 
-        stateStore = {};
-        mockGlobalState = {
-            get: jest.fn(<T>(key: string, defaultValue?: T) => (stateStore[key] ?? defaultValue) as T),
-            update: jest.fn((key: string, value: unknown) => {
-                stateStore[key] = value;
+        secretStore = {};
+        mockSecretStorage = {
+            get: jest.fn((key: string) => Promise.resolve(secretStore[key])),
+            store: jest.fn((key: string, value: string) => {
+                secretStore[key] = value;
                 return Promise.resolve();
             }),
-            keys: jest.fn(() => Object.keys(stateStore)),
-            setKeysForSync: jest.fn(),
+            delete: jest.fn((key: string) => {
+                delete secretStore[key];
+                return Promise.resolve();
+            }),
+            onDidChange: jest.fn(),
         };
     });
 
@@ -117,14 +121,14 @@ describe('HelixService - Persistent Key Store', () => {
     });
 
     it('should restore key from persistent store on cache miss', async () => {
-        stateStore['helix.apiKeys'] = {
+        secretStore['helix.apiKeys'] = JSON.stringify({
             'testorg/testsite': {
                 value: 'persisted-key-value',
                 id: 'persisted-key-id',
                 expiresAt: Date.now() + 3600000,
             },
-        };
-        HelixServiceClass.initKeyStore(mockGlobalState as unknown as import('vscode').Memento);
+        });
+        await HelixServiceClass.initKeyStore(mockSecretStorage as unknown as import('vscode').SecretStorage);
 
         const key = await service.createAdminApiKey('testorg', 'testsite');
         expect(key).toBe('persisted-key-value');
@@ -133,14 +137,14 @@ describe('HelixService - Persistent Key Store', () => {
     });
 
     it('should skip expired persistent keys', async () => {
-        stateStore['helix.apiKeys'] = {
+        secretStore['helix.apiKeys'] = JSON.stringify({
             'testorg/testsite': {
                 value: 'expired-key',
                 id: 'expired-key-id',
                 expiresAt: Date.now() - 1000,
             },
-        };
-        HelixServiceClass.initKeyStore(mockGlobalState as unknown as import('vscode').Memento);
+        });
+        await HelixServiceClass.initKeyStore(mockSecretStorage as unknown as import('vscode').SecretStorage);
 
         mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
         mockFetch.mockResolvedValueOnce({
@@ -154,7 +158,7 @@ describe('HelixService - Persistent Key Store', () => {
     });
 
     it('should persist new keys with ID and expiry', async () => {
-        HelixServiceClass.initKeyStore(mockGlobalState as unknown as import('vscode').Memento);
+        await HelixServiceClass.initKeyStore(mockSecretStorage as unknown as import('vscode').SecretStorage);
 
         mockFetch.mockResolvedValueOnce({
             ok: true, status: 200,
@@ -163,27 +167,28 @@ describe('HelixService - Persistent Key Store', () => {
 
         await service.createAdminApiKey('testorg', 'testsite');
 
-        expect(mockGlobalState.update).toHaveBeenCalledWith(
+        expect(mockSecretStorage.store).toHaveBeenCalledWith(
             'helix.apiKeys',
-            expect.objectContaining({
-                'testorg/testsite': expect.objectContaining({
-                    value: 'new-key-value',
-                    id: 'new-key-id',
-                    expiresAt: expect.any(Number),
-                }),
-            }),
+            expect.any(String),
         );
+        const storedJson = mockSecretStorage.store.mock.calls[0][1] as string;
+        const stored = JSON.parse(storedJson) as Record<string, { value: string; id: string; expiresAt: number }>;
+        expect(stored['testorg/testsite']).toEqual(expect.objectContaining({
+            value: 'new-key-value',
+            id: 'new-key-id',
+            expiresAt: expect.any(Number),
+        }));
     });
 
     it('should delete old key before creating new one', async () => {
-        stateStore['helix.apiKeys'] = {
+        secretStore['helix.apiKeys'] = JSON.stringify({
             'testorg/testsite': {
                 value: 'old-key-value',
                 id: 'old-key-id',
                 expiresAt: Date.now() + 3600000,
             },
-        };
-        HelixServiceClass.initKeyStore(mockGlobalState as unknown as import('vscode').Memento);
+        });
+        await HelixServiceClass.initKeyStore(mockSecretStorage as unknown as import('vscode').SecretStorage);
 
         const restoredKey = await service.createAdminApiKey('testorg', 'testsite');
         expect(restoredKey).toBe('old-key-value');
@@ -210,14 +215,14 @@ describe('HelixService - Persistent Key Store', () => {
     });
 
     it('should continue if old key deletion fails', async () => {
-        stateStore['helix.apiKeys'] = {
+        secretStore['helix.apiKeys'] = JSON.stringify({
             'testorg/testsite': {
                 value: 'old-key-value',
                 id: 'old-key-id',
                 expiresAt: Date.now() + 3600000,
             },
-        };
-        HelixServiceClass.initKeyStore(mockGlobalState as unknown as import('vscode').Memento);
+        });
+        await HelixServiceClass.initKeyStore(mockSecretStorage as unknown as import('vscode').SecretStorage);
 
         await service.createAdminApiKey('testorg', 'testsite');
         const originalDateNow = Date.now;
@@ -246,7 +251,7 @@ describe('HelixService - Persistent Key Store', () => {
 
         const key = await service.createAdminApiKey('testorg', 'testsite');
         expect(key).toBe('memory-only-key');
-        expect(mockGlobalState.update).not.toHaveBeenCalled();
+        expect(mockSecretStorage.store).not.toHaveBeenCalled();
 
         const key2 = await service.createAdminApiKey('testorg', 'testsite');
         expect(key2).toBe('memory-only-key');
@@ -254,14 +259,14 @@ describe('HelixService - Persistent Key Store', () => {
     });
 
     it('should delete admin API key and clear caches on deleteAdminApiKey', async () => {
-        stateStore['helix.apiKeys'] = {
+        secretStore['helix.apiKeys'] = JSON.stringify({
             'testorg/testsite': {
                 value: 'key-to-delete',
                 id: 'key-id-123',
                 expiresAt: Date.now() + 3600000,
             },
-        };
-        HelixServiceClass.initKeyStore(mockGlobalState as unknown as import('vscode').Memento);
+        });
+        await HelixServiceClass.initKeyStore(mockSecretStorage as unknown as import('vscode').SecretStorage);
 
         await service.createAdminApiKey('testorg', 'testsite');
         mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
@@ -285,39 +290,40 @@ describe('HelixService - Persistent Key Store', () => {
     });
 
     it('should succeed when no persisted key exists on deleteAdminApiKey', async () => {
-        HelixServiceClass.initKeyStore(mockGlobalState as unknown as import('vscode').Memento);
+        await HelixServiceClass.initKeyStore(mockSecretStorage as unknown as import('vscode').SecretStorage);
         const result = await service.deleteAdminApiKey('testorg', 'testsite');
         expect(result.success).toBe(true);
         expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('should handle server error gracefully on deleteAdminApiKey', async () => {
-        stateStore['helix.apiKeys'] = {
+        secretStore['helix.apiKeys'] = JSON.stringify({
             'testorg/testsite': {
                 value: 'key-value',
                 id: 'key-id-456',
                 expiresAt: Date.now() + 3600000,
             },
-        };
-        HelixServiceClass.initKeyStore(mockGlobalState as unknown as import('vscode').Memento);
+        });
+        await HelixServiceClass.initKeyStore(mockSecretStorage as unknown as import('vscode').SecretStorage);
 
         mockFetch.mockRejectedValueOnce(new Error('Network timeout'));
 
         const result = await service.deleteAdminApiKey('testorg', 'testsite');
         expect(result.success).toBe(false);
         expect(result.error).toContain('Network timeout');
-        expect((stateStore['helix.apiKeys'] as Record<string, unknown>)?.['testorg/testsite']).toBeUndefined();
+        const stored = JSON.parse(secretStore['helix.apiKeys']) as Record<string, unknown>;
+        expect(stored['testorg/testsite']).toBeUndefined();
     });
 
     it('should treat 404 as success on deleteAdminApiKey', async () => {
-        stateStore['helix.apiKeys'] = {
+        secretStore['helix.apiKeys'] = JSON.stringify({
             'testorg/testsite': {
                 value: 'key-value',
                 id: 'key-id-gone',
                 expiresAt: Date.now() + 3600000,
             },
-        };
-        HelixServiceClass.initKeyStore(mockGlobalState as unknown as import('vscode').Memento);
+        });
+        await HelixServiceClass.initKeyStore(mockSecretStorage as unknown as import('vscode').SecretStorage);
 
         mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
 
@@ -326,25 +332,78 @@ describe('HelixService - Persistent Key Store', () => {
     });
 
     it('should be idempotent when initKeyStore called multiple times', async () => {
-        stateStore['helix.apiKeys'] = {
+        secretStore['helix.apiKeys'] = JSON.stringify({
             'testorg/testsite': {
                 value: 'persisted-key',
                 id: 'key-id',
                 expiresAt: Date.now() + 3600000,
             },
-        };
-        HelixServiceClass.initKeyStore(mockGlobalState as unknown as import('vscode').Memento);
+        });
+        await HelixServiceClass.initKeyStore(mockSecretStorage as unknown as import('vscode').SecretStorage);
 
-        const anotherMockState = {
-            get: jest.fn(() => ({})),
-            update: jest.fn(() => Promise.resolve()),
-            keys: jest.fn(() => []),
-            setKeysForSync: jest.fn(),
+        const anotherMockStorage = {
+            get: jest.fn(() => Promise.resolve(undefined)),
+            store: jest.fn(() => Promise.resolve()),
+            delete: jest.fn(() => Promise.resolve()),
+            onDidChange: jest.fn(),
         };
-        HelixServiceClass.initKeyStore(anotherMockState as unknown as import('vscode').Memento);
+        await HelixServiceClass.initKeyStore(anotherMockStorage as unknown as import('vscode').SecretStorage);
 
         const key = await service.createAdminApiKey('testorg', 'testsite');
         expect(key).toBe('persisted-key');
         expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should migrate keys from legacy globalState to SecretStorage', async () => {
+        const legacyKeys = {
+            'testorg/testsite': {
+                value: 'legacy-key-value',
+                id: 'legacy-key-id',
+                expiresAt: Date.now() + 3600000,
+            },
+        };
+        const mockLegacyState = {
+            get: jest.fn(() => legacyKeys),
+            update: jest.fn(() => Promise.resolve()),
+            keys: jest.fn(() => ['helix.apiKeys']),
+            setKeysForSync: jest.fn(),
+        };
+
+        await HelixServiceClass.initKeyStore(
+            mockSecretStorage as unknown as import('vscode').SecretStorage,
+            mockLegacyState as unknown as import('vscode').Memento,
+        );
+
+        // Keys migrated to SecretStorage
+        expect(mockSecretStorage.store).toHaveBeenCalledWith(
+            'helix.apiKeys',
+            JSON.stringify(legacyKeys),
+        );
+
+        // Legacy globalState cleared
+        expect(mockLegacyState.update).toHaveBeenCalledWith('helix.apiKeys', undefined);
+
+        // Migrated key is accessible
+        const key = await service.createAdminApiKey('testorg', 'testsite');
+        expect(key).toBe('legacy-key-value');
+        expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should skip migration when legacy globalState has no keys', async () => {
+        const mockLegacyState = {
+            get: jest.fn(() => undefined),
+            update: jest.fn(() => Promise.resolve()),
+            keys: jest.fn(() => []),
+            setKeysForSync: jest.fn(),
+        };
+
+        await HelixServiceClass.initKeyStore(
+            mockSecretStorage as unknown as import('vscode').SecretStorage,
+            mockLegacyState as unknown as import('vscode').Memento,
+        );
+
+        // No migration writes
+        expect(mockSecretStorage.store).not.toHaveBeenCalled();
+        expect(mockLegacyState.update).not.toHaveBeenCalled();
     });
 });

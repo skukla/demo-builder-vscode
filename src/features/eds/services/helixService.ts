@@ -96,7 +96,7 @@ interface PersistedHelixKey {
     expiresAt: number;
 }
 
-/** globalState key for persisted Helix API keys */
+/** SecretStorage key for persisted Helix API keys */
 const HELIX_KEYS_STATE_KEY = 'helix.apiKeys';
 
 /** Persistence expiry: 7 days (keys have ~1 year server expiry) */
@@ -130,25 +130,54 @@ export class HelixService {
         HelixService.apiKeyCache.clear();
     }
 
-    /** Persistent storage (globalState). Null = in-memory only (backward compatible). */
-    private static globalState: vscode.Memento | null = null;
+    /** Encrypted persistent storage (OS keychain via SecretStorage). Null = in-memory only. */
+    private static secretStorage: vscode.SecretStorage | null = null;
 
-    /** Initialize persistent key storage. Idempotent — safe to call multiple times. */
-    static initKeyStore(globalState: vscode.Memento): void {
-        if (!HelixService.globalState) {
-            HelixService.globalState = globalState;
+    /**
+     * Initialize persistent key storage with encrypted SecretStorage.
+     * Idempotent — safe to call multiple times (first caller wins).
+     *
+     * @param secretStorage - VS Code SecretStorage (OS keychain) for encrypted key persistence
+     * @param legacyState - Optional globalState Memento for one-time migration of plaintext keys
+     */
+    static async initKeyStore(
+        secretStorage: vscode.SecretStorage,
+        legacyState?: vscode.Memento,
+    ): Promise<void> {
+        if (!HelixService.secretStorage) {
+            HelixService.secretStorage = secretStorage;
+
+            // One-time migration: move keys from plaintext globalState to encrypted SecretStorage
+            if (legacyState) {
+                const legacyKeys = legacyState.get<Record<string, PersistedHelixKey>>(HELIX_KEYS_STATE_KEY);
+                if (legacyKeys && Object.keys(legacyKeys).length > 0) {
+                    await secretStorage.store(HELIX_KEYS_STATE_KEY, JSON.stringify(legacyKeys));
+                    await legacyState.update(HELIX_KEYS_STATE_KEY, undefined);
+                }
+            }
         }
     }
 
     /** Clear persistent key store (for testing). */
     static clearKeyStore(): void {
-        HelixService.globalState = null;
+        HelixService.secretStorage = null;
+    }
+
+    /** Read all persisted keys from SecretStorage. */
+    private static async getAllPersistedKeys(): Promise<Record<string, PersistedHelixKey>> {
+        const raw = await HelixService.secretStorage?.get(HELIX_KEYS_STATE_KEY);
+        if (!raw) return {};
+        try {
+            return JSON.parse(raw) as Record<string, PersistedHelixKey>;
+        } catch {
+            return {};
+        }
     }
 
     /** Read a persisted key entry (returns undefined if missing or expired). */
-    private static getPersistedKey(cacheKey: string): PersistedHelixKey | undefined {
-        const keys = HelixService.globalState?.get<Record<string, PersistedHelixKey>>(HELIX_KEYS_STATE_KEY, {});
-        const entry = keys?.[cacheKey];
+    private static async getPersistedKey(cacheKey: string): Promise<PersistedHelixKey | undefined> {
+        const keys = await HelixService.getAllPersistedKeys();
+        const entry = keys[cacheKey];
         if (!entry || Date.now() >= entry.expiresAt) {
             return undefined;
         }
@@ -156,25 +185,25 @@ export class HelixService {
     }
 
     /** Read a persisted key entry regardless of expiry (for old key deletion). */
-    private static getPersistedKeyRaw(cacheKey: string): PersistedHelixKey | undefined {
-        const keys = HelixService.globalState?.get<Record<string, PersistedHelixKey>>(HELIX_KEYS_STATE_KEY, {});
-        return keys?.[cacheKey];
+    private static async getPersistedKeyRaw(cacheKey: string): Promise<PersistedHelixKey | undefined> {
+        const keys = await HelixService.getAllPersistedKeys();
+        return keys[cacheKey];
     }
 
-    /** Write a persisted key entry. */
-    private static setPersistedKey(cacheKey: string, key: PersistedHelixKey): void {
-        if (!HelixService.globalState) return;
-        const keys = HelixService.globalState.get<Record<string, PersistedHelixKey>>(HELIX_KEYS_STATE_KEY, {});
+    /** Write a persisted key entry to encrypted storage. */
+    private static async setPersistedKey(cacheKey: string, key: PersistedHelixKey): Promise<void> {
+        if (!HelixService.secretStorage) return;
+        const keys = await HelixService.getAllPersistedKeys();
         keys[cacheKey] = key;
-        void HelixService.globalState.update(HELIX_KEYS_STATE_KEY, keys);
+        await HelixService.secretStorage.store(HELIX_KEYS_STATE_KEY, JSON.stringify(keys));
     }
 
-    /** Remove a persisted key entry. */
-    private static deletePersistedKey(cacheKey: string): void {
-        if (!HelixService.globalState) return;
-        const keys = HelixService.globalState.get<Record<string, PersistedHelixKey>>(HELIX_KEYS_STATE_KEY, {});
+    /** Remove a persisted key entry from encrypted storage. */
+    private static async deletePersistedKey(cacheKey: string): Promise<void> {
+        if (!HelixService.secretStorage) return;
+        const keys = await HelixService.getAllPersistedKeys();
         delete keys[cacheKey];
-        void HelixService.globalState.update(HELIX_KEYS_STATE_KEY, keys);
+        await HelixService.secretStorage.store(HELIX_KEYS_STATE_KEY, JSON.stringify(keys));
     }
 
     /**
@@ -558,7 +587,7 @@ export class HelixService {
         }
 
         // 2. Check persistent store (survives restarts)
-        const persisted = HelixService.getPersistedKey(cacheKey);
+        const persisted = await HelixService.getPersistedKey(cacheKey);
         if (persisted) {
             this.logger.debug(`[Helix] Restoring persisted Admin API Key for ${cacheKey}`);
             const jitteredTtl = getCacheTTLWithJitter(CACHE_TTL.LONG);
@@ -609,7 +638,7 @@ export class HelixService {
                         ? new Date(data.expiration).getTime()
                         : Infinity;
                     const persistExpiry = Math.min(Date.now() + PERSIST_TTL_MS, serverExpiry);
-                    HelixService.setPersistedKey(cacheKey, {
+                    await HelixService.setPersistedKey(cacheKey, {
                         value: keyValue,
                         id: keyId,
                         expiresAt: persistExpiry,
@@ -643,11 +672,11 @@ export class HelixService {
         const cacheKey = `${org}/${site}`;
 
         // Look up persisted key for server-side ID
-        const persisted = HelixService.getPersistedKeyRaw(cacheKey);
+        const persisted = await HelixService.getPersistedKeyRaw(cacheKey);
 
         // Clear both caches regardless
         HelixService.apiKeyCache.delete(cacheKey);
-        HelixService.deletePersistedKey(cacheKey);
+        await HelixService.deletePersistedKey(cacheKey);
 
         if (!persisted?.id) {
             this.logger.debug(`[Helix] No persisted API key to delete for ${cacheKey}`);
@@ -681,13 +710,13 @@ export class HelixService {
      * Catches all errors — old key will expire naturally (~1 year).
      */
     private async deleteOldApiKey(org: string, site: string, cacheKey: string): Promise<void> {
-        const persisted = HelixService.getPersistedKeyRaw(cacheKey);
+        const persisted = await HelixService.getPersistedKeyRaw(cacheKey);
         if (!persisted?.id) {
             return;
         }
 
         // Remove from persistent store first (even if API call fails)
-        HelixService.deletePersistedKey(cacheKey);
+        await HelixService.deletePersistedKey(cacheKey);
 
         const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${persisted.id}.json`;
         try {

@@ -370,7 +370,7 @@ async function unpublishCdnContent(
 
     try {
         progress.report({ message: 'Unpublishing CDN content...' });
-        HelixService.initKeyStore(context.context.globalState);
+        await HelixService.initKeyStore(context.context.secrets, context.context.globalState);
         const helixService = new HelixService(context.logger, undefined, daLiveTokenProvider);
         const daOrg = edsMetadata.daLiveOrg ?? '';
         const daSite = edsMetadata.daLiveSite ?? '';

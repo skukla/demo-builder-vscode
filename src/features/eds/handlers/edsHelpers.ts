@@ -80,8 +80,9 @@ export function getGitHubServices(context: HandlerContext): GitHubServices {
  * Accepts ExtensionContext directly so callers without HandlerContext can use it.
  */
 export function getDaLiveAuthService(extensionContext: vscode.ExtensionContext): DaLiveAuthService {
-    // Initialize Helix key persistence alongside DA.live auth (idempotent)
-    HelixService.initKeyStore(extensionContext.globalState);
+    // Initialize Helix key persistence alongside DA.live auth (idempotent).
+    // Fire-and-forget: secretStorage ref is set synchronously, migration runs async.
+    void HelixService.initKeyStore(extensionContext.secrets, extensionContext.globalState);
     if (!cachedDaLiveAuthService) {
         cachedDaLiveAuthService = new DaLiveAuthService(extensionContext);
     }
