@@ -1162,6 +1162,54 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Get content paths by recursively listing all content on the source DA.live site.
+     *
+     * Uses the authenticated DA.live list API to enumerate every file,
+     * then filters to content types (.html, .xlsx) and strips extensions
+     * so the returned paths match the format expected by copySingleFile.
+     *
+     * This is more complete than getContentPathsFromIndex because the CDN
+     * content index excludes fragment documents (nav, footer) and some
+     * spreadsheets that are not indexed.
+     *
+     * @param org - Source organization name
+     * @param site - Source site name
+     * @returns Array of content paths (extension-free, e.g. '/nav', '/about')
+     */
+    async getContentPathsFromDaLive(org: string, site: string): Promise<string[]> {
+        const contentPaths: string[] = [];
+        const pathPrefix = `/${org}/${site}`;
+        const contentExtensions = new Set(['.html', '.xlsx']);
+
+        const stripPrefix = (entryPath: string): string =>
+            entryPath.replace(pathPrefix, '') || '/';
+
+        const stripExtension = (filePath: string, ext: string): string =>
+            filePath.slice(0, -ext.length);
+
+        const collectPaths = async (dirPath: string): Promise<void> => {
+            const entries = await this.listDirectory(org, site, dirPath);
+
+            for (const entry of entries) {
+                if (entry.ext) {
+                    // File — include only content types
+                    if (contentExtensions.has(entry.ext)) {
+                        const relativePath = stripPrefix(entry.path);
+                        contentPaths.push(stripExtension(relativePath, entry.ext));
+                    }
+                } else {
+                    // Directory — recurse
+                    const relativePath = stripPrefix(entry.path);
+                    await collectPaths(relativePath);
+                }
+            }
+        };
+
+        await collectPaths('/');
+        return contentPaths;
+    }
+
+    /**
      * Get content paths from a content source index
      *
      * Fetches the content index (e.g., full-index.json) from the source site
@@ -1204,10 +1252,20 @@ export class DaLiveContentOperations {
         contentPatchSource?: ContentPatchSource,
     ): Promise<DaLiveCopyResult> {
         // Report initialization progress
-        progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Fetching content index...' });
+        progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Enumerating source content...' });
 
-        // Get content paths from index
-        let contentPaths = await this.getContentPathsFromIndex(source);
+        // Enumerate content paths: prefer DA.live list API (complete), fall back to CDN index
+        let contentPaths: string[];
+        let usedDaLiveList = false;
+
+        try {
+            contentPaths = await this.getContentPathsFromDaLive(source.org, source.site);
+            usedDaLiveList = true;
+            this.logger.info(`[DA.live] Enumerated ${contentPaths.length} content files via list API`);
+        } catch {
+            this.logger.info(`[DA.live] List API unavailable, falling back to content index`);
+            contentPaths = await this.getContentPathsFromIndex(source);
+        }
 
         // Filter out product overlay documents (keep only /products/default)
         const originalCount = contentPaths.length;
@@ -1231,25 +1289,39 @@ export class DaLiveContentOperations {
 
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Checking configurations...' });
 
-        // Add essential root-level spreadsheets that may not be in the content index
-        // These are stored as .xlsx in DA.live and served as .json on CDN
-        // Note: /config is handled separately via code generation (config.json in GitHub repo)
-        // - /placeholders: i18n text strings and labels
-        // - /redirects: URL redirect rules
-        // - /metadata: Default page metadata
-        // - /sitemap: Sitemap configuration
-        const essentialConfigs = ['/placeholders', '/redirects', '/metadata', '/sitemap'];
-        for (const configPath of essentialConfigs) {
-            if (!contentPaths.includes(configPath)) {
-                // Check if config exists on source before adding
-                const sourceUrl = `https://main--${source.site}--${source.org}.aem.live${configPath}.json`;
-                try {
-                    const response = await fetch(sourceUrl, { method: 'HEAD' });
-                    if (response.ok) {
-                        contentPaths.unshift(configPath); // Add at beginning for priority
+        // When using CDN index fallback, add essential content that may not
+        // be in the content index. The DA.live list API already returns
+        // everything, so this is only needed for the fallback path.
+        if (!usedDaLiveList) {
+            const baseUrl = `https://main--${source.site}--${source.org}.aem.live`;
+
+            // Spreadsheets: served as .json on CDN, stored as .xlsx on DA.live
+            const essentialSpreadsheets = ['/placeholders', '/redirects', '/metadata', '/sitemap'];
+            for (const configPath of essentialSpreadsheets) {
+                if (!contentPaths.includes(configPath)) {
+                    try {
+                        const response = await fetch(`${baseUrl}${configPath}.json`, { method: 'HEAD' });
+                        if (response.ok) {
+                            contentPaths.unshift(configPath);
+                        }
+                    } catch {
+                        // Doesn't exist, skip
                     }
-                } catch {
-                    // Config doesn't exist, skip
+                }
+            }
+
+            // HTML fragment documents (nav, footer): not indexed but loaded at runtime
+            const essentialFragments = ['/nav', '/footer'];
+            for (const fragmentPath of essentialFragments) {
+                if (!contentPaths.includes(fragmentPath)) {
+                    try {
+                        const response = await fetch(`${baseUrl}${fragmentPath}`, { method: 'HEAD' });
+                        if (response.ok) {
+                            contentPaths.unshift(fragmentPath);
+                        }
+                    } catch {
+                        // Doesn't exist, skip
+                    }
                 }
             }
         }

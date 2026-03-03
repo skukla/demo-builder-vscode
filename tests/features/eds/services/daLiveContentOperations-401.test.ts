@@ -265,6 +265,12 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
         const destOrg = 'dest-org';
         const destSite = 'dest-site';
 
+        beforeEach(() => {
+            // These tests focus on per-batch token behavior, not content enumeration.
+            // Force fallback to CDN index so existing fetch mocks work unchanged.
+            jest.spyOn(service, 'getContentPathsFromDaLive').mockRejectedValue(new Error('Skipped'));
+        });
+
         /**
          * Create fetch mock for copyContentFromSource tests.
          * Supports configurable number of content paths and DA.live POST status.

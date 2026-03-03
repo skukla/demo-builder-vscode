@@ -73,13 +73,10 @@ describe('DaLiveContentOperations - HTML transformation', () => {
         let fetchedUrl: string | null = null;
         let postedFormData: FormData | null = null;
 
+        jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(['/nav']);
+
         mockFetch
-            .mockResolvedValueOnce(mockFetchResponse(200, { data: [{ path: '/nav' }] }, 'application/json'))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
+            .mockResolvedValueOnce(mockFetchResponse(404)) // isSpreadsheetPath HEAD
             .mockImplementationOnce(async (url: string) => {
                 fetchedUrl = url;
                 return {
@@ -126,13 +123,10 @@ describe('DaLiveContentOperations - HTML transformation', () => {
 
         let postedFormData: FormData | null = null;
 
+        jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(['/page']);
+
         mockFetch
-            .mockResolvedValueOnce(mockFetchResponse(200, { data: [{ path: '/page' }] }, 'application/json'))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
+            .mockResolvedValueOnce(mockFetchResponse(404)) // isSpreadsheetPath HEAD
             .mockImplementationOnce(async () => {
                 return {
                     ok: true,
@@ -174,13 +168,10 @@ describe('DaLiveContentOperations - HTML transformation', () => {
 
         let postedFormData: FormData | null = null;
 
+        jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(['/page']);
+
         mockFetch
-            .mockResolvedValueOnce(mockFetchResponse(200, { data: [{ path: '/page' }] }, 'application/json'))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
+            .mockResolvedValueOnce(mockFetchResponse(404)) // isSpreadsheetPath HEAD
             .mockImplementationOnce(async () => {
                 return {
                     ok: true,
@@ -219,12 +210,9 @@ describe('DaLiveContentOperations - HTML transformation', () => {
 
         let fetchedUrl: string | null = null;
 
+        jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(['/citisignal-fr/']);
+
         mockFetch
-            .mockResolvedValueOnce(mockFetchResponse(200, { data: [{ path: '/citisignal-fr/' }] }, 'application/json'))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
             .mockImplementationOnce(async (url: string) => {
                 fetchedUrl = url;
                 return {
@@ -259,13 +247,10 @@ describe('DaLiveContentOperations - HTML transformation', () => {
 
         let postedFormData: FormData | null = null;
 
+        jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(['/page']);
+
         mockFetch
-            .mockResolvedValueOnce(mockFetchResponse(200, { data: [{ path: '/page' }] }, 'application/json'))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
+            .mockResolvedValueOnce(mockFetchResponse(404)) // isSpreadsheetPath HEAD
             .mockImplementationOnce(async () => {
                 return {
                     ok: true,
@@ -306,13 +291,10 @@ describe('DaLiveContentOperations - HTML transformation', () => {
 
         let postedFormData: FormData | null = null;
 
+        jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(['/nav']);
+
         mockFetch
-            .mockResolvedValueOnce(mockFetchResponse(200, { data: [{ path: '/nav' }] }, 'application/json'))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
-            .mockResolvedValueOnce(mockFetchResponse(404))
+            .mockResolvedValueOnce(mockFetchResponse(404)) // isSpreadsheetPath HEAD
             .mockImplementationOnce(async () => {
                 return {
                     ok: true,
