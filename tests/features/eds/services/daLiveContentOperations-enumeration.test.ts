@@ -236,6 +236,35 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
             );
         });
 
+        it('should fall back to CDN index when DA.live list returns 0 files (inaccessible org)', async () => {
+            // DA.live list succeeds but returns 0 files (user lacks access to source org)
+            const listSpy = jest.spyOn(service, 'getContentPathsFromDaLive')
+                .mockResolvedValue([]);
+            const indexSpy = jest.spyOn(service, 'getContentPathsFromIndex')
+                .mockResolvedValue(['/index', '/about', '/apparel']);
+
+            // Mock HEAD checks + copy responses
+            mockFetch.mockResolvedValue(mockFetchResponse(200));
+
+            const result = await service.copyContentFromSource(
+                {
+                    org: 'source-org',
+                    site: 'source-site',
+                    indexUrl: 'https://main--source-site--source-org.aem.live/full-index.json',
+                },
+                'dest-org',
+                'dest-site',
+            );
+
+            expect(listSpy).toHaveBeenCalled();
+            expect(indexSpy).toHaveBeenCalled();
+            // 3 from index + essential configs/fragments from HEAD checks
+            expect(result.totalFiles).toBeGreaterThanOrEqual(3);
+            expect(mockLogger.info).toHaveBeenCalledWith(
+                expect.stringContaining('List API returned 0 files'),
+            );
+        });
+
         it('should skip essentialConfigs when DA.live list succeeds', async () => {
             jest.spyOn(service, 'getContentPathsFromDaLive')
                 .mockResolvedValue(['/index', '/placeholders', '/nav']);

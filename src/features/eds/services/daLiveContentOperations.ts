@@ -1254,14 +1254,21 @@ export class DaLiveContentOperations {
         // Report initialization progress
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Enumerating source content...' });
 
-        // Enumerate content paths: prefer DA.live list API (complete), fall back to CDN index
+        // Enumerate content paths: prefer DA.live list API (complete), fall back to CDN index.
+        // The list API returns 404 (mapped to empty array) for orgs the user doesn't belong to,
+        // so also fall back when it succeeds but returns 0 paths.
         let contentPaths: string[];
         let usedDaLiveList = false;
 
         try {
             contentPaths = await this.getContentPathsFromDaLive(source.org, source.site);
-            usedDaLiveList = true;
-            this.logger.info(`[DA.live] Enumerated ${contentPaths.length} content files via list API`);
+            if (contentPaths.length > 0) {
+                usedDaLiveList = true;
+                this.logger.info(`[DA.live] Enumerated ${contentPaths.length} content files via list API`);
+            } else {
+                this.logger.info(`[DA.live] List API returned 0 files, falling back to content index`);
+                contentPaths = await this.getContentPathsFromIndex(source);
+            }
         } catch {
             this.logger.info(`[DA.live] List API unavailable, falling back to content index`);
             contentPaths = await this.getContentPathsFromIndex(source);
