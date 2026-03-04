@@ -66,6 +66,19 @@ export async function installBlockCollections(
         const seenBlocks = new Set<string>();
         const allBlockIds: string[] = [];
 
+        // Discover blocks already in the destination repo (from template reset)
+        // so library installation only ADDS new blocks, never overwrites template blocks
+        const destFiles = await githubFileOps.listRepoFiles(destOwner, destRepo, 'main');
+        for (const entry of destFiles) {
+            const parts = entry.path.split('/');
+            if (parts.length >= 3 && parts[0] === 'blocks') {
+                seenBlocks.add(parts[1]);
+            }
+        }
+        if (seenBlocks.size > 0) {
+            logger.info(`[Block Collection] Destination repo has ${seenBlocks.size} existing blocks — these will be preserved`);
+        }
+
         // Per-library: track which blocks are unique to this library and their files
         const libraryBlockFiles: Array<{
             source: AddonSource;

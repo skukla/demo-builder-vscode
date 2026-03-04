@@ -105,9 +105,9 @@ describe('installBlockCollections (single library)', () => {
         destComponentDef: string = createDestComponentDef(),
         blockIds: string[] = DEFAULT_BLOCKS,
     ): void {
-        mockGithubFileOps.listRepoFiles.mockResolvedValue(
-            createBlockFileEntries(blockIds),
-        );
+        mockGithubFileOps.listRepoFiles
+            .mockResolvedValueOnce([]) // destination (empty — no existing blocks)
+            .mockResolvedValueOnce(createBlockFileEntries(blockIds));
 
         mockGithubFileOps.getBlobContent.mockResolvedValue('export default function() {}');
 
@@ -319,9 +319,9 @@ describe('installBlockCollections (single library)', () => {
         it('should use provided source config for GitHub API calls', async () => {
             const customSource: AddonSource = { owner: 'my-org', repo: 'my-blocks', branch: 'develop' };
 
-            mockGithubFileOps.listRepoFiles.mockResolvedValue(
-                createBlockFileEntries(['hero-cta', 'newsletter']),
-            );
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce([]) // destination (empty)
+                .mockResolvedValueOnce(createBlockFileEntries(['hero-cta', 'newsletter']));
             mockGithubFileOps.getBlobContent.mockResolvedValue('export default function() {}');
             mockGithubFileOps.getFileContent.mockResolvedValue(null);
             mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
@@ -472,12 +472,14 @@ describe('installBlockCollections (single library)', () => {
 
         it('should discover blocks from deeply nested files', async () => {
             // Given: Source has files in nested subdirectories under blocks/
-            mockGithubFileOps.listRepoFiles.mockResolvedValue([
-                { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
-                { path: 'blocks/hero-cta/styles/main.css', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
-                { path: 'blocks/newsletter/newsletter.js', mode: '100644', type: 'blob' as const, sha: 'sha-3' },
-                { path: 'blocks/newsletter/templates/default.html', mode: '100644', type: 'blob' as const, sha: 'sha-4' },
-            ]);
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce([]) // destination (empty)
+                .mockResolvedValueOnce([
+                    { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
+                    { path: 'blocks/hero-cta/styles/main.css', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
+                    { path: 'blocks/newsletter/newsletter.js', mode: '100644', type: 'blob' as const, sha: 'sha-3' },
+                    { path: 'blocks/newsletter/templates/default.html', mode: '100644', type: 'blob' as const, sha: 'sha-4' },
+                ]);
             mockGithubFileOps.getBlobContent.mockResolvedValue('content');
             mockGithubFileOps.getFileContent.mockResolvedValue(null);
             mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
@@ -502,10 +504,12 @@ describe('installBlockCollections (single library)', () => {
 
         it('should ignore files directly in blocks/ (not in subdirectories)', async () => {
             // Given: Source has a file at blocks/README.md (not in a block subdirectory)
-            mockGithubFileOps.listRepoFiles.mockResolvedValue([
-                { path: 'blocks/README.md', mode: '100644', type: 'blob' as const, sha: 'sha-readme' },
-                { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
-            ]);
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce([]) // destination (empty)
+                .mockResolvedValueOnce([
+                    { path: 'blocks/README.md', mode: '100644', type: 'blob' as const, sha: 'sha-readme' },
+                    { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
+                ]);
             mockGithubFileOps.getBlobContent.mockResolvedValue('content');
             mockGithubFileOps.getFileContent.mockResolvedValue(null);
             mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
@@ -642,10 +646,12 @@ describe('installBlockCollections (single library)', () => {
 
         it('should handle source with no block files', async () => {
             // Given: Source has files but none in blocks/ subdirectories
-            mockGithubFileOps.listRepoFiles.mockResolvedValue([
-                { path: 'README.md', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
-                { path: 'package.json', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
-            ]);
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce([]) // destination (empty)
+                .mockResolvedValueOnce([
+                    { path: 'README.md', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
+                    { path: 'package.json', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
+                ]);
             mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
 
             // When
@@ -664,7 +670,9 @@ describe('installBlockCollections (single library)', () => {
 
         it('should handle completely empty source repo', async () => {
             // Given: Source repo has no files at all
-            mockGithubFileOps.listRepoFiles.mockResolvedValue([]);
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce([]) // destination (empty)
+                .mockResolvedValueOnce([]); // source (empty too)
             mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
 
             // When
@@ -682,12 +690,14 @@ describe('installBlockCollections (single library)', () => {
 
         it('should deduplicate block IDs from multiple files in same directory', async () => {
             // Given: Source has multiple files per block directory
-            mockGithubFileOps.listRepoFiles.mockResolvedValue([
-                { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
-                { path: 'blocks/hero-cta/hero-cta.css', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
-                { path: 'blocks/hero-cta/icons/arrow.svg', mode: '100644', type: 'blob' as const, sha: 'sha-3' },
-                { path: 'blocks/newsletter/newsletter.js', mode: '100644', type: 'blob' as const, sha: 'sha-4' },
-            ]);
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce([]) // destination (empty)
+                .mockResolvedValueOnce([
+                    { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
+                    { path: 'blocks/hero-cta/hero-cta.css', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
+                    { path: 'blocks/hero-cta/icons/arrow.svg', mode: '100644', type: 'blob' as const, sha: 'sha-3' },
+                    { path: 'blocks/newsletter/newsletter.js', mode: '100644', type: 'blob' as const, sha: 'sha-4' },
+                ]);
             mockGithubFileOps.getBlobContent.mockResolvedValue('content');
             mockGithubFileOps.getFileContent.mockResolvedValue(null);
             mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
@@ -726,12 +736,14 @@ describe('installBlockCollections (single library)', () => {
 
         it('should not include files outside blocks/ in block file filtering', async () => {
             // Given: Source has blocks/ files mixed with other files
-            mockGithubFileOps.listRepoFiles.mockResolvedValue([
-                { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
-                { path: 'scripts/main.js', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
-                { path: 'styles/global.css', mode: '100644', type: 'blob' as const, sha: 'sha-3' },
-                { path: 'component-definition.json', mode: '100644', type: 'blob' as const, sha: 'sha-4' },
-            ]);
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce([]) // destination (empty)
+                .mockResolvedValueOnce([
+                    { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
+                    { path: 'scripts/main.js', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
+                    { path: 'styles/global.css', mode: '100644', type: 'blob' as const, sha: 'sha-3' },
+                    { path: 'component-definition.json', mode: '100644', type: 'blob' as const, sha: 'sha-4' },
+                ]);
             mockGithubFileOps.getBlobContent.mockResolvedValue('content');
             mockGithubFileOps.getFileContent.mockResolvedValue(null);
             mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
