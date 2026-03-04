@@ -134,6 +134,31 @@ export async function tryWithTimeout<T>(
     }
 }
 
+/**
+ * Run async operations in sequential batches with bounded concurrency.
+ *
+ * Within each batch, items run in parallel via Promise.all.
+ * Batches run sequentially to cap the number of concurrent requests.
+ *
+ * @param items - Items to process
+ * @param batchSize - Max items per batch (concurrent within batch)
+ * @param fn - Async function to apply to each item
+ * @returns Flat array of results in the same order as items
+ */
+export async function runInBatches<T, R>(
+    items: T[],
+    batchSize: number,
+    fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+    const results: R[] = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchResults = await Promise.all(batch.map(fn));
+        results.push(...batchResults);
+    }
+    return results;
+}
+
 // Note: For command-level retry logic with exponential backoff,
 // see ExternalCommandManager.executeWithRetry() which already
 // handles retries for git, npm, aio, and other CLI commands.

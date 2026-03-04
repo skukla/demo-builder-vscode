@@ -17,6 +17,7 @@ import { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubTokenService } from './githubTokenService';
 import { getCacheTTLWithJitter, isExpired, createCacheEntry, type CacheEntry } from '@/core/cache/cacheUtils';
 import { getLogger } from '@/core/logging';
+import { runInBatches } from '@/core/utils/promiseUtils';
 import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -29,6 +30,16 @@ const HELIX_ADMIN_URL = 'https://admin.hlx.page';
 
 /** Default branch for Helix operations */
 const DEFAULT_BRANCH = 'main';
+
+/**
+ * Max concurrent DELETE requests per batch.
+ * Helix Admin API enforces 10 req/s per project — batching at 5 keeps
+ * well under the limit even with sequential live + parallel preview DELETEs.
+ */
+const HELIX_DELETE_BATCH_SIZE = 5;
+
+/** Max retry attempts for 429 Too Many Requests responses */
+const HELIX_RATE_LIMIT_MAX_RETRIES = 3;
 
 /**
  * Response from bulk preview/publish operations (202 Accepted)
@@ -751,6 +762,7 @@ export class HelixService {
         site: string,
         path: string,
         branch: string,
+        retryCount: number = 0,
     ): Promise<{ success: boolean }> {
         const cleanPath = this.normalizeWebPath(path);
         const url = `${HELIX_ADMIN_URL}/${partition}/${org}/${site}/${branch}${cleanPath}`;
@@ -771,6 +783,19 @@ export class HelixService {
             const detail = await this.captureErrorDetail(response);
             this.logger.warn(`[Helix] ${action} failed (${response.status}): ${detail}`);
             return { success: false };
+        }
+        if (response.status === 429) {
+            if (retryCount >= HELIX_RATE_LIMIT_MAX_RETRIES) {
+                throw new Error(`Rate limited after ${retryCount} retries: ${partition} ${cleanPath}`);
+            }
+            const retryAfter = parseInt(response.headers.get('retry-after') || '1', 10);
+            const waitMs = Math.min(retryAfter * 1000, 30000);
+            this.logger.warn(
+                `[Helix] Rate limited on ${partition} ${cleanPath}, ` +
+                `retrying after ${retryAfter}s (attempt ${retryCount + 1}/${HELIX_RATE_LIMIT_MAX_RETRIES})`,
+            );
+            await new Promise(resolve => setTimeout(resolve, waitMs));
+            return this.deleteResource(partition, org, site, path, branch, retryCount + 1);
         }
         if (response.status === 204 || response.status === 404) {
             this.logger.debug(`[Helix] ${successLog}: ${cleanPath}`);
@@ -864,11 +889,12 @@ export class HelixService {
             }
         }
 
-        // Delete preview CDN entries
-        const deleted = await Promise.all(
-            webPaths.map(path => this.deletePreview(org, site, path, branch)),
+        // Delete preview CDN entries in batches to respect 10 req/s rate limit
+        const previewResults = await runInBatches(
+            webPaths, HELIX_DELETE_BATCH_SIZE,
+            path => this.deletePreview(org, site, path, branch),
         );
-        const previewCount = deleted.filter(Boolean).length;
+        const previewCount = previewResults.filter(Boolean).length;
 
         this.logger.info(`[Helix] Unpublish complete: ${liveCount}/${webPaths.length} live, ${previewCount}/${webPaths.length} preview`);
         return { success: liveCount > 0 || previewCount > 0, count: Math.max(liveCount, previewCount) };

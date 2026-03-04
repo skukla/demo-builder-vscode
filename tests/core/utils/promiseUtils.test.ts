@@ -1,4 +1,4 @@
-import { withTimeout, tryWithTimeout } from '@/core/utils/promiseUtils';
+import { withTimeout, tryWithTimeout, runInBatches } from '@/core/utils/promiseUtils';
 
 describe('promiseUtils', () => {
     beforeEach(() => {
@@ -340,6 +340,42 @@ describe('promiseUtils', () => {
 
             expect(result.path).toBe('/tmp/file.txt');
             expect(result.size).toBe(1024);
+        });
+    });
+
+    describe('runInBatches', () => {
+        it('should process items in sequential batches', async () => {
+            const order: number[] = [];
+            const fn = async (n: number) => { order.push(n); return n * 2; };
+
+            const results = await runInBatches([1, 2, 3, 4, 5], 2, fn);
+
+            expect(results).toEqual([2, 4, 6, 8, 10]);
+            expect(order).toEqual([1, 2, 3, 4, 5]);
+        });
+
+        it('should return empty array for empty input', async () => {
+            const results = await runInBatches([], 5, async (x: number) => x);
+            expect(results).toEqual([]);
+        });
+
+        it('should handle batch size larger than items', async () => {
+            const results = await runInBatches([1, 2], 10, async (n) => n + 1);
+            expect(results).toEqual([2, 3]);
+        });
+
+        it('should handle batch size of 1 (sequential)', async () => {
+            const results = await runInBatches([10, 20, 30], 1, async (n) => n / 10);
+            expect(results).toEqual([1, 2, 3]);
+        });
+
+        it('should propagate errors from the callback', async () => {
+            const fn = async (n: number) => {
+                if (n === 3) throw new Error('batch error');
+                return n;
+            };
+
+            await expect(runInBatches([1, 2, 3, 4], 2, fn)).rejects.toThrow('batch error');
         });
     });
 
