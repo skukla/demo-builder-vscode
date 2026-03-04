@@ -22,7 +22,7 @@ import { DEFAULT_FOLDER_MAPPING, buildSiteConfigParams, ConfigurationService } f
 import { COMPONENT_IDS } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
-import { getBlockLibrarySource, getBlockLibraryName, isBlockLibraryAvailableForPackage } from '@/features/project-creation/services/blockLibraryLoader';
+import { getBlockLibrarySource, getBlockLibraryContentSource, getBlockLibraryName, isBlockLibraryAvailableForPackage } from '@/features/project-creation/services/blockLibraryLoader';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -565,6 +565,13 @@ export async function executeEdsReset(
         }
 
         // Steps 4-6: Content Pipeline
+        // Build library content sources for block doc page copying
+        const libraryContentSources: Array<{ org: string; site: string }> = [];
+        for (const libraryId of (project.selectedBlockLibraries ?? [])) {
+            const cs = getBlockLibraryContentSource(libraryId);
+            if (cs) libraryContentSources.push(cs);
+        }
+
         const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
         const { executeEdsPipeline } = await import('./edsPipeline');
 
@@ -576,6 +583,7 @@ export async function executeEdsReset(
                 contentSource: contentSourceConfig,
                 contentPatches, includeBlockLibrary,
                 blockCollectionIds: repoResetResult.blockCollectionIds,
+                libraryContentSources,
                 purgeCache: true, skipPublish: false,
             },
             {

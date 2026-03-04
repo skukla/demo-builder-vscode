@@ -16,6 +16,7 @@ import {
     getNativeBlockLibraries,
     getDefaultBlockLibraryIds,
     getBlockLibrarySource,
+    getBlockLibraryContentSource,
     getBlockLibraryName,
     isBlockLibraryAvailableForPackage,
 } from '@/features/project-creation/services/blockLibraryLoader';
@@ -273,6 +274,36 @@ describe('blockLibraryLoader', () => {
             const source = getBlockLibrarySource('nonexistent');
 
             expect(source).toBeUndefined();
+        });
+    });
+
+    describe('getBlockLibraryContentSource', () => {
+        it('should return content source for demo-team-blocks', () => {
+            const cs = getBlockLibraryContentSource('demo-team-blocks');
+
+            expect(cs).toBeDefined();
+            expect(cs?.org).toBe('demo-system-stores');
+            expect(cs?.site).toBe('accs-citisignal');
+        });
+
+        it('should return content source for isle5', () => {
+            const cs = getBlockLibraryContentSource('isle5');
+
+            expect(cs).toBeDefined();
+            expect(cs?.org).toBe('stephen-garner-adobe');
+            expect(cs?.site).toBe('isle5');
+        });
+
+        it('should return undefined for library without content source', () => {
+            const cs = getBlockLibraryContentSource('buildright-blocks');
+
+            expect(cs).toBeUndefined();
+        });
+
+        it('should return undefined for unknown library', () => {
+            const cs = getBlockLibraryContentSource('nonexistent');
+
+            expect(cs).toBeUndefined();
         });
     });
 

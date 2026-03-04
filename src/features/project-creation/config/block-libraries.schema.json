@@ -75,6 +75,23 @@
         "default": {
           "type": "boolean",
           "description": "Whether this library should be pre-selected by default for non-native packages"
+        },
+        "contentSource": {
+          "type": "object",
+          "required": ["org", "site"],
+          "properties": {
+            "org": {
+              "type": "string",
+              "minLength": 1,
+              "description": "DA.live organization name that hosts block doc pages"
+            },
+            "site": {
+              "type": "string",
+              "minLength": 1,
+              "description": "DA.live site name that hosts block doc pages"
+            }
+          },
+          "description": "DA.live content source containing block documentation pages (.da/library/blocks/)"
         }
       }
     },

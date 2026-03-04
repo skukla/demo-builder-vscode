@@ -118,6 +118,21 @@ export function getBlockLibrarySource(libraryId: string): AddonSource | undefine
 }
 
 /**
+ * Resolve a block library ID to its DA.live content source.
+ *
+ * The content source hosts block documentation pages at .da/library/blocks/.
+ * These pages are copied to the user's site during the pipeline so that
+ * DA.live's block library can render them.
+ *
+ * @param libraryId - The block library ID (e.g., "demo-team-blocks")
+ * @returns The content source {org, site}, or undefined if not configured
+ */
+export function getBlockLibraryContentSource(libraryId: string): { org: string; site: string } | undefined {
+    const lib = config.libraries.find(l => l.id === libraryId);
+    return lib?.contentSource;
+}
+
+/**
  * Get the display name for a block library.
  *
  * @param libraryId - The block library ID

@@ -15,6 +15,7 @@ import {
     type EdsPipelineParams,
     type EdsPipelineServices,
 } from '@/features/eds/services/edsPipeline';
+import { DaLiveError } from '@/features/eds/services/types';
 
 // Mock edsHelpers
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
@@ -47,6 +48,12 @@ describe('executeEdsPipeline - operations', () => {
                 success: true,
                 blocksCount: 5,
                 paths: ['.da/library/blocks.json', '.da/library/blocks/hero'],
+            }),
+            copyContent: jest.fn().mockResolvedValue({
+                success: true,
+                copiedFiles: [],
+                failedFiles: [],
+                totalFiles: 0,
             }),
         } as unknown as EdsPipelineServices['daLiveContentOps'];
 
@@ -230,8 +237,81 @@ describe('executeEdsPipeline - operations', () => {
                 'test-owner',   // user's repo, not template
                 'test-repo',
                 expect.any(Function),
-                blockCollectionIds,
+                undefined,
             );
+        });
+
+        it('should copy doc pages via DA.live API for owned orgs', async () => {
+            const libraryContentSources = [
+                { org: 'demo-system-stores', site: 'accs-citisignal' },
+                { org: 'stephen-garner-adobe', site: 'isle5' },
+            ];
+            await executeEdsPipeline(
+                { ...baseParams, skipContent: true, includeBlockLibrary: true, libraryContentSources },
+                services,
+            );
+
+            // copyContent called for each source (DA.live API enumeration)
+            expect(mockDaLiveContentOps.copyContent).toHaveBeenCalledTimes(2);
+            expect(mockDaLiveContentOps.copyContent).toHaveBeenCalledWith(
+                { org: 'demo-system-stores', site: 'accs-citisignal', path: '.da/library/blocks' },
+                { org: 'test-org', site: 'test-site', path: '.da/library/blocks' },
+                { recursive: true },
+            );
+
+            // libraryContentSources also forwarded for CDN fallback
+            expect(mockDaLiveContentOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
+                'test-org', 'test-site', 'template-owner', 'template-repo',
+                expect.any(Function),
+                libraryContentSources,
+            );
+        });
+
+        it('should swallow 403 from copyContent and continue (CDN fallback)', async () => {
+            (mockDaLiveContentOps.copyContent as jest.Mock).mockRejectedValue(
+                new DaLiveError('Access denied when trying to list directory.', 'HTTP_403', 403),
+            );
+
+            const libraryContentSources = [
+                { org: 'third-party-org', site: 'their-site' },
+            ];
+            const result = await executeEdsPipeline(
+                { ...baseParams, skipContent: true, includeBlockLibrary: true, libraryContentSources },
+                services,
+            );
+
+            // Pipeline succeeds despite 403
+            expect(result.success).toBe(true);
+            // createBlockLibraryFromTemplate still called with sources for CDN fallback
+            expect(mockDaLiveContentOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
+                expect.anything(), expect.anything(), expect.anything(), expect.anything(),
+                expect.any(Function),
+                libraryContentSources,
+            );
+        });
+
+        it('should propagate non-403 errors from copyContent', async () => {
+            (mockDaLiveContentOps.copyContent as jest.Mock).mockRejectedValue(
+                new Error('Network failure'),
+            );
+
+            const result = await executeEdsPipeline(
+                { ...baseParams, skipContent: true, includeBlockLibrary: true, libraryContentSources: [{ org: 'o', site: 's' }] },
+                services,
+            );
+
+            // Non-403 errors should fail the pipeline
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('Network failure');
+        });
+
+        it('should not call copyContent when libraryContentSources is empty', async () => {
+            await executeEdsPipeline(
+                { ...baseParams, skipContent: true, includeBlockLibrary: true, libraryContentSources: [] },
+                services,
+            );
+
+            expect(mockDaLiveContentOps.copyContent).not.toHaveBeenCalled();
         });
 
         it('should include library paths in result', async () => {

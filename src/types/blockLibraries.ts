@@ -10,6 +10,8 @@ export interface BlockLibrary {
     nativeForPackages?: string[];
     onlyForPackages?: string[];
     default?: boolean;
+    /** DA.live content source containing block documentation pages (.da/library/blocks/) */
+    contentSource?: { org: string; site: string };
 }
 
 export interface BlockLibrariesConfig {

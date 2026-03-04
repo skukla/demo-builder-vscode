@@ -849,9 +849,8 @@ export class DaLiveContentOperations {
      * @param templateOwner - GitHub owner of template repo
      * @param templateRepo - GitHub repo name of template
      * @param getFileContent - Function to fetch file from GitHub (from GitHubFileOperations)
-     * @param blockCollectionIds - Unused. Kept for call-site compatibility while the
-     *   pipeline still passes it. DA.live's library only renders block lists for a
-     *   section titled exactly "Blocks", so grouping is not possible.
+     * @param libraryContentSources - DA.live sites whose published block doc pages should be
+     *   copied via public CDN for blocks that lack unsafeHTML auto-generation
      * @returns Result with success status, block count, and paths created (for publishing)
      */
     async createBlockLibraryFromTemplate(
@@ -860,7 +859,7 @@ export class DaLiveContentOperations {
         templateOwner: string,
         templateRepo: string,
         getFileContent: (owner: string, repo: string, path: string) => Promise<{ content: string; sha: string } | null>,
-        _blockCollectionIds?: string[],
+        libraryContentSources?: Array<{ org: string; site: string }>,
     ): Promise<{ success: boolean; blocksCount: number; paths: string[]; error?: string }> {
         try {
             const componentDef = await getFileContent(templateOwner, templateRepo, 'component-definition.json');
@@ -872,24 +871,24 @@ export class DaLiveContentOperations {
 
             // GitHubFileOperations.getFileContent already decodes base64
             const parsed = JSON.parse(componentDef.content);
-            const blocksGroup = parsed.groups?.find((g: { id: string }) => g.id === 'blocks');
 
-            const blocks = blocksGroup?.components?.map((c: {
-                title: string;
-                id: string;
-                plugins?: { da?: { unsafeHTML?: string } };
-            }) => ({
-                title: c.title,
-                id: c.id,
-                exampleHtml: c.plugins?.da?.unsafeHTML,
-            })) ?? [];
+            // Scan ALL groups (not just 'blocks') so entries in other groups
+            // like 'product' (product-teaser) are included in the library.
+            const blocks = (parsed.groups ?? []).flatMap(
+                (g: { components?: Array<{ title: string; id: string; plugins?: { da?: { unsafeHTML?: string } } }> }) =>
+                    (g.components ?? []).map(c => ({
+                        title: c.title,
+                        id: c.id,
+                        exampleHtml: c.plugins?.da?.unsafeHTML,
+                    })),
+            );
 
             if (blocks.length === 0) {
                 this.logger.debug('[DA.live] No blocks found in component-definition.json');
                 return { success: true, blocksCount: 0, paths: [] };
             }
 
-            return await this.createBlockLibrary(org, site, blocks);
+            return await this.createBlockLibrary(org, site, blocks, libraryContentSources);
         } catch (error) {
             this.logger.warn(`[DA.live] Block library from template failed: ${(error as Error).message}`);
             return { success: false, blocksCount: 0, paths: [], error: (error as Error).message };
@@ -913,6 +912,7 @@ export class DaLiveContentOperations {
         org: string,
         site: string,
         blocks: Array<{ title: string; id: string; exampleHtml?: string }>,
+        libraryContentSources?: Array<{ org: string; site: string }>,
     ): Promise<{ success: boolean; blocksCount: number; paths: string[]; error?: string }> {
         if (blocks.length === 0) {
             return { success: true, blocksCount: 0, paths: [] };
@@ -921,6 +921,13 @@ export class DaLiveContentOperations {
         try {
             // Create doc pages for blocks that have exampleHtml but no existing page
             await this.ensureBlockDocPages(org, site, blocks);
+
+            // Copy doc pages from library content sources for blocks without
+            // unsafeHTML. Uses the public CDN (.plain.html) to avoid requiring
+            // DA.live API auth on third-party source orgs.
+            if (libraryContentSources?.length) {
+                await this.copyBlockDocPagesFromSources(org, site, blocks, libraryContentSources);
+            }
 
             // Check which blocks have documentation pages (including newly created ones)
             const existingBlockIds = await this.getBlocksWithDocs(org, site, blocks);
@@ -984,9 +991,10 @@ export class DaLiveContentOperations {
     /**
      * Create documentation pages for blocks that have exampleHtml but no existing page.
      *
-     * This is non-destructive: only creates pages for blocks missing from DA.live.
-     * Blocks that already have doc pages (e.g., copied from a template's content
-     * source) are left untouched. Failures are logged but don't halt the pipeline.
+     * Non-destructive: only creates pages for blocks missing from DA.live.
+     * Blocks that already have doc pages (e.g., copied from a library content
+     * source) are left untouched — the authored page is higher quality than
+     * the generated one. Failures are logged but don't halt the pipeline.
      *
      * @param org - Organization name
      * @param site - Site name
@@ -1000,12 +1008,18 @@ export class DaLiveContentOperations {
         const blocksWithHtml = blocks.filter(b => b.exampleHtml);
         if (blocksWithHtml.length === 0) return;
 
-        // Always create/overwrite doc pages for blocks with exampleHtml.
-        // Using overwrite ensures format fixes (e.g. section wrapper) are
-        // applied to pages created by earlier extension versions.
-        this.logger.info(`[DA.live] Creating ${blocksWithHtml.length} block doc pages`);
+        // Check which blocks already have doc pages (e.g., copied from content source)
+        const existingIds = new Set(await this.getBlocksWithDocs(org, site, blocksWithHtml));
+        const missing = blocksWithHtml.filter(b => !existingIds.has(b.id));
 
-        for (const block of blocksWithHtml) {
+        if (missing.length === 0) {
+            this.logger.debug('[DA.live] All blocks with exampleHtml already have doc pages');
+            return;
+        }
+
+        this.logger.info(`[DA.live] Creating ${missing.length} block doc pages (${existingIds.size} already exist)`);
+
+        for (const block of missing) {
             try {
                 // Wrap exampleHtml in document structure expected by DA.live.
                 // Block must be inside a section <div> — DA.live treats direct
@@ -1016,7 +1030,6 @@ export class DaLiveContentOperations {
                     org, site,
                     `.da/library/blocks/${block.id}.html`,
                     docHtml,
-                    { overwrite: true },
                 );
                 if (result.success) {
                     this.logger.debug(`[DA.live] Created doc page for block: ${block.id}`);
@@ -1026,6 +1039,61 @@ export class DaLiveContentOperations {
             } catch (error) {
                 this.logger.warn(`[DA.live] Failed to create doc page for ${block.id}: ${(error as Error).message}`);
             }
+        }
+    }
+
+    /**
+     * Copy block doc pages from library content sources via public CDN.
+     *
+     * For blocks without unsafeHTML (no auto-generated doc page), fetches each
+     * block's doc page from each content source's public CDN and writes it to
+     * the destination site. Tries content sources in order and stops at the
+     * first successful fetch per block.
+     *
+     * Uses the CDN (.plain.html) instead of the DA.live /list/ API so that no
+     * API auth is required on the source org — only the destination needs auth.
+     *
+     * @param org - Destination DA.live organization
+     * @param site - Destination DA.live site
+     * @param blocks - All block definitions (filters to those without unsafeHTML)
+     * @param contentSources - Library content sources to fetch doc pages from
+     */
+    private async copyBlockDocPagesFromSources(
+        org: string,
+        site: string,
+        blocks: Array<{ id: string; exampleHtml?: string }>,
+        contentSources: Array<{ org: string; site: string }>,
+    ): Promise<void> {
+        // Only need CDN copy for blocks WITHOUT unsafeHTML —
+        // blocks WITH unsafeHTML are handled by ensureBlockDocPages
+        const blocksNeedingCdnCopy = blocks.filter(b => !b.exampleHtml);
+        if (blocksNeedingCdnCopy.length === 0) return;
+
+        // Check which blocks already have doc pages (e.g., copied by copyContent
+        // from an owned org). Only CDN-fetch the ones still missing.
+        const existingIds = new Set(await this.getBlocksWithDocs(org, site, blocksNeedingCdnCopy));
+        const missing = blocksNeedingCdnCopy.filter(b => !existingIds.has(b.id));
+        if (missing.length === 0) return;
+
+        const token = await this.getImsToken();
+        let copiedCount = 0;
+
+        for (const block of missing) {
+            const docPath = `/.da/library/blocks/${block.id}`;
+            for (const source of contentSources) {
+                const success = await this.copySingleFile(
+                    token, source, docPath,
+                    { org, site }, docPath,
+                );
+                if (success) {
+                    copiedCount++;
+                    break; // Found in this source, move to next block
+                }
+            }
+        }
+
+        if (copiedCount > 0) {
+            this.logger.info(`[DA.live] Copied ${copiedCount} block doc pages from CDN (${existingIds.size} already existed)`);
         }
     }
 
@@ -1043,7 +1111,7 @@ export class DaLiveContentOperations {
     private async getBlocksWithDocs(
         org: string,
         site: string,
-        blocks: Array<{ title: string; id: string }>,
+        blocks: Array<{ id: string }>,
     ): Promise<string[]> {
         const token = await this.getImsToken();
         const existingIds: string[] = [];

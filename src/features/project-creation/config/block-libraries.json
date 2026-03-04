@@ -13,7 +13,11 @@
         "branch": "main"
       },
       "nativeForPackages": ["citisignal"],
-      "stackTypes": ["eds-storefront"]
+      "stackTypes": ["eds-storefront"],
+      "contentSource": {
+        "org": "demo-system-stores",
+        "site": "accs-citisignal"
+      }
     },
     {
       "id": "isle5",
@@ -27,7 +31,11 @@
       },
       "nativeForPackages": ["isle5"],
       "stackTypes": ["eds-storefront"],
-      "default": true
+      "default": true,
+      "contentSource": {
+        "org": "stephen-garner-adobe",
+        "site": "isle5"
+      }
     },
     {
       "id": "buildright-blocks",

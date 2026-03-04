@@ -28,7 +28,7 @@ import { DaLiveAuthError, type GitHubTreeInput } from '../services/types';
 import { configureDaLivePermissions, ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getBlockLibrarySource, getBlockLibraryName, isBlockLibraryAvailableForPackage } from '@/features/project-creation/services/blockLibraryLoader';
+import { getBlockLibrarySource, getBlockLibraryContentSource, getBlockLibraryName, isBlockLibraryAvailableForPackage } from '@/features/project-creation/services/blockLibraryLoader';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -753,6 +753,13 @@ export async function executeStorefrontSetupPhases(
         // Phase 4-5: Content Pipeline (with token expiry recovery)
         if (signal.aborted) throw new Error('Operation cancelled');
 
+        // Build library content sources for block doc page copying
+        const libraryContentSources: Array<{ org: string; site: string }> = [];
+        for (const libraryId of effectiveBlockLibraries) {
+            const cs = getBlockLibraryContentSource(libraryId);
+            if (cs) libraryContentSources.push(cs);
+        }
+
         const { executeEdsPipeline } = await import('../services/edsPipeline');
 
         let pipelineAttempt = 0;
@@ -775,6 +782,7 @@ export async function executeStorefrontSetupPhases(
                         contentPatchSource: edsConfig.contentPatchSource,
                         includeBlockLibrary: true,
                         blockCollectionIds,
+                        libraryContentSources,
                         purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
                     },
                     {

@@ -40,6 +40,13 @@ export interface BlockLibraryEntry {
     name: string;
 }
 
+/** Per-library block discovery result used by merge helpers */
+interface LibraryBlockData {
+    source: AddonSource;
+    blockIds: string[];
+    files: Array<{ path: string; sha: string }>;
+}
+
 /**
  * Install blocks from multiple libraries into the user's repo in a single atomic commit.
  *
@@ -82,11 +89,7 @@ export async function installBlockCollections(
         }
 
         // Per-library: track which blocks are unique to this library and their files
-        const libraryBlockFiles: Array<{
-            source: AddonSource;
-            blockIds: string[];
-            files: Array<{ path: string; sha: string }>;
-        }> = [];
+        const libraryBlockFiles: LibraryBlockData[] = [];
 
         // Per-library: track source commit SHA for version tracking
         const libraryVersions: LibraryVersionInfo[] = [];
@@ -259,11 +262,7 @@ async function buildMergedComponentDefinitionMultiSource(
     githubFileOps: GitHubFileOperations,
     destOwner: string,
     destRepo: string,
-    libraryBlockFiles: Array<{
-        source: AddonSource;
-        blockIds: string[];
-        files: Array<{ path: string; sha: string }>;
-    }>,
+    libraryBlockFiles: LibraryBlockData[],
 ): Promise<string | null> {
     // Collect entries tagged by group from all source repos
     const entriesByGroup = new Map<string, {
@@ -341,11 +340,7 @@ async function buildMergedComponentFiltersMultiSource(
     githubFileOps: GitHubFileOperations,
     destOwner: string,
     destRepo: string,
-    libraryBlockFiles: Array<{
-        source: AddonSource;
-        blockIds: string[];
-        files: Array<{ path: string; sha: string }>;
-    }>,
+    libraryBlockFiles: LibraryBlockData[],
 ): Promise<string | null> {
     const newSectionIds: string[] = [];
     const newSubFilters: Array<{ id: string; components: string[] }> = [];
@@ -432,11 +427,7 @@ async function buildMergedComponentModelsMultiSource(
     githubFileOps: GitHubFileOperations,
     destOwner: string,
     destRepo: string,
-    libraryBlockFiles: Array<{
-        source: AddonSource;
-        blockIds: string[];
-        files: Array<{ path: string; sha: string }>;
-    }>,
+    libraryBlockFiles: LibraryBlockData[],
 ): Promise<string | null> {
     const newModels: Array<{ id: string; [key: string]: unknown }> = [];
     const collectedIds = new Set<string>();

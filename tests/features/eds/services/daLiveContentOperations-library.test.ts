@@ -127,8 +127,8 @@ describe('createBlockLibraryFromTemplate', () => {
         expect(result.blocksCount).toBe(0);
     });
 
-    it('should return success with zero blocks when template has no blocks group', async () => {
-        // Given: Template with component-definition.json but no blocks group
+    it('should return success with zero blocks when all groups have empty components', async () => {
+        // Given: Template with component-definition.json but no components in any group
         const content = { groups: [{ id: 'other', title: 'Other', components: [] }] };
         mockGetFileContent.mockResolvedValue({
             content: JSON.stringify(content),
@@ -143,6 +143,44 @@ describe('createBlockLibraryFromTemplate', () => {
         // Then: Should return success with zero blocks
         expect(result.success).toBe(true);
         expect(result.blocksCount).toBe(0);
+    });
+
+    it('should extract blocks from all groups, not just the blocks group', async () => {
+        // Given: Template with blocks in multiple groups (blocks + product)
+        const content = {
+            groups: [
+                {
+                    id: 'blocks',
+                    title: 'Blocks',
+                    components: [
+                        { title: 'Hero', id: 'hero', plugins: { da: { unsafeHTML: '<div class="hero">Example</div>' } } },
+                    ],
+                },
+                {
+                    id: 'product',
+                    title: 'Product',
+                    components: [
+                        { title: 'Product Teaser', id: 'product-teaser' },
+                    ],
+                },
+            ],
+        };
+        mockGetFileContent.mockResolvedValue({
+            content: JSON.stringify(content),
+            sha: 'abc123',
+        });
+        mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({}) } as Response);
+
+        // When: createBlockLibraryFromTemplate is called
+        const result = await service.createBlockLibraryFromTemplate(
+            destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+        );
+
+        // Then: Should include blocks from both groups
+        expect(result.success).toBe(true);
+        expect(result.blocksCount).toBe(2);
+        expect(result.paths).toContain('.da/library/blocks/hero');
+        expect(result.paths).toContain('.da/library/blocks/product-teaser');
     });
 
     it('should handle getFileContent errors gracefully', async () => {
@@ -303,9 +341,9 @@ describe('createBlockLibraryFromTemplate', () => {
             );
             expect(postCalls).toHaveLength(2);
 
-            // Verify logging
+            // Verify logging (0 already exist since existingDocPages is empty)
             expect(mockLogger.info).toHaveBeenCalledWith(
-                expect.stringContaining('Creating 2 block doc pages'),
+                expect.stringContaining('Creating 2 block doc pages (0 already exist)'),
             );
         });
 
@@ -335,8 +373,8 @@ describe('createBlockLibraryFromTemplate', () => {
             expect(result.paths).not.toContain('.da/library/blocks/cards');
         });
 
-        it('should overwrite blocks that already have doc pages', async () => {
-            // Given: hero-cta already has a doc page
+        it('should skip blocks that already have doc pages from content source', async () => {
+            // Given: hero-cta already has a doc page (e.g., copied from library content source)
             mockGetFileContent.mockResolvedValue({
                 content: createComponentDef([
                     { title: 'Hero CTA', id: 'hero-cta', unsafeHTML: '<div class="hero-cta">CTA</div>' },
@@ -345,7 +383,7 @@ describe('createBlockLibraryFromTemplate', () => {
                 sha: 'abc123',
             });
             mockFetch.mockImplementation(createDocPageMockFetch({
-                existingDocPages: ['hero-cta'], // Already exists — should be overwritten
+                existingDocPages: ['hero-cta'], // Already exists — should NOT be overwritten
                 createSucceeds: true,
             }));
 
@@ -354,18 +392,19 @@ describe('createBlockLibraryFromTemplate', () => {
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
-            // Then: Both blocks should be in library
+            // Then: Both blocks should be in library (hero-cta via existing, newsletter via created)
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(2);
 
-            // Both blocks should get POST to /source/ (overwrite ensures format consistency)
+            // Only newsletter should get POST to /source/ (hero-cta already exists)
             const createCalls = mockFetch.mock.calls.filter(
                 (call: [string, RequestInit]) =>
                     call[0].includes('/source/') &&
                     call[0].includes('.da/library/blocks/') &&
                     call[1]?.method === 'POST',
             );
-            expect(createCalls).toHaveLength(2);
+            expect(createCalls).toHaveLength(1);
+            expect(createCalls[0][0]).toContain('newsletter');
         });
 
         it('should continue when one doc page creation fails', async () => {
@@ -487,6 +526,194 @@ describe('createBlockLibraryFromTemplate', () => {
             expect(postedHtml).toBe(
                 `<body><header></header><main><div>${exampleHtml}</div></main><footer></footer></body>`,
             );
+        });
+    });
+
+    describe('copyBlockDocPagesFromSources (CDN-based copy)', () => {
+        /**
+         * Helper mock that handles the CDN-based copy flow:
+         * 1. copySingleFile: HEAD to check spreadsheet (.json) → 404 (not a spreadsheet)
+         * 2. copySingleFile: GET .plain.html from public CDN → returns HTML content
+         * 3. copySingleFile: POST to /source/ on destination → creates doc page
+         * 4. ensureBlockDocPages: HEAD checks for blocks with exampleHtml
+         * 5. getBlocksWithDocs: HEAD checks for ALL blocks
+         * 6. createBlockLibrary: DELETE + POST config + POST spreadsheet
+         */
+        function createCdnCopyMockFetch(config: {
+            cdnAvailableBlocks: string[];
+        }) {
+            const { cdnAvailableBlocks } = config;
+            const createdPages = new Set<string>();
+
+            return async (url: string, options?: RequestInit) => {
+                // HEAD check for spreadsheet detection (.json URL)
+                if (url.includes('.aem.live/') && url.endsWith('.json') && options?.method === 'HEAD') {
+                    return { ok: false, status: 404 } as Response;
+                }
+
+                // GET .plain.html from public CDN (copySingleFile fetch)
+                if (url.includes('.aem.live/') && url.includes('.plain.html')) {
+                    const match = url.match(/\.da\/library\/blocks\/([^.]+)\.plain\.html/);
+                    if (match && cdnAvailableBlocks.includes(match[1])) {
+                        return {
+                            ok: true,
+                            status: 200,
+                            headers: new Headers({ 'content-type': 'text/html' }),
+                            text: async () => `<div class="${match[1]}">Block content</div>`,
+                            blob: async () => new Blob([`<div class="${match[1]}">Block content</div>`]),
+                        } as unknown as Response;
+                    }
+                    return { ok: false, status: 404 } as Response;
+                }
+
+                // POST to /source/ (create doc page or CDN copy write)
+                if (url.includes('/source/') && url.includes('.da/library/blocks/') && options?.method === 'POST') {
+                    const match = url.match(/\.da\/library\/blocks\/([^.]+)\.html/);
+                    if (match) createdPages.add(match[1]);
+                    return { ok: true, status: 200 } as Response;
+                }
+
+                // HEAD check for block doc pages (ensureBlockDocPages + getBlocksWithDocs)
+                if (url.includes('.da/library/blocks/') && url.endsWith('.html') && options?.method === 'HEAD') {
+                    const match = url.match(/\.da\/library\/blocks\/([^.]+)\.html/);
+                    if (match) {
+                        const exists = createdPages.has(match[1]);
+                        return { ok: exists, status: exists ? 200 : 404 } as Response;
+                    }
+                }
+
+                // Config and spreadsheet operations
+                if (url.includes('/config/') && options?.method === 'GET') {
+                    return { ok: true, status: 200, json: async () => ({}) } as Response;
+                }
+                if (url.includes('/config/') && options?.method === 'POST') {
+                    return { ok: true, status: 200 } as Response;
+                }
+                if (options?.method === 'DELETE') {
+                    return { ok: true, status: 200 } as Response;
+                }
+                if (url.includes('.json') && options?.method === 'POST') {
+                    return { ok: true, status: 200 } as Response;
+                }
+
+                return { ok: true, status: 200 } as Response;
+            };
+        }
+
+        it('should copy doc pages from CDN for blocks without unsafeHTML', async () => {
+            // Given: hero-v2 has no unsafeHTML but exists on CDN content source
+            mockGetFileContent.mockResolvedValue({
+                content: createComponentDef([
+                    { title: 'Cards', id: 'cards', unsafeHTML: '<div class="cards">Example</div>' },
+                    { title: 'Hero V2', id: 'hero-v2' }, // No unsafeHTML — needs CDN copy
+                ]),
+                sha: 'abc123',
+            });
+            mockFetch.mockImplementation(createCdnCopyMockFetch({
+                cdnAvailableBlocks: ['hero-v2'],
+            }));
+
+            const contentSources = [{ org: 'demo-system-stores', site: 'accs-citisignal' }];
+
+            // When: createBlockLibraryFromTemplate is called with content sources
+            const result = await service.createBlockLibraryFromTemplate(
+                destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+                contentSources,
+            );
+
+            // Then: Both blocks should appear in the library
+            expect(result.success).toBe(true);
+            expect(result.blocksCount).toBe(2);
+            expect(result.paths).toContain('.da/library/blocks/cards');
+            expect(result.paths).toContain('.da/library/blocks/hero-v2');
+
+            // Verify CDN fetch was made for hero-v2 (not cards, which has unsafeHTML)
+            const cdnFetches = mockFetch.mock.calls.filter(
+                (call: [string, RequestInit]) =>
+                    call[0].includes('aem.live') && call[0].includes('.plain.html'),
+            );
+            expect(cdnFetches.some((c: [string]) => c[0].includes('hero-v2'))).toBe(true);
+            expect(cdnFetches.some((c: [string]) => c[0].includes('cards'))).toBe(false);
+        });
+
+        it('should try multiple content sources in order', async () => {
+            // Given: hero-v2 not on first source, available on second
+            mockGetFileContent.mockResolvedValue({
+                content: createComponentDef([
+                    { title: 'Hero V2', id: 'hero-v2' },
+                ]),
+                sha: 'abc123',
+            });
+
+            const createdPages = new Set<string>();
+            mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
+                if (url.includes('.aem.live/') && url.endsWith('.json') && options?.method === 'HEAD') {
+                    return { ok: false, status: 404 } as Response;
+                }
+                if (url.includes('.aem.live/') && url.includes('.plain.html')) {
+                    // Only available on second source (isle5)
+                    if (url.includes('isle5')) {
+                        return {
+                            ok: true, status: 200,
+                            headers: new Headers({ 'content-type': 'text/html' }),
+                            text: async () => '<div class="hero-v2">Content</div>',
+                        } as unknown as Response;
+                    }
+                    return { ok: false, status: 404 } as Response;
+                }
+                if (url.includes('/source/') && url.includes('.da/library/blocks/') && options?.method === 'POST') {
+                    const match = url.match(/\.da\/library\/blocks\/([^.]+)\.html/);
+                    if (match) createdPages.add(match[1]);
+                    return { ok: true, status: 200 } as Response;
+                }
+                if (url.includes('.da/library/blocks/') && url.endsWith('.html') && options?.method === 'HEAD') {
+                    const match = url.match(/\.da\/library\/blocks\/([^.]+)\.html/);
+                    if (match) return { ok: createdPages.has(match[1]), status: createdPages.has(match[1]) ? 200 : 404 } as Response;
+                }
+                if (url.includes('/config/') && options?.method === 'GET') {
+                    return { ok: true, status: 200, json: async () => ({}) } as Response;
+                }
+                if (url.includes('/config/') && options?.method === 'POST') return { ok: true, status: 200 } as Response;
+                if (options?.method === 'DELETE') return { ok: true, status: 200 } as Response;
+                if (url.includes('.json') && options?.method === 'POST') return { ok: true, status: 200 } as Response;
+                return { ok: true, status: 200 } as Response;
+            });
+
+            const contentSources = [
+                { org: 'first-org', site: 'first-site' },
+                { org: 'stephen-garner-adobe', site: 'isle5' },
+            ];
+
+            // When
+            const result = await service.createBlockLibraryFromTemplate(
+                destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+                contentSources,
+            );
+
+            // Then: hero-v2 should be found via second source
+            expect(result.success).toBe(true);
+            expect(result.blocksCount).toBe(1);
+            expect(result.paths).toContain('.da/library/blocks/hero-v2');
+        });
+
+        it('should skip CDN copy when no libraryContentSources provided', async () => {
+            // Given: Block without unsafeHTML and no content sources
+            mockGetFileContent.mockResolvedValue({
+                content: createComponentDef([
+                    { title: 'Hero V2', id: 'hero-v2' }, // No unsafeHTML, no CDN source
+                ]),
+                sha: 'abc123',
+            });
+            mockFetch.mockResolvedValue({ ok: false, status: 404 } as Response);
+
+            // When: Called without content sources
+            const result = await service.createBlockLibraryFromTemplate(
+                destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+            );
+
+            // Then: Block excluded (no doc page, no way to get one)
+            expect(result.success).toBe(true);
+            expect(result.blocksCount).toBe(0);
         });
     });
 
