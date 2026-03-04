@@ -2,6 +2,8 @@
  * Tests for Projects Dashboard handlers
  */
 
+import * as os from 'os';
+import * as path from 'path';
 import {
     handleGetProjects,
     handleSelectProject,
@@ -105,6 +107,26 @@ describe('dashboardHandlers', () => {
             await handleGetProjects(context as any);
 
             expect(context.sendMessage).not.toHaveBeenCalled();
+        });
+
+        it('should return projects in deterministic alphabetical order by name (regression)', async () => {
+            // Create projects in reverse-alphabetical order (simulates mtime-based ordering)
+            const projects = [
+                createMockProject({ name: 'citisignal-headless', path: path.join(os.homedir(), '.demo-builder', 'projects', 'citisignal-headless') }),
+                createMockProject({ name: 'citisignal-eds', path: path.join(os.homedir(), '.demo-builder', 'projects', 'citisignal-eds') }),
+                createMockProject({ name: 'buildright-eds', path: path.join(os.homedir(), '.demo-builder', 'projects', 'buildright-eds') }),
+            ];
+            const context = createMockHandlerContext(projects);
+
+            const result = await handleGetProjects(context as any);
+
+            expect(result.success).toBe(true);
+            const returnedNames = (result.data as any).projects.map((p: any) => p.name);
+            expect(returnedNames).toEqual([
+                'buildright-eds',
+                'citisignal-eds',
+                'citisignal-headless',
+            ]);
         });
 
         it('should enrich projects with mesh status when mesh is deployed and stale', async () => {

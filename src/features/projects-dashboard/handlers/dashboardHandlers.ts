@@ -79,6 +79,10 @@ export const handleGetProjects: MessageHandler = async (
             }
         }
 
+        // Sort alphabetically by name for deterministic ordering
+        // (mtime-based scanner order is unstable after mesh enrichment writes)
+        projects.sort((a, b) => a.name.localeCompare(b.name));
+
         // Include config in response (avoids race condition with init message)
         // Session override takes precedence over VS Code setting
         const config = vscode.workspace.getConfiguration('demoBuilder');
