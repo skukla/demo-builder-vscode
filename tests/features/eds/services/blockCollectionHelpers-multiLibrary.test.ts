@@ -308,7 +308,7 @@ describe('installBlockCollections', () => {
 
             mockGithubFileOps.getFileContent.mockImplementation(
                 async (owner: string, repo: string, path: string) => {
-                    if (path === 'component-filters.json') return null;
+                    if (path === 'component-filters.json' || path === 'component-models.json') return null;
                     if (owner === SOURCE_A.owner && repo === SOURCE_A.repo) {
                         return { content: sourceACompDef, sha: 'source-a-sha' };
                     }

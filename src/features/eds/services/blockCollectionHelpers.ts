@@ -3,8 +3,9 @@
  *
  * Copies custom EDS block directories from a configurable source repository
  * into the user's GitHub repository and merges their component definitions
- * (component-definition.json) and authoring filters (component-filters.json)
- * into the destination — all in a single atomic commit using the Git Tree API.
+ * (component-definition.json), authoring filters (component-filters.json),
+ * and field models (component-models.json) into the destination — all in a
+ * single atomic commit using the Git Tree API.
  *
  * The source repository is configured in block-libraries.json
  * (e.g., libraries[].source with owner/repo/branch).
@@ -43,8 +44,8 @@ export interface BlockLibraryEntry {
  * Install blocks from multiple libraries into the user's repo in a single atomic commit.
  *
  * Deduplicates blocks across all libraries (first source wins for overlapping block IDs),
- * merges component-definition.json and component-filters.json entries from all sources,
- * and creates one commit.
+ * merges component-definition.json, component-filters.json, and component-models.json
+ * entries from all sources, and creates one commit.
  *
  * @param libraries - Array of library entries (source + name), processed in order
  * @param additionalTreeEntries - Extra tree entries to include in the same atomic commit
@@ -196,6 +197,19 @@ export async function installBlockCollections(
                 mode: '100644',
                 type: 'blob',
                 content: mergedFilters,
+            });
+        }
+
+        // 3c. Build merged component-models.json from all sources
+        const mergedModels = await buildMergedComponentModelsMultiSource(
+            githubFileOps, destOwner, destRepo, libraryBlockFiles,
+        );
+        if (mergedModels) {
+            treeEntries.push({
+                path: 'component-models.json',
+                mode: '100644',
+                type: 'blob',
+                content: mergedModels,
             });
         }
 
@@ -404,5 +418,66 @@ async function buildMergedComponentFiltersMultiSource(
     }
 
     return changed ? JSON.stringify(destFilters, null, 2) : null;
+}
+
+/**
+ * Build a merged component-models.json from multiple source repositories.
+ *
+ * component-models.json is a flat array of model objects (each with an `id`
+ * and `fields` array). Collects models matching installed block IDs
+ * (including sub-component models like tabs-item for tabs), deduplicates
+ * across libraries, and appends to the destination.
+ */
+async function buildMergedComponentModelsMultiSource(
+    githubFileOps: GitHubFileOperations,
+    destOwner: string,
+    destRepo: string,
+    libraryBlockFiles: Array<{
+        source: AddonSource;
+        blockIds: string[];
+        files: Array<{ path: string; sha: string }>;
+    }>,
+): Promise<string | null> {
+    const newModels: Array<{ id: string; [key: string]: unknown }> = [];
+    const collectedIds = new Set<string>();
+
+    for (const libData of libraryBlockFiles) {
+        const sourceFile = await githubFileOps.getFileContent(
+            libData.source.owner, libData.source.repo, 'component-models.json',
+        );
+        if (!sourceFile?.content) continue;
+
+        const sourceModels: Array<{ id: string; [key: string]: unknown }> =
+            JSON.parse(sourceFile.content);
+
+        for (const model of sourceModels) {
+            if (collectedIds.has(model.id)) continue;
+            const matches = libData.blockIds.some(
+                (block: string) => model.id === block || model.id.startsWith(`${block}-`),
+            );
+            if (!matches) continue;
+
+            collectedIds.add(model.id);
+            newModels.push(model);
+        }
+    }
+
+    if (newModels.length === 0) return null;
+
+    // Merge into destination
+    const destFile = await githubFileOps.getFileContent(
+        destOwner, destRepo, 'component-models.json',
+    );
+    if (!destFile?.content) return null;
+
+    const destModels: Array<{ id: string; [key: string]: unknown }> =
+        JSON.parse(destFile.content);
+
+    const existingIds = new Set(destModels.map(m => m.id));
+    const entriesToAdd = newModels.filter(m => !existingIds.has(m.id));
+
+    if (entriesToAdd.length === 0) return null;
+
+    return JSON.stringify([...destModels, ...entriesToAdd], null, 2);
 }
 
