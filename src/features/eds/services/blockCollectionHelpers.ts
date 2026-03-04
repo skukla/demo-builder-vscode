@@ -3,8 +3,8 @@
  *
  * Copies custom EDS block directories from a configurable source repository
  * into the user's GitHub repository and merges their component definitions
- * into the destination's component-definition.json — all in a single
- * atomic commit using the Git Tree API.
+ * (component-definition.json) and authoring filters (component-filters.json)
+ * into the destination — all in a single atomic commit using the Git Tree API.
  *
  * The source repository is configured in block-libraries.json
  * (e.g., libraries[].source with owner/repo/branch).
@@ -43,7 +43,8 @@ export interface BlockLibraryEntry {
  * Install blocks from multiple libraries into the user's repo in a single atomic commit.
  *
  * Deduplicates blocks across all libraries (first source wins for overlapping block IDs),
- * merges component-definition.json entries from all sources, and creates one commit.
+ * merges component-definition.json and component-filters.json entries from all sources,
+ * and creates one commit.
  *
  * @param libraries - Array of library entries (source + name), processed in order
  * @param additionalTreeEntries - Extra tree entries to include in the same atomic commit
@@ -185,6 +186,19 @@ export async function installBlockCollections(
             });
         }
 
+        // 3b. Build merged component-filters.json from all sources
+        const mergedFilters = await buildMergedComponentFiltersMultiSource(
+            githubFileOps, destOwner, destRepo, libraryBlockFiles,
+        );
+        if (mergedFilters) {
+            treeEntries.push({
+                path: 'component-filters.json',
+                mode: '100644',
+                type: 'blob',
+                content: mergedFilters,
+            });
+        }
+
         // 4. Append any additional tree entries (e.g. inspector tagging files)
         if (additionalTreeEntries && additionalTreeEntries.length > 0) {
             treeEntries.push(...additionalTreeEntries);
@@ -223,8 +237,9 @@ export async function installBlockCollections(
 /**
  * Build a merged component-definition.json from multiple source repositories.
  *
- * For each source, extracts entries matching the blocks assigned to that source
- * (after cross-library dedup). Combines all entries and appends to destination.
+ * For each source, extracts entries from ALL groups matching the blocks assigned
+ * to that source (after cross-library dedup). Appends to the matching destination
+ * group, creating new groups as needed.
  */
 async function buildMergedComponentDefinitionMultiSource(
     githubFileOps: GitHubFileOperations,
@@ -236,8 +251,11 @@ async function buildMergedComponentDefinitionMultiSource(
         files: Array<{ path: string; sha: string }>;
     }>,
 ): Promise<string | null> {
-    // Collect component entries from each source's comp-def
-    const allNewEntries: Array<{ title: string; id: string; [key: string]: unknown }> = [];
+    // Collect entries tagged by group from all source repos
+    const entriesByGroup = new Map<string, {
+        title: string;
+        entries: Array<{ id: string; [key: string]: unknown }>;
+    }>();
     const collectedIds = new Set<string>();
 
     for (const libData of libraryBlockFiles) {
@@ -247,49 +265,144 @@ async function buildMergedComponentDefinitionMultiSource(
         if (!sourceFile?.content) continue;
 
         const sourceDef = JSON.parse(sourceFile.content);
-        const sourceBlocksGroup = sourceDef.groups?.find(
-            (g: { id: string }) => g.id === 'blocks',
-        );
-        if (!sourceBlocksGroup?.components) continue;
+        if (!sourceDef.groups) continue;
 
-        // Extract entries matching this library's unique blocks (including sub-components)
-        const matchingEntries = sourceBlocksGroup.components.filter(
-            (c: { id: string }) => libData.blockIds.some(
-                block => c.id === block || c.id.startsWith(`${block}-`),
-            ),
-        );
+        for (const group of sourceDef.groups) {
+            if (!group.components) continue;
+            for (const entry of group.components) {
+                if (collectedIds.has(entry.id)) continue;
+                const matches = libData.blockIds.some(
+                    (block: string) => entry.id === block || entry.id.startsWith(`${block}-`),
+                );
+                if (!matches) continue;
 
-        for (const entry of matchingEntries) {
-            if (!collectedIds.has(entry.id)) {
                 collectedIds.add(entry.id);
-                allNewEntries.push(entry);
+                if (!entriesByGroup.has(group.id)) {
+                    entriesByGroup.set(group.id, { title: group.title, entries: [] });
+                }
+                entriesByGroup.get(group.id)!.entries.push(entry);
             }
         }
     }
 
-    if (allNewEntries.length === 0) return null;
+    if (entriesByGroup.size === 0) return null;
 
-    // Fetch destination comp-def and append new entries
+    // Merge into destination
     const destFile = await githubFileOps.getFileContent(
         destOwner, destRepo, 'component-definition.json',
     );
     if (!destFile?.content) return null;
 
     const destDef = JSON.parse(destFile.content);
-    const destBlocksGroup = destDef.groups?.find(
-        (g: { id: string }) => g.id === 'blocks',
+    if (!destDef.groups) return null;
+
+    let addedCount = 0;
+    for (const [groupId, groupData] of entriesByGroup) {
+        let destGroup = destDef.groups.find((g: { id: string }) => g.id === groupId);
+        if (!destGroup) {
+            destGroup = { id: groupId, title: groupData.title, components: [] };
+            destDef.groups.push(destGroup);
+        }
+        const existingIds = new Set(
+            destGroup.components?.map((c: { id: string }) => c.id) ?? [],
+        );
+        const newEntries = groupData.entries.filter((c: { id: string }) => !existingIds.has(c.id));
+        if (newEntries.length > 0) {
+            destGroup.components = [...(destGroup.components || []), ...newEntries];
+            addedCount += newEntries.length;
+        }
+    }
+
+    return addedCount > 0 ? JSON.stringify(destDef, null, 2) : null;
+}
+
+/**
+ * Build a merged component-filters.json from multiple source repositories.
+ *
+ * For each source, extracts filter entries (section allowlist + sub-component
+ * filters) matching the blocks assigned to that source. Combines all entries
+ * and appends to the destination's component-filters.json.
+ */
+async function buildMergedComponentFiltersMultiSource(
+    githubFileOps: GitHubFileOperations,
+    destOwner: string,
+    destRepo: string,
+    libraryBlockFiles: Array<{
+        source: AddonSource;
+        blockIds: string[];
+        files: Array<{ path: string; sha: string }>;
+    }>,
+): Promise<string | null> {
+    const newSectionIds: string[] = [];
+    const newSubFilters: Array<{ id: string; components: string[] }> = [];
+    const collectedSectionIds = new Set<string>();
+    const collectedSubFilterIds = new Set<string>();
+
+    for (const libData of libraryBlockFiles) {
+        const sourceFile = await githubFileOps.getFileContent(
+            libData.source.owner, libData.source.repo, 'component-filters.json',
+        );
+        if (!sourceFile?.content) continue;
+
+        const sourceFilters: Array<{ id: string; components: string[] }> =
+            JSON.parse(sourceFile.content);
+        const blockIdSet = new Set(libData.blockIds);
+
+        // Extract block IDs from source's section filter that match installed blocks
+        const sourceSection = sourceFilters.find(f => f.id === 'section');
+        if (sourceSection) {
+            for (const componentId of sourceSection.components) {
+                if (blockIdSet.has(componentId) && !collectedSectionIds.has(componentId)) {
+                    collectedSectionIds.add(componentId);
+                    newSectionIds.push(componentId);
+                }
+            }
+        }
+
+        // Collect sub-component filter entries whose id matches a block ID
+        for (const filter of sourceFilters) {
+            if (filter.id === 'main' || filter.id === 'section') continue;
+            if (blockIdSet.has(filter.id) && !collectedSubFilterIds.has(filter.id)) {
+                collectedSubFilterIds.add(filter.id);
+                newSubFilters.push(filter);
+            }
+        }
+    }
+
+    if (newSectionIds.length === 0 && newSubFilters.length === 0) return null;
+
+    // Merge into destination
+    const destFile = await githubFileOps.getFileContent(
+        destOwner, destRepo, 'component-filters.json',
     );
-    if (!destBlocksGroup) return null;
+    if (!destFile?.content) return null;
 
-    // Skip entries already in destination
-    const existingIds = new Set(
-        destBlocksGroup.components?.map((c: { id: string }) => c.id) ?? [],
-    );
-    const newEntries = allNewEntries.filter(c => !existingIds.has(c.id));
+    const destFilters: Array<{ id: string; components: string[] }> =
+        JSON.parse(destFile.content);
 
-    if (newEntries.length === 0) return null;
+    let changed = false;
 
-    destBlocksGroup.components = [...(destBlocksGroup.components || []), ...newEntries];
-    return JSON.stringify(destDef, null, 2);
+    // Append new block IDs to destination's section filter (skip duplicates)
+    const destSection = destFilters.find(f => f.id === 'section');
+    if (destSection) {
+        const existingSectionIds = new Set(destSection.components);
+        for (const id of newSectionIds) {
+            if (!existingSectionIds.has(id)) {
+                destSection.components.push(id);
+                changed = true;
+            }
+        }
+    }
+
+    // Append new sub-component filter entries (skip entries already present)
+    const existingFilterIds = new Set(destFilters.map(f => f.id));
+    for (const subFilter of newSubFilters) {
+        if (!existingFilterIds.has(subFilter.id)) {
+            destFilters.push(subFilter);
+            changed = true;
+        }
+    }
+
+    return changed ? JSON.stringify(destFilters, null, 2) : null;
 }
 

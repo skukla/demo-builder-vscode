@@ -48,6 +48,28 @@ function createDestComponentDef(
     });
 }
 
+/** Create a source component-filters.json */
+function createComponentFilters(
+    sectionBlocks: string[],
+    subFilters: Array<{ id: string; components: string[] }> = [],
+): string {
+    return JSON.stringify([
+        { id: 'main', components: ['section'] },
+        { id: 'section', components: sectionBlocks },
+        ...subFilters,
+    ]);
+}
+
+/** Create a destination component-filters.json with common defaults */
+function createDestComponentFilters(
+    sectionBlocks: string[] = ['hero', 'cards', 'enrichment', 'fragment', 'text', 'image'],
+): string {
+    return JSON.stringify([
+        { id: 'main', components: ['section'] },
+        { id: 'section', components: sectionBlocks },
+    ]);
+}
+
 /** Create mock file entries for blocks/ directories */
 function createBlockFileEntries(
     blockIds: string[],
@@ -285,7 +307,8 @@ describe('installBlockCollections', () => {
             const destCompDef = createDestComponentDef();
 
             mockGithubFileOps.getFileContent.mockImplementation(
-                async (owner: string, repo: string, _path: string) => {
+                async (owner: string, repo: string, path: string) => {
+                    if (path === 'component-filters.json') return null;
                     if (owner === SOURCE_A.owner && repo === SOURCE_A.repo) {
                         return { content: sourceACompDef, sha: 'source-a-sha' };
                     }
@@ -657,6 +680,157 @@ describe('installBlockCollections', () => {
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(2);
             expect(result.blockIds).toEqual(['newsletter', 'product-grid']);
+        });
+    });
+
+    describe('component-filters merge (multi-library)', () => {
+        it('should merge filters from multiple libraries', async () => {
+            // Lib A: hero-v2, tabs (with sub-filter)
+            // Lib B: blog-tiles, circle-carousel (with sub-filter)
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce([]) // destination (empty)
+                .mockResolvedValueOnce(createBlockFileEntries(['hero-v2', 'tabs']))
+                .mockResolvedValueOnce(createBlockFileEntries(['blog-tiles', 'circle-carousel']));
+
+            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
+
+            const sourceAFilters = createComponentFilters(
+                ['hero-v2', 'tabs'],
+                [{ id: 'tabs', components: ['tabs-item'] }],
+            );
+            const sourceBFilters = createComponentFilters(
+                ['blog-tiles', 'circle-carousel'],
+                [{ id: 'circle-carousel', components: ['circle-carousel-item'] }],
+            );
+            const destFilters = createDestComponentFilters();
+
+            mockGithubFileOps.getFileContent.mockImplementation(
+                async (owner: string, repo: string, path: string) => {
+                    if (owner === SOURCE_A.owner && repo === SOURCE_A.repo) {
+                        if (path === 'component-filters.json') {
+                            return { content: sourceAFilters, sha: 'sha-cf-a' };
+                        }
+                        return null; // no comp-def
+                    }
+                    if (owner === SOURCE_B.owner && repo === SOURCE_B.repo) {
+                        if (path === 'component-filters.json') {
+                            return { content: sourceBFilters, sha: 'sha-cf-b' };
+                        }
+                        return null; // no comp-def
+                    }
+                    // destination
+                    if (path === 'component-filters.json') {
+                        return { content: destFilters, sha: 'dest-sha-cf' };
+                    }
+                    return null;
+                },
+            );
+
+            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
+            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
+            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
+            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [
+                    { source: SOURCE_A, name: 'Isle5' },
+                    { source: SOURCE_B, name: 'Custom Blocks' },
+                ],
+                mockLogger,
+            );
+
+            expect(result.success).toBe(true);
+
+            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
+            const treeEntries = createTreeCall[2] as Array<{ path: string; content?: string }>;
+            const filtersEntry = treeEntries.find(e => e.path === 'component-filters.json');
+            expect(filtersEntry).toBeDefined();
+
+            const merged = JSON.parse(filtersEntry!.content!);
+            const sectionFilter = merged.find((f: { id: string }) => f.id === 'section');
+
+            // All four block IDs should be in section
+            expect(sectionFilter.components).toContain('hero-v2');
+            expect(sectionFilter.components).toContain('tabs');
+            expect(sectionFilter.components).toContain('blog-tiles');
+            expect(sectionFilter.components).toContain('circle-carousel');
+
+            // Sub-filters should be present
+            const tabsFilter = merged.find((f: { id: string }) => f.id === 'tabs');
+            expect(tabsFilter).toBeDefined();
+            expect(tabsFilter.components).toContain('tabs-item');
+
+            const carouselFilter = merged.find((f: { id: string }) => f.id === 'circle-carousel');
+            expect(carouselFilter).toBeDefined();
+            expect(carouselFilter.components).toContain('circle-carousel-item');
+        });
+
+        it('should not duplicate filter entries across libraries', async () => {
+            // Both libs have 'hero' in section filters
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce([]) // destination (empty)
+                .mockResolvedValueOnce(createBlockFileEntries(['hero', 'newsletter']))
+                .mockResolvedValueOnce(createBlockFileEntries(['hero', 'product-grid']));
+
+            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
+
+            const sourceAFilters = createComponentFilters(['hero', 'newsletter']);
+            const sourceBFilters = createComponentFilters(['hero', 'product-grid']);
+            const destFilters = createDestComponentFilters();
+
+            mockGithubFileOps.getFileContent.mockImplementation(
+                async (owner: string, repo: string, path: string) => {
+                    if (owner === SOURCE_A.owner && repo === SOURCE_A.repo) {
+                        if (path === 'component-filters.json') {
+                            return { content: sourceAFilters, sha: 'sha-cf-a' };
+                        }
+                        return null;
+                    }
+                    if (owner === SOURCE_B.owner && repo === SOURCE_B.repo) {
+                        if (path === 'component-filters.json') {
+                            return { content: sourceBFilters, sha: 'sha-cf-b' };
+                        }
+                        return null;
+                    }
+                    if (path === 'component-filters.json') {
+                        return { content: destFilters, sha: 'dest-sha-cf' };
+                    }
+                    return null;
+                },
+            );
+
+            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
+            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
+            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
+            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [
+                    { source: SOURCE_A, name: 'Isle5' },
+                    { source: SOURCE_B, name: 'Custom Blocks' },
+                ],
+                mockLogger,
+            );
+
+            expect(result.success).toBe(true);
+
+            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
+            const treeEntries = createTreeCall[2] as Array<{ path: string; content?: string }>;
+            const filtersEntry = treeEntries.find(e => e.path === 'component-filters.json');
+            expect(filtersEntry).toBeDefined();
+
+            const merged = JSON.parse(filtersEntry!.content!);
+            const sectionFilter = merged.find((f: { id: string }) => f.id === 'section');
+
+            // 'hero' already in dest defaults, so should appear only once
+            const heroCount = sectionFilter.components.filter((c: string) => c === 'hero').length;
+            expect(heroCount).toBe(1);
+
+            // 'newsletter' and 'product-grid' should be added
+            expect(sectionFilter.components).toContain('newsletter');
+            expect(sectionFilter.components).toContain('product-grid');
         });
     });
 });

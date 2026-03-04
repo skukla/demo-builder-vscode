@@ -49,6 +49,28 @@ function createDestComponentDef(
     });
 }
 
+/** Create a source component-filters.json */
+function createComponentFilters(
+    sectionBlocks: string[],
+    subFilters: Array<{ id: string; components: string[] }> = [],
+): string {
+    return JSON.stringify([
+        { id: 'main', components: ['section'] },
+        { id: 'section', components: sectionBlocks },
+        ...subFilters,
+    ]);
+}
+
+/** Create a destination component-filters.json with common defaults */
+function createDestComponentFilters(
+    sectionBlocks: string[] = ['hero', 'cards', 'enrichment', 'fragment', 'text', 'image'],
+): string {
+    return JSON.stringify([
+        { id: 'main', components: ['section'] },
+        { id: 'section', components: sectionBlocks },
+    ]);
+}
+
 /** Create mock file entries for blocks/ directories */
 function createBlockFileEntries(
     blockIds: string[],
@@ -112,7 +134,9 @@ describe('installBlockCollections (single library)', () => {
         mockGithubFileOps.getBlobContent.mockResolvedValue('export default function() {}');
 
         mockGithubFileOps.getFileContent.mockImplementation(
-            async (owner: string, repo: string, _path: string) => {
+            async (owner: string, repo: string, path: string) => {
+                // Return null for component-filters.json (not tested by comp-def tests)
+                if (path === 'component-filters.json') return null;
                 if (owner === 'stephen-garner-adobe' && repo === 'isle5') {
                     if (sourceComponentDef === null) return null;
                     return { content: sourceComponentDef, sha: 'source-sha' };
@@ -342,7 +366,7 @@ describe('installBlockCollections (single library)', () => {
             );
         });
 
-        it('should not add component-definition.json when dest has no blocks group', async () => {
+        it('should create blocks group when dest has no blocks group', async () => {
             const destDef = JSON.stringify({
                 groups: [{ id: 'other', title: 'Other', components: [] }],
             });
@@ -362,9 +386,14 @@ describe('installBlockCollections (single library)', () => {
             expect(result.success).toBe(true);
 
             const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
-            const treeEntries = createTreeCall[2] as Array<{ path: string }>;
+            const treeEntries = createTreeCall[2] as Array<{ path: string; content?: string }>;
             const compDefEntry = treeEntries.find(e => e.path === 'component-definition.json');
-            expect(compDefEntry).toBeUndefined();
+            expect(compDefEntry).toBeDefined();
+
+            const merged = JSON.parse(compDefEntry!.content!);
+            const blocksGroup = merged.groups.find((g: { id: string }) => g.id === 'blocks');
+            expect(blocksGroup).toBeDefined();
+            expect(blocksGroup.components[0].id).toBe('hero-cta');
         });
 
         it('should deduplicate entries already in destination', async () => {
@@ -430,6 +459,111 @@ describe('installBlockCollections (single library)', () => {
             const treeEntries = createTreeCall[2] as Array<{ path: string }>;
             const compDefEntry = treeEntries.find(e => e.path === 'component-definition.json');
             expect(compDefEntry).toBeUndefined();
+        });
+
+        it('should extract entries from non-blocks groups', async () => {
+            // Source has product-teaser in 'product' group (not 'blocks')
+            const sourceComponentDef = JSON.stringify({
+                groups: [
+                    {
+                        id: 'blocks',
+                        title: 'Blocks',
+                        components: [
+                            { title: 'Hero CTA', id: 'hero-cta', plugins: { da: { name: 'hero-cta' } } },
+                        ],
+                    },
+                    {
+                        id: 'product',
+                        title: 'Product',
+                        components: [
+                            { title: 'Product Teaser', id: 'product-teaser', plugins: { da: { name: 'product-teaser' } } },
+                        ],
+                    },
+                ],
+            });
+            // Destination has both groups
+            const destDef = JSON.stringify({
+                groups: [
+                    { id: 'blocks', title: 'Blocks', components: [{ title: 'Hero', id: 'hero' }] },
+                    { id: 'product', title: 'Product', components: [] },
+                ],
+            });
+
+            setupSuccessfulInstall(sourceComponentDef, destDef, ['hero-cta', 'product-teaser']);
+
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
+            );
+
+            expect(result.success).toBe(true);
+
+            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
+            const treeEntries = createTreeCall[2] as Array<{ path: string; content?: string }>;
+            const compDefEntry = treeEntries.find(e => e.path === 'component-definition.json');
+            expect(compDefEntry).toBeDefined();
+
+            const merged = JSON.parse(compDefEntry!.content!);
+            // product-teaser should be in the 'product' group
+            const productGroup = merged.groups.find((g: { id: string }) => g.id === 'product');
+            expect(productGroup).toBeDefined();
+            const productIds = productGroup.components.map((c: { id: string }) => c.id);
+            expect(productIds).toContain('product-teaser');
+
+            // hero-cta should be in the 'blocks' group
+            const blocksGroup = merged.groups.find((g: { id: string }) => g.id === 'blocks');
+            const blocksIds = blocksGroup.components.map((c: { id: string }) => c.id);
+            expect(blocksIds).toContain('hero-cta');
+        });
+
+        it('should create destination group when it does not exist', async () => {
+            // Source has product-teaser in 'product' group
+            // Destination has NO 'product' group
+            const sourceComponentDef = JSON.stringify({
+                groups: [
+                    {
+                        id: 'product',
+                        title: 'Product',
+                        components: [
+                            { title: 'Product Teaser', id: 'product-teaser', plugins: { da: { name: 'product-teaser' } } },
+                        ],
+                    },
+                ],
+            });
+            const destDef = JSON.stringify({
+                groups: [
+                    { id: 'blocks', title: 'Blocks', components: [{ title: 'Hero', id: 'hero' }] },
+                ],
+            });
+
+            setupSuccessfulInstall(sourceComponentDef, destDef, ['product-teaser']);
+
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
+            );
+
+            expect(result.success).toBe(true);
+
+            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
+            const treeEntries = createTreeCall[2] as Array<{ path: string; content?: string }>;
+            const compDefEntry = treeEntries.find(e => e.path === 'component-definition.json');
+            expect(compDefEntry).toBeDefined();
+
+            const merged = JSON.parse(compDefEntry!.content!);
+            // A new 'product' group should have been created
+            const productGroup = merged.groups.find((g: { id: string }) => g.id === 'product');
+            expect(productGroup).toBeDefined();
+            expect(productGroup.title).toBe('Product');
+            const productIds = productGroup.components.map((c: { id: string }) => c.id);
+            expect(productIds).toContain('product-teaser');
+
+            // Existing 'blocks' group should be untouched
+            const blocksGroup = merged.groups.find((g: { id: string }) => g.id === 'blocks');
+            expect(blocksGroup.components).toHaveLength(1);
+            expect(blocksGroup.components[0].id).toBe('hero');
         });
     });
 
@@ -1015,6 +1149,198 @@ describe('installBlockCollections (single library)', () => {
                 (c: { id: string }) => c.id === 'hero-cta',
             );
             expect(heroEntry).toBeUndefined();
+        });
+    });
+
+    // ---------------------------------------------------------------
+    // Component-filters merge tests
+    // ---------------------------------------------------------------
+    describe('component-filters merge', () => {
+        /** Set up mocks for filter merge tests with path-based dispatch. */
+        function setupFilterInstall(opts: {
+            blockIds?: string[];
+            sourceCompDef?: string | null;
+            sourceFilters?: string | null;
+            destCompDef?: string;
+            destFilters?: string | null;
+        }): void {
+            const blockIds = opts.blockIds ?? ['hero-cta', 'newsletter'];
+
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce([]) // destination (empty)
+                .mockResolvedValueOnce(createBlockFileEntries(blockIds));
+
+            mockGithubFileOps.getBlobContent.mockResolvedValue('export default function() {}');
+
+            mockGithubFileOps.getFileContent.mockImplementation(
+                async (owner: string, repo: string, path: string) => {
+                    if (owner === 'stephen-garner-adobe' && repo === 'isle5') {
+                        if (path === 'component-filters.json') {
+                            if (opts.sourceFilters === null) return null;
+                            return { content: opts.sourceFilters, sha: 'sha-cf' };
+                        }
+                        if (opts.sourceCompDef === null) return null;
+                        return { content: opts.sourceCompDef ?? null, sha: 'sha-cd' };
+                    }
+                    // destination
+                    if (path === 'component-filters.json') {
+                        if (opts.destFilters === null || opts.destFilters === undefined) return null;
+                        return { content: opts.destFilters, sha: 'dest-sha-cf' };
+                    }
+                    return { content: opts.destCompDef ?? createDestComponentDef(), sha: 'dest-sha' };
+                },
+            );
+
+            mockGithubFileOps.getBranchInfo.mockResolvedValue({
+                treeSha: 'tree-sha', commitSha: 'commit-sha',
+            });
+            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
+            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
+            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+        }
+
+        it('should merge component-filters.json with library block IDs', async () => {
+            const sourceFilters = createComponentFilters(['hero-cta', 'newsletter']);
+            const destFilters = createDestComponentFilters();
+
+            setupFilterInstall({
+                blockIds: ['hero-cta', 'newsletter'],
+                sourceCompDef: null,
+                sourceFilters,
+                destFilters,
+            });
+
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
+            );
+
+            expect(result.success).toBe(true);
+
+            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
+            const treeEntries = createTreeCall[2] as Array<{ path: string; content?: string }>;
+            const filtersEntry = treeEntries.find(e => e.path === 'component-filters.json');
+            expect(filtersEntry).toBeDefined();
+
+            const merged = JSON.parse(filtersEntry!.content!);
+            const sectionFilter = merged.find((f: { id: string }) => f.id === 'section');
+            expect(sectionFilter.components).toContain('hero-cta');
+            expect(sectionFilter.components).toContain('newsletter');
+        });
+
+        it('should add sub-component filter entries', async () => {
+            const sourceFilters = createComponentFilters(
+                ['tabs'],
+                [{ id: 'tabs', components: ['tabs-item'] }],
+            );
+            const destFilters = createDestComponentFilters();
+
+            setupFilterInstall({
+                blockIds: ['tabs'],
+                sourceCompDef: null,
+                sourceFilters,
+                destFilters,
+            });
+
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
+            );
+
+            expect(result.success).toBe(true);
+
+            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
+            const treeEntries = createTreeCall[2] as Array<{ path: string; content?: string }>;
+            const filtersEntry = treeEntries.find(e => e.path === 'component-filters.json');
+            expect(filtersEntry).toBeDefined();
+
+            const merged = JSON.parse(filtersEntry!.content!);
+            // Sub-component filter entry should be present
+            const tabsFilter = merged.find((f: { id: string }) => f.id === 'tabs');
+            expect(tabsFilter).toBeDefined();
+            expect(tabsFilter.components).toContain('tabs-item');
+        });
+
+        it('should not duplicate existing filter entries', async () => {
+            // Source section has 'hero' which already exists in destination
+            const sourceFilters = createComponentFilters(['hero', 'newsletter']);
+            const destFilters = createDestComponentFilters(); // already has 'hero'
+
+            setupFilterInstall({
+                blockIds: ['hero', 'newsletter'],
+                sourceCompDef: null,
+                sourceFilters,
+                destFilters,
+            });
+
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
+            );
+
+            expect(result.success).toBe(true);
+
+            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
+            const treeEntries = createTreeCall[2] as Array<{ path: string; content?: string }>;
+            const filtersEntry = treeEntries.find(e => e.path === 'component-filters.json');
+            expect(filtersEntry).toBeDefined();
+
+            const merged = JSON.parse(filtersEntry!.content!);
+            const sectionFilter = merged.find((f: { id: string }) => f.id === 'section');
+            // 'hero' should appear only once
+            const heroCount = sectionFilter.components.filter((c: string) => c === 'hero').length;
+            expect(heroCount).toBe(1);
+            // 'newsletter' should be added
+            expect(sectionFilter.components).toContain('newsletter');
+        });
+
+        it('should handle missing source component-filters.json', async () => {
+            setupFilterInstall({
+                blockIds: ['hero-cta'],
+                sourceCompDef: null,
+                sourceFilters: null, // source has no filters
+                destFilters: createDestComponentFilters(),
+            });
+
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
+            );
+
+            expect(result.success).toBe(true);
+
+            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
+            const treeEntries = createTreeCall[2] as Array<{ path: string }>;
+            const filtersEntry = treeEntries.find(e => e.path === 'component-filters.json');
+            expect(filtersEntry).toBeUndefined();
+        });
+
+        it('should handle missing destination component-filters.json', async () => {
+            const sourceFilters = createComponentFilters(['hero-cta']);
+
+            setupFilterInstall({
+                blockIds: ['hero-cta'],
+                sourceCompDef: null,
+                sourceFilters,
+                destFilters: null, // destination has no filters
+            });
+
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
+            );
+
+            expect(result.success).toBe(true);
+
+            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
+            const treeEntries = createTreeCall[2] as Array<{ path: string }>;
+            const filtersEntry = treeEntries.find(e => e.path === 'component-filters.json');
+            expect(filtersEntry).toBeUndefined();
         });
     });
 
