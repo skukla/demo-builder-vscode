@@ -463,6 +463,7 @@ async function generateEdsConfigJson(
         daLiveOrg,
         daLiveSite,
         ...configParams,
+        selectedAddons: context.getSelectedAddons(),
     };
 
     // Validate required params

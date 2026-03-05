@@ -30,16 +30,17 @@ describe('demoPackageLoader', () => {
             expect(packages.length).toBeGreaterThan(0);
         });
 
-        it('should return exactly 4 packages (citisignal, isle5, buildright, and custom)', async () => {
+        it('should return exactly 5 packages (citisignal, isle5, buildright, custom, and b2b)', async () => {
             const packages = await loadDemoPackages();
 
-            expect(packages.length).toBe(4);
+            expect(packages.length).toBe(5);
 
             const ids = packages.map(p => p.id);
             expect(ids).toContain('citisignal');
             expect(ids).toContain('isle5');
             expect(ids).toContain('buildright');
             expect(ids).toContain('custom');
+            expect(ids).toContain('b2b');
         });
 
         it('should return packages with required properties', async () => {
@@ -201,10 +202,10 @@ describe('demoPackageLoader', () => {
     });
 
     describe('getAllStorefronts', () => {
-        it('should return all 8 storefronts with package and stack info', async () => {
+        it('should return all 10 storefronts with package and stack info', async () => {
             const storefronts = await getAllStorefronts();
 
-            expect(storefronts).toHaveLength(8);
+            expect(storefronts).toHaveLength(10);
         });
 
         it('should include package ID and stack ID with each storefront', async () => {

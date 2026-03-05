@@ -290,6 +290,31 @@ describe('ProjectSetupContext', () => {
         });
     });
 
+    describe('getSelectedAddons()', () => {
+        it('should return selectedAddons from config', () => {
+            const configWithAddons = { ...mockConfig, selectedAddons: ['adobe-commerce-b2b'] };
+            const context = new ProjectSetupContext(
+                mockHandlerContext,
+                mockRegistry,
+                mockProject,
+                configWithAddons,
+            );
+
+            expect(context.getSelectedAddons()).toEqual(['adobe-commerce-b2b']);
+        });
+
+        it('should return undefined when selectedAddons is missing', () => {
+            const context = new ProjectSetupContext(
+                mockHandlerContext,
+                mockRegistry,
+                mockProject,
+                mockConfig,
+            );
+
+            expect(context.getSelectedAddons()).toBeUndefined();
+        });
+    });
+
     describe('withProject()', () => {
         it('should create new context with updated project', () => {
             const context = new ProjectSetupContext(

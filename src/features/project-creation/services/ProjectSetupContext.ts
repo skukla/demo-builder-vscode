@@ -91,6 +91,13 @@ export class ProjectSetupContext {
     }
 
     /**
+     * Get selected addon IDs from wizard state
+     */
+    getSelectedAddons(): string[] | undefined {
+        return this.config.selectedAddons as string[] | undefined;
+    }
+
+    /**
      * Get specific component definition by ID
      */
     getComponentDefinition(componentId: string): TransformedComponentDefinition | undefined {

@@ -7,6 +7,7 @@ import * as fs from 'fs/promises';
 jest.mock('vscode');
 jest.mock('@/core/di');
 jest.mock('fs/promises');
+jest.mock('@/features/eds/handlers/edsHelpers');
 
 // Mock validatePathSafety since it uses dynamic import
 const mockValidatePathSafety = jest.fn();

@@ -356,6 +356,17 @@
                     "ACO_ENVIRONMENT_ID"
                 ]
             }
+        },
+        "adobe-commerce-b2b": {
+            "name": "B2B Commerce",
+            "description": "B2B features: company management, quotes, purchase orders, requisition lists, and company switcher",
+            "addonFor": ["adobe-commerce-paas", "adobe-commerce-accs"],
+            "configuration": {
+                "configFlags": {
+                    "commerce-b2b-enabled": true,
+                    "commerce-companies-enabled": true
+                }
+            }
         }
     },
 
@@ -715,7 +726,7 @@
         "dependencies": [],
         "appBuilderApps": ["integration-service"],
         "integrations": ["experience-platform"],
-        "addons": ["adobe-commerce-aco"],
+        "addons": ["adobe-commerce-aco", "adobe-commerce-b2b"],
         "tools": ["commerce-demo-ingestion"]
     }
 }

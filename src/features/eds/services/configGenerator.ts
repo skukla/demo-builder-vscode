@@ -21,6 +21,7 @@
  */
 
 import configTemplate from '../config/config-template.json';
+import componentsConfig from '@/features/components/config/components.json';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger , Project } from '@/types';
 
@@ -72,6 +73,8 @@ export interface ConfigGeneratorParams {
     customerGroup?: string;
     /** Whether AEM Assets integration is enabled */
     aemAssetsEnabled?: boolean;
+    /** Selected addon IDs (e.g., ['adobe-commerce-b2b']) */
+    selectedAddons?: string[];
 }
 
 /**
@@ -273,11 +276,41 @@ export function extractConfigParamsFromConfigs(
  * @returns Config parameters for generation
  */
 export function extractConfigParams(project: Project): Partial<ConfigGeneratorParams> {
-    return extractConfigParamsFromConfigs(
-        project.componentConfigs as ComponentConfigs | undefined,
-        project.meshState?.endpoint,
-        project.componentSelections?.backend,
-    );
+    return {
+        ...extractConfigParamsFromConfigs(
+            project.componentConfigs as ComponentConfigs | undefined,
+            project.meshState?.endpoint,
+            project.componentSelections?.backend,
+        ),
+        selectedAddons: project.selectedAddons,
+    };
+}
+
+/**
+ * Inject addon-specific config flags into the config object.
+ *
+ * Reads configFlags from components.json addon definitions and merges them
+ * into config.public.default. This is data-driven — any addon with a
+ * `configuration.configFlags` object will have its flags injected.
+ */
+function injectAddonConfigFlags(
+    config: Record<string, Record<string, Record<string, unknown>>>,
+    selectedAddons: string[],
+    logger: Logger,
+): void {
+    const addonsConfig = (componentsConfig as Record<string, unknown>).addons as
+        Record<string, { configuration?: { configFlags?: Record<string, boolean> } }> | undefined;
+
+    if (!addonsConfig) { return; }
+
+    for (const addonId of selectedAddons) {
+        const addon = addonsConfig[addonId];
+        const flags = addon?.configuration?.configFlags;
+        if (flags && config.public?.default) {
+            Object.assign(config.public.default, flags);
+            logger.debug(`[ConfigGenerator] Injected config flags for addon: ${addonId}`);
+        }
+    }
 }
 
 /**
@@ -359,6 +392,11 @@ export function generateConfigJson(
             // Note: commerce-core-endpoint is preserved for ALL environment types,
             // even when it equals commerce-endpoint. The storefront uses its existence
             // to route cs headers (Magento-Website-Code, etc.) to catalog queries.
+        }
+
+        // Inject addon-specific config flags (e.g., B2B flags)
+        if (params.selectedAddons?.length) {
+            injectAddonConfigFlags(finalConfig, params.selectedAddons, logger);
         }
 
         // Serialize with proper formatting

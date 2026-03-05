@@ -38,6 +38,7 @@ const COMPONENT_CONFIGURATION_FIELDS = new Set([
     'providesEndpoint', 'providesEnvVars', 'requiresDeployment', 'configFiles',
     'deploymentTarget', 'runtime', 'actions', 'impact', 'removable',
     'defaultEnabled', 'position', 'startOpen', 'scripts', 'skipNpmInstall',
+    'configFlags',
 ]);
 
 const COMPONENT_SOURCE_FIELDS = new Set([

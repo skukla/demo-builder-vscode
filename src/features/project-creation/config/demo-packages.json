@@ -9,7 +9,8 @@
       "icon": "isle5",
       "featured": true,
       "addons": {
-        "adobe-commerce-aco": "excluded"
+        "adobe-commerce-aco": "excluded",
+        "adobe-commerce-b2b": "optional"
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "base",
@@ -69,7 +70,8 @@
       "icon": "custom",
       "featured": false,
       "addons": {
-        "adobe-commerce-aco": "excluded"
+        "adobe-commerce-aco": "excluded",
+        "adobe-commerce-b2b": "optional"
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "website",
@@ -121,13 +123,73 @@
       }
     },
     {
+      "id": "b2b",
+      "name": "B2B Commerce",
+      "description": "B2B Commerce storefront with company management, quotes, purchase orders, and requisition lists",
+      "icon": "custom",
+      "featured": false,
+      "addons": {
+        "adobe-commerce-aco": "excluded",
+        "adobe-commerce-b2b": "required"
+      },
+      "configDefaults": {
+        "ADOBE_COMMERCE_WEBSITE_CODE": "base",
+        "ADOBE_COMMERCE_STORE_CODE": "main_website_store",
+        "ADOBE_COMMERCE_STORE_VIEW_CODE": "default",
+        "ACCS_WEBSITE_CODE": "base",
+        "ACCS_STORE_CODE": "main_website_store",
+        "ACCS_STORE_VIEW_CODE": "default"
+      },
+      "storefronts": {
+        "eds-paas": {
+          "name": "B2B EDS + PaaS",
+          "description": "B2B Commerce storefront with Commerce PaaS backend",
+          "icon": "eds",
+          "featured": true,
+          "tags": ["eds", "b2b", "paas"],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/adobe-commerce/boilerplate-b2b-template",
+            "branch": "main",
+            "gitOptions": { "shallow": true }
+          },
+          "templateOwner": "adobe-commerce",
+          "templateRepo": "boilerplate-b2b-template",
+          "contentSource": {
+            "org": "adobe-commerce",
+            "site": "boilerplate-b2b"
+          }
+        },
+        "eds-accs": {
+          "name": "B2B EDS + ACCS",
+          "description": "B2B Commerce storefront with Commerce Cloud Service backend",
+          "icon": "eds",
+          "featured": false,
+          "tags": ["eds", "b2b", "accs"],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/adobe-commerce/boilerplate-b2b-template",
+            "branch": "main",
+            "gitOptions": { "shallow": true }
+          },
+          "templateOwner": "adobe-commerce",
+          "templateRepo": "boilerplate-b2b-template",
+          "contentSource": {
+            "org": "adobe-commerce",
+            "site": "boilerplate-b2b"
+          }
+        }
+      }
+    },
+    {
       "id": "citisignal",
       "name": "CitiSignal",
       "description": "Telecommunications demo with CitiSignal branding",
       "icon": "citisignal",
       "featured": true,
       "addons": {
-        "adobe-commerce-aco": "excluded"
+        "adobe-commerce-aco": "excluded",
+        "adobe-commerce-b2b": "optional"
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
@@ -217,7 +279,8 @@
       "featured": false,
       "status": "coming-soon",
       "addons": {
-        "adobe-commerce-aco": "required"
+        "adobe-commerce-aco": "required",
+        "adobe-commerce-b2b": "excluded"
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "buildright",

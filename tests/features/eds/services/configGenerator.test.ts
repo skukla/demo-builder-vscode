@@ -284,6 +284,100 @@ describe('configGenerator', () => {
 
     });
 
+    describe('addon config flags injection', () => {
+        const baseParams: ConfigGeneratorParams = {
+            githubOwner: 'test-owner',
+            repoName: 'test-repo',
+            daLiveOrg: 'test-org',
+            daLiveSite: 'test-site',
+            commerceEndpoint: 'https://commerce.example.com/graphql',
+            storeViewCode: 'en_us',
+            storeCode: 'us_store',
+            websiteCode: 'us_website',
+            environmentType: 'paas',
+        };
+
+        it('should inject B2B config flags when B2B addon is selected', () => {
+            const params: ConfigGeneratorParams = {
+                ...baseParams,
+                selectedAddons: ['adobe-commerce-b2b'],
+            };
+
+            const result = generateConfigJson(params, mockLogger);
+
+            expect(result.success).toBe(true);
+            const config = JSON.parse(result.content!);
+            expect(config.public.default['commerce-b2b-enabled']).toBe(true);
+            expect(config.public.default['commerce-companies-enabled']).toBe(true);
+        });
+
+        it('should not inject B2B flags when no addons selected', () => {
+            const result = generateConfigJson(baseParams, mockLogger);
+
+            expect(result.success).toBe(true);
+            const config = JSON.parse(result.content!);
+            expect(config.public.default['commerce-b2b-enabled']).toBeUndefined();
+            expect(config.public.default['commerce-companies-enabled']).toBeUndefined();
+        });
+
+        it('should not inject B2B flags when empty addons array', () => {
+            const params: ConfigGeneratorParams = {
+                ...baseParams,
+                selectedAddons: [],
+            };
+
+            const result = generateConfigJson(params, mockLogger);
+
+            expect(result.success).toBe(true);
+            const config = JSON.parse(result.content!);
+            expect(config.public.default['commerce-b2b-enabled']).toBeUndefined();
+            expect(config.public.default['commerce-companies-enabled']).toBeUndefined();
+        });
+
+        it('should not inject flags for addon without configFlags', () => {
+            const params: ConfigGeneratorParams = {
+                ...baseParams,
+                selectedAddons: ['adobe-commerce-aco'],
+            };
+
+            const result = generateConfigJson(params, mockLogger);
+
+            expect(result.success).toBe(true);
+            const config = JSON.parse(result.content!);
+            // ACO addon has no configFlags in its configuration
+            expect(config.public.default['commerce-b2b-enabled']).toBeUndefined();
+        });
+
+        it('should handle multiple addons with config flags', () => {
+            const params: ConfigGeneratorParams = {
+                ...baseParams,
+                selectedAddons: ['adobe-commerce-aco', 'adobe-commerce-b2b'],
+            };
+
+            const result = generateConfigJson(params, mockLogger);
+
+            expect(result.success).toBe(true);
+            const config = JSON.parse(result.content!);
+            // B2B flags should be present
+            expect(config.public.default['commerce-b2b-enabled']).toBe(true);
+            expect(config.public.default['commerce-companies-enabled']).toBe(true);
+        });
+
+        it('should gracefully handle unknown addon ID', () => {
+            const params: ConfigGeneratorParams = {
+                ...baseParams,
+                selectedAddons: ['nonexistent-addon'],
+            };
+
+            const result = generateConfigJson(params, mockLogger);
+
+            expect(result.success).toBe(true);
+            // Should still generate valid config without errors
+            const config = JSON.parse(result.content!);
+            expect(config.public.default).toBeDefined();
+        });
+    });
+
     describe('extractConfigParamsFromConfigs', () => {
         it('should use backendComponentId for environment type', () => {
             const componentConfigs = {
