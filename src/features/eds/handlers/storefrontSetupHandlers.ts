@@ -300,7 +300,6 @@ export async function handleStartStorefrontSetup(
             context,
             edsConfig,
             abortController.signal,
-            payload.selectedAddons,
             payload.selectedBlockLibraries,
             payload.customBlockLibraries,
             payload.selectedPackage,

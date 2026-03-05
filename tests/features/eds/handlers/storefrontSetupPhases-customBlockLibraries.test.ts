@@ -201,9 +201,8 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         // When: Executing setup with both built-in and custom libraries
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            undefined, // selectedAddons
             ['isle5'], // selectedBlockLibraries (built-in)
-            CUSTOM_LIBS, // customBlockLibraries (NEW parameter)
+            CUSTOM_LIBS, // customBlockLibraries
         );
 
         // Then: installBlockCollections (plural) should be called ONCE with all sources combined
@@ -230,7 +229,6 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         // When: Executing setup without custom libraries
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            undefined, // selectedAddons
             ['isle5'], // selectedBlockLibraries
             undefined, // no customBlockLibraries
         );
@@ -253,7 +251,6 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
 
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            undefined,
             ['isle5'],
             [], // empty custom libraries
         );
@@ -279,7 +276,6 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         // When: Executing setup with only custom libraries
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            undefined, // selectedAddons
             undefined, // no built-in block libraries
             customLibs, // customBlockLibraries
         );

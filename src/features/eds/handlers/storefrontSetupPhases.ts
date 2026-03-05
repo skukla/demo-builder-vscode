@@ -618,14 +618,12 @@ async function registerConfigurationService(
  * @param context - Handler context
  * @param edsConfig - EDS configuration from wizard
  * @param signal - Abort signal for cancellation
- * @param selectedAddons - Selected addon IDs
  * @returns Setup result with repo details
  */
 export async function executeStorefrontSetupPhases(
     context: HandlerContext,
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     signal: AbortSignal,
-    selectedAddons?: string[],
     selectedBlockLibraries?: string[],
     customBlockLibraries?: CustomBlockLibrary[],
     packageId?: string,

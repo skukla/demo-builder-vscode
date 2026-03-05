@@ -234,7 +234,6 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
         // When: Executing storefront setup with block libraries
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            undefined,
             ['isle5'],
             customLibs,
         );
@@ -269,7 +268,6 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
         // When: Executing storefront setup
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            undefined,
             ['isle5'],
             [{ name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks', branch: 'v2' } }],
         );
@@ -319,7 +317,6 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
         // When: Executing storefront setup with block libraries that fail to install
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            undefined,
             ['isle5'],
         );
 
