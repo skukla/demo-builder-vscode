@@ -54,6 +54,8 @@ describe('AdobeEntitySelector', () => {
             setCachedOrganization: jest.fn(),
             setCachedProject: jest.fn(),
             setCachedWorkspace: jest.fn(),
+            setCachedConsoleWhere: jest.fn(),
+            getCachedConsoleWhere: jest.fn(),
             clearConsoleWhereCache: jest.fn(),
             setOrgClearedDueToValidation: jest.fn(),
         } as unknown as jest.Mocked<AuthCacheManager>;
@@ -274,7 +276,12 @@ describe('AdobeEntitySelector', () => {
             await selector.selectWorkspace('ws1', 'proj1');
 
             expect(mockCacheManager.setCachedWorkspace).toHaveBeenCalled();
-            expect(mockCacheManager.clearConsoleWhereCache).toHaveBeenCalled();
+            // Console.where cache is updated (not cleared) after selection
+            expect(mockCacheManager.setCachedConsoleWhere).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    workspace: expect.objectContaining({ id: 'ws1' }),
+                }),
+            );
         });
     });
 
@@ -377,6 +384,106 @@ describe('AdobeEntitySelector', () => {
 
             // Should not throw
             await expect(selector.clearConsoleContext()).resolves.not.toThrow();
+        });
+    });
+
+    describe('console.where cache optimization', () => {
+        it('should update console.where cache after org selection instead of just clearing', async () => {
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: 'Organization selected',
+                stderr: '',
+                code: 0,
+            });
+            mockFetcher.getOrganizations.mockResolvedValue([
+                { id: 'org1', code: 'ORG@AdobeOrg', name: 'Test Org' },
+            ]);
+
+            await selector.selectOrganization('org1');
+
+            // Should update cache with the selected org (not just clear it)
+            expect(mockCacheManager.setCachedConsoleWhere).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    org: expect.objectContaining({ id: 'org1' }),
+                }),
+            );
+        });
+
+        it('should update console.where cache after project selection instead of just clearing', async () => {
+            // ensureContext returns matching org
+            mockResolver.getConsoleWhereContext.mockResolvedValue({
+                org: { id: 'org1', name: 'Test Org', code: 'ORG' },
+            });
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: 'Project selected',
+                stderr: '',
+                code: 0,
+            });
+            mockFetcher.getProjects.mockResolvedValue([
+                { id: 'proj1', name: 'Test Project', title: 'Test Project' },
+            ]);
+
+            await selector.selectProject('proj1', 'org1');
+
+            // Should update cache with the selected project
+            expect(mockCacheManager.setCachedConsoleWhere).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    project: expect.objectContaining({ id: 'proj1' }),
+                }),
+            );
+        });
+
+        it('should update console.where cache after workspace selection instead of just clearing', async () => {
+            // ensureContext returns matching project
+            mockResolver.getConsoleWhereContext.mockResolvedValue({
+                project: { id: 'proj1', name: 'Test Project', title: 'Test Project' },
+            });
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: 'Workspace selected',
+                stderr: '',
+                code: 0,
+            });
+            mockFetcher.getWorkspaces.mockResolvedValue([
+                { id: 'ws1', name: 'Stage', title: 'Stage' },
+            ]);
+
+            await selector.selectWorkspace('ws1', 'proj1');
+
+            // Should update cache with the selected workspace
+            expect(mockCacheManager.setCachedConsoleWhere).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    workspace: expect.objectContaining({ id: 'ws1' }),
+                }),
+            );
+        });
+
+        it('should skip permission check when skipPermissionCheck option is true', async () => {
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: 'Organization selected',
+                stderr: '',
+                code: 0,
+            });
+            mockFetcher.getOrganizations.mockResolvedValue([
+                { id: 'org1', code: 'ORG@AdobeOrg', name: 'Test Org' },
+            ]);
+
+            await selector.selectOrganization('org1', { skipPermissionCheck: true });
+
+            expect(mockOrgValidator.testDeveloperPermissions).not.toHaveBeenCalled();
+        });
+
+        it('should still check permissions by default', async () => {
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: 'Organization selected',
+                stderr: '',
+                code: 0,
+            });
+            mockFetcher.getOrganizations.mockResolvedValue([
+                { id: 'org1', code: 'ORG@AdobeOrg', name: 'Test Org' },
+            ]);
+
+            await selector.selectOrganization('org1');
+
+            expect(mockOrgValidator.testDeveloperPermissions).toHaveBeenCalled();
         });
     });
 });

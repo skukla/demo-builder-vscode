@@ -148,7 +148,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             const result = await authService.selectOrganization('org123');
 
             expect(result).toBe(true);
-            expect(mockSelector.selectOrganization).toHaveBeenCalledWith('org123');
+            expect(mockSelector.selectOrganization).toHaveBeenCalledWith('org123', undefined);
         });
 
         it('should select project with org context guard', async () => {

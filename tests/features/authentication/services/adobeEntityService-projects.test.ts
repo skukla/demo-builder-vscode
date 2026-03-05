@@ -418,7 +418,11 @@ describe('AdobeEntityService - Projects', () => {
 
             await service.selectProject('proj1', 'org1');
 
-            expect(mockCacheManager.clearConsoleWhereCache).toHaveBeenCalled();
+            expect(mockCacheManager.setCachedConsoleWhere).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    project: expect.objectContaining({ id: 'proj1' }),
+                }),
+            );
         });
     });
 

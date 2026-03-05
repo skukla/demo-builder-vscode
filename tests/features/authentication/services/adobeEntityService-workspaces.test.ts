@@ -365,7 +365,11 @@ describe('AdobeEntityService - Workspaces', () => {
 
             await service.selectWorkspace('ws1', 'proj1');
 
-            expect(mockCacheManager.clearConsoleWhereCache).toHaveBeenCalled();
+            expect(mockCacheManager.setCachedConsoleWhere).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    workspace: expect.objectContaining({ id: 'ws1' }),
+                }),
+            );
         });
     });
 
