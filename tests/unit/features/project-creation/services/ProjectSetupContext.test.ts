@@ -292,7 +292,7 @@ describe('ProjectSetupContext', () => {
 
     describe('getSelectedAddons()', () => {
         it('should return selectedAddons from config', () => {
-            const configWithAddons = { ...mockConfig, selectedAddons: ['adobe-commerce-b2b'] };
+            const configWithAddons = { ...mockConfig, selectedAddons: ['adobe-commerce-aco'] };
             const context = new ProjectSetupContext(
                 mockHandlerContext,
                 mockRegistry,
@@ -300,7 +300,7 @@ describe('ProjectSetupContext', () => {
                 configWithAddons,
             );
 
-            expect(context.getSelectedAddons()).toEqual(['adobe-commerce-b2b']);
+            expect(context.getSelectedAddons()).toEqual(['adobe-commerce-aco']);
         });
 
         it('should return undefined when selectedAddons is missing', () => {

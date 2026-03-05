@@ -5,15 +5,6 @@
     "adobe-commerce-aco": {
       "name": "Adobe Commerce Optimizer",
       "description": "Catalog optimization service for enhanced product discovery"
-    },
-    "adobe-commerce-b2b": {
-      "name": "B2B Commerce",
-      "description": "Company management, quotes, purchase orders, and requisition lists",
-      "source": {
-        "owner": "adobe-commerce",
-        "repo": "boilerplate-b2b-template",
-        "branch": "main"
-      }
     }
   },
   "stacks": [
@@ -48,8 +39,7 @@
       "backend": "adobe-commerce-paas",
       "dependencies": ["eds-commerce-mesh"],
       "optionalAddons": [
-        { "id": "adobe-commerce-aco" },
-        { "id": "adobe-commerce-b2b" }
+        { "id": "adobe-commerce-aco" }
       ],
       "features": ["Ultra-fast delivery", "DA.live content", "Self-managed backend"],
       "requiresGitHub": true,
@@ -64,8 +54,7 @@
       "backend": "adobe-commerce-accs",
       "dependencies": ["eds-accs-mesh"],
       "optionalAddons": [
-        { "id": "adobe-commerce-aco" },
-        { "id": "adobe-commerce-b2b" }
+        { "id": "adobe-commerce-aco" }
       ],
       "features": ["Ultra-fast delivery", "DA.live content", "Managed backend"],
       "requiresGitHub": true,

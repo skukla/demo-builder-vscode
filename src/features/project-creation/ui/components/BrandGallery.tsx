@@ -35,6 +35,8 @@ export interface BrandGalleryProps {
     onPackageSelect: (packageId: string) => void;
     onStackSelect: (stackId: string) => void;
     onAddonsChange?: (addons: string[]) => void;
+    selectedFeaturePacks?: string[];
+    onFeaturePacksChange?: (packs: string[]) => void;
     selectedBlockLibraries?: string[];
     onBlockLibrariesChange?: (libraries: string[]) => void;
     /** User's saved block library default preferences (from settings) */
@@ -176,9 +178,11 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     selectedPackage,
     selectedStack,
     selectedAddons = [],
+    selectedFeaturePacks = [],
     onPackageSelect,
     onStackSelect,
     onAddonsChange,
+    onFeaturePacksChange,
     selectedBlockLibraries = [],
     onBlockLibrariesChange,
     blockLibraryDefaults,
@@ -191,6 +195,8 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     const [modalPackageId, setModalPackageId] = useState<string | null>(null);
     // Track modal-local addon state (synced to parent on Done)
     const [modalAddons, setModalAddons] = useState<string[]>(selectedAddons);
+    // Track modal-local feature pack state (synced to parent on Done)
+    const [modalFeaturePacks, setModalFeaturePacks] = useState<string[]>(selectedFeaturePacks);
     // Track modal-local block library state (synced to parent on Done)
     const [modalBlockLibraries, setModalBlockLibraries] = useState<string[]>(selectedBlockLibraries);
     // Track modal-local custom block library state (synced to parent on Done)
@@ -246,6 +252,14 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             .map(([id]) => id);
     }, []);
 
+    // Helper to get required feature pack IDs from package's featurePacks config
+    const getRequiredFeaturePacks = useCallback((pkg: DemoPackage): string[] => {
+        if (!pkg.featurePacks) return [];
+        return Object.entries(pkg.featurePacks)
+            .filter(([_, config]) => config === 'required')
+            .map(([id]) => id);
+    }, []);
+
     const handleCardClick = useCallback((pkg: DemoPackage) => {
         // Always open modal when clicking a card (allows changing selection)
         onPackageSelect(pkg.id);
@@ -253,6 +267,10 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         const requiredAddons = getRequiredAddons(pkg);
         const initialAddons = [...new Set([...selectedAddons, ...requiredAddons])];
         setModalAddons(initialAddons);
+        // Initialize modal feature packs with current state + package's required packs
+        const requiredPacks = getRequiredFeaturePacks(pkg);
+        const initialPacks = [...new Set([...selectedFeaturePacks, ...requiredPacks])];
+        setModalFeaturePacks(initialPacks);
         // Initialize modal block libraries from parent state
         setModalBlockLibraries(selectedBlockLibraries);
         // Initialize modal custom block libraries from parent state, falling back to defaults
@@ -261,7 +279,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             : (customBlockLibraryDefaults ?? []);
         setModalCustomBlockLibraries(initialCustomLibs);
         setModalPackageId(pkg.id);
-    }, [onPackageSelect, selectedAddons, selectedBlockLibraries, customBlockLibraries, customBlockLibraryDefaults, getRequiredAddons]);
+    }, [onPackageSelect, selectedAddons, selectedFeaturePacks, selectedBlockLibraries, customBlockLibraries, customBlockLibraryDefaults, getRequiredAddons, getRequiredFeaturePacks]);
 
     const handleStackSelect = useCallback((stackId: string) => {
         onStackSelect(stackId);
@@ -274,6 +292,11 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                 .filter(addon => addon.default)
                 .map(addon => addon.id);
             return [...new Set([...requiredAddons, ...defaultAddons])];
+        });
+        // When stack changes, reset feature packs to required only
+        setModalFeaturePacks(() => {
+            const currentPackage = packages.find(p => p.id === modalPackageId);
+            return currentPackage ? getRequiredFeaturePacks(currentPackage) : [];
         });
         // When stack changes, compute default block libraries for EDS stacks
         const stackObj = stacks.find(s => s.id === stackId);
@@ -291,10 +314,14 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             setModalCustomBlockLibraries([]);
             onCustomBlockLibrariesChange?.([]);
         }
-    }, [onStackSelect, packages, stacks, modalPackageId, getRequiredAddons, onBlockLibrariesChange, blockLibraryDefaults, onCustomBlockLibrariesChange]);
+    }, [onStackSelect, packages, stacks, modalPackageId, getRequiredAddons, getRequiredFeaturePacks, onBlockLibrariesChange, blockLibraryDefaults, onCustomBlockLibrariesChange]);
 
     const handleModalAddonsChange = useCallback((addons: string[]) => {
         setModalAddons(addons);
+    }, []);
+
+    const handleModalFeaturePacksChange = useCallback((packs: string[]) => {
+        setModalFeaturePacks(packs);
     }, []);
 
     const handleModalBlockLibrariesChange = useCallback((libraries: string[]) => {
@@ -313,6 +340,10 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         const requiredAddons = currentPackage ? getRequiredAddons(currentPackage) : [];
         const finalAddons = [...new Set([...modalAddons, ...requiredAddons])];
         onAddonsChange?.(finalAddons);
+        // Sync feature packs to parent state (including required packs)
+        const requiredPacks = currentPackage ? getRequiredFeaturePacks(currentPackage) : [];
+        const finalFeaturePacks = [...new Set([...modalFeaturePacks, ...requiredPacks])];
+        onFeaturePacksChange?.(finalFeaturePacks);
         // Sync block libraries to parent state (including native libraries)
         const stackObj = stacks.find(s => s.id === selectedStack);
         const nativeIds = stackObj && currentPackage
@@ -329,7 +360,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             });
         }
         setModalPackageId(null);
-    }, [modalAddons, modalBlockLibraries, modalCustomBlockLibraries, onAddonsChange, onBlockLibrariesChange, onCustomBlockLibrariesChange, packages, stacks, selectedStack, modalPackageId, getRequiredAddons]);
+    }, [modalAddons, modalFeaturePacks, modalBlockLibraries, modalCustomBlockLibraries, onAddonsChange, onFeaturePacksChange, onBlockLibrariesChange, onCustomBlockLibrariesChange, packages, stacks, selectedStack, modalPackageId, getRequiredAddons, getRequiredFeaturePacks]);
 
     const handleModalClose = useCallback(() => {
         setModalPackageId(null);
@@ -399,11 +430,13 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                         stacks={stacks}
                         selectedStackId={selectedPackage === modalPackage.id ? selectedStack : undefined}
                         selectedAddons={modalAddons}
+                        selectedFeaturePacks={modalFeaturePacks}
                         selectedBlockLibraries={modalBlockLibraries}
                         customBlockLibraries={modalCustomBlockLibraries}
                         customBlockLibraryDefaults={customBlockLibraryDefaults}
                         onStackSelect={handleStackSelect}
                         onAddonsChange={handleModalAddonsChange}
+                        onFeaturePacksChange={handleModalFeaturePacksChange}
                         onBlockLibrariesChange={handleModalBlockLibrariesChange}
                         onCustomBlockLibrariesChange={handleModalCustomBlockLibrariesChange}
                         onDone={handleModalDone}

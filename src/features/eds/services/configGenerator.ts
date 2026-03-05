@@ -23,6 +23,7 @@
 import configTemplate from '../config/config-template.json';
 import componentsConfig from '@/features/components/config/components.json';
 import { COMPONENT_IDS } from '@/core/constants';
+import { getFeaturePackConfigFlags } from '@/features/project-creation/services/featurePackLoader';
 import type { Logger , Project } from '@/types';
 
 // Bundled template - single source of truth
@@ -73,8 +74,10 @@ export interface ConfigGeneratorParams {
     customerGroup?: string;
     /** Whether AEM Assets integration is enabled */
     aemAssetsEnabled?: boolean;
-    /** Selected addon IDs (e.g., ['adobe-commerce-b2b']) */
+    /** Selected addon IDs (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
+    /** Selected feature pack IDs (e.g., ['b2b-commerce']) */
+    selectedFeaturePacks?: string[];
 }
 
 /**
@@ -283,6 +286,7 @@ export function extractConfigParams(project: Project): Partial<ConfigGeneratorPa
             project.componentSelections?.backend,
         ),
         selectedAddons: project.selectedAddons,
+        selectedFeaturePacks: project.selectedFeaturePacks,
     };
 }
 
@@ -309,6 +313,27 @@ function injectAddonConfigFlags(
         if (flags && config.public?.default) {
             Object.assign(config.public.default, flags);
             logger.debug(`[ConfigGenerator] Injected config flags for addon: ${addonId}`);
+        }
+    }
+}
+
+/**
+ * Inject feature-pack-specific config flags into the config object.
+ *
+ * Reads configFlags from feature-packs.json definitions and merges them
+ * into config.public.default. Similar to injectAddonConfigFlags but sources
+ * flags from the feature pack system instead of components.json.
+ */
+function injectFeaturePackConfigFlags(
+    config: Record<string, Record<string, Record<string, unknown>>>,
+    selectedFeaturePacks: string[],
+    logger: Logger,
+): void {
+    for (const packId of selectedFeaturePacks) {
+        const flags = getFeaturePackConfigFlags(packId);
+        if (flags && config.public?.default) {
+            Object.assign(config.public.default, flags);
+            logger.debug(`[ConfigGenerator] Injected config flags for feature pack: ${packId}`);
         }
     }
 }
@@ -394,9 +419,14 @@ export function generateConfigJson(
             // to route cs headers (Magento-Website-Code, etc.) to catalog queries.
         }
 
-        // Inject addon-specific config flags (e.g., B2B flags)
+        // Inject addon-specific config flags
         if (params.selectedAddons?.length) {
             injectAddonConfigFlags(finalConfig, params.selectedAddons, logger);
+        }
+
+        // Inject feature-pack-specific config flags (e.g., B2B flags)
+        if (params.selectedFeaturePacks?.length) {
+            injectFeaturePackConfigFlags(finalConfig, params.selectedFeaturePacks, logger);
         }
 
         // Serialize with proper formatting

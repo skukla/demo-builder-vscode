@@ -156,6 +156,9 @@ export interface DemoPackage {
     /** Addons configuration for this package */
     addons?: Addons;
 
+    /** Feature packs configuration for this package (required/optional/excluded per pack ID) */
+    featurePacks?: Record<string, AddonConfig>;
+
     /** Default configuration values (env var name to value) - embedded brand data */
     configDefaults: Record<string, string>;
 

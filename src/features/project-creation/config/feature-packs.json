@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "featurePacks": [
+    {
+      "id": "b2b-commerce",
+      "name": "B2B Commerce",
+      "description": "Company management, quotes, purchase orders, requisition lists, and company switcher",
+      "source": {
+        "owner": "hlxsites",
+        "repo": "aem-boilerplate-commerce",
+        "branch": "b2b"
+      },
+      "stackTypes": ["eds-storefront"],
+      "configFlags": {
+        "commerce-b2b-enabled": true,
+        "commerce-companies-enabled": true
+      },
+      "blocks": {
+        "install": true,
+        "sourceDir": "blocks"
+      },
+      "initializers": {
+        "install": true,
+        "sourceDir": "scripts/initializers",
+        "files": [
+          "company.js",
+          "purchaseorders.js",
+          "quotes.js",
+          "requisitionlists.js"
+        ]
+      },
+      "dependencies": {
+        "@dropins/storefront-account-b2b": "^1.0.0",
+        "@dropins/storefront-company-switcher": "^1.0.0",
+        "@dropins/storefront-purchase-orders": "^1.0.0",
+        "@dropins/storefront-quotes": "^1.0.0",
+        "@dropins/storefront-requisition-lists": "^1.0.0"
+      }
+    }
+  ]
+}

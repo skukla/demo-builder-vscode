@@ -14,6 +14,7 @@
  */
 
 import { installBlockCollections, type BlockLibraryEntry } from '../services/blockCollectionHelpers';
+import { installFeaturePacks } from '../services/featurePackInstaller';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../services/inspectorHelpers';
 import { ConfigurationService, DEFAULT_FOLDER_MAPPING, buildSiteConfigParams } from '../services/configurationService';
 import type { DaLiveAuthService } from '../services/daLiveAuthService';
@@ -224,6 +225,7 @@ async function executePhaseHelixConfig(
     useExistingRepo: boolean,
     customBlockLibraries?: CustomBlockLibrary[],
     packageId?: string,
+    selectedFeaturePacks?: string[],
 ): Promise<{ blockCollectionIds?: string[]; earlyReturn?: StorefrontSetupResult }> {
     const logger = context.logger;
     const { githubFileOps } = services;
@@ -350,6 +352,26 @@ async function executePhaseHelixConfig(
     }
 
     const blockCollectionIds = blockCollectionIdsResult.length > 0 ? blockCollectionIdsResult : undefined;
+
+    // Phase 2.2: Feature Pack Installation (blocks, initializers, dependencies)
+    if (selectedFeaturePacks && selectedFeaturePacks.length > 0) {
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'helix-config',
+            message: `Installing ${selectedFeaturePacks.length} feature ${selectedFeaturePacks.length === 1 ? 'pack' : 'packs'}...`,
+            progress: 32,
+        });
+
+        const fpResult = await installFeaturePacks(
+            githubFileOps, repoInfo.repoOwner, repoInfo.repoName,
+            selectedFeaturePacks, logger,
+        );
+
+        if (fpResult.success) {
+            logger.info(`[Storefront Setup] Feature packs installed: ${fpResult.blocksInstalled} blocks, ${fpResult.initializersInstalled} initializers, ${fpResult.dependenciesAdded} dependencies`);
+        } else {
+            logger.warn(`[Storefront Setup] Feature pack installation warning: ${fpResult.error}`);
+        }
+    }
 
     // Phase 2.5: GitHub App Check (EXISTING repos only)
     if (useExistingRepo) {
@@ -627,6 +649,7 @@ export async function executeStorefrontSetupPhases(
     selectedBlockLibraries?: string[],
     customBlockLibraries?: CustomBlockLibrary[],
     packageId?: string,
+    selectedFeaturePacks?: string[],
 ): Promise<StorefrontSetupResult> {
     const logger = context.logger;
 
@@ -707,7 +730,7 @@ export async function executeStorefrontSetupPhases(
             try {
                 const phase2Result = await executePhaseHelixConfig(
                     context, edsConfig, services, repoInfo, effectiveBlockLibraries, useExistingRepo,
-                    customBlockLibraries, packageId,
+                    customBlockLibraries, packageId, selectedFeaturePacks,
                 );
                 blockCollectionIds = phase2Result.blockCollectionIds ?? [];
                 if (phase2Result.earlyReturn) return phase2Result.earlyReturn;

@@ -13,6 +13,10 @@ import {
     getAvailableBlockLibraries,
     getNativeBlockLibraries,
 } from '../../services/blockLibraryLoader';
+import {
+    getAvailableFeaturePacks,
+    getNativeFeaturePacks,
+} from '../../services/featurePackLoader';
 import { filterAddonsByPackage } from './brandGalleryHelpers';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
@@ -35,11 +39,13 @@ export interface ArchitectureModalProps {
     stacks: Stack[];
     selectedStackId?: string;
     selectedAddons?: string[];
+    selectedFeaturePacks?: string[];
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
     customBlockLibraryDefaults?: CustomBlockLibrary[];
     onStackSelect: (stackId: string) => void;
     onAddonsChange: (addons: string[]) => void;
+    onFeaturePacksChange: (packs: string[]) => void;
     onBlockLibrariesChange: (libraries: string[]) => void;
     onCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
     onDone: () => void;
@@ -51,11 +57,13 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     stacks,
     selectedStackId,
     selectedAddons = [],
+    selectedFeaturePacks = [],
     selectedBlockLibraries = [],
     customBlockLibraries = [],
     customBlockLibraryDefaults = [],
     onStackSelect,
     onAddonsChange,
+    onFeaturePacksChange,
     onBlockLibrariesChange,
     onCustomBlockLibrariesChange,
     onDone,
@@ -99,6 +107,17 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         [selectedAddons, onAddonsChange],
     );
 
+    const handleFeaturePackToggle = useCallback(
+        (packId: string, isSelected: boolean) => {
+            if (isSelected) {
+                onFeaturePacksChange([...selectedFeaturePacks, packId]);
+            } else {
+                onFeaturePacksChange(selectedFeaturePacks.filter(id => id !== packId));
+            }
+        },
+        [selectedFeaturePacks, onFeaturePacksChange],
+    );
+
     // Get the selected stack object
     const selectedStack = useMemo(() => {
         if (!selectedStackId) return null;
@@ -119,6 +138,20 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         if (!selectedStack || !isEdsStack) return [];
         return getNativeBlockLibraries(selectedStack, pkg.id);
     }, [selectedStack, isEdsStack, pkg.id]);
+
+    // Get available feature packs (optional) for the current stack and package
+    const availableFeaturePacks = useMemo(() => {
+        if (!selectedStack) return [];
+        return getAvailableFeaturePacks(selectedStack, pkg.id);
+    }, [selectedStack, pkg.id]);
+
+    // Get feature packs that are required (shown as disabled/checked)
+    const nativeFeaturePacks = useMemo(() => {
+        if (!selectedStack) return [];
+        return getNativeFeaturePacks(selectedStack, pkg.id);
+    }, [selectedStack, pkg.id]);
+
+    const hasFeaturePacks = availableFeaturePacks.length > 0 || nativeFeaturePacks.length > 0;
 
     const handleBlockLibraryToggle = useCallback(
         (libraryId: string, isSelected: boolean) => {
@@ -296,6 +329,43 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                                 })}
                             </div>
                         </div>
+
+                        {/* Feature Packs Section - shown when packs are available for this stack/package */}
+                        {hasFeaturePacks && (
+                            <div className="addons-section addons-visible">
+                                <Divider size="S" marginTop="size-300" marginBottom="size-200" />
+                                <Text UNSAFE_className="description-block-sm">
+                                    Feature Packs
+                                </Text>
+                                <div className="architecture-addons">
+                                    {nativeFeaturePacks.map((pack) => (
+                                        <Checkbox
+                                            key={pack.id}
+                                            isSelected={true}
+                                            isDisabled={true}
+                                            onChange={() => {}}
+                                        >
+                                            <span className="addon-label">
+                                                <span className="addon-name">{pack.name}</span>
+                                                <span className="addon-description">{pack.description}</span>
+                                            </span>
+                                        </Checkbox>
+                                    ))}
+                                    {availableFeaturePacks.map((pack) => (
+                                        <Checkbox
+                                            key={pack.id}
+                                            isSelected={selectedFeaturePacks.includes(pack.id)}
+                                            onChange={(isSelected) => handleFeaturePackToggle(pack.id, isSelected)}
+                                        >
+                                            <span className="addon-label">
+                                                <span className="addon-name">{pack.name}</span>
+                                                <span className="addon-description">{pack.description}</span>
+                                            </span>
+                                        </Checkbox>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </>
                 )}
 

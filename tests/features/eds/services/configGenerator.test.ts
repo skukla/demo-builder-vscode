@@ -297,10 +297,10 @@ describe('configGenerator', () => {
             environmentType: 'paas',
         };
 
-        it('should inject B2B config flags when B2B addon is selected', () => {
+        it('should inject B2B config flags when B2B feature pack is selected', () => {
             const params: ConfigGeneratorParams = {
                 ...baseParams,
-                selectedAddons: ['adobe-commerce-b2b'],
+                selectedFeaturePacks: ['b2b-commerce'],
             };
 
             const result = generateConfigJson(params, mockLogger);
@@ -348,17 +348,18 @@ describe('configGenerator', () => {
             expect(config.public.default['commerce-b2b-enabled']).toBeUndefined();
         });
 
-        it('should handle multiple addons with config flags', () => {
+        it('should handle feature packs alongside addons', () => {
             const params: ConfigGeneratorParams = {
                 ...baseParams,
-                selectedAddons: ['adobe-commerce-aco', 'adobe-commerce-b2b'],
+                selectedAddons: ['adobe-commerce-aco'],
+                selectedFeaturePacks: ['b2b-commerce'],
             };
 
             const result = generateConfigJson(params, mockLogger);
 
             expect(result.success).toBe(true);
             const config = JSON.parse(result.content!);
-            // B2B flags should be present
+            // B2B flags from feature pack should be present
             expect(config.public.default['commerce-b2b-enabled']).toBe(true);
             expect(config.public.default['commerce-companies-enabled']).toBe(true);
         });

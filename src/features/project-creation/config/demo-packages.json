@@ -9,8 +9,10 @@
       "icon": "isle5",
       "featured": true,
       "addons": {
-        "adobe-commerce-aco": "excluded",
-        "adobe-commerce-b2b": "optional"
+        "adobe-commerce-aco": "excluded"
+      },
+      "featurePacks": {
+        "b2b-commerce": "optional"
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "base",
@@ -70,8 +72,10 @@
       "icon": "custom",
       "featured": false,
       "addons": {
-        "adobe-commerce-aco": "excluded",
-        "adobe-commerce-b2b": "optional"
+        "adobe-commerce-aco": "excluded"
+      },
+      "featurePacks": {
+        "b2b-commerce": "optional"
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "website",
@@ -129,8 +133,10 @@
       "icon": "custom",
       "featured": false,
       "addons": {
-        "adobe-commerce-aco": "excluded",
-        "adobe-commerce-b2b": "required"
+        "adobe-commerce-aco": "excluded"
+      },
+      "featurePacks": {
+        "b2b-commerce": "required"
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "base",
@@ -188,8 +194,10 @@
       "icon": "citisignal",
       "featured": true,
       "addons": {
-        "adobe-commerce-aco": "excluded",
-        "adobe-commerce-b2b": "optional"
+        "adobe-commerce-aco": "excluded"
+      },
+      "featurePacks": {
+        "b2b-commerce": "optional"
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
@@ -279,8 +287,10 @@
       "featured": false,
       "status": "coming-soon",
       "addons": {
-        "adobe-commerce-aco": "required",
-        "adobe-commerce-b2b": "excluded"
+        "adobe-commerce-aco": "required"
+      },
+      "featurePacks": {
+        "b2b-commerce": "excluded"
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "buildright",

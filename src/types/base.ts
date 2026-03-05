@@ -42,6 +42,8 @@ export interface Project {
     selectedAddons?: string[];
     /** Block library IDs selected during project creation (e.g., ['isle5', 'demo-team-blocks']) */
     selectedBlockLibraries?: string[];
+    /** Feature pack IDs selected during project creation (e.g., ['b2b-commerce']) */
+    selectedFeaturePacks?: string[];
     /** Custom block libraries added by URL */
     customBlockLibraries?: CustomBlockLibrary[];
     /** Installed block library snapshot — source commit SHA captured at install time */

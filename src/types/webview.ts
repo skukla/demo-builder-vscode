@@ -38,6 +38,7 @@ export interface WizardState {
     selectedStack?: string;  // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
     selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
     selectedBlockLibraries?: string[];  // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
+    selectedFeaturePacks?: string[];  // Selected feature pack IDs (e.g., ['b2b-commerce'])
     customBlockLibraries?: CustomBlockLibrary[];  // Custom block libraries added by URL
     packageConfigDefaults?: Record<string, string>;  // Package-specific config defaults (e.g., store codes)
     components?: ComponentSelection;
