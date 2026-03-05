@@ -881,15 +881,13 @@ export class HelixService {
 
         this.logger.info(`[Helix] Unpublishing ${webPaths.length} pages (page-by-page)`);
 
-        let liveCount = 0;
-        for (const path of webPaths) {
-            const result = await this.deleteResource('live', org, site, path, branch);
-            if (result.success) {
-                liveCount++;
-            }
-        }
+        // Delete live and preview CDN entries in batches to respect rate limits
+        const liveResults = await runInBatches(
+            webPaths, HELIX_DELETE_BATCH_SIZE,
+            async path => (await this.deleteResource('live', org, site, path, branch)).success,
+        );
+        const liveCount = liveResults.filter(Boolean).length;
 
-        // Delete preview CDN entries in batches to respect 10 req/s rate limit
         const previewResults = await runInBatches(
             webPaths, HELIX_DELETE_BATCH_SIZE,
             path => this.deletePreview(org, site, path, branch),
