@@ -220,6 +220,7 @@ describe('executeEdsPipeline - operations', () => {
                 'template-repo',
                 expect.any(Function),
                 undefined,
+                undefined,
             );
         });
 
@@ -238,6 +239,7 @@ describe('executeEdsPipeline - operations', () => {
                 'test-repo',
                 expect.any(Function),
                 undefined,
+                blockCollectionIds,
             );
         });
 
@@ -264,6 +266,7 @@ describe('executeEdsPipeline - operations', () => {
                 'test-org', 'test-site', 'template-owner', 'template-repo',
                 expect.any(Function),
                 libraryContentSources,
+                undefined,
             );
         });
 
@@ -287,6 +290,7 @@ describe('executeEdsPipeline - operations', () => {
                 expect.anything(), expect.anything(), expect.anything(), expect.anything(),
                 expect.any(Function),
                 libraryContentSources,
+                undefined,
             );
         });
 

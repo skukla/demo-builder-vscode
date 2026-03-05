@@ -377,6 +377,7 @@ export async function executeEdsPipeline(
                 daLiveOrg, daLiveSite, compDefOwner, compDefRepo,
                 (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
                 libraryContentSources,
+                blockCollectionIds,
             );
 
             libraryPaths = libResult.paths;

@@ -851,6 +851,8 @@ export class DaLiveContentOperations {
      * @param getFileContent - Function to fetch file from GitHub (from GitHubFileOperations)
      * @param libraryContentSources - DA.live sites whose published block doc pages should be
      *   copied via public CDN for blocks that lack unsafeHTML auto-generation
+     * @param installedBlockIds - Block IDs installed from block collections; when provided,
+     *   CDN doc page copy is restricted to only these blocks (skips native template blocks)
      * @returns Result with success status, block count, and paths created (for publishing)
      */
     async createBlockLibraryFromTemplate(
@@ -860,6 +862,7 @@ export class DaLiveContentOperations {
         templateRepo: string,
         getFileContent: (owner: string, repo: string, path: string) => Promise<{ content: string; sha: string } | null>,
         libraryContentSources?: Array<{ org: string; site: string }>,
+        installedBlockIds?: string[],
     ): Promise<{ success: boolean; blocksCount: number; paths: string[]; error?: string }> {
         try {
             const componentDef = await getFileContent(templateOwner, templateRepo, 'component-definition.json');
@@ -888,7 +891,7 @@ export class DaLiveContentOperations {
                 return { success: true, blocksCount: 0, paths: [] };
             }
 
-            return await this.createBlockLibrary(org, site, blocks, libraryContentSources);
+            return await this.createBlockLibrary(org, site, blocks, libraryContentSources, installedBlockIds);
         } catch (error) {
             this.logger.warn(`[DA.live] Block library from template failed: ${(error as Error).message}`);
             return { success: false, blocksCount: 0, paths: [], error: (error as Error).message };
@@ -913,6 +916,7 @@ export class DaLiveContentOperations {
         site: string,
         blocks: Array<{ title: string; id: string; exampleHtml?: string }>,
         libraryContentSources?: Array<{ org: string; site: string }>,
+        installedBlockIds?: string[],
     ): Promise<{ success: boolean; blocksCount: number; paths: string[]; error?: string }> {
         if (blocks.length === 0) {
             return { success: true, blocksCount: 0, paths: [] };
@@ -926,7 +930,7 @@ export class DaLiveContentOperations {
             // unsafeHTML. Uses the public CDN (.plain.html) to avoid requiring
             // DA.live API auth on third-party source orgs.
             if (libraryContentSources?.length) {
-                await this.copyBlockDocPagesFromSources(org, site, blocks, libraryContentSources);
+                await this.copyBlockDocPagesFromSources(org, site, blocks, libraryContentSources, installedBlockIds);
             }
 
             // Check which blocks have documentation pages (including newly created ones)
@@ -1063,10 +1067,19 @@ export class DaLiveContentOperations {
         site: string,
         blocks: Array<{ id: string; exampleHtml?: string }>,
         contentSources: Array<{ org: string; site: string }>,
+        installedBlockIds?: string[],
     ): Promise<void> {
         // Only need CDN copy for blocks WITHOUT unsafeHTML —
         // blocks WITH unsafeHTML are handled by ensureBlockDocPages
-        const blocksNeedingCdnCopy = blocks.filter(b => !b.exampleHtml);
+        let blocksNeedingCdnCopy = blocks.filter(b => !b.exampleHtml);
+
+        // When installedBlockIds is provided, only attempt CDN copy for blocks
+        // installed by block collections. Native template blocks won't have doc
+        // pages on library content sources, so attempting them produces 404 spam.
+        if (installedBlockIds?.length) {
+            const installedSet = new Set(installedBlockIds);
+            blocksNeedingCdnCopy = blocksNeedingCdnCopy.filter(b => installedSet.has(b.id));
+        }
         if (blocksNeedingCdnCopy.length === 0) return;
 
         // Check which blocks already have doc pages (e.g., copied by copyContent

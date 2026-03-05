@@ -696,6 +696,82 @@ describe('createBlockLibraryFromTemplate', () => {
             expect(result.paths).toContain('.da/library/blocks/hero-v2');
         });
 
+        it('should only attempt CDN copy for installedBlockIds, skipping native template blocks', async () => {
+            // Given: Template has 4 blocks without unsafeHTML, but only 2 were
+            // installed by block collections. The other 2 are native template blocks.
+            mockGetFileContent.mockResolvedValue({
+                content: createComponentDef([
+                    { title: 'Cards', id: 'cards' },           // native template block
+                    { title: 'Hero', id: 'hero' },             // native template block
+                    { title: 'Commerce Cart', id: 'commerce-cart' }, // installed by block collection
+                    { title: 'Tabs', id: 'tabs' },              // installed by block collection
+                ]),
+                sha: 'abc123',
+            });
+
+            mockFetch.mockImplementation(createCdnCopyMockFetch({
+                cdnAvailableBlocks: ['commerce-cart', 'tabs'],
+            }));
+
+            const contentSources = [{ org: 'demo-system-stores', site: 'accs-citisignal' }];
+            const installedBlockIds = ['commerce-cart', 'tabs'];
+
+            // When: createBlockLibraryFromTemplate is called with installedBlockIds
+            const result = await service.createBlockLibraryFromTemplate(
+                destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+                contentSources, installedBlockIds,
+            );
+
+            // Then: Only installed blocks should have CDN fetches attempted
+            expect(result.success).toBe(true);
+
+            const cdnFetches = mockFetch.mock.calls.filter(
+                (call: [string, RequestInit]) =>
+                    call[0].includes('aem.live') && call[0].includes('.plain.html'),
+            );
+
+            // Should attempt CDN copy for installed blocks
+            expect(cdnFetches.some((c: [string]) => c[0].includes('commerce-cart'))).toBe(true);
+            expect(cdnFetches.some((c: [string]) => c[0].includes('tabs'))).toBe(true);
+
+            // Should NOT attempt CDN copy for native template blocks
+            expect(cdnFetches.some((c: [string]) => c[0].includes('/cards.'))).toBe(false);
+            expect(cdnFetches.some((c: [string]) => c[0].includes('/hero.'))).toBe(false);
+        });
+
+        it('should fall back to all blocks when installedBlockIds is not provided', async () => {
+            // Given: Template has 2 blocks without unsafeHTML, no installedBlockIds
+            mockGetFileContent.mockResolvedValue({
+                content: createComponentDef([
+                    { title: 'Cards', id: 'cards' },
+                    { title: 'Hero V2', id: 'hero-v2' },
+                ]),
+                sha: 'abc123',
+            });
+
+            mockFetch.mockImplementation(createCdnCopyMockFetch({
+                cdnAvailableBlocks: ['cards', 'hero-v2'],
+            }));
+
+            const contentSources = [{ org: 'demo-system-stores', site: 'accs-citisignal' }];
+
+            // When: createBlockLibraryFromTemplate is called WITHOUT installedBlockIds
+            const result = await service.createBlockLibraryFromTemplate(
+                destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
+                contentSources,
+            );
+
+            // Then: All blocks without unsafeHTML should get CDN copy attempts
+            expect(result.success).toBe(true);
+
+            const cdnFetches = mockFetch.mock.calls.filter(
+                (call: [string, RequestInit]) =>
+                    call[0].includes('aem.live') && call[0].includes('.plain.html'),
+            );
+            expect(cdnFetches.some((c: [string]) => c[0].includes('cards'))).toBe(true);
+            expect(cdnFetches.some((c: [string]) => c[0].includes('hero-v2'))).toBe(true);
+        });
+
         it('should skip CDN copy when no libraryContentSources provided', async () => {
             // Given: Block without unsafeHTML and no content sources
             mockGetFileContent.mockResolvedValue({
