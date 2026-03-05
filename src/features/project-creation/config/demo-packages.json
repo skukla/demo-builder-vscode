@@ -124,7 +124,7 @@
     },
     {
       "id": "b2b",
-      "name": "B2B Commerce",
+      "name": "B2B Boilerplate",
       "description": "B2B Commerce storefront with company management, quotes, purchase orders, and requisition lists",
       "icon": "custom",
       "featured": false,
