@@ -1377,6 +1377,9 @@ export class DaLiveContentOperations {
 
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Checking configurations...' });
 
+        // Auth pages missing from source — stubs created after the main copy loop
+        const missingAuthPages: Array<{ path: string; blockClass: string }> = [];
+
         // When using CDN index fallback, add essential content that may not
         // be in the content index. The DA.live list API already returns
         // everything, so this is only needed for the fallback path.
@@ -1415,19 +1418,23 @@ export class DaLiveContentOperations {
 
             // Customer auth pages: dropin-rendered pages not in content index but
             // needed for login/account flows. Probe source CDN and copy if they exist.
-            const essentialAuthPages = [
-                '/customer/login',
-                '/customer/account',
+            // Pages not on source get stubs with correct block markup in the destination.
+            const essentialAuthPages: Array<{ path: string; blockClass: string }> = [
+                { path: '/customer/login', blockClass: 'commerce-login' },
+                { path: '/customer/account', blockClass: 'commerce-account' },
+                { path: '/customer/create-account', blockClass: 'commerce-create-account' },
             ];
-            for (const authPath of essentialAuthPages) {
-                if (!contentPaths.includes(authPath)) {
+            for (const authPage of essentialAuthPages) {
+                if (!contentPaths.includes(authPage.path)) {
                     try {
-                        const response = await fetch(`${baseUrl}${authPath}`, { method: 'HEAD' });
+                        const response = await fetch(`${baseUrl}${authPage.path}`, { method: 'HEAD' });
                         if (response.ok) {
-                            contentPaths.unshift(authPath);
+                            contentPaths.unshift(authPage.path);
+                        } else {
+                            missingAuthPages.push(authPage);
                         }
                     } catch {
-                        // Page doesn't exist on source — skip
+                        missingAuthPages.push(authPage);
                     }
                 }
             }
@@ -1435,7 +1442,7 @@ export class DaLiveContentOperations {
 
         const copiedFiles: string[] = [];
         const failedFiles: { path: string; error: string }[] = [];
-        const totalFiles = contentPaths.length;
+        let totalFiles = contentPaths.length;
 
         // Copy files in parallel batches for improved performance (~5x faster)
         const contentStart = Date.now();
@@ -1483,6 +1490,43 @@ export class DaLiveContentOperations {
             }
         }
         this.logger.debug(`[DA.live] Content copy total: ${totalFiles} files in ${formatDuration(Date.now() - contentStart)}`);
+
+        // Create stub pages for auth pages that don't exist on source.
+        // Each stub uses the correct block class so the dropin renders properly.
+        if (missingAuthPages.length > 0) {
+            const token = await this.getImsToken();
+            for (const { path: authPath, blockClass } of missingAuthPages) {
+                try {
+                    const daPath = this.resolveDaPath(authPath, true);
+                    const stubHtml = [
+                        '<body><header></header><main><div>',
+                        `<div class="${blockClass}"><div><div></div></div></div>`,
+                        '</div></main><footer></footer></body>',
+                    ].join('');
+                    const blob = new Blob([stubHtml], { type: 'text/html' });
+                    const formData = new FormData();
+                    formData.append('data', blob);
+
+                    const destUrl = `${DA_LIVE_BASE_URL}/source/${destOrg}/${destSite}/${daPath}`;
+                    const response = await fetch(destUrl, {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${token}` },
+                        body: formData,
+                        signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+                    });
+
+                    if (response.ok) {
+                        copiedFiles.push(authPath);
+                        totalFiles++;
+                        this.logger.info(`[DA.live] Created stub page for ${authPath}`);
+                    } else {
+                        this.logger.warn(`[DA.live] Failed to create stub for ${authPath}: ${response.status}`);
+                    }
+                } catch (error) {
+                    this.logger.warn(`[DA.live] Failed to create stub for ${authPath}: ${(error as Error).message}`);
+                }
+            }
+        }
 
         // Final progress update
         if (progressCallback) {

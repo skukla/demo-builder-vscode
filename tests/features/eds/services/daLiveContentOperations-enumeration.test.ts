@@ -368,8 +368,8 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
                 'dest-site',
             );
 
-            // 2 from index + 4 spreadsheets + 2 fragments + 2 auth pages = 10
-            expect(result.totalFiles).toBe(10);
+            // 2 from index + 4 spreadsheets + 2 fragments + 3 auth pages = 11
+            expect(result.totalFiles).toBe(11);
 
             // Verify HEAD requests were made for nav and footer
             const headCalls = mockFetch.mock.calls
@@ -417,9 +417,9 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
                 'dest-site',
             );
 
-            // 2 from index + 4 spreadsheets + 2 fragments + 1 auth page (login only) = 9
-            // customer/account returned 404, so NOT included
-            expect(result.totalFiles).toBe(9);
+            // 2 from index + 4 spreadsheets + 2 fragments + 2 auth (login + create-account) = 10 copied
+            // + 1 stub (account returned 404) = 11 total
+            expect(result.totalFiles).toBe(11);
 
             // Verify HEAD requests were made for customer auth pages
             const headCalls = mockFetch.mock.calls
@@ -458,6 +458,87 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
                     !(url as string).endsWith('.json'),
             );
             expect(customerAuthProbes).toHaveLength(0);
+        });
+
+        it('should create stub with correct block markup for create-account page (not on source)', async () => {
+            // DA.live list fails — triggers CDN index fallback
+            jest.spyOn(service, 'getContentPathsFromDaLive')
+                .mockRejectedValue(new Error('Not authenticated'));
+            jest.spyOn(service, 'getContentPathsFromIndex')
+                .mockResolvedValue(['/index']);
+
+            const postCalls: Array<{ url: string; body: FormData | null }> = [];
+
+            mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
+                if (options?.method === 'HEAD') {
+                    // login and account exist on source, create-account does NOT
+                    if ((url as string).includes('/customer/login') || (url as string).includes('/customer/account')) {
+                        return mockFetchResponse(200);
+                    }
+                    if ((url as string).includes('/customer/create-account')) {
+                        return mockFetchResponse(404);
+                    }
+                    return mockFetchResponse(200);
+                }
+                if (options?.method === 'POST') {
+                    postCalls.push({ url: url as string, body: options.body as FormData | null });
+                }
+                return mockFetchResponse(200);
+            });
+
+            const result = await service.copyContentFromSource(
+                {
+                    org: 'source-org',
+                    site: 'source-site',
+                    indexUrl: 'https://main--source-site--source-org.aem.live/full-index.json',
+                },
+                'dest-org',
+                'dest-site',
+            );
+
+            // Stub should be created via POST to DA.live /source endpoint
+            const stubPost = postCalls.find(p => p.url.includes('create-account'));
+            expect(stubPost).toBeDefined();
+            expect(stubPost!.url).toContain('/source/dest-org/dest-site/customer/create-account.html');
+
+            // copiedFiles should include the stub
+            expect(result.copiedFiles).toContainEqual('/customer/create-account');
+
+            // Log should confirm stub creation with block class
+            expect(mockLogger.info).toHaveBeenCalledWith(
+                expect.stringContaining('Created stub page for /customer/create-account'),
+            );
+        });
+
+        it('should NOT create stubs for auth pages that exist on source', async () => {
+            // DA.live list fails — triggers CDN index fallback
+            jest.spyOn(service, 'getContentPathsFromDaLive')
+                .mockRejectedValue(new Error('Not authenticated'));
+            jest.spyOn(service, 'getContentPathsFromIndex')
+                .mockResolvedValue(['/index']);
+
+            mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
+                if (options?.method === 'HEAD') {
+                    // ALL auth pages exist on source
+                    return mockFetchResponse(200);
+                }
+                return mockFetchResponse(200);
+            });
+
+            await service.copyContentFromSource(
+                {
+                    org: 'source-org',
+                    site: 'source-site',
+                    indexUrl: 'https://main--source-site--source-org.aem.live/full-index.json',
+                },
+                'dest-org',
+                'dest-site',
+            );
+
+            // No stub creation — all auth pages were copied from source
+            expect(mockLogger.info).not.toHaveBeenCalledWith(
+                expect.stringContaining('Created stub'),
+            );
         });
     });
 });
