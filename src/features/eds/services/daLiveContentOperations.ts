@@ -1412,6 +1412,25 @@ export class DaLiveContentOperations {
                     }
                 }
             }
+
+            // Customer auth pages: dropin-rendered pages not in content index but
+            // needed for login/account flows. Probe source CDN and copy if they exist.
+            const essentialAuthPages = [
+                '/customer/login',
+                '/customer/account',
+            ];
+            for (const authPath of essentialAuthPages) {
+                if (!contentPaths.includes(authPath)) {
+                    try {
+                        const response = await fetch(`${baseUrl}${authPath}`, { method: 'HEAD' });
+                        if (response.ok) {
+                            contentPaths.unshift(authPath);
+                        }
+                    } catch {
+                        // Page doesn't exist on source — skip
+                    }
+                }
+            }
         }
 
         const copiedFiles: string[] = [];

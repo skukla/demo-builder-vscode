@@ -368,8 +368,8 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
                 'dest-site',
             );
 
-            // 2 from index + 4 spreadsheets + 2 fragments (nav + footer) = 8
-            expect(result.totalFiles).toBe(8);
+            // 2 from index + 4 spreadsheets + 2 fragments + 2 auth pages = 10
+            expect(result.totalFiles).toBe(10);
 
             // Verify HEAD requests were made for nav and footer
             const headCalls = mockFetch.mock.calls
@@ -381,6 +381,83 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
             expect(headCalls).toContainEqual(
                 expect.stringContaining('/footer'),
             );
+        });
+
+        it('should add customer auth pages via CDN HEAD checks in fallback path (regression: auth 404s)', async () => {
+            // DA.live list fails — triggers CDN index fallback
+            jest.spyOn(service, 'getContentPathsFromDaLive')
+                .mockRejectedValue(new Error('Not authenticated'));
+            // CDN index returns pages WITHOUT customer auth pages (not in sitemap)
+            jest.spyOn(service, 'getContentPathsFromIndex')
+                .mockResolvedValue(['/index', '/about']);
+
+            // URL-based mock: customer/login exists, customer/account returns 404
+            mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
+                if (options?.method === 'HEAD') {
+                    if ((url as string).includes('/customer/login')) {
+                        return mockFetchResponse(200);
+                    }
+                    if ((url as string).includes('/customer/account')) {
+                        return mockFetchResponse(404);
+                    }
+                    // Spreadsheets and fragments succeed
+                    return mockFetchResponse(200);
+                }
+                // Copy operations succeed
+                return mockFetchResponse(200);
+            });
+
+            const result = await service.copyContentFromSource(
+                {
+                    org: 'source-org',
+                    site: 'source-site',
+                    indexUrl: 'https://main--source-site--source-org.aem.live/full-index.json',
+                },
+                'dest-org',
+                'dest-site',
+            );
+
+            // 2 from index + 4 spreadsheets + 2 fragments + 1 auth page (login only) = 9
+            // customer/account returned 404, so NOT included
+            expect(result.totalFiles).toBe(9);
+
+            // Verify HEAD requests were made for customer auth pages
+            const headCalls = mockFetch.mock.calls
+                .filter(([, opts]: [string, RequestInit | undefined]) => opts?.method === 'HEAD')
+                .map(([url]: [string]) => url);
+            expect(headCalls).toContainEqual(
+                expect.stringContaining('/customer/login'),
+            );
+            expect(headCalls).toContainEqual(
+                expect.stringContaining('/customer/account'),
+            );
+        });
+
+        it('should skip customer auth page probing when DA.live list succeeds', async () => {
+            jest.spyOn(service, 'getContentPathsFromDaLive')
+                .mockResolvedValue(['/index', '/customer/login', '/customer/account', '/nav']);
+
+            mockFetch.mockResolvedValue(mockFetchResponse(200));
+
+            await service.copyContentFromSource(
+                {
+                    org: 'source-org',
+                    site: 'source-site',
+                    indexUrl: 'https://main--source-site--source-org.aem.live/full-index.json',
+                },
+                'dest-org',
+                'dest-site',
+            );
+
+            // No HEAD requests for customer auth page probing — DA.live list already found them
+            // Exclude .json URLs which come from isSpreadsheetPath checks (unrelated)
+            const customerAuthProbes = mockFetch.mock.calls.filter(
+                ([url, opts]: [string, RequestInit | undefined]) =>
+                    opts?.method === 'HEAD' &&
+                    (url as string).includes('/customer/') &&
+                    !(url as string).endsWith('.json'),
+            );
+            expect(customerAuthProbes).toHaveLength(0);
         });
     });
 });

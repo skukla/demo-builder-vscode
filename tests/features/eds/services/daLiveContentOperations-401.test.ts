@@ -288,8 +288,9 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
                         'application/json',
                     );
                 }
-                // Essential config HEAD checks (return 404 - don't exist)
-                if (options?.method === 'HEAD' && url.endsWith('.json')) {
+                // All HEAD checks (essential configs, fragments, auth pages) return 404
+                // so they don't inflate contentPaths — these tests focus on token behavior
+                if (options?.method === 'HEAD') {
                     return mockFetchResponse(404);
                 }
                 // Source content GET
@@ -307,6 +308,8 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
         it('should call getAccessToken once per batch', async () => {
             // 7 paths = 2 batches (5 + 2) with CONTENT_COPY_BATCH_SIZE = 5
             const paths = ['/p1', '/p2', '/p3', '/p4', '/p5', '/p6', '/p7'];
+            // Use DA.live list directly to bypass CDN fallback (avoids auth page probing/stub creation)
+            jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(paths);
             setupContentSourceMock(paths);
 
             await service.copyContentFromSource(source, destOrg, destSite);
@@ -323,6 +326,8 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
 
             // 6 paths = 2 batches (5 + 1)
             const paths = ['/p1', '/p2', '/p3', '/p4', '/p5', '/p6'];
+            // Use DA.live list directly to bypass CDN fallback
+            jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(paths);
             setupContentSourceMock(paths);
 
             await service.copyContentFromSource(source, destOrg, destSite);
@@ -358,6 +363,8 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
         it('should call getAccessToken for a single batch', async () => {
             // 3 paths = 1 batch
             const paths = ['/p1', '/p2', '/p3'];
+            // Use DA.live list directly to bypass CDN fallback
+            jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(paths);
             setupContentSourceMock(paths);
 
             await service.copyContentFromSource(source, destOrg, destSite);
