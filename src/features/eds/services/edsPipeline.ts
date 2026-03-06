@@ -20,7 +20,7 @@
 import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { HelixService } from './helixService';
-import { DaLiveError } from './types';
+import { DaLiveAuthError, DaLiveError } from './types';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
@@ -443,6 +443,9 @@ export async function executeEdsPipeline(
             libraryPaths,
         };
     } catch (error) {
+        // Re-throw auth errors so callers can offer re-authentication
+        if (error instanceof DaLiveAuthError) throw error;
+
         const errorMessage = (error as Error).message;
         logger.error(`[EdsPipeline] Failed: ${errorMessage}`);
         return {

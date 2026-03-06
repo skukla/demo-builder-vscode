@@ -574,40 +574,70 @@ export async function executeEdsReset(
 
         const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
         const { executeEdsPipeline } = await import('./edsPipeline');
+        const { DaLiveAuthError } = await import('./types');
+        const { ensureDaLiveAuth } = await import('../handlers/edsHelpers');
 
-        const pipelineResult = await executeEdsPipeline(
-            {
-                repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
-                clearExistingContent: true,
-                skipContent: !contentSourceConfig,
-                contentSource: contentSourceConfig,
-                contentPatches, includeBlockLibrary,
-                blockCollectionIds: repoResetResult.blockCollectionIds,
-                libraryContentSources,
-                purgeCache: true, skipPublish: false,
-            },
-            {
-                daLiveContentOps, githubFileOps, helixService, logger: context.logger,
-            },
-            (info) => {
-                const stepMap: Record<string, number> = {
-                    'content-clear': 4, 'content-copy': 4, 'block-library': 4,
-                    'eds-settings': 5, 'cache-purge': 6, 'content-publish': 6, 'library-publish': 6,
-                };
-                let message = info.message;
-                if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
-                    message = `Publishing to CDN (${info.current}/${info.total} pages)`;
+        const MAX_REAUTH_ATTEMPTS = 2;
+        let pipelineAttempt = 0;
+
+        while (true) {
+            try {
+                const pipelineResult = await executeEdsPipeline(
+                    {
+                        repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
+                        clearExistingContent: true,
+                        skipContent: !contentSourceConfig,
+                        contentSource: contentSourceConfig,
+                        contentPatches, includeBlockLibrary,
+                        blockCollectionIds: repoResetResult.blockCollectionIds,
+                        libraryContentSources,
+                        purgeCache: true, skipPublish: false,
+                    },
+                    {
+                        daLiveContentOps, githubFileOps, helixService, logger: context.logger,
+                    },
+                    (info) => {
+                        const stepMap: Record<string, number> = {
+                            'content-clear': 4, 'content-copy': 4, 'block-library': 4,
+                            'eds-settings': 5, 'cache-purge': 6, 'content-publish': 6, 'library-publish': 6,
+                        };
+                        let message = info.message;
+                        if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
+                            message = `Publishing to CDN (${info.current}/${info.total} pages)`;
+                        }
+                        report(stepMap[info.operation] ?? 4, message);
+                    },
+                );
+
+                if (!pipelineResult.success) {
+                    throw new Error(pipelineResult.error || 'Content pipeline failed');
                 }
-                report(stepMap[info.operation] ?? 4, message);
-            },
-        );
 
-        if (!pipelineResult.success) {
-            throw new Error(pipelineResult.error || 'Content pipeline failed');
+                contentCopied = pipelineResult.contentFilesCopied;
+                context.logger.info('[EdsReset] Content pipeline completed successfully');
+                break;
+            } catch (error) {
+                if (error instanceof DaLiveAuthError && pipelineAttempt < MAX_REAUTH_ATTEMPTS) {
+                    pipelineAttempt++;
+                    context.logger.warn(`[EdsReset] DA.live token expired mid-pipeline (attempt ${pipelineAttempt})`);
+                    report(4, 'DA.live session expired. Please re-authenticate...');
+
+                    const authResult = await ensureDaLiveAuth(context, '[EdsReset]');
+                    if (!authResult.authenticated) {
+                        throw new Error(
+                            authResult.cancelled
+                                ? 'Reset cancelled — DA.live re-authentication required'
+                                : `DA.live re-authentication failed: ${authResult.error}`,
+                        );
+                    }
+
+                    context.logger.info('[EdsReset] DA.live re-authenticated, resuming pipeline');
+                    report(4, 'Resuming content pipeline...');
+                    continue;
+                }
+                throw error;
+            }
         }
-
-        contentCopied = pipelineResult.contentFilesCopied;
-        context.logger.info('[EdsReset] Content pipeline completed successfully');
 
         // Verify CDN if requested
         if (verifyCdn) {

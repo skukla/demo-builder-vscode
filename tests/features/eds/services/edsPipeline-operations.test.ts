@@ -15,7 +15,7 @@ import {
     type EdsPipelineParams,
     type EdsPipelineServices,
 } from '@/features/eds/services/edsPipeline';
-import { DaLiveError } from '@/features/eds/services/types';
+import { DaLiveError, DaLiveAuthError } from '@/features/eds/services/types';
 
 // Mock edsHelpers
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
@@ -450,6 +450,40 @@ describe('executeEdsPipeline - operations', () => {
 
             // Pipeline should succeed even if library publish fails (non-fatal)
             expect(result.success).toBe(true);
+        });
+    });
+
+    describe('DaLiveAuthError propagation', () => {
+        it('should re-throw DaLiveAuthError instead of swallowing it', async () => {
+            // Given: Content copy throws DaLiveAuthError (token expired mid-pipeline)
+            (mockDaLiveContentOps.copyContentFromSource as jest.Mock).mockRejectedValue(
+                new DaLiveAuthError('DA.live token expired during content copy'),
+            );
+
+            // When/Then: Pipeline should re-throw DaLiveAuthError, not return { success: false }
+            await expect(
+                executeEdsPipeline(
+                    { ...baseParams, contentSource: { org: 'src', site: 'src' } },
+                    services,
+                ),
+            ).rejects.toThrow(DaLiveAuthError);
+        });
+
+        it('should still swallow non-auth errors into result', async () => {
+            // Given: Content copy throws a generic error
+            (mockDaLiveContentOps.copyContentFromSource as jest.Mock).mockRejectedValue(
+                new Error('Network failure'),
+            );
+
+            // When: Pipeline runs
+            const result = await executeEdsPipeline(
+                { ...baseParams, contentSource: { org: 'src', site: 'src' } },
+                services,
+            );
+
+            // Then: Generic errors still returned as { success: false }
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('Network failure');
         });
     });
 });
