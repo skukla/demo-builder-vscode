@@ -49,6 +49,13 @@
             "description": "Replace urlPath smart-watches with watches in the product-list-page block on the smart-watches page",
             "searchPattern": "<div>smart-watches</div>",
             "replacement": "<div>watches</div>"
+        },
+        {
+            "id": "nav-create-account-link",
+            "pagePath": "/nav",
+            "description": "Fix nav registration link from /customer/create to /customer/create-account to match path constant",
+            "searchPattern": "href=\"/customer/create\"",
+            "replacement": "href=\"/customer/create-account\""
         }
     ]
 }

@@ -28,7 +28,7 @@ beforeEach(() => {
 
 describe('CONTENT_PATCHES', () => {
     it('loads all patches from config', () => {
-        expect(CONTENT_PATCHES.length).toBe(7);
+        expect(CONTENT_PATCHES.length).toBe(8);
     });
 
     it('each patch has required fields', () => {
@@ -173,6 +173,31 @@ describe('applyContentPatches', () => {
         );
         expect(result.html).toBe('<div><div>urlPath</div>\n      <div>watches</div></div>');
         expect(result.results[0].applied).toBe(true);
+    });
+
+    it('applies nav create-account link fix', async () => {
+        const html = '<li><a href="/customer/create">Registration</a></li>';
+        const result = await applyContentPatches(
+            html,
+            '/nav',
+            ['nav-create-account-link'],
+            mockLogger,
+        );
+        expect(result.html).toBe('<li><a href="/customer/create-account">Registration</a></li>');
+        expect(result.results[0].applied).toBe(true);
+    });
+
+    it('nav create-account patch is no-op when source already correct', async () => {
+        const html = '<li><a href="/customer/create-account">Registration</a></li>';
+        const result = await applyContentPatches(
+            html,
+            '/nav',
+            ['nav-create-account-link'],
+            mockLogger,
+        );
+        // Pattern not found — patch not applied (idempotent)
+        expect(result.html).toBe(html);
+        expect(result.results[0].applied).toBe(false);
     });
 
     it('applies phones heading reorder patch', async () => {

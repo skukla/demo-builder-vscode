@@ -41,7 +41,8 @@
             "org": "stephen-garner-adobe",
             "site": "isle5",
             "indexPath": "/sitemap.json"
-          }
+          },
+          "contentPatches": ["nav-create-account-link"]
         },
         "eds-accs": {
           "name": "Isle5 EDS + ACCS",
@@ -61,7 +62,8 @@
             "org": "stephen-garner-adobe",
             "site": "isle5",
             "indexPath": "/sitemap.json"
-          }
+          },
+          "contentPatches": ["nav-create-account-link"]
         }
       }
     },
