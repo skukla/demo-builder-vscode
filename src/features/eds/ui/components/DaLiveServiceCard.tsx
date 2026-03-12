@@ -22,7 +22,7 @@
 import { Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 /** Props for DaLiveServiceCard component */
 export interface DaLiveServiceCardProps {
@@ -84,13 +84,19 @@ export function DaLiveServiceCard({
     const [orgValue, setOrgValue] = useState(defaultOrg || '');
     const [tokenValue, setTokenValue] = useState('');
 
+    // Sync defaultOrg prop into local state when it arrives async and field is empty
+    useEffect(() => {
+        if (defaultOrg && !orgValue) {
+            setOrgValue(defaultOrg);
+        }
+    }, [defaultOrg]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const isLoading = isChecking || (isAuthenticating && !showInput);
     const canSubmit = orgValue.trim() !== '' && tokenValue.trim() !== '';
 
     const handleSubmit = () => {
         if (canSubmit) {
             onSubmit(orgValue.trim(), tokenValue.trim());
-            setOrgValue('');
             setTokenValue('');
         }
     };

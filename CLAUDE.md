@@ -334,3 +334,6 @@ demo-builder-vscode/
 ---
 
 For detailed information about specific areas, navigate to the CLAUDE.md file in the relevant directory.
+
+## RPTC Verification Configuration
+verification-agent-mode: automatic
