@@ -272,6 +272,43 @@ describe('applyContentPatches with external source', () => {
         global.fetch = originalFetch;
     });
 
+    it('deduplicates concurrent fetches to a single HTTP request', async () => {
+        const mockPatches = {
+            patches: [
+                { id: 'test-patch', pagePath: '/', description: 'test', searchPattern: 'foo', replacement: 'bar' },
+            ],
+        };
+        const fetchMock = jest.fn().mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve(mockPatches),
+        });
+        global.fetch = fetchMock;
+
+        const source: ContentPatchSource = {
+            owner: 'dedup-owner',
+            repo: 'dedup-repo',
+            path: 'dedup-path',
+        };
+
+        // Fire 5 concurrent calls (simulates batch content copy)
+        const results = await Promise.all([
+            getContentPatches(['test-patch'], source, mockLogger),
+            getContentPatches(['test-patch'], source, mockLogger),
+            getContentPatches(['test-patch'], source, mockLogger),
+            getContentPatches(['test-patch'], source, mockLogger),
+            getContentPatches(['test-patch'], source, mockLogger),
+        ]);
+
+        // All 5 should return the same patch
+        for (const patches of results) {
+            expect(patches).toHaveLength(1);
+            expect(patches[0].id).toBe('test-patch');
+        }
+
+        // Only ONE HTTP request should have been made
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
     it('falls back to local patches when external fetch fails', async () => {
         // Mock fetch to fail
         global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));

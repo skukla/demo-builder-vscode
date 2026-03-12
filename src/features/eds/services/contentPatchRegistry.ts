@@ -52,17 +52,18 @@ export function getContentPatchById(id: string): ContentPatch | undefined {
     return CONTENT_PATCHES.find((p) => p.id === id);
 }
 
-// Cache external patches per source to avoid redundant HTTP requests during batch operations
-const externalPatchCache = new Map<string, ContentPatch[]>();
+// Cache the fetch Promise per source so concurrent callers share one in-flight request
+const externalPatchCache = new Map<string, Promise<ContentPatch[]>>();
 
 /**
- * Fetch patches.json from external repository (with per-source caching)
+ * Fetch patches.json from external repository (with per-source caching).
+ * Caches the Promise itself so concurrent batch calls share a single HTTP request.
  *
  * @param source - External patch source configuration
  * @param logger - Logger instance
  * @returns Array of all patches from the external file
  */
-async function fetchExternalPatches(source: ContentPatchSource, logger: Logger): Promise<ContentPatch[]> {
+function fetchExternalPatches(source: ContentPatchSource, logger: Logger): Promise<ContentPatch[]> {
     const cacheKey = `${source.owner}/${source.repo}/${source.path}`;
     const cached = externalPatchCache.get(cacheKey);
     if (cached) {
@@ -72,18 +73,25 @@ async function fetchExternalPatches(source: ContentPatchSource, logger: Logger):
     logger.info(`[ContentPatch] Fetching patches from ${source.owner}/${source.repo}`);
     const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/main/${source.path}/patches.json`;
 
-    const response = await fetch(url, {
-        signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
-    });
+    const promise = (async () => {
+        const response = await fetch(url, {
+            signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
+        });
 
-    if (!response.ok) {
-        throw new Error(`Failed to fetch patches: ${response.status} ${response.statusText}`);
-    }
+        if (!response.ok) {
+            throw new Error(`Failed to fetch patches: ${response.status} ${response.statusText}`);
+        }
 
-    const data = await response.json();
-    const patches = data.patches || [];
-    externalPatchCache.set(cacheKey, patches);
-    return patches;
+        const data = await response.json();
+        return (data.patches || []) as ContentPatch[];
+    })();
+
+    externalPatchCache.set(cacheKey, promise);
+
+    // Remove from cache on failure so the next call retries
+    promise.catch(() => externalPatchCache.delete(cacheKey));
+
+    return promise;
 }
 
 /**
