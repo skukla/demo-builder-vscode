@@ -70,54 +70,6 @@ export class UpdateManager {
     }
 
     /**
-     * Check for component updates in current project (respects stable/beta channel)
-     */
-    async checkComponentUpdates(project: Project): Promise<Map<string, UpdateCheckResult>> {
-        const results = new Map<string, UpdateCheckResult>();
-        const channel = this.getUpdateChannel();
-
-        if (!project.componentInstances) {
-            return results;
-        }
-
-        const componentIds = getComponentIds(project.componentInstances);
-
-        for (const componentId of componentIds) {
-            const repoInfo = await this.resolveComponentRepository(
-                componentId, project.componentInstances[componentId],
-            );
-
-            if (!repoInfo) {
-                continue;
-            }
-
-            const currentVersion = getComponentVersion(project, componentId) || 'unknown';
-            const latestRelease = await this.fetchLatestRelease(repoInfo.repository, channel);
-
-            if (!latestRelease) {
-                results.set(componentId, {
-                    hasUpdate: false,
-                    current: currentVersion,
-                    latest: currentVersion,
-                });
-                continue;
-            }
-
-            const hasUpdate = currentVersion === 'unknown' ||
-                        this.isNewerVersion(latestRelease.version, currentVersion);
-
-            results.set(componentId, {
-                hasUpdate,
-                current: currentVersion,
-                latest: latestRelease.version,
-                releaseInfo: hasUpdate ? latestRelease : undefined,
-            });
-        }
-
-        return results;
-    }
-
-    /**
      * Check for component updates across ALL projects
      * Groups results by component with list of outdated projects for each
      *

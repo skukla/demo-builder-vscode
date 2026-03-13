@@ -7,6 +7,7 @@ import {
     type UpdateContext,
 } from './updateExecutor';
 import {
+    buildUpdatePickerItems,
     formatBehindLabel,
     getTemplateSource,
     type BlockLibraryUpdateItem,
@@ -188,147 +189,13 @@ export class CheckUpdatesCommand extends BaseCommand {
         inspectorItems: InspectorUpdateItem[],
         currentProject: Project | null,
     ): Promise<void> {
-        // Reorganize component updates: group by project instead of by component
-        const projectComponentMap = new Map<string, {
-            project: Project;
-            components: Array<{
-                componentId: string;
-                currentVersion: string;
-                latestVersion: string;
-                releaseInfo: MultiProjectUpdateResult['releaseInfo'];
-            }>;
-        }>();
-
-        for (const update of componentUpdates) {
-            for (const { project, currentVersion } of update.outdatedProjects) {
-                if (!projectComponentMap.has(project.path)) {
-                    projectComponentMap.set(project.path, {
-                        project,
-                        components: [],
-                    });
-                }
-                projectComponentMap.get(project.path)?.components.push({
-                    componentId: update.componentId,
-                    currentVersion,
-                    latestVersion: update.latestVersion,
-                    releaseInfo: update.releaseInfo,
-                });
-            }
-        }
-
-        // Build QuickPick items
-        const items: UpdateItem[] = [];
-
-        // Fork sync items go first
-        items.push(...forkSyncItems);
-
-        // Get all unique projects (from component, template, and addon updates)
-        const allProjectPaths = new Set([
-            ...projectComponentMap.keys(),
-            ...templateUpdates.map(t => t.project.path),
-            ...blockLibraryItems.map(b => b.project.path),
-            ...inspectorItems.map(i => i.project.path),
-        ]);
-
-        // Build project data map
-        const projectDataMap = new Map<string, {
-            project: Project;
-            components: Array<{
-                componentId: string;
-                currentVersion: string;
-                latestVersion: string;
-                releaseInfo: MultiProjectUpdateResult['releaseInfo'];
-            }>;
-            templateUpdate?: TemplateUpdateResult;
-        }>();
-
-        for (const [path, data] of projectComponentMap) {
-            projectDataMap.set(path, { ...data });
-        }
-
-        for (const { project, update } of templateUpdates) {
-            if (projectDataMap.has(project.path)) {
-                const projectData = projectDataMap.get(project.path);
-                if (projectData) {
-                    projectData.templateUpdate = update;
-                }
-            } else {
-                projectDataMap.set(project.path, {
-                    project,
-                    components: [],
-                    templateUpdate: update,
-                });
-            }
-        }
-
-        // Sort projects: current project first, then alphabetically
-        const sortedProjects = Array.from(projectDataMap.values()).sort((a, b) => {
-            const aIsCurrent = a.project.path === currentProject?.path;
-            const bIsCurrent = b.project.path === currentProject?.path;
-            if (aIsCurrent && !bIsCurrent) return -1;
-            if (!aIsCurrent && bIsCurrent) return 1;
-            return a.project.name.localeCompare(b.project.name);
-        });
-
-        for (const { project, components, templateUpdate } of sortedProjects) {
-            const isCurrent = project.path === currentProject?.path;
-            const projectLabel = isCurrent
-                ? `${project.name} (current)`
-                : project.name;
-
-            if (templateUpdate) {
-                items.push({
-                    label: projectLabel,
-                    detail: `    EDS Template  ${formatBehindLabel(templateUpdate.commitsBehind)}`,
-                    description: `${templateUpdate.templateOwner}/${templateUpdate.templateRepo}`,
-                    picked: isCurrent,
-                    project,
-                    templateUpdate,
-                    isTemplateUpdate: true,
-                } as TemplateUpdateItem);
-            }
-
-            for (const comp of components) {
-                items.push({
-                    label: projectLabel,
-                    detail: `    ${comp.componentId}  ${comp.currentVersion} → ${comp.latestVersion}`,
-                    picked: isCurrent,
-                    project,
-                    componentId: comp.componentId,
-                    currentVersion: comp.currentVersion,
-                    latestVersion: comp.latestVersion,
-                    releaseInfo: comp.releaseInfo,
-                    isProjectUpdate: true,
-                } as ProjectUpdateItem);
-            }
-        }
-
-        items.push(...blockLibraryItems);
-        items.push(...inspectorItems);
-
-        // Count totals for title
-        const totalProjects = allProjectPaths.size;
-        const totalComponents = Array.from(projectComponentMap.values())
-            .reduce((sum, p) => sum + p.components.length, 0);
-        const totalTemplates = templateUpdates.length;
-        const totalAddons = blockLibraryItems.length + inspectorItems.length;
-
-        const parts: string[] = [];
-        if (forkSyncItems.length > 0) {
-            parts.push(`${forkSyncItems.length} fork${forkSyncItems.length !== 1 ? 's' : ''}`);
-        }
-        if (totalComponents > 0) {
-            parts.push(`${totalComponents} component${totalComponents !== 1 ? 's' : ''}`);
-        }
-        if (totalTemplates > 0) {
-            parts.push(`${totalTemplates} template${totalTemplates !== 1 ? 's' : ''}`);
-        }
-        if (totalAddons > 0) {
-            parts.push(`${totalAddons} add-on${totalAddons !== 1 ? 's' : ''}`);
-        }
+        const { items, title } = buildUpdatePickerItems(
+            componentUpdates, templateUpdates, forkSyncItems,
+            blockLibraryItems, inspectorItems, currentProject,
+        );
 
         const selected = await vscode.window.showQuickPick(items, {
-            title: `Updates Available (${totalProjects} project${totalProjects !== 1 ? 's' : ''}, ${parts.join(', ')})`,
+            title,
             placeHolder: 'Select updates to apply',
             canPickMany: true,
             ignoreFocusOut: true,
@@ -339,7 +206,10 @@ export class CheckUpdatesCommand extends BaseCommand {
             return;
         }
 
-        // Separate update types using discriminated unions
+        await this.dispatchSelectedUpdates(selected);
+    }
+
+    private async dispatchSelectedUpdates(selected: UpdateItem[]): Promise<void> {
         const selectedForks = selected.filter(
             (item): item is ForkSyncItem => 'isForkSync' in item && item.isForkSync,
         );

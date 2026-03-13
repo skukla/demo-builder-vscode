@@ -25,11 +25,6 @@ export const GITHUB_API_BASE = 'https://api.github.com';
 
 export interface GitHubCompareResponse {
     ahead_by: number;
-    status: string;
-    files?: Array<{
-        filename: string;
-        status: string;
-    }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,8 +108,11 @@ export async function getLatestBranchCommit(
 }
 
 /**
- * Compare two commits and return the full comparison response.
+ * Compare two commits and return the comparison response.
  * Returns null on any error (graceful degradation).
+ *
+ * `base` and `head` can be commit SHAs, branch names, or cross-repo
+ * refs like `"otherOwner/otherRepo:main"`.
  */
 export async function compareCommits(
     secrets: vscode.SecretStorage,

@@ -15,8 +15,8 @@ import * as vscode from 'vscode';
 import {
     GITHUB_API_BASE,
     buildGitHubHeaders,
+    compareCommits,
     fetchWithTimeout,
-    type GitHubCompareResponse,
 } from './githubApiClient';
 import type { Logger } from '@/types/logger';
 
@@ -78,16 +78,14 @@ export class ForkSyncService {
             const parentBranch = repoData.parent?.default_branch ?? defaultBranch;
 
             // Compare fork with upstream
-            const compareResponse = await fetchWithTimeout(
-                `${GITHUB_API_BASE}/repos/${owner}/${repo}/compare/${defaultBranch}...${parentFullName}:${parentBranch}`,
-                { headers },
+            const compareData = await compareCommits(
+                this.secrets, owner, repo,
+                defaultBranch, `${parentFullName}:${parentBranch}`,
             );
 
-            if (!compareResponse.ok) {
+            if (!compareData) {
                 return null;
             }
-
-            const compareData = await compareResponse.json() as GitHubCompareResponse;
 
             this.logger.debug(
                 `[Updates] ${owner}/${repo}: ${compareData.ahead_by} commit(s) behind upstream`,

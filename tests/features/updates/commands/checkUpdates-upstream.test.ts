@@ -453,6 +453,9 @@ describe('CheckUpdatesCommand — Upstream Sync & Add-on Updates', () => {
             mockStateManager.loadProjectFromPath.mockResolvedValue(project);
             mockStateManager.getCurrentProject.mockResolvedValue(project);
 
+            // Make saveProject fail to trigger the error path
+            mockStateManager.saveProject.mockRejectedValue(new Error('Save failed'));
+
             const MockAddonChecker = AddonUpdateChecker as jest.MockedClass<typeof AddonUpdateChecker>;
             MockAddonChecker.prototype.checkBlockLibraries.mockResolvedValue([
                 {
@@ -473,7 +476,8 @@ describe('CheckUpdatesCommand — Upstream Sync & Add-on Updates', () => {
             await jest.runAllTimersAsync();
             await executePromise;
 
-            // Test passes by reaching this point without rejection — error is caught internally
+            // Error is caught internally and reported to user
+            expect(vscode.window.showErrorMessage).toHaveBeenCalled();
         });
 
         it('should save updated commitSha after successful block library update', async () => {

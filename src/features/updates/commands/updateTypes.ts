@@ -100,3 +100,123 @@ export function shouldSkipBlockLibrary(
     if (!source) return false;
     return library.source.owner === source.owner && library.source.repo === source.repo;
 }
+
+// ---------------------------------------------------------------------------
+// QuickPick item builder
+// ---------------------------------------------------------------------------
+
+/**
+ * Build all QuickPick items and a summary title from the raw update results.
+ * Pure function — no side effects, no VS Code API calls.
+ */
+export function buildUpdatePickerItems(
+    componentUpdates: MultiProjectUpdateResult[],
+    templateUpdates: Array<{ project: Project; update: TemplateUpdateResult }>,
+    forkSyncItems: ForkSyncItem[],
+    blockLibraryItems: BlockLibraryUpdateItem[],
+    inspectorItems: InspectorUpdateItem[],
+    currentProject: Project | null,
+): { items: UpdateItem[]; title: string } {
+    // Single map: group components and templates by project
+    const projectMap = new Map<string, {
+        project: Project;
+        components: Array<{
+            componentId: string;
+            currentVersion: string;
+            latestVersion: string;
+            releaseInfo: MultiProjectUpdateResult['releaseInfo'];
+        }>;
+        templateUpdate?: TemplateUpdateResult;
+    }>();
+
+    for (const update of componentUpdates) {
+        for (const { project, currentVersion } of update.outdatedProjects) {
+            if (!projectMap.has(project.path)) {
+                projectMap.set(project.path, { project, components: [] });
+            }
+            projectMap.get(project.path)?.components.push({
+                componentId: update.componentId,
+                currentVersion,
+                latestVersion: update.latestVersion,
+                releaseInfo: update.releaseInfo,
+            });
+        }
+    }
+
+    for (const { project, update } of templateUpdates) {
+        const existing = projectMap.get(project.path);
+        if (existing) {
+            existing.templateUpdate = update;
+        } else {
+            projectMap.set(project.path, { project, components: [], templateUpdate: update });
+        }
+    }
+
+    // Sort: current project first, then alphabetically
+    const sortedProjects = Array.from(projectMap.values()).sort((a, b) => {
+        const aIsCurrent = a.project.path === currentProject?.path;
+        const bIsCurrent = b.project.path === currentProject?.path;
+        if (aIsCurrent && !bIsCurrent) return -1;
+        if (!aIsCurrent && bIsCurrent) return 1;
+        return a.project.name.localeCompare(b.project.name);
+    });
+
+    // Assemble items
+    const items: UpdateItem[] = [...forkSyncItems];
+
+    for (const { project, components, templateUpdate } of sortedProjects) {
+        const isCurrent = project.path === currentProject?.path;
+        const projectLabel = isCurrent ? `${project.name} (current)` : project.name;
+
+        if (templateUpdate) {
+            items.push({
+                label: projectLabel,
+                detail: `    EDS Template  ${formatBehindLabel(templateUpdate.commitsBehind)}`,
+                description: `${templateUpdate.templateOwner}/${templateUpdate.templateRepo}`,
+                picked: isCurrent,
+                project,
+                templateUpdate,
+                isTemplateUpdate: true,
+            } as TemplateUpdateItem);
+        }
+
+        for (const comp of components) {
+            items.push({
+                label: projectLabel,
+                detail: `    ${comp.componentId}  ${comp.currentVersion} → ${comp.latestVersion}`,
+                picked: isCurrent,
+                project,
+                componentId: comp.componentId,
+                currentVersion: comp.currentVersion,
+                latestVersion: comp.latestVersion,
+                releaseInfo: comp.releaseInfo,
+                isProjectUpdate: true,
+            } as ProjectUpdateItem);
+        }
+    }
+
+    items.push(...blockLibraryItems);
+    items.push(...inspectorItems);
+
+    // Build summary title
+    // Forks are repo-level, not project-level, so excluded from project count
+    const allProjectPaths = new Set([
+        ...projectMap.keys(),
+        ...blockLibraryItems.map(b => b.project.path),
+        ...inspectorItems.map(i => i.project.path),
+    ]);
+
+    const totalComponents = Array.from(projectMap.values())
+        .reduce((sum, p) => sum + p.components.length, 0);
+
+    const parts: string[] = [];
+    if (forkSyncItems.length > 0) parts.push(`${forkSyncItems.length} fork${forkSyncItems.length !== 1 ? 's' : ''}`);
+    if (totalComponents > 0) parts.push(`${totalComponents} component${totalComponents !== 1 ? 's' : ''}`);
+    if (templateUpdates.length > 0) parts.push(`${templateUpdates.length} template${templateUpdates.length !== 1 ? 's' : ''}`);
+    const totalAddons = blockLibraryItems.length + inspectorItems.length;
+    if (totalAddons > 0) parts.push(`${totalAddons} add-on${totalAddons !== 1 ? 's' : ''}`);
+
+    const title = `Updates Available (${allProjectPaths.size} project${allProjectPaths.size !== 1 ? 's' : ''}, ${parts.join(', ')})`;
+
+    return { items, title };
+}

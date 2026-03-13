@@ -122,8 +122,6 @@ describe('githubApiClient', () => {
                 ok: true,
                 json: async () => ({
                     ahead_by: 5,
-                    status: 'ahead',
-                    files: [{ filename: 'test.ts', status: 'modified' }],
                 }),
             });
 
@@ -131,8 +129,6 @@ describe('githubApiClient', () => {
 
             expect(result).toEqual({
                 ahead_by: 5,
-                status: 'ahead',
-                files: [{ filename: 'test.ts', status: 'modified' }],
             });
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://api.github.com/repos/owner/repo/compare/aaa...bbb',
