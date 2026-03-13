@@ -2,9 +2,13 @@ import * as fs from 'fs/promises';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { ComponentRepositoryResolver, type ComponentRepositoryInfo } from './componentRepositoryResolver';
+import {
+    GITHUB_API_BASE,
+    buildGitHubHeaders,
+    fetchWithTimeout,
+} from './githubApiClient';
 import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
 import { validateGitHubDownloadURL } from '@/core/validation';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 import { getComponentIds, getComponentVersion } from '@/types/typeGuards';
@@ -207,86 +211,80 @@ export class UpdateManager {
             // For stable: use /releases/latest (non-prereleases only)
             // For beta: use /releases?per_page=20 (includes prereleases, need to sort)
             const url = channel === 'stable'
-                ? `https://api.github.com/repos/${repo}/releases/latest`
-                : `https://api.github.com/repos/${repo}/releases?per_page=20`;
+                ? `${GITHUB_API_BASE}/repos/${repo}/releases/latest`
+                : `${GITHUB_API_BASE}/repos/${repo}/releases?per_page=20`;
 
-            // Create timeout controller
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), TIMEOUTS.QUICK);
-      
-            try {
-                const response = await fetch(url, { signal: controller.signal });
+            const headers = await buildGitHubHeaders(this.context.secrets);
 
-                // HTTP status validation (Step 4)
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        return null;
-                    }
-                    if (response.status === 403) {
-                        throw new Error('GitHub rate limit exceeded. Try again later.');
-                    }
-                    if (response.status >= 500) {
-                        throw new Error(`GitHub server error: HTTP ${response.status}`);
-                    }
-                    throw new Error(`GitHub API error: HTTP ${response.status}`);
-                }
+            const response = await fetchWithTimeout(url, { headers });
 
-                const data: GitHubRelease | GitHubRelease[] = await response.json();
-
-                // Beta channel returns array, stable returns object
-                let release: GitHubRelease;
-                if (Array.isArray(data)) {
-                    // For beta: find the latest version by semver, not by GitHub's order
-                    const nonDraftReleases = data.filter((r: GitHubRelease) => !r.draft);
-                    if (nonDraftReleases.length === 0) return null;
-
-                    // Sort by version using semver
-                    release = nonDraftReleases.sort((a: GitHubRelease, b: GitHubRelease) => {
-                        const versionA = this.parseVersionFromTag(a.tag_name);
-                        const versionB = this.parseVersionFromTag(b.tag_name);
-                        return semver.gt(versionA, versionB) ? -1 : 1;
-                    })[0];
-                } else {
-                    release = data;
-                }
-
-                if (!release || release.message === 'Not Found') {
+            // HTTP status validation
+            if (!response.ok) {
+                if (response.status === 404) {
                     return null;
                 }
-
-                // Find VSIX asset for extension, or source archive for components
-                const isExtension = repo === this.EXTENSION_REPO;
-                const asset: GitHubReleaseAsset | string | undefined = isExtension
-                    ? release.assets.find((a: GitHubReleaseAsset) => a.name.endsWith('.vsix'))
-                    : release.zipball_url;
-
-                if (!asset) {
-                    return null;
+                if (response.status === 403) {
+                    throw new Error('GitHub rate limit exceeded. Try again later.');
                 }
-
-                // Safely extract download URL based on asset type
-                const downloadUrl = isExtension && typeof asset !== 'string'
-                    ? asset.browser_download_url
-                    : release.zipball_url;
-
-                // SECURITY: Validate GitHub download URL before returning
-                if (!validateGitHubDownloadURL(downloadUrl)) {
-                    this.logger.warn(`[Updates] Security check failed for download URL from ${repo}: ${downloadUrl}`);
-                    return null;
+                if (response.status >= 500) {
+                    throw new Error(`GitHub server error: HTTP ${response.status}`);
                 }
-
-                const version = this.parseVersionFromTag(release.tag_name);
-
-                return {
-                    version,
-                    downloadUrl,
-                    releaseNotes: release.body || 'No release notes available',
-                    publishedAt: release.published_at,
-                    isPrerelease: release.prerelease,
-                };
-            } finally {
-                clearTimeout(timeout);
+                throw new Error(`GitHub API error: HTTP ${response.status}`);
             }
+
+            const data: GitHubRelease | GitHubRelease[] = await response.json();
+
+            // Beta channel returns array, stable returns object
+            let release: GitHubRelease;
+            if (Array.isArray(data)) {
+                // For beta: find the latest version by semver, not by GitHub's order
+                const nonDraftReleases = data.filter((r: GitHubRelease) => !r.draft);
+                if (nonDraftReleases.length === 0) return null;
+
+                // Sort by version using semver
+                release = nonDraftReleases.sort((a: GitHubRelease, b: GitHubRelease) => {
+                    const versionA = this.parseVersionFromTag(a.tag_name);
+                    const versionB = this.parseVersionFromTag(b.tag_name);
+                    return semver.gt(versionA, versionB) ? -1 : 1;
+                })[0];
+            } else {
+                release = data;
+            }
+
+            if (!release || release.message === 'Not Found') {
+                return null;
+            }
+
+            // Find VSIX asset for extension, or source archive for components
+            const isExtension = repo === this.EXTENSION_REPO;
+            const asset: GitHubReleaseAsset | string | undefined = isExtension
+                ? release.assets.find((a: GitHubReleaseAsset) => a.name.endsWith('.vsix'))
+                : release.zipball_url;
+
+            if (!asset) {
+                return null;
+            }
+
+            // Safely extract download URL based on asset type
+            const downloadUrl = isExtension && typeof asset !== 'string'
+                ? asset.browser_download_url
+                : release.zipball_url;
+
+            // SECURITY: Validate GitHub download URL before returning
+            if (!validateGitHubDownloadURL(downloadUrl)) {
+                this.logger.warn(`[Updates] Security check failed for download URL from ${repo}: ${downloadUrl}`);
+                return null;
+            }
+
+            const version = this.parseVersionFromTag(release.tag_name);
+
+            return {
+                version,
+                downloadUrl,
+                releaseNotes: release.body || 'No release notes available',
+                publishedAt: release.published_at,
+                isPrerelease: release.prerelease,
+            };
         } catch (error) {
             // Graceful degradation: returning null means "no update available" which
             // is better UX than showing errors for transient network issues or GitHub outages.

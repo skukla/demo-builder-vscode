@@ -9,8 +9,11 @@
  */
 
 import * as vscode from 'vscode';
+import {
+    compareCommits,
+    getLatestBranchCommit,
+} from './githubApiClient';
 import { COMPONENT_IDS } from '@/core/constants';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
@@ -26,25 +29,10 @@ export interface TemplateUpdateResult {
     latestCommit: string;
     /** Number of commits the project is behind */
     commitsBehind: number;
-    /** List of changed files (optional, for preview) */
-    changedFiles?: string[];
     /** Template owner (GitHub username or org) */
     templateOwner: string;
     /** Template repository name */
     templateRepo: string;
-}
-
-/**
- * GitHub commit comparison response (simplified)
- */
-interface GitHubCompareResponse {
-    ahead_by: number;
-    behind_by: number;
-    status: 'ahead' | 'behind' | 'identical' | 'diverged';
-    files?: Array<{
-        filename: string;
-        status: 'added' | 'removed' | 'modified' | 'renamed';
-    }>;
 }
 
 /**
@@ -94,7 +82,9 @@ export class TemplateUpdateChecker {
 
         try {
             // Fetch template's latest commit SHA
-            const latestCommit = await this.getLatestCommitSha(templateOwner, templateRepo);
+            const latestCommit = await getLatestBranchCommit(
+                this.secrets, templateOwner, templateRepo, 'main',
+            );
             if (!latestCommit) {
                 this.logger.warn(`[TemplateUpdates] Could not fetch latest commit for ${templateOwner}/${templateRepo}`);
                 return null;
@@ -113,19 +103,18 @@ export class TemplateUpdateChecker {
             }
 
             // Compare commits to get the number of commits behind
-            const comparison = await this.compareCommits(
-                templateOwner,
-                templateRepo,
-                lastSyncedCommit,
-                latestCommit,
+            const comparison = await compareCommits(
+                this.secrets, templateOwner, templateRepo,
+                lastSyncedCommit, latestCommit,
             );
 
+            const commitsBehind = comparison?.ahead_by ?? 0;
+
             return {
-                hasUpdates: comparison.behind_by > 0,
+                hasUpdates: commitsBehind > 0,
                 currentCommit: lastSyncedCommit,
                 latestCommit,
-                commitsBehind: comparison.behind_by,
-                changedFiles: comparison.files?.map(f => f.filename),
+                commitsBehind,
                 templateOwner,
                 templateRepo,
             };
@@ -135,105 +124,4 @@ export class TemplateUpdateChecker {
         }
     }
 
-    /**
-     * Get list of changed files between commits
-     *
-     * @param templateOwner - Template repository owner
-     * @param templateRepo - Template repository name
-     * @param baseCommit - Base commit SHA (project's current state)
-     * @param headCommit - Head commit SHA (template's latest state)
-     * @returns List of changed file paths
-     */
-    async getChangedFiles(
-        templateOwner: string,
-        templateRepo: string,
-        baseCommit: string,
-        headCommit: string,
-    ): Promise<string[]> {
-        try {
-            const comparison = await this.compareCommits(
-                templateOwner,
-                templateRepo,
-                baseCommit,
-                headCommit,
-            );
-
-            return comparison.files?.map(f => f.filename) ?? [];
-        } catch (error) {
-            this.logger.error(`[TemplateUpdates] Failed to get changed files`, error as Error);
-            return [];
-        }
-    }
-
-    /**
-     * Fetch the latest commit SHA from the template repository
-     */
-    private async getLatestCommitSha(owner: string, repo: string): Promise<string | null> {
-        try {
-            const url = `https://api.github.com/repos/${owner}/${repo}/branches/main`;
-
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), TIMEOUTS.QUICK);
-
-            try {
-                const response = await fetch(url, {
-                    headers: {
-                        'Accept': 'application/vnd.github.v3+json',
-                        'User-Agent': 'Demo-Builder-VSCode',
-                    },
-                    signal: controller.signal,
-                });
-
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        return null;
-                    }
-                    throw new Error(`GitHub API error: HTTP ${response.status}`);
-                }
-
-                const data = await response.json();
-                return data.commit?.sha ?? null;
-            } finally {
-                clearTimeout(timeout);
-            }
-        } catch (error) {
-            if ((error as Error).name === 'AbortError') {
-                this.logger.warn(`[TemplateUpdates] Timeout fetching latest commit for ${owner}/${repo}`);
-            }
-            return null;
-        }
-    }
-
-    /**
-     * Compare two commits using GitHub's compare API
-     */
-    private async compareCommits(
-        owner: string,
-        repo: string,
-        base: string,
-        head: string,
-    ): Promise<GitHubCompareResponse> {
-        const url = `https://api.github.com/repos/${owner}/${repo}/compare/${base}...${head}`;
-
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), TIMEOUTS.QUICK);
-
-        try {
-            const response = await fetch(url, {
-                headers: {
-                    'Accept': 'application/vnd.github.v3+json',
-                    'User-Agent': 'Demo-Builder-VSCode',
-                },
-                signal: controller.signal,
-            });
-
-            if (!response.ok) {
-                throw new Error(`GitHub API error: HTTP ${response.status}`);
-            }
-
-            return await response.json() as GitHubCompareResponse;
-        } finally {
-            clearTimeout(timeout);
-        }
-    }
 }

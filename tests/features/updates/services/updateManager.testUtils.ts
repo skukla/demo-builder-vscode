@@ -21,6 +21,12 @@ export function createMockContext(version: string = '1.0.0'): any {
                 version,
             },
         },
+        secrets: {
+            get: jest.fn().mockResolvedValue('mock-github-token'),
+            store: jest.fn(),
+            delete: jest.fn(),
+            onDidChange: jest.fn(),
+        },
     };
 }
 

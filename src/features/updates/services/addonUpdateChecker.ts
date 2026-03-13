@@ -12,9 +12,8 @@
 
 import * as vscode from 'vscode';
 import {
-    GITHUB_API_BASE,
-    buildGitHubHeaders,
-    fetchWithTimeout,
+    compareCommits,
+    getLatestBranchCommit,
 } from './githubApiClient';
 import { SDK_SOURCE } from '@/features/eds/services/inspectorHelpers';
 import type { Project } from '@/types';
@@ -70,8 +69,8 @@ export class AddonUpdateChecker {
                     continue;
                 }
 
-                const latestCommit = await this.getLatestCommitSha(
-                    lib.source.owner, lib.source.repo, lib.source.branch,
+                const latestCommit = await getLatestBranchCommit(
+                    this.secrets, lib.source.owner, lib.source.repo, lib.source.branch,
                 );
                 if (!latestCommit) {
                     this.logger.warn(`[Updates] Could not fetch latest commit for ${lib.source.owner}/${lib.source.repo}`);
@@ -87,11 +86,11 @@ export class AddonUpdateChecker {
                     `[Updates] Library "${lib.name}": ${lib.commitSha.slice(0, 7)} → ${latestCommit.slice(0, 7)}`,
                 );
 
-                const commitsBehind = await this.getCommitsBehind(
-                    lib.source.owner, lib.source.repo, lib.commitSha, latestCommit,
+                const comparison = await compareCommits(
+                    this.secrets, lib.source.owner, lib.source.repo, lib.commitSha, latestCommit,
                 );
 
-                results.push({ library: lib, latestCommit, commitsBehind });
+                results.push({ library: lib, latestCommit, commitsBehind: comparison?.ahead_by ?? 0 });
             } catch (error) {
                 this.logger.warn(
                     `[Updates] Failed to check library "${lib.name}": ${(error as Error).message}`,
@@ -114,8 +113,8 @@ export class AddonUpdateChecker {
         const { commitSha: currentCommit } = project.installedInspectorSdk;
 
         try {
-            const latestCommit = await this.getLatestCommitSha(
-                SDK_SOURCE.owner, SDK_SOURCE.repo, SDK_SOURCE.branch,
+            const latestCommit = await getLatestBranchCommit(
+                this.secrets, SDK_SOURCE.owner, SDK_SOURCE.repo, SDK_SOURCE.branch,
             );
             if (!latestCommit) {
                 this.logger.warn(`[Updates] Could not fetch latest commit for Inspector SDK`);
@@ -131,60 +130,19 @@ export class AddonUpdateChecker {
                 `[Updates] Inspector SDK: ${currentCommit.slice(0, 7)} → ${latestCommit.slice(0, 7)}`,
             );
 
-            const commitsBehind = await this.getCommitsBehind(
-                SDK_SOURCE.owner, SDK_SOURCE.repo, currentCommit, latestCommit,
+            const comparison = await compareCommits(
+                this.secrets, SDK_SOURCE.owner, SDK_SOURCE.repo, currentCommit, latestCommit,
             );
 
-            return { hasUpdate: true, currentCommit, latestCommit, commitsBehind };
+            return {
+                hasUpdate: true,
+                currentCommit,
+                latestCommit,
+                commitsBehind: comparison?.ahead_by ?? 0,
+            };
         } catch (error) {
             this.logger.error(`[Updates] Failed to check Inspector SDK updates`, error as Error);
             return null;
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // Private helpers
-    // -----------------------------------------------------------------------
-
-    private async getLatestCommitSha(
-        owner: string, repo: string, branch: string,
-    ): Promise<string | null> {
-        try {
-            const headers = await buildGitHubHeaders(this.secrets);
-            const response = await fetchWithTimeout(
-                `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${branch}`,
-                { headers },
-            );
-
-            if (!response.ok) {
-                return null;
-            }
-
-            const data = await response.json();
-            return data.commit?.sha ?? null;
-        } catch {
-            return null;
-        }
-    }
-
-    private async getCommitsBehind(
-        owner: string, repo: string, base: string, head: string,
-    ): Promise<number> {
-        try {
-            const headers = await buildGitHubHeaders(this.secrets);
-            const response = await fetchWithTimeout(
-                `${GITHUB_API_BASE}/repos/${owner}/${repo}/compare/${base}...${head}`,
-                { headers },
-            );
-
-            if (!response.ok) {
-                return 0;
-            }
-
-            const data = await response.json();
-            return data.ahead_by ?? 0;
-        } catch {
-            return 0;
         }
     }
 }

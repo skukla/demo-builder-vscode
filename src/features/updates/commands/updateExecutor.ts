@@ -35,6 +35,41 @@ export interface UpdateContext {
 }
 
 // ---------------------------------------------------------------------------
+// Shared: running demo guard
+// ---------------------------------------------------------------------------
+
+/**
+ * If the project is running, prompt the user to stop it.
+ * Returns true if the project is safe to update, false if skipped.
+ */
+async function ensureProjectStopped(
+    project: { name: string; path: string; status?: string },
+    actionVerb: string,
+    ctx: UpdateContext,
+): Promise<boolean> {
+    if (project.status !== 'running') return true;
+
+    const stop = await vscode.window.showWarningMessage(
+        `"${project.name}" is currently running. Stop it before updating?`,
+        `Stop & ${actionVerb}`,
+        'Skip',
+    );
+
+    if (!stop || stop === 'Skip') {
+        ctx.logger.debug(`[Updates] Skipping ${project.name} (demo running, user declined)`);
+        return false;
+    }
+
+    const currentProject = await ctx.stateManager.getCurrentProject();
+    if (currentProject?.path === project.path) {
+        await vscode.commands.executeCommand('demoBuilder.stopDemo');
+        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STOP_WAIT));
+    }
+
+    return true;
+}
+
+// ---------------------------------------------------------------------------
 // Fork sync
 // ---------------------------------------------------------------------------
 
@@ -80,26 +115,9 @@ export async function performTemplateUpdates(
     // Check for running demos first
     let filtered = selections;
     for (const selection of filtered) {
-        const project = selection.project;
-
-        if (project.status === 'running') {
-            const stop = await vscode.window.showWarningMessage(
-                `"${project.name}" is currently running. Stop it before syncing template?`,
-                'Stop & Sync',
-                'Skip',
-            );
-
-            if (stop !== 'Stop & Sync') {
-                ctx.logger.debug(`[Updates] Skipping template sync for ${project.name} (demo running, user declined)`);
-                filtered = filtered.filter(s => s.project.path !== project.path);
-                continue;
-            }
-
-            const currentProject = await ctx.stateManager.getCurrentProject();
-            if (currentProject?.path === project.path) {
-                await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STOP_WAIT));
-            }
+        const canProceed = await ensureProjectStopped(selection.project, 'Sync', ctx);
+        if (!canProceed) {
+            filtered = filtered.filter(s => s.project.path !== selection.project.path);
         }
     }
 
@@ -194,25 +212,9 @@ export async function performComponentUpdates(
     // Check for running demos first
     for (const [, updates] of projectUpdates.entries()) {
         const project = updates[0].project;
-
-        if (project.status === 'running') {
-            const stop = await vscode.window.showWarningMessage(
-                `"${project.name}" is currently running. Stop it before updating?`,
-                'Stop & Update',
-                'Skip',
-            );
-
-            if (stop !== 'Stop & Update') {
-                ctx.logger.debug(`[Updates] Skipping ${project.name} (demo running, user declined)`);
-                projectUpdates.delete(project.path);
-                continue;
-            }
-
-            const currentProject = await ctx.stateManager.getCurrentProject();
-            if (currentProject?.path === project.path) {
-                await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STOP_WAIT));
-            }
+        const canProceed = await ensureProjectStopped(project, 'Update', ctx);
+        if (!canProceed) {
+            projectUpdates.delete(project.path);
         }
     }
 

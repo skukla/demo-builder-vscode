@@ -1,9 +1,10 @@
 /**
  * Shared GitHub API utilities for update-checking services.
  *
- * Centralises header construction, fetch-with-timeout boilerplate, and
- * common response types so that ForkSyncService, AddonUpdateChecker,
- * and (eventually) TemplateUpdateChecker don't each reimplement them.
+ * Centralises header construction, fetch-with-timeout boilerplate,
+ * common response types, and reusable query helpers so that
+ * ForkSyncService, AddonUpdateChecker, and TemplateUpdateChecker
+ * don't each reimplement them.
  *
  * Each consumer still handles response status codes its own way —
  * this module only removes the mechanical duplication.
@@ -24,6 +25,11 @@ export const GITHUB_API_BASE = 'https://api.github.com';
 
 export interface GitHubCompareResponse {
     ahead_by: number;
+    status: string;
+    files?: Array<{
+        filename: string;
+        status: string;
+    }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,5 +77,65 @@ export async function fetchWithTimeout(
         return await fetch(url, { ...options, signal: controller.signal });
     } finally {
         clearTimeout(timeout);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Reusable query helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch the latest commit SHA for a branch.
+ * Returns null on any error (graceful degradation).
+ */
+export async function getLatestBranchCommit(
+    secrets: vscode.SecretStorage,
+    owner: string,
+    repo: string,
+    branch: string,
+): Promise<string | null> {
+    try {
+        const headers = await buildGitHubHeaders(secrets);
+        const response = await fetchWithTimeout(
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${branch}`,
+            { headers },
+        );
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const data = await response.json();
+        return data.commit?.sha ?? null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Compare two commits and return the full comparison response.
+ * Returns null on any error (graceful degradation).
+ */
+export async function compareCommits(
+    secrets: vscode.SecretStorage,
+    owner: string,
+    repo: string,
+    base: string,
+    head: string,
+): Promise<GitHubCompareResponse | null> {
+    try {
+        const headers = await buildGitHubHeaders(secrets);
+        const response = await fetchWithTimeout(
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/compare/${base}...${head}`,
+            { headers },
+        );
+
+        if (!response.ok) {
+            return null;
+        }
+
+        return await response.json() as GitHubCompareResponse;
+    } catch {
+        return null;
     }
 }

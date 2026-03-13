@@ -36,7 +36,6 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 global.fetch = jest.fn() as jest.Mock;
 
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
-import type { ForkStatus, ForkSyncResult } from '@/features/updates/services/forkSyncService';
 
 describe('ForkSyncService', () => {
     let service: ForkSyncService;

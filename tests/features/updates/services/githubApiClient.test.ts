@@ -10,7 +10,12 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 // Mock global fetch
 global.fetch = jest.fn() as jest.Mock;
 
-import { buildGitHubHeaders, fetchWithTimeout } from '@/features/updates/services/githubApiClient';
+import {
+    buildGitHubHeaders,
+    compareCommits,
+    fetchWithTimeout,
+    getLatestBranchCommit,
+} from '@/features/updates/services/githubApiClient';
 
 describe('githubApiClient', () => {
     const mockFetch = global.fetch as jest.Mock;
@@ -71,6 +76,84 @@ describe('githubApiClient', () => {
             await expect(
                 fetchWithTimeout('https://api.github.com/test'),
             ).rejects.toThrow('The operation was aborted');
+        });
+    });
+
+    describe('getLatestBranchCommit', () => {
+        const mockSecrets = { get: jest.fn().mockResolvedValue('tok') } as any;
+
+        it('should return commit SHA on success', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ commit: { sha: 'abc123' } }),
+            });
+
+            const sha = await getLatestBranchCommit(mockSecrets, 'owner', 'repo', 'main');
+
+            expect(sha).toBe('abc123');
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://api.github.com/repos/owner/repo/branches/main',
+                expect.objectContaining({ headers: expect.any(Object) }),
+            );
+        });
+
+        it('should return null on non-ok response', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+            const sha = await getLatestBranchCommit(mockSecrets, 'owner', 'repo', 'main');
+
+            expect(sha).toBeNull();
+        });
+
+        it('should return null on network error', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            const sha = await getLatestBranchCommit(mockSecrets, 'owner', 'repo', 'main');
+
+            expect(sha).toBeNull();
+        });
+    });
+
+    describe('compareCommits', () => {
+        const mockSecrets = { get: jest.fn().mockResolvedValue('tok') } as any;
+
+        it('should return comparison data on success', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    ahead_by: 5,
+                    status: 'ahead',
+                    files: [{ filename: 'test.ts', status: 'modified' }],
+                }),
+            });
+
+            const result = await compareCommits(mockSecrets, 'owner', 'repo', 'aaa', 'bbb');
+
+            expect(result).toEqual({
+                ahead_by: 5,
+                status: 'ahead',
+                files: [{ filename: 'test.ts', status: 'modified' }],
+            });
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://api.github.com/repos/owner/repo/compare/aaa...bbb',
+                expect.objectContaining({ headers: expect.any(Object) }),
+            );
+        });
+
+        it('should return null on non-ok response', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+            const result = await compareCommits(mockSecrets, 'owner', 'repo', 'aaa', 'bbb');
+
+            expect(result).toBeNull();
+        });
+
+        it('should return null on network error', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            const result = await compareCommits(mockSecrets, 'owner', 'repo', 'aaa', 'bbb');
+
+            expect(result).toBeNull();
         });
     });
 
