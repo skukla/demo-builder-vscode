@@ -79,8 +79,13 @@ export class AddonUpdateChecker {
                 }
 
                 if (latestCommit === lib.commitSha) {
+                    this.logger.debug(`[Updates] Library "${lib.name}": up to date (${lib.commitSha.slice(0, 7)})`);
                     continue;
                 }
+
+                this.logger.debug(
+                    `[Updates] Library "${lib.name}": ${lib.commitSha.slice(0, 7)} → ${latestCommit.slice(0, 7)}`,
+                );
 
                 const commitsBehind = await this.getCommitsBehind(
                     lib.source.owner, lib.source.repo, lib.commitSha, latestCommit,
@@ -118,8 +123,13 @@ export class AddonUpdateChecker {
             }
 
             if (latestCommit === currentCommit) {
+                this.logger.debug(`[Updates] Inspector SDK: up to date (${currentCommit.slice(0, 7)})`);
                 return { hasUpdate: false, currentCommit, latestCommit, commitsBehind: 0 };
             }
+
+            this.logger.debug(
+                `[Updates] Inspector SDK: ${currentCommit.slice(0, 7)} → ${latestCommit.slice(0, 7)}`,
+            );
 
             const commitsBehind = await this.getCommitsBehind(
                 SDK_SOURCE.owner, SDK_SOURCE.repo, currentCommit, latestCommit,

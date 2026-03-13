@@ -388,6 +388,7 @@ export class CheckUpdatesCommand extends BaseCommand {
     // -----------------------------------------------------------------------
 
     private async checkForkSyncUpdates(allProjects: Project[]): Promise<ForkSyncItem[]> {
+        this.logger.debug(`[Updates] Checking fork sync across ${allProjects.length} project(s)`);
         const forkSyncService = new ForkSyncService(this.context.secrets, this.logger);
         const forkSyncItems: ForkSyncItem[] = [];
         const checkedForks = new Set<string>();
@@ -417,6 +418,10 @@ export class CheckUpdatesCommand extends BaseCommand {
             }
         }
 
+        this.logger.debug(
+            `[Updates] Fork sync check complete: ${checkedForks.size} repo(s) checked, ${forkSyncItems.length} behind upstream`,
+        );
+
         return forkSyncItems;
     }
 
@@ -424,6 +429,7 @@ export class CheckUpdatesCommand extends BaseCommand {
         allProjects: Project[],
         currentProject: Project | null,
     ): Promise<{ blockLibraryItems: BlockLibraryUpdateItem[]; inspectorItems: InspectorUpdateItem[] }> {
+        this.logger.debug(`[Updates] Checking add-on updates across ${allProjects.length} project(s)`);
         const addonChecker = new AddonUpdateChecker(this.context.secrets, this.logger);
         const blockLibraryItems: BlockLibraryUpdateItem[] = [];
         const inspectorItems: InspectorUpdateItem[] = [];
@@ -458,6 +464,10 @@ export class CheckUpdatesCommand extends BaseCommand {
                 });
             }
         }
+
+        this.logger.debug(
+            `[Updates] Add-on check complete: ${blockLibraryItems.length} block lib(s), ${inspectorItems.length} inspector SDK(s) need updates`,
+        );
 
         return { blockLibraryItems, inspectorItems };
     }

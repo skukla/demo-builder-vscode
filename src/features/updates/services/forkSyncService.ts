@@ -67,8 +67,11 @@ export class ForkSyncService {
             const repoData = await repoResponse.json() as GitHubRepoResponse;
 
             if (!repoData.fork) {
+                this.logger.debug(`[Updates] ${owner}/${repo} is not a fork — skipping`);
                 return { isFork: false, behindBy: 0 };
             }
+
+            this.logger.debug(`[Updates] ${owner}/${repo} is a fork of ${repoData.parent?.full_name}`);
 
             const parentFullName = repoData.parent?.full_name;
             const defaultBranch = repoData.default_branch;
@@ -85,6 +88,10 @@ export class ForkSyncService {
             }
 
             const compareData = await compareResponse.json() as GitHubCompareResponse;
+
+            this.logger.debug(
+                `[Updates] ${owner}/${repo}: ${compareData.ahead_by} commit(s) behind upstream`,
+            );
 
             return {
                 isFork: true,
