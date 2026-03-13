@@ -1,37 +1,33 @@
 import * as vscode from 'vscode';
+import {
+    performAddonUpdates,
+    performComponentUpdates,
+    performForkSyncUpdates,
+    performTemplateUpdates,
+    type UpdateContext,
+} from './updateExecutor';
+import {
+    formatBehindLabel,
+    getTemplateSource,
+    type BlockLibraryUpdateItem,
+    type ForkSyncItem,
+    type InspectorUpdateItem,
+    type ProjectUpdateItem,
+    type TemplateUpdateItem,
+    type UpdateItem,
+} from './updateTypes';
 import { BaseCommand } from '@/core/base';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
-import { sanitizeErrorForLogging } from '@/core/validation';
-import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
+import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
-import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { TemplateUpdateChecker, TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
 import { UpdateManager, MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
 import { Project } from '@/types';
 
 /**
- * QuickPick item representing a project that can be updated
- */
-interface ProjectUpdateItem extends vscode.QuickPickItem {
-    project: Project;
-    componentId: string;
-    currentVersion: string;
-    latestVersion: string;
-    releaseInfo: MultiProjectUpdateResult['releaseInfo'];
-}
-
-/**
- * QuickPick item for template updates (EDS projects)
- */
-interface TemplateUpdateItem extends vscode.QuickPickItem {
-    project: Project;
-    templateUpdate: TemplateUpdateResult;
-    isTemplateUpdate: true;
-}
-
-/**
- * Command to check for and apply updates to extension and components
- * User must confirm before updates are applied
+ * Command to check for and apply updates to extension and components.
+ * User must confirm before updates are applied.
  * RESILIENCE: Checks if demo is running before updating (prevents file lock issues)
  */
 export class CheckUpdatesCommand extends BaseCommand {
@@ -39,7 +35,6 @@ export class CheckUpdatesCommand extends BaseCommand {
     private static lock = new ExecutionLock('CheckUpdates');
 
     async execute(): Promise<void> {
-        // Prevent duplicate concurrent execution
         if (CheckUpdatesCommand.lock.isLocked()) {
             this.logger.debug('[Updates] Already in progress');
             return;
@@ -47,15 +42,17 @@ export class CheckUpdatesCommand extends BaseCommand {
 
         await CheckUpdatesCommand.lock.run(async () => {
             try {
-                // Run update check with visible progress notification
-                const { extensionUpdate, multiProjectUpdates, templateUpdates, currentProject, hasUpdates } = await vscode.window.withProgress(
+                const {
+                    extensionUpdate, multiProjectUpdates, templateUpdates,
+                    forkSyncItems, blockLibraryItems, inspectorItems,
+                    currentProject, hasUpdates,
+                } = await vscode.window.withProgress(
                     {
                         location: vscode.ProgressLocation.Notification,
                         title: 'Demo Builder Updates',
                         cancellable: false,
                     },
                     async (progress) => {
-                        // Show initial message
                         progress.report({ message: 'Checking for updates...' });
 
                         // Wait to ensure message is visible before making GitHub API call
@@ -64,11 +61,10 @@ export class CheckUpdatesCommand extends BaseCommand {
                         const updateManager = new UpdateManager(this.context, this.logger);
                         const currentProject = await this.stateManager.getCurrentProject();
 
-                        // Check extension updates
+                        // Phase 1: Check extension updates
                         const extensionUpdate = await updateManager.checkExtensionUpdate();
 
-                        // Load ALL projects and check for component updates across all of them
-                        // (read-only, do not persist after load)
+                        // Load ALL projects
                         progress.report({ message: 'Checking all projects...' });
                         const projectMetadata = await this.stateManager.getAllProjects();
                         const allProjects: Project[] = [];
@@ -84,7 +80,11 @@ export class CheckUpdatesCommand extends BaseCommand {
                             }
                         }
 
-                        // Check component updates across all projects
+                        // Phase 2: Check fork sync for source repos
+                        progress.report({ message: 'Checking source repos...' });
+                        const forkSyncItems = await this.checkForkSyncUpdates(allProjects);
+
+                        // Phase 3: Check component updates across all projects
                         const multiProjectUpdates = allProjects.length > 0
                             ? await updateManager.checkAllProjectsForUpdates(allProjects)
                             : [];
@@ -101,28 +101,41 @@ export class CheckUpdatesCommand extends BaseCommand {
                             }
                         }
 
+                        // Phase 4: Check add-on updates
+                        progress.report({ message: 'Checking add-ons...' });
+                        const { blockLibraryItems, inspectorItems } = await this.checkAddonUpdates(
+                            allProjects, currentProject ?? null,
+                        );
+
                         // Check if any updates available
-                        const hasUpdates = extensionUpdate.hasUpdate || multiProjectUpdates.length > 0 || templateUpdates.length > 0;
+                        const hasUpdates = extensionUpdate.hasUpdate
+                            || multiProjectUpdates.length > 0
+                            || templateUpdates.length > 0
+                            || forkSyncItems.length > 0
+                            || blockLibraryItems.length > 0
+                            || inspectorItems.length > 0;
 
                         if (!hasUpdates) {
-                            // Show "up to date" result
                             progress.report({
                                 message: `Up to date (v${extensionUpdate.current})`,
                             });
                             await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UPDATE_RESULT_DISPLAY));
                         }
 
-                        return { extensionUpdate, multiProjectUpdates, templateUpdates, currentProject, hasUpdates };
+                        return {
+                            extensionUpdate, multiProjectUpdates, templateUpdates,
+                            forkSyncItems, blockLibraryItems, inspectorItems,
+                            currentProject, hasUpdates,
+                        };
                     },
                 );
 
-                // If no updates, we already showed the result - just return
                 if (!hasUpdates) {
                     this.logger.info('[Updates] ✓ No updates available - Demo Builder is up to date');
                     return;
                 }
 
-                // Handle extension update separately if present
+                // Handle extension update separately
                 if (extensionUpdate.hasUpdate) {
                     const action = await vscode.window.showInformationMessage(
                         `Extension update available: v${extensionUpdate.current} → v${extensionUpdate.latest}`,
@@ -136,16 +149,24 @@ export class CheckUpdatesCommand extends BaseCommand {
                             extensionUpdate.releaseInfo.downloadUrl,
                             extensionUpdate.latest,
                         );
-                        // Extension update triggers reload, so return here
                         return;
                     }
                 }
 
-                // Handle multi-project component updates and template updates with QuickPick
-                if (multiProjectUpdates.length > 0 || templateUpdates.length > 0) {
+                // Handle all non-extension updates with QuickPick
+                const hasNonExtensionUpdates = multiProjectUpdates.length > 0
+                    || templateUpdates.length > 0
+                    || forkSyncItems.length > 0
+                    || blockLibraryItems.length > 0
+                    || inspectorItems.length > 0;
+
+                if (hasNonExtensionUpdates) {
                     await this.showMultiProjectUpdatePicker(
                         multiProjectUpdates,
                         templateUpdates,
+                        forkSyncItems,
+                        blockLibraryItems,
+                        inspectorItems,
                         currentProject ?? null,
                     );
                 }
@@ -155,13 +176,16 @@ export class CheckUpdatesCommand extends BaseCommand {
         });
     }
 
-    /**
-     * Show QuickPick with multi-select to let user choose which projects to update
-     * Organized by project (parent) with components/templates as children
-     */
+    // -----------------------------------------------------------------------
+    // QuickPick builder + dispatch
+    // -----------------------------------------------------------------------
+
     private async showMultiProjectUpdatePicker(
         componentUpdates: MultiProjectUpdateResult[],
         templateUpdates: Array<{ project: Project; update: TemplateUpdateResult }>,
+        forkSyncItems: ForkSyncItem[],
+        blockLibraryItems: BlockLibraryUpdateItem[],
+        inspectorItems: InspectorUpdateItem[],
         currentProject: Project | null,
     ): Promise<void> {
         // Reorganize component updates: group by project instead of by component
@@ -192,13 +216,18 @@ export class CheckUpdatesCommand extends BaseCommand {
             }
         }
 
-        // Build QuickPick items organized by project
-        const items: (ProjectUpdateItem | TemplateUpdateItem)[] = [];
+        // Build QuickPick items
+        const items: UpdateItem[] = [];
 
-        // Get all unique projects (from both component and template updates)
+        // Fork sync items go first
+        items.push(...forkSyncItems);
+
+        // Get all unique projects (from component, template, and addon updates)
         const allProjectPaths = new Set([
             ...projectComponentMap.keys(),
             ...templateUpdates.map(t => t.project.path),
+            ...blockLibraryItems.map(b => b.project.path),
+            ...inspectorItems.map(i => i.project.path),
         ]);
 
         // Build project data map
@@ -213,12 +242,10 @@ export class CheckUpdatesCommand extends BaseCommand {
             templateUpdate?: TemplateUpdateResult;
         }>();
 
-        // Add component update data
         for (const [path, data] of projectComponentMap) {
             projectDataMap.set(path, { ...data });
         }
 
-        // Add template update data
         for (const { project, update } of templateUpdates) {
             if (projectDataMap.has(project.path)) {
                 const projectData = projectDataMap.get(project.path);
@@ -249,50 +276,57 @@ export class CheckUpdatesCommand extends BaseCommand {
                 ? `${project.name} (current)`
                 : project.name;
 
-            // Add template update item first (if available)
             if (templateUpdate) {
                 items.push({
                     label: projectLabel,
-                    detail: `    EDS Template  ${templateUpdate.commitsBehind} commit${templateUpdate.commitsBehind !== 1 ? 's' : ''} behind`,
+                    detail: `    EDS Template  ${formatBehindLabel(templateUpdate.commitsBehind)}`,
                     description: `${templateUpdate.templateOwner}/${templateUpdate.templateRepo}`,
-                    picked: isCurrent, // Pre-select for current project
+                    picked: isCurrent,
                     project,
                     templateUpdate,
                     isTemplateUpdate: true,
                 } as TemplateUpdateItem);
             }
 
-            // Add component update items
             for (const comp of components) {
                 items.push({
                     label: projectLabel,
                     detail: `    ${comp.componentId}  ${comp.currentVersion} → ${comp.latestVersion}`,
-                    picked: isCurrent, // Pre-select components in current project
+                    picked: isCurrent,
                     project,
                     componentId: comp.componentId,
                     currentVersion: comp.currentVersion,
                     latestVersion: comp.latestVersion,
                     releaseInfo: comp.releaseInfo,
+                    isProjectUpdate: true,
                 } as ProjectUpdateItem);
             }
         }
 
-        // Count totals
+        items.push(...blockLibraryItems);
+        items.push(...inspectorItems);
+
+        // Count totals for title
         const totalProjects = allProjectPaths.size;
         const totalComponents = Array.from(projectComponentMap.values())
             .reduce((sum, p) => sum + p.components.length, 0);
         const totalTemplates = templateUpdates.length;
+        const totalAddons = blockLibraryItems.length + inspectorItems.length;
 
-        // Build title
         const parts: string[] = [];
+        if (forkSyncItems.length > 0) {
+            parts.push(`${forkSyncItems.length} fork${forkSyncItems.length !== 1 ? 's' : ''}`);
+        }
         if (totalComponents > 0) {
             parts.push(`${totalComponents} component${totalComponents !== 1 ? 's' : ''}`);
         }
         if (totalTemplates > 0) {
             parts.push(`${totalTemplates} template${totalTemplates !== 1 ? 's' : ''}`);
         }
+        if (totalAddons > 0) {
+            parts.push(`${totalAddons} add-on${totalAddons !== 1 ? 's' : ''}`);
+        }
 
-        // Show QuickPick with multi-select
         const selected = await vscode.window.showQuickPick(items, {
             title: `Updates Available (${totalProjects} project${totalProjects !== 1 ? 's' : ''}, ${parts.join(', ')})`,
             placeHolder: 'Select updates to apply',
@@ -305,233 +339,135 @@ export class CheckUpdatesCommand extends BaseCommand {
             return;
         }
 
-        // Separate component and template updates
-        const selectedComponents = selected.filter(
-            (item): item is ProjectUpdateItem => !('isTemplateUpdate' in item),
+        // Separate update types using discriminated unions
+        const selectedForks = selected.filter(
+            (item): item is ForkSyncItem => 'isForkSync' in item && item.isForkSync,
         );
         const selectedTemplates = selected.filter(
             (item): item is TemplateUpdateItem => 'isTemplateUpdate' in item && item.isTemplateUpdate,
         );
-
-        this.logger.debug(`[Updates] User selected ${selectedComponents.length} component(s) and ${selectedTemplates.length} template(s) to update`);
-
-        // Perform component updates
-        if (selectedComponents.length > 0) {
-            await this.performMultiProjectUpdates(selectedComponents);
-        }
-
-        // Perform template updates
-        if (selectedTemplates.length > 0) {
-            await this.performTemplateUpdates(selectedTemplates);
-        }
-    }
-
-    /**
-     * Perform updates for selected projects from QuickPick
-     */
-    private async performMultiProjectUpdates(selections: ProjectUpdateItem[]): Promise<void> {
-        // Group by project to handle running demos
-        const projectUpdates = new Map<string, ProjectUpdateItem[]>();
-        for (const selection of selections) {
-            const key = selection.project.path;
-            if (!projectUpdates.has(key)) {
-                projectUpdates.set(key, []);
-            }
-            projectUpdates.get(key)?.push(selection);
-        }
-
-        // Check for running demos first (before showing progress)
-        for (const [, updates] of projectUpdates.entries()) {
-            const project = updates[0].project;
-
-            if (project.status === 'running') {
-                const stop = await vscode.window.showWarningMessage(
-                    `"${project.name}" is currently running. Stop it before updating?`,
-                    'Stop & Update',
-                    'Skip',
-                );
-
-                if (stop !== 'Stop & Update') {
-                    this.logger.debug(`[Updates] Skipping ${project.name} (demo running, user declined)`);
-                    projectUpdates.delete(project.path);
-                    continue;
-                }
-
-                // If this is the current project, stop it
-                const currentProject = await this.stateManager.getCurrentProject();
-                if (currentProject?.path === project.path) {
-                    await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STOP_WAIT));
-                }
-            }
-        }
-
-        // If all projects were skipped, exit
-        if (projectUpdates.size === 0) {
-            return;
-        }
-
-        // Perform updates with progress indicator
-        const totalUpdates = Array.from(projectUpdates.values()).reduce((sum, u) => sum + u.length, 0);
-
-        const { successCount, failCount } = await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: 'Updating Components',
-                cancellable: false,
-            },
-            async (progress) => {
-                const componentUpdater = new ComponentUpdater(this.logger, this.context.extensionPath);
-                let successCount = 0;
-                let failCount = 0;
-
-                for (const [, updates] of projectUpdates.entries()) {
-                    const project = updates[0].project;
-
-                    for (const update of updates) {
-                        if (!update.releaseInfo) continue;
-
-                        progress.report({
-                            message: `${update.componentId} in ${project.name}...`,
-                            increment: (100 / totalUpdates),
-                        });
-
-                        try {
-                            await componentUpdater.updateComponent(
-                                project,
-                                update.componentId,
-                                update.releaseInfo.downloadUrl,
-                                update.latestVersion,
-                            );
-                            successCount++;
-                            this.logger.info(`[Updates] Updated ${update.componentId} in ${project.name}`);
-                        } catch (error) {
-                            failCount++;
-                            const sanitizedError = sanitizeErrorForLogging(error as Error);
-                            this.logger.error(`[Updates] Failed to update ${update.componentId} in ${project.name}`, error as Error);
-                            vscode.window.showErrorMessage(
-                                `Failed to update ${update.componentId} in ${project.name}: ${sanitizedError}`,
-                            );
-                        }
-                    }
-
-                    // Save project state after updates
-                    await this.stateManager.saveProject(project);
-                }
-
-                return { successCount, failCount };
-            },
+        const selectedComponents = selected.filter(
+            (item): item is ProjectUpdateItem => 'isProjectUpdate' in item && item.isProjectUpdate,
+        );
+        const selectedBlockLibraries = selected.filter(
+            (item): item is BlockLibraryUpdateItem => 'isBlockLibraryUpdate' in item && item.isBlockLibraryUpdate,
+        );
+        const selectedInspectors = selected.filter(
+            (item): item is InspectorUpdateItem => 'isInspectorUpdate' in item && item.isInspectorUpdate,
         );
 
-        // Only show message if there were failures (progress indicator handles success case)
-        if (failCount > 0) {
-            vscode.window.showWarningMessage(
-                `Updated ${successCount} component(s), ${failCount} failed. Restart affected demos to apply changes.`,
-                'OK',
+        this.logger.debug(
+            `[Updates] User selected: ${selectedForks.length} fork(s), ${selectedTemplates.length} template(s), `
+            + `${selectedComponents.length} component(s), ${selectedBlockLibraries.length} block lib(s), ${selectedInspectors.length} inspector(s)`,
+        );
+
+        const ctx = this.buildUpdateContext();
+
+        // Execution order: fork sync -> template -> components -> add-ons
+        if (selectedForks.length > 0) {
+            await performForkSyncUpdates(selectedForks, ctx);
+        }
+
+        const templateSyncSucceeded = selectedTemplates.length > 0
+            ? await performTemplateUpdates(selectedTemplates, ctx)
+            : new Set<string>();
+
+        if (selectedComponents.length > 0) {
+            await performComponentUpdates(selectedComponents, ctx);
+        }
+
+        if (selectedBlockLibraries.length > 0 || selectedInspectors.length > 0) {
+            await performAddonUpdates(
+                selectedBlockLibraries, selectedInspectors, templateSyncSucceeded, ctx,
             );
         }
     }
 
-    /**
-     * Perform template sync for selected EDS projects
-     */
-    private async performTemplateUpdates(selections: TemplateUpdateItem[]): Promise<void> {
-        // Check for running demos first
-        for (const selection of selections) {
-            const project = selection.project;
+    // -----------------------------------------------------------------------
+    // Check helpers (build QuickPick items from API results)
+    // -----------------------------------------------------------------------
 
-            if (project.status === 'running') {
-                const stop = await vscode.window.showWarningMessage(
-                    `"${project.name}" is currently running. Stop it before syncing template?`,
-                    'Stop & Sync',
-                    'Skip',
-                );
+    private async checkForkSyncUpdates(allProjects: Project[]): Promise<ForkSyncItem[]> {
+        const forkSyncService = new ForkSyncService(this.context.secrets, this.logger);
+        const forkSyncItems: ForkSyncItem[] = [];
+        const checkedForks = new Set<string>();
 
-                if (stop !== 'Stop & Sync') {
-                    this.logger.debug(`[Updates] Skipping template sync for ${project.name} (demo running, user declined)`);
-                    selections = selections.filter(s => s.project.path !== project.path);
-                    continue;
-                }
+        for (const project of allProjects) {
+            const source = getTemplateSource(project);
+            if (!source) continue;
 
-                // If this is the current project, stop it
-                const currentProject = await this.stateManager.getCurrentProject();
-                if (currentProject?.path === project.path) {
-                    await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STOP_WAIT));
-                }
+            const key = `${source.owner}/${source.repo}`;
+            if (checkedForks.has(key)) continue;
+            checkedForks.add(key);
+
+            const status = await forkSyncService.checkForkStatus(source.owner, source.repo);
+            if (status?.isFork && status.behindBy > 0) {
+                forkSyncItems.push({
+                    label: `$(repo-forked) ${source.repo}`,
+                    detail: `    ${formatBehindLabel(status.behindBy)} ${status.parentFullName}`,
+                    description: key,
+                    picked: true,
+                    owner: source.owner,
+                    repo: source.repo,
+                    branch: status.defaultBranch || 'main',
+                    behindBy: status.behindBy,
+                    parentFullName: status.parentFullName || '',
+                    isForkSync: true,
+                });
             }
         }
 
-        if (selections.length === 0) {
-            return;
+        return forkSyncItems;
+    }
+
+    private async checkAddonUpdates(
+        allProjects: Project[],
+        currentProject: Project | null,
+    ): Promise<{ blockLibraryItems: BlockLibraryUpdateItem[]; inspectorItems: InspectorUpdateItem[] }> {
+        const addonChecker = new AddonUpdateChecker(this.context.secrets, this.logger);
+        const blockLibraryItems: BlockLibraryUpdateItem[] = [];
+        const inspectorItems: InspectorUpdateItem[] = [];
+
+        for (const project of allProjects) {
+            const isCurrent = project.path === currentProject?.path;
+
+            const blockUpdates = await addonChecker.checkBlockLibraries(project);
+            for (const update of blockUpdates) {
+                blockLibraryItems.push({
+                    label: project.name,
+                    detail: `    $(package) ${update.library.name}  ${formatBehindLabel(update.commitsBehind)}`,
+                    picked: isCurrent,
+                    project,
+                    library: update.library,
+                    latestCommit: update.latestCommit,
+                    commitsBehind: update.commitsBehind,
+                    isBlockLibraryUpdate: true,
+                });
+            }
+
+            const inspectorUpdate = await addonChecker.checkInspectorSdk(project);
+            if (inspectorUpdate?.hasUpdate) {
+                inspectorItems.push({
+                    label: project.name,
+                    detail: `    $(tools) Demo Inspector SDK  ${formatBehindLabel(inspectorUpdate.commitsBehind)}`,
+                    picked: isCurrent,
+                    project,
+                    latestCommit: inspectorUpdate.latestCommit,
+                    commitsBehind: inspectorUpdate.commitsBehind,
+                    isInspectorUpdate: true,
+                });
+            }
         }
 
-        // Perform template syncs with progress indicator
-        // Uses merge strategy with automatic reset fallback on conflicts
-        const { successCount, failCount } = await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: 'Syncing Templates',
-                cancellable: false,
-            },
-            async (progress) => {
-                const templateSyncService = new TemplateSyncService(this.context.secrets, this.logger);
-                let successCount = 0;
-                let failCount = 0;
+        return { blockLibraryItems, inspectorItems };
+    }
 
-                for (let i = 0; i < selections.length; i++) {
-                    const selection = selections[i];
-                    const project = selection.project;
-
-                    progress.report({
-                        message: `${project.name}...`,
-                        increment: (100 / selections.length),
-                    });
-
-                    try {
-                        const result = await templateSyncService.syncWithTemplate(project, {
-                            strategy: 'merge',
-                        });
-
-                        if (result.success) {
-                            // Update lastSyncedCommit in project
-                            await templateSyncService.updateLastSyncedCommit(
-                                project,
-                                result.syncedCommit,
-                                this.stateManager,
-                            );
-
-                            successCount++;
-                            this.logger.info(`[Updates] Template synced for ${project.name} (${result.strategy}${result.fallbackOccurred ? ', fallback' : ''})`);
-
-                            if (result.fallbackOccurred && result.conflicts) {
-                                vscode.window.showWarningMessage(
-                                    `${project.name}: Merge conflicts in ${result.conflicts.length} files, fell back to reset.`,
-                                );
-                            }
-                        } else {
-                            throw new Error(result.error || 'Unknown error');
-                        }
-                    } catch (error) {
-                        failCount++;
-                        const sanitizedError = sanitizeErrorForLogging(error as Error);
-                        this.logger.error(`[Updates] Template sync failed for ${project.name}`, error as Error);
-                        vscode.window.showErrorMessage(
-                            `Failed to sync template for ${project.name}: ${sanitizedError}`,
-                        );
-                    }
-                }
-
-                return { successCount, failCount };
-            },
-        );
-
-        // Show summary message
-        if (successCount > 0) {
-            const message = failCount > 0
-                ? `Synced ${successCount} template(s), ${failCount} failed.`
-                : `Successfully synced ${successCount} template(s).`;
-            vscode.window.showInformationMessage(message);
-        }
+    private buildUpdateContext(): UpdateContext {
+        return {
+            secrets: this.context.secrets,
+            extensionPath: this.context.extensionPath,
+            stateManager: this.stateManager,
+            logger: this.logger,
+        };
     }
 }

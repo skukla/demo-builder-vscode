@@ -41,7 +41,7 @@ export interface InstallInspectorResult {
 // SDK source configuration
 // ---------------------------------------------------------------------------
 
-const SDK_SOURCE = {
+export const SDK_SOURCE = {
     owner: 'skukla',
     repo: 'demo-inspector-sdk',
     branch: 'main',
