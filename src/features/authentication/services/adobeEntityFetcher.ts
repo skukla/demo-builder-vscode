@@ -111,7 +111,9 @@ export class AdobeEntityFetcher {
     }
 
     /**
-     * Parse and validate CLI JSON response
+     * Parse and validate CLI JSON response.
+     * Strips CLI warning lines (prefixed with ›) that the aio CLI writes to stdout
+     * alongside JSON output, which would otherwise break JSON.parse.
      */
     private parseCLIResponse<TRaw>(
         stdout: string,
@@ -120,6 +122,13 @@ export class AdobeEntityFetcher {
     ): TRaw[] {
         const parsed = parseJSON<TRaw[]>(stdout);
         if (parsed && Array.isArray(parsed)) return parsed;
+
+        // Strip CLI warning/info lines (› prefix) and retry parse
+        const cleaned = stdout.split('\n')
+            .filter(line => !line.trimStart().startsWith('\u203A') && line.trim().length > 0)
+            .join('\n');
+        const retryParsed = parseJSON<TRaw[]>(cleaned);
+        if (retryParsed && Array.isArray(retryParsed)) return retryParsed;
 
         if (stderr?.includes('401') || stderr?.toLowerCase().includes('unauthorized')) {
             throw new Error('AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.');
