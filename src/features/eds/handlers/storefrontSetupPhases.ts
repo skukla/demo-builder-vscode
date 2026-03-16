@@ -600,11 +600,11 @@ async function registerConfigurationService(
                 logger.warn(`[Storefront Setup] Site config update warning: ${updateResult.error}`);
             }
         } else if (registerResult.statusCode === 401) {
-            logger.warn(`[Storefront Setup] Config Service requires org admin setup: ${registerResult.error}`);
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'code-sync', message: 'Site config skipped (org admin setup needed)', progress: 49,
-            });
-            skipFolderMapping = true;
+            // Token expired or invalid — throw DaLiveAuthError so the recovery loop
+            // in executeStorefrontSetupPhases can prompt the user to re-authenticate.
+            throw new DaLiveAuthError(
+                `Configuration Service authentication failed: ${registerResult.error}`,
+            );
         } else {
             logger.warn(`[Storefront Setup] Config Service registration warning: ${registerResult.error}`);
         }
@@ -615,12 +615,29 @@ async function registerConfigurationService(
             );
             if (folderResult.success) {
                 logger.info('[Storefront Setup] Folder mapping configured via Configuration Service');
+            } else if (folderResult.statusCode === 401) {
+                throw new DaLiveAuthError(
+                    `Folder mapping authentication failed: ${folderResult.error}`,
+                );
             } else {
-                logger.warn(`[Storefront Setup] Folder mapping warning: ${folderResult.error}`);
+                logger.error(`[Storefront Setup] Folder mapping failed: ${folderResult.error}`);
+                await context.sendMessage('storefront-setup-progress', {
+                    phase: 'code-sync',
+                    message: '⚠️ Folder mapping failed — product detail pages may not work',
+                    progress: 49,
+                });
             }
         }
     } catch (error) {
-        logger.warn(`[Storefront Setup] Configuration Service warning: ${(error as Error).message}`);
+        // Let DaLiveAuthError propagate to the recovery loop for re-auth prompt
+        if (error instanceof DaLiveAuthError) throw error;
+
+        logger.error(`[Storefront Setup] Configuration Service failed — Folder mapping not applied: ${(error as Error).message}`);
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'code-sync',
+            message: '⚠️ Configuration Service failed — product detail pages may not work',
+            progress: 49,
+        });
     }
 }
 

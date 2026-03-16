@@ -268,6 +268,54 @@ describe('AdobeEntityFetcher', () => {
 
             expect(result).toHaveLength(0);
         });
+
+        it('should parse JSON when CLI stdout contains warning lines with \u203A', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+
+            // Simulate aio CLI output with upgrade warnings before JSON
+            const warningLines = [
+                ' \u203A   Warning: @adobe/aio-cli update available from 10.3.4 to 11.0.2.',
+                ' \u203A   Run npm install -g @adobe/aio-cli to update.',
+                ' \u203A   Warning: @adobe/aio-cli-plugin-api-mesh update available from 5.5.0 to',
+                ' \u203A  ',
+            ].join('\n');
+            const jsonData = JSON.stringify([
+                { id: 'proj1', name: 'Project 1', title: 'Project 1 Title' },
+            ]);
+
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: warningLines + '\n' + jsonData,
+                stderr: '',
+                code: 2,
+            });
+
+            const result = await fetcher.getProjects();
+
+            expect(result).toHaveLength(1);
+            expect(result[0].name).toBe('Project 1');
+        });
+
+        it('should parse JSON when CLI stdout has warnings for organizations', async () => {
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+
+            const warningLines = ' \u203A   Warning: update available\n';
+            const jsonData = JSON.stringify([
+                { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org 1' },
+            ]);
+
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: warningLines + jsonData,
+                stderr: '',
+                code: 2,
+            });
+
+            const result = await fetcher.getOrganizations();
+
+            expect(result).toHaveLength(1);
+            expect(result[0].name).toBe('Org 1');
+        });
     });
 
     describe('getWorkspaces()', () => {
