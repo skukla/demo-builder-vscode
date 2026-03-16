@@ -157,6 +157,12 @@ export class AdobeEntityFetcher {
             if (stderr.includes('401') || stderr.toLowerCase().includes('unauthorized')) {
                 throw new Error('AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.');
             }
+            if (stderr.includes('403') || stderr.toLowerCase().includes('forbidden')) {
+                throw new Error(
+                    'Your Adobe CLI is configured for a different organization than you are signed into. '
+                    + 'Run "aio console org select" in your terminal to switch to the correct organization.',
+                );
+            }
         }
 
         // Log raw stdout and stderr for debugging when all parsing attempts fail
