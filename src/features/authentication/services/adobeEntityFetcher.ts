@@ -139,12 +139,29 @@ export class AdobeEntityFetcher {
         const retryParsed = parseJSON<TRaw[]>(cleaned);
         if (retryParsed && Array.isArray(retryParsed)) return retryParsed;
 
-        if (stderr?.includes('401') || stderr?.toLowerCase().includes('unauthorized')) {
-            throw new Error('AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.');
+        // Some CLI versions write JSON to stderr when exit code is 2
+        if (stderr) {
+            const stderrCleaned = stderr.split('\n')
+                .filter(line => {
+                    const trimmed = line.trim();
+                    if (trimmed.length === 0) return false;
+                    const firstChar = trimmed[0];
+                    return firstChar === '[' || firstChar === ']'
+                        || firstChar === '{' || firstChar === '}'
+                        || firstChar === '"';
+                })
+                .join('\n');
+            const stderrParsed = parseJSON<TRaw[]>(stderrCleaned);
+            if (stderrParsed && Array.isArray(stderrParsed)) return stderrParsed;
+
+            if (stderr.includes('401') || stderr.toLowerCase().includes('unauthorized')) {
+                throw new Error('AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.');
+            }
         }
 
-        // Log raw stdout for debugging when all parsing attempts fail
+        // Log raw stdout and stderr for debugging when all parsing attempts fail
         this.debugLogger.error(`[Entity Fetcher] Raw ${entityName} stdout (${stdout.length} chars): ${stdout.substring(0, 500)}`);
+        this.debugLogger.error(`[Entity Fetcher] Raw ${entityName} stderr (${stderr.length} chars): ${stderr.substring(0, 500)}`);
         throw new Error(`Invalid ${entityName} response format`);
     }
 
