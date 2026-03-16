@@ -123,9 +123,18 @@ export class AdobeEntityFetcher {
         const parsed = parseJSON<TRaw[]>(stdout);
         if (parsed && Array.isArray(parsed)) return parsed;
 
-        // Strip CLI warning/info lines (› prefix) and retry parse
+        // Strip non-JSON lines from CLI output. The aio CLI mixes warnings, update
+        // notices, and other noise into stdout alongside JSON. Keep only lines that
+        // look like JSON content (start with [, ], {, }, or " after trimming).
         const cleaned = stdout.split('\n')
-            .filter(line => !line.trimStart().startsWith('\u203A') && line.trim().length > 0)
+            .filter(line => {
+                const trimmed = line.trim();
+                if (trimmed.length === 0) return false;
+                const firstChar = trimmed[0];
+                return firstChar === '[' || firstChar === ']'
+                    || firstChar === '{' || firstChar === '}'
+                    || firstChar === '"';
+            })
             .join('\n');
         const retryParsed = parseJSON<TRaw[]>(cleaned);
         if (retryParsed && Array.isArray(retryParsed)) return retryParsed;
@@ -133,6 +142,9 @@ export class AdobeEntityFetcher {
         if (stderr?.includes('401') || stderr?.toLowerCase().includes('unauthorized')) {
             throw new Error('AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.');
         }
+
+        // Log raw stdout for debugging when all parsing attempts fail
+        this.debugLogger.error(`[Entity Fetcher] Raw ${entityName} stdout (${stdout.length} chars): ${stdout.substring(0, 500)}`);
         throw new Error(`Invalid ${entityName} response format`);
     }
 
