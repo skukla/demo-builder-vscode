@@ -96,10 +96,18 @@ export class AdobeContextResolver {
             ? cachedOrgList
             : await this.fetchOrgListSafely();
 
-        const matchedOrg = orgList.find(o => o.name === orgString || o.code === orgString);
+        const needle = orgString.trim().toLowerCase();
+        const matchedOrg = orgList.find(o =>
+            o.name.trim().toLowerCase() === needle
+            || o.code.trim().toLowerCase() === needle
+            || o.id.trim().toLowerCase() === needle,
+        );
         if (matchedOrg) return matchedOrg;
 
-        this.debugLogger.warn('[Context Resolver] Could not find org in list, using name as fallback');
+        this.debugLogger.warn(
+            `[Context Resolver] Could not find org "${orgString}" in list `
+            + `[${orgList.map(o => `"${o.name}" (${o.id})`).join(', ')}], using name as fallback`,
+        );
         return this.createFallbackOrg(orgString);
     }
 
