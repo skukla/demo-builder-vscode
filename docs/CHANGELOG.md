@@ -7,7 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.106] - 2026-03-18
+
+### Added
+- **Custom Block Library Docs**: Documentation for creating standalone block libraries compatible with the Demo Builder (`docs/systems/custom-block-libraries.md`)
+
 ### Fixed
+- **Folder Mapping Re-Auth**: 401 responses from the Configuration Service now throw `DaLiveAuthError`, triggering the existing mid-pipeline re-auth prompt instead of silently skipping folder mapping. Non-auth failures are logged at error level with a visible UI warning about product detail page impact.
+- **CLI Warning Stripping**: `aio` CLI upgrade warnings mixed into stdout no longer break JSON parsing. Uses JSON-character filtering to keep only parsable content, with stderr fallback for CLI versions that write JSON to stderr.
+- **Org Mismatch Detection**: When the CLI org context doesn't match the authenticated org (causing 403 on project listing), the error message now tells the user to run `aio console org select` instead of showing the generic "Failed to load projects."
+- **Case-Insensitive Org Matching**: Organization name resolution now uses case-insensitive, whitespace-trimmed matching with ID fallback, preventing silent fallback to a broken org context.
+- **Inspector SDK Lint Errors**: Vendored `scripts/demo-inspector-sdk/` files are now added to `.eslintignore` during storefront setup, preventing GitHub Actions build failures.
+- **Custom Block Library Settings Sync**: Adding a custom block library via VS Code settings while the Architecture Modal is open now immediately shows the new library without needing to close and re-open the modal.
+
+## [1.0.0-beta.100] - 2025-03-13
+
+### Added
+- **Upstream Sync System**: Detect and sync forked source repos with their upstream via GitHub merge-upstream API
+- **Add-on Update Detection**: Block library and Demo Inspector SDK commit-SHA comparison against source HEAD
+- **B2B Feature Packs**: Bundle blocks, config flags, initializers, and dependencies into installable feature packs
+- **B2B Commerce Demo Package**: New B2B demo package with addon and config flag injection
+- **Isle5 Demo Package**: Branded demo package with native block library
+- **Demo Inspector SDK Vendoring**: Vendor SDK files and tagging script into storefront at project creation
+- **Block Library Selection UX**: Multi-step architecture modal for selecting block libraries during project creation
+- **Global Block Library Selection**: Dynamic block discovery with settings-based custom library support
+- **Config-Driven Block Collections**: Block collection source and handler extraction driven by configuration
+- **DA.live Bookmarklet Setup**: New command for DA.live bookmarklet setup with extracted `openUrl` utility
+- **Content Patches**: ACCS content patch to replace Orchard7 with Orchard1-1 on index page
+- **Auth Route Stub Pages**: Create stub pages for auth routes missing from source content
+- **Column-Based Brand Tiles**: Column layout with compact expansion and settings sync for brand selection
+
+### Changed
+- **Block Library Sources**: Switched Isle5 source from fork to upstream repo; renamed library IDs for clarity
+- **Authentication Performance**: Update `console.where` cache instead of clearing after entity selection
+- **Projects Dashboard**: Sort projects alphabetically for deterministic grid ordering
+- **Update Pipeline**: Shared `githubApiClient` module centralizes GitHub API calls across all update services
+- **Update Pipeline**: Removed dead code and simplified update service internals
+
+### Fixed
+- **EDS Content Copy**: Filter CDN doc page copy to installed blocks only; fall back to CDN index when DA.live list API returns 0 files
+- **EDS Content Enumeration**: Enumerate content via DA.live list API to include nav/footer fragments
+- **EDS Block Installation**: Preserve template blocks during block library installation; merge component-models.json and component-filters.json
+- **EDS Block Deduplication**: Deduplicate blocks across multiple block libraries
+- **EDS Rate Limits**: Batch preview DELETEs and handle 429 rate limits from Helix Admin API
+- **EDS Auth Recovery**: Add DA.live re-auth recovery to EDS reset pipeline and DaLiveAuthError recovery to phases 2-3
+- **EDS DA.live Token**: Use DA.live token for all DA.live API calls in content setup
+- **EDS Helix DELETE**: Use DA.live Bearer token for DELETE operations to bypass "source exists" restriction
+- **EDS Patch Fetches**: Deduplicate concurrent external patch fetches
+- **EDS Navigation**: Patch nav registration link to match create-account path
+- **EDS DA.live Org**: Sync DA.live default org into input field on async arrival
+- **EDS Block Doc Pages**: Add section wrapper to block doc pages and always overwrite; copy pages from content sources for Custom projects
+- **EDS CDN Probe**: Probe customer auth pages in CDN fallback content copy
+- **EDS Mid-Pipeline Auth**: Add mid-pipeline auth guard for mesh redeployment and fix config service registration
+- **Updates**: Decouple npm install from buildScript gate and check extraction exit code
+- **Updates**: Add repoUrl fallback for components not in components.json
+- **Brand Tiles**: Preserve JSON config order for brand tiles instead of alphabetical sort
+- **B2B**: Rename B2B brand card to "B2B Boilerplate"
+
+### Security
+- **Helix API Keys**: Migrate from globalState to SecretStorage
+
+### Refactored
+- **Authentication**: Decompose entity services, simplify perf tracking, consolidate DaLiveAuth; consolidate auth guards and remove dead code
+- **EDS**: Remove bulk unpublish dead code and simplify to page-by-page DELETE; remove unused selectedAddons parameter
+- **Inspector**: Remove git submodule infrastructure (dead code after inspector removal); remove demo inspector from extension and clean up stale docs
+- **ESLint**: Resolve all ESLint errors and warnings across codebase
+
+### Performance
+- **EDS Unpublish**: Batch Helix live partition unpublish with concurrency 5
+
+### Fixed (Prior Unreleased)
 - **Prerequisites Node.js Installation**: Fixed fnm list ENOENT errors by adding shell context to all fnm list commands
 - **Prerequisites UI**: Added milestone substep display showing "(Step X of Y)" for multi-step operations with progress milestones
 - **Authentication Flow**: Fixed fnm ENOENT errors during environment setup when VS Code launched from Dock (non-terminal launch)
