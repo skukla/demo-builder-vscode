@@ -64,3 +64,4 @@ jscpd-output/
 .claude/.env*           # Secrets
 .jest-cache/
 .playwright-mcp/
+.worktrees/
