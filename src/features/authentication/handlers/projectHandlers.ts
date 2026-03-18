@@ -78,9 +78,14 @@ export async function handleGetProjects(
         return { success: true, data: projects };
     } catch (error) {
         const appError = toAppError(error);
+        const originalMessage = (error instanceof Error) ? error.message : '';
+        const hasActionableMessage = originalMessage.includes('organization')
+            || originalMessage.includes('AUTH_EXPIRED');
         const errorMessage = isTimeout(appError)
             ? appError.userMessage
-            : 'Failed to load projects. Please try again.';
+            : hasActionableMessage
+                ? originalMessage.replace('AUTH_EXPIRED: ', '')
+                : 'Failed to load projects. Please try again.';
 
         context.logger.error('Failed to get projects:', appError);
         await context.sendMessage('get-projects', {

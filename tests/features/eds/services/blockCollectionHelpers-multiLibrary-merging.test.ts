@@ -1,9 +1,10 @@
 /**
- * Block Collection Helpers - Multi-Library Tests
+ * Block Collection Helpers - Multi-Library Tests: Merging & Template Preservation
  *
- * Tests for installBlockCollections (plural) with multiple library sources:
- * cross-library deduplication, single atomic commit, multi-source
- * component-definition.json merge, edge cases, and version tracking.
+ * Tests for installBlockCollections (plural) covering:
+ * - Multi-source component-definition.json merge
+ * - Template block preservation (regression tests)
+ * - Component-filters merge across multiple libraries
  */
 
 import {
@@ -109,182 +110,6 @@ describe('installBlockCollections', () => {
         } as unknown as jest.Mocked<GitHubFileOperations>;
     });
 
-    describe('cross-library block deduplication', () => {
-        it('should deduplicate blocks across libraries (first source wins)', async () => {
-            mockGithubFileOps.listRepoFiles
-                .mockResolvedValueOnce([]) // destination (empty)
-                .mockResolvedValueOnce(createBlockFileEntries(['hero-cta', 'newsletter', 'search-bar']))
-                .mockResolvedValueOnce(createBlockFileEntries(['newsletter', 'search-bar', 'product-grid']));
-
-            mockGithubFileOps.getBlobContent.mockResolvedValue('export default function() {}');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
-
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [
-                    { source: SOURCE_A, name: 'Isle5' },
-                    { source: SOURCE_B, name: 'Custom Blocks' },
-                ],
-                mockLogger,
-            );
-
-            expect(result.success).toBe(true);
-            expect(result.blocksCount).toBe(4);
-            expect(mockGithubFileOps.getBlobContent).toHaveBeenCalledTimes(4);
-        });
-
-        it('should fetch overlapping blocks only from the first source (first wins)', async () => {
-            mockGithubFileOps.listRepoFiles
-                .mockResolvedValueOnce([]) // destination (empty)
-                .mockResolvedValueOnce([
-                    { path: 'blocks/newsletter/newsletter.js', mode: '100644', type: 'blob' as const, sha: 'sha-A-newsletter' },
-                ])
-                .mockResolvedValueOnce([
-                    { path: 'blocks/newsletter/newsletter.js', mode: '100644', type: 'blob' as const, sha: 'sha-B-newsletter' },
-                ]);
-
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
-
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [
-                    { source: SOURCE_A, name: 'Isle5' },
-                    { source: SOURCE_B, name: 'Custom Blocks' },
-                ],
-                mockLogger,
-            );
-
-            expect(result.blocksCount).toBe(1);
-            expect(mockGithubFileOps.getBlobContent).toHaveBeenCalledTimes(1);
-            expect(mockGithubFileOps.getBlobContent).toHaveBeenCalledWith(
-                SOURCE_A.owner, SOURCE_A.repo, 'sha-A-newsletter',
-            );
-        });
-
-        it('should return unique blockIds in result (no duplicates)', async () => {
-            mockGithubFileOps.listRepoFiles
-                .mockResolvedValueOnce([]) // destination (empty)
-                .mockResolvedValueOnce(createBlockFileEntries(['alpha', 'beta']))
-                .mockResolvedValueOnce(createBlockFileEntries(['beta', 'gamma']));
-
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
-
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [
-                    { source: SOURCE_A, name: 'Source A' },
-                    { source: SOURCE_B, name: 'Source B' },
-                ],
-                mockLogger,
-            );
-
-            expect(result.blockIds).toEqual(['alpha', 'beta', 'gamma']);
-            expect(result.blocksCount).toBe(3);
-        });
-    });
-
-    describe('single atomic commit', () => {
-        it('should create exactly one commit for multiple libraries', async () => {
-            mockGithubFileOps.listRepoFiles
-                .mockResolvedValueOnce([]) // destination (empty)
-                .mockResolvedValueOnce(createBlockFileEntries(['hero-cta']))
-                .mockResolvedValueOnce(createBlockFileEntries(['product-grid']));
-
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
-
-            await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [
-                    { source: SOURCE_A, name: 'Isle5' },
-                    { source: SOURCE_B, name: 'Custom Blocks' },
-                ],
-                mockLogger,
-            );
-
-            expect(mockGithubFileOps.createCommit).toHaveBeenCalledTimes(1);
-            expect(mockGithubFileOps.createTree).toHaveBeenCalledTimes(1);
-            expect(mockGithubFileOps.updateBranchRef).toHaveBeenCalledTimes(1);
-        });
-
-        it('should include blocks from all libraries in the single commit tree', async () => {
-            mockGithubFileOps.listRepoFiles
-                .mockResolvedValueOnce([]) // destination (empty)
-                .mockResolvedValueOnce(createBlockFileEntries(['hero-cta']))
-                .mockResolvedValueOnce(createBlockFileEntries(['product-grid']));
-
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
-
-            await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [
-                    { source: SOURCE_A, name: 'Isle5' },
-                    { source: SOURCE_B, name: 'Custom Blocks' },
-                ],
-                mockLogger,
-            );
-
-            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
-            const treeEntries = createTreeCall[2] as Array<{ path: string }>;
-            const blockPaths = treeEntries
-                .filter(e => e.path.startsWith('blocks/'))
-                .map(e => e.path);
-
-            expect(blockPaths).toContain('blocks/hero-cta/hero-cta.js');
-            expect(blockPaths).toContain('blocks/product-grid/product-grid.js');
-        });
-
-        it('should mention total unique block count in commit message', async () => {
-            mockGithubFileOps.listRepoFiles
-                .mockResolvedValueOnce([]) // destination (empty)
-                .mockResolvedValueOnce(createBlockFileEntries(['hero-cta', 'newsletter']))
-                .mockResolvedValueOnce(createBlockFileEntries(['newsletter', 'product-grid']));
-
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
-
-            await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [
-                    { source: SOURCE_A, name: 'Isle5' },
-                    { source: SOURCE_B, name: 'Custom Blocks' },
-                ],
-                mockLogger,
-            );
-
-            const commitMessage = mockGithubFileOps.createCommit.mock.calls[0][2] as string;
-            expect(commitMessage).toContain('3 blocks');
-            expect(commitMessage).toContain('2 libraries');
-        });
-    });
-
     describe('multi-source component-definition.json merge', () => {
         it('should merge component-definition.json entries from all sources without duplicates', async () => {
             mockGithubFileOps.listRepoFiles
@@ -356,199 +181,8 @@ describe('installBlockCollections', () => {
         });
     });
 
-    describe('edge cases', () => {
-        it('should handle mixed success (some sources have no blocks)', async () => {
-            mockGithubFileOps.listRepoFiles
-                .mockResolvedValueOnce([]) // destination (empty)
-                .mockResolvedValueOnce(createBlockFileEntries(['hero-cta', 'newsletter']))
-                .mockResolvedValueOnce([
-                    { path: 'README.md', mode: '100644', type: 'blob' as const, sha: 'sha-readme' },
-                ]);
-
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
-
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [
-                    { source: SOURCE_A, name: 'Isle5' },
-                    { source: SOURCE_B, name: 'Empty Lib' },
-                ],
-                mockLogger,
-            );
-
-            expect(result.success).toBe(true);
-            expect(result.blocksCount).toBe(2);
-            expect(result.blockIds).toEqual(['hero-cta', 'newsletter']);
-        });
-
-        it('should return empty success result when no libraries provided', async () => {
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [],
-                mockLogger,
-            );
-
-            expect(result.success).toBe(true);
-            expect(result.blocksCount).toBe(0);
-            expect(result.blockIds).toEqual([]);
-            expect(mockGithubFileOps.listRepoFiles).not.toHaveBeenCalled();
-            expect(mockGithubFileOps.createCommit).not.toHaveBeenCalled();
-        });
-
-        it('should return error when all sources fail to list files', async () => {
-            mockGithubFileOps.listRepoFiles
-                .mockResolvedValueOnce([]) // destination (empty)
-                .mockRejectedValueOnce(new Error('API rate limit'))
-                .mockRejectedValueOnce(new Error('Not found'));
-
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [
-                    { source: SOURCE_A, name: 'Isle5' },
-                    { source: SOURCE_B, name: 'Custom Blocks' },
-                ],
-                mockLogger,
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.blocksCount).toBe(0);
-            expect(result.blockIds).toEqual([]);
-        });
-
-        it('should work correctly with a single library (backward compatible behavior)', async () => {
-            mockGithubFileOps.listRepoFiles
-                .mockResolvedValueOnce([]) // destination (empty)
-                .mockResolvedValueOnce(createBlockFileEntries(['hero-cta', 'newsletter']));
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
-
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [{ source: SOURCE_A, name: 'Isle5' }],
-                mockLogger,
-            );
-
-            expect(result.success).toBe(true);
-            expect(result.blocksCount).toBe(2);
-            expect(result.blockIds).toEqual(['hero-cta', 'newsletter']);
-            expect(mockGithubFileOps.createCommit).toHaveBeenCalledTimes(1);
-        });
-    });
-
-    describe('libraryVersions tracking', () => {
-        it('should return libraryVersions with source commit SHAs when install succeeds', async () => {
-            mockGithubFileOps.listRepoFiles
-                .mockResolvedValueOnce([]) // destination (empty)
-                .mockResolvedValueOnce(createBlockFileEntries(['hero-cta', 'newsletter']))
-                .mockResolvedValueOnce(createBlockFileEntries(['product-grid']));
-
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-
-            mockGithubFileOps.getBranchInfo.mockImplementation(
-                async (owner: string, repo: string) => {
-                    if (owner === SOURCE_A.owner && repo === SOURCE_A.repo) {
-                        return { treeSha: 'tree-sha-a', commitSha: 'source-commit-sha-a' };
-                    }
-                    if (owner === SOURCE_B.owner && repo === SOURCE_B.repo) {
-                        return { treeSha: 'tree-sha-b', commitSha: 'source-commit-sha-b' };
-                    }
-                    return { treeSha: 'dest-tree-sha', commitSha: 'dest-commit-sha' };
-                },
-            );
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
-
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [
-                    { source: SOURCE_A, name: 'Isle5' },
-                    { source: SOURCE_B, name: 'Custom Blocks' },
-                ],
-                mockLogger,
-            );
-
-            expect(result.success).toBe(true);
-            expect(result.libraryVersions).toBeDefined();
-            expect(result.libraryVersions).toHaveLength(2);
-        });
-
-        it('should map libraryVersions correctly to each library (name, source, commitSha, blockIds)', async () => {
-            mockGithubFileOps.listRepoFiles
-                .mockResolvedValueOnce([]) // destination (empty)
-                .mockResolvedValueOnce(createBlockFileEntries(['hero-cta', 'newsletter']))
-                .mockResolvedValueOnce(createBlockFileEntries(['product-grid']));
-
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-
-            mockGithubFileOps.getBranchInfo.mockImplementation(
-                async (owner: string, repo: string) => {
-                    if (owner === SOURCE_A.owner && repo === SOURCE_A.repo) {
-                        return { treeSha: 'tree-sha-a', commitSha: 'abc123' };
-                    }
-                    if (owner === SOURCE_B.owner && repo === SOURCE_B.repo) {
-                        return { treeSha: 'tree-sha-b', commitSha: 'def456' };
-                    }
-                    return { treeSha: 'dest-tree', commitSha: 'dest-sha' };
-                },
-            );
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
-
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [
-                    { source: SOURCE_A, name: 'Isle5' },
-                    { source: SOURCE_B, name: 'Custom Blocks' },
-                ],
-                mockLogger,
-            );
-
-            expect(result.libraryVersions).toEqual([
-                {
-                    source: SOURCE_A,
-                    name: 'Isle5',
-                    commitSha: 'abc123',
-                    blockIds: ['hero-cta', 'newsletter'],
-                },
-                {
-                    source: SOURCE_B,
-                    name: 'Custom Blocks',
-                    commitSha: 'def456',
-                    blockIds: ['product-grid'],
-                },
-            ]);
-        });
-
-        it('should return empty libraryVersions when library list is empty', async () => {
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [],
-                mockLogger,
-            );
-
-            expect(result.success).toBe(true);
-            expect(result.libraryVersions ?? []).toEqual([]);
-        });
-    });
-
     describe('template block preservation (regression)', () => {
         it('should not overwrite blocks that already exist in the destination repo', async () => {
-            // Destination already has cards and hero from template reset
-            // Library offers cards, hero (overlap) + newsletter (new)
-            // Only newsletter should be installed
             mockGithubFileOps.listRepoFiles.mockImplementation(
                 async (owner: string, repo: string) => {
                     if (owner === 'dest-owner' && repo === 'dest-repo') {
@@ -642,10 +276,6 @@ describe('installBlockCollections', () => {
         });
 
         it('should preserve template blocks across multiple libraries', async () => {
-            // Destination has cards from template
-            // Library A has cards (overlap) + newsletter (new)
-            // Library B has cards (overlap) + product-grid (new)
-            // Should install: newsletter + product-grid only
             mockGithubFileOps.listRepoFiles.mockImplementation(
                 async (owner: string, repo: string) => {
                     if (owner === 'dest-owner' && repo === 'dest-repo') {
@@ -685,8 +315,6 @@ describe('installBlockCollections', () => {
 
     describe('component-filters merge (multi-library)', () => {
         it('should merge filters from multiple libraries', async () => {
-            // Lib A: hero-v2, tabs (with sub-filter)
-            // Lib B: blog-tiles, circle-carousel (with sub-filter)
             mockGithubFileOps.listRepoFiles
                 .mockResolvedValueOnce([]) // destination (empty)
                 .mockResolvedValueOnce(createBlockFileEntries(['hero-v2', 'tabs']))
@@ -710,13 +338,13 @@ describe('installBlockCollections', () => {
                         if (path === 'component-filters.json') {
                             return { content: sourceAFilters, sha: 'sha-cf-a' };
                         }
-                        return null; // no comp-def
+                        return null;
                     }
                     if (owner === SOURCE_B.owner && repo === SOURCE_B.repo) {
                         if (path === 'component-filters.json') {
                             return { content: sourceBFilters, sha: 'sha-cf-b' };
                         }
-                        return null; // no comp-def
+                        return null;
                     }
                     // destination
                     if (path === 'component-filters.json') {
@@ -750,13 +378,11 @@ describe('installBlockCollections', () => {
             const merged = JSON.parse(filtersEntry!.content!);
             const sectionFilter = merged.find((f: { id: string }) => f.id === 'section');
 
-            // All four block IDs should be in section
             expect(sectionFilter.components).toContain('hero-v2');
             expect(sectionFilter.components).toContain('tabs');
             expect(sectionFilter.components).toContain('blog-tiles');
             expect(sectionFilter.components).toContain('circle-carousel');
 
-            // Sub-filters should be present
             const tabsFilter = merged.find((f: { id: string }) => f.id === 'tabs');
             expect(tabsFilter).toBeDefined();
             expect(tabsFilter.components).toContain('tabs-item');
@@ -767,7 +393,6 @@ describe('installBlockCollections', () => {
         });
 
         it('should not duplicate filter entries across libraries', async () => {
-            // Both libs have 'hero' in section filters
             mockGithubFileOps.listRepoFiles
                 .mockResolvedValueOnce([]) // destination (empty)
                 .mockResolvedValueOnce(createBlockFileEntries(['hero', 'newsletter']))
@@ -824,11 +449,9 @@ describe('installBlockCollections', () => {
             const merged = JSON.parse(filtersEntry!.content!);
             const sectionFilter = merged.find((f: { id: string }) => f.id === 'section');
 
-            // 'hero' already in dest defaults, so should appear only once
             const heroCount = sectionFilter.components.filter((c: string) => c === 'hero').length;
             expect(heroCount).toBe(1);
 
-            // 'newsletter' and 'product-grid' should be added
             expect(sectionFilter.components).toContain('newsletter');
             expect(sectionFilter.components).toContain('product-grid');
         });

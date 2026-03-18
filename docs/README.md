@@ -22,6 +22,7 @@ Detailed documentation about specific subsystems.
 
 - **[Prerequisites System](./systems/prerequisites-system.md)** - Comprehensive guide to the configuration-driven prerequisites and progress tracking system
 - **[Error Logging](./systems/error-logging.md)** - Error handling, logging strategy, and notification system
+- **[Custom Block Libraries](./systems/custom-block-libraries.md)** - Creating standalone block libraries for use with the Demo Builder
 - **[Webview Loading](./systems/webview-loading.md)** - VS Code webview initialization and loading state management
 
 #### 👨‍💻 Development
