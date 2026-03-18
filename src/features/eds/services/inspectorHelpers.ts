@@ -231,6 +231,22 @@ export async function generateInspectorTreeEntries(
         content: initScriptContent,
     });
 
+    // Ensure vendored SDK is excluded from ESLint
+    const existingEslintIgnore = await githubFileOps.getFileContent(
+        destOwner, destRepo, '.eslintignore',
+    );
+    const eslintIgnoreContent = existingEslintIgnore?.content ?? '';
+    if (!eslintIgnoreContent.includes(SDK_CONFIG.destDir)) {
+        const separator = eslintIgnoreContent.endsWith('\n') || eslintIgnoreContent === '' ? '' : '\n';
+        treeEntries.push({
+            path: '.eslintignore',
+            mode: '100644',
+            type: 'blob',
+            content: eslintIgnoreContent + separator + `${SDK_CONFIG.destDir}/\n`,
+        });
+        logger.info(`[Inspector Tagging] Added ${SDK_CONFIG.destDir}/ to .eslintignore`);
+    }
+
     // Append loader snippet to delayed.js if not already present
     const existingDelayed = await githubFileOps.getFileContent(
         destOwner, destRepo, 'scripts/delayed.js',
