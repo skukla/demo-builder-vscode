@@ -202,6 +202,23 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     // Track modal-local custom block library state (synced to parent on Done)
     const [modalCustomBlockLibraries, setModalCustomBlockLibraries] = useState<CustomBlockLibrary[]>(customBlockLibraries);
 
+    // Sync custom block libraries when VS Code settings change while modal is open.
+    // Uses a ref to track the previous defaults so we only react to actual changes,
+    // not the initial mount (which would override the user's checkbox state).
+    const prevCustomDefaultsRef = useRef(customBlockLibraryDefaults);
+    useEffect(() => {
+        if (!modalPackageId || !customBlockLibraryDefaults?.length) return;
+        if (prevCustomDefaultsRef.current === customBlockLibraryDefaults) return;
+        prevCustomDefaultsRef.current = customBlockLibraryDefaults;
+        setModalCustomBlockLibraries(prev => {
+            const existingKeys = new Set(prev.map(l => `${l.source.owner}/${l.source.repo}`));
+            const newLibs = customBlockLibraryDefaults.filter(
+                l => !existingKeys.has(`${l.source.owner}/${l.source.repo}`),
+            );
+            return newLibs.length > 0 ? [...prev, ...newLibs] : prev;
+        });
+    }, [customBlockLibraryDefaults, modalPackageId]);
+
     const filteredPackages = useMemo(
         () => sortPackages(filterPackagesBySearchQuery(packages, searchQuery)),
         [packages, searchQuery],
