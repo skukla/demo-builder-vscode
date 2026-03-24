@@ -218,11 +218,12 @@ function resolveConfigField(
     meshConfig: Record<string, string | boolean | number | undefined>,
     accsKey: string,
     paasKey: string,
+    backendConfig?: Record<string, string | boolean | number | undefined>,
 ): string | undefined {
     if (isAccs) {
-        return (edsConfig[accsKey] || meshConfig[accsKey]) as string | undefined;
+        return (edsConfig[accsKey] || meshConfig[accsKey] || backendConfig?.[accsKey]) as string | undefined;
     }
-    return (edsConfig[paasKey] || meshConfig[paasKey]) as string | undefined;
+    return (edsConfig[paasKey] || meshConfig[paasKey] || backendConfig?.[paasKey]) as string | undefined;
 }
 
 export function extractConfigParamsFromConfigs(
@@ -233,35 +234,35 @@ export function extractConfigParamsFromConfigs(
     const edsConfig = componentConfigs?.[COMPONENT_IDS.EDS_STOREFRONT] || {};
     const paasMeshConfig = componentConfigs?.[COMPONENT_IDS.EDS_COMMERCE_MESH] || {};
     const accsMeshConfig = componentConfigs?.[COMPONENT_IDS.EDS_ACCS_MESH] || {};
+    const backendConfig = backendComponentId ? (componentConfigs?.[backendComponentId] || {}) : {};
 
     const environmentType = mapBackendToEnvironmentType(backendComponentId);
     const isAccs = environmentType === 'accs';
     const meshConfig = isAccs ? accsMeshConfig : paasMeshConfig;
 
-    // For ACCS: prefer mesh endpoint, then ACCS endpoint
-    // For PaaS: prefer mesh endpoint, then Commerce GraphQL endpoint
+    // Resolve commerce endpoint: mesh endpoint > frontend config > mesh config > backend config
     const commerceEndpoint = meshEndpoint ||
         (isAccs
-            ? (edsConfig.ACCS_GRAPHQL_ENDPOINT || accsMeshConfig.ACCS_GRAPHQL_ENDPOINT)
-            : edsConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT);
+            ? (edsConfig.ACCS_GRAPHQL_ENDPOINT || accsMeshConfig.ACCS_GRAPHQL_ENDPOINT || backendConfig.ACCS_GRAPHQL_ENDPOINT)
+            : (edsConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT || paasMeshConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT || backendConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT));
 
-    const storeViewCode = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_STORE_VIEW_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE');
-    const storeCode = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_STORE_CODE', 'ADOBE_COMMERCE_STORE_CODE');
-    const websiteCode = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_WEBSITE_CODE', 'ADOBE_COMMERCE_WEBSITE_CODE');
-    const customerGroup = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_CUSTOMER_GROUP', 'ADOBE_COMMERCE_CUSTOMER_GROUP');
+    const storeViewCode = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_STORE_VIEW_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE', backendConfig);
+    const storeCode = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_STORE_CODE', 'ADOBE_COMMERCE_STORE_CODE', backendConfig);
+    const websiteCode = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_WEBSITE_CODE', 'ADOBE_COMMERCE_WEBSITE_CODE', backendConfig);
+    const customerGroup = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_CUSTOMER_GROUP', 'ADOBE_COMMERCE_CUSTOMER_GROUP', backendConfig);
 
     return {
         environmentType,
         commerceEndpoint: commerceEndpoint as string | undefined,
         catalogServiceEndpoint: isAccs
             ? undefined
-            : (edsConfig.PAAS_CATALOG_SERVICE_ENDPOINT) as string | undefined,
+            : (edsConfig.PAAS_CATALOG_SERVICE_ENDPOINT || backendConfig.PAAS_CATALOG_SERVICE_ENDPOINT) as string | undefined,
         commerceApiKey: isAccs
             ? undefined
-            : (edsConfig.ADOBE_CATALOG_API_KEY || paasMeshConfig.ADOBE_CATALOG_API_KEY) as string | undefined,
+            : (edsConfig.ADOBE_CATALOG_API_KEY || paasMeshConfig.ADOBE_CATALOG_API_KEY || backendConfig.ADOBE_CATALOG_API_KEY) as string | undefined,
         commerceEnvironmentId: isAccs
             ? undefined
-            : (edsConfig.ADOBE_COMMERCE_ENVIRONMENT_ID || paasMeshConfig.ADOBE_COMMERCE_ENVIRONMENT_ID) as string | undefined,
+            : (edsConfig.ADOBE_COMMERCE_ENVIRONMENT_ID || paasMeshConfig.ADOBE_COMMERCE_ENVIRONMENT_ID || backendConfig.ADOBE_COMMERCE_ENVIRONMENT_ID) as string | undefined,
         storeViewCode,
         storeCode,
         websiteCode,
