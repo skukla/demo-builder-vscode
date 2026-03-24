@@ -269,12 +269,14 @@ export class DaLiveNetworkError extends DaLiveError {
  * Setup phases for EDS project creation
  */
 export type EdsSetupPhase =
-    | 'github-repo'
+    | 'repository'
     | 'github-clone'
-    | 'helix-config'
+    | 'storefront-code'
     | 'code-sync'
-    | 'dalive-content'
-    | 'content-publish'
+    | 'site-config'
+    | 'content'
+    | 'block-library'
+    | 'publish'
     | 'tools-clone'
     | 'env-config'
     | 'complete';

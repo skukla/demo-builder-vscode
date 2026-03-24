@@ -348,11 +348,11 @@ export async function handleResumeStorefrontSetup(
 ): Promise<HandlerResponse> {
     context.logger.info('[Storefront Setup] Resume requested after GitHub App installation');
 
-    // Continue from code-sync phase
+    // Continue from code-sync phase (after GitHub App installation)
     await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
         message: 'Verifying code synchronization...',
-        progress: 40,
+        progress: 36,
     });
 
     return { success: true };

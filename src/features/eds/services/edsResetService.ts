@@ -6,12 +6,17 @@
  *
  * The reset workflow:
  * 1. Reset repo to template (Git Tree API)
- * 2. Sync code to CDN + configure permissions
- * 3. Publish config.json
- * 4. Copy demo content to DA.live
- * 5. Apply EDS settings
- * 6. Purge cache + publish content
- * 7. (Optional) Redeploy API Mesh
+ * 2. Install block libraries
+ * 3. Install inspector tagging
+ * 4. Sync code to CDN
+ * 5. Configure site permissions
+ * 6. Update Configuration Service
+ * 7. Publish config.json to CDN
+ * 8. Clear + copy demo content to DA.live
+ * 9. Create block library in DA.live
+ * 10. Apply EDS settings
+ * 11. Purge cache + publish content
+ * 12. (Optional) Redeploy API Mesh
  *
  * @module features/eds/services/edsResetService
  */
@@ -232,6 +237,7 @@ async function resetRepoToTemplate(
 ): Promise<{ filesReset: number; blockCollectionIds?: string[] }> {
     const { repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo, project, includeBlockLibrary = false } = params;
 
+    // Step 1: Reset repository to template
     report(1, 'Resetting repository to template...');
     context.logger.info(`[EdsReset] Resetting repo using bulk tree operations`);
 
@@ -266,6 +272,9 @@ async function resetRepoToTemplate(
 
     context.logger.info(`[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
     report(1, `Reset ${resetResult.fileCount} files`);
+
+    // Step 2: Install block libraries
+    report(2, 'Preparing block libraries...');
 
     // Generate inspector tree entries (always, for consistency with storefront setup)
     let inspectorEntries: GitHubTreeInput[] = [];
@@ -319,7 +328,7 @@ async function resetRepoToTemplate(
 
     let allBlockIds: string[] = [];
     if (allLibraries.length > 0) {
-        report(1, `Re-installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`);
+        report(2, `Re-installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`);
         const blockResult = await installBlockCollections(
             githubFileOps, repoOwner, repoName, allLibraries, context.logger, inspectorEntries,
         );
@@ -330,8 +339,8 @@ async function resetRepoToTemplate(
             context.logger.warn(`[EdsReset] Block library reinstall failed: ${blockResult.error}`);
         }
     } else if (inspectorEntries.length > 0) {
-        // No block libraries — inspector makes its own standalone commit
-        report(1, 'Installing inspector tagging...');
+        // Step 3: No block libraries — inspector makes its own standalone commit
+        report(3, 'Installing inspector tagging...');
         const inspectorResult = await installInspectorTagging(
             githubFileOps, repoOwner, repoName, project.selectedPackage, context.logger,
         );
@@ -348,7 +357,7 @@ async function resetRepoToTemplate(
 }
 
 /**
- * Step 2: Sync code to CDN and configure DA.live permissions.
+ * Steps 4-5: Sync code to CDN and configure DA.live permissions.
  */
 async function syncCodeAndPermissions(
     params: EdsResetParams,
@@ -361,18 +370,20 @@ async function syncCodeAndPermissions(
     const { HelixService } = await import('./helixService');
     const { configureDaLivePermissions } = await import('../handlers/edsHelpers');
 
-    report(2, 'Syncing code to CDN...');
+    // Step 4: Sync code to CDN
+    report(4, 'Syncing code to CDN...');
     const helixServiceForCodeSync = new HelixService(context.logger, githubTokenService, tokenProvider);
     try {
         await helixServiceForCodeSync.previewCode(repoOwner, repoName, '/*');
         context.logger.info('[EdsReset] Code synced to CDN');
-        report(2, 'Code synchronized');
+        report(4, 'Code synchronized');
     } catch (codeSyncError) {
         context.logger.warn(`[EdsReset] Code sync request failed: ${(codeSyncError as Error).message}, continuing anyway`);
-        report(2, 'Code sync pending...');
+        report(4, 'Code sync pending...');
     }
 
-    report(2, 'Configuring site permissions...');
+    // Step 5: Configure site permissions
+    report(5, 'Configuring site permissions...');
     const { getDaLiveAuthService } = await import('../handlers/edsHelpers');
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const userEmail = await daLiveAuthService.getUserEmail();
@@ -384,7 +395,7 @@ async function syncCodeAndPermissions(
 }
 
 /**
- * Step 7: Redeploy API Mesh.
+ * Step 12: Redeploy API Mesh.
  * @returns Partial-success result if mesh failed, or null on success/skip.
  */
 async function redeployApiMesh(
@@ -408,7 +419,7 @@ async function redeployApiMesh(
     const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
     const authService = ServiceLocator.getAuthenticationService();
 
-    report(7, 'Checking Adobe I/O authentication...');
+    report(12, 'Checking Adobe I/O authentication...');
     const authResult = await ensureAdobeIOAuth({
         authManager: authService,
         logger: context.logger,
@@ -433,7 +444,7 @@ async function redeployApiMesh(
         };
     }
 
-    report(7, 'Setting Adobe context...');
+    report(12, 'Setting Adobe context...');
     if (project.adobe?.organization) {
         await authService.selectOrganization(project.adobe.organization, { skipPermissionCheck: true });
     }
@@ -444,7 +455,7 @@ async function redeployApiMesh(
         await authService.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
     }
 
-    report(7, 'Redeploying API Mesh...');
+    report(12, 'Redeploying API Mesh...');
     context.logger.info(`[EdsReset] Redeploying mesh for ${repoOwner}/${repoName}`);
 
     try {
@@ -454,7 +465,7 @@ async function redeployApiMesh(
 
         const meshDeployResult = await deployMeshComponent(
             meshComponent.path, commandManager, context.logger,
-            (msg, sub) => report(7, sub || msg), existingMeshId,
+            (msg, sub) => report(12, sub || msg), existingMeshId,
         );
 
         if (meshDeployResult.success && meshDeployResult.data?.endpoint) {
@@ -507,7 +518,7 @@ export async function executeEdsReset(
         includeBlockLibrary = false, verifyCdn = false, redeployMesh = false, contentPatches,
     } = params;
 
-    const baseSteps = 6;
+    const baseSteps = 11;
     const totalSteps = redeployMesh ? baseSteps + 1 : baseSteps;
     const report = (step: number, message: string) => {
         onProgress?.({ step, totalSteps, message });
@@ -531,7 +542,8 @@ export async function executeEdsReset(
         // Step 2: Sync code to CDN + configure permissions
         await syncCodeAndPermissions(params, context, githubTokenService, tokenProvider, report);
 
-        // Step 2.5: Update Configuration Service with current content source
+        // Step 6: Update Configuration Service with current content source
+        report(6, 'Updating Configuration Service...');
         const configService = new ConfigurationService(tokenProvider, context.logger);
         try {
             const configResult = await configService.updateSiteConfig(
@@ -539,10 +551,12 @@ export async function executeEdsReset(
             );
             if (configResult.success) {
                 context.logger.info('[EdsReset] Configuration Service updated');
+                report(6, 'Configuring folder mapping...');
                 // Also update folder mapping
                 await configService.setFolderMapping(
                     repoOwner, repoName, DEFAULT_FOLDER_MAPPING,
                 );
+                report(6, 'Configuration Service updated');
             } else {
                 context.logger.warn(`[EdsReset] Configuration Service update warning: ${configResult.error}`);
             }
@@ -550,21 +564,21 @@ export async function executeEdsReset(
             context.logger.warn(`[EdsReset] Configuration Service update skipped: ${(configError as Error).message}`);
         }
 
-        // Step 3: Publish config.json to CDN
-        report(3, 'Publishing config.json to CDN...');
+        // Step 7: Publish config.json to CDN
+        report(7, 'Publishing config.json to CDN...');
         context.logger.info(`[EdsReset] Publishing config.json to CDN for ${repoOwner}/${repoName}`);
 
         const helixServiceForCode = new HelixService(context.logger, githubTokenService);
         try {
             await helixServiceForCode.previewCode(repoOwner, repoName, '/config.json');
             context.logger.info('[EdsReset] config.json published to CDN');
-            report(3, 'config.json published');
+            report(7, 'config.json published');
         } catch (configError) {
             context.logger.warn(`[EdsReset] Failed to publish config.json: ${(configError as Error).message}`);
-            report(3, 'config.json publish failed, continuing...');
+            report(7, 'config.json publish failed, continuing...');
         }
 
-        // Steps 4-6: Content Pipeline
+        // Steps 8-11: Content Pipeline
         // Build library content sources for block doc page copying
         const libraryContentSources: Array<{ org: string; site: string }> = [];
         for (const libraryId of (project.selectedBlockLibraries ?? [])) {
@@ -598,14 +612,14 @@ export async function executeEdsReset(
                     },
                     (info) => {
                         const stepMap: Record<string, number> = {
-                            'content-clear': 4, 'content-copy': 4, 'block-library': 4,
-                            'eds-settings': 5, 'cache-purge': 6, 'content-publish': 6, 'library-publish': 6,
+                            'content-clear': 8, 'content-copy': 8, 'block-library': 9,
+                            'eds-settings': 10, 'cache-purge': 11, 'content-publish': 11, 'library-publish': 11,
                         };
                         let message = info.message;
                         if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
                             message = `Publishing to CDN (${info.current}/${info.total} pages)`;
                         }
-                        report(stepMap[info.operation] ?? 4, message);
+                        report(stepMap[info.operation] ?? 8, message);
                     },
                 );
 
@@ -620,7 +634,7 @@ export async function executeEdsReset(
                 if (error instanceof DaLiveAuthError && pipelineAttempt < MAX_REAUTH_ATTEMPTS) {
                     pipelineAttempt++;
                     context.logger.warn(`[EdsReset] DA.live token expired mid-pipeline (attempt ${pipelineAttempt})`);
-                    report(4, 'DA.live session expired. Please re-authenticate...');
+                    report(8, 'DA.live session expired. Please re-authenticate...');
 
                     const authResult = await ensureDaLiveAuth(context, '[EdsReset]');
                     if (!authResult.authenticated) {
@@ -632,7 +646,7 @@ export async function executeEdsReset(
                     }
 
                     context.logger.info('[EdsReset] DA.live re-authenticated, resuming pipeline');
-                    report(4, 'Resuming content pipeline...');
+                    report(8, 'Resuming content pipeline...');
                     continue;
                 }
                 throw error;
@@ -641,19 +655,19 @@ export async function executeEdsReset(
 
         // Verify CDN if requested
         if (verifyCdn) {
-            report(6, 'Verifying configuration...');
+            report(11, 'Verifying configuration...');
             const { verifyCdnResources } = await import('./configSyncService');
             const verification = await verifyCdnResources(repoOwner, repoName, context.logger);
             if (verification.configVerified) {
-                report(6, 'Configuration verified');
+                report(11, 'Configuration verified');
                 context.logger.info('[EdsReset] config.json verified on CDN');
             } else {
-                report(6, 'Configuration propagating...');
+                report(11, 'Configuration propagating...');
                 context.logger.warn('[EdsReset] config.json CDN verification timed out - may need more time to propagate');
             }
         }
 
-        // Step 7: Redeploy API Mesh (optional)
+        // Step 12: Redeploy API Mesh (optional)
         if (redeployMesh) {
             const meshResult = await redeployApiMesh(project, repoOwner, repoName, context, report, filesReset, contentCopied);
             if (meshResult) {

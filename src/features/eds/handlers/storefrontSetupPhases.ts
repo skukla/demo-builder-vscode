@@ -106,7 +106,7 @@ async function executePhaseGitHubRepo(
 
         logger.info(`[Storefront Setup] Using pre-created repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`);
         await context.sendMessage('storefront-setup-progress', {
-            phase: 'github-repo',
+            phase: 'repository',
             message: `Using repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
             progress: 15,
             ...repoInfo,
@@ -147,7 +147,7 @@ async function executePhaseExistingRepo(
 
     logger.info(`[Storefront Setup] Using existing repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`);
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'github-repo',
+        phase: 'repository',
         message: `Using existing repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 5,
         ...repoInfo,
@@ -156,7 +156,7 @@ async function executePhaseExistingRepo(
     if (edsConfig.resetToTemplate) {
         logger.info('[Storefront Setup] Resetting repository to template...');
         await context.sendMessage('storefront-setup-progress', {
-            phase: 'github-repo', message: 'Resetting repository to template...', progress: 6,
+            phase: 'repository', message: 'Resetting repository to template...', progress: 6,
         });
 
         await services.githubRepoOps.resetToTemplate(
@@ -167,7 +167,7 @@ async function executePhaseExistingRepo(
     }
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'github-repo', message: 'Repository ready', progress: 15, ...repoInfo,
+        phase: 'repository', message: 'Repository ready', progress: 15, ...repoInfo,
     });
 }
 
@@ -186,7 +186,7 @@ async function executePhaseNewRepo(
     const logger = context.logger;
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'github-repo', message: 'Creating GitHub repository from template...', progress: 5,
+        phase: 'repository', message: 'Creating GitHub repository from template...', progress: 5,
     });
 
     logger.info(`[Storefront Setup] Creating repository: ${repoInfo.repoName}`);
@@ -203,13 +203,13 @@ async function executePhaseNewRepo(
     logger.info(`[Storefront Setup] Repository created: ${repoInfo.repoUrl}`);
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'github-repo', message: 'Waiting for repository content...', progress: 10, ...repoInfo,
+        phase: 'repository', message: 'Waiting for repository content...', progress: 10, ...repoInfo,
     });
 
     await services.githubRepoOps.waitForContent(repoInfo.repoOwner, repoInfo.repoName, signal);
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'github-repo', message: 'Repository ready', progress: 15, ...repoInfo,
+        phase: 'repository', message: 'Repository ready', progress: 15, ...repoInfo,
     });
 }
 
@@ -236,13 +236,13 @@ async function executePhaseHelixConfig(
     }
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'helix-config', message: 'Configuring Edge Delivery Services...', progress: 20,
+        phase: 'storefront-code', message: 'Configuring Edge Delivery Services...', progress: 20,
     });
 
     const fstabContent = generateFstabContent({ daLiveOrg: edsConfig.daLiveOrg, daLiveSite: edsConfig.daLiveSite });
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'helix-config', message: 'Pushing fstab.yaml configuration...', progress: 25,
+        phase: 'storefront-code', message: 'Pushing fstab.yaml configuration...', progress: 25,
     });
 
     const existingFstab = await githubFileOps.getFileContent(repoInfo.repoOwner, repoInfo.repoName, 'fstab.yaml');
@@ -286,7 +286,7 @@ async function executePhaseHelixConfig(
 
     // Generate inspector tree entries (always, regardless of block libraries)
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'helix-config',
+        phase: 'storefront-code',
         message: 'Preparing inspector tagging...',
         progress: 27,
     });
@@ -304,7 +304,7 @@ async function executePhaseHelixConfig(
     let blockCollectionIdsResult: string[] = [];
     if (allLibraries.length > 0) {
         await context.sendMessage('storefront-setup-progress', {
-            phase: 'helix-config',
+            phase: 'storefront-code',
             message: `Installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`,
             progress: 28,
         });
@@ -341,7 +341,7 @@ async function executePhaseHelixConfig(
         );
         if (inspectorResult.success) {
             await context.sendMessage('storefront-setup-progress', {
-                phase: 'helix-config',
+                phase: 'storefront-code',
                 message: 'Inspector tagging installed',
                 progress: 28,
             });
@@ -356,7 +356,7 @@ async function executePhaseHelixConfig(
     // Phase 2.2: Feature Pack Installation (blocks, initializers, dependencies)
     if (selectedFeaturePacks && selectedFeaturePacks.length > 0) {
         await context.sendMessage('storefront-setup-progress', {
-            phase: 'helix-config',
+            phase: 'storefront-code',
             message: `Installing ${selectedFeaturePacks.length} feature ${selectedFeaturePacks.length === 1 ? 'pack' : 'packs'}...`,
             progress: 32,
         });
@@ -384,7 +384,7 @@ async function executePhaseHelixConfig(
     }
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'helix-config', message: 'Helix configured', progress: 35,
+        phase: 'storefront-code', message: 'Helix configured', progress: 35,
     });
 
     return { blockCollectionIds };
@@ -402,7 +402,7 @@ async function checkGitHubAppForExistingRepo(
     const { githubAppService } = services;
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'helix-config', message: 'Verifying GitHub App installation...', progress: 28,
+        phase: 'storefront-code', message: 'Verifying GitHub App installation...', progress: 28,
     });
 
     logger.info(`[Storefront Setup] Checking GitHub App for existing repo: ${repoInfo.repoOwner}/${repoInfo.repoName}`);
@@ -469,7 +469,7 @@ async function executePhaseCodeSync(
 
     // Phase 3c: Configure Admin Access
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'code-sync', message: 'Configuring site permissions...', progress: 47,
+        phase: 'site-config', message: 'Configuring site permissions...', progress: 44,
     });
 
     const daLiveEmail = await daLiveAuthService.getUserEmail();
@@ -481,9 +481,9 @@ async function executePhaseCodeSync(
         );
         if (!adminResult.success) {
             await context.sendMessage('storefront-setup-progress', {
-                phase: 'code-sync',
+                phase: 'site-config',
                 message: `⚠️ Permissions partially configured: ${adminResult.error}`,
-                progress: 47,
+                progress: 44,
             });
         }
     } else {
@@ -494,7 +494,7 @@ async function executePhaseCodeSync(
     await registerConfigurationService(context, services, repoInfo, edsConfig, logger);
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'code-sync', message: 'Site configuration complete', progress: 49,
+        phase: 'site-config', message: 'Site configuration complete', progress: 49,
     });
 
     return null;
@@ -579,7 +579,7 @@ async function registerConfigurationService(
     const { configurationService } = services;
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'code-sync', message: 'Registering site with Configuration Service...', progress: 48,
+        phase: 'site-config', message: 'Registering site with Configuration Service...', progress: 46,
     });
 
     try {
@@ -622,7 +622,7 @@ async function registerConfigurationService(
             } else {
                 logger.error(`[Storefront Setup] Folder mapping failed: ${folderResult.error}`);
                 await context.sendMessage('storefront-setup-progress', {
-                    phase: 'code-sync',
+                    phase: 'site-config',
                     message: '⚠️ Folder mapping failed — product detail pages may not work',
                     progress: 49,
                 });
@@ -634,7 +634,7 @@ async function registerConfigurationService(
 
         logger.error(`[Storefront Setup] Configuration Service failed — Folder mapping not applied: ${(error as Error).message}`);
         await context.sendMessage('storefront-setup-progress', {
-            phase: 'code-sync',
+            phase: 'site-config',
             message: '⚠️ Configuration Service failed — product detail pages may not work',
             progress: 49,
         });
@@ -831,22 +831,22 @@ export async function executeStorefrontSetupPhases(
                     },
                     (info) => {
                         const mapping: Record<string, { phase: string; progress: number }> = {
-                            'content-clear': { phase: 'content-copy', progress: 45 },
-                            'content-copy': { phase: 'content-copy', progress: 50 },
-                            'block-library': { phase: 'content-copy', progress: 61 },
-                            'eds-settings': { phase: 'content-copy', progress: 63 },
-                            'cache-purge': { phase: 'content-publish', progress: 66 },
-                            'content-publish': { phase: 'content-publish', progress: 67 },
-                            'library-publish': { phase: 'content-publish', progress: 91 },
+                            'content-clear': { phase: 'content', progress: 49 },
+                            'content-copy': { phase: 'content', progress: 50 },
+                            'block-library': { phase: 'block-library', progress: 59 },
+                            'eds-settings': { phase: 'block-library', progress: 63 },
+                            'cache-purge': { phase: 'publish', progress: 66 },
+                            'content-publish': { phase: 'publish', progress: 67 },
+                            'library-publish': { phase: 'publish', progress: 91 },
                         };
                         const m = mapping[info.operation] ?? { phase: info.operation, progress: 50 };
                         let progress = m.progress;
 
                         if (info.operation === 'content-copy' && info.percentage !== undefined) {
-                            progress = 50 + Math.round(info.percentage * 0.1);
+                            progress = 50 + Math.round(info.percentage * 0.08);
                         }
                         if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
-                            progress = 67 + Math.round((info.current / info.total) * 23);
+                            progress = 67 + Math.round((info.current / info.total) * 27);
                         }
 
                         context.sendMessage('storefront-setup-progress', {
@@ -883,7 +883,7 @@ export async function executeStorefrontSetupPhases(
 
                     logger.info('[Storefront Setup] DA.live re-authenticated, resuming pipeline');
                     await context.sendMessage('storefront-setup-progress', {
-                        phase: 'content-copy', message: 'Resuming content copy...', progress: 50,
+                        phase: 'content', message: 'Resuming content copy...', progress: 50,
                     });
                     continue;
                 }
@@ -894,7 +894,7 @@ export async function executeStorefrontSetupPhases(
         if (signal.aborted) throw new Error('Operation cancelled');
 
         await context.sendMessage('storefront-setup-progress', {
-            phase: 'content-publish',
+            phase: 'publish',
             message: pipelineResult.libraryPaths.length > 0 ? 'Site is live!' : 'Content publish complete',
             progress: 90,
         });
