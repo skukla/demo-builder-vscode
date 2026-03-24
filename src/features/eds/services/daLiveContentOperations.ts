@@ -429,7 +429,9 @@ export class DaLiveContentOperations {
                 });
 
                 if (!sourceResponse.ok) {
-                    this.logger.warn(`[DA.live] Failed to fetch source ${sourcePath}: ${sourceResponse.status}`);
+                    // 404 is expected for blocks without doc pages on the CDN — log at debug
+                    const logLevel = sourceResponse.status === 404 ? 'debug' : 'warn';
+                    this.logger[logLevel](`[DA.live] Failed to fetch source ${sourcePath}: ${sourceResponse.status}`);
                     return false;
                 }
 

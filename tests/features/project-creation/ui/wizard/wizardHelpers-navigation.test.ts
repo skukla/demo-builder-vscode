@@ -303,7 +303,7 @@ describe('wizardHelpers - navigation', () => {
 
         it('should return false when on last step', () => {
             expect(shouldShowWizardFooter(true, 'review')).toBe(false);
-            expect(shouldShowWizardFooter(true, 'deploy-mesh')).toBe(false);
+            expect(shouldShowWizardFooter(true, 'create-project')).toBe(false);
         });
 
         it('should return false when on mesh-deployment step', () => {

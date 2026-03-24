@@ -117,6 +117,8 @@ function createMockContext(overrides: Partial<HandlerContext> = {}): HandlerCont
 function createValidPayload(): StorefrontSetupStartPayload {
     return {
         projectName: 'test-project',
+        // Include mesh dependency so Adobe I/O auth pre-flight runs
+        dependencies: ['eds-accs-mesh'],
         edsConfig: {
             repoName: 'test-repo',
             daLiveOrg: 'test-org',

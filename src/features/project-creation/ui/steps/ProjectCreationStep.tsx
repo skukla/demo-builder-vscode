@@ -93,6 +93,7 @@ type DetectedMeshInfo = { meshId?: string; meshStatus?: 'deployed' | 'not-deploy
 async function runMeshCheck(
     state: WizardState,
     stack: import('@/types/stacks').Stack | undefined,
+    dependencies: string[],
     updateState: (updates: Partial<WizardState>) => void,
     setMeshCheckResult: (result: MeshCheckResult | null) => void,
     setPhase: (phase: StepPhase) => void,
@@ -105,7 +106,7 @@ async function runMeshCheck(
             workspaceId: state.adobeWorkspace?.id,
             projectId: state.adobeProject?.id,
             selectedComponents: stack ? [
-                stack.frontend, stack.backend, ...stack.dependencies,
+                stack.frontend, stack.backend, ...dependencies,
             ].filter(Boolean) : [],
         });
 
@@ -347,7 +348,7 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
     const progress = state.creationProgress;
     const [isCancelling, setIsCancelling] = useState(false);
     const [isOpeningProject, setIsOpeningProject] = useState(false);
-    const [phase, setPhase] = useState<StepPhase>('checking-mesh');
+    const [phase, setPhase] = useState<StepPhase>('creating');
     const [meshCheckResult, setMeshCheckResult] = useState<MeshCheckResult | null>(null);
     const [githubAppInstallData, setGitHubAppInstallData] = useState<GitHubAppInstallData | null>(null);
 
@@ -357,8 +358,12 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
         [state.selectedStack],
     );
 
-    // Determine if checks are needed - use stack dependencies directly
-    const needsMeshCheck = hasMeshInDependencies(stack?.dependencies);
+    // Determine if checks are needed - check both stack dependencies and user-selected optional deps
+    const effectiveDependencies = useMemo(
+        () => [...(stack?.dependencies || []), ...(state.selectedOptionalDependencies || [])],
+        [stack?.dependencies, state.selectedOptionalDependencies],
+    );
+    const needsMeshCheck = hasMeshInDependencies(effectiveDependencies);
     const needsGitHubAppCheck = useMemo(() => {
         const stackId = state.selectedStack;
         if (!stackId) return false;
@@ -413,7 +418,7 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
     const runPreFlightChecks = useCallback(async () => {
         // Run mesh check if needed (returns null on failure, meshInfo on success, undefined if no mesh)
         const meshInfo = needsMeshCheck
-            ? await runMeshCheck(state, stack, updateState, setMeshCheckResult, setPhase)
+            ? await runMeshCheck(state, stack, effectiveDependencies, updateState, setMeshCheckResult, setPhase)
             : undefined;
 
         if (meshInfo === null) return; // Mesh check failed, phase already set
@@ -436,7 +441,7 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
         });
         const projectConfig = buildProjectConfig(stateWithMeshInfo, importedSettings, packages);
         vscode.createProject(projectConfig);
-    }, [needsMeshCheck, checkGitHubApp, state, stack, updateState, importedSettings, packages]);
+    }, [needsMeshCheck, checkGitHubApp, state, stack, effectiveDependencies, updateState, importedSettings, packages]);
 
     /**
      * Handle detected GitHub app installation

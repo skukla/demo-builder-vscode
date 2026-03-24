@@ -173,3 +173,46 @@ export function getAddonSource(addonId: string): AddonSource | undefined {
     const addonDef = config.addonDefinitions?.[addonId];
     return addonDef?.source;
 }
+
+/**
+ * Get optional dependency IDs that should be auto-selected for a package/stack combination.
+ *
+ * Resolves mesh requirement from storefront-level first, then package-level.
+ * When resolved value is `true`, mesh is auto-included. Otherwise, no auto-selection.
+ *
+ * @param packageId - The demo package ID
+ * @param stackId - The stack ID
+ * @returns Array of optional dependency IDs that should be auto-selected
+ */
+export async function getAutoSelectedOptionalDependencies(
+    packageId: string,
+    stackId: string,
+): Promise<string[]> {
+    const pkg = await getPackageById(packageId);
+    const meshRequirement = getResolvedMeshRequirement(pkg, stackId);
+    if (meshRequirement !== true) {
+        return [];
+    }
+
+    const config = stacksConfig as unknown as StacksConfig;
+    const stack = config.stacks.find(s => s.id === stackId);
+    return stack?.optionalDependencies ?? [];
+}
+
+/**
+ * Resolve the effective mesh requirement for a package + stack combination.
+ * Storefront-level `requiresMesh` overrides package-level.
+ *
+ * @returns true | false | 'optional' | undefined
+ */
+export function getResolvedMeshRequirement(
+    pkg: DemoPackage | undefined,
+    stackId: string,
+): boolean | 'optional' | undefined {
+    if (!pkg) return undefined;
+    const storefront = pkg.storefronts?.[stackId];
+    if (storefront?.requiresMesh !== undefined) {
+        return storefront.requiresMesh;
+    }
+    return pkg.requiresMesh;
+}

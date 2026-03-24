@@ -61,40 +61,37 @@ describe('ComponentRegistryManager - Mesh Entries', () => {
     });
 
     describe('stack routing', () => {
-        it('eds-paas stack should require eds-commerce-mesh', () => {
+        it('eds-paas stack should have empty requiredComponents (mesh now optional)', () => {
             const stack = componentsJson.stacks['eds-paas'];
 
             expect(stack).toBeDefined();
-            expect(stack.requiredComponents).toContain('eds-commerce-mesh');
+            expect(stack.requiredComponents).toEqual([]);
             expect(stack.requiredComponents).not.toContain('commerce-mesh');
-            expect(stack.requiredComponents).not.toContain('headless-commerce-mesh');
         });
 
-        it('eds-accs stack should require eds-accs-mesh', () => {
+        it('eds-accs stack should have empty requiredComponents (mesh now optional)', () => {
             const stack = componentsJson.stacks['eds-accs'];
 
             expect(stack).toBeDefined();
-            expect(stack.requiredComponents).toContain('eds-accs-mesh');
-            expect(stack.requiredComponents).not.toContain('eds-commerce-mesh');
-            expect(stack.requiredComponents).not.toContain('headless-commerce-mesh');
+            expect(stack.requiredComponents).toEqual([]);
+            expect(stack.requiredComponents).not.toContain('commerce-mesh');
         });
 
-        it('headless-paas stack should require headless-commerce-mesh', () => {
+        it('headless-paas stack should have empty requiredComponents (mesh now optional)', () => {
             const stack = componentsJson.stacks['headless-paas'];
 
             expect(stack).toBeDefined();
-            expect(stack.requiredComponents).toContain('headless-commerce-mesh');
+            expect(stack.requiredComponents).toEqual([]);
             expect(stack.requiredComponents).not.toContain('commerce-mesh');
-            expect(stack.requiredComponents).not.toContain('eds-commerce-mesh');
         });
     });
 
     describe('frontend dependencies', () => {
-        it('headless frontend should depend on headless-commerce-mesh', () => {
+        it('headless frontend should have empty required dependencies (mesh now optional)', () => {
             const headless = componentsJson.frontends?.headless;
 
             expect(headless).toBeDefined();
-            expect(headless.dependencies?.required).toContain('headless-commerce-mesh');
+            expect(headless.dependencies?.required).toEqual([]);
             expect(headless.dependencies?.required).not.toContain('commerce-mesh');
         });
 

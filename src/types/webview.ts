@@ -29,7 +29,7 @@ export type WizardStep =
     | 'data-source-config'  // Legacy: Data source configuration
     | 'connect-services'  // Legacy: Connect services step
     | 'review'
-    | 'deploy-mesh';
+    | 'create-project';
 
 export interface WizardState {
     currentStep: WizardStep;
@@ -39,6 +39,7 @@ export interface WizardState {
     selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
     selectedBlockLibraries?: string[];  // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
     selectedFeaturePacks?: string[];  // Selected feature pack IDs (e.g., ['b2b-commerce'])
+    selectedOptionalDependencies?: string[];  // Selected optional dependency IDs (e.g., mesh component IDs from stack.optionalDependencies)
     customBlockLibraries?: CustomBlockLibrary[];  // Custom block libraries added by URL
     packageConfigDefaults?: Record<string, string>;  // Package-specific config defaults (e.g., store codes)
     components?: ComponentSelection;

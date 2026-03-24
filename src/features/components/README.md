@@ -433,7 +433,7 @@ if (validation.warnings.length > 0) {
     "selectionGroups": {
         "frontend": ["citisignal-nextjs"],
         "backend": ["commerce-cloud"],
-        "dependencies": ["eds-commerce-mesh", "headless-commerce-mesh"],
+        "dependencies": [],  // Mesh components are now optional via stacks.json optionalDependencies
         "externalSystems": [],
         "appBuilder": ["cif-actions-app"]
     },

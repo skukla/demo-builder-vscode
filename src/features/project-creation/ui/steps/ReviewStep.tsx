@@ -238,8 +238,10 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
     );
 
     const componentSelection = useMemo(() => stack ? {
-        frontend: stack.frontend, backend: stack.backend, dependencies: stack.dependencies,
-    } : undefined, [stack]);
+        frontend: stack.frontend,
+        backend: stack.backend,
+        dependencies: [...(stack.dependencies || []), ...(state.selectedOptionalDependencies || [])],
+    } : undefined, [stack, state.selectedOptionalDependencies]);
 
     const componentInfo = useMemo(
         () => buildComponentInfoList(componentSelection, state.apiMesh?.meshStatus, componentsData, backendServiceNames),
@@ -282,12 +284,17 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
                     gap: 'var(--spectrum-global-dimension-size-200)',
                 }}
             >
-                <ProjectConfigSection packageName={packageName} stackName={stackName} />
-                <AdobeIOSection
-                    orgName={adobeOrgName}
-                    projectName={adobeProjectName}
-                    workspaceName={adobeWorkspaceName}
-                />
+                {/* Span both columns when no Adobe I/O section */}
+                <div style={(!adobeOrgName && !adobeProjectName && !adobeWorkspaceName) ? { gridColumn: '1 / -1' } : undefined}>
+                    <ProjectConfigSection packageName={packageName} stackName={stackName} />
+                </div>
+                {(adobeOrgName || adobeProjectName || adobeWorkspaceName) && (
+                    <AdobeIOSection
+                        orgName={adobeOrgName}
+                        projectName={adobeProjectName}
+                        workspaceName={adobeWorkspaceName}
+                    />
+                )}
                 <ComponentsSection componentInfo={componentInfo} />
                 {hasEdsConfig ? (
                     <EdsSection

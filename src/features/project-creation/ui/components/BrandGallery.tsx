@@ -15,6 +15,7 @@ import {
     getDefaultBlockLibraryIds,
     getBlockLibraryName,
 } from '../../services/blockLibraryLoader';
+import { getResolvedMeshRequirement } from '../../services/demoPackageLoader';
 import { ArchitectureModal } from './ArchitectureModal';
 import { sortPackages, filterPackagesBySearchQuery } from './brandGalleryHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -47,6 +48,10 @@ export interface BrandGalleryProps {
     onCustomBlockLibrariesChange?: (libs: CustomBlockLibrary[]) => void;
     /** Custom block library defaults from VS Code settings */
     customBlockLibraryDefaults?: CustomBlockLibrary[];
+    /** Selected optional dependency IDs (e.g., mesh components from stack.optionalDependencies) */
+    selectedOptionalDependencies?: string[];
+    /** Callback when optional dependencies change */
+    onOptionalDependenciesChange?: (deps: string[]) => void;
     /** Optional content to render above the gallery (e.g., project name field) */
     headerContent?: React.ReactNode;
 }
@@ -189,6 +194,8 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     customBlockLibraries = [],
     onCustomBlockLibrariesChange,
     customBlockLibraryDefaults,
+    selectedOptionalDependencies = [],
+    onOptionalDependenciesChange,
     headerContent,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -201,6 +208,10 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     const [modalBlockLibraries, setModalBlockLibraries] = useState<string[]>(selectedBlockLibraries);
     // Track modal-local custom block library state (synced to parent on Done)
     const [modalCustomBlockLibraries, setModalCustomBlockLibraries] = useState<CustomBlockLibrary[]>(customBlockLibraries);
+    // Track modal-local optional dependency state (e.g., mesh toggle; propagated immediately for timeline)
+    const [modalOptionalDeps, setModalOptionalDeps] = useState<string[]>(selectedOptionalDependencies);
+    // Track pre-modal optional deps for cancel/revert
+    const preModalOptionalDepsRef = useRef<string[]>(selectedOptionalDependencies);
 
     // Sync custom block libraries when VS Code settings change while modal is open.
     // Uses a ref to track the previous defaults so we only react to actual changes,
@@ -295,17 +306,40 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             ? customBlockLibraries
             : (customBlockLibraryDefaults ?? []);
         setModalCustomBlockLibraries(initialCustomLibs);
+        // Save pre-modal state for cancel/revert
+        preModalOptionalDepsRef.current = selectedOptionalDependencies;
+        // Initialize modal optional deps: auto-select mesh only when resolved requirement is true
+        const currentStack = selectedStack ? stacks.find(s => s.id === selectedStack) : undefined;
+        const meshReq = getResolvedMeshRequirement(pkg, selectedStack ?? '');
+        if (meshReq === true) {
+            const deps = currentStack?.optionalDependencies ?? [];
+            setModalOptionalDeps(deps);
+            onOptionalDependenciesChange?.(deps);
+        } else {
+            setModalOptionalDeps(selectedOptionalDependencies);
+        }
         setModalPackageId(pkg.id);
-    }, [onPackageSelect, selectedAddons, selectedFeaturePacks, selectedBlockLibraries, customBlockLibraries, customBlockLibraryDefaults, getRequiredAddons, getRequiredFeaturePacks]);
+    }, [onPackageSelect, selectedAddons, selectedFeaturePacks, selectedBlockLibraries, customBlockLibraries, customBlockLibraryDefaults, getRequiredAddons, getRequiredFeaturePacks, selectedOptionalDependencies, selectedStack, stacks]);
 
     const handleStackSelect = useCallback((stackId: string) => {
         onStackSelect(stackId);
+        const selectedStackObj = stacks.find(s => s.id === stackId);
+        // When stack changes, reset optional deps based on resolved mesh requirement
+        const currentPkg = packages.find(p => p.id === modalPackageId);
+        const meshReq = getResolvedMeshRequirement(currentPkg, stackId);
+        if (meshReq === true) {
+            const deps = selectedStackObj?.optionalDependencies ?? [];
+            setModalOptionalDeps(deps);
+            onOptionalDependenciesChange?.(deps);
+        } else {
+            setModalOptionalDeps([]);
+            onOptionalDependenciesChange?.([]);
+        }
         // When stack changes, set addons to: required (from package) + default (from stack)
         setModalAddons(() => {
             const currentPackage = packages.find(p => p.id === modalPackageId);
             const requiredAddons = currentPackage ? getRequiredAddons(currentPackage) : [];
-            const stackObj = stacks.find(s => s.id === stackId);
-            const defaultAddons = (stackObj?.optionalAddons || [])
+            const defaultAddons = (selectedStackObj?.optionalAddons || [])
                 .filter(addon => addon.default)
                 .map(addon => addon.id);
             return [...new Set([...requiredAddons, ...defaultAddons])];
@@ -316,7 +350,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             return currentPackage ? getRequiredFeaturePacks(currentPackage) : [];
         });
         // When stack changes, compute default block libraries for EDS stacks
-        const stackObj = stacks.find(s => s.id === stackId);
+        const stackObj = selectedStackObj;
         if (stackObj?.frontend === 'eds-storefront' && modalPackageId) {
             const defaults = getDefaultBlockLibraryIds(stackObj, modalPackageId, blockLibraryDefaults);
             const nativeIds = getNativeBlockLibraries(stackObj, modalPackageId).map(l => l.id);
@@ -351,6 +385,13 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         onCustomBlockLibrariesChange?.(libs);
     }, [onCustomBlockLibrariesChange]);
 
+    const handleModalOptionalDepsChange = useCallback((deps: string[]) => {
+        setModalOptionalDeps(deps);
+        // Propagate immediately (like stack selection) because mesh toggle
+        // affects which wizard steps are shown (Adobe I/O steps)
+        onOptionalDependenciesChange?.(deps);
+    }, [onOptionalDependenciesChange]);
+
     const handleModalDone = useCallback(() => {
         // Sync addons to parent state (including required addons) and close modal
         const currentPackage = packages.find(p => p.id === modalPackageId);
@@ -370,6 +411,8 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         onBlockLibrariesChange?.(finalBlockLibraries);
         // Sync custom block libraries to parent state
         onCustomBlockLibrariesChange?.(modalCustomBlockLibraries);
+        // Sync optional dependencies (mesh toggle) to parent state
+        onOptionalDependenciesChange?.(modalOptionalDeps);
         // Offer to save block library defaults (one-time tip handled by extension host)
         if (modalBlockLibraries.length > 0) {
             vscode.postMessage('offer-save-block-library-defaults', {
@@ -377,11 +420,13 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             });
         }
         setModalPackageId(null);
-    }, [modalAddons, modalFeaturePacks, modalBlockLibraries, modalCustomBlockLibraries, onAddonsChange, onFeaturePacksChange, onBlockLibrariesChange, onCustomBlockLibrariesChange, packages, stacks, selectedStack, modalPackageId, getRequiredAddons, getRequiredFeaturePacks]);
+    }, [modalAddons, modalFeaturePacks, modalBlockLibraries, modalCustomBlockLibraries, modalOptionalDeps, onAddonsChange, onFeaturePacksChange, onBlockLibrariesChange, onCustomBlockLibrariesChange, onOptionalDependenciesChange, packages, stacks, selectedStack, modalPackageId, getRequiredAddons, getRequiredFeaturePacks]);
 
     const handleModalClose = useCallback(() => {
+        // Revert optional deps to pre-modal state (cancel undoes timeline changes)
+        onOptionalDependenciesChange?.(preModalOptionalDepsRef.current);
         setModalPackageId(null);
-    }, []);
+    }, [onOptionalDependenciesChange]);
 
     if (packages.length === 0) {
         return (
@@ -456,6 +501,8 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                         onFeaturePacksChange={handleModalFeaturePacksChange}
                         onBlockLibrariesChange={handleModalBlockLibrariesChange}
                         onCustomBlockLibrariesChange={handleModalCustomBlockLibrariesChange}
+                        selectedOptionalDependencies={modalOptionalDeps}
+                        onOptionalDependenciesChange={handleModalOptionalDepsChange}
                         onDone={handleModalDone}
                         onClose={handleModalClose}
                     />

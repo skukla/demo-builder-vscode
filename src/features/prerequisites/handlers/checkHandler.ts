@@ -274,7 +274,9 @@ async function initializePrerequisiteCheck(
             context.sharedState.currentComponentSelection = {
                 frontend: stack.frontend,
                 backend: stack.backend,
-                dependencies: stack.dependencies,
+                // Include all optional deps so prerequisites are ready regardless of user's mesh choice
+                // (prerequisites run before the Architecture Modal where mesh is toggled)
+                dependencies: [...(stack.dependencies || []), ...(stack.optionalDependencies || [])],
                 integrations: [],
                 appBuilder: [],
             };

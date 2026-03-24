@@ -186,6 +186,14 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         [updateState],
     );
 
+    // Handler for optional dependency changes (mesh toggle from BrandGallery modal)
+    const handleOptionalDependenciesChange = useCallback(
+        (deps: string[]) => {
+            updateState({ selectedOptionalDependencies: deps });
+        },
+        [updateState],
+    );
+
     // Handler for custom block library changes (from BrandGallery modal)
     const handleCustomBlockLibrariesChange = useCallback(
         (libs: CustomBlockLibrary[]) => {
@@ -307,6 +315,8 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 customBlockLibraries={state.customBlockLibraries}
                 onCustomBlockLibrariesChange={handleCustomBlockLibrariesChange}
                 customBlockLibraryDefaults={customBlockLibraryDefaults}
+                selectedOptionalDependencies={state.selectedOptionalDependencies}
+                onOptionalDependenciesChange={handleOptionalDependenciesChange}
                 headerContent={projectNameField}
             />
         );

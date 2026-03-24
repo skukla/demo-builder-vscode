@@ -706,7 +706,7 @@ async function syncEdsConfigToRemote(
 ): Promise<void> {
     const edsSetupCompleteForSync = !!typedConfig.edsConfig?.preflightComplete;
 
-    if (!isEdsStack || !edsSetupCompleteForSync || !project.meshState?.endpoint) {
+    if (!isEdsStack || !edsSetupCompleteForSync) {
         logPhase5SkipReason(context, isEdsStack, typedConfig);
         return;
     }
@@ -773,8 +773,6 @@ function logPhase5SkipReason(
         context.logger.debug('[Phase 5] Skipped - edsConfig not set');
     } else if (!typedConfig.edsConfig.preflightComplete) {
         context.logger.debug('[Phase 5] Skipped - preflight not completed');
-    } else {
-        context.logger.debug('[Phase 5] Skipped - meshState.endpoint not set');
     }
 }
 
@@ -965,7 +963,8 @@ async function loadComponentDefinitions(
     }
 
     const frontend = stack.frontend;
-    const dependencies = stack.dependencies || [];
+    // Use config dependencies (includes user-selected optional deps like mesh) or fall back to stack defaults
+    const dependencies = typedConfig.components?.dependencies ?? stack.dependencies ?? [];
     const appBuilder = typedConfig.selectedAddons?.filter(addon =>
         !stack.optionalAddons?.some(opt => opt.id === addon),
     ) || [];

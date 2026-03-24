@@ -41,6 +41,7 @@ describe('ReviewStep', () => {
         projectName: 'my-demo-project',
         projectTemplate: 'citisignal',
         selectedStack: 'headless-paas', // Source of truth for components
+        selectedOptionalDependencies: ['headless-commerce-mesh'], // User opted in to mesh
         adobeAuth: {
             isAuthenticated: true,
             isChecking: false,
@@ -294,6 +295,7 @@ describe('ReviewStep', () => {
             const edsState = {
                 ...completeState,
                 selectedStack: 'eds-paas',
+                selectedOptionalDependencies: ['eds-commerce-mesh'],
             };
 
             render(
