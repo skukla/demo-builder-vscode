@@ -706,7 +706,7 @@ async function syncEdsConfigToRemote(
 ): Promise<void> {
     const edsSetupCompleteForSync = !!typedConfig.edsConfig?.preflightComplete;
 
-    if (!isEdsStack || !edsSetupCompleteForSync || !project.meshState?.endpoint) {
+    if (!isEdsStack || !edsSetupCompleteForSync) {
         logPhase5SkipReason(context, isEdsStack, typedConfig);
         return;
     }
