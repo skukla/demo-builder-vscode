@@ -89,11 +89,13 @@ Orchestrates complete EDS project setup through phases:
 
 | Phase | Progress | Operations |
 |-------|----------|------------|
-| `github-repo` | 0-15% | Create/configure GitHub repository from template |
-| `helix-config` | 20-35% | Configure Helix 5, install block libraries (built-in + custom) with inspector tagging, save install tracking data |
-| `code-sync` | 35-49% | Verify code synchronization, publish to CDN, configure site permissions, register with Configuration Service |
-| `content-copy` | 45-65% | Copy demo content to DA.live, install block library content and settings |
-| `content-publish` | 66-95% | Publish content and libraries to CDN |
+| `repository` | 0-15% | Create/configure GitHub repository from template |
+| `storefront-code` | 15-35% | Push fstab.yaml, install block libraries (built-in + custom) with inspector tagging, install feature packs |
+| `code-sync` | 35-42% | Verify code synchronization, publish code to CDN |
+| `site-config` | 42-49% | Configure DA.live permissions, register with Configuration Service, set folder mapping |
+| `content` | 49-58% | Clear existing DA.live content, copy demo content from source |
+| `block-library` | 58-65% | Create block library in DA.live, apply EDS settings |
+| `publish` | 65-95% | Purge CDN cache, publish content and block library to CDN |
 | `auth-recovery` | (paused) | DA.live token expired; prompts re-authentication (up to 2 attempts) |
 | `complete` | 100% | Setup complete |
 
