@@ -29,11 +29,13 @@ describe('config.json Timing', () => {
         it('should NOT generate config.json during storefront-setup', () => {
             // Storefront-setup phases should not include config.json generation
             const storefrontSetupPhases = [
-                'github-repo',
-                'helix-config',
+                'repository',
+                'storefront-code',
                 'code-sync',
-                'dalive-content',
-                'content-publish',
+                'site-config',
+                'content',
+                'block-library',
+                'publish',
             ] as const;
 
             // No env-config or config-json phase in storefront-setup

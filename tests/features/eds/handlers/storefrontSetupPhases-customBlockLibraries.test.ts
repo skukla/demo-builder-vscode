@@ -284,7 +284,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         expect(context.sendMessage).toHaveBeenCalledWith(
             'storefront-setup-progress',
             expect.objectContaining({
-                phase: 'helix-config',
+                phase: 'storefront-code',
                 message: expect.stringContaining('1'),
             }),
         );

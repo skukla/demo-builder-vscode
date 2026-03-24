@@ -29,23 +29,25 @@ describe('Storefront Setup Operations', () => {
 
         // Phases in storefront-setup after Phase 4
         const STOREFRONT_SETUP_PHASES = [
-            'github-repo',
-            'helix-config',
+            'repository',
+            'storefront-code',
             'code-sync',
-            'content-copy',
-            'content-publish',  // NEW: makes site LIVE
+            'site-config',
+            'content',
+            'block-library',
+            'publish',
         ] as const;
 
-        it('should include content-publish phase after content-copy', () => {
-            const contentPublishIndex = STOREFRONT_SETUP_PHASES.indexOf('content-publish');
-            const contentCopyIndex = STOREFRONT_SETUP_PHASES.indexOf('content-copy');
+        it('should include publish phase after content', () => {
+            const publishIndex = STOREFRONT_SETUP_PHASES.indexOf('publish');
+            const contentIndex = STOREFRONT_SETUP_PHASES.indexOf('content');
 
-            expect(contentPublishIndex).toBeGreaterThan(contentCopyIndex);
-            expect(contentPublishIndex).toBe(4); // 5th phase (0-indexed)
+            expect(publishIndex).toBeGreaterThan(contentIndex);
+            expect(publishIndex).toBe(6); // 7th phase (0-indexed)
         });
 
-        it('should have 5 phases total (including content-publish)', () => {
-            expect(STOREFRONT_SETUP_PHASES.length).toBe(5);
+        it('should have 7 phases total', () => {
+            expect(STOREFRONT_SETUP_PHASES.length).toBe(7);
         });
 
         it('should NOT include tools-clone in storefront-setup', () => {
@@ -67,29 +69,31 @@ describe('Storefront Setup Operations', () => {
          */
 
         const PROGRESS_RANGES = {
-            'github-repo': { start: 0, end: 15 },
-            'helix-config': { start: 15, end: 35 },
-            'code-sync': { start: 35, end: 45 },
-            'content-copy': { start: 45, end: 60 },
-            'content-publish': { start: 60, end: 90 },
+            'repository': { start: 0, end: 15 },
+            'storefront-code': { start: 15, end: 35 },
+            'code-sync': { start: 35, end: 42 },
+            'site-config': { start: 42, end: 49 },
+            'content': { start: 49, end: 58 },
+            'block-library': { start: 58, end: 65 },
+            'publish': { start: 65, end: 95 },
             'complete': { start: 100, end: 100 },
         } as const;
 
-        it('should allocate progress for content-publish phase (60-90%)', () => {
-            const contentPublish = PROGRESS_RANGES['content-publish'];
-            expect(contentPublish.start).toBe(60);
-            expect(contentPublish.end).toBe(90);
+        it('should allocate progress for publish phase (65-95%)', () => {
+            const publish = PROGRESS_RANGES['publish'];
+            expect(publish.start).toBe(65);
+            expect(publish.end).toBe(95);
         });
 
-        it('should have content-copy end at 60%', () => {
-            const contentCopy = PROGRESS_RANGES['content-copy'];
-            expect(contentCopy.end).toBe(60);
+        it('should have content end at 58%', () => {
+            const content = PROGRESS_RANGES['content'];
+            expect(content.end).toBe(58);
         });
 
-        it('should have no gaps between content-copy and content-publish', () => {
-            const contentCopy = PROGRESS_RANGES['content-copy'];
-            const contentPublish = PROGRESS_RANGES['content-publish'];
-            expect(contentCopy.end).toBe(contentPublish.start);
+        it('should have no gaps between content and block-library', () => {
+            const content = PROGRESS_RANGES['content'];
+            const blockLibrary = PROGRESS_RANGES['block-library'];
+            expect(content.end).toBe(blockLibrary.start);
         });
     });
 
@@ -101,27 +105,27 @@ describe('Storefront Setup Operations', () => {
 
         it('should publish content to CDN after content copy', () => {
             // The expected operation order:
-            // 1. Copy DA.live content (content-copy phase)
-            // 2. Publish all content to CDN (content-publish phase) ← this makes site LIVE
+            // 1. Copy DA.live content (content phase)
+            // 2. Publish all content to CDN (publish phase) - this makes site LIVE
             const phaseOrder = [
-                { phase: 'content-copy', description: 'Copy demo content' },
-                { phase: 'content-publish', description: 'Publish content to CDN' },
+                { phase: 'content', description: 'Copy demo content' },
+                { phase: 'publish', description: 'Publish content to CDN' },
             ];
 
-            expect(phaseOrder[0].phase).toBe('content-copy');
-            expect(phaseOrder[1].phase).toBe('content-publish');
+            expect(phaseOrder[0].phase).toBe('content');
+            expect(phaseOrder[1].phase).toBe('publish');
         });
 
-        it('should make site accessible after content-publish phase', () => {
-            // After content-publish completes:
+        it('should make site accessible after publish phase', () => {
+            // After publish completes:
             // - Site URL should return 200
             // - Content should be visible at preview URL
             // - No additional steps needed for site to be viewable
 
             // This is a logical assertion - the actual URL test would be integration
-            const siteAccessibleAfter = 'content-publish';
+            const siteAccessibleAfter = 'publish';
             expect(siteAccessibleAfter).not.toBe('deploy-mesh'); // Old behavior
-            expect(siteAccessibleAfter).toBe('content-publish'); // New behavior
+            expect(siteAccessibleAfter).toBe('publish'); // New behavior
         });
     });
 
@@ -130,7 +134,7 @@ describe('Storefront Setup Operations', () => {
          * Tests for skip behavior when content is skipped.
          */
 
-        it('should skip content-publish when skipContent is true', () => {
+        it('should skip publish when skipContent is true', () => {
             // Logic: if skipContent, don't publish (nothing to publish)
             // But still send progress message to maintain flow
             const skipContent = true;
@@ -139,7 +143,7 @@ describe('Storefront Setup Operations', () => {
             expect(shouldCallPublishApi).toBe(false);
         });
 
-        it('should run content-publish when skipContent is false', () => {
+        it('should run publish when skipContent is false', () => {
             // Default behavior - publish runs after content copy
             const skipContent = false;
             const shouldCallPublishApi = !skipContent;
@@ -158,10 +162,10 @@ describe('Storefront Setup Operations', () => {
             // This is important - site must be viewable after storefront-setup
 
             const publishError = new Error('Failed to publish content to CDN');
-            const errorPhase = 'content-publish';
+            const errorPhase = 'publish';
 
             expect(publishError.message).toContain('publish');
-            expect(errorPhase).toBe('content-publish');
+            expect(errorPhase).toBe('publish');
         });
 
         it('should include meaningful error message', () => {
@@ -178,22 +182,22 @@ describe('Storefront Setup Operations', () => {
          * Tests for progress message types.
          */
 
-        it('should use storefront-setup-progress for content-publish messages', () => {
+        it('should use storefront-setup-progress for publish messages', () => {
             // Progress messages for new phases should use the same type
             const progressMessageType = 'storefront-setup-progress';
-            const contentPublishMessage = {
-                phase: 'content-publish',
+            const publishMessage = {
+                phase: 'publish',
                 message: 'Publishing content to CDN...',
-                progress: 65,
+                progress: 67,
             };
 
             expect(progressMessageType).toBe('storefront-setup-progress');
-            expect(contentPublishMessage.phase).toBe('content-publish');
+            expect(publishMessage.phase).toBe('publish');
         });
 
         it('should include site is live message on completion', () => {
             const completionMessage = {
-                phase: 'content-publish',
+                phase: 'publish',
                 message: 'Site is live!',
                 progress: 90,
             };

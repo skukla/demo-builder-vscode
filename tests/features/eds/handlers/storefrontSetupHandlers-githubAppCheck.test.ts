@@ -160,13 +160,13 @@ describe('Storefront Setup - GitHub App Check (Phase 2.5)', () => {
         it('should show progress message during GitHub App verification', () => {
             // Given: Starting Phase 2.5 check
             const progressMessage = {
-                phase: 'helix-config',
+                phase: 'storefront-code',
                 message: 'Verifying GitHub App installation...',
                 progress: 28,
             };
 
             // Then: Progress should be at 28% (between fstab push at 25% and patches at 30%)
-            expect(progressMessage.phase).toBe('helix-config');
+            expect(progressMessage.phase).toBe('storefront-code');
             expect(progressMessage.message).toContain('Verifying GitHub App');
             expect(progressMessage.progress).toBe(28);
         });
