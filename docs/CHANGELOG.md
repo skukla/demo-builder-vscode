@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.107] - 2026-03-24
+
+### Added
+- **Optional API Mesh**: API Mesh is now optional and driven by demo package configuration. Each package declares `requiresMesh` (true/false/'optional'). Storefronts can override at the storefront level.
+- **Mesh Toggle in Architecture Modal**: Custom projects show an "Include API Mesh" toggle. Curated packages respect their definition without user choice.
+- **Conditional Wizard Steps**: Adobe Auth, I/O Project, and Workspace steps are hidden when no mesh is selected. Timeline updates live as the user toggles mesh.
+- **Merged Config Generator**: `mergeComponentConfigs()` replaces component-specific lookups. The config generator no longer knows which component owns which env var.
+- **Tests for Mesh Resolution**: 8 tests for `getResolvedMeshRequirement`, 8 tests for `mergeComponentConfigs`.
+
+### Changed
+- **Progress Step Refactoring**: Deployment phases split from 5 → 7 (repository, storefront-code, code-sync, site-config, content, block-library, publish). Reset steps expanded from 6-7 → 11-12.
+- **Wizard Step Rename**: "Deploy Mesh" → "Create Project" throughout the wizard.
+- **Review Step Layout**: Project Configuration spans full width when no Adobe I/O section.
+- **Storefront Setup Payload**: Now includes explicit `dependencies` field for mesh-aware auth decisions.
+
+### Fixed
+- **Inspector Tagging**: Fixed `SDK_CONFIG is not defined` — was referencing wrong constant (`SDK_SOURCE`).
+- **Block Doc Page 404s**: Downgraded from warning to debug level (expected for blocks without CDN doc pages).
+- **ConfigService 409**: Logged at info level instead of error (handled scenario: delete + re-create).
+- **Phase 5 Config Sync**: Removed `meshState.endpoint` guard that blocked config.json push for meshless projects.
+- **Review Step Continue**: Adobe I/O selections only required when mesh is in dependencies.
+- **BrandGallery Truthy Bug**: `pkg.requiresMesh` used strict `=== true` instead of truthy check that matched `'optional'`.
+- **Stack Change Propagation**: `handleStackSelect` now propagates optional deps immediately for live timeline updates.
+
 ## [1.0.0-beta.106] - 2026-03-18
 
 ### Added
