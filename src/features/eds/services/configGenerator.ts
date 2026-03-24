@@ -7,15 +7,14 @@
  *
  * ## Generation Timeline (EDS Projects)
  *
- * config.json must be generated AFTER mesh deployment because it requires the mesh endpoint:
+ * When a mesh component is included, config.json must be generated AFTER mesh deployment
+ * because it requires the mesh endpoint. When no mesh is included, config generation uses
+ * direct backend endpoints instead.
  *
  * 1. **StorefrontSetupStep (preflight)**: Creates repo, fstab.yaml, content (no mesh needed)
- * 2. **executor Phase 3**: Deploys mesh → project.meshState.endpoint
- * 3. **executor Phase 4**: Generates config.json WITH mesh endpoint (this module)
+ * 2. **executor Phase 3**: Deploys mesh (if included) → project.meshState.endpoint
+ * 3. **executor Phase 4**: Generates config.json with mesh endpoint OR direct backend endpoints
  * 4. **executor Phase 5**: Syncs config.json to GitHub and publishes to CDN
- *
- * The mesh endpoint is required for `commerce-core-endpoint` and `commerce-endpoint` fields.
- * Without it, Commerce features will not work on the live site.
  *
  * @module features/eds/services/configGenerator
  */

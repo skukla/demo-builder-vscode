@@ -24,7 +24,7 @@ The Adobe Demo Builder is a VS Code extension that streamlines the creation and 
 │  ├── Create Project (Webview Wizard)                       │
 │  ├── Start/Stop Demo (Process Management)                  │
 │  ├── Configure Project (Settings UI)                       │
-│  ├── Deploy Mesh (Adobe I/O Integration)                   │
+│  ├── Deploy Mesh (Adobe I/O Integration, conditional)      │
 │  └── Check for Updates (Auto-Update System)                │
 ├─────────────────────────────────────────────────────────────┤
 │  Utilities & Systems                                        │
