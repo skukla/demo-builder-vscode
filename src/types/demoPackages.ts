@@ -150,6 +150,10 @@ export interface DemoPackage {
     /** Whether this package should be featured in the UI */
     featured?: boolean;
 
+    /** Whether this package requires API Mesh (default: false).
+     *  When true, mesh is auto-included. When false, mesh is an optional toggle. */
+    requiresMesh?: boolean;
+
     /** Availability status (default: 'active') */
     status?: 'active' | 'coming-soon';
 

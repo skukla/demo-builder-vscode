@@ -8,6 +8,7 @@
       "description": "Commerce demo with Isle5 branding and custom EDS blocks",
       "icon": "isle5",
       "featured": true,
+      "requiresMesh": false,
       "addons": {
         "adobe-commerce-aco": "excluded"
       },
@@ -73,6 +74,7 @@
       "description": "Unbranded Commerce storefront for custom demos",
       "icon": "custom",
       "featured": false,
+      "requiresMesh": false,
       "addons": {
         "adobe-commerce-aco": "excluded"
       },
@@ -134,6 +136,7 @@
       "description": "B2B Commerce storefront with company management, quotes, purchase orders, and requisition lists",
       "icon": "custom",
       "featured": false,
+      "requiresMesh": false,
       "addons": {
         "adobe-commerce-aco": "excluded"
       },
@@ -195,6 +198,7 @@
       "description": "Telecommunications demo with CitiSignal branding",
       "icon": "citisignal",
       "featured": true,
+      "requiresMesh": false,
       "addons": {
         "adobe-commerce-aco": "excluded"
       },
@@ -287,6 +291,7 @@
       "description": "Construction/hardware demo with BuildRight branding",
       "icon": "buildright",
       "featured": false,
+      "requiresMesh": false,
       "status": "coming-soon",
       "addons": {
         "adobe-commerce-aco": "required"

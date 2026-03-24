@@ -173,3 +173,27 @@ export function getAddonSource(addonId: string): AddonSource | undefined {
     const addonDef = config.addonDefinitions?.[addonId];
     return addonDef?.source;
 }
+
+/**
+ * Get optional dependency IDs that should be auto-selected for a package/stack combination
+ *
+ * When a package has `requiresMesh: true`, all mesh-type optional dependencies
+ * from the stack are auto-included. Otherwise, they are user-toggleable.
+ *
+ * @param packageId - The demo package ID
+ * @param stackId - The stack ID
+ * @returns Array of optional dependency IDs that should be auto-selected
+ */
+export async function getAutoSelectedOptionalDependencies(
+    packageId: string,
+    stackId: string,
+): Promise<string[]> {
+    const pkg = await getPackageById(packageId);
+    if (!pkg?.requiresMesh) {
+        return [];
+    }
+
+    const config = stacksConfig as unknown as StacksConfig;
+    const stack = config.stacks.find(s => s.id === stackId);
+    return stack?.optionalDependencies ?? [];
+}

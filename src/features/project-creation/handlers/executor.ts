@@ -965,7 +965,8 @@ async function loadComponentDefinitions(
     }
 
     const frontend = stack.frontend;
-    const dependencies = stack.dependencies || [];
+    // Use config dependencies (includes user-selected optional deps like mesh) or fall back to stack defaults
+    const dependencies = typedConfig.components?.dependencies ?? stack.dependencies ?? [];
     const appBuilder = typedConfig.selectedAddons?.filter(addon =>
         !stack.optionalAddons?.some(opt => opt.id === addon),
     ) || [];

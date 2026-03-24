@@ -47,6 +47,9 @@ export interface Stack {
     /** Dependency component IDs from components.json */
     dependencies: string[];
 
+    /** Optional dependency component IDs (e.g., mesh) that can be toggled by user or auto-included by package */
+    optionalDependencies?: string[];
+
     /** Optional addons available for this stack */
     optionalAddons?: OptionalAddon[];
 

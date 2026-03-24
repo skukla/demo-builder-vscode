@@ -18,8 +18,9 @@
                 "dark": "adobe-file-icon-dark.svg"
             },
             "configuration": {
-                "requiredEnvVars": ["MESH_ENDPOINT"],
+                "requiredEnvVars": [],
                 "optionalEnvVars": [
+                    "MESH_ENDPOINT",
                     "AEM_ASSETS_ENABLED"
                 ],
                 "configFiles": {
@@ -60,7 +61,6 @@
             "configuration": {
                 "nodeVersion": "24",
                 "requiredEnvVars": [
-                    "MESH_ENDPOINT",
                     "ADOBE_COMMERCE_URL",
                     "ADOBE_COMMERCE_ENVIRONMENT_ID",
                     "ADOBE_COMMERCE_STORE_VIEW_CODE",
@@ -68,11 +68,11 @@
                     "ADOBE_COMMERCE_STORE_CODE",
                     "ADOBE_CATALOG_API_KEY"
                 ],
-                "optionalEnvVars": ["ADOBE_ASSETS_URL", "ADOBE_COMMERCE_CUSTOMER_GROUP"]
+                "optionalEnvVars": ["MESH_ENDPOINT", "ADOBE_ASSETS_URL", "ADOBE_COMMERCE_CUSTOMER_GROUP"]
             },
             "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
             "dependencies": {
-                "required": ["headless-commerce-mesh"],
+                "required": [],
                 "optional": []
             }
         }
@@ -269,7 +269,7 @@
             "description": "Edge Delivery Services with Adobe Commerce PaaS backend",
             "frontend": "eds-storefront",
             "backend": "adobe-commerce-paas",
-            "requiredComponents": ["eds-commerce-mesh"],
+            "requiredComponents": [],
             "optionalComponents": ["integration-service"]
         },
         "eds-accs": {
@@ -277,7 +277,7 @@
             "description": "Edge Delivery Services with Adobe Commerce Cloud Service backend",
             "frontend": "eds-storefront",
             "backend": "adobe-commerce-accs",
-            "requiredComponents": ["eds-accs-mesh"],
+            "requiredComponents": [],
             "optionalComponents": []
         },
         "headless-paas": {
@@ -285,7 +285,7 @@
             "description": "Next.js headless storefront with Adobe Commerce PaaS backend",
             "frontend": "headless",
             "backend": "adobe-commerce-paas",
-            "requiredComponents": ["headless-commerce-mesh"],
+            "requiredComponents": [],
             "optionalComponents": ["integration-service"]
         }
     },
@@ -470,7 +470,7 @@
         "MESH_ENDPOINT": {
             "label": "Mesh Query URL",
             "type": "url",
-            "required": true,
+            "required": false,
             "placeholder": "https://edge-sandbox-graph.adobe.io/api/your-mesh-id/graphql",
             "description": "Automatically supplied after API Mesh deployment",
             "group": "mesh"

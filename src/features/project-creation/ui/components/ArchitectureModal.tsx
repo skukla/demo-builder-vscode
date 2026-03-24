@@ -22,6 +22,7 @@ import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import { isMeshComponentId } from '@/core/constants';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { DemoPackage } from '@/types/demoPackages';
 import type { Stack, StacksConfig } from '@/types/stacks';
@@ -48,6 +49,8 @@ export interface ArchitectureModalProps {
     onFeaturePacksChange: (packs: string[]) => void;
     onBlockLibrariesChange: (libraries: string[]) => void;
     onCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
+    selectedOptionalDependencies?: string[];
+    onOptionalDependenciesChange?: (deps: string[]) => void;
     onDone: () => void;
     onClose: () => void;
 }
@@ -66,6 +69,8 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     onFeaturePacksChange,
     onBlockLibrariesChange,
     onCustomBlockLibrariesChange,
+    selectedOptionalDependencies = [],
+    onOptionalDependenciesChange,
     onDone,
     onClose,
 }) => {
@@ -152,6 +157,33 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     }, [selectedStack, pkg.id]);
 
     const hasFeaturePacks = availableFeaturePacks.length > 0 || nativeFeaturePacks.length > 0;
+
+    // Determine if mesh toggle should be shown
+    // Show when stack has optional mesh dependencies AND package does NOT require mesh
+    const meshOptionalDeps = useMemo((): string[] => {
+        if (!selectedStack) return [];
+        return (selectedStack.optionalDependencies ?? []).filter(id => isMeshComponentId(id));
+    }, [selectedStack]);
+
+    const showMeshToggle = meshOptionalDeps.length > 0 && !pkg.requiresMesh;
+    const isMeshAutoIncluded = meshOptionalDeps.length > 0 && pkg.requiresMesh === true;
+
+    const handleMeshToggle = useCallback(
+        (isSelected: boolean) => {
+            if (!onOptionalDependenciesChange) return;
+            if (isSelected) {
+                const newDeps = [...new Set([...selectedOptionalDependencies, ...meshOptionalDeps])];
+                onOptionalDependenciesChange(newDeps);
+            } else {
+                onOptionalDependenciesChange(
+                    selectedOptionalDependencies.filter(id => !meshOptionalDeps.includes(id)),
+                );
+            }
+        },
+        [selectedOptionalDependencies, meshOptionalDeps, onOptionalDependenciesChange],
+    );
+
+    const isMeshSelected = meshOptionalDeps.some(id => selectedOptionalDependencies.includes(id));
 
     const handleBlockLibraryToggle = useCallback(
         (libraryId: string, isSelected: boolean) => {
@@ -363,6 +395,30 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                                             </span>
                                         </Checkbox>
                                     ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* API Mesh Section - shown when mesh is optional or auto-included */}
+                        {(showMeshToggle || isMeshAutoIncluded) && (
+                            <div className="addons-section addons-visible">
+                                <Divider size="S" marginTop="size-300" marginBottom="size-200" />
+                                <Text UNSAFE_className="description-block-sm">
+                                    API Mesh
+                                </Text>
+                                <div className="architecture-addons">
+                                    <Checkbox
+                                        isSelected={isMeshAutoIncluded || isMeshSelected}
+                                        isDisabled={isMeshAutoIncluded}
+                                        onChange={handleMeshToggle}
+                                    >
+                                        <span className="addon-label">
+                                            <span className="addon-name">Include API Mesh</span>
+                                            <span className="addon-description">
+                                                Deploy an API Mesh for GraphQL query routing. Not required for direct backend connections.
+                                            </span>
+                                        </span>
+                                    </Checkbox>
                                 </div>
                             </div>
                         )}

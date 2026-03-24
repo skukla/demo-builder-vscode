@@ -83,7 +83,8 @@ function buildComponentList(
     project: Project,
 ): { id: string; type: string }[] {
     const frontend = stack.frontend;
-    const dependencies = stack.dependencies || [];
+    // Use project's saved dependencies (includes user-selected optional deps like mesh) or fall back to stack defaults
+    const dependencies = project.componentSelections?.dependencies ?? stack.dependencies ?? [];
     const appBuilder = (project.selectedAddons || []).filter(
         addon => !stack.optionalAddons?.some(opt => opt.id === addon),
     );

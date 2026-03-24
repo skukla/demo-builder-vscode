@@ -238,8 +238,10 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
     );
 
     const componentSelection = useMemo(() => stack ? {
-        frontend: stack.frontend, backend: stack.backend, dependencies: stack.dependencies,
-    } : undefined, [stack]);
+        frontend: stack.frontend,
+        backend: stack.backend,
+        dependencies: [...(stack.dependencies || []), ...(state.selectedOptionalDependencies || [])],
+    } : undefined, [stack, state.selectedOptionalDependencies]);
 
     const componentInfo = useMemo(
         () => buildComponentInfoList(componentSelection, state.apiMesh?.meshStatus, componentsData, backendServiceNames),

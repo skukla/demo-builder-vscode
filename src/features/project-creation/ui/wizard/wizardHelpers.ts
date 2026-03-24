@@ -678,7 +678,10 @@ export function buildProjectConfig(
         components: stack ? {
             frontend: stack.frontend,
             backend: stack.backend,
-            dependencies: stack.dependencies || [],
+            dependencies: [
+                ...(stack.dependencies || []),
+                ...(wizardState.selectedOptionalDependencies || []),
+            ],
             integrations: [],
             appBuilder: [],
         } : undefined,

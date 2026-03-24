@@ -42,6 +42,8 @@ export interface ActionGridProps {
     isStartDisabled: boolean;
     /** Whether Stop button should be disabled (ignored for EDS projects) */
     isStopDisabled: boolean;
+    /** Whether the project includes an API Mesh component */
+    hasMesh?: boolean;
     /** Whether mesh-related actions should be disabled */
     isMeshActionDisabled: boolean;
     /** Whether browser is currently opening */
@@ -85,6 +87,7 @@ export function ActionGrid({
     isRunning,
     isStartDisabled,
     isStopDisabled,
+    hasMesh = true,
     isMeshActionDisabled,
     isOpeningBrowser,
     isLogsHoverSuppressed,
@@ -175,17 +178,19 @@ export function ActionGrid({
                 <Text UNSAFE_className="icon-label">Logs</Text>
             </ActionButton>
 
-            {/* Deploy Mesh */}
-            <ActionButton
-                onPress={handleDeployMesh}
-                isQuiet
-                isDisabled={isMeshActionDisabled}
-                UNSAFE_className="dashboard-action-button"
-                data-action="deploy-mesh"
-            >
-                <Refresh size="L" />
-                <Text UNSAFE_className="icon-label">Deploy Mesh</Text>
-            </ActionButton>
+            {/* Deploy Mesh - only shown when project includes mesh */}
+            {hasMesh && (
+                <ActionButton
+                    onPress={handleDeployMesh}
+                    isQuiet
+                    isDisabled={isMeshActionDisabled}
+                    UNSAFE_className="dashboard-action-button"
+                    data-action="deploy-mesh"
+                >
+                    <Refresh size="L" />
+                    <Text UNSAFE_className="icon-label">Deploy Mesh</Text>
+                </ActionButton>
+            )}
 
             {/* Configure */}
             <ActionButton

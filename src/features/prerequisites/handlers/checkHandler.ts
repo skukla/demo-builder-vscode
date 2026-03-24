@@ -274,7 +274,7 @@ async function initializePrerequisiteCheck(
             context.sharedState.currentComponentSelection = {
                 frontend: stack.frontend,
                 backend: stack.backend,
-                dependencies: stack.dependencies,
+                dependencies: [...(stack.dependencies || []), ...(stack.optionalDependencies || [])],
                 integrations: [],
                 appBuilder: [],
             };

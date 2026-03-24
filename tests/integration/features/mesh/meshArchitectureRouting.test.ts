@@ -2,10 +2,10 @@
  * Integration Tests: Mesh Architecture Routing
  *
  * Tests for the complete mesh-per-stack routing architecture:
- * - EDS-PaaS stack resolves to eds-commerce-mesh component
- * - Headless-PaaS stack resolves to headless-commerce-mesh component
+ * - EDS-PaaS stack resolves to eds-commerce-mesh component (via optionalDependencies)
+ * - Headless-PaaS stack resolves to headless-commerce-mesh component (via optionalDependencies)
  * - EDS config.json uses mesh URL for both commerce endpoints
- * - Full EDS project creation includes correct mesh component
+ * - Full EDS project creation includes correct mesh component when selected
  *
  * These are end-to-end integration tests that verify the complete
  * data flow from stack selection to mesh component resolution.
@@ -14,12 +14,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Read actual components.json for integration validation
+// Read actual config files for integration validation
 const componentsJsonPath = path.join(
     __dirname,
     '../../../../src/features/components/config/components.json'
 );
 const componentsJson = JSON.parse(fs.readFileSync(componentsJsonPath, 'utf-8'));
+
+const stacksJsonPath = path.join(
+    __dirname,
+    '../../../../src/features/project-creation/config/stacks.json'
+);
+const stacksJson = JSON.parse(fs.readFileSync(stacksJsonPath, 'utf-8'));
 
 describe('Mesh Architecture Routing - Integration Tests', () => {
     // ==========================================================
@@ -28,11 +34,10 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
     describe('Stack-to-Mesh Resolution', () => {
         it('EDS-PaaS stack should resolve to eds-commerce-mesh component', () => {
             // Given: Stack selection of `eds-paas`
-            const stackId = 'eds-paas';
-            const stack = componentsJson.stacks[stackId];
+            const stack = stacksJson.stacks.find((s: any) => s.id === 'eds-paas');
 
-            // When: Resolving mesh component from stack's required components
-            const meshComponent = stack.requiredComponents.find((c: string) =>
+            // When: Resolving mesh component from stack's optionalDependencies
+            const meshComponent = stack.optionalDependencies.find((c: string) =>
                 c.includes('mesh')
             );
 
@@ -46,11 +51,10 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
 
         it('Headless-PaaS stack should resolve to headless-commerce-mesh component', () => {
             // Given: Stack selection of `headless-paas`
-            const stackId = 'headless-paas';
-            const stack = componentsJson.stacks[stackId];
+            const stack = stacksJson.stacks.find((s: any) => s.id === 'headless-paas');
 
-            // When: Resolving mesh component from stack's required components
-            const meshComponent = stack.requiredComponents.find((c: string) =>
+            // When: Resolving mesh component from stack's optionalDependencies
+            const meshComponent = stack.optionalDependencies.find((c: string) =>
                 c.includes('mesh')
             );
 
@@ -106,20 +110,19 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
             expect(edsMesh.configuration.providesEnvVars).toContain('MESH_ENDPOINT');
         });
 
-        it('both commerce endpoints should use same mesh URL when mesh deployed', () => {
+        it('both commerce endpoints should use same mesh URL when mesh is selected', () => {
             // This test validates the architecture decision:
             // - commerce-core-endpoint: Used for core commerce operations (from MESH_ENDPOINT)
             // - commerce-endpoint: Used for catalog service (now also routes through mesh)
 
             // Given: EDS-PaaS stack configuration
-            const stack = componentsJson.stacks['eds-paas'];
+            const stack = stacksJson.stacks.find((s: any) => s.id === 'eds-paas');
 
-            // When: Stack requires eds-commerce-mesh
-            const requiresMesh = stack.requiredComponents.includes('eds-commerce-mesh');
+            // When: Stack has eds-commerce-mesh as optional dependency
+            const hasMeshOptional = stack.optionalDependencies.includes('eds-commerce-mesh');
 
-            // Then: Mesh is required, meaning both endpoints will use mesh URL
-            // The eds-config generator maps MESH_ENDPOINT to both commerce endpoints
-            expect(requiresMesh).toBe(true);
+            // Then: Mesh is available as optional, and when selected both endpoints use mesh URL
+            expect(hasMeshOptional).toBe(true);
 
             // And the mesh provides the endpoint that the generator will use
             const edsMesh = componentsJson.mesh['eds-commerce-mesh'];
@@ -131,13 +134,12 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
     // Full Project Creation Flow Tests (2 tests)
     // ==========================================================
     describe('Full Project Creation Flow', () => {
-        it('EDS project should clone from eds-commerce-mesh repository', () => {
-            // Given: EDS-PaaS stack selection
-            const stackId = 'eds-paas';
-            const stack = componentsJson.stacks[stackId];
+        it('EDS project should clone from eds-commerce-mesh repository when mesh selected', () => {
+            // Given: EDS-PaaS stack selection with mesh enabled
+            const stack = stacksJson.stacks.find((s: any) => s.id === 'eds-paas');
 
-            // When: Getting the required mesh component
-            const meshId = stack.requiredComponents.find((c: string) => c.includes('mesh'));
+            // When: Getting the mesh component from optionalDependencies
+            const meshId = stack.optionalDependencies.find((c: string) => c.includes('mesh'));
 
             // Then: Should use eds-commerce-mesh with correct GitHub repo
             expect(meshId).toBe('eds-commerce-mesh');
@@ -147,13 +149,12 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
             expect(mesh.source.url).toBe('https://github.com/skukla/commerce-eds-mesh');
         });
 
-        it('Headless project should clone from headless-commerce-mesh repository', () => {
-            // Given: Headless-PaaS stack selection
-            const stackId = 'headless-paas';
-            const stack = componentsJson.stacks[stackId];
+        it('Headless project should clone from headless-commerce-mesh repository when mesh selected', () => {
+            // Given: Headless-PaaS stack selection with mesh enabled
+            const stack = stacksJson.stacks.find((s: any) => s.id === 'headless-paas');
 
-            // When: Getting the required mesh component
-            const meshId = stack.requiredComponents.find((c: string) => c.includes('mesh'));
+            // When: Getting the mesh component from optionalDependencies
+            const meshId = stack.optionalDependencies.find((c: string) => c.includes('mesh'));
 
             // Then: Should use headless-commerce-mesh with correct GitHub repo
             expect(meshId).toBe('headless-commerce-mesh');
@@ -168,20 +169,15 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
     // Architecture Consistency Tests (3 tests)
     // ==========================================================
     describe('Architecture Consistency', () => {
-        it('all PaaS stacks should have a mesh component', () => {
-            // Given: All stacks that use PaaS backend
-            const paasStacks = Object.entries(componentsJson.stacks)
-                .filter(([_key, stack]: [string, any]) =>
-                    stack.backend === 'adobe-commerce-paas'
-                );
-
-            // When: Checking each stack's required components
-            for (const [_stackId, stack] of paasStacks) {
-                const hasMesh = (stack as any).requiredComponents.some((c: string) =>
+        it('all stacks should have mesh available as optional dependency', () => {
+            // Given: All stacks from stacks.json
+            for (const stack of stacksJson.stacks) {
+                // When: Checking each stack's optionalDependencies
+                const hasMesh = (stack.optionalDependencies || []).some((c: string) =>
                     c.includes('mesh')
                 );
 
-                // Then: Each PaaS stack should have a mesh component
+                // Then: Each stack should have a mesh component available
                 expect(hasMesh).toBe(true);
             }
         });
@@ -197,7 +193,7 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
         });
 
         it('no stack should reference the old commerce-mesh component', () => {
-            // Given: All stacks in the configuration
+            // Given: All stacks in components.json stacks section
             const stacks = componentsJson.stacks;
 
             // When: Checking for legacy commerce-mesh references
