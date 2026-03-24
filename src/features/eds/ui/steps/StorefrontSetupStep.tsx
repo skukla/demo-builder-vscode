@@ -306,12 +306,13 @@ export function StorefrontSetupStep({
             edsConfig: state.edsConfig,
             componentConfigs: state.componentConfigs,
             backendComponentId: state.components?.backend,
+            dependencies: [...(state.components?.dependencies || []), ...(state.selectedOptionalDependencies || [])],
             selectedAddons: state.selectedAddons,
             selectedBlockLibraries: state.selectedBlockLibraries,
             customBlockLibraries: state.customBlockLibraries,
             selectedPackage: state.selectedPackage,
         });
-    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.selectedAddons, state.selectedBlockLibraries, state.customBlockLibraries, state.selectedPackage]);
+    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.components?.dependencies, state.selectedOptionalDependencies, state.selectedAddons, state.selectedBlockLibraries, state.customBlockLibraries, state.selectedPackage]);
 
     /**
      * Handle GitHub App installation detected
@@ -342,6 +343,7 @@ export function StorefrontSetupStep({
         edsConfig: state.edsConfig,
         componentConfigs: state.componentConfigs,
         backendComponentId: state.components?.backend,
+        dependencies: [...(state.components?.dependencies || []), ...(state.selectedOptionalDependencies || [])],
         selectedAddons: state.selectedAddons,
         selectedBlockLibraries: state.selectedBlockLibraries,
         customBlockLibraries: state.customBlockLibraries,
@@ -425,6 +427,7 @@ export function StorefrontSetupStep({
             edsConfig: initialConfigRef.current.edsConfig,
             componentConfigs: initialConfigRef.current.componentConfigs,
             backendComponentId: initialConfigRef.current.backendComponentId,
+            dependencies: initialConfigRef.current.dependencies,
             selectedAddons: initialConfigRef.current.selectedAddons,
             selectedBlockLibraries: initialConfigRef.current.selectedBlockLibraries,
             customBlockLibraries: initialConfigRef.current.customBlockLibraries,
