@@ -28,7 +28,8 @@ interface ReviewState {
 export function hasRequiredReviewData(state: ReviewState): boolean {
     if (!state.projectName) return false;
 
-    // Adobe I/O selections only required when mesh is included
+    // Adobe I/O selections only required when mesh is included.
+    // Mesh is always in optionalDependencies (never in required stack dependencies).
     const deps = [...(state.selectedOptionalDependencies || [])];
     if (hasMeshInDependencies(deps)) {
         if (!state.adobeOrg?.id) return false;

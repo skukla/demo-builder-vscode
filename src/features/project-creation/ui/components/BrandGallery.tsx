@@ -328,9 +328,12 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         const currentPkg = packages.find(p => p.id === modalPackageId);
         const meshReq = getResolvedMeshRequirement(currentPkg, stackId);
         if (meshReq === true) {
-            setModalOptionalDeps(selectedStackObj?.optionalDependencies ?? []);
+            const deps = selectedStackObj?.optionalDependencies ?? [];
+            setModalOptionalDeps(deps);
+            onOptionalDependenciesChange?.(deps);
         } else {
             setModalOptionalDeps([]);
+            onOptionalDependenciesChange?.([]);
         }
         // When stack changes, set addons to: required (from package) + default (from stack)
         setModalAddons(() => {

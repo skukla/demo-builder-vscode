@@ -773,8 +773,6 @@ function logPhase5SkipReason(
         context.logger.debug('[Phase 5] Skipped - edsConfig not set');
     } else if (!typedConfig.edsConfig.preflightComplete) {
         context.logger.debug('[Phase 5] Skipped - preflight not completed');
-    } else {
-        context.logger.debug('[Phase 5] Skipped - meshState.endpoint not set');
     }
 }
 
