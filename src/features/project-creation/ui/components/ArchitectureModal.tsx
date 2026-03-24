@@ -23,6 +23,7 @@ import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { isMeshComponentId } from '@/core/constants';
+import { getResolvedMeshRequirement } from '../../services/demoPackageLoader';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { DemoPackage } from '@/types/demoPackages';
 import type { Stack, StacksConfig } from '@/types/stacks';
@@ -166,11 +167,10 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     }, [selectedStack]);
 
     // Resolve mesh requirement: storefront-level overrides package-level
-    const resolvedMeshReq = useMemo(() => {
-        if (!selectedStackId) return pkg.requiresMesh;
-        const storefront = pkg.storefronts?.[selectedStackId];
-        return storefront?.requiresMesh !== undefined ? storefront.requiresMesh : pkg.requiresMesh;
-    }, [pkg, selectedStackId]);
+    const resolvedMeshReq = useMemo(
+        () => getResolvedMeshRequirement(pkg, selectedStackId ?? ''),
+        [pkg, selectedStackId],
+    );
 
     const showMeshToggle = meshOptionalDeps.length > 0 && resolvedMeshReq === 'optional';
     const isMeshAutoIncluded = meshOptionalDeps.length > 0 && resolvedMeshReq === true;

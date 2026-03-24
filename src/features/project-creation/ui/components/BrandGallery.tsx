@@ -15,6 +15,7 @@ import {
     getDefaultBlockLibraryIds,
     getBlockLibraryName,
 } from '../../services/blockLibraryLoader';
+import { getResolvedMeshRequirement } from '../../services/demoPackageLoader';
 import { ArchitectureModal } from './ArchitectureModal';
 import { sortPackages, filterPackagesBySearchQuery } from './brandGalleryHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -303,9 +304,10 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             ? customBlockLibraries
             : (customBlockLibraryDefaults ?? []);
         setModalCustomBlockLibraries(initialCustomLibs);
-        // Initialize modal optional deps: auto-select all optionalDependencies if package requires mesh
-        if (pkg.requiresMesh) {
-            const currentStack = selectedStack ? stacks.find(s => s.id === selectedStack) : undefined;
+        // Initialize modal optional deps: auto-select mesh only when resolved requirement is true
+        const currentStack = selectedStack ? stacks.find(s => s.id === selectedStack) : undefined;
+        const meshReq = getResolvedMeshRequirement(pkg, selectedStack ?? '');
+        if (meshReq === true) {
             setModalOptionalDeps(currentStack?.optionalDependencies ?? []);
         } else {
             setModalOptionalDeps(selectedOptionalDependencies);
@@ -316,9 +318,10 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     const handleStackSelect = useCallback((stackId: string) => {
         onStackSelect(stackId);
         const selectedStackObj = stacks.find(s => s.id === stackId);
-        // When stack changes, reset optional deps based on package requiresMesh
+        // When stack changes, reset optional deps based on resolved mesh requirement
         const currentPkg = packages.find(p => p.id === modalPackageId);
-        if (currentPkg?.requiresMesh) {
+        const meshReq = getResolvedMeshRequirement(currentPkg, stackId);
+        if (meshReq === true) {
             setModalOptionalDeps(selectedStackObj?.optionalDependencies ?? []);
         } else {
             setModalOptionalDeps([]);
