@@ -276,7 +276,9 @@ export class ConfigurationService {
             }
 
             const errorMessage = this.formatError(response.status, errorBody);
-            this.logger.error(`[ConfigService] ${method} ${url} -> ${response.status}: ${errorMessage}`);
+            // 409 (conflict) is handled by callers (delete + re-create) — log at info, not error
+            const logLevel = response.status === 409 ? 'info' : 'error';
+            this.logger[logLevel](`[ConfigService] ${method} ${url} -> ${response.status}: ${errorMessage}`);
 
             return {
                 success: false,
