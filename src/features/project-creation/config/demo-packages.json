@@ -74,7 +74,7 @@
       "description": "Unbranded Commerce storefront for custom demos",
       "icon": "custom",
       "featured": false,
-      "requiresMesh": false,
+      "requiresMesh": "optional",
       "addons": {
         "adobe-commerce-aco": "excluded"
       },

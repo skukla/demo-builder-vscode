@@ -165,7 +165,7 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         return (selectedStack.optionalDependencies ?? []).filter(id => isMeshComponentId(id));
     }, [selectedStack]);
 
-    const showMeshToggle = meshOptionalDeps.length > 0 && !pkg.requiresMesh;
+    const showMeshToggle = meshOptionalDeps.length > 0 && pkg.requiresMesh === 'optional';
     const isMeshAutoIncluded = meshOptionalDeps.length > 0 && pkg.requiresMesh === true;
 
     const handleMeshToggle = useCallback(
