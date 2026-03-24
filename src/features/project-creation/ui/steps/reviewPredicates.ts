@@ -4,6 +4,8 @@
  * Extracts long validation chains to named functions for improved readability.
  */
 
+import { hasMeshInDependencies } from '@/core/constants';
+
 /**
  * Minimal state interface for review data validation
  */
@@ -12,6 +14,8 @@ interface ReviewState {
     adobeOrg?: { id?: string };
     adobeProject?: { id?: string };
     adobeWorkspace?: { id?: string };
+    selectedStack?: string;
+    selectedOptionalDependencies?: string[];
 }
 
 /**
@@ -19,14 +23,18 @@ interface ReviewState {
  *
  * Required:
  * - Project name (non-empty)
- * - Adobe organization selected
- * - Adobe project selected
- * - Adobe workspace selected
+ * - Adobe organization, project, and workspace (only when mesh is included)
  */
 export function hasRequiredReviewData(state: ReviewState): boolean {
     if (!state.projectName) return false;
-    if (!state.adobeOrg?.id) return false;
-    if (!state.adobeProject?.id) return false;
-    if (!state.adobeWorkspace?.id) return false;
+
+    // Adobe I/O selections only required when mesh is included
+    const deps = [...(state.selectedOptionalDependencies || [])];
+    if (hasMeshInDependencies(deps)) {
+        if (!state.adobeOrg?.id) return false;
+        if (!state.adobeProject?.id) return false;
+        if (!state.adobeWorkspace?.id) return false;
+    }
+
     return true;
 }
