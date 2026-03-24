@@ -165,8 +165,15 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         return (selectedStack.optionalDependencies ?? []).filter(id => isMeshComponentId(id));
     }, [selectedStack]);
 
-    const showMeshToggle = meshOptionalDeps.length > 0 && pkg.requiresMesh === 'optional';
-    const isMeshAutoIncluded = meshOptionalDeps.length > 0 && pkg.requiresMesh === true;
+    // Resolve mesh requirement: storefront-level overrides package-level
+    const resolvedMeshReq = useMemo(() => {
+        if (!selectedStackId) return pkg.requiresMesh;
+        const storefront = pkg.storefronts?.[selectedStackId];
+        return storefront?.requiresMesh !== undefined ? storefront.requiresMesh : pkg.requiresMesh;
+    }, [pkg, selectedStackId]);
+
+    const showMeshToggle = meshOptionalDeps.length > 0 && resolvedMeshReq === 'optional';
+    const isMeshAutoIncluded = meshOptionalDeps.length > 0 && resolvedMeshReq === true;
 
     const handleMeshToggle = useCallback(
         (isSelected: boolean) => {

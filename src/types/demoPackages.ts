@@ -93,6 +93,12 @@ export interface Storefront {
     contentPatches?: string[];
     /** External repository for content patches (if not using bundled patches) */
     contentPatchSource?: ContentPatchSource;
+    /** API Mesh requirement for this storefront (overrides package-level requiresMesh).
+     *  - true: mesh auto-included, no user choice
+     *  - false: no mesh, no user choice
+     *  - 'optional': mesh toggle shown, user decides
+     *  - undefined: inherit from package */
+    requiresMesh?: boolean | 'optional';
 }
 
 /**

@@ -29,12 +29,18 @@
           "description": "Edge Delivery Services storefront with Commerce PaaS backend",
           "icon": "eds",
           "featured": true,
-          "tags": ["eds", "isle5", "paas"],
+          "tags": [
+            "eds",
+            "isle5",
+            "paas"
+          ],
           "source": {
             "type": "git",
             "url": "https://github.com/stephen-garner-adobe/isle5",
             "branch": "main",
-            "gitOptions": { "shallow": true }
+            "gitOptions": {
+              "shallow": true
+            }
           },
           "templateOwner": "stephen-garner-adobe",
           "templateRepo": "isle5",
@@ -43,19 +49,27 @@
             "site": "isle5",
             "indexPath": "/sitemap.json"
           },
-          "contentPatches": ["nav-create-account-link"]
+          "contentPatches": [
+            "nav-create-account-link"
+          ]
         },
         "eds-accs": {
           "name": "Isle5 EDS + ACCS",
           "description": "Edge Delivery Services storefront with Commerce Cloud Service backend",
           "icon": "eds",
           "featured": false,
-          "tags": ["eds", "isle5", "accs"],
+          "tags": [
+            "eds",
+            "isle5",
+            "accs"
+          ],
           "source": {
             "type": "git",
             "url": "https://github.com/stephen-garner-adobe/isle5",
             "branch": "main",
-            "gitOptions": { "shallow": true }
+            "gitOptions": {
+              "shallow": true
+            }
           },
           "templateOwner": "stephen-garner-adobe",
           "templateRepo": "isle5",
@@ -64,7 +78,9 @@
             "site": "isle5",
             "indexPath": "/sitemap.json"
           },
-          "contentPatches": ["nav-create-account-link"]
+          "contentPatches": [
+            "nav-create-account-link"
+          ]
         }
       }
     },
@@ -95,12 +111,18 @@
           "description": "Unbranded EDS storefront with Commerce PaaS backend",
           "icon": "eds",
           "featured": true,
-          "tags": ["eds", "custom", "paas"],
+          "tags": [
+            "eds",
+            "custom",
+            "paas"
+          ],
           "source": {
             "type": "git",
             "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
             "branch": "main",
-            "gitOptions": { "shallow": true }
+            "gitOptions": {
+              "shallow": true
+            }
           },
           "templateOwner": "hlxsites",
           "templateRepo": "aem-boilerplate-commerce",
@@ -114,12 +136,18 @@
           "description": "Unbranded EDS storefront with Commerce Cloud Service backend",
           "icon": "eds",
           "featured": true,
-          "tags": ["eds", "custom", "accs"],
+          "tags": [
+            "eds",
+            "custom",
+            "accs"
+          ],
           "source": {
             "type": "git",
             "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
             "branch": "main",
-            "gitOptions": { "shallow": true }
+            "gitOptions": {
+              "shallow": true
+            }
           },
           "templateOwner": "hlxsites",
           "templateRepo": "aem-boilerplate-commerce",
@@ -157,12 +185,18 @@
           "description": "B2B Commerce storefront with Commerce PaaS backend",
           "icon": "eds",
           "featured": true,
-          "tags": ["eds", "b2b", "paas"],
+          "tags": [
+            "eds",
+            "b2b",
+            "paas"
+          ],
           "source": {
             "type": "git",
             "url": "https://github.com/adobe-commerce/boilerplate-b2b-template",
             "branch": "main",
-            "gitOptions": { "shallow": true }
+            "gitOptions": {
+              "shallow": true
+            }
           },
           "templateOwner": "adobe-commerce",
           "templateRepo": "boilerplate-b2b-template",
@@ -176,12 +210,18 @@
           "description": "B2B Commerce storefront with Commerce Cloud Service backend",
           "icon": "eds",
           "featured": false,
-          "tags": ["eds", "b2b", "accs"],
+          "tags": [
+            "eds",
+            "b2b",
+            "accs"
+          ],
           "source": {
             "type": "git",
             "url": "https://github.com/adobe-commerce/boilerplate-b2b-template",
             "branch": "main",
-            "gitOptions": { "shallow": true }
+            "gitOptions": {
+              "shallow": true
+            }
           },
           "templateOwner": "adobe-commerce",
           "templateRepo": "boilerplate-b2b-template",
@@ -219,7 +259,11 @@
           "description": "Next.js headless storefront with Adobe Commerce API Mesh integration",
           "icon": "nextjs",
           "featured": true,
-          "tags": ["headless", "nextjs", "citisignal"],
+          "tags": [
+            "headless",
+            "nextjs",
+            "citisignal"
+          ],
           "source": {
             "type": "git",
             "url": "https://github.com/skukla/citisignal-nextjs",
@@ -227,14 +271,19 @@
             "gitOptions": {
               "shallow": false
             }
-          }
+          },
+          "requiresMesh": true
         },
         "eds-paas": {
           "name": "CitiSignal EDS + PaaS",
           "description": "Edge Delivery Services storefront with Commerce PaaS backend",
           "icon": "eds",
           "featured": true,
-          "tags": ["eds", "citisignal", "paas"],
+          "tags": [
+            "eds",
+            "citisignal",
+            "paas"
+          ],
           "source": {
             "type": "git",
             "url": "https://github.com/skukla/citisignal-eds-boilerplate",
@@ -249,7 +298,13 @@
             "org": "demo-system-stores",
             "site": "accs-citisignal"
           },
-          "contentPatches": ["index-product-teaser-sku", "phones-product-teaser-sku", "phones-heading-reorder", "smart-watches-category-id", "smart-watches-url-path"],
+          "contentPatches": [
+            "index-product-teaser-sku",
+            "phones-product-teaser-sku",
+            "phones-heading-reorder",
+            "smart-watches-category-id",
+            "smart-watches-url-path"
+          ],
           "contentPatchSource": {
             "owner": "skukla",
             "repo": "eds-demo-content-patches",
@@ -261,7 +316,11 @@
           "description": "Edge Delivery Services storefront with Commerce Cloud Service backend",
           "icon": "eds",
           "featured": false,
-          "tags": ["eds", "citisignal", "accs"],
+          "tags": [
+            "eds",
+            "citisignal",
+            "accs"
+          ],
           "source": {
             "type": "git",
             "url": "https://github.com/skukla/citisignal-eds-boilerplate",
@@ -276,7 +335,11 @@
             "org": "demo-system-stores",
             "site": "accs-citisignal"
           },
-          "contentPatches": ["index-product-teaser-sku-accs", "phones-heading-reorder", "smart-watches-category-id-accs"],
+          "contentPatches": [
+            "index-product-teaser-sku-accs",
+            "phones-heading-reorder",
+            "smart-watches-category-id-accs"
+          ],
           "contentPatchSource": {
             "owner": "skukla",
             "repo": "eds-demo-content-patches",
@@ -291,7 +354,7 @@
       "description": "Construction/hardware demo with BuildRight branding",
       "icon": "buildright",
       "featured": false,
-      "requiresMesh": false,
+      "requiresMesh": true,
       "status": "coming-soon",
       "addons": {
         "adobe-commerce-aco": "required"
@@ -310,7 +373,11 @@
           "description": "Edge Delivery Services storefront with Commerce PaaS backend",
           "icon": "eds",
           "featured": true,
-          "tags": ["eds", "buildright", "paas"],
+          "tags": [
+            "eds",
+            "buildright",
+            "paas"
+          ],
           "source": {
             "type": "git",
             "url": "https://github.com/skukla/buildright-eds",
