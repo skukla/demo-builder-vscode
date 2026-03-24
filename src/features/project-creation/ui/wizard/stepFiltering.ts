@@ -24,6 +24,12 @@ export interface StepCondition {
     stackRequiresAny?: Array<'requiresGitHub' | 'requiresDaLive'>;
 
     /**
+     * If true, this step is only shown when an API Mesh component is included
+     * in the project (either required by package or selected by user).
+     */
+    requiresMesh?: boolean;
+
+    /**
      * If true, this step is only shown when NO predefined stack is selected.
      * Used for steps like Component Selection that are hidden when a stack
      * already determines the components, but should appear for a future
@@ -66,6 +72,8 @@ export interface WizardStepWithCondition {
 export interface FilterOptions {
     /** Whether the wizard is in edit mode (editing existing project) */
     isEditMode?: boolean;
+    /** Whether the project includes an API Mesh component */
+    hasMesh?: boolean;
 }
 
 /**
@@ -119,7 +127,12 @@ export function filterStepsForStack(
             return true;
         }
 
-        const { stackRequires, stackRequiresAny, showWhenNoStack } = step.condition;
+        const { stackRequires, stackRequiresAny, showWhenNoStack, requiresMesh } = step.condition;
+
+        // Steps that require mesh are hidden when no mesh is included
+        if (requiresMesh && !options.hasMesh) {
+            return false;
+        }
 
         // Steps with showWhenNoStack are only shown when no stack is selected
         // (already handled above - if we get here, a stack IS selected, so hide it)

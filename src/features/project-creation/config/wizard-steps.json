@@ -26,19 +26,28 @@
       "id": "adobe-auth",
       "name": "Adobe Authentication",
       "description": "Authenticate with Adobe to deploy your API Mesh and access Adobe services.",
-      "enabled": true
+      "enabled": true,
+      "condition": {
+        "requiresMesh": true
+      }
     },
     {
       "id": "adobe-project",
       "name": "I/O Project Selection",
       "description": "Select the Adobe I/O project for your demo.",
-      "enabled": true
+      "enabled": true,
+      "condition": {
+        "requiresMesh": true
+      }
     },
     {
       "id": "adobe-workspace",
       "name": "Workspace Selection",
       "description": "Select the workspace within your project.",
-      "enabled": true
+      "enabled": true,
+      "condition": {
+        "requiresMesh": true
+      }
     },
     {
       "id": "eds-connect-services",
