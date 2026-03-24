@@ -7,22 +7,21 @@
  *
  * ## Generation Timeline (EDS Projects)
  *
- * config.json must be generated AFTER mesh deployment because it requires the mesh endpoint:
+ * When a mesh component is included, config.json must be generated AFTER mesh deployment
+ * because it requires the mesh endpoint. When no mesh is included, config generation uses
+ * direct backend endpoints instead.
  *
  * 1. **StorefrontSetupStep (preflight)**: Creates repo, fstab.yaml, content (no mesh needed)
- * 2. **executor Phase 3**: Deploys mesh → project.meshState.endpoint
- * 3. **executor Phase 4**: Generates config.json WITH mesh endpoint (this module)
+ * 2. **executor Phase 3**: Deploys mesh (if included) → project.meshState.endpoint
+ * 3. **executor Phase 4**: Generates config.json with mesh endpoint OR direct backend endpoints
  * 4. **executor Phase 5**: Syncs config.json to GitHub and publishes to CDN
- *
- * The mesh endpoint is required for `commerce-core-endpoint` and `commerce-endpoint` fields.
- * Without it, Commerce features will not work on the live site.
  *
  * @module features/eds/services/configGenerator
  */
 
 import configTemplate from '../config/config-template.json';
 import componentsConfig from '@/features/components/config/components.json';
-import { COMPONENT_IDS } from '@/core/constants';
+import { isMeshComponentId } from '@/core/constants';
 import { getFeaturePackConfigFlags } from '@/features/project-creation/services/featurePackLoader';
 import type { Logger , Project } from '@/types';
 
@@ -212,17 +211,34 @@ export function mapBackendToEnvironmentType(backendComponentId?: string): Enviro
  * @param paasKey - Config key for PaaS environments
  * @returns Resolved value or undefined
  */
-function resolveConfigField(
-    isAccs: boolean,
-    edsConfig: Record<string, string | boolean | number | undefined>,
-    meshConfig: Record<string, string | boolean | number | undefined>,
-    accsKey: string,
-    paasKey: string,
-): string | undefined {
-    if (isAccs) {
-        return (edsConfig[accsKey] || meshConfig[accsKey]) as string | undefined;
+/**
+ * Merge all component env vars into a single flat config.
+ * Mesh components win over others (mesh endpoint overrides direct backend URL).
+ * Non-mesh components are merged in iteration order (last wins for duplicates).
+ */
+export function mergeComponentConfigs(
+    componentConfigs: ComponentConfigs | undefined,
+    meshEndpoint?: string,
+): Record<string, string | boolean | number | undefined> {
+    if (!componentConfigs) return {};
+
+    const nonMesh: Record<string, string | boolean | number | undefined> = {};
+    const mesh: Record<string, string | boolean | number | undefined> = {};
+
+    for (const [componentId, config] of Object.entries(componentConfigs)) {
+        const target = isMeshComponentId(componentId) ? mesh : nonMesh;
+        Object.assign(target, config);
     }
-    return (edsConfig[paasKey] || meshConfig[paasKey]) as string | undefined;
+
+    // Mesh values override non-mesh (spread order = last wins)
+    const merged = { ...nonMesh, ...mesh };
+
+    // Deployed mesh endpoint overrides everything
+    if (meshEndpoint) {
+        merged.MESH_ENDPOINT = meshEndpoint;
+    }
+
+    return merged;
 }
 
 export function extractConfigParamsFromConfigs(
@@ -230,43 +246,25 @@ export function extractConfigParamsFromConfigs(
     meshEndpoint?: string,
     backendComponentId?: string,
 ): Partial<ConfigGeneratorParams> {
-    const edsConfig = componentConfigs?.[COMPONENT_IDS.EDS_STOREFRONT] || {};
-    const paasMeshConfig = componentConfigs?.[COMPONENT_IDS.EDS_COMMERCE_MESH] || {};
-    const accsMeshConfig = componentConfigs?.[COMPONENT_IDS.EDS_ACCS_MESH] || {};
-
+    const config = mergeComponentConfigs(componentConfigs, meshEndpoint);
     const environmentType = mapBackendToEnvironmentType(backendComponentId);
     const isAccs = environmentType === 'accs';
-    const meshConfig = isAccs ? accsMeshConfig : paasMeshConfig;
 
-    // For ACCS: prefer mesh endpoint, then ACCS endpoint
-    // For PaaS: prefer mesh endpoint, then Commerce GraphQL endpoint
-    const commerceEndpoint = meshEndpoint ||
-        (isAccs
-            ? (edsConfig.ACCS_GRAPHQL_ENDPOINT || accsMeshConfig.ACCS_GRAPHQL_ENDPOINT)
-            : edsConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT);
-
-    const storeViewCode = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_STORE_VIEW_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE');
-    const storeCode = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_STORE_CODE', 'ADOBE_COMMERCE_STORE_CODE');
-    const websiteCode = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_WEBSITE_CODE', 'ADOBE_COMMERCE_WEBSITE_CODE');
-    const customerGroup = resolveConfigField(isAccs, edsConfig, meshConfig, 'ACCS_CUSTOMER_GROUP', 'ADOBE_COMMERCE_CUSTOMER_GROUP');
+    // Commerce endpoint: deployed mesh > merged config
+    const endpointKey = isAccs ? 'ACCS_GRAPHQL_ENDPOINT' : 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT';
+    const commerceEndpoint = meshEndpoint || config[endpointKey];
 
     return {
         environmentType,
         commerceEndpoint: commerceEndpoint as string | undefined,
-        catalogServiceEndpoint: isAccs
-            ? undefined
-            : (edsConfig.PAAS_CATALOG_SERVICE_ENDPOINT) as string | undefined,
-        commerceApiKey: isAccs
-            ? undefined
-            : (edsConfig.ADOBE_CATALOG_API_KEY || paasMeshConfig.ADOBE_CATALOG_API_KEY) as string | undefined,
-        commerceEnvironmentId: isAccs
-            ? undefined
-            : (edsConfig.ADOBE_COMMERCE_ENVIRONMENT_ID || paasMeshConfig.ADOBE_COMMERCE_ENVIRONMENT_ID) as string | undefined,
-        storeViewCode,
-        storeCode,
-        websiteCode,
-        customerGroup,
-        aemAssetsEnabled: edsConfig.AEM_ASSETS_ENABLED === 'true',
+        catalogServiceEndpoint: isAccs ? undefined : config.PAAS_CATALOG_SERVICE_ENDPOINT as string | undefined,
+        commerceApiKey: isAccs ? undefined : config.ADOBE_CATALOG_API_KEY as string | undefined,
+        commerceEnvironmentId: isAccs ? undefined : config.ADOBE_COMMERCE_ENVIRONMENT_ID as string | undefined,
+        storeViewCode: config[isAccs ? 'ACCS_STORE_VIEW_CODE' : 'ADOBE_COMMERCE_STORE_VIEW_CODE'] as string | undefined,
+        storeCode: config[isAccs ? 'ACCS_STORE_CODE' : 'ADOBE_COMMERCE_STORE_CODE'] as string | undefined,
+        websiteCode: config[isAccs ? 'ACCS_WEBSITE_CODE' : 'ADOBE_COMMERCE_WEBSITE_CODE'] as string | undefined,
+        customerGroup: config[isAccs ? 'ACCS_CUSTOMER_GROUP' : 'ADOBE_COMMERCE_CUSTOMER_GROUP'] as string | undefined,
+        aemAssetsEnabled: config.AEM_ASSETS_ENABLED === 'true',
     };
 }
 

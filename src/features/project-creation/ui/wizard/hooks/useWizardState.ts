@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
+import { hasMeshInDependencies } from '@/core/constants';
 import {
     getEnabledWizardSteps,
     initializeComponentsFromImport,
@@ -330,9 +331,17 @@ export function useWizardState({
             };
         });
 
-        // Step 4: Apply stack-based and mode-based filtering
+        // Step 4: Determine if mesh is included (from stack dependencies + user optional selections)
+        const effectiveDeps = [
+            ...(selectedStack?.dependencies || []),
+            ...(state.selectedOptionalDependencies || []),
+        ];
+        const meshIncluded = hasMeshInDependencies(effectiveDeps);
+
+        // Step 5: Apply stack-based, mode-based, and mesh-based filtering
         const filteredSteps = filterStepsForStack(stepsWithConditions, selectedStack, {
             isEditMode: !!editProject,
+            hasMesh: meshIncluded,
         });
 
         return filteredSteps.map(step => ({
@@ -340,7 +349,7 @@ export function useWizardState({
             name: step.name,
             description: step.description,
         }));
-    }, [wizardSteps, stacks, state.selectedStack, editProject]);
+    }, [wizardSteps, stacks, state.selectedStack, state.selectedOptionalDependencies, editProject]);
 
     // Step completion tracking
     // Neither import mode nor edit mode pre-marks steps as completed

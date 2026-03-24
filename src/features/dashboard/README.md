@@ -11,7 +11,7 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 - **Real-Time Status Display**: Show demo status (ready, starting, running, stopping)
 - **Mesh Status Monitoring**: Async mesh status checking with auth-aware prompts
 - **Adobe Context Display**: Show organization, project, and workspace
-- **Quick Actions**: Start, Stop, Open Browser, Deploy Mesh, Configure, View Logs
+- **Quick Actions**: Start, Stop, Open Browser, Deploy Mesh (shown conditionally when project includes a mesh component), Configure, View Logs
 - **Component Browser**: Browse project files with .env hiding (via ComponentTreeProvider)
 - **Focus Retention**: Maintain webview focus for in-place actions (Logs toggle, Start/Stop)
 - **Smart Logs Toggle**: Remember last active channel (Logs vs Debug)

@@ -32,13 +32,9 @@ All components are defined in `src/features/components/config/components.json`, 
     "url": "https://github.com/adobe/citisignal-nextjs.git",
     "branch": "main"
   },
-  "dependencies": {
-    "required": ["commerce-mesh"],
-    "optional": []
-  },
   "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-saas"],
   "configuration": {
-    "envVars": ["MESH_ENDPOINT", "ADOBE_COMMERCE_URL"],
+    "envVars": ["ADOBE_COMMERCE_URL"],
     "port": 3000,
     "nodeVersion": "20"
   }

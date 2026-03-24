@@ -383,7 +383,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
         expect(mockContext.sendMessage).toHaveBeenCalledWith(
             'storefront-setup-progress',
             expect.objectContaining({
-                phase: 'content-copy',
+                phase: 'content',
                 message: expect.stringContaining('Resuming'),
             }),
         );

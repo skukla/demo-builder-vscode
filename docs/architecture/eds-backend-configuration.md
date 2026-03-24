@@ -404,14 +404,17 @@ Both `.env` and `site.json` follow the same conceptual pattern but use appropria
 
 ### Key Difference: Two-Phase Configuration
 
-Both `.env` and `site.json` use a **two-phase approach** when mesh endpoint is needed:
+Both `.env` and `site.json` use a **two-phase approach** when a mesh component is included:
 
 1. **Initial generation (Phase 0 for site.json, Phase 4 for .env)**: Create with placeholder/empty endpoint
 2. **Post-mesh update**: Fill in actual mesh endpoint after deployment
 
+When no mesh component is included, configuration is generated in a single phase using direct backend endpoints.
+
 **Critical Understanding**:
-- **`.env` update happens automatically**: Phase 4's `generateEnvironmentFiles()` regenerates `.env` for ALL components (including EDS) using the deployed `project.meshState.endpoint`. No custom hook needed.
-- **`site.json` update needs custom hook**: Since `site.json` is EDS-specific and NOT part of Phase 4, it requires a custom `updateSiteJsonWithMesh()` call after mesh deployment.
+- **Phase 3 mesh deployment is conditional**: Only runs when the project includes a mesh component (determined by stacks.json selection)
+- **Phase 4 handles both scenarios**: `generateEnvironmentFiles()` regenerates `.env` for ALL components — using `project.meshState.endpoint` when mesh is deployed, or direct backend endpoints when mesh is absent
+- **`site.json` update needs custom hook**: When mesh is included, `site.json` requires a custom `updateSiteJsonWithMesh()` call after mesh deployment (EDS-specific, not part of Phase 4)
 
 ### Implementation
 

@@ -15,7 +15,8 @@
       "icon": "nextjs",
       "frontend": "headless",
       "backend": "adobe-commerce-paas",
-      "dependencies": ["headless-commerce-mesh"],
+      "dependencies": [],
+      "optionalDependencies": ["headless-commerce-mesh"],
       "optionalAddons": [],
       "features": ["Server-side rendering", "API Mesh integration", "Full customization"]
     },
@@ -26,7 +27,8 @@
       "icon": "nextjs",
       "frontend": "headless",
       "backend": "adobe-commerce-accs",
-      "dependencies": ["headless-commerce-mesh"],
+      "dependencies": [],
+      "optionalDependencies": ["headless-commerce-mesh"],
       "optionalAddons": [],
       "features": ["Server-side rendering", "API Mesh integration", "Managed backend"]
     },
@@ -37,7 +39,8 @@
       "icon": "eds",
       "frontend": "eds-storefront",
       "backend": "adobe-commerce-paas",
-      "dependencies": ["eds-commerce-mesh"],
+      "dependencies": [],
+      "optionalDependencies": ["eds-commerce-mesh"],
       "optionalAddons": [
         { "id": "adobe-commerce-aco" }
       ],
@@ -52,7 +55,8 @@
       "icon": "eds",
       "frontend": "eds-storefront",
       "backend": "adobe-commerce-accs",
-      "dependencies": ["eds-accs-mesh"],
+      "dependencies": [],
+      "optionalDependencies": ["eds-accs-mesh"],
       "optionalAddons": [
         { "id": "adobe-commerce-aco" }
       ],

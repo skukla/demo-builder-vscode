@@ -236,15 +236,15 @@ export async function generateInspectorTreeEntries(
         destOwner, destRepo, '.eslintignore',
     );
     const eslintIgnoreContent = existingEslintIgnore?.content ?? '';
-    if (!eslintIgnoreContent.includes(SDK_CONFIG.destDir)) {
+    if (!eslintIgnoreContent.includes(SDK_SOURCE.destDir)) {
         const separator = eslintIgnoreContent.endsWith('\n') || eslintIgnoreContent === '' ? '' : '\n';
         treeEntries.push({
             path: '.eslintignore',
             mode: '100644',
             type: 'blob',
-            content: eslintIgnoreContent + separator + `${SDK_CONFIG.destDir}/\n`,
+            content: eslintIgnoreContent + separator + `${SDK_SOURCE.destDir}/\n`,
         });
-        logger.info(`[Inspector Tagging] Added ${SDK_CONFIG.destDir}/ to .eslintignore`);
+        logger.info(`[Inspector Tagging] Added ${SDK_SOURCE.destDir}/ to .eslintignore`);
     }
 
     // Append loader snippet to delayed.js if not already present

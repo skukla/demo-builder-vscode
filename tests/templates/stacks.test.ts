@@ -52,12 +52,14 @@ describe('stacks.json', () => {
             expect(headless?.backend).toBe('adobe-commerce-paas');
         });
 
-        it('should include headless-commerce-mesh dependency', () => {
+        it('should include headless-commerce-mesh in optionalDependencies', () => {
             const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;
             const headless = stacks.find(s => s.id === 'headless-paas');
-            const deps = headless?.dependencies as string[];
-            // Headless stacks use headless-commerce-mesh (prefixed/namespaced GraphQL mesh)
-            expect(deps).toContain('headless-commerce-mesh');
+            const optDeps = headless?.optionalDependencies as string[];
+            // Headless stacks have headless-commerce-mesh as optional dependency
+            expect(optDeps).toContain('headless-commerce-mesh');
+            // dependencies should be empty (mesh moved to optionalDependencies)
+            expect(headless?.dependencies).toEqual([]);
         });
 
         it('should have features array', () => {
@@ -89,12 +91,14 @@ describe('stacks.json', () => {
             expect(eds?.backend).toBe('adobe-commerce-accs');
         });
 
-        it('should include eds-accs-mesh dependency for Drop-ins integration', () => {
+        it('should include eds-accs-mesh in optionalDependencies', () => {
             const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;
             const eds = stacks.find(s => s.id === 'eds-accs');
-            const deps = eds?.dependencies as string[];
-            // EDS ACCS stacks use eds-accs-mesh (ACCS-specific passthrough GraphQL mesh)
-            expect(deps).toContain('eds-accs-mesh');
+            const optDeps = eds?.optionalDependencies as string[];
+            // EDS ACCS stacks have eds-accs-mesh as optional dependency
+            expect(optDeps).toContain('eds-accs-mesh');
+            // dependencies should be empty (mesh moved to optionalDependencies)
+            expect(eds?.dependencies).toEqual([]);
         });
 
         it('should require GitHub OAuth', () => {

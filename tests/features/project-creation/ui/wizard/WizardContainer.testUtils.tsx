@@ -32,7 +32,7 @@ export const createMockWizardSteps = () => [
     { id: 'prerequisites', name: 'Prerequisites', enabled: true },
     { id: 'settings', name: 'Settings', enabled: true },
     { id: 'review', name: 'Review', enabled: true },
-    { id: 'deploy-mesh', name: 'Deploy Mesh', enabled: true },
+    { id: 'create-project', name: 'Create Project', enabled: true },
 ];
 
 /**

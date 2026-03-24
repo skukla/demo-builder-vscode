@@ -13,6 +13,7 @@
  */
 
 import * as vscode from 'vscode';
+import { hasMeshInDependencies } from '@/core/constants';
 import { CleanupService } from '../services/cleanupService';
 import { ConfigurationService } from '../services/configurationService';
 import { createDaLiveTokenProvider, createDaLiveServiceTokenProvider } from '../services/daLiveContentOperations';
@@ -53,6 +54,8 @@ export interface StorefrontSetupStartPayload {
     componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
     /** Backend component ID for environment-aware config generation */
     backendComponentId?: string;
+    /** Effective component dependencies (stack deps + user-selected optional deps) */
+    dependencies?: string[];
     /** Selected addon IDs (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
     /** Selected block library IDs (e.g., ['isle5', 'demo-team-blocks']) */
@@ -257,31 +260,35 @@ export async function handleStartStorefrontSetup(
     const abortController = new AbortController();
     context.sharedState.storefrontSetupAbortController = abortController;
 
-    // Check if AuthenticationService is available
-    if (!context.authManager) {
-        context.logger.error('[Storefront Setup] AuthenticationService not available');
-        await context.sendMessage('storefront-setup-error', {
-            message: 'Authentication required',
-            error: 'Please authenticate with Adobe before starting storefront setup',
-        });
-        return { success: false, error: 'AuthenticationService not available' };
-    }
+    // Pre-flight: Check Adobe I/O authentication only when mesh is included
+    const needsMesh = hasMeshInDependencies(payload.dependencies ?? []);
+    if (needsMesh) {
+        if (!context.authManager) {
+            context.logger.error('[Storefront Setup] AuthenticationService not available');
+            await context.sendMessage('storefront-setup-error', {
+                message: 'Authentication required',
+                error: 'Please authenticate with Adobe before starting storefront setup',
+            });
+            return { success: false, error: 'AuthenticationService not available' };
+        }
 
-    // Pre-flight: Check Adobe I/O authentication (with inline re-auth)
-    const adobeResult = await ensureAdobeIOAuth({
-        authManager: context.authManager,
-        logger: context.logger,
-        logPrefix: '[Storefront Setup]',
-        warningMessage: 'Adobe sign-in required for storefront setup.',
-    });
-    if (!adobeResult.authenticated) {
-        await context.sendMessage('storefront-setup-error', {
-            message: 'Authentication required',
-            error: adobeResult.cancelled
-                ? 'Adobe sign-in was cancelled.'
-                : 'Adobe sign-in failed. Please try again.',
+        const adobeResult = await ensureAdobeIOAuth({
+            authManager: context.authManager,
+            logger: context.logger,
+            logPrefix: '[Storefront Setup]',
+            warningMessage: 'Adobe sign-in required for storefront setup.',
         });
-        return { success: false, error: 'Adobe authentication required' };
+        if (!adobeResult.authenticated) {
+            await context.sendMessage('storefront-setup-error', {
+                message: 'Authentication required',
+                error: adobeResult.cancelled
+                    ? 'Adobe sign-in was cancelled.'
+                    : 'Adobe sign-in failed. Please try again.',
+            });
+            return { success: false, error: 'Adobe authentication required' };
+        }
+    } else {
+        context.logger.info('[Storefront Setup] No mesh selected — skipping Adobe I/O auth check');
     }
 
     // Pre-flight: Check DA.live authentication (with inline re-auth)
@@ -348,11 +355,11 @@ export async function handleResumeStorefrontSetup(
 ): Promise<HandlerResponse> {
     context.logger.info('[Storefront Setup] Resume requested after GitHub App installation');
 
-    // Continue from code-sync phase
+    // Continue from code-sync phase (after GitHub App installation)
     await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
         message: 'Verifying code synchronization...',
-        progress: 40,
+        progress: 36,
     });
 
     return { success: true };

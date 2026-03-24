@@ -10,12 +10,14 @@
  *
  * Phases:
  * - idle: Initial state before operations start
- * - github-repo: Creating/fetching GitHub repository
- * - helix-config: Configuring Helix 5 fstab.yaml
+ * - repository: Creating/fetching GitHub repository
+ * - storefront-code: Installing blocks and configuring storefront code
  * - code-sync: Verifying code bus synchronization
+ * - site-config: Configuring site permissions and routing
  * - github-app: Waiting for GitHub App installation
- * - content-copy: Copying demo content to DA.live
- * - content-publish: Publishing content to CDN
+ * - content: Copying demo content to DA.live
+ * - block-library: Setting up block library in DA.live
+ * - publish: Publishing content to CDN
  * - completed: All operations successful
  * - error: Operation failed
  *
@@ -37,11 +39,13 @@ import type { WizardState } from '@/types/webview';
  * Progress ranges for each setup phase
  */
 const PROGRESS_RANGES = {
-    'github-repo': { start: 0, end: 15 },
-    'helix-config': { start: 15, end: 35 },
-    'code-sync': { start: 35, end: 45 },
-    'content-copy': { start: 45, end: 65 },
-    'content-publish': { start: 65, end: 95 },
+    'repository': { start: 0, end: 15 },
+    'storefront-code': { start: 15, end: 35 },
+    'code-sync': { start: 35, end: 42 },
+    'site-config': { start: 42, end: 49 },
+    'content': { start: 49, end: 58 },
+    'block-library': { start: 58, end: 65 },
+    'publish': { start: 65, end: 95 },
     'complete': 100,
 } as const;
 
@@ -50,12 +54,14 @@ const PROGRESS_RANGES = {
  */
 type StorefrontSetupPhase =
     | 'idle'
-    | 'github-repo'
-    | 'helix-config'
+    | 'repository'
+    | 'storefront-code'
     | 'code-sync'
+    | 'site-config'
     | 'github-app'
-    | 'content-copy'
-    | 'content-publish'
+    | 'content'
+    | 'block-library'
+    | 'publish'
     | 'cancelling'
     | 'completed'
     | 'error';
@@ -115,15 +121,19 @@ interface StorefrontSetupStepProps {
  */
 function getHelperText(phase: StorefrontSetupPhase): string | undefined {
     switch (phase) {
-        case 'github-repo':
+        case 'repository':
             return 'This may take up to 30 seconds';
-        case 'helix-config':
-            return 'This usually takes a few seconds';
+        case 'storefront-code':
+            return 'Installing blocks and configuring storefront';
         case 'code-sync':
             return 'Verifying Edge Delivery Services connection';
-        case 'content-copy':
+        case 'site-config':
+            return 'Configuring site permissions and routing';
+        case 'content':
             return 'This may take 1-2 minutes';
-        case 'content-publish':
+        case 'block-library':
+            return 'Setting up block library in DA.live';
+        case 'publish':
             return 'This may take 2-3 minutes';
         default:
             return undefined;
@@ -134,7 +144,7 @@ function getHelperText(phase: StorefrontSetupPhase): string | undefined {
  * Check if a phase is actively processing
  */
 function isActivePhase(phase: StorefrontSetupPhase): boolean {
-    return ['idle', 'github-repo', 'helix-config', 'code-sync', 'content-copy', 'content-publish', 'cancelling'].includes(phase);
+    return ['idle', 'repository', 'storefront-code', 'code-sync', 'site-config', 'content', 'block-library', 'publish', 'cancelling'].includes(phase);
 }
 
 /**
@@ -185,17 +195,17 @@ export function StorefrontSetupStep({
             // Update partial state based on phase transitions
             const newPartialState = { ...prev.partialState, phase: data.phase };
 
-            // Mark repo as created when moving past github-repo phase
-            if (data.phase !== 'idle' && data.phase !== 'github-repo' && data.repoUrl) {
+            // Mark repo as created when moving past repository phase
+            if (data.phase !== 'idle' && data.phase !== 'repository' && data.repoUrl) {
                 newPartialState.repoCreated = true;
                 newPartialState.repoUrl = data.repoUrl;
                 newPartialState.repoOwner = data.repoOwner;
                 newPartialState.repoName = data.repoName;
             }
 
-            // Mark content as copied when completing content-copy phase
+            // Mark content as copied when completing content phase
             if (data.phase === 'completed' ||
-                (prev.partialState.phase === 'content-copy' && data.phase !== 'content-copy')) {
+                (prev.partialState.phase === 'content' && data.phase !== 'content')) {
                 newPartialState.contentCopied = true;
             }
 
@@ -296,12 +306,13 @@ export function StorefrontSetupStep({
             edsConfig: state.edsConfig,
             componentConfigs: state.componentConfigs,
             backendComponentId: state.components?.backend,
+            dependencies: [...(state.components?.dependencies || []), ...(state.selectedOptionalDependencies || [])],
             selectedAddons: state.selectedAddons,
             selectedBlockLibraries: state.selectedBlockLibraries,
             customBlockLibraries: state.customBlockLibraries,
             selectedPackage: state.selectedPackage,
         });
-    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.selectedAddons, state.selectedBlockLibraries, state.customBlockLibraries, state.selectedPackage]);
+    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.components?.dependencies, state.selectedOptionalDependencies, state.selectedAddons, state.selectedBlockLibraries, state.customBlockLibraries, state.selectedPackage]);
 
     /**
      * Handle GitHub App installation detected
@@ -332,6 +343,7 @@ export function StorefrontSetupStep({
         edsConfig: state.edsConfig,
         componentConfigs: state.componentConfigs,
         backendComponentId: state.components?.backend,
+        dependencies: [...(state.components?.dependencies || []), ...(state.selectedOptionalDependencies || [])],
         selectedAddons: state.selectedAddons,
         selectedBlockLibraries: state.selectedBlockLibraries,
         customBlockLibraries: state.customBlockLibraries,
@@ -415,6 +427,7 @@ export function StorefrontSetupStep({
             edsConfig: initialConfigRef.current.edsConfig,
             componentConfigs: initialConfigRef.current.componentConfigs,
             backendComponentId: initialConfigRef.current.backendComponentId,
+            dependencies: initialConfigRef.current.dependencies,
             selectedAddons: initialConfigRef.current.selectedAddons,
             selectedBlockLibraries: initialConfigRef.current.selectedBlockLibraries,
             customBlockLibraries: initialConfigRef.current.customBlockLibraries,

@@ -309,7 +309,7 @@ export function WizardContainer({
                 return <ComponentConfigStep {...props} />;
             case 'review':
                 return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} packages={packages} stacks={stacks} />;
-            case 'deploy-mesh':
+            case 'create-project':
                 return <ProjectCreationStep state={state} updateState={updateState} onBack={goBack} importedSettings={importedSettings} packages={packages} />;
             default:
                 return null;
@@ -327,7 +327,7 @@ export function WizardContainer({
     }
 
     const currentStepIndex = getCurrentStepIndex();
-    const isLastStep = state.currentStep === 'deploy-mesh';
+    const isLastStep = state.currentStep === 'create-project';
     const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
     const currentStepDescription = WIZARD_STEPS[currentStepIndex]?.description;
 

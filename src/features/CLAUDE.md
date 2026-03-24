@@ -214,7 +214,7 @@ features/my-feature/
 **Purpose**: Project creation workflow, demo template selection, and environment setup
 
 **Key Services:**
-- Demo package loading and storefront resolution (`services/demoPackageLoader.ts`)
+- Demo package loading, storefront resolution, and mesh requirement resolution (`services/demoPackageLoader.ts`)
 - Custom block library URL parsing and validation (`services/customBlockLibraryUtils.ts`)
 - Project template application
 - Environment file generation

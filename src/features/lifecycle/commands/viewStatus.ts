@@ -36,7 +36,7 @@ export class ViewStatusCommand extends BaseCommand {
         // Use getMeshComponentInstance which finds by subType === 'mesh' (not hardcoded ID)
         const meshComponent = getMeshComponentInstance(project);
 
-        return [
+        const lines = [
             `**Project:** ${project.name}`,
             `**Template:** ${project.template}`,
             `**Status:** ${project.status}`,
@@ -45,15 +45,26 @@ export class ViewStatusCommand extends BaseCommand {
             `- **Status:** ${frontendComponent?.status || 'Not configured'}`,
             `- **Port:** ${frontendComponent?.port || 'N/A'}`,
             `- **Version:** ${frontendComponent?.version || 'N/A'}`,
-            '',
-            '### API Mesh',
-            `- **Status:** ${meshComponent?.status || 'Not deployed'}`,
-            `- **Endpoint:** ${getMeshEndpointUrl(project) || 'N/A'}`,
+        ];
+
+        // Only show API Mesh section when project has a mesh component
+        if (meshComponent) {
+            lines.push(
+                '',
+                '### API Mesh',
+                `- **Status:** ${meshComponent.status || 'Not deployed'}`,
+                `- **Endpoint:** ${getMeshEndpointUrl(project) || 'N/A'}`,
+            );
+        }
+
+        lines.push(
             '',
             '### Commerce',
             `- **Type:** ${project.commerce?.type || 'Not configured'}`,
             `- **URL:** ${project.commerce?.instance.url || 'N/A'}`,
-        ].join('\n');
+        );
+
+        return lines.join('\n');
     }
 
     private logProjectStatus(project: Project): void {

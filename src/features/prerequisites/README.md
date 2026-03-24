@@ -49,7 +49,7 @@ await prereqManager.loadConfig();
 const prereqs = await prereqManager.getRequiredPrerequisites({
     frontend: 'citisignal-nextjs',
     backend: 'commerce-cloud',
-    dependencies: ['commerce-mesh']
+    dependencies: ['commerce-mesh']  // Optional: mesh may not be included if stack has no mesh dependency
 });
 
 // Check each prerequisite
