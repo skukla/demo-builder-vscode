@@ -486,12 +486,12 @@
             "label": "Product Images from AEM Assets",
             "type": "select",
             "required": false,
-            "default": "false",
+            "default": "true",
             "options": [
                 { "value": "false", "label": "Disabled" },
                 { "value": "true", "label": "Enabled" }
             ],
-            "description": "When enabled, product images load from AEM Assets instead of the Commerce catalog. Requires your Commerce backend to have AEM Assets integration configured.",
+            "description": "When enabled, product images load from AEM Assets instead of the Commerce catalog. Disable if your Commerce backend does not have AEM Assets integration configured.",
             "group": "adobe-assets"
         },
         "ADOBE_CATALOG_API_KEY": {
