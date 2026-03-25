@@ -463,8 +463,7 @@
             "label": "Customer Group",
             "type": "text",
             "required": false,
-            "default": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
-            "description": "Customer group hash for pricing. Default is 'Not Logged In' group",
+            "description": "Customer group hash for Catalog Service pricing. Leave blank for default behavior (storefront handles automatically)",
             "group": "accs"
         },
         "MESH_ENDPOINT": {
@@ -569,8 +568,7 @@
             "label": "Customer Group ID",
             "type": "text",
             "required": false,
-            "default": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
-            "description": "Leave as default for 'Not Logged In' group, or customize for specific pricing rules",
+            "description": "Customer group hash for Catalog Service pricing. Leave blank for default behavior (storefront handles automatically)",
             "group": "adobe-commerce"
         },
         "ADOBE_COMMERCE_ENVIRONMENT_ID": {
