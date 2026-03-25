@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.108] - 2026-03-25
+
+### Changed
+- **AEM Assets Enabled by Default**: EDS storefronts now default to AEM Assets enabled (`commerce-assets-enabled: true`). All demo backends have AEM Assets integration configured; users can disable in Configure if needed.
+- **Customer Group Field**: Removed auto-populated default hash from `ACCS_CUSTOMER_GROUP` and `ADOBE_COMMERCE_CUSTOMER_GROUP`. The storefront auth dropin handles customer group headers automatically at runtime. Field remains optional for B2B Shared Catalog edge cases.
+
+### Added
+- **Multi-Site Research Documentation**: Comprehensive design research for multi-site storefront feature including repoless architecture, Commerce store structure discovery, per-site configuration, and content data management (`docs/research/`).
+
 ## [1.0.0-beta.107] - 2026-03-24
 
 ### Added
