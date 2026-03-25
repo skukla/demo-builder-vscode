@@ -24,10 +24,11 @@ export interface StepCondition {
     stackRequiresAny?: Array<'requiresGitHub' | 'requiresDaLive'>;
 
     /**
-     * If true, this step is only shown when an API Mesh component is included
-     * in the project (either required by package or selected by user).
+     * If true, this step is only shown when Adobe I/O credentials are needed.
+     * This includes: API Mesh is included, OR ACCS backend is selected
+     * (ACCS store discovery requires IMS token from Adobe I/O auth).
      */
-    requiresMesh?: boolean;
+    requiresAdobeIO?: boolean;
 
     /**
      * If true, this step is only shown when NO predefined stack is selected.
@@ -72,8 +73,8 @@ export interface WizardStepWithCondition {
 export interface FilterOptions {
     /** Whether the wizard is in edit mode (editing existing project) */
     isEditMode?: boolean;
-    /** Whether the project includes an API Mesh component */
-    hasMesh?: boolean;
+    /** Whether the project requires Adobe I/O credentials (mesh included OR ACCS backend) */
+    hasAdobeIO?: boolean;
 }
 
 /**
@@ -127,10 +128,10 @@ export function filterStepsForStack(
             return true;
         }
 
-        const { stackRequires, stackRequiresAny, showWhenNoStack, requiresMesh } = step.condition;
+        const { stackRequires, stackRequiresAny, showWhenNoStack, requiresAdobeIO } = step.condition;
 
-        // Steps that require mesh are hidden when no mesh is included
-        if (requiresMesh && !options.hasMesh) {
+        // Steps that require Adobe I/O are hidden when no Adobe I/O credentials are needed
+        if (requiresAdobeIO && !options.hasAdobeIO) {
             return false;
         }
 

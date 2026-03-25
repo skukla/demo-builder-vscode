@@ -28,7 +28,7 @@
       "description": "Authenticate with Adobe to deploy your API Mesh and access Adobe services.",
       "enabled": true,
       "condition": {
-        "requiresMesh": true
+        "requiresAdobeIO": true
       }
     },
     {
@@ -37,7 +37,7 @@
       "description": "Select the Adobe I/O project for your demo.",
       "enabled": true,
       "condition": {
-        "requiresMesh": true
+        "requiresAdobeIO": true
       }
     },
     {
@@ -46,7 +46,7 @@
       "description": "Select the workspace within your project.",
       "enabled": true,
       "condition": {
-        "requiresMesh": true
+        "requiresAdobeIO": true
       }
     },
     {

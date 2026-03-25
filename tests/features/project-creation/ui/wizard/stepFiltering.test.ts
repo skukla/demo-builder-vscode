@@ -275,6 +275,42 @@ describe('stepFiltering', () => {
             expect(stepIds).toContain('connect-services');
         });
 
+        it('should show requiresAdobeIO step when hasAdobeIO is true', () => {
+            const stepsWithAdobeIO: WizardStepWithCondition[] = [
+                { id: 'welcome', name: 'Welcome' },
+                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeIO: true } },
+                { id: 'review', name: 'Review' },
+            ];
+
+            const result = filterStepsForStack(stepsWithAdobeIO, edgeDeliveryStack, { hasAdobeIO: true });
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).toContain('adobe-auth');
+        });
+
+        it('should hide requiresAdobeIO step when hasAdobeIO is false', () => {
+            const stepsWithAdobeIO: WizardStepWithCondition[] = [
+                { id: 'welcome', name: 'Welcome' },
+                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeIO: true } },
+                { id: 'review', name: 'Review' },
+            ];
+
+            const result = filterStepsForStack(stepsWithAdobeIO, headlessStack, { hasAdobeIO: false });
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).not.toContain('adobe-auth');
+        });
+
+        it('should hide requiresAdobeIO step when hasAdobeIO is not provided', () => {
+            const stepsWithAdobeIO: WizardStepWithCondition[] = [
+                { id: 'welcome', name: 'Welcome' },
+                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeIO: true } },
+                { id: 'review', name: 'Review' },
+            ];
+
+            const result = filterStepsForStack(stepsWithAdobeIO, headlessStack);
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).not.toContain('adobe-auth');
+        });
+
         it('should exclude step when stackRequiresAny has no matching properties', () => {
             // Given: A step with stackRequiresAny condition
             const stepsWithRequiresAny: WizardStepWithCondition[] = [
