@@ -53,6 +53,8 @@ export interface AdobeEntityFetcherConfig {
  */
 export class AdobeEntityFetcher {
     private debugLogger = getLogger();
+    /** Cached credential from createWorkspaceCredential — avoids re-query issues */
+    private cachedCredential: WorkspaceCredential | undefined;
 
     constructor(
         private commandManager: CommandExecutor,
@@ -355,6 +357,12 @@ export class AdobeEntityFetcher {
      * Uses SDK only (no CLI fallback) — requires org, project, and workspace IDs.
      */
     async getWorkspaceCredential(): Promise<WorkspaceCredential | undefined> {
+        // Check in-memory cache first (populated by createWorkspaceCredential)
+        if (this.cachedCredential) {
+            this.debugLogger.debug(`[Entity Fetcher] Using cached credential: ${this.cachedCredential.name || 'unnamed'}`);
+            return this.cachedCredential;
+        }
+
         try {
             await this.ensureSDKReady();
 
@@ -389,32 +397,28 @@ export class AdobeEntityFetcher {
                 return undefined;
             }
 
-            // Log all credentials for debugging
+            // Log credentials for debugging
             this.debugLogger.debug(`[Entity Fetcher] Workspace has ${credentials.length} credential(s):`);
             for (const c of credentials) {
-                const apiKeyStatus = c.apiKey ? 'present' : 'absent';
-                const oauthStatus = c.oauth_server_to_server ? 'present' : 'absent';
-                this.debugLogger.debug(`  - ${c.name || 'unnamed'}: integration_type=${c.integration_type}, apiKey=${apiKeyStatus}, oauth_s2s=${oauthStatus}`);
+                const hasClientId = c.client_id ? 'present' : 'absent';
+                this.debugLogger.debug(`  - ${c.integration_name || 'unnamed'}: flow_type=${c.flow_type}, integration_type=${c.integration_type}, client_id=${hasClientId}`);
             }
 
-            // Resolve client_id: prefer OAuth S2S > top-level apiKey > JWT > OAuth2
-            for (const cred of credentials) {
-                if (cred.oauth_server_to_server?.client_id) {
-                    this.debugLogger.debug(`[Entity Fetcher] Using OAuth S2S client_id from: ${cred.name || 'unnamed'}`);
-                    return { clientId: cred.oauth_server_to_server.client_id, name: cred.name, source: 'oauth_server_to_server' };
-                }
+            // Resolve client_id: prefer OAuth S2S (integration_type), fall back to any with client_id
+            // Note: OAuth S2S credentials have integration_type='oauth_server_to_server' and flow_type='entp'
+            const oauthS2S = credentials.find(
+                (c: RawWorkspaceCredential) => c.client_id && c.integration_type === 'oauth_server_to_server',
+            );
+            if (oauthS2S?.client_id) {
+                this.debugLogger.debug(`[Entity Fetcher] Using OAuth S2S credential: ${oauthS2S.integration_name || 'unnamed'}`);
+                return { clientId: oauthS2S.client_id, name: oauthS2S.integration_name, source: 'oauth_server_to_server' };
             }
-            for (const cred of credentials) {
-                if (cred.apiKey) {
-                    this.debugLogger.debug(`[Entity Fetcher] Using top-level apiKey from: ${cred.name || 'unnamed'}`);
-                    return { clientId: cred.apiKey, name: cred.name, source: 'apiKey' };
-                }
-            }
-            for (const cred of credentials) {
-                if (cred.jwt?.client_id) {
-                    this.debugLogger.debug(`[Entity Fetcher] Using JWT client_id from: ${cred.name || 'unnamed'}`);
-                    return { clientId: cred.jwt.client_id, name: cred.name, source: 'jwt' };
-                }
+
+            // Fall back to any credential with a client_id
+            const anyCred = credentials.find((c: RawWorkspaceCredential) => !!c.client_id);
+            if (anyCred?.client_id) {
+                this.debugLogger.debug(`[Entity Fetcher] Using ${anyCred.integration_type || 'unknown'} credential: ${anyCred.integration_name || 'unnamed'}`);
+                return { clientId: anyCred.client_id, name: anyCred.integration_name, source: 'apiKey' };
             }
 
             this.debugLogger.debug('[Entity Fetcher] No credential with client_id found in workspace');
@@ -487,12 +491,25 @@ export class AdobeEntityFetcher {
 
             this.debugLogger.info(`[Entity Fetcher] OAuth S2S credential created successfully`);
 
-            return {
+            const credential: WorkspaceCredential = {
                 clientId: apiKey,
                 name,
                 source: 'oauth_server_to_server',
             };
+
+            // Cache for immediate use by getWorkspaceCredential (avoids re-query format issues)
+            this.cachedCredential = credential;
+
+            return credential;
         } catch (error) {
+            const errorMessage = (error as Error).message || '';
+
+            // 409 Conflict = credential already exists — fetch and return it
+            if (errorMessage.includes('409') || errorMessage.includes('Conflict')) {
+                this.debugLogger.info('[Entity Fetcher] Credential already exists, fetching existing one');
+                return this.getWorkspaceCredential();
+            }
+
             this.debugLogger.error('[Entity Fetcher] Failed to create workspace credential', error as Error);
             return undefined;
         }

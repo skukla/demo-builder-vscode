@@ -48,6 +48,9 @@ describe('SOP: Inline Styles', () => {
 
         // Modal/dialog layout stability
         'GitHubRepoSelectionStep.tsx': 'Fixed height container prevents modal resize during status recheck',
+
+        // Store discovery button alignment
+        'ComponentConfigStep.tsx': 'Flex layout for Auto-Detect button aligned with field input, paddingBottom for description text offset',
     };
 
     /**

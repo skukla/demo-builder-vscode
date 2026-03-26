@@ -4,7 +4,7 @@ import {
     Form,
     Heading,
     Divider,
-    ActionButton,
+    Button,
     ProgressCircle,
 } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo } from 'react';
@@ -192,50 +192,62 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                             <Flex direction="column" marginBottom="size-100">
                                 {group.fields.map(field => (
                                     <React.Fragment key={field.key}>
-                                        {/* Auto-Detect button — inline with website code field */}
-                                        {isStoreGroup(group.id) && isWebsiteCodeField(field.key) && (
-                                            <Flex direction="column" marginBottom="size-100">
-                                                <Flex alignItems="center" gap="size-200">
-                                                    <ActionButton
-                                                        isQuiet
-                                                        onPress={() => handleFetchStores(group.id)}
-                                                        isDisabled={isFetching || isCreatingCredential || !canFetchStores(group.id)}
-                                                    >
-                                                        {isFetching && <ProgressCircle isIndeterminate size="S" aria-label="Detecting store structure" />}
-                                                        <Text>{isFetching ? 'Detecting...' : 'Auto-Detect'}</Text>
-                                                    </ActionButton>
-                                                    {fetchStatusText && !fetchError && (
-                                                        <Text UNSAFE_className="text-green-700">{fetchStatusText}</Text>
-                                                    )}
+                                        {isStoreGroup(group.id) && isWebsiteCodeField(field.key) ? (
+                                            /* Website code field with Auto-Detect button alongside */
+                                            <div>
+                                                <Flex alignItems="end" gap="size-150">
+                                                    <div style={{ flex: 1 }}>
+                                                        <ConfigFieldRenderer
+                                                            field={enhanceField(field)}
+                                                            value={getFieldValue(field)}
+                                                            error={validationErrors[field.key]}
+                                                            isTouched={touchedFields.has(field.key)}
+                                                            onUpdate={updateField}
+                                                            onNormalizeUrl={normalizeUrlField}
+                                                        />
+                                                    </div>
+                                                    <div style={{ paddingBottom: 'var(--spectrum-global-dimension-size-200)' }}>
+                                                        <Button
+                                                            variant="secondary"
+                                                            onPress={() => handleFetchStores(group.id)}
+                                                            isDisabled={isFetching || isCreatingCredential || !canFetchStores(group.id)}
+                                                        >
+                                                            {isFetching && <ProgressCircle isIndeterminate size="S" aria-label="Detecting store structure" />}
+                                                            {isFetching ? 'Detecting...' : 'Auto-Detect'}
+                                                        </Button>
+                                                    </div>
                                                 </Flex>
-                                                {/* Credential missing prompt */}
+                                                {/* Status messages below the field row */}
                                                 {credentialMissing && (
-                                                    <Flex alignItems="center" gap="size-100" marginTop="size-100">
+                                                    <Flex alignItems="center" gap="size-100" marginBottom="size-200">
                                                         <Text UNSAFE_className="text-yellow-700">No OAuth credential found.</Text>
-                                                        <ActionButton
-                                                            isQuiet
+                                                        <Button
+                                                            variant="secondary"
                                                             onPress={createCredential}
                                                             isDisabled={isCreatingCredential}
                                                         >
                                                             {isCreatingCredential && <ProgressCircle isIndeterminate size="S" aria-label="Creating credential" />}
-                                                            <Text>{isCreatingCredential ? 'Creating...' : 'Create Credential'}</Text>
-                                                        </ActionButton>
+                                                            {isCreatingCredential ? 'Creating...' : 'Create Credential'}
+                                                        </Button>
                                                     </Flex>
                                                 )}
-                                                {/* Error (non-credential) */}
                                                 {fetchError && !credentialMissing && (
-                                                    <Text UNSAFE_className="text-red-700" marginTop="size-100">{fetchError}</Text>
+                                                    <Text UNSAFE_className="text-red-700" marginBottom="size-200">{fetchError}</Text>
                                                 )}
-                                            </Flex>
+                                                {fetchStatusText && !fetchError && (
+                                                    <Text UNSAFE_className="text-green-700" marginBottom="size-200">{fetchStatusText}</Text>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <ConfigFieldRenderer
+                                                field={enhanceField(field)}
+                                                value={getFieldValue(field)}
+                                                error={validationErrors[field.key]}
+                                                isTouched={touchedFields.has(field.key)}
+                                                onUpdate={updateField}
+                                                onNormalizeUrl={normalizeUrlField}
+                                            />
                                         )}
-                                        <ConfigFieldRenderer
-                                            field={enhanceField(field)}
-                                            value={getFieldValue(field)}
-                                            error={validationErrors[field.key]}
-                                            isTouched={touchedFields.has(field.key)}
-                                            onUpdate={updateField}
-                                            onNormalizeUrl={normalizeUrlField}
-                                        />
                                     </React.Fragment>
                                 ))}
                             </Flex>

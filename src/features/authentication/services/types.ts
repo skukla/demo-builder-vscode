@@ -75,19 +75,30 @@ export interface SDKResponse<T = unknown> {
  * and typed sub-objects (`jwt`, `oauth_server_to_server`, `oauth2`)
  * that contain credential-specific details including their own `client_id`.
  */
+/**
+ * Raw credential from Adobe Console SDK getCredentials() response.
+ *
+ * Actual response fields (verified via logging):
+ * - `client_id` — the API key / client ID (top-level, always present)
+ * - `flow_type` — e.g. 'adobeid', 'oauth_server_to_server'
+ * - `integration_type` — e.g. 'apikey', 'oauth_server_to_server'
+ * - `id_integration` — integration ID
+ * - `integration_name` — credential name
+ *
+ * Note: The API spec documents `apiKey` and sub-objects (`oauth_server_to_server`,
+ * `jwt`, `oauth2`) but the actual SDK response uses flat `client_id` + `flow_type`.
+ */
 export interface RawWorkspaceCredential {
-    id: string;
-    name?: string;
-    /** Top-level client ID / API key */
-    apiKey?: string;
-    /** Credential type: 'service', 'oauthweb', 'oauthandroid', 'oauthios' */
+    /** Client ID / API key — always present on credentials */
+    client_id?: string;
+    /** Flow type: 'adobeid', 'oauth_server_to_server', etc. */
+    flow_type?: string;
+    /** Integration type: 'apikey', 'oauth_server_to_server', etc. */
     integration_type?: string;
-    /** OAuth Server-to-Server credential details (if this type) */
-    oauth_server_to_server?: { client_id?: string; scopes?: string[] };
-    /** JWT credential details (if this type) */
-    jwt?: { client_id?: string };
-    /** OAuth2 credential details (if this type) */
-    oauth2?: { client_id?: string };
+    /** Integration ID */
+    id_integration?: string;
+    /** Credential name */
+    integration_name?: string;
 }
 
 /**
