@@ -51,6 +51,7 @@ describe('edsHandlers', () => {
             // When: Checking for ACCS message types
             // Then: ACCS handlers present
             expect(hasHandler(edsHandlers, 'validate-accs-credentials')).toBe(true);
+            expect(hasHandler(edsHandlers, 'discover-store-structure')).toBe(true);
         });
 
         it('should include storefront setup handlers', () => {
@@ -62,13 +63,13 @@ describe('edsHandlers', () => {
             expect(hasHandler(edsHandlers, 'storefront-setup-resume')).toBe(true);
         });
 
-        it('should have exactly 18 handlers', () => {
+        it('should have exactly 19 handlers', () => {
             // Given: edsHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(edsHandlers);
 
-            // Then: Exactly 18 handlers (6 GitHub + 8 DA.live + 1 ACCS + 3 Storefront Setup)
-            expect(types).toHaveLength(18);
+            // Then: Exactly 19 handlers (6 GitHub + 8 DA.live + 2 ACCS/Store + 3 Storefront Setup)
+            expect(types).toHaveLength(19);
         });
 
         it('should have handlers as functions', () => {

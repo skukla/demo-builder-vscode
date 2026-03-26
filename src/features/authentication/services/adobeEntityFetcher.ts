@@ -27,7 +27,9 @@ import type {
     RawAdobeOrg,
     RawAdobeProject,
     RawAdobeWorkspace,
+    RawWorkspaceCredential,
     SDKResponse,
+    WorkspaceCredential,
 } from './types';
 import { getLogger, StepLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
@@ -341,6 +343,73 @@ export class AdobeEntityFetcher {
         } catch (error) {
             this.debugLogger.error('[Entity Fetcher] Failed to get workspaces', error as Error);
             throw error;
+        }
+    }
+
+    /**
+     * Get OAuth S2S credential for the current workspace.
+     *
+     * Returns the first OAuth Server-to-Server credential's client_id,
+     * which is used as the x-api-key header for ACCS REST API calls.
+     *
+     * Uses SDK only (no CLI fallback) — requires org, project, and workspace IDs.
+     */
+    async getWorkspaceCredential(): Promise<WorkspaceCredential | undefined> {
+        try {
+            await this.ensureSDKReady();
+
+            const cachedOrg = this.cacheManager.getCachedOrganization();
+            const cachedProject = this.cacheManager.getCachedProject();
+            const cachedWorkspace = this.cacheManager.getCachedWorkspace();
+
+            const orgId = cachedOrg?.id;
+            const projectId = cachedProject?.id;
+            const workspaceId = cachedWorkspace?.id;
+
+            if (!orgId || !projectId || !workspaceId) {
+                this.debugLogger.debug('[Entity Fetcher] Cannot fetch credentials: missing org/project/workspace ID');
+                return undefined;
+            }
+
+            if (!this.sdkClient.isInitialized()) {
+                this.debugLogger.debug('[Entity Fetcher] SDK not available for credential fetch');
+                return undefined;
+            }
+
+            const client = this.sdkClient.getClient() as {
+                getCredentials: (orgId: string, projectId: string, workspaceId: string) =>
+                    Promise<SDKResponse<RawWorkspaceCredential[]>>;
+            };
+
+            const response = await client.getCredentials(orgId, projectId, workspaceId);
+            const credentials = response?.body;
+
+            if (!credentials || !Array.isArray(credentials)) {
+                this.debugLogger.debug('[Entity Fetcher] No credentials returned from SDK');
+                return undefined;
+            }
+
+            // Find the OAuth S2S credential (preferred for ACCS)
+            const oauthCred = credentials.find(
+                (c: RawWorkspaceCredential) =>
+                    c.flow_type === 'oauth_server_to_server' && c.client_id,
+            );
+
+            if (!oauthCred?.client_id) {
+                this.debugLogger.debug('[Entity Fetcher] No OAuth S2S credential found in workspace');
+                return undefined;
+            }
+
+            this.debugLogger.debug(`[Entity Fetcher] Found OAuth S2S credential: ${oauthCred.name || 'unnamed'}`);
+
+            return {
+                clientId: oauthCred.client_id,
+                name: oauthCred.name,
+                flowType: oauthCred.flow_type,
+            };
+        } catch (error) {
+            this.debugLogger.error('[Entity Fetcher] Failed to get workspace credentials', error as Error);
+            return undefined;
         }
     }
 }

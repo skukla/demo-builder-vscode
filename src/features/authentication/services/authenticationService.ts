@@ -10,7 +10,7 @@ import { AuthenticationErrorFormatter } from '@/features/authentication/services
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import { withTiming } from '@/features/authentication/services/performanceTracker';
 import { TokenManager } from '@/features/authentication/services/tokenManager';
-import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation } from '@/features/authentication/services/types';
+import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation, WorkspaceCredential } from '@/features/authentication/services/types';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -393,6 +393,16 @@ export class AuthenticationService {
             const { fetcher } = await this.ensureEntities();
             return fetcher.getWorkspaces();
         });
+    }
+
+    /**
+     * Get OAuth S2S credential for the current workspace.
+     * Returns the client_id needed for ACCS REST API x-api-key header.
+     * Returns undefined if credentials are unavailable (SDK not ready, no workspace selected, etc.)
+     */
+    async getWorkspaceCredential(): Promise<WorkspaceCredential | undefined> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.getWorkspaceCredential();
     }
 
     /**

@@ -128,6 +128,7 @@ export {
     handleStoreDaLiveToken,
     handleVerifyDaLiveOrg,
     handleValidateAccsCredentials,
+    handleDiscoverStoreStructure,
 } from './handlers';
 
 // Types - GitHub

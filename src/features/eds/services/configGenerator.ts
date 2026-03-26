@@ -22,6 +22,13 @@
 import configTemplate from '../config/config-template.json';
 import componentsConfig from '@/features/components/config/components.json';
 import { isMeshComponentId } from '@/core/constants';
+import {
+    PAAS_GRAPHQL_ENDPOINT, PAAS_ENVIRONMENT_ID, PAAS_STORE_VIEW_CODE,
+    PAAS_STORE_CODE, PAAS_WEBSITE_CODE, PAAS_CUSTOMER_GROUP,
+    PAAS_CATALOG_SERVICE_ENDPOINT, CATALOG_API_KEY,
+    ACCS_GRAPHQL_ENDPOINT, ACCS_STORE_VIEW_CODE, ACCS_STORE_CODE,
+    ACCS_WEBSITE_CODE, ACCS_CUSTOMER_GROUP,
+} from '@/features/components/config/envVarKeys';
 import { getFeaturePackConfigFlags } from '@/features/project-creation/services/featurePackLoader';
 import type { Logger , Project } from '@/types';
 
@@ -251,19 +258,19 @@ export function extractConfigParamsFromConfigs(
     const isAccs = environmentType === 'accs';
 
     // Commerce endpoint: deployed mesh > merged config
-    const endpointKey = isAccs ? 'ACCS_GRAPHQL_ENDPOINT' : 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT';
+    const endpointKey = isAccs ? ACCS_GRAPHQL_ENDPOINT : PAAS_GRAPHQL_ENDPOINT;
     const commerceEndpoint = meshEndpoint || config[endpointKey];
 
     return {
         environmentType,
         commerceEndpoint: commerceEndpoint as string | undefined,
-        catalogServiceEndpoint: isAccs ? undefined : config.PAAS_CATALOG_SERVICE_ENDPOINT as string | undefined,
-        commerceApiKey: isAccs ? undefined : config.ADOBE_CATALOG_API_KEY as string | undefined,
-        commerceEnvironmentId: isAccs ? undefined : config.ADOBE_COMMERCE_ENVIRONMENT_ID as string | undefined,
-        storeViewCode: config[isAccs ? 'ACCS_STORE_VIEW_CODE' : 'ADOBE_COMMERCE_STORE_VIEW_CODE'] as string | undefined,
-        storeCode: config[isAccs ? 'ACCS_STORE_CODE' : 'ADOBE_COMMERCE_STORE_CODE'] as string | undefined,
-        websiteCode: config[isAccs ? 'ACCS_WEBSITE_CODE' : 'ADOBE_COMMERCE_WEBSITE_CODE'] as string | undefined,
-        customerGroup: config[isAccs ? 'ACCS_CUSTOMER_GROUP' : 'ADOBE_COMMERCE_CUSTOMER_GROUP'] as string | undefined,
+        catalogServiceEndpoint: isAccs ? undefined : config[PAAS_CATALOG_SERVICE_ENDPOINT] as string | undefined,
+        commerceApiKey: isAccs ? undefined : config[CATALOG_API_KEY] as string | undefined,
+        commerceEnvironmentId: isAccs ? undefined : config[PAAS_ENVIRONMENT_ID] as string | undefined,
+        storeViewCode: config[isAccs ? ACCS_STORE_VIEW_CODE : PAAS_STORE_VIEW_CODE] as string | undefined,
+        storeCode: config[isAccs ? ACCS_STORE_CODE : PAAS_STORE_CODE] as string | undefined,
+        websiteCode: config[isAccs ? ACCS_WEBSITE_CODE : PAAS_WEBSITE_CODE] as string | undefined,
+        customerGroup: config[isAccs ? ACCS_CUSTOMER_GROUP : PAAS_CUSTOMER_GROUP] as string | undefined,
         aemAssetsEnabled: config.AEM_ASSETS_ENABLED === 'true',
     };
 }

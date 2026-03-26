@@ -25,3 +25,21 @@ export function deriveGraphqlEndpoint(commerceUrl: string): string {
     const baseUrl = commerceUrl.replace(/\/+$/, '');
     return `${baseUrl}/graphql`;
 }
+
+/**
+ * Look up a config value by key across all component configs.
+ *
+ * Searches each component's config map for the given key, returning
+ * the first non-empty string value found. Returns undefined if the
+ * key is absent or empty in all components.
+ */
+export function lookupComponentConfigValue(
+    configs: Record<string, Record<string, string | boolean | number | undefined>>,
+    key: string,
+): string | undefined {
+    for (const componentId of Object.keys(configs)) {
+        const val = configs[componentId]?.[key];
+        if (val !== undefined && val !== '') return String(val);
+    }
+    return undefined;
+}

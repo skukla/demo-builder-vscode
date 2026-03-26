@@ -8,6 +8,7 @@ import { formatGroupName } from './formatters';
 import { generateConfigFile } from '@/core/config/configFileGenerator';
 import { COMPONENT_IDS } from '@/core/constants';
 import { normalizeIfUrl } from '@/core/validation/Validator';
+import { PAAS_CATALOG_SERVICE_ENDPOINT, CATALOG_SERVICE_ENDPOINT, ACCS_CATALOG_SERVICE_ENDPOINT } from '@/features/components/config/envVarKeys';
 import { generateConfigJson, extractConfigParamsFromConfigs, type ConfigGeneratorParams } from '@/features/eds/services/configGenerator';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import { TransformedComponentDefinition, EnvVarDefinition, ConfigFileDefinition, ComponentRegistry } from '@/types/components';
@@ -339,12 +340,12 @@ async function generateSingleConfigFile(
     // Compute derived values FIRST (before processing keys)
     const derivedValues = new Map<string, string>();
     
-    // Derive ADOBE_CATALOG_SERVICE_ENDPOINT from backend-specific source
-    const paasEndpoint = getConfigValue('PAAS_CATALOG_SERVICE_ENDPOINT');
-    const accsEndpoint = getConfigValue('ACCS_CATALOG_SERVICE_ENDPOINT');
+    // Derive CATALOG_SERVICE_ENDPOINT from backend-specific source
+    const paasEndpoint = getConfigValue(PAAS_CATALOG_SERVICE_ENDPOINT);
+    const accsEndpoint = getConfigValue(ACCS_CATALOG_SERVICE_ENDPOINT);
     if (paasEndpoint || accsEndpoint) {
         const derivedEndpoint = paasEndpoint || accsEndpoint;
-        derivedValues.set('ADOBE_CATALOG_SERVICE_ENDPOINT', derivedEndpoint ?? '');
+        derivedValues.set(CATALOG_SERVICE_ENDPOINT, derivedEndpoint ?? '');
         context.logger.debug(`[Config Generator] Computed ADOBE_CATALOG_SERVICE_ENDPOINT from ${paasEndpoint ? 'PAAS' : 'ACCS'}_CATALOG_SERVICE_ENDPOINT: ${derivedEndpoint}`);
     }
     

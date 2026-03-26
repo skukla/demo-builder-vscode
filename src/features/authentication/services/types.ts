@@ -68,6 +68,31 @@ export interface SDKResponse<T = unknown> {
     statusCode?: number;
 }
 
+/**
+ * Raw credential from Adobe Console SDK getCredentials() response.
+ * Each workspace may have multiple credentials (OAuth S2S, API Key, etc.)
+ */
+export interface RawWorkspaceCredential {
+    id_integration: string;
+    flow_type: string;
+    integration_type: string;
+    client_id?: string;
+    name?: string;
+}
+
+/**
+ * Mapped workspace credential — contains the OAuth S2S client_id
+ * needed for ACCS REST API x-api-key header.
+ */
+export interface WorkspaceCredential {
+    /** OAuth S2S client_id (used as x-api-key for ACCS) */
+    clientId: string;
+    /** Credential name from Adobe Console */
+    name?: string;
+    /** Integration type (e.g., 'oauth_server_to_server') */
+    flowType: string;
+}
+
 export interface AdobeCLIError extends Error {
     code?: string;
     stdout?: string;

@@ -91,6 +91,9 @@ export const projectCreationHandlers = defineHandlers({
     // EDS handlers - ACCS
     'validate-accs-credentials': eds.handleValidateAccsCredentials,
 
+    // EDS handlers - Store Discovery
+    'discover-store-structure': eds.handleDiscoverStoreStructure,
+
     // EDS handlers - Storefront Setup (renamed from Preflight)
     'storefront-setup-start': eds.handleStartStorefrontSetup,
     'storefront-setup-cancel': eds.handleCancelStorefrontSetup,

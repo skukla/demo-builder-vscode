@@ -5,6 +5,8 @@
  * to named functions for improved readability and testability.
  */
 
+import * as K from '../config/envVarKeys';
+
 /**
  * Service group definition interface
  */
@@ -70,9 +72,9 @@ export interface ServiceGroupResult<T> {
  * `.filter(group => group.fields.length > 0)` in both consumers.
  */
 export const SERVICE_GROUP_DEFINITIONS: ServiceGroupDef[] = [
-    { id: 'accs', label: 'Adobe Commerce Cloud Service', order: 1, fieldOrder: ['ACCS_GRAPHQL_ENDPOINT', 'ACCS_WEBSITE_CODE', 'ACCS_STORE_CODE', 'ACCS_STORE_VIEW_CODE', 'ACCS_CUSTOMER_GROUP'] },
-    { id: 'adobe-commerce', label: 'Adobe Commerce', order: 2, fieldOrder: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT', 'ADOBE_COMMERCE_WEBSITE_CODE', 'ADOBE_COMMERCE_STORE_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE', 'ADOBE_COMMERCE_CUSTOMER_GROUP', 'ADOBE_COMMERCE_ADMIN_USERNAME', 'ADOBE_COMMERCE_ADMIN_PASSWORD'] },
-    { id: 'catalog-service', label: 'Catalog Service', order: 3, fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_API_KEY'] },
+    { id: 'accs', label: 'Adobe Commerce Cloud Service', order: 1, fieldOrder: [K.ACCS_GRAPHQL_ENDPOINT, K.ACCS_WEBSITE_CODE, K.ACCS_STORE_CODE, K.ACCS_STORE_VIEW_CODE, K.ACCS_CUSTOMER_GROUP] },
+    { id: 'adobe-commerce', label: 'Adobe Commerce', order: 2, fieldOrder: [K.PAAS_URL, K.PAAS_GRAPHQL_ENDPOINT, K.PAAS_ADMIN_USERNAME, K.PAAS_ADMIN_PASSWORD, K.PAAS_WEBSITE_CODE, K.PAAS_STORE_CODE, K.PAAS_STORE_VIEW_CODE, K.PAAS_CUSTOMER_GROUP] },
+    { id: 'catalog-service', label: 'Catalog Service', order: 3, fieldOrder: [K.CATALOG_SERVICE_ENDPOINT, K.PAAS_ENVIRONMENT_ID, K.CATALOG_API_KEY] },
     { id: 'mesh', label: 'API Mesh', order: 4 },
     { id: 'adobe-assets', label: 'Adobe Assets', order: 5 },
     { id: 'adobe-commerce-aco', label: 'Adobe Commerce Optimizer', order: 6, fieldOrder: ['ACO_API_URL', 'ACO_API_KEY', 'ACO_TENANT_ID', 'ACO_ENVIRONMENT_ID'] },

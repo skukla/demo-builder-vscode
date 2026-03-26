@@ -28,6 +28,7 @@ src/features/eds/
 │   ├── configurationService.ts     # AEM Configuration Service (site registration)
 │   ├── configGenerator.ts          # config.json generation for storefronts
 │   ├── configSyncService.ts        # Config.json sync between DA.live and repo
+│   ├── commerceStoreDiscovery.ts   # Commerce REST API store hierarchy discovery (PaaS + ACCS)
 │   ├── cleanupService.ts           # External resource cleanup on project deletion
 │   ├── resourceCleanupHelpers.ts   # Shared cleanup helper functions
 │   ├── toolManager.ts              # Commerce demo ingestion tool management
@@ -36,12 +37,21 @@ src/features/eds/
 │   ├── edsResetService.ts          # Core reset logic (template reset, code sync)
 │   ├── edsResetUI.ts               # Reset UI orchestration (auth, progress, notifications)
 │   ├── edsPipeline.ts              # EDS setup pipeline orchestration
+│   ├── featurePackInstaller.ts     # Feature pack artifact installation
 │   ├── fstabGenerator.ts           # fstab.yaml generation
 │   ├── storefrontRepublishService.ts # Storefront config republish
 │   ├── storefrontStalenessDetector.ts # Config.json staleness detection
 │   ├── errorFormatters.ts          # User-friendly error message formatting
 │   ├── codeSyncErrors.ts           # Code sync error hierarchy
 │   └── types.ts                    # TypeScript type definitions
+├── commands/
+│   ├── cleanupDaLiveSites.ts      # DA.live site cleanup command
+│   └── manageGitHubRepos.ts       # GitHub repo management command
+├── config/
+│   ├── config-template.json       # EDS config.json template
+│   └── content-patches.json       # Content patch definitions
+├── utils/
+│   └── daLiveTokenBookmarklet.ts  # DA.live token bookmarklet generator
 ├── ui/
 │   ├── components/
 │   │   ├── DaLiveOrgConfigSection.tsx   # DA.live org configuration
@@ -122,6 +132,16 @@ If the DA.live token expires during content pipeline execution (phases 4-5), the
 
 - **edsResetService** - Core reset logic: template reset, block library reinstallation (built-in + custom), inspector tagging, code sync, config service update, mesh redeploy
 - **edsResetUI** - UI orchestration: auth checks, progress notifications, confirmation dialogs
+
+### Commerce Store Discovery (commerceStoreDiscovery)
+
+Fetches store hierarchy (websites, store groups, store views) from the Commerce REST API:
+
+- **discoverStoreStructure** — Orchestrator: dispatches to PaaS or ACCS auth path
+- **getAdminToken** — PaaS admin token via `POST /rest/V1/integration/admin/token`
+- **fetchStoreStructurePaas** — PaaS store hierarchy (Bearer token auth)
+- **fetchStoreStructureAccs** — ACCS store hierarchy (IMS OAuth + x-api-key auth)
+- **extractTenantId** — Extract tenant ID from ACCS GraphQL endpoint URL
 
 ### Error Formatters
 

@@ -24,6 +24,7 @@ export {
     handleStoreDaLiveTokenWithOrg,
     handleClearDaLiveAuth,
     handleCreateGitHubRepo,
+    handleDiscoverStoreStructure,
     clearServiceCache,
 } from './edsHandlers';
 
