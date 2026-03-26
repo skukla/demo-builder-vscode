@@ -179,6 +179,12 @@ import { formatGitHubError, formatDaLiveError, formatHelixError } from '@/featur
 | `SYNC_TIMEOUT` | Code sync taking too long | "longer than expected" |
 | `CONFIG_FAILED` | Configuration failed | "server encountered an error" |
 
+### Store Discovery Errors
+
+| Code | Description | User Message Pattern |
+|------|-------------|---------------------|
+| `CREDENTIAL_MISSING` | No OAuth credential on workspace | "No OAuth credential found" |
+
 ## Partial State Tracking
 
 The `StorefrontSetupPartialState` interface tracks setup progress for cleanup on cancel:

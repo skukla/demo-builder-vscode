@@ -64,7 +64,7 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
             }),
             getWorkspaceCredential: jest.fn().mockResolvedValue({
                 clientId: 'mock-client-id',
-                flowType: 'oauth_server_to_server',
+                source: 'oauth_server_to_server',
             }),
         },
         ...overrides,

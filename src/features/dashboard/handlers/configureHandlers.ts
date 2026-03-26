@@ -19,6 +19,7 @@ import { validateURL } from '@/core/validation';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 import { parseJSON } from '@/types/typeGuards';
 import { handleDiscoverStoreStructure } from '@/features/eds';
+import { handleCreateWorkspaceCredential } from '@/features/authentication';
 
 // ==========================================================
 // Handlers
@@ -89,4 +90,5 @@ export const configureHandlers = defineHandlers({
     'openExternal': handleOpenExternal,
     'open-eds-settings': handleOpenEdsSettings,
     'discover-store-structure': handleDiscoverStoreStructure,
+    'create-workspace-credential': handleCreateWorkspaceCredential,
 });

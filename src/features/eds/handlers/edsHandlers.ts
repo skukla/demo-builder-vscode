@@ -174,27 +174,32 @@ export async function handleValidateAccsCredentials(
 // Store Discovery Helpers
 // ==========================================================
 
-/** Resolve ACCS-specific params (IMS token, tenant ID, client ID). Returns error string on failure. */
+interface AccsError { error: string; code?: string }
+
+/** Resolve ACCS-specific params (IMS token, tenant ID, client ID). Returns error object on failure. */
 async function resolveAccsParams(
     context: HandlerContext,
     payload: { orgId?: string; accsGraphqlEndpoint?: string },
-): Promise<{ imsToken: string; orgId?: string; tenantId: string; clientId: string } | string> {
+): Promise<{ imsToken: string; orgId?: string; tenantId: string; clientId: string } | AccsError> {
     if (!context.authManager) {
-        return 'Adobe authentication not available. Please sign in first.';
+        return { error: 'Adobe authentication not available. Please sign in first.' };
     }
 
     const imsToken = await context.authManager.getTokenManager().getAccessToken();
     if (!imsToken) {
-        return 'Adobe IMS token expired. Please re-authenticate.';
+        return { error: 'Adobe IMS token expired. Please re-authenticate.' };
     }
 
     if (!payload.accsGraphqlEndpoint) {
-        return 'ACCS GraphQL endpoint is required to determine tenant ID.';
+        return { error: 'ACCS GraphQL endpoint is required to determine tenant ID.' };
     }
 
     const credential = await context.authManager.getWorkspaceCredential();
     if (!credential?.clientId) {
-        return 'No OAuth credential found for this workspace. Ensure the workspace has an OAuth Server-to-Server credential configured in Adobe Developer Console.';
+        return {
+            error: 'No OAuth credential found for this workspace.',
+            code: 'CREDENTIAL_MISSING',
+        };
     }
 
     return {
@@ -263,9 +268,13 @@ export async function handleDiscoverStoreStructure(
         } else {
             // ACCS: resolve IMS token, tenant ID, and client ID
             const accsResult = await resolveAccsParams(context, payload);
-            if (typeof accsResult === 'string') {
-                await context.sendMessage('store-discovery-result', { success: false, error: accsResult });
-                return { success: false, error: accsResult };
+            if ('error' in accsResult) {
+                await context.sendMessage('store-discovery-result', {
+                    success: false,
+                    error: accsResult.error,
+                    code: accsResult.code,
+                });
+                return { success: false, error: accsResult.error };
             }
             Object.assign(params, accsResult);
         }

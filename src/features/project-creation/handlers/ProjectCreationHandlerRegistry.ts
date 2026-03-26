@@ -63,6 +63,7 @@ export const projectCreationHandlers = defineHandlers({
     // Workspace handlers
     'get-workspaces': authentication.handleGetWorkspaces,
     'select-workspace': authentication.handleSelectWorkspace,
+    'create-workspace-credential': authentication.handleCreateWorkspaceCredential,
 
     // Mesh handlers
     'check-api-mesh': mesh.handleCheckApiMesh,

@@ -70,27 +70,37 @@ export interface SDKResponse<T = unknown> {
 
 /**
  * Raw credential from Adobe Console SDK getCredentials() response.
- * Each workspace may have multiple credentials (OAuth S2S, API Key, etc.)
+ *
+ * Per the API spec, each credential has a top-level `apiKey` (client ID)
+ * and typed sub-objects (`jwt`, `oauth_server_to_server`, `oauth2`)
+ * that contain credential-specific details including their own `client_id`.
  */
 export interface RawWorkspaceCredential {
-    id_integration: string;
-    flow_type: string;
-    integration_type: string;
-    client_id?: string;
+    id: string;
     name?: string;
+    /** Top-level client ID / API key */
+    apiKey?: string;
+    /** Credential type: 'service', 'oauthweb', 'oauthandroid', 'oauthios' */
+    integration_type?: string;
+    /** OAuth Server-to-Server credential details (if this type) */
+    oauth_server_to_server?: { client_id?: string; scopes?: string[] };
+    /** JWT credential details (if this type) */
+    jwt?: { client_id?: string };
+    /** OAuth2 credential details (if this type) */
+    oauth2?: { client_id?: string };
 }
 
 /**
- * Mapped workspace credential — contains the OAuth S2S client_id
+ * Mapped workspace credential — contains the client_id
  * needed for ACCS REST API x-api-key header.
  */
 export interface WorkspaceCredential {
-    /** OAuth S2S client_id (used as x-api-key for ACCS) */
+    /** Client ID (used as x-api-key for ACCS) */
     clientId: string;
     /** Credential name from Adobe Console */
     name?: string;
-    /** Integration type (e.g., 'oauth_server_to_server') */
-    flowType: string;
+    /** How the client ID was resolved */
+    source: 'oauth_server_to_server' | 'apiKey' | 'jwt' | 'oauth2';
 }
 
 export interface AdobeCLIError extends Error {

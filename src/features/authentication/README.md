@@ -40,6 +40,8 @@ The feature leverages the Adobe Console SDK to achieve 30x faster operations com
 - `getCurrentWorkspace()` - Get currently selected workspace
 - `autoSelectOrganizationIfNeeded()` - Auto-select if only one org available
 - `getTokenManager()` - Get TokenManager instance for token inspection operations
+- `getWorkspaceCredential()` - Get existing OAuth S2S credential from current workspace
+- `createWorkspaceCredential(name, description)` - Create OAuth S2S credential on current workspace
 
 **Example Usage**:
 ```typescript
@@ -165,7 +167,7 @@ cacheManager.setCachedAuthStatus(false, 30000); // 30 seconds
 **Purpose**: Manages Adobe organizations, projects, and workspaces with SDK acceleration
 
 **Sub-services**:
-- `fetcher` (AdobeEntityFetcher) — `getOrganizations()`, `getProjects()`, `getWorkspaces()`
+- `fetcher` (AdobeEntityFetcher) — `getOrganizations()`, `getProjects()`, `getWorkspaces()`, `getWorkspaceCredential()`, `createWorkspaceCredential()`
 - `resolver` (AdobeContextResolver) — `getCurrentOrganization()`, `getCurrentProject()`, `getCurrentWorkspace()`, `getCurrentContext()`
 - `selector` (AdobeEntitySelector) — `selectOrganization()`, `selectProject()`, `selectWorkspace()`, `autoSelectOrganizationIfNeeded()`
 
@@ -242,6 +244,7 @@ See `services/types.ts` for type definitions:
 - `AdobeWorkspace` - Project workspace
 - `AdobeContext` - Complete org/project/workspace context
 - `AuthTokenValidation` - Token validation result with org and expiry
+- `WorkspaceCredential` - OAuth S2S credential with clientId, name, and source
 - `CacheEntry<T>` - Generic cache entry with data and expiry
 
 ### Raw CLI Response Types
@@ -249,6 +252,7 @@ See `services/types.ts` for type definitions:
 - `RawAdobeProject` - Adobe CLI project response
 - `RawAdobeWorkspace` - Adobe CLI workspace response
 - `AdobeConsoleWhereResponse` - Response from `aio console where` command
+- `RawWorkspaceCredential` - Raw workspace credential from Adobe Console SDK
 - `AdobeCLIError` - Adobe CLI error with code and output
 
 ### SDK Types

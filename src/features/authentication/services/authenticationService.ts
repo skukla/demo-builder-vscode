@@ -406,6 +406,15 @@ export class AuthenticationService {
     }
 
     /**
+     * Create an OAuth S2S credential on the current workspace.
+     * Returns the new credential with client_id, or undefined on failure.
+     */
+    async createWorkspaceCredential(name: string, description: string): Promise<WorkspaceCredential | undefined> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.createWorkspaceCredential(name, description);
+    }
+
+    /**
      * Get cached organization (fast - no fetch, no CLI calls)
      * Returns cached org if available, undefined otherwise
      *

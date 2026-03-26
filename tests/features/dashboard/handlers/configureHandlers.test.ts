@@ -111,11 +111,12 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'openExternal')).toBe(true);
             expect(hasHandler(configureHandlers, 'open-eds-settings')).toBe(true);
             expect(hasHandler(configureHandlers, 'discover-store-structure')).toBe(true);
+            expect(hasHandler(configureHandlers, 'create-workspace-credential')).toBe(true);
         });
 
-        it('should have exactly 5 handlers', () => {
+        it('should have exactly 6 handlers', () => {
             const types = getRegisteredTypes(configureHandlers);
-            expect(types).toHaveLength(5);
+            expect(types).toHaveLength(6);
         });
 
         it('should have all handlers as functions', () => {

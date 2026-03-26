@@ -389,26 +389,111 @@ export class AdobeEntityFetcher {
                 return undefined;
             }
 
-            // Find the OAuth S2S credential (preferred for ACCS)
-            const oauthCred = credentials.find(
-                (c: RawWorkspaceCredential) =>
-                    c.flow_type === 'oauth_server_to_server' && c.client_id,
-            );
+            // Log all credentials for debugging
+            this.debugLogger.debug(`[Entity Fetcher] Workspace has ${credentials.length} credential(s):`);
+            for (const c of credentials) {
+                const apiKeyStatus = c.apiKey ? 'present' : 'absent';
+                const oauthStatus = c.oauth_server_to_server ? 'present' : 'absent';
+                this.debugLogger.debug(`  - ${c.name || 'unnamed'}: integration_type=${c.integration_type}, apiKey=${apiKeyStatus}, oauth_s2s=${oauthStatus}`);
+            }
 
-            if (!oauthCred?.client_id) {
-                this.debugLogger.debug('[Entity Fetcher] No OAuth S2S credential found in workspace');
+            // Resolve client_id: prefer OAuth S2S > top-level apiKey > JWT > OAuth2
+            for (const cred of credentials) {
+                if (cred.oauth_server_to_server?.client_id) {
+                    this.debugLogger.debug(`[Entity Fetcher] Using OAuth S2S client_id from: ${cred.name || 'unnamed'}`);
+                    return { clientId: cred.oauth_server_to_server.client_id, name: cred.name, source: 'oauth_server_to_server' };
+                }
+            }
+            for (const cred of credentials) {
+                if (cred.apiKey) {
+                    this.debugLogger.debug(`[Entity Fetcher] Using top-level apiKey from: ${cred.name || 'unnamed'}`);
+                    return { clientId: cred.apiKey, name: cred.name, source: 'apiKey' };
+                }
+            }
+            for (const cred of credentials) {
+                if (cred.jwt?.client_id) {
+                    this.debugLogger.debug(`[Entity Fetcher] Using JWT client_id from: ${cred.name || 'unnamed'}`);
+                    return { clientId: cred.jwt.client_id, name: cred.name, source: 'jwt' };
+                }
+            }
+
+            this.debugLogger.debug('[Entity Fetcher] No credential with client_id found in workspace');
+            return undefined;
+        } catch (error) {
+            this.debugLogger.error('[Entity Fetcher] Failed to get workspace credentials', error as Error);
+            return undefined;
+        }
+    }
+
+    /**
+     * Create an OAuth Server-to-Server credential on the current workspace.
+     *
+     * Uses the Adobe Console SDK's createOAuthServerToServerCredential method.
+     * The response includes `apiKey` which is the client_id we need for ACCS REST API.
+     */
+    async createWorkspaceCredential(
+        name: string,
+        description: string,
+    ): Promise<WorkspaceCredential | undefined> {
+        // Input validation — enforce constraints regardless of caller
+        if (!name || name.length > 200) {
+            this.debugLogger.error('[Entity Fetcher] Invalid credential name (empty or >200 chars)');
+            return undefined;
+        }
+        if (description.length > 500) {
+            this.debugLogger.error('[Entity Fetcher] Invalid credential description (>500 chars)');
+            return undefined;
+        }
+
+        try {
+            await this.ensureSDKReady();
+
+            const cachedOrg = this.cacheManager.getCachedOrganization();
+            const cachedProject = this.cacheManager.getCachedProject();
+            const cachedWorkspace = this.cacheManager.getCachedWorkspace();
+
+            const orgId = cachedOrg?.id;
+            const projectId = cachedProject?.id;
+            const workspaceId = cachedWorkspace?.id;
+
+            if (!orgId || !projectId || !workspaceId) {
+                this.debugLogger.debug('[Entity Fetcher] Cannot create credential: missing org/project/workspace ID');
                 return undefined;
             }
 
-            this.debugLogger.debug(`[Entity Fetcher] Found OAuth S2S credential: ${oauthCred.name || 'unnamed'}`);
+            if (!this.sdkClient.isInitialized()) {
+                this.debugLogger.debug('[Entity Fetcher] SDK not available for credential creation');
+                return undefined;
+            }
+
+            const client = this.sdkClient.getClient() as {
+                createOAuthServerToServerCredential: (
+                    orgId: string, projectId: string, workspaceId: string,
+                    name: string, description: string,
+                ) => Promise<SDKResponse<{ id: string; apiKey: string; orgId: string }>>;
+            };
+
+            this.debugLogger.info(`[Entity Fetcher] Creating OAuth S2S credential "${name}" on workspace ${workspaceId}`);
+
+            const response = await client.createOAuthServerToServerCredential(
+                orgId, projectId, workspaceId, name, description,
+            );
+
+            const apiKey = response?.body?.apiKey;
+            if (!apiKey) {
+                this.debugLogger.error('[Entity Fetcher] Credential created but no apiKey in response');
+                return undefined;
+            }
+
+            this.debugLogger.info(`[Entity Fetcher] OAuth S2S credential created successfully`);
 
             return {
-                clientId: oauthCred.client_id,
-                name: oauthCred.name,
-                flowType: oauthCred.flow_type,
+                clientId: apiKey,
+                name,
+                source: 'oauth_server_to_server',
             };
         } catch (error) {
-            this.debugLogger.error('[Entity Fetcher] Failed to get workspace credentials', error as Error);
+            this.debugLogger.error('[Entity Fetcher] Failed to create workspace credential', error as Error);
             return undefined;
         }
     }

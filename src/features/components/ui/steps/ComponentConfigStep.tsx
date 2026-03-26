@@ -27,11 +27,13 @@ import {
     PAAS_URL,
     PAAS_ADMIN_USERNAME,
     PAAS_ADMIN_PASSWORD,
+    PAAS_WEBSITE_CODE,
+    ACCS_WEBSITE_CODE,
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
 } from '../../config/envVarKeys';
 
-/** Flex row style for section header with action button */
-const SECTION_HEADER_STYLE: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
+/** Whether a field is a website code field (where Auto-Detect button appears) */
+const isWebsiteCodeField = (key: string) => key === PAAS_WEBSITE_CODE || key === ACCS_WEBSITE_CODE;
 
 export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseStepProps) {
     const {
@@ -59,7 +61,10 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         isFetching,
         fetchError,
         hasStoreData,
+        credentialMissing,
+        isCreatingCredential,
         fetchStores,
+        createCredential,
         getFieldOptions,
         isStoreGroup,
     } = useStoreDiscovery(state.componentConfigs ?? {});
@@ -128,7 +133,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
     /** Status text after successful fetch */
     const fetchStatusText = useMemo(() => {
         if (!hasStoreData) return null;
-        return 'Store structure loaded — fields updated to dropdowns.';
+        return 'Store structure detected — fields updated to dropdowns.';
     }, [hasStoreData]);
 
     /**
@@ -179,44 +184,59 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
 
                         <div id={`section-${group.id}`} className={index > 0 ? 'config-section-with-padding' : 'config-section'}>
                             {/* Section Header */}
-                            <div className="config-section-header" style={SECTION_HEADER_STYLE}>
+                            <div className="config-section-header">
                                 <Heading level={3}>{group.label}</Heading>
-                                {isStoreGroup(group.id) && (
-                                    <ActionButton
-                                        isQuiet
-                                        onPress={() => handleFetchStores(group.id)}
-                                        isDisabled={isFetching || !canFetchStores(group.id)}
-                                    >
-                                        {isFetching && <ProgressCircle isIndeterminate size="S" aria-label="Fetching stores" />}
-                                        <Text>{isFetching ? 'Fetching...' : 'Fetch Stores'}</Text>
-                                    </ActionButton>
-                                )}
                             </div>
-
-                            {/* Fetch status/error */}
-                            {isStoreGroup(group.id) && fetchError && (
-                                <Text UNSAFE_className="text-red-700" marginBottom="size-200">
-                                    {fetchError}
-                                </Text>
-                            )}
-                            {isStoreGroup(group.id) && fetchStatusText && (
-                                <Text UNSAFE_className="text-green-700" marginBottom="size-200">
-                                    {fetchStatusText}
-                                </Text>
-                            )}
 
                             {/* Section Content */}
                             <Flex direction="column" marginBottom="size-100">
                                 {group.fields.map(field => (
-                                    <ConfigFieldRenderer
-                                        key={field.key}
-                                        field={enhanceField(field)}
-                                        value={getFieldValue(field)}
-                                        error={validationErrors[field.key]}
-                                        isTouched={touchedFields.has(field.key)}
-                                        onUpdate={updateField}
-                                        onNormalizeUrl={normalizeUrlField}
-                                    />
+                                    <React.Fragment key={field.key}>
+                                        {/* Auto-Detect button — inline with website code field */}
+                                        {isStoreGroup(group.id) && isWebsiteCodeField(field.key) && (
+                                            <Flex direction="column" marginBottom="size-100">
+                                                <Flex alignItems="center" gap="size-200">
+                                                    <ActionButton
+                                                        isQuiet
+                                                        onPress={() => handleFetchStores(group.id)}
+                                                        isDisabled={isFetching || isCreatingCredential || !canFetchStores(group.id)}
+                                                    >
+                                                        {isFetching && <ProgressCircle isIndeterminate size="S" aria-label="Detecting store structure" />}
+                                                        <Text>{isFetching ? 'Detecting...' : 'Auto-Detect'}</Text>
+                                                    </ActionButton>
+                                                    {fetchStatusText && !fetchError && (
+                                                        <Text UNSAFE_className="text-green-700">{fetchStatusText}</Text>
+                                                    )}
+                                                </Flex>
+                                                {/* Credential missing prompt */}
+                                                {credentialMissing && (
+                                                    <Flex alignItems="center" gap="size-100" marginTop="size-100">
+                                                        <Text UNSAFE_className="text-yellow-700">No OAuth credential found.</Text>
+                                                        <ActionButton
+                                                            isQuiet
+                                                            onPress={createCredential}
+                                                            isDisabled={isCreatingCredential}
+                                                        >
+                                                            {isCreatingCredential && <ProgressCircle isIndeterminate size="S" aria-label="Creating credential" />}
+                                                            <Text>{isCreatingCredential ? 'Creating...' : 'Create Credential'}</Text>
+                                                        </ActionButton>
+                                                    </Flex>
+                                                )}
+                                                {/* Error (non-credential) */}
+                                                {fetchError && !credentialMissing && (
+                                                    <Text UNSAFE_className="text-red-700" marginTop="size-100">{fetchError}</Text>
+                                                )}
+                                            </Flex>
+                                        )}
+                                        <ConfigFieldRenderer
+                                            field={enhanceField(field)}
+                                            value={getFieldValue(field)}
+                                            error={validationErrors[field.key]}
+                                            isTouched={touchedFields.has(field.key)}
+                                            onUpdate={updateField}
+                                            onNormalizeUrl={normalizeUrlField}
+                                        />
+                                    </React.Fragment>
                                 ))}
                             </Flex>
                         </div>
