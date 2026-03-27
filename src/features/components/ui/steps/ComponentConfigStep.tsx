@@ -11,6 +11,7 @@ import {
 } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { ConfigFieldRenderer } from '../components/ConfigFieldRenderer';
+import { StoreStructureSelector } from '../components/StoreStructureSelector';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
 import { useComponentConfig, type UniqueField } from '../hooks/useComponentConfig';
 import { useConfigNavigation } from '../hooks/useConfigNavigation';
@@ -31,12 +32,27 @@ import {
     PAAS_ADMIN_USERNAME,
     PAAS_ADMIN_PASSWORD,
     PAAS_WEBSITE_CODE,
+    PAAS_STORE_CODE,
+    PAAS_STORE_VIEW_CODE,
     ACCS_WEBSITE_CODE,
+    ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE,
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
 } from '../../config/envVarKeys';
 
-/** Whether a field is a website code field (where Auto-Detect button appears) */
+/** Whether a field is a website code field (where Auto-Detect controls appear) */
 const isWebsiteCodeField = (key: string) => key === PAAS_WEBSITE_CODE || key === ACCS_WEBSITE_CODE;
+
+/** Whether a field is any store code field (website, store, or store view) */
+const isStoreCodeField = (key: string) =>
+    key === PAAS_WEBSITE_CODE || key === PAAS_STORE_CODE || key === PAAS_STORE_VIEW_CODE ||
+    key === ACCS_WEBSITE_CODE || key === ACCS_STORE_CODE || key === ACCS_STORE_VIEW_CODE;
+
+/** Whether a field is a store group code field */
+const isStoreGroupField = (key: string) => key === PAAS_STORE_CODE || key === ACCS_STORE_CODE;
+
+/** Whether a field is a store view code field */
+const isStoreViewField = (key: string) => key === PAAS_STORE_VIEW_CODE || key === ACCS_STORE_VIEW_CODE;
 
 export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseStepProps) {
     const {
@@ -69,6 +85,9 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         fetchStores,
         createCredential,
         getFieldOptions,
+        getWebsiteItems,
+        getStoreGroupItems,
+        getStoreViewItems,
         isStoreGroup,
     } = useStoreDiscovery(state.componentConfigs ?? {});
 
@@ -143,13 +162,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
             }
         }
     }, [state.componentConfigs, state.adobeOrg?.id, fetchStores]);
-
-    /** Enhance a field with dynamic options from store discovery */
-    const enhanceField = useCallback((field: UniqueField): UniqueField => {
-        const dynamicOptions = getFieldOptions(field.key);
-        if (!dynamicOptions) return field;
-        return { ...field, options: dynamicOptions, type: 'select' };
-    }, [getFieldOptions]);
 
     /** Check if PaaS group has the base URL filled (needed to enable button) */
     const canFetchStores = useCallback((groupId: string): boolean => {
@@ -285,15 +297,27 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                         )}
                                                     </Flex>
                                                 )}
-                                                {/* Website code field — no button alongside anymore */}
-                                                <ConfigFieldRenderer
-                                                    field={enhanceField(field)}
-                                                    value={getFieldValue(field)}
-                                                    error={validationErrors[field.key]}
-                                                    isTouched={touchedFields.has(field.key)}
-                                                    onUpdate={updateField}
-                                                    onNormalizeUrl={normalizeUrlField}
-                                                />
+                                                {/* Website code — listbox when data exists, text input otherwise */}
+                                                {hasStoreData ? (
+                                                    <StoreStructureSelector
+                                                        label={field.label}
+                                                        items={getWebsiteItems()}
+                                                        selectedCode={String(getFieldValue(field) || '')}
+                                                        onSelect={(code) => updateField(field, code)}
+                                                        ariaLabel="Websites"
+                                                        itemNoun="website"
+                                                        isRequired={field.required}
+                                                    />
+                                                ) : (
+                                                    <ConfigFieldRenderer
+                                                        field={field}
+                                                        value={getFieldValue(field)}
+                                                        error={validationErrors[field.key]}
+                                                        isTouched={touchedFields.has(field.key)}
+                                                        onUpdate={updateField}
+                                                        onNormalizeUrl={normalizeUrlField}
+                                                    />
+                                                )}
                                                 {/* Status messages below the field row */}
                                                 {credentialMissing && (
                                                     <Flex alignItems="center" gap="size-100" marginBottom="size-200">
@@ -317,9 +341,35 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                     <Text UNSAFE_className="text-green-700" marginBottom="size-200">{fetchStatusText}</Text>
                                                 )}
                                             </div>
+                                        ) : hasStoreData && isStoreGroupField(field.key) ? (
+                                            <StoreStructureSelector
+                                                label={field.label}
+                                                items={getStoreGroupItems(
+                                                    lookupComponentConfigValue(state.componentConfigs ?? {},
+                                                        field.key === PAAS_STORE_CODE ? PAAS_WEBSITE_CODE : ACCS_WEBSITE_CODE) || '',
+                                                )}
+                                                selectedCode={String(getFieldValue(field) || '')}
+                                                onSelect={(code) => updateField(field, code)}
+                                                ariaLabel="Store Groups"
+                                                itemNoun="store"
+                                                isRequired={field.required}
+                                            />
+                                        ) : hasStoreData && isStoreViewField(field.key) ? (
+                                            <StoreStructureSelector
+                                                label={field.label}
+                                                items={getStoreViewItems(
+                                                    lookupComponentConfigValue(state.componentConfigs ?? {},
+                                                        field.key === PAAS_STORE_VIEW_CODE ? PAAS_STORE_CODE : ACCS_STORE_CODE) || '',
+                                                )}
+                                                selectedCode={String(getFieldValue(field) || '')}
+                                                onSelect={(code) => updateField(field, code)}
+                                                ariaLabel="Store Views"
+                                                itemNoun="store view"
+                                                isRequired={field.required}
+                                            />
                                         ) : (
                                             <ConfigFieldRenderer
-                                                field={enhanceField(field)}
+                                                field={field}
                                                 value={getFieldValue(field)}
                                                 error={validationErrors[field.key]}
                                                 isTouched={touchedFields.has(field.key)}

@@ -45,6 +45,13 @@ interface StoreDiscoveryState {
 
 type FieldOptions = Array<{ value: string; label: string }>;
 
+/** Item format for StoreStructureSelector component */
+export interface StoreListItem {
+    code: string;
+    name: string;
+    numericId: number;
+}
+
 interface UseStoreDiscoveryReturn {
     /** Whether a fetch is in progress */
     isFetching: boolean;
@@ -62,6 +69,12 @@ interface UseStoreDiscoveryReturn {
     createCredential: () => void;
     /** Get dropdown options for a field key (empty if no data) */
     getFieldOptions: (fieldKey: string) => FieldOptions | undefined;
+    /** Get websites as list items */
+    getWebsiteItems: () => StoreListItem[];
+    /** Get store groups filtered by selected website code */
+    getStoreGroupItems: (websiteCode: string) => StoreListItem[];
+    /** Get store views filtered by selected store group code */
+    getStoreViewItems: (storeGroupCode: string) => StoreListItem[];
     /** Whether a given service group should show the Auto-Detect button */
     isStoreGroup: (groupId: string) => boolean;
 }
@@ -227,6 +240,34 @@ export function useStoreDiscovery(
 
     const hasStoreData = state.storeData !== null;
 
+    // List-item getters for StoreStructureSelector
+    const getWebsiteItems = useCallback((): StoreListItem[] => {
+        if (!state.storeData) return [];
+        return state.storeData.websites
+            .filter(w => w.code !== 'admin') // Exclude admin website
+            .map(w => ({ code: w.code, name: w.name, numericId: w.id }));
+    }, [state.storeData]);
+
+    const getStoreGroupItems = useCallback((websiteCode: string): StoreListItem[] => {
+        if (!state.storeData) return [];
+        const { websites, storeGroups } = state.storeData;
+        const website = websites.find(w => w.code === websiteCode);
+        if (!website) return storeGroups.map(sg => ({ code: sg.code, name: sg.name, numericId: sg.id }));
+        return storeGroups
+            .filter(sg => sg.website_id === website.id)
+            .map(sg => ({ code: sg.code, name: sg.name, numericId: sg.id }));
+    }, [state.storeData]);
+
+    const getStoreViewItems = useCallback((storeGroupCode: string): StoreListItem[] => {
+        if (!state.storeData) return [];
+        const { storeGroups, storeViews } = state.storeData;
+        const storeGroup = storeGroups.find(sg => sg.code === storeGroupCode);
+        const filtered = storeGroup
+            ? storeViews.filter(sv => sv.store_group_id === storeGroup.id && sv.is_active)
+            : storeViews.filter(sv => sv.is_active && sv.code !== 'admin');
+        return filtered.map(sv => ({ code: sv.code, name: sv.name, numericId: sv.id }));
+    }, [state.storeData]);
+
     return {
         isFetching: state.isFetching,
         fetchError: state.fetchError,
@@ -236,6 +277,9 @@ export function useStoreDiscovery(
         fetchStores,
         createCredential,
         getFieldOptions,
+        getWebsiteItems,
+        getStoreGroupItems,
+        getStoreViewItems,
         isStoreGroup,
     };
 }
