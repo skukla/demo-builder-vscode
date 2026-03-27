@@ -311,6 +311,47 @@ describe('stepFiltering', () => {
             expect(stepIds).not.toContain('adobe-auth');
         });
 
+        it('should show requiresAdobeAuth step when hasAdobeAuth is true', () => {
+            const steps: WizardStepWithCondition[] = [
+                { id: 'welcome', name: 'Welcome' },
+                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeAuth: true } },
+                { id: 'review', name: 'Review' },
+            ];
+
+            const result = filterStepsForStack(steps, edgeDeliveryStack, { hasAdobeAuth: true });
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).toContain('adobe-auth');
+        });
+
+        it('should hide requiresAdobeAuth step when hasAdobeAuth is false', () => {
+            const steps: WizardStepWithCondition[] = [
+                { id: 'welcome', name: 'Welcome' },
+                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeAuth: true } },
+                { id: 'review', name: 'Review' },
+            ];
+
+            const result = filterStepsForStack(steps, headlessStack, { hasAdobeAuth: false });
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).not.toContain('adobe-auth');
+        });
+
+        it('should show auth step but hide project/workspace steps for ACCS without mesh', () => {
+            const steps: WizardStepWithCondition[] = [
+                { id: 'welcome', name: 'Welcome' },
+                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeAuth: true } },
+                { id: 'adobe-project', name: 'Project', condition: { requiresAdobeIO: true } },
+                { id: 'adobe-workspace', name: 'Workspace', condition: { requiresAdobeIO: true } },
+                { id: 'review', name: 'Review' },
+            ];
+
+            // ACCS without mesh: hasAdobeAuth=true, hasAdobeIO=false
+            const result = filterStepsForStack(steps, edgeDeliveryStack, { hasAdobeAuth: true, hasAdobeIO: false });
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).toContain('adobe-auth');
+            expect(stepIds).not.toContain('adobe-project');
+            expect(stepIds).not.toContain('adobe-workspace');
+        });
+
         it('should exclude step when stackRequiresAny has no matching properties', () => {
             // Given: A step with stackRequiresAny condition
             const stepsWithRequiresAny: WizardStepWithCondition[] = [

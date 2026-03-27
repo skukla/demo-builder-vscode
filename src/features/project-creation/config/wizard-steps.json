@@ -25,10 +25,10 @@
     {
       "id": "adobe-auth",
       "name": "Adobe Authentication",
-      "description": "Authenticate with Adobe to deploy your API Mesh and access Adobe services.",
+      "description": "Authenticate with Adobe to access Adobe services and store discovery.",
       "enabled": true,
       "condition": {
-        "requiresAdobeIO": true
+        "requiresAdobeAuth": true
       }
     },
     {
