@@ -31,6 +31,7 @@ export const ACCS_WEBSITE_CODE = 'ACCS_WEBSITE_CODE';
 export const ACCS_STORE_CODE = 'ACCS_STORE_CODE';
 export const ACCS_STORE_VIEW_CODE = 'ACCS_STORE_VIEW_CODE';
 export const ACCS_CUSTOMER_GROUP = 'ACCS_CUSTOMER_GROUP';
+export const ACCS_DISCOVERY_SERVICE_URL = 'ACCS_DISCOVERY_SERVICE_URL';
 export const ACCS_CATALOG_SERVICE_ENDPOINT = 'ACCS_CATALOG_SERVICE_ENDPOINT';
 
 // ==========================================================

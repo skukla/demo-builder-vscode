@@ -30,6 +30,7 @@ import {
     PAAS_WEBSITE_CODE,
     ACCS_WEBSITE_CODE,
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
+    ACCS_DISCOVERY_SERVICE_URL,
 } from '../../config/envVarKeys';
 
 /** Whether a field is a website code field (where Auto-Detect button appears) */
@@ -93,6 +94,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
             const accsEndpoint = lookupComponentConfigValue(configs, ACCS_ENDPOINT_KEY);
             if (!accsEndpoint) return;
 
+            const discoveryServiceUrl = lookupComponentConfigValue(configs, ACCS_DISCOVERY_SERVICE_URL);
+
             // Extract base URL from ACCS endpoint (host portion)
             try {
                 const url = new URL(accsEndpoint);
@@ -101,6 +104,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                     baseUrl: `${url.protocol}//${url.host}`,
                     orgId: state.adobeOrg?.id,
                     accsGraphqlEndpoint: accsEndpoint,
+                    discoveryServiceUrl: discoveryServiceUrl || undefined,
                 });
             } catch {
                 // Invalid URL — let the handler catch it
@@ -109,6 +113,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                     baseUrl: accsEndpoint,
                     orgId: state.adobeOrg?.id,
                     accsGraphqlEndpoint: accsEndpoint,
+                    discoveryServiceUrl: discoveryServiceUrl || undefined,
                 });
             }
         }

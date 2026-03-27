@@ -230,6 +230,8 @@ interface DiscoverStoreStructurePayload {
     orgId?: string;
     /** ACCS only: ACCS GraphQL endpoint URL (to extract tenant ID) */
     accsGraphqlEndpoint?: string;
+    /** ACCS only: Discovery service URL for cross-org access */
+    discoveryServiceUrl?: string;
 }
 
 /**
@@ -265,8 +267,22 @@ export async function handleDiscoverStoreStructure(
         if (payload.backendType === 'paas') {
             params.username = payload.username;
             params.password = payload.password;
+        } else if (payload.discoveryServiceUrl) {
+            // ACCS with discovery service (cross-org) — just need IMS token + service URL
+            const imsToken = context.authManager
+                ? await context.authManager.getTokenManager().getAccessToken()
+                : undefined;
+            if (!imsToken) {
+                await context.sendMessage('store-discovery-result', {
+                    success: false,
+                    error: 'Adobe IMS token required. Please sign in first.',
+                });
+                return { success: false, error: 'IMS token not available' };
+            }
+            params.imsToken = imsToken;
+            params.discoveryServiceUrl = payload.discoveryServiceUrl;
         } else {
-            // ACCS: resolve IMS token, tenant ID, and client ID
+            // ACCS direct (same-org) — resolve IMS token, tenant ID, and client ID
             const accsResult = await resolveAccsParams(context, payload);
             if ('error' in accsResult) {
                 await context.sendMessage('store-discovery-result', {

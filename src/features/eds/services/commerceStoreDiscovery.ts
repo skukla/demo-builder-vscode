@@ -191,6 +191,52 @@ export async function fetchStoreStructureAccs(
 }
 
 // ==========================================================
+// Discovery Service (cross-org proxy)
+// ==========================================================
+
+/**
+ * Fetch store structure via an ACCS Discovery Service (App Builder action).
+ *
+ * The service validates the caller's IMS token, generates its own Commerce
+ * token using S2S credentials in the Commerce org, and returns the store
+ * structure. This enables cross-org access without sharing credentials.
+ *
+ * @param serviceUrl - Discovery service action URL
+ * @param imsToken - Caller's IMS token for authentication
+ * @param accsGraphqlEndpoint - ACCS GraphQL endpoint (passed to service for tenant resolution)
+ */
+async function fetchViaDiscoveryService(
+    serviceUrl: string,
+    imsToken: string,
+    accsGraphqlEndpoint: string,
+): Promise<CommerceStoreStructure> {
+    const url = `${normalizeUrl(serviceUrl)}?accsEndpoint=${encodeURIComponent(accsGraphqlEndpoint)}`;
+
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${imsToken}`,
+            'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+    });
+
+    if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        const errorMsg = (body as { error?: string }).error || `Service returned ${response.status}`;
+        throw new Error(errorMsg);
+    }
+
+    const body = await response.json() as { success: boolean; data?: CommerceStoreStructure; error?: string };
+
+    if (!body.success || !body.data) {
+        throw new Error((body as { error?: string }).error || 'Discovery service returned no data');
+    }
+
+    return body.data;
+}
+
+// ==========================================================
 // Orchestrator
 // ==========================================================
 
@@ -226,7 +272,17 @@ export async function discoverStoreStructure(
             return { success: true, data };
         }
 
-        // ACCS path
+        // ACCS path — prefer discovery service if configured (handles cross-org)
+        if (params.discoveryServiceUrl && params.imsToken) {
+            const data = await fetchViaDiscoveryService(
+                params.discoveryServiceUrl,
+                params.imsToken,
+                params.baseUrl,
+            );
+            return { success: true, data };
+        }
+
+        // ACCS direct path (same-org only)
         if (!params.imsToken || !params.clientId || !params.orgId || !params.tenantId) {
             return { success: false, error: 'Adobe authentication is incomplete. Ensure you have signed in and selected an Adobe workspace.' };
         }

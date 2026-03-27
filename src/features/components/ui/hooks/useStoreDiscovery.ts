@@ -73,6 +73,7 @@ interface FetchStoresParams {
     password?: string;
     orgId?: string;
     accsGraphqlEndpoint?: string;
+    discoveryServiceUrl?: string;
 }
 
 // ==========================================================

@@ -110,7 +110,7 @@
                     "ACCS_STORE_CODE",
                     "ACCS_STORE_VIEW_CODE"
                 ],
-                "optionalEnvVars": ["ACCS_CUSTOMER_GROUP"]
+                "optionalEnvVars": ["ACCS_CUSTOMER_GROUP", "ACCS_DISCOVERY_SERVICE_URL"]
             }
         }
     },
@@ -466,6 +466,14 @@
             "type": "text",
             "required": false,
             "description": "Customer group hash for Catalog Service pricing. Leave blank for default behavior (storefront handles automatically)",
+            "group": "accs"
+        },
+        "ACCS_DISCOVERY_SERVICE_URL": {
+            "label": "Discovery Service URL",
+            "type": "url",
+            "required": false,
+            "placeholder": "https://your-org.adobeioruntime.net/api/v1/web/accs-discovery/discover-stores",
+            "description": "App Builder action URL for auto-detecting store structure. Required for cross-org ACCS instances.",
             "group": "accs"
         },
         "MESH_ENDPOINT": {
