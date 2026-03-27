@@ -232,6 +232,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                             selectedKey={commerceLocation}
                                                             onSelectionChange={(key) => setCommerceLocation(key as 'same-org' | 'different-org')}
                                                             width="size-2400"
+                                                            isDisabled={isFetching}
                                                         >
                                                             <Item key="same-org">Same org as my I/O project</Item>
                                                             <Item key="different-org">Different org</Item>
@@ -242,33 +243,46 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                                 selectedKey={selectedCommerceOrg}
                                                                 onSelectionChange={(key) => setSelectedCommerceOrg(String(key))}
                                                                 width="size-2400"
+                                                                isDisabled={isFetching}
                                                             >
                                                                 {discoveryOrgs.map(org => (
                                                                     <Item key={org}>{org}</Item>
                                                                 ))}
                                                             </Picker>
                                                         )}
-                                                        <Button
-                                                            variant="secondary"
-                                                            onPress={() => handleFetchStores(group.id)}
-                                                            isDisabled={isFetching || isCreatingCredential || !canFetchStores(group.id)}
-                                                        >
-                                                            {isFetching && <ProgressCircle isIndeterminate size="S" aria-label="Detecting store structure" />}
-                                                            {isFetching ? 'Detecting...' : 'Auto-Detect'}
-                                                        </Button>
+                                                        {isFetching ? (
+                                                            <Flex alignItems="center" gap="size-100">
+                                                                <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
+                                                                <Text UNSAFE_className="status-text">Detecting...</Text>
+                                                            </Flex>
+                                                        ) : (
+                                                            <Button
+                                                                variant="secondary"
+                                                                onPress={() => handleFetchStores(group.id)}
+                                                                isDisabled={isCreatingCredential || !canFetchStores(group.id)}
+                                                            >
+                                                                Auto-Detect
+                                                            </Button>
+                                                        )}
                                                     </Flex>
                                                 )}
-                                                {/* PaaS Auto-Detect — inline with field (no pickers) */}
+                                                {/* PaaS Auto-Detect */}
                                                 {group.id === 'adobe-commerce' && (
-                                                    <Flex gap="size-200" marginBottom="size-200" alignItems="end">
-                                                        <Button
-                                                            variant="secondary"
-                                                            onPress={() => handleFetchStores(group.id)}
-                                                            isDisabled={isFetching || !canFetchStores(group.id)}
-                                                        >
-                                                            {isFetching && <ProgressCircle isIndeterminate size="S" aria-label="Detecting store structure" />}
-                                                            {isFetching ? 'Detecting...' : 'Auto-Detect'}
-                                                        </Button>
+                                                    <Flex gap="size-200" marginBottom="size-200" alignItems="center">
+                                                        {isFetching ? (
+                                                            <Flex alignItems="center" gap="size-100">
+                                                                <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
+                                                                <Text UNSAFE_className="status-text">Detecting...</Text>
+                                                            </Flex>
+                                                        ) : (
+                                                            <Button
+                                                                variant="secondary"
+                                                                onPress={() => handleFetchStores(group.id)}
+                                                                isDisabled={!canFetchStores(group.id)}
+                                                            >
+                                                                Auto-Detect
+                                                            </Button>
+                                                        )}
                                                     </Flex>
                                                 )}
                                                 {/* Website code field — no button alongside anymore */}
@@ -284,14 +298,16 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                 {credentialMissing && (
                                                     <Flex alignItems="center" gap="size-100" marginBottom="size-200">
                                                         <Text UNSAFE_className="text-yellow-700">No OAuth credential found.</Text>
-                                                        <Button
-                                                            variant="secondary"
-                                                            onPress={createCredential}
-                                                            isDisabled={isCreatingCredential}
-                                                        >
-                                                            {isCreatingCredential && <ProgressCircle isIndeterminate size="S" aria-label="Creating credential" />}
-                                                            {isCreatingCredential ? 'Creating...' : 'Create Credential'}
-                                                        </Button>
+                                                        {isCreatingCredential ? (
+                                                            <Flex alignItems="center" gap="size-100">
+                                                                <ProgressCircle size="S" isIndeterminate aria-label="Creating credential" />
+                                                                <Text UNSAFE_className="status-text">Creating...</Text>
+                                                            </Flex>
+                                                        ) : (
+                                                            <Button variant="secondary" onPress={createCredential}>
+                                                                Create Credential
+                                                            </Button>
+                                                        )}
                                                     </Flex>
                                                 )}
                                                 {fetchError && !credentialMissing && (
