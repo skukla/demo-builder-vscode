@@ -46,6 +46,7 @@ import {
     handleResumeStorefrontSetup,
 } from './storefrontSetupHandlers';
 import * as vscode from 'vscode';
+import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
@@ -316,13 +317,36 @@ export async function handleDiscoverStoreStructure(
                     return { success: false, error: 'Discovery service not configured' };
                 }
 
-                const imsToken = context.authManager
-                    ? await context.authManager.getTokenManager().getAccessToken()
-                    : undefined;
+                // Ensure Adobe auth (prompts for re-sign-in if expired)
+                if (!context.authManager) {
+                    await context.sendMessage('store-discovery-result', {
+                        success: false,
+                        error: 'Authentication not available.',
+                    });
+                    return { success: false, error: 'AuthManager not available' };
+                }
+
+                const authResult = await ensureAdobeIOAuth({
+                    authManager: context.authManager,
+                    logger: context.logger,
+                    logPrefix: '[Store Discovery]',
+                    warningMessage: 'Adobe sign-in required for store discovery.',
+                });
+                if (!authResult.authenticated) {
+                    await context.sendMessage('store-discovery-result', {
+                        success: false,
+                        error: authResult.cancelled
+                            ? 'Adobe sign-in was cancelled.'
+                            : 'Adobe sign-in failed. Please try again.',
+                    });
+                    return { success: false, error: 'Adobe authentication required' };
+                }
+
+                const imsToken = await context.authManager.getTokenManager().getAccessToken();
                 if (!imsToken) {
                     await context.sendMessage('store-discovery-result', {
                         success: false,
-                        error: 'Adobe IMS token required. Please sign in first.',
+                        error: 'Failed to retrieve IMS token after sign-in.',
                     });
                     return { success: false, error: 'IMS token not available' };
                 }
