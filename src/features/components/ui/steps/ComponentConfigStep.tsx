@@ -223,9 +223,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                 {group.fields.map(field => (
                                     <React.Fragment key={field.key}>
                                         {isStoreGroup(group.id) && isWebsiteCodeField(field.key) ? (
-                                            /* Commerce location picker + Auto-Detect button + Website code field */
                                             <div>
-                                                {/* Commerce location — only for ACCS groups */}
+                                                {/* Commerce location + org picker + Auto-Detect — single row (ACCS only) */}
                                                 {group.id === 'accs' && (
                                                     <Flex gap="size-200" marginBottom="size-200" alignItems="end">
                                                         <Picker
@@ -249,20 +248,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                                 ))}
                                                             </Picker>
                                                         )}
-                                                    </Flex>
-                                                )}
-                                                <Flex alignItems="end" gap="size-150">
-                                                    <div style={{ flex: 1 }}>
-                                                        <ConfigFieldRenderer
-                                                            field={enhanceField(field)}
-                                                            value={getFieldValue(field)}
-                                                            error={validationErrors[field.key]}
-                                                            isTouched={touchedFields.has(field.key)}
-                                                            onUpdate={updateField}
-                                                            onNormalizeUrl={normalizeUrlField}
-                                                        />
-                                                    </div>
-                                                    <div style={{ paddingBottom: 'var(--spectrum-global-dimension-size-200)' }}>
                                                         <Button
                                                             variant="secondary"
                                                             onPress={() => handleFetchStores(group.id)}
@@ -271,8 +256,30 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                             {isFetching && <ProgressCircle isIndeterminate size="S" aria-label="Detecting store structure" />}
                                                             {isFetching ? 'Detecting...' : 'Auto-Detect'}
                                                         </Button>
-                                                    </div>
-                                                </Flex>
+                                                    </Flex>
+                                                )}
+                                                {/* PaaS Auto-Detect — inline with field (no pickers) */}
+                                                {group.id === 'adobe-commerce' && (
+                                                    <Flex gap="size-200" marginBottom="size-200" alignItems="end">
+                                                        <Button
+                                                            variant="secondary"
+                                                            onPress={() => handleFetchStores(group.id)}
+                                                            isDisabled={isFetching || !canFetchStores(group.id)}
+                                                        >
+                                                            {isFetching && <ProgressCircle isIndeterminate size="S" aria-label="Detecting store structure" />}
+                                                            {isFetching ? 'Detecting...' : 'Auto-Detect'}
+                                                        </Button>
+                                                    </Flex>
+                                                )}
+                                                {/* Website code field — no button alongside anymore */}
+                                                <ConfigFieldRenderer
+                                                    field={enhanceField(field)}
+                                                    value={getFieldValue(field)}
+                                                    error={validationErrors[field.key]}
+                                                    isTouched={touchedFields.has(field.key)}
+                                                    onUpdate={updateField}
+                                                    onNormalizeUrl={normalizeUrlField}
+                                                />
                                                 {/* Status messages below the field row */}
                                                 {credentialMissing && (
                                                     <Flex alignItems="center" gap="size-100" marginBottom="size-200">
