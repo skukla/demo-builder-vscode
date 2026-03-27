@@ -260,11 +260,9 @@ export async function handleStartStorefrontSetup(
     const abortController = new AbortController();
     context.sharedState.storefrontSetupAbortController = abortController;
 
-    // Pre-flight: Check Adobe I/O authentication when mesh is included OR ACCS backend
+    // Pre-flight: Check Adobe I/O authentication when mesh is included
     const needsMesh = hasMeshInDependencies(payload.dependencies ?? []);
-    const isAccsBackend = payload.backendComponentId === 'adobe-commerce-accs';
-    const needsAdobeIO = needsMesh || isAccsBackend;
-    if (needsAdobeIO) {
+    if (needsMesh) {
         if (!context.authManager) {
             context.logger.error('[Storefront Setup] AuthenticationService not available');
             await context.sendMessage('storefront-setup-error', {

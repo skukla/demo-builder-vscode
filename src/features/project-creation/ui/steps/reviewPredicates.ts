@@ -5,7 +5,6 @@
  */
 
 import { hasMeshInDependencies } from '@/core/constants';
-import { getStackById } from '../hooks/useSelectedStack';
 
 /**
  * Minimal state interface for review data validation
@@ -15,22 +14,7 @@ interface ReviewState {
     adobeOrg?: { id?: string };
     adobeProject?: { id?: string };
     adobeWorkspace?: { id?: string };
-    selectedStack?: string;
     selectedOptionalDependencies?: string[];
-}
-
-/**
- * Check if the project requires Adobe I/O credentials.
- * True when: mesh is included OR ACCS backend is selected.
- */
-function needsAdobeIO(state: ReviewState): boolean {
-    const deps = [...(state.selectedOptionalDependencies || [])];
-    if (hasMeshInDependencies(deps)) return true;
-
-    const stack = state.selectedStack ? getStackById(state.selectedStack) : undefined;
-    if (stack?.backend === 'adobe-commerce-accs') return true;
-
-    return false;
 }
 
 /**
@@ -38,13 +22,14 @@ function needsAdobeIO(state: ReviewState): boolean {
  *
  * Required:
  * - Project name (non-empty)
- * - Adobe organization, project, and workspace (when Adobe I/O is needed)
+ * - Adobe organization, project, and workspace (when mesh is included)
  */
 export function hasRequiredReviewData(state: ReviewState): boolean {
     if (!state.projectName) return false;
 
-    // Adobe I/O selections required when mesh is included OR ACCS backend selected
-    if (needsAdobeIO(state)) {
+    // Adobe I/O selections required when mesh is included
+    const deps = [...(state.selectedOptionalDependencies || [])];
+    if (hasMeshInDependencies(deps)) {
         if (!state.adobeOrg?.id) return false;
         if (!state.adobeProject?.id) return false;
         if (!state.adobeWorkspace?.id) return false;

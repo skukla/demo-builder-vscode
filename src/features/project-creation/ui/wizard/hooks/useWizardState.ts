@@ -332,19 +332,17 @@ export function useWizardState({
         });
 
         // Step 4: Determine if Adobe I/O credentials are needed
-        // Adobe I/O is required when: mesh is included OR ACCS backend is selected (for store discovery)
+        // Adobe I/O is required when mesh is included (for mesh deployment)
         const effectiveDeps = [
             ...(selectedStack?.dependencies || []),
             ...(state.selectedOptionalDependencies || []),
         ];
         const meshIncluded = hasMeshInDependencies(effectiveDeps);
-        const isAccsBackend = selectedStack?.backend === 'adobe-commerce-accs';
-        const needsAdobeIO = meshIncluded || isAccsBackend;
 
         // Step 5: Apply stack-based, mode-based, and Adobe I/O-based filtering
         const filteredSteps = filterStepsForStack(stepsWithConditions, selectedStack, {
             isEditMode: !!editProject,
-            hasAdobeIO: needsAdobeIO,
+            hasAdobeIO: meshIncluded,
         });
 
         return filteredSteps.map(step => ({
