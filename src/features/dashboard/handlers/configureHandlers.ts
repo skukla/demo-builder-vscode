@@ -18,7 +18,7 @@ import * as vscode from 'vscode';
 import { validateURL } from '@/core/validation';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 import { parseJSON } from '@/types/typeGuards';
-import { handleDiscoverStoreStructure } from '@/features/eds';
+import { handleDiscoverStoreStructure, handleGetDiscoveryOrgs } from '@/features/eds';
 import { handleCreateWorkspaceCredential } from '@/features/authentication';
 
 // ==========================================================
@@ -90,5 +90,6 @@ export const configureHandlers = defineHandlers({
     'openExternal': handleOpenExternal,
     'open-eds-settings': handleOpenEdsSettings,
     'discover-store-structure': handleDiscoverStoreStructure,
+    'get-discovery-orgs': handleGetDiscoveryOrgs,
     'create-workspace-credential': handleCreateWorkspaceCredential,
 });

@@ -73,7 +73,8 @@ interface FetchStoresParams {
     password?: string;
     orgId?: string;
     accsGraphqlEndpoint?: string;
-    discoveryServiceUrl?: string;
+    /** Cross-org: selected Commerce org name (looked up from settings by handler) */
+    commerceOrg?: string;
 }
 
 // ==========================================================

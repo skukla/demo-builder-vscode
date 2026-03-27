@@ -25,6 +25,7 @@ export {
     handleClearDaLiveAuth,
     handleCreateGitHubRepo,
     handleDiscoverStoreStructure,
+    handleGetDiscoveryOrgs,
     clearServiceCache,
 } from './edsHandlers';
 

@@ -129,6 +129,7 @@ export {
     handleVerifyDaLiveOrg,
     handleValidateAccsCredentials,
     handleDiscoverStoreStructure,
+    handleGetDiscoveryOrgs,
 } from './handlers';
 
 // Types - GitHub

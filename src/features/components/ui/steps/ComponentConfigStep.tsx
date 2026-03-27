@@ -6,14 +6,17 @@ import {
     Divider,
     Button,
     ProgressCircle,
+    Picker,
+    Item,
 } from '@adobe/react-spectrum';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { ConfigFieldRenderer } from '../components/ConfigFieldRenderer';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
 import { useComponentConfig, type UniqueField } from '../hooks/useComponentConfig';
 import { useConfigNavigation } from '../hooks/useConfigNavigation';
 import { useStoreDiscovery } from '../hooks/useStoreDiscovery';
 import { lookupComponentConfigValue } from '../../services/envVarHelpers';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
@@ -30,7 +33,6 @@ import {
     PAAS_WEBSITE_CODE,
     ACCS_WEBSITE_CODE,
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
-    ACCS_DISCOVERY_SERVICE_URL,
 } from '../../config/envVarKeys';
 
 /** Whether a field is a website code field (where Auto-Detect button appears) */
@@ -70,6 +72,26 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         isStoreGroup,
     } = useStoreDiscovery(state.componentConfigs ?? {});
 
+    // ACCS commerce location state
+    const [commerceLocation, setCommerceLocation] = useState<'same-org' | 'different-org'>('different-org');
+    const [selectedCommerceOrg, setSelectedCommerceOrg] = useState<string>('');
+    const [discoveryOrgs, setDiscoveryOrgs] = useState<string[]>([]);
+
+    // Load configured discovery orgs on mount
+    useEffect(() => {
+        webviewClient.request<{ success: boolean; data?: string[] }>('get-discovery-orgs')
+            .then(result => {
+                if (result.success && result.data) {
+                    setDiscoveryOrgs(result.data);
+                    // Auto-select first org if available
+                    if (result.data.length > 0 && !selectedCommerceOrg) {
+                        setSelectedCommerceOrg(result.data[0]);
+                    }
+                }
+            })
+            .catch(() => {}); // Silently fail — orgs just won't be available
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
     /** Build and send the store discovery request for a given group */
     const handleFetchStores = useCallback((groupId: string) => {
         const configs = state.componentConfigs ?? {};
@@ -94,7 +116,10 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
             const accsEndpoint = lookupComponentConfigValue(configs, ACCS_ENDPOINT_KEY);
             if (!accsEndpoint) return;
 
-            const discoveryServiceUrl = lookupComponentConfigValue(configs, ACCS_DISCOVERY_SERVICE_URL);
+            // Determine commerce org for cross-org, undefined for same-org
+            const commerceOrg = commerceLocation === 'different-org' && selectedCommerceOrg
+                ? selectedCommerceOrg
+                : undefined;
 
             // Extract base URL from ACCS endpoint (host portion)
             try {
@@ -104,7 +129,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                     baseUrl: `${url.protocol}//${url.host}`,
                     orgId: state.adobeOrg?.id,
                     accsGraphqlEndpoint: accsEndpoint,
-                    discoveryServiceUrl: discoveryServiceUrl || undefined,
+                    commerceOrg,
                 });
             } catch {
                 // Invalid URL — let the handler catch it
@@ -113,7 +138,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                     baseUrl: accsEndpoint,
                     orgId: state.adobeOrg?.id,
                     accsGraphqlEndpoint: accsEndpoint,
-                    discoveryServiceUrl: discoveryServiceUrl || undefined,
+                    commerceOrg,
                 });
             }
         }
@@ -198,8 +223,34 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                 {group.fields.map(field => (
                                     <React.Fragment key={field.key}>
                                         {isStoreGroup(group.id) && isWebsiteCodeField(field.key) ? (
-                                            /* Website code field with Auto-Detect button alongside */
+                                            /* Commerce location picker + Auto-Detect button + Website code field */
                                             <div>
+                                                {/* Commerce location — only for ACCS groups */}
+                                                {group.id === 'accs' && (
+                                                    <Flex gap="size-200" marginBottom="size-200" alignItems="end">
+                                                        <Picker
+                                                            label="Commerce Instance"
+                                                            selectedKey={commerceLocation}
+                                                            onSelectionChange={(key) => setCommerceLocation(key as 'same-org' | 'different-org')}
+                                                            width="size-2400"
+                                                        >
+                                                            <Item key="same-org">Same org as my I/O project</Item>
+                                                            <Item key="different-org">Different org</Item>
+                                                        </Picker>
+                                                        {commerceLocation === 'different-org' && discoveryOrgs.length > 0 && (
+                                                            <Picker
+                                                                label="Commerce Org"
+                                                                selectedKey={selectedCommerceOrg}
+                                                                onSelectionChange={(key) => setSelectedCommerceOrg(String(key))}
+                                                                width="size-2400"
+                                                            >
+                                                                {discoveryOrgs.map(org => (
+                                                                    <Item key={org}>{org}</Item>
+                                                                ))}
+                                                            </Picker>
+                                                        )}
+                                                    </Flex>
+                                                )}
                                                 <Flex alignItems="end" gap="size-150">
                                                     <div style={{ flex: 1 }}>
                                                         <ConfigFieldRenderer

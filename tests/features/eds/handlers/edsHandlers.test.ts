@@ -68,8 +68,8 @@ describe('edsHandlers', () => {
             // When: Getting registered types
             const types = getRegisteredTypes(edsHandlers);
 
-            // Then: Exactly 19 handlers (6 GitHub + 8 DA.live + 2 ACCS/Store + 3 Storefront Setup)
-            expect(types).toHaveLength(19);
+            // Then: Exactly 20 handlers (6 GitHub + 8 DA.live + 3 ACCS/Store + 3 Storefront Setup)
+            expect(types).toHaveLength(20);
         });
 
         it('should have handlers as functions', () => {

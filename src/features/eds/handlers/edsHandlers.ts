@@ -45,6 +45,7 @@ import {
     handleCancelStorefrontSetup,
     handleResumeStorefrontSetup,
 } from './storefrontSetupHandlers';
+import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
@@ -174,6 +175,28 @@ export async function handleValidateAccsCredentials(
 // Store Discovery Helpers
 // ==========================================================
 
+/** ACCS Discovery Service entry from VS Code settings */
+interface AccsDiscoveryService {
+    orgName: string;
+    orgId?: string;
+    serviceUrl: string;
+}
+
+/** Look up discovery service URL by org name from VS Code settings */
+function getDiscoveryServiceUrl(orgName: string): string | undefined {
+    const services = vscode.workspace.getConfiguration('demoBuilder.accsDiscovery')
+        .get<AccsDiscoveryService[]>('services', []);
+    const match = services.find(s => s.orgName === orgName);
+    return match?.serviceUrl;
+}
+
+/** Get all configured discovery service org names */
+function getDiscoveryServiceOrgs(): string[] {
+    const services = vscode.workspace.getConfiguration('demoBuilder.accsDiscovery')
+        .get<AccsDiscoveryService[]>('services', []);
+    return services.map(s => s.orgName);
+}
+
 interface AccsError { error: string; code?: string }
 
 /** Resolve ACCS-specific params (IMS token, tenant ID, client ID). Returns error object on failure. */
@@ -210,6 +233,17 @@ async function resolveAccsParams(
     };
 }
 
+/**
+ * Handle request for configured discovery service orgs.
+ * Returns list of org names from VS Code settings for the UI dropdown.
+ */
+export async function handleGetDiscoveryOrgs(
+    _context: HandlerContext,
+): Promise<HandlerResponse> {
+    const orgs = getDiscoveryServiceOrgs();
+    return { success: true, data: orgs };
+}
+
 // ==========================================================
 // Store Discovery Handler
 // ==========================================================
@@ -230,8 +264,8 @@ interface DiscoverStoreStructurePayload {
     orgId?: string;
     /** ACCS only: ACCS GraphQL endpoint URL (to extract tenant ID) */
     accsGraphqlEndpoint?: string;
-    /** ACCS only: Discovery service URL for cross-org access */
-    discoveryServiceUrl?: string;
+    /** ACCS only: selected Commerce org name for cross-org discovery */
+    commerceOrg?: string;
 }
 
 /**
@@ -267,8 +301,17 @@ export async function handleDiscoverStoreStructure(
         if (payload.backendType === 'paas') {
             params.username = payload.username;
             params.password = payload.password;
-        } else if (payload.discoveryServiceUrl) {
-            // ACCS with discovery service (cross-org) — just need IMS token + service URL
+        } else if (payload.commerceOrg) {
+            // ACCS cross-org — look up discovery service from VS Code settings
+            const serviceUrl = getDiscoveryServiceUrl(payload.commerceOrg);
+            if (!serviceUrl) {
+                await context.sendMessage('store-discovery-result', {
+                    success: false,
+                    error: `No discovery service configured for "${payload.commerceOrg}". Check Demo Builder settings.`,
+                });
+                return { success: false, error: 'Discovery service not configured' };
+            }
+
             const imsToken = context.authManager
                 ? await context.authManager.getTokenManager().getAccessToken()
                 : undefined;
@@ -280,7 +323,7 @@ export async function handleDiscoverStoreStructure(
                 return { success: false, error: 'IMS token not available' };
             }
             params.imsToken = imsToken;
-            params.discoveryServiceUrl = payload.discoveryServiceUrl;
+            params.discoveryServiceUrl = serviceUrl;
         } else {
             // ACCS direct (same-org) — resolve IMS token, tenant ID, and client ID
             const accsResult = await resolveAccsParams(context, payload);
@@ -353,6 +396,7 @@ export const edsHandlers = defineHandlers({
 
     // Store discovery
     'discover-store-structure': handleDiscoverStoreStructure,
+    'get-discovery-orgs': handleGetDiscoveryOrgs,
 
     // Storefront setup handlers (renamed from eds-preflight-*)
     'storefront-setup-start': handleStartStorefrontSetup,

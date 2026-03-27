@@ -94,6 +94,7 @@ export const projectCreationHandlers = defineHandlers({
 
     // EDS handlers - Store Discovery
     'discover-store-structure': eds.handleDiscoverStoreStructure,
+    'get-discovery-orgs': eds.handleGetDiscoveryOrgs,
 
     // EDS handlers - Storefront Setup (renamed from Preflight)
     'storefront-setup-start': eds.handleStartStorefrontSetup,

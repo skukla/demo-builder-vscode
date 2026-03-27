@@ -208,6 +208,40 @@
             "description": "Dummy path prefix for editor.path that prevents Universal Editor from auto-opening. Uses a non-existent path so UE only opens via punch-out."
           }
         }
+      },
+      {
+        "title": "ACCS Discovery",
+        "properties": {
+          "demoBuilder.accsDiscovery.services": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "orgName": {
+                  "type": "string",
+                  "description": "Display name for the Commerce org"
+                },
+                "orgId": {
+                  "type": "string",
+                  "description": "Adobe IMS org ID (e.g., ABC123@AdobeOrg)"
+                },
+                "serviceUrl": {
+                  "type": "string",
+                  "description": "Discovery service App Builder action URL"
+                }
+              },
+              "required": ["orgName", "serviceUrl"]
+            },
+            "default": [
+              {
+                "orgName": "Adobe Demo System",
+                "orgId": "8EBB33FE5E43BA110A495EF8@AdobeOrg",
+                "serviceUrl": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/accs-discovery/discover-stores"
+              }
+            ],
+            "description": "ACCS Discovery Services for cross-org store structure auto-detection. Each entry maps a Commerce org to its App Builder discovery service."
+          }
+        }
       }
     ],
     "viewsContainers": {
