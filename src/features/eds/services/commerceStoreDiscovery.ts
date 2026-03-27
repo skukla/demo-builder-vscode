@@ -274,10 +274,12 @@ export async function discoverStoreStructure(
 
         // ACCS path — prefer discovery service if configured (handles cross-org)
         if (params.discoveryServiceUrl && params.imsToken) {
+            // Service needs the full GraphQL endpoint (with tenant ID), not just the host
+            const accsEndpoint = params.accsGraphqlEndpoint || params.baseUrl;
             const data = await fetchViaDiscoveryService(
                 params.discoveryServiceUrl,
                 params.imsToken,
-                params.baseUrl,
+                accsEndpoint,
             );
             return { success: true, data };
         }

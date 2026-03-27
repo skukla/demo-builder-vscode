@@ -127,6 +127,9 @@ export interface StoreDiscoveryParams {
     /** ACCS only: tenant ID extracted from ACCS GraphQL endpoint */
     tenantId?: string;
 
+    /** ACCS only: Full GraphQL endpoint URL (needed by discovery service for tenant resolution) */
+    accsGraphqlEndpoint?: string;
+
     /** ACCS only: Discovery service URL (App Builder action) for cross-org access */
     discoveryServiceUrl?: string;
 }

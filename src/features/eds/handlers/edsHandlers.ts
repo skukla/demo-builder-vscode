@@ -324,6 +324,7 @@ export async function handleDiscoverStoreStructure(
             }
             params.imsToken = imsToken;
             params.discoveryServiceUrl = serviceUrl;
+            params.accsGraphqlEndpoint = payload.accsGraphqlEndpoint;
         } else {
             // ACCS direct (same-org) — resolve IMS token, tenant ID, and client ID
             const accsResult = await resolveAccsParams(context, payload);
