@@ -6,10 +6,8 @@ import {
     Divider,
     Button,
     ProgressCircle,
-    Picker,
-    Item,
 } from '@adobe/react-spectrum';
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { ConfigFieldRenderer } from '../components/ConfigFieldRenderer';
 import { StoreStructureSelector } from '../components/StoreStructureSelector';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
@@ -17,7 +15,6 @@ import { useComponentConfig, type UniqueField } from '../hooks/useComponentConfi
 import { useConfigNavigation } from '../hooks/useConfigNavigation';
 import { useStoreDiscovery } from '../hooks/useStoreDiscovery';
 import { lookupComponentConfigValue } from '../../services/envVarHelpers';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
@@ -90,26 +87,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         isStoreGroup,
     } = useStoreDiscovery();
 
-    // ACCS commerce location state
-    const [commerceLocation, setCommerceLocation] = useState<'same-org' | 'different-org'>('different-org');
-    const [selectedCommerceOrg, setSelectedCommerceOrg] = useState<string>('');
-    const [discoveryOrgs, setDiscoveryOrgs] = useState<string[]>([]);
-
-    // Load configured discovery orgs on mount
-    useEffect(() => {
-        webviewClient.request<{ success: boolean; data?: string[] }>('get-discovery-orgs')
-            .then(result => {
-                if (result.success && result.data) {
-                    setDiscoveryOrgs(result.data);
-                    // Auto-select first org if available
-                    if (result.data.length > 0 && !selectedCommerceOrg) {
-                        setSelectedCommerceOrg(result.data[0]);
-                    }
-                }
-            })
-            .catch(() => {}); // Silently fail — orgs just won't be available
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
     /** Build and send the store discovery request for a given group */
     const handleFetchStores = useCallback((groupId: string) => {
         const configs = state.componentConfigs ?? {};
@@ -130,16 +107,10 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                 password: password || undefined,
             });
         } else {
-            // ACCS
+            // ACCS — handler reads cross-org/same-org config from VS Code settings
             const accsEndpoint = lookupComponentConfigValue(configs, ACCS_ENDPOINT_KEY);
             if (!accsEndpoint) return;
 
-            // Determine commerce org for cross-org, undefined for same-org
-            const commerceOrg = commerceLocation === 'different-org' && selectedCommerceOrg
-                ? selectedCommerceOrg
-                : undefined;
-
-            // Extract base URL from ACCS endpoint (host portion)
             try {
                 const url = new URL(accsEndpoint);
                 fetchStores({
@@ -147,16 +118,13 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                     baseUrl: `${url.protocol}//${url.host}`,
                     orgId: state.adobeOrg?.id,
                     accsGraphqlEndpoint: accsEndpoint,
-                    commerceOrg,
                 });
             } catch {
-                // Invalid URL — let the handler catch it
                 fetchStores({
                     backendType: 'accs',
                     baseUrl: accsEndpoint,
                     orgId: state.adobeOrg?.id,
                     accsGraphqlEndpoint: accsEndpoint,
-                    commerceOrg,
                 });
             }
         }
@@ -235,67 +203,23 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                     <React.Fragment key={field.key}>
                                         {isStoreGroup(group.id) && isWebsiteCodeField(field.key) ? (
                                             <div>
-                                                {/* Commerce location + org picker + Auto-Detect — single row (ACCS only) */}
-                                                {group.id === 'accs' && (
-                                                    <Flex gap="size-200" marginBottom="size-200" alignItems="end">
-                                                        <Picker
-                                                            label="Commerce Instance"
-                                                            selectedKey={commerceLocation}
-                                                            onSelectionChange={(key) => setCommerceLocation(key as 'same-org' | 'different-org')}
-                                                            width="size-2400"
-                                                            isDisabled={isFetching}
+                                                {/* Auto-Detect button (both ACCS and PaaS) */}
+                                                <Flex gap="size-200" marginBottom="size-200" alignItems="center">
+                                                    {isFetching ? (
+                                                        <Flex alignItems="center" gap="size-100">
+                                                            <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
+                                                            <Text UNSAFE_className="status-text">Detecting...</Text>
+                                                        </Flex>
+                                                    ) : (
+                                                        <Button
+                                                            variant="secondary"
+                                                            onPress={() => handleFetchStores(group.id)}
+                                                            isDisabled={isCreatingCredential || !canFetchStores(group.id)}
                                                         >
-                                                            <Item key="same-org">Same org as my I/O project</Item>
-                                                            <Item key="different-org">Different org</Item>
-                                                        </Picker>
-                                                        {commerceLocation === 'different-org' && discoveryOrgs.length > 0 && (
-                                                            <Picker
-                                                                label="Commerce Org"
-                                                                selectedKey={selectedCommerceOrg}
-                                                                onSelectionChange={(key) => setSelectedCommerceOrg(String(key))}
-                                                                width="size-2400"
-                                                                isDisabled={isFetching}
-                                                            >
-                                                                {discoveryOrgs.map(org => (
-                                                                    <Item key={org}>{org}</Item>
-                                                                ))}
-                                                            </Picker>
-                                                        )}
-                                                        {isFetching ? (
-                                                            <Flex alignItems="center" gap="size-100">
-                                                                <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
-                                                                <Text UNSAFE_className="status-text">Detecting...</Text>
-                                                            </Flex>
-                                                        ) : (
-                                                            <Button
-                                                                variant="secondary"
-                                                                onPress={() => handleFetchStores(group.id)}
-                                                                isDisabled={isCreatingCredential || !canFetchStores(group.id)}
-                                                            >
-                                                                Auto-Detect
-                                                            </Button>
-                                                        )}
-                                                    </Flex>
-                                                )}
-                                                {/* PaaS Auto-Detect */}
-                                                {group.id === 'adobe-commerce' && (
-                                                    <Flex gap="size-200" marginBottom="size-200" alignItems="center">
-                                                        {isFetching ? (
-                                                            <Flex alignItems="center" gap="size-100">
-                                                                <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
-                                                                <Text UNSAFE_className="status-text">Detecting...</Text>
-                                                            </Flex>
-                                                        ) : (
-                                                            <Button
-                                                                variant="secondary"
-                                                                onPress={() => handleFetchStores(group.id)}
-                                                                isDisabled={!canFetchStores(group.id)}
-                                                            >
-                                                                Auto-Detect
-                                                            </Button>
-                                                        )}
-                                                    </Flex>
-                                                )}
+                                                            Auto-Detect
+                                                        </Button>
+                                                    )}
+                                                </Flex>
                                                 {/* Website code — listbox when data exists, text input otherwise */}
                                                 {hasStoreData ? (
                                                     <StoreStructureSelector

@@ -264,8 +264,6 @@ interface DiscoverStoreStructurePayload {
     orgId?: string;
     /** ACCS only: ACCS GraphQL endpoint URL (to extract tenant ID) */
     accsGraphqlEndpoint?: string;
-    /** ACCS only: selected Commerce org name for cross-org discovery */
-    commerceOrg?: string;
 }
 
 /**
@@ -301,42 +299,49 @@ export async function handleDiscoverStoreStructure(
         if (payload.backendType === 'paas') {
             params.username = payload.username;
             params.password = payload.password;
-        } else if (payload.commerceOrg) {
-            // ACCS cross-org — look up discovery service from VS Code settings
-            const serviceUrl = getDiscoveryServiceUrl(payload.commerceOrg);
-            if (!serviceUrl) {
-                await context.sendMessage('store-discovery-result', {
-                    success: false,
-                    error: `No discovery service configured for "${payload.commerceOrg}". Check Demo Builder settings.`,
-                });
-                return { success: false, error: 'Discovery service not configured' };
-            }
-
-            const imsToken = context.authManager
-                ? await context.authManager.getTokenManager().getAccessToken()
-                : undefined;
-            if (!imsToken) {
-                await context.sendMessage('store-discovery-result', {
-                    success: false,
-                    error: 'Adobe IMS token required. Please sign in first.',
-                });
-                return { success: false, error: 'IMS token not available' };
-            }
-            params.imsToken = imsToken;
-            params.discoveryServiceUrl = serviceUrl;
-            params.accsGraphqlEndpoint = payload.accsGraphqlEndpoint;
         } else {
-            // ACCS direct (same-org) — resolve IMS token, tenant ID, and client ID
-            const accsResult = await resolveAccsParams(context, payload);
-            if ('error' in accsResult) {
-                await context.sendMessage('store-discovery-result', {
-                    success: false,
-                    error: accsResult.error,
-                    code: accsResult.code,
-                });
-                return { success: false, error: accsResult.error };
+            // ACCS — check settings for cross-org vs same-org
+            const accsConfig = vscode.workspace.getConfiguration('demoBuilder.accsDiscovery');
+            const instanceLocation = accsConfig.get<string>('commerceInstanceLocation', 'different-org');
+
+            if (instanceLocation === 'different-org') {
+                // Cross-org — look up discovery service from settings
+                const defaultOrg = accsConfig.get<string>('defaultCommerceOrg', '');
+                const serviceUrl = getDiscoveryServiceUrl(defaultOrg);
+                if (!serviceUrl) {
+                    await context.sendMessage('store-discovery-result', {
+                        success: false,
+                        error: `No discovery service configured for "${defaultOrg}". Check Demo Builder ACCS Discovery settings.`,
+                    });
+                    return { success: false, error: 'Discovery service not configured' };
+                }
+
+                const imsToken = context.authManager
+                    ? await context.authManager.getTokenManager().getAccessToken()
+                    : undefined;
+                if (!imsToken) {
+                    await context.sendMessage('store-discovery-result', {
+                        success: false,
+                        error: 'Adobe IMS token required. Please sign in first.',
+                    });
+                    return { success: false, error: 'IMS token not available' };
+                }
+                params.imsToken = imsToken;
+                params.discoveryServiceUrl = serviceUrl;
+                params.accsGraphqlEndpoint = payload.accsGraphqlEndpoint;
+            } else {
+                // ACCS direct (same-org) — resolve IMS token, tenant ID, and client ID
+                const accsResult = await resolveAccsParams(context, payload);
+                if ('error' in accsResult) {
+                    await context.sendMessage('store-discovery-result', {
+                        success: false,
+                        error: accsResult.error,
+                        code: accsResult.code,
+                    });
+                    return { success: false, error: accsResult.error };
+                }
+                Object.assign(params, accsResult);
             }
-            Object.assign(params, accsResult);
         }
 
         const result = await discoverStoreStructure(params);
