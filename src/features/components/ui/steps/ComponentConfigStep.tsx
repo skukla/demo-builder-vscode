@@ -84,12 +84,11 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         isCreatingCredential,
         fetchStores,
         createCredential,
-        getFieldOptions,
         getWebsiteItems,
         getStoreGroupItems,
         getStoreViewItems,
         isStoreGroup,
-    } = useStoreDiscovery(state.componentConfigs ?? {});
+    } = useStoreDiscovery();
 
     // ACCS commerce location state
     const [commerceLocation, setCommerceLocation] = useState<'same-org' | 'different-org'>('different-org');
