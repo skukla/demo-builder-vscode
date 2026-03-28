@@ -183,19 +183,10 @@ interface AccsDiscoveryService {
     serviceUrl: string;
 }
 
-/** Look up discovery service URL by org name from VS Code settings */
-function getDiscoveryServiceUrl(orgName: string): string | undefined {
-    const services = vscode.workspace.getConfiguration('demoBuilder.accsDiscovery')
+/** Get all configured discovery services from VS Code settings */
+function getDiscoveryServices(): AccsDiscoveryService[] {
+    return vscode.workspace.getConfiguration('demoBuilder.accsDiscovery')
         .get<AccsDiscoveryService[]>('services', []);
-    const match = services.find(s => s.orgName === orgName);
-    return match?.serviceUrl;
-}
-
-/** Get all configured discovery service org names */
-function getDiscoveryServiceOrgs(): string[] {
-    const services = vscode.workspace.getConfiguration('demoBuilder.accsDiscovery')
-        .get<AccsDiscoveryService[]>('services', []);
-    return services.map(s => s.orgName);
 }
 
 interface AccsError { error: string; code?: string }
@@ -232,17 +223,6 @@ async function resolveAccsParams(
         tenantId: extractTenantId(payload.accsGraphqlEndpoint),
         clientId: credential.clientId,
     };
-}
-
-/**
- * Handle request for configured discovery service orgs.
- * Returns list of org names from VS Code settings for the UI dropdown.
- */
-export async function handleGetDiscoveryOrgs(
-    _context: HandlerContext,
-): Promise<HandlerResponse> {
-    const orgs = getDiscoveryServiceOrgs();
-    return { success: true, data: orgs };
 }
 
 // ==========================================================
@@ -301,60 +281,50 @@ export async function handleDiscoverStoreStructure(
             params.username = payload.username;
             params.password = payload.password;
         } else {
-            // ACCS — check settings for cross-org vs same-org
-            const accsConfig = vscode.workspace.getConfiguration('demoBuilder.accsDiscovery');
-            const instanceLocation = accsConfig.get<string>('commerceInstanceLocation', 'different-org');
+            // ACCS — try discovery services first, fall back to direct auth
+            const services = getDiscoveryServices();
 
-            if (instanceLocation === 'different-org') {
-                // Cross-org — look up discovery service from settings
-                const defaultOrg = accsConfig.get<string>('defaultCommerceOrg', '');
-                const serviceUrl = getDiscoveryServiceUrl(defaultOrg);
-                if (!serviceUrl) {
-                    await context.sendMessage('store-discovery-result', {
-                        success: false,
-                        error: `No discovery service configured for "${defaultOrg}". Check Demo Builder ACCS Discovery settings.`,
-                    });
-                    return { success: false, error: 'Discovery service not configured' };
-                }
-
-                // Ensure Adobe auth (prompts for re-sign-in if expired)
-                if (!context.authManager) {
-                    await context.sendMessage('store-discovery-result', {
-                        success: false,
-                        error: 'Authentication not available.',
-                    });
-                    return { success: false, error: 'AuthManager not available' };
-                }
-
-                const authResult = await ensureAdobeIOAuth({
-                    authManager: context.authManager,
-                    logger: context.logger,
-                    logPrefix: '[Store Discovery]',
-                    warningMessage: 'Adobe sign-in required for store discovery.',
+            // Ensure Adobe auth (prompts for re-sign-in if expired)
+            if (!context.authManager) {
+                await context.sendMessage('store-discovery-result', {
+                    success: false,
+                    error: 'Authentication not available.',
                 });
-                if (!authResult.authenticated) {
-                    await context.sendMessage('store-discovery-result', {
-                        success: false,
-                        error: authResult.cancelled
-                            ? 'Adobe sign-in was cancelled.'
-                            : 'Adobe sign-in failed. Please try again.',
-                    });
-                    return { success: false, error: 'Adobe authentication required' };
-                }
+                return { success: false, error: 'AuthManager not available' };
+            }
 
-                const imsToken = await context.authManager.getTokenManager().getAccessToken();
-                if (!imsToken) {
-                    await context.sendMessage('store-discovery-result', {
-                        success: false,
-                        error: 'Failed to retrieve IMS token after sign-in.',
-                    });
-                    return { success: false, error: 'IMS token not available' };
-                }
+            const authResult = await ensureAdobeIOAuth({
+                authManager: context.authManager,
+                logger: context.logger,
+                logPrefix: '[Store Discovery]',
+                warningMessage: 'Adobe sign-in required for store discovery.',
+            });
+            if (!authResult.authenticated) {
+                await context.sendMessage('store-discovery-result', {
+                    success: false,
+                    error: authResult.cancelled
+                        ? 'Adobe sign-in was cancelled.'
+                        : 'Adobe sign-in failed. Please try again.',
+                });
+                return { success: false, error: 'Adobe authentication required' };
+            }
+
+            const imsToken = await context.authManager.getTokenManager().getAccessToken();
+            if (!imsToken) {
+                await context.sendMessage('store-discovery-result', {
+                    success: false,
+                    error: 'Failed to retrieve IMS token after sign-in.',
+                });
+                return { success: false, error: 'IMS token not available' };
+            }
+
+            if (services.length > 0) {
+                // Try the first configured discovery service
                 params.imsToken = imsToken;
-                params.discoveryServiceUrl = serviceUrl;
+                params.discoveryServiceUrl = services[0].serviceUrl;
                 params.accsGraphqlEndpoint = payload.accsGraphqlEndpoint;
             } else {
-                // ACCS direct (same-org) — resolve IMS token, tenant ID, and client ID
+                // No discovery services configured — fall back to direct auth
                 const accsResult = await resolveAccsParams(context, payload);
                 if ('error' in accsResult) {
                     await context.sendMessage('store-discovery-result', {
@@ -426,7 +396,6 @@ export const edsHandlers = defineHandlers({
 
     // Store discovery
     'discover-store-structure': handleDiscoverStoreStructure,
-    'get-discovery-orgs': handleGetDiscoveryOrgs,
 
     // Storefront setup handlers (renamed from eds-preflight-*)
     'storefront-setup-start': handleStartStorefrontSetup,

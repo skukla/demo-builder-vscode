@@ -212,24 +212,6 @@
       {
         "title": "ACCS Discovery",
         "properties": {
-          "demoBuilder.accsDiscovery.commerceInstanceLocation": {
-            "type": "string",
-            "enum": [
-              "same-org",
-              "different-org"
-            ],
-            "enumDescriptions": [
-              "Your Adobe I/O project is in the same org as your Commerce instance",
-              "Your Commerce instance is in a different org (e.g., Adobe Demo System)"
-            ],
-            "default": "different-org",
-            "description": "Whether your ACCS Commerce instance is in the same Adobe org as your Developer Console project."
-          },
-          "demoBuilder.accsDiscovery.defaultCommerceOrg": {
-            "type": "string",
-            "default": "Adobe Demo System",
-            "description": "Default Commerce org for cross-org auto-detection. Must match an orgName in the Discovery Services list."
-          },
           "demoBuilder.accsDiscovery.services": {
             "type": "array",
             "items": {

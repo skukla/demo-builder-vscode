@@ -114,9 +114,9 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'create-workspace-credential')).toBe(true);
         });
 
-        it('should have exactly 7 handlers', () => {
+        it('should have exactly 6 handlers', () => {
             const types = getRegisteredTypes(configureHandlers);
-            expect(types).toHaveLength(7);
+            expect(types).toHaveLength(6);
         });
 
         it('should have all handlers as functions', () => {
