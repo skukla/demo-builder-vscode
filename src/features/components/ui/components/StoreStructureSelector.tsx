@@ -59,7 +59,8 @@ export function StoreStructureSelector({
             selectedKey={selectedCode || null}
             onSelectionChange={(key) => onSelect(String(key))}
             isRequired={isRequired}
-            width="100%"
+            flex={1}
+            minWidth="size-2000"
         >
             {items.map(item => (
                 <Item key={item.code}>{item.name} ({item.code})</Item>
