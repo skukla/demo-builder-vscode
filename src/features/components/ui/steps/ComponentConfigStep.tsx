@@ -7,7 +7,7 @@ import {
     Button,
     ProgressCircle,
 } from '@adobe/react-spectrum';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect, useRef } from 'react';
 import { ConfigFieldRenderer } from '../components/ConfigFieldRenderer';
 import { StoreStructureSelector } from '../components/StoreStructureSelector';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
@@ -130,6 +130,30 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         }
     }, [state.componentConfigs, state.adobeOrg?.id, fetchStores]);
 
+    // Auto-detect store structure when ACCS endpoint changes to a valid URL
+    const prevAccsEndpointRef = useRef<string | undefined>(undefined);
+    const accsEndpoint = useMemo(() => {
+        return lookupComponentConfigValue(state.componentConfigs ?? {}, ACCS_ENDPOINT_KEY);
+    }, [state.componentConfigs]);
+
+    useEffect(() => {
+        if (!accsEndpoint || accsEndpoint === prevAccsEndpointRef.current) return;
+        prevAccsEndpointRef.current = accsEndpoint;
+
+        // Only trigger if it looks like a valid ACCS endpoint URL
+        try {
+            const url = new URL(accsEndpoint);
+            if (!url.pathname.includes('graphql')) return;
+        } catch {
+            return; // Not a valid URL yet
+        }
+
+        // Don't re-trigger if we already have data or are fetching
+        if (hasStoreData || isFetching) return;
+
+        handleFetchStores('accs');
+    }, [accsEndpoint, hasStoreData, isFetching, handleFetchStores]);
+
     /** Check if PaaS group has the base URL filled (needed to enable button) */
     const canFetchStores = useCallback((groupId: string): boolean => {
         const configs = state.componentConfigs ?? {};
@@ -197,23 +221,32 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                     <React.Fragment key={field.key}>
                                         {isStoreGroup(group.id) && isWebsiteCodeField(field.key) ? (
                                             <div>
-                                                {/* Auto-Detect button (both ACCS and PaaS) */}
-                                                <Flex gap="size-200" marginBottom="size-200" alignItems="center">
-                                                    {isFetching ? (
-                                                        <Flex alignItems="center" gap="size-100">
-                                                            <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
-                                                            <Text UNSAFE_className="status-text">Detecting...</Text>
-                                                        </Flex>
-                                                    ) : (
-                                                        <Button
-                                                            variant="secondary"
-                                                            onPress={() => handleFetchStores(group.id)}
-                                                            isDisabled={isCreatingCredential || !canFetchStores(group.id)}
-                                                        >
-                                                            Auto-Detect
-                                                        </Button>
-                                                    )}
-                                                </Flex>
+                                                {/* ACCS: auto-detects on endpoint change — show inline spinner */}
+                                                {group.id === 'accs' && isFetching && (
+                                                    <Flex alignItems="center" gap="size-100" marginBottom="size-200">
+                                                        <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
+                                                        <Text UNSAFE_className="status-text">Detecting store structure...</Text>
+                                                    </Flex>
+                                                )}
+                                                {/* PaaS: manual Auto-Detect (needs username/password first) */}
+                                                {group.id === 'adobe-commerce' && (
+                                                    <Flex gap="size-200" marginBottom="size-200" alignItems="center">
+                                                        {isFetching ? (
+                                                            <Flex alignItems="center" gap="size-100">
+                                                                <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
+                                                                <Text UNSAFE_className="status-text">Detecting...</Text>
+                                                            </Flex>
+                                                        ) : (
+                                                            <Button
+                                                                variant="secondary"
+                                                                onPress={() => handleFetchStores(group.id)}
+                                                                isDisabled={!canFetchStores(group.id)}
+                                                            >
+                                                                Auto-Detect
+                                                            </Button>
+                                                        )}
+                                                    </Flex>
+                                                )}
                                                 {/* Website code — picker when data exists, text input otherwise */}
                                                 {hasStoreData ? (
                                                     <StoreStructureSelector
