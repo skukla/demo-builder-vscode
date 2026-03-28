@@ -130,38 +130,40 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         }
     }, [state.componentConfigs, state.adobeOrg?.id, fetchStores]);
 
-    // Auto-detect store structure when ACCS endpoint changes to a valid URL
-    const prevAccsEndpointRef = useRef<string | undefined>(undefined);
-    const accsEndpoint = useMemo(() => {
-        return lookupComponentConfigValue(state.componentConfigs ?? {}, ACCS_ENDPOINT_KEY);
+    // Auto-detect store structure when required fields are filled
+    const prevAutoDetectKeyRef = useRef<string | undefined>(undefined);
+    const autoDetectKey = useMemo(() => {
+        const configs = state.componentConfigs ?? {};
+        const accsEndpoint = lookupComponentConfigValue(configs, ACCS_ENDPOINT_KEY);
+        const paasUrl = lookupComponentConfigValue(configs, PAAS_URL);
+        const paasUser = lookupComponentConfigValue(configs, PAAS_ADMIN_USERNAME);
+        const paasPass = lookupComponentConfigValue(configs, PAAS_ADMIN_PASSWORD);
+
+        // ACCS: valid URL with /graphql
+        if (accsEndpoint) {
+            try {
+                const url = new URL(accsEndpoint);
+                if (url.pathname.includes('graphql')) return `accs:${accsEndpoint}`;
+            } catch { /* not valid yet */ }
+        }
+
+        // PaaS: URL + username + password all filled
+        if (paasUrl && paasUser && paasPass) {
+            return `paas:${paasUrl}:${paasUser}`;
+        }
+
+        return undefined;
     }, [state.componentConfigs]);
 
     useEffect(() => {
-        if (!accsEndpoint || accsEndpoint === prevAccsEndpointRef.current) return;
-        prevAccsEndpointRef.current = accsEndpoint;
+        if (!autoDetectKey || autoDetectKey === prevAutoDetectKeyRef.current) return;
+        prevAutoDetectKeyRef.current = autoDetectKey;
 
-        // Only trigger if it looks like a valid ACCS endpoint URL
-        try {
-            const url = new URL(accsEndpoint);
-            if (!url.pathname.includes('graphql')) return;
-        } catch {
-            return; // Not a valid URL yet
-        }
-
-        // Don't re-trigger if we already have data or are fetching
         if (hasStoreData || isFetching) return;
 
-        handleFetchStores('accs');
-    }, [accsEndpoint, hasStoreData, isFetching, handleFetchStores]);
-
-    /** Check if PaaS group has the base URL filled (needed to enable button) */
-    const canFetchStores = useCallback((groupId: string): boolean => {
-        const configs = state.componentConfigs ?? {};
-        if (groupId === 'adobe-commerce') {
-            return !!lookupComponentConfigValue(configs, PAAS_URL);
-        }
-        return !!lookupComponentConfigValue(configs, ACCS_ENDPOINT_KEY);
-    }, [state.componentConfigs]);
+        const backendType = autoDetectKey.startsWith('accs:') ? 'accs' : 'adobe-commerce';
+        handleFetchStores(backendType);
+    }, [autoDetectKey, hasStoreData, isFetching, handleFetchStores]);
 
     /**
      * Render main content based on loading/error/data state
@@ -221,30 +223,11 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                     <React.Fragment key={field.key}>
                                         {isStoreGroup(group.id) && isWebsiteCodeField(field.key) ? (
                                             <div>
-                                                {/* ACCS: auto-detects on endpoint change — show inline spinner */}
-                                                {group.id === 'accs' && isFetching && (
+                                                {/* Inline spinner during auto-detection */}
+                                                {isFetching && (
                                                     <Flex alignItems="center" gap="size-100" marginBottom="size-200">
                                                         <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
                                                         <Text UNSAFE_className="status-text">Detecting store structure...</Text>
-                                                    </Flex>
-                                                )}
-                                                {/* PaaS: manual Auto-Detect (needs username/password first) */}
-                                                {group.id === 'adobe-commerce' && (
-                                                    <Flex gap="size-200" marginBottom="size-200" alignItems="center">
-                                                        {isFetching ? (
-                                                            <Flex alignItems="center" gap="size-100">
-                                                                <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
-                                                                <Text UNSAFE_className="status-text">Detecting...</Text>
-                                                            </Flex>
-                                                        ) : (
-                                                            <Button
-                                                                variant="secondary"
-                                                                onPress={() => handleFetchStores(group.id)}
-                                                                isDisabled={!canFetchStores(group.id)}
-                                                            >
-                                                                Auto-Detect
-                                                            </Button>
-                                                        )}
                                                     </Flex>
                                                 )}
                                                 {/* Website code — picker when data exists, text input otherwise */}
