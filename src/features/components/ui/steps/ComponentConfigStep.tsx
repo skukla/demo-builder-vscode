@@ -8,7 +8,7 @@ import {
 } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useEffect, useRef } from 'react';
 import { ConfigFieldRenderer } from '../components/ConfigFieldRenderer';
-import { StoreStructureSelector } from '../components/StoreStructureSelector';
+import { StoreSelectionRow } from '../components/StoreSelectionRow';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
 import { useComponentConfig, type UniqueField } from '../hooks/useComponentConfig';
 import { useConfigNavigation } from '../hooks/useConfigNavigation';
@@ -36,19 +36,13 @@ import {
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
 } from '../../config/envVarKeys';
 
-/** Whether a field is a website code field (where Auto-Detect controls appear) */
+/** Whether a field is a website code field (where store selection row appears) */
 const isWebsiteCodeField = (key: string) => key === PAAS_WEBSITE_CODE || key === ACCS_WEBSITE_CODE;
 
 /** Whether a field is any store code field (website, store, or store view) */
 const isStoreCodeField = (key: string) =>
     key === PAAS_WEBSITE_CODE || key === PAAS_STORE_CODE || key === PAAS_STORE_VIEW_CODE ||
     key === ACCS_WEBSITE_CODE || key === ACCS_STORE_CODE || key === ACCS_STORE_VIEW_CODE;
-
-/** Whether a field is a store group code field */
-const isStoreGroupField = (key: string) => key === PAAS_STORE_CODE || key === ACCS_STORE_CODE;
-
-/** Whether a field is a store view code field */
-const isStoreViewField = (key: string) => key === PAAS_STORE_VIEW_CODE || key === ACCS_STORE_VIEW_CODE;
 
 export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseStepProps) {
     const {
@@ -226,14 +220,16 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                         <Text UNSAFE_className="status-text">Detecting store structure...</Text>
                                                     </Flex>
                                                 )}
-                                                {/* Website code — picker when data exists, text input otherwise */}
+                                                {/* Store selection — inline row when data exists, text input otherwise */}
                                                 {hasStoreData ? (
-                                                    <StoreStructureSelector
-                                                        label={field.label}
-                                                        items={getWebsiteItems()}
-                                                        selectedCode={String(getFieldValue(field) || '')}
-                                                        onSelect={(code) => updateField(field, code)}
-                                                        isRequired={field.required}
+                                                    <StoreSelectionRow
+                                                        group={group}
+                                                        getFieldValue={getFieldValue}
+                                                        updateField={updateField}
+                                                        getWebsiteItems={getWebsiteItems}
+                                                        getStoreGroupItems={getStoreGroupItems}
+                                                        getStoreViewItems={getStoreViewItems}
+                                                        componentConfigs={state.componentConfigs ?? {}}
                                                     />
                                                 ) : (
                                                     <ConfigFieldRenderer
@@ -249,28 +245,9 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                     <Text UNSAFE_className="text-red-700" marginBottom="size-200">{fetchError}</Text>
                                                 )}
                                             </div>
-                                        ) : hasStoreData && isStoreGroupField(field.key) ? (
-                                            <StoreStructureSelector
-                                                label={field.label}
-                                                items={getStoreGroupItems(
-                                                    lookupComponentConfigValue(state.componentConfigs ?? {},
-                                                        field.key === PAAS_STORE_CODE ? PAAS_WEBSITE_CODE : ACCS_WEBSITE_CODE) || '',
-                                                )}
-                                                selectedCode={String(getFieldValue(field) || '')}
-                                                onSelect={(code) => updateField(field, code)}
-                                                isRequired={field.required}
-                                            />
-                                        ) : hasStoreData && isStoreViewField(field.key) ? (
-                                            <StoreStructureSelector
-                                                label={field.label}
-                                                items={getStoreViewItems(
-                                                    lookupComponentConfigValue(state.componentConfigs ?? {},
-                                                        field.key === PAAS_STORE_VIEW_CODE ? PAAS_STORE_CODE : ACCS_STORE_CODE) || '',
-                                                )}
-                                                selectedCode={String(getFieldValue(field) || '')}
-                                                onSelect={(code) => updateField(field, code)}
-                                                isRequired={field.required}
-                                            />
+                                        ) : hasStoreData && isStoreCodeField(field.key) ? (
+                                            /* Store/StoreView fields are rendered inline by StoreSelectionRow above — skip */
+                                            null
                                         ) : (
                                             <ConfigFieldRenderer
                                                 field={field}
