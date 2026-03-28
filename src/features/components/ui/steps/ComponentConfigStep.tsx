@@ -220,8 +220,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                         <Text UNSAFE_className="status-text">Detecting store structure...</Text>
                                                     </Flex>
                                                 )}
-                                                {/* Store selection — inline row when data exists, text input otherwise */}
-                                                {hasStoreData ? (
+                                                {/* Store selection row when data exists */}
+                                                {hasStoreData && (
                                                     <StoreSelectionRow
                                                         group={group}
                                                         getFieldValue={getFieldValue}
@@ -231,22 +231,24 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                         getStoreViewItems={getStoreViewItems}
                                                         componentConfigs={state.componentConfigs ?? {}}
                                                     />
-                                                ) : (
-                                                    <ConfigFieldRenderer
-                                                        field={field}
-                                                        value={getFieldValue(field)}
-                                                        error={validationErrors[field.key]}
-                                                        isTouched={touchedFields.has(field.key)}
-                                                        onUpdate={updateField}
-                                                        onNormalizeUrl={normalizeUrlField}
-                                                    />
                                                 )}
+                                                {/* Error + fallback text input for website */}
                                                 {fetchError && (
-                                                    <Text UNSAFE_className="text-red-700" marginBottom="size-200">{fetchError}</Text>
+                                                    <>
+                                                        <Text UNSAFE_className="text-red-700" marginBottom="size-200">{fetchError}</Text>
+                                                        <ConfigFieldRenderer
+                                                            field={field}
+                                                            value={getFieldValue(field)}
+                                                            error={validationErrors[field.key]}
+                                                            isTouched={touchedFields.has(field.key)}
+                                                            onUpdate={updateField}
+                                                            onNormalizeUrl={normalizeUrlField}
+                                                        />
+                                                    </>
                                                 )}
                                             </div>
-                                        ) : hasStoreData && isStoreCodeField(field.key) ? (
-                                            /* Store/StoreView fields are rendered inline by StoreSelectionRow above — skip */
+                                        ) : isStoreCodeField(field.key) && !fetchError ? (
+                                            /* Store fields hidden until auto-detect succeeds or fails */
                                             null
                                         ) : (
                                             <ConfigFieldRenderer
