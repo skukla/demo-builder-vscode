@@ -61,6 +61,7 @@ export function StoreStructureSelector({
             isRequired={isRequired}
             flex={1}
             minWidth="size-2000"
+            menuWidth="auto"
         >
             {items.map(item => (
                 <Item key={item.code}>{item.name} ({item.code})</Item>
