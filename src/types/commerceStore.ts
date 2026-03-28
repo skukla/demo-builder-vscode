@@ -115,22 +115,13 @@ export interface StoreDiscoveryParams {
     /** PaaS only: admin password for token authentication */
     password?: string;
 
-    /** ACCS only: IMS access token */
+    /** ACCS only: IMS access token (for discovery service authentication) */
     imsToken?: string;
 
-    /** ACCS only: API client ID (x-api-key header) */
-    clientId?: string;
-
-    /** ACCS only: IMS organization ID (x-gw-ims-org-id header) */
-    orgId?: string;
-
-    /** ACCS only: tenant ID extracted from ACCS GraphQL endpoint */
-    tenantId?: string;
-
-    /** ACCS only: Full GraphQL endpoint URL (needed by discovery service for tenant resolution) */
+    /** ACCS only: Full GraphQL endpoint URL (discovery service extracts tenant ID) */
     accsGraphqlEndpoint?: string;
 
-    /** ACCS only: Discovery service URL (App Builder action) for cross-org access */
+    /** ACCS only: Discovery service URL (App Builder action) */
     discoveryServiceUrl?: string;
 }
 

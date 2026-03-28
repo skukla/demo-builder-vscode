@@ -2,16 +2,21 @@
  * handleDiscoverStoreStructure Handler Tests
  *
  * Tests for the store discovery handler's orchestration logic:
- * parameter validation, auth manager interaction, and message sending.
+ * parameter validation, discovery service lookup, auth guard, and message sending.
  */
 
 import type { ExtensionContext } from 'vscode';
+import * as vscode from 'vscode';
 import type { HandlerContext } from '@/types/handlers';
 
 // Mock the discovery service
 jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
     discoverStoreStructure: jest.fn(),
-    extractTenantId: jest.fn(),
+}));
+
+// Mock ensureAdobeIOAuth
+jest.mock('@/core/auth/adobeAuthGuard', () => ({
+    ensureAdobeIOAuth: jest.fn(),
 }));
 
 // Mock timeoutConfig (must include UI subkeys for transitive imports)
@@ -32,14 +37,33 @@ jest.mock('@/core/validation', () => ({
 }));
 
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
-import { discoverStoreStructure, extractTenantId } from '@/features/eds/services/commerceStoreDiscovery';
+import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
+import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 
 const mockDiscoverStoreStructure = discoverStoreStructure as jest.MockedFunction<typeof discoverStoreStructure>;
-const mockExtractTenantId = extractTenantId as jest.MockedFunction<typeof extractTenantId>;
+const mockEnsureAdobeIOAuth = ensureAdobeIOAuth as jest.MockedFunction<typeof ensureAdobeIOAuth>;
+const mockGetConfiguration = vscode.workspace.getConfiguration as jest.MockedFunction<typeof vscode.workspace.getConfiguration>;
 
 // ==========================================================
 // Test Helpers
 // ==========================================================
+
+const MOCK_DISCOVERY_SERVICE = {
+    orgName: 'Test Org',
+    serviceUrl: 'https://actions.adobeioruntime.net/api/v1/web/discovery',
+};
+
+function mockDiscoveryServices(services: { orgName: string; serviceUrl: string }[] = [MOCK_DISCOVERY_SERVICE]): void {
+    mockGetConfiguration.mockReturnValue({
+        get: jest.fn().mockReturnValue(services),
+    } as unknown as ReturnType<typeof vscode.workspace.getConfiguration>);
+}
+
+function mockNoDiscoveryServices(): void {
+    mockGetConfiguration.mockReturnValue({
+        get: jest.fn().mockReturnValue([]),
+    } as unknown as ReturnType<typeof vscode.workspace.getConfiguration>);
+}
 
 function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext {
     const mockExtensionContext = {
@@ -62,10 +86,6 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
             getTokenManager: jest.fn().mockReturnValue({
                 getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
             }),
-            getWorkspaceCredential: jest.fn().mockResolvedValue({
-                clientId: 'mock-client-id',
-                source: 'oauth_server_to_server',
-            }),
         },
         ...overrides,
     } as unknown as HandlerContext;
@@ -84,7 +104,9 @@ const MOCK_STORE_DATA = {
 describe('handleDiscoverStoreStructure', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockExtractTenantId.mockReturnValue('TestTenant123');
+        // Default: discovery services configured, auth succeeds
+        mockDiscoveryServices();
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     });
 
     // ----------------------------------------------------------
@@ -145,8 +167,23 @@ describe('handleDiscoverStoreStructure', () => {
     });
 
     // ----------------------------------------------------------
-    // ACCS path
+    // ACCS path — discovery service
     // ----------------------------------------------------------
+
+    it('should send error when no discovery services are configured for ACCS', async () => {
+        mockNoDiscoveryServices();
+        const context = createMockContext();
+
+        await handleDiscoverStoreStructure(context, {
+            backendType: 'accs',
+            baseUrl: 'https://accs.test',
+        });
+
+        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
+            success: false,
+            error: expect.stringContaining('No discovery service configured'),
+        }));
+    });
 
     it('should send error when authManager is not available for ACCS', async () => {
         const context = createMockContext({ authManager: undefined });
@@ -154,17 +191,45 @@ describe('handleDiscoverStoreStructure', () => {
         await handleDiscoverStoreStructure(context, {
             backendType: 'accs',
             baseUrl: 'https://accs.test',
-            orgId: 'org@AdobeOrg',
-            accsGraphqlEndpoint: 'https://accs.test/Tenant123/graphql',
         });
 
         expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
             success: false,
-            error: expect.stringContaining('authentication not available'),
+            error: expect.stringContaining('Authentication not available'),
         }));
     });
 
-    it('should send error when IMS token is expired for ACCS', async () => {
+    it('should send error when Adobe sign-in is cancelled for ACCS', async () => {
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, cancelled: true });
+        const context = createMockContext();
+
+        await handleDiscoverStoreStructure(context, {
+            backendType: 'accs',
+            baseUrl: 'https://accs.test',
+        });
+
+        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
+            success: false,
+            error: expect.stringContaining('cancelled'),
+        }));
+    });
+
+    it('should send error when Adobe sign-in fails for ACCS', async () => {
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
+        const context = createMockContext();
+
+        await handleDiscoverStoreStructure(context, {
+            backendType: 'accs',
+            baseUrl: 'https://accs.test',
+        });
+
+        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
+            success: false,
+            error: expect.stringContaining('sign-in failed'),
+        }));
+    });
+
+    it('should send error when IMS token is unavailable after sign-in for ACCS', async () => {
         const context = createMockContext({
             authManager: {
                 getTokenManager: jest.fn().mockReturnValue({
@@ -176,49 +241,34 @@ describe('handleDiscoverStoreStructure', () => {
         await handleDiscoverStoreStructure(context, {
             backendType: 'accs',
             baseUrl: 'https://accs.test',
-            orgId: 'org@AdobeOrg',
-            accsGraphqlEndpoint: 'https://accs.test/Tenant123/graphql',
         });
 
         expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
             success: false,
-            error: expect.stringContaining('IMS token expired'),
+            error: expect.stringContaining('IMS token'),
         }));
     });
 
-    it('should send error when accsGraphqlEndpoint is missing for ACCS', async () => {
-        const context = createMockContext();
-
-        await handleDiscoverStoreStructure(context, {
-            backendType: 'accs',
-            baseUrl: 'https://accs.test',
-            orgId: 'org@AdobeOrg',
-            // accsGraphqlEndpoint missing
-        });
-
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: false,
-            error: expect.stringContaining('ACCS GraphQL endpoint'),
-        }));
-    });
-
-    it('should delegate to discoverStoreStructure for ACCS path with IMS token', async () => {
+    it('should delegate to discoverStoreStructure for ACCS path with discovery service', async () => {
         const context = createMockContext();
         mockDiscoverStoreStructure.mockResolvedValue({ success: true, data: MOCK_STORE_DATA });
 
         await handleDiscoverStoreStructure(context, {
             backendType: 'accs',
             baseUrl: 'https://accs.test',
-            orgId: 'org@AdobeOrg',
             accsGraphqlEndpoint: 'https://accs.test/TestTenant123/graphql',
         });
 
-        expect(mockExtractTenantId).toHaveBeenCalledWith('https://accs.test/TestTenant123/graphql');
         expect(mockDiscoverStoreStructure).toHaveBeenCalledWith(expect.objectContaining({
             backendType: 'accs',
             baseUrl: 'https://accs.test',
             imsToken: 'mock-ims-token',
-            tenantId: 'TestTenant123',
+            discoveryServiceUrl: MOCK_DISCOVERY_SERVICE.serviceUrl,
+            accsGraphqlEndpoint: 'https://accs.test/TestTenant123/graphql',
+        }));
+        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
+            success: true,
+            data: MOCK_STORE_DATA,
         }));
     });
 
@@ -283,44 +333,5 @@ describe('handleDiscoverStoreStructure', () => {
         expect(context.logger.info).toHaveBeenCalledWith(
             expect.stringContaining('1 websites'),
         );
-    });
-
-    it('should send error when workspace credential is unavailable for ACCS', async () => {
-        const context = createMockContext({
-            authManager: {
-                getTokenManager: jest.fn().mockReturnValue({
-                    getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
-                }),
-                getWorkspaceCredential: jest.fn().mockResolvedValue(undefined),
-            } as unknown as HandlerContext['authManager'],
-        });
-
-        await handleDiscoverStoreStructure(context, {
-            backendType: 'accs',
-            baseUrl: 'https://accs.test',
-            orgId: 'org@AdobeOrg',
-            accsGraphqlEndpoint: 'https://accs.test/TestTenant123/graphql',
-        });
-
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: false,
-            error: expect.stringContaining('No OAuth credential'),
-        }));
-    });
-
-    it('should pass workspace clientId for ACCS path', async () => {
-        const context = createMockContext();
-        mockDiscoverStoreStructure.mockResolvedValue({ success: true, data: MOCK_STORE_DATA });
-
-        await handleDiscoverStoreStructure(context, {
-            backendType: 'accs',
-            baseUrl: 'https://accs.test',
-            orgId: 'org@AdobeOrg',
-            accsGraphqlEndpoint: 'https://accs.test/TestTenant123/graphql',
-        });
-
-        expect(mockDiscoverStoreStructure).toHaveBeenCalledWith(expect.objectContaining({
-            clientId: 'mock-client-id',
-        }));
     });
 });

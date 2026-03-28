@@ -65,44 +65,6 @@ export async function getAdminToken(
 }
 
 // ==========================================================
-// ACCS Tenant ID Extraction
-// ==========================================================
-
-/**
- * Extract tenant ID from an ACCS GraphQL endpoint URL.
- *
- * Example: "https://na1-sandbox.api.commerce.adobe.com/Abcd1234/graphql"
- *       → "Abcd1234"
- *
- * The tenant ID is the path segment immediately before /graphql.
- */
-export function extractTenantId(accsGraphqlEndpoint: string): string {
-    let url: URL;
-    try {
-        url = new URL(accsGraphqlEndpoint);
-    } catch {
-        throw new Error(`Cannot extract tenant ID from endpoint: ${accsGraphqlEndpoint}`);
-    }
-
-    const segments = url.pathname.split('/').filter(Boolean);
-
-    // Find segment before "graphql"
-    const graphqlIndex = segments.indexOf('graphql');
-    if (graphqlIndex <= 0) {
-        throw new Error('Expected /tenantId/graphql path format');
-    }
-
-    const tenantId = segments[graphqlIndex - 1];
-
-    // Validate tenant ID format (alphanumeric, prevents path traversal)
-    if (!/^[a-zA-Z0-9_-]+$/.test(tenantId)) {
-        throw new Error('Invalid tenant ID format in the provided GraphQL endpoint');
-    }
-
-    return tenantId;
-}
-
-// ==========================================================
 // Store Structure Fetching
 // ==========================================================
 
@@ -160,38 +122,8 @@ export async function fetchStoreStructurePaas(
     return { websites, storeGroups, storeViews };
 }
 
-/**
- * Fetch store structure from ACCS Commerce.
- *
- * Uses IMS OAuth token with x-api-key and x-gw-ims-org-id headers.
- * ACCS URL format: ${accsBaseUrl}/${tenantId}/V1/store/... (no /rest prefix)
- */
-export async function fetchStoreStructureAccs(
-    accsBaseUrl: string,
-    tenantId: string,
-    imsToken: string,
-    clientId: string,
-    orgId: string,
-): Promise<CommerceStoreStructure> {
-    const base = normalizeUrl(accsBaseUrl);
-    const headers = {
-        'Authorization': `Bearer ${imsToken}`,
-        'x-api-key': clientId,
-        'x-gw-ims-org-id': orgId,
-        'Content-Type': 'application/json',
-    };
-
-    const [websites, storeGroups, storeViews] = await Promise.all([
-        fetchStoreResource<CommerceWebsite[]>(`${base}/${tenantId}/V1/store/websites`, headers),
-        fetchStoreResource<CommerceStoreGroup[]>(`${base}/${tenantId}/V1/store/storeGroups`, headers),
-        fetchStoreResource<CommerceStoreView[]>(`${base}/${tenantId}/V1/store/storeViews`, headers),
-    ]);
-
-    return { websites, storeGroups, storeViews };
-}
-
 // ==========================================================
-// Discovery Service (cross-org proxy)
+// Discovery Service (ACCS proxy)
 // ==========================================================
 
 /**
@@ -272,29 +204,16 @@ export async function discoverStoreStructure(
             return { success: true, data };
         }
 
-        // ACCS path — prefer discovery service if configured (handles cross-org)
-        if (params.discoveryServiceUrl && params.imsToken) {
-            // Service needs the full GraphQL endpoint (with tenant ID), not just the host
-            const accsEndpoint = params.accsGraphqlEndpoint || params.baseUrl;
-            const data = await fetchViaDiscoveryService(
-                params.discoveryServiceUrl,
-                params.imsToken,
-                accsEndpoint,
-            );
-            return { success: true, data };
+        // ACCS path — uses discovery service
+        if (!params.discoveryServiceUrl || !params.imsToken) {
+            return { success: false, error: 'Discovery service not configured or IMS token missing.' };
         }
 
-        // ACCS direct path (same-org only)
-        if (!params.imsToken || !params.clientId || !params.orgId || !params.tenantId) {
-            return { success: false, error: 'Adobe authentication is incomplete. Ensure you have signed in and selected an Adobe workspace.' };
-        }
-
-        const data = await fetchStoreStructureAccs(
-            params.baseUrl,
-            params.tenantId,
+        const accsEndpoint = params.accsGraphqlEndpoint || params.baseUrl;
+        const data = await fetchViaDiscoveryService(
+            params.discoveryServiceUrl,
             params.imsToken,
-            params.clientId,
-            params.orgId,
+            accsEndpoint,
         );
         return { success: true, data };
     } catch (error) {

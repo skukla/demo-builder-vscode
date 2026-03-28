@@ -14,9 +14,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 
 import {
     getAdminToken,
-    extractTenantId,
     fetchStoreStructurePaas,
-    fetchStoreStructureAccs,
     discoverStoreStructure,
 } from '@/features/eds/services/commerceStoreDiscovery';
 
@@ -56,58 +54,6 @@ describe('commerceStoreDiscovery', () => {
 
     afterEach(() => {
         fetchSpy.mockRestore();
-    });
-
-    // ----------------------------------------------------------
-    // extractTenantId
-    // ----------------------------------------------------------
-
-    describe('extractTenantId', () => {
-        it('should extract tenant ID from standard ACCS endpoint', () => {
-            const result = extractTenantId(
-                'https://na1-sandbox.api.commerce.adobe.com/Abcd1234/graphql',
-            );
-            expect(result).toBe('Abcd1234');
-        });
-
-        it('should extract tenant ID with longer path', () => {
-            const result = extractTenantId(
-                'https://api.commerce.adobe.com/MyTenant123/graphql',
-            );
-            expect(result).toBe('MyTenant123');
-        });
-
-        it('should handle trailing slash', () => {
-            const result = extractTenantId(
-                'https://na1-sandbox.api.commerce.adobe.com/Abcd1234/graphql/',
-            );
-            // "graphql" is followed by empty string after split, but filter(Boolean) removes it
-            // The segment before "graphql" is still "Abcd1234"
-            expect(result).toBe('Abcd1234');
-        });
-
-        it('should throw for invalid URL', () => {
-            expect(() => extractTenantId('not-a-url')).toThrow('Cannot extract tenant ID');
-        });
-
-        it('should throw for URL without path segments', () => {
-            expect(() => extractTenantId('https://api.commerce.adobe.com')).toThrow(
-                'Expected /tenantId/graphql path format',
-            );
-        });
-
-        it('should throw for URL without /graphql path', () => {
-            expect(() => extractTenantId(
-                'https://api.commerce.adobe.com/MyTenant123',
-            )).toThrow('Expected /tenantId/graphql path format');
-        });
-
-        it('should reject tenant ID with special characters', () => {
-            // URL-encoded path segment that bypasses URL normalization
-            expect(() => extractTenantId(
-                'https://api.commerce.adobe.com/ten%2Fant/graphql',
-            )).toThrow('Invalid tenant ID format in the provided GraphQL endpoint');
-        });
     });
 
     // ----------------------------------------------------------
@@ -251,43 +197,6 @@ describe('commerceStoreDiscovery', () => {
     });
 
     // ----------------------------------------------------------
-    // fetchStoreStructureAccs
-    // ----------------------------------------------------------
-
-    describe('fetchStoreStructureAccs', () => {
-        const accsBase = 'https://na1-sandbox.api.commerce.adobe.com';
-        const tenantId = 'Abcd1234';
-        const imsToken = 'mock-ims-token';
-        const clientId = 'mock-client-id';
-        const orgId = 'mock-org@AdobeOrg';
-
-        it('should fetch with ACCS-specific headers and URL format', async () => {
-            fetchSpy
-                .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_WEBSITES) })
-                .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_STORE_GROUPS) })
-                .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_STORE_VIEWS) });
-
-            const result = await fetchStoreStructureAccs(
-                accsBase, tenantId, imsToken, clientId, orgId,
-            );
-
-            expect(result.websites).toEqual(MOCK_WEBSITES);
-
-            // Verify ACCS URL format (no /rest prefix)
-            expect(fetchSpy).toHaveBeenCalledWith(
-                `${accsBase}/${tenantId}/V1/store/websites`,
-                expect.objectContaining({
-                    headers: expect.objectContaining({
-                        'Authorization': `Bearer ${imsToken}`,
-                        'x-api-key': clientId,
-                        'x-gw-ims-org-id': orgId,
-                    }),
-                }),
-            );
-        });
-    });
-
-    // ----------------------------------------------------------
     // discoverStoreStructure (orchestrator)
     // ----------------------------------------------------------
 
@@ -338,23 +247,30 @@ describe('commerceStoreDiscovery', () => {
 
             expect(result.success).toBe(false);
             if (!result.success) {
-                expect(result.error).toContain('Adobe authentication is incomplete');
+                expect(result.error).toContain('Discovery service not configured or IMS token missing');
             }
         });
 
-        it('should return success for ACCS path', async () => {
-            fetchSpy
-                .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_WEBSITES) })
-                .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_STORE_GROUPS) })
-                .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_STORE_VIEWS) });
+        it('should return success for ACCS path via discovery service', async () => {
+            // Mock discovery service response (single fetch call)
+            fetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: () => Promise.resolve({
+                    success: true,
+                    data: {
+                        websites: MOCK_WEBSITES,
+                        storeGroups: MOCK_STORE_GROUPS,
+                        storeViews: MOCK_STORE_VIEWS,
+                    },
+                }),
+            });
 
             const result = await discoverStoreStructure({
                 backendType: 'accs',
                 baseUrl: 'https://na1-sandbox.api.commerce.adobe.com',
                 imsToken: 'mock-ims-token',
-                clientId: 'mock-client-id',
-                orgId: 'mock-org@AdobeOrg',
-                tenantId: 'Abcd1234',
+                discoveryServiceUrl: 'https://actions.adobeioruntime.net/api/v1/web/discovery',
+                accsGraphqlEndpoint: 'https://na1-sandbox.api.commerce.adobe.com/Abcd1234/graphql',
             });
 
             expect(result.success).toBe(true);

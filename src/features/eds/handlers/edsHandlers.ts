@@ -50,7 +50,7 @@ import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
-import { discoverStoreStructure, extractTenantId } from '../services/commerceStoreDiscovery';
+import { discoverStoreStructure } from '../services/commerceStoreDiscovery';
 import type { StoreDiscoveryParams } from '@/types/commerceStore';
 
 // Re-export all GitHub handlers
@@ -189,41 +189,7 @@ function getDiscoveryServices(): AccsDiscoveryService[] {
         .get<AccsDiscoveryService[]>('services', []);
 }
 
-interface AccsError { error: string; code?: string }
 
-/** Resolve ACCS-specific params (IMS token, tenant ID, client ID). Returns error object on failure. */
-async function resolveAccsParams(
-    context: HandlerContext,
-    payload: { orgId?: string; accsGraphqlEndpoint?: string },
-): Promise<{ imsToken: string; orgId?: string; tenantId: string; clientId: string } | AccsError> {
-    if (!context.authManager) {
-        return { error: 'Adobe authentication not available. Please sign in first.' };
-    }
-
-    const imsToken = await context.authManager.getTokenManager().getAccessToken();
-    if (!imsToken) {
-        return { error: 'Adobe IMS token expired. Please re-authenticate.' };
-    }
-
-    if (!payload.accsGraphqlEndpoint) {
-        return { error: 'ACCS GraphQL endpoint is required to determine tenant ID.' };
-    }
-
-    const credential = await context.authManager.getWorkspaceCredential();
-    if (!credential?.clientId) {
-        return {
-            error: 'No OAuth credential found for this workspace.',
-            code: 'CREDENTIAL_MISSING',
-        };
-    }
-
-    return {
-        imsToken,
-        orgId: payload.orgId,
-        tenantId: extractTenantId(payload.accsGraphqlEndpoint),
-        clientId: credential.clientId,
-    };
-}
 
 // ==========================================================
 // Store Discovery Handler
@@ -281,8 +247,16 @@ export async function handleDiscoverStoreStructure(
             params.username = payload.username;
             params.password = payload.password;
         } else {
-            // ACCS — try discovery services first, fall back to direct auth
+            // ACCS — requires a discovery service
             const services = getDiscoveryServices();
+            if (services.length === 0) {
+                // No discovery service — skip silently, fields stay as text inputs
+                await context.sendMessage('store-discovery-result', {
+                    success: false,
+                    error: 'No discovery service configured. Enter store codes manually.',
+                });
+                return { success: true };
+            }
 
             // Ensure Adobe auth (prompts for re-sign-in if expired)
             if (!context.authManager) {
@@ -318,44 +292,9 @@ export async function handleDiscoverStoreStructure(
                 return { success: false, error: 'IMS token not available' };
             }
 
-            if (services.length > 0) {
-                // Try the first configured discovery service
-                params.imsToken = imsToken;
-                params.discoveryServiceUrl = services[0].serviceUrl;
-                params.accsGraphqlEndpoint = payload.accsGraphqlEndpoint;
-            } else {
-                // No discovery services configured — fall back to direct auth
-                let accsResult = await resolveAccsParams(context, payload);
-
-                // Credential missing: prompt user to create one
-                if ('error' in accsResult && accsResult.code === 'CREDENTIAL_MISSING') {
-                    const action = await vscode.window.showWarningMessage(
-                        'No OAuth credential found for this workspace. Create one to enable store auto-detection?',
-                        'Create Credential',
-                        'Skip',
-                    );
-                    if (action === 'Create Credential' && context.authManager) {
-                        context.logger.info('[Store Discovery] Creating workspace credential...');
-                        const created = await context.authManager.createWorkspaceCredential(
-                            'Demo Builder Store Discovery',
-                            'OAuth credential for Commerce store auto-detection',
-                        );
-                        if (created) {
-                            // Retry after credential creation
-                            accsResult = await resolveAccsParams(context, payload);
-                        }
-                    }
-                }
-
-                if ('error' in accsResult) {
-                    await context.sendMessage('store-discovery-result', {
-                        success: false,
-                        error: accsResult.error,
-                    });
-                    return { success: false, error: accsResult.error };
-                }
-                Object.assign(params, accsResult);
-            }
+            params.imsToken = imsToken;
+            params.discoveryServiceUrl = services[0].serviceUrl;
+            params.accsGraphqlEndpoint = payload.accsGraphqlEndpoint;
         }
 
         const result = await discoverStoreStructure(params);
