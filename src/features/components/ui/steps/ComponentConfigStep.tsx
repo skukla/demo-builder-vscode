@@ -139,12 +139,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         return !!lookupComponentConfigValue(configs, ACCS_ENDPOINT_KEY);
     }, [state.componentConfigs]);
 
-    /** Status text after successful fetch */
-    const fetchStatusText = useMemo(() => {
-        if (!hasStoreData) return null;
-        return 'Store structure detected — fields updated to dropdowns.';
-    }, [hasStoreData]);
-
     /**
      * Render main content based on loading/error/data state
      * Extracts 4-branch nested ternary per SOP §5
@@ -220,15 +214,13 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                         </Button>
                                                     )}
                                                 </Flex>
-                                                {/* Website code — listbox when data exists, text input otherwise */}
+                                                {/* Website code — picker when data exists, text input otherwise */}
                                                 {hasStoreData ? (
                                                     <StoreStructureSelector
                                                         label={field.label}
                                                         items={getWebsiteItems()}
                                                         selectedCode={String(getFieldValue(field) || '')}
                                                         onSelect={(code) => updateField(field, code)}
-                                                        ariaLabel="Websites"
-                                                        itemNoun="website"
                                                         isRequired={field.required}
                                                     />
                                                 ) : (
@@ -241,7 +233,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                         onNormalizeUrl={normalizeUrlField}
                                                     />
                                                 )}
-                                                {/* Status messages below the field row */}
+                                                {/* Error messages only — no success messaging */}
                                                 {credentialMissing && (
                                                     <Flex alignItems="center" gap="size-100" marginBottom="size-200">
                                                         <Text UNSAFE_className="text-yellow-700">No OAuth credential found.</Text>
@@ -260,9 +252,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                 {fetchError && !credentialMissing && (
                                                     <Text UNSAFE_className="text-red-700" marginBottom="size-200">{fetchError}</Text>
                                                 )}
-                                                {fetchStatusText && !fetchError && (
-                                                    <Text UNSAFE_className="text-green-700" marginBottom="size-200">{fetchStatusText}</Text>
-                                                )}
                                             </div>
                                         ) : hasStoreData && isStoreGroupField(field.key) ? (
                                             <StoreStructureSelector
@@ -273,8 +262,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                 )}
                                                 selectedCode={String(getFieldValue(field) || '')}
                                                 onSelect={(code) => updateField(field, code)}
-                                                ariaLabel="Store Groups"
-                                                itemNoun="store"
                                                 isRequired={field.required}
                                             />
                                         ) : hasStoreData && isStoreViewField(field.key) ? (
@@ -286,8 +273,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                 )}
                                                 selectedCode={String(getFieldValue(field) || '')}
                                                 onSelect={(code) => updateField(field, code)}
-                                                ariaLabel="Store Views"
-                                                itemNoun="store view"
                                                 isRequired={field.required}
                                             />
                                         ) : (

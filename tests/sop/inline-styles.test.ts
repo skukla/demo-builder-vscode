@@ -50,7 +50,6 @@ describe('SOP: Inline Styles', () => {
         'GitHubRepoSelectionStep.tsx': 'Fixed height container prevents modal resize during status recheck',
 
         // Store structure listbox container
-        'StoreStructureSelector.tsx': 'Fixed height flex container required by SearchableList component (needs explicit height for scrolling)',
 
     };
 
