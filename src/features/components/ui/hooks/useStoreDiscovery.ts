@@ -9,7 +9,7 @@
  * @module features/components/ui/hooks/useStoreDiscovery
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { useVSCodeMessage } from '@/core/ui/hooks/useVSCodeMessage';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
@@ -22,12 +22,6 @@ interface StoreDiscoveryState {
     isFetching: boolean;
     fetchError: string | null;
     storeData: CommerceStoreStructure | null;
-    /** Whether the last error was a missing credential (enables Create Credential prompt) */
-    credentialMissing: boolean;
-    /** Whether credential creation is in progress */
-    isCreatingCredential: boolean;
-    /** Last fetch params — for auto-retry after credential creation */
-    lastFetchParams: FetchStoresParams | null;
 }
 
 /** Item format for StoreStructureSelector component */
@@ -44,14 +38,8 @@ interface UseStoreDiscoveryReturn {
     fetchError: string | null;
     /** Whether store data has been fetched */
     hasStoreData: boolean;
-    /** Whether the workspace is missing an OAuth credential */
-    credentialMissing: boolean;
-    /** Whether credential creation is in progress */
-    isCreatingCredential: boolean;
     /** Trigger store discovery */
     fetchStores: (params: FetchStoresParams) => void;
-    /** Create workspace credential then auto-retry detection */
-    createCredential: () => void;
     /** Get websites as list items */
     getWebsiteItems: () => StoreListItem[];
     /** Get store groups filtered by selected website code */
@@ -80,88 +68,33 @@ export function useStoreDiscovery(): UseStoreDiscoveryReturn {
         isFetching: false,
         fetchError: null,
         storeData: null,
-        credentialMissing: false,
-        isCreatingCredential: false,
-        lastFetchParams: null,
     });
 
-    // Ref for last fetch params — avoids stale closure in createCredential's auto-retry
-    const lastFetchParamsRef = useRef<FetchStoresParams | null>(null);
-
     // Listen for discovery results from the backend
-    useVSCodeMessage<{ success: boolean; data?: CommerceStoreStructure; error?: string; code?: string }>(
+    useVSCodeMessage<{ success: boolean; data?: CommerceStoreStructure; error?: string }>(
         'store-discovery-result',
         (result) => {
             if (result.success && result.data) {
-                setState(prev => ({
-                    ...prev,
+                setState({
                     isFetching: false,
                     fetchError: null,
-                    storeData: result.data ?? null,
-                    credentialMissing: false,
-                }));
+                    storeData: result.data,
+                });
             } else {
-                setState(prev => ({
-                    ...prev,
+                setState({
                     isFetching: false,
                     fetchError: result.error || 'Unknown error',
-                    credentialMissing: result.code === 'CREDENTIAL_MISSING',
-                }));
+                    storeData: null,
+                });
             }
         },
     );
 
     // Trigger discovery
     const fetchStores = useCallback((params: FetchStoresParams) => {
-        lastFetchParamsRef.current = params;
-        setState(prev => ({
-            ...prev,
-            isFetching: true,
-            fetchError: null,
-            storeData: null,
-            credentialMissing: false,
-            lastFetchParams: params,
-        }));
+        setState({ isFetching: true, fetchError: null, storeData: null });
         webviewClient.postMessage('discover-store-structure', params);
     }, []);
-
-    // Create credential via request-response, then auto-retry detection
-    const createCredential = useCallback(async () => {
-        setState(prev => ({ ...prev, isCreatingCredential: true, fetchError: null }));
-
-        try {
-            const result = await webviewClient.request<{ success: boolean; error?: string }>(
-                'create-workspace-credential',
-            );
-
-            if (result.success) {
-                setState(prev => ({
-                    ...prev,
-                    isCreatingCredential: false,
-                    credentialMissing: false,
-                }));
-                // Auto-retry with saved params (read from ref to avoid stale closure)
-                const savedParams = lastFetchParamsRef.current;
-                if (savedParams) {
-                    fetchStores(savedParams);
-                }
-            } else {
-                setState(prev => ({
-                    ...prev,
-                    isCreatingCredential: false,
-                    fetchError: result.error || 'Failed to create credential',
-                    credentialMissing: false,
-                }));
-            }
-        } catch (error) {
-            setState(prev => ({
-                ...prev,
-                isCreatingCredential: false,
-                fetchError: (error as Error).message,
-                credentialMissing: false,
-            }));
-        }
-    }, [fetchStores]);
 
     const isStoreGroup = (groupId: string) => groupId === 'accs' || groupId === 'adobe-commerce';
 
@@ -199,10 +132,7 @@ export function useStoreDiscovery(): UseStoreDiscoveryReturn {
         isFetching: state.isFetching,
         fetchError: state.fetchError,
         hasStoreData,
-        credentialMissing: state.credentialMissing,
-        isCreatingCredential: state.isCreatingCredential,
         fetchStores,
-        createCredential,
         getWebsiteItems,
         getStoreGroupItems,
         getStoreViewItems,

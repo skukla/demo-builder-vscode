@@ -4,7 +4,6 @@ import {
     Form,
     Heading,
     Divider,
-    Button,
     ProgressCircle,
 } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useEffect, useRef } from 'react';
@@ -77,10 +76,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         isFetching,
         fetchError,
         hasStoreData,
-        credentialMissing,
-        isCreatingCredential,
         fetchStores,
-        createCredential,
         getWebsiteItems,
         getStoreGroupItems,
         getStoreViewItems,
@@ -249,23 +245,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                         onNormalizeUrl={normalizeUrlField}
                                                     />
                                                 )}
-                                                {/* Error messages only — no success messaging */}
-                                                {credentialMissing && (
-                                                    <Flex alignItems="center" gap="size-100" marginBottom="size-200">
-                                                        <Text UNSAFE_className="text-yellow-700">No OAuth credential found.</Text>
-                                                        {isCreatingCredential ? (
-                                                            <Flex alignItems="center" gap="size-100">
-                                                                <ProgressCircle size="S" isIndeterminate aria-label="Creating credential" />
-                                                                <Text UNSAFE_className="status-text">Creating...</Text>
-                                                            </Flex>
-                                                        ) : (
-                                                            <Button variant="secondary" onPress={createCredential}>
-                                                                Create Credential
-                                                            </Button>
-                                                        )}
-                                                    </Flex>
-                                                )}
-                                                {fetchError && !credentialMissing && (
+                                                {fetchError && (
                                                     <Text UNSAFE_className="text-red-700" marginBottom="size-200">{fetchError}</Text>
                                                 )}
                                             </div>

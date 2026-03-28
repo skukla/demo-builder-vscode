@@ -325,12 +325,32 @@ export async function handleDiscoverStoreStructure(
                 params.accsGraphqlEndpoint = payload.accsGraphqlEndpoint;
             } else {
                 // No discovery services configured — fall back to direct auth
-                const accsResult = await resolveAccsParams(context, payload);
+                let accsResult = await resolveAccsParams(context, payload);
+
+                // Credential missing: prompt user to create one
+                if ('error' in accsResult && accsResult.code === 'CREDENTIAL_MISSING') {
+                    const action = await vscode.window.showWarningMessage(
+                        'No OAuth credential found for this workspace. Create one to enable store auto-detection?',
+                        'Create Credential',
+                        'Skip',
+                    );
+                    if (action === 'Create Credential' && context.authManager) {
+                        context.logger.info('[Store Discovery] Creating workspace credential...');
+                        const created = await context.authManager.createWorkspaceCredential(
+                            'Demo Builder Store Discovery',
+                            'OAuth credential for Commerce store auto-detection',
+                        );
+                        if (created) {
+                            // Retry after credential creation
+                            accsResult = await resolveAccsParams(context, payload);
+                        }
+                    }
+                }
+
                 if ('error' in accsResult) {
                     await context.sendMessage('store-discovery-result', {
                         success: false,
                         error: accsResult.error,
-                        code: accsResult.code,
                     });
                     return { success: false, error: accsResult.error };
                 }
