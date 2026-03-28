@@ -44,6 +44,11 @@ const isStoreCodeField = (key: string) =>
     key === PAAS_WEBSITE_CODE || key === PAAS_STORE_CODE || key === PAAS_STORE_VIEW_CODE ||
     key === ACCS_WEBSITE_CODE || key === ACCS_STORE_CODE || key === ACCS_STORE_VIEW_CODE;
 
+/** Connection fields — always shown. Everything else is hidden until prerequisites are met. */
+const CONNECTION_FIELDS = new Set([
+    ACCS_ENDPOINT_KEY, PAAS_URL, PAAS_ADMIN_USERNAME, PAAS_ADMIN_PASSWORD,
+]);
+
 export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseStepProps) {
     const {
         isLoading,
@@ -211,16 +216,37 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                             <Flex direction="column" marginBottom="size-100">
                                 {group.fields.map(field => (
                                     <React.Fragment key={field.key}>
-                                        {isStoreGroup(group.id) && isWebsiteCodeField(field.key) ? (
+                                        {CONNECTION_FIELDS.has(field.key) ? (
+                                            /* Connection fields (endpoint, URL, credentials) — always shown */
+                                            <ConfigFieldRenderer
+                                                field={field}
+                                                value={getFieldValue(field)}
+                                                error={validationErrors[field.key]}
+                                                isTouched={touchedFields.has(field.key)}
+                                                onUpdate={updateField}
+                                                onNormalizeUrl={normalizeUrlField}
+                                            />
+                                        ) : !isStoreGroup(group.id) || !autoDetectKey ? (
+                                            /* Non-store groups: hide until prerequisites met; non-store fields: always show */
+                                            !isStoreGroup(group.id) ? (
+                                                <ConfigFieldRenderer
+                                                    field={field}
+                                                    value={getFieldValue(field)}
+                                                    error={validationErrors[field.key]}
+                                                    isTouched={touchedFields.has(field.key)}
+                                                    onUpdate={updateField}
+                                                    onNormalizeUrl={normalizeUrlField}
+                                                />
+                                            ) : null
+                                        ) : isWebsiteCodeField(field.key) ? (
+                                            /* Store selection: spinner, Pickers, or fallback text inputs */
                                             <div>
-                                                {/* Inline spinner during auto-detection */}
                                                 {isFetching && (
                                                     <Flex alignItems="center" gap="size-100" marginBottom="size-200">
                                                         <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
                                                         <Text UNSAFE_className="status-text">Detecting store structure...</Text>
                                                     </Flex>
                                                 )}
-                                                {/* Store selection row when data exists */}
                                                 {hasStoreData && (
                                                     <StoreSelectionRow
                                                         group={group}
@@ -232,7 +258,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                         componentConfigs={state.componentConfigs ?? {}}
                                                     />
                                                 )}
-                                                {/* Error + fallback text input for website */}
                                                 {fetchError && (
                                                     <>
                                                         <Text UNSAFE_className="text-red-700" marginBottom="size-200">{fetchError}</Text>
@@ -248,9 +273,10 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                                                 )}
                                             </div>
                                         ) : isStoreCodeField(field.key) && !fetchError ? (
-                                            /* Store fields hidden until auto-detect succeeds or fails */
+                                            /* Store/view fields rendered by StoreSelectionRow — skip */
                                             null
                                         ) : (
+                                            /* Other dependent fields (e.g., Customer Group) — show after prerequisites met */
                                             <ConfigFieldRenderer
                                                 field={field}
                                                 value={getFieldValue(field)}
