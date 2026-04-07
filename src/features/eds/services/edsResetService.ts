@@ -321,7 +321,7 @@ async function resetRepoToTemplate(
         }
     }
 
-    context.logger.info('[EdsReset] Installing blocks from', allLibraries.map(l => `${l.source.owner}/${l.source.repo}`));
+    context.logger.info(`[EdsReset] Installing blocks from: ${allLibraries.map(l => `${l.source.owner}/${l.source.repo}`).join(', ')}`);
 
     const { installBlockCollections } = await import('./blockCollectionHelpers');
     const { installInspectorTagging } = await import('./inspectorHelpers');

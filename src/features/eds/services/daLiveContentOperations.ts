@@ -935,6 +935,14 @@ export class DaLiveContentOperations {
                 await this.copyBlockDocPagesFromSources(org, site, blocks, libraryContentSources, installedBlockIds);
             }
 
+            // Generate stub doc pages for any blocks still without documentation.
+            // Runs after ensureBlockDocPages and copyBlockDocPagesFromSources so it
+            // only creates stubs for blocks that couldn't be sourced from anywhere else.
+            // Covers all blocks — not just installedBlockIds — because deduplicated
+            // blocks (present in both template and a library) are skipped during
+            // installation and never appear in installedBlockIds.
+            await this.generateStubDocPages(org, site, blocks);
+
             // Check which blocks have documentation pages (including newly created ones)
             const existingBlockIds = await this.getBlocksWithDocs(org, site, blocks);
             const verifiedBlocks = blocks.filter(b => existingBlockIds.includes(b.id));
@@ -1025,26 +1033,30 @@ export class DaLiveContentOperations {
 
         this.logger.info(`[DA.live] Creating ${missing.length} block doc pages (${existingIds.size} already exist)`);
 
-        for (const block of missing) {
-            try {
-                // Wrap exampleHtml in document structure expected by DA.live.
-                // Block must be inside a section <div> — DA.live treats direct
-                // children of <main> as sections, not blocks. This matches the
-                // format produced by .plain.html (content source copy path).
-                const docHtml = `<body><header></header><main><div>${block.exampleHtml}</div></main><footer></footer></body>`;
-                const result = await this.createSource(
-                    org, site,
-                    `.da/library/blocks/${block.id}.html`,
-                    docHtml,
-                );
-                if (result.success) {
-                    this.logger.debug(`[DA.live] Created doc page for block: ${block.id}`);
-                } else {
-                    this.logger.warn(`[DA.live] Failed to create doc page for ${block.id}: ${result.error}`);
+        // Create doc pages in parallel batches to match content copy performance pattern
+        for (let i = 0; i < missing.length; i += CONTENT_COPY_BATCH_SIZE) {
+            const batch = missing.slice(i, i + CONTENT_COPY_BATCH_SIZE);
+            await Promise.all(batch.map(async (block) => {
+                try {
+                    // Wrap exampleHtml in document structure expected by DA.live.
+                    // Block must be inside a section <div> — DA.live treats direct
+                    // children of <main> as sections, not blocks. This matches the
+                    // format produced by .plain.html (content source copy path).
+                    const docHtml = `<body><header></header><main><div>${block.exampleHtml}</div></main><footer></footer></body>`;
+                    const result = await this.createSource(
+                        org, site,
+                        `.da/library/blocks/${block.id}.html`,
+                        docHtml,
+                    );
+                    if (result.success) {
+                        this.logger.debug(`[DA.live] Created doc page for block: ${block.id}`);
+                    } else {
+                        this.logger.warn(`[DA.live] Failed to create doc page for ${block.id}: ${result.error}`);
+                    }
+                } catch (error) {
+                    this.logger.warn(`[DA.live] Failed to create doc page for ${block.id}: ${(error as Error).message}`);
                 }
-            } catch (error) {
-                this.logger.warn(`[DA.live] Failed to create doc page for ${block.id}: ${(error as Error).message}`);
-            }
+            }));
         }
     }
 
@@ -1109,6 +1121,61 @@ export class DaLiveContentOperations {
 
         if (copiedCount > 0) {
             this.logger.info(`[DA.live] Copied ${copiedCount} block doc pages from CDN (${existingIds.size} already existed)`);
+        }
+    }
+
+    /**
+     * Generate stub documentation pages for blocks that have no doc page.
+     *
+     * Runs after ensureBlockDocPages and copyBlockDocPagesFromSources as a final
+     * fallback. Creates a minimal valid DA.live page for every block still missing
+     * documentation so that all blocks in component-definition.json appear in the
+     * library UI.
+     *
+     * Covers all blocks — not just those installed from external libraries — because
+     * blocks deduplicated during library installation (already present in the template)
+     * never appear in installedBlockIds but still need stubs if the template has no
+     * doc page for them.
+     *
+     * Non-destructive: only creates pages for blocks with no existing doc page.
+     * Blocks with unsafeHTML (handled by ensureBlockDocPages) are skipped.
+     *
+     * @param org - Destination DA.live organization
+     * @param site - Destination DA.live site
+     * @param blocks - All block definitions from component-definition.json
+     */
+    private async generateStubDocPages(
+        org: string,
+        site: string,
+        blocks: Array<{ title: string; id: string; exampleHtml?: string }>,
+    ): Promise<void> {
+        // Only stub blocks without unsafeHTML — blocks with unsafeHTML
+        // already have proper doc pages from ensureBlockDocPages
+        const candidates = blocks.filter(b => !b.exampleHtml);
+        if (candidates.length === 0) return;
+
+        const existingIds = new Set(await this.getBlocksWithDocs(org, site, candidates));
+        const missing = candidates.filter(b => !existingIds.has(b.id));
+        if (missing.length === 0) return;
+
+        this.logger.info(`[DA.live] Generating ${missing.length} stub doc pages for installed blocks without documentation`);
+
+        // Create stub pages in parallel batches to match content copy performance pattern
+        for (let i = 0; i < missing.length; i += CONTENT_COPY_BATCH_SIZE) {
+            const batch = missing.slice(i, i + CONTENT_COPY_BATCH_SIZE);
+            await Promise.all(batch.map(async (block) => {
+                try {
+                    const stubHtml = `<body><header></header><main><div><div class="${block.id}"><div><div><p>${block.title}</p></div></div></div></div></main><footer></footer></body>`;
+                    const result = await this.createSource(org, site, `.da/library/blocks/${block.id}.html`, stubHtml);
+                    if (result.success) {
+                        this.logger.debug(`[DA.live] Created stub doc page for block: ${block.id}`);
+                    } else {
+                        this.logger.warn(`[DA.live] Failed to create stub doc page for ${block.id}: ${result.error}`);
+                    }
+                } catch (error) {
+                    this.logger.warn(`[DA.live] Failed to create stub doc page for ${block.id}: ${(error as Error).message}`);
+                }
+            }));
         }
     }
 
