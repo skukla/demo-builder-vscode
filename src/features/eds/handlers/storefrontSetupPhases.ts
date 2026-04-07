@@ -588,7 +588,7 @@ async function registerConfigurationService(
         );
         const registerResult = await configurationService.registerSite(siteParams);
 
-        let skipFolderMapping = false;
+        const skipFolderMapping = false;
         if (registerResult.success) {
             logger.info('[Storefront Setup] Site registered with Configuration Service');
         } else if (registerResult.statusCode === 409) {

@@ -36,7 +36,6 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
-import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
 import { ConnectStoreStepContent } from '@/features/project-creation/ui/components/ConnectStoreStepContent';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
 import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';

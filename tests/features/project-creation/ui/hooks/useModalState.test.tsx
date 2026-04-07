@@ -33,7 +33,6 @@ jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
 
 import { vscode as mockVscode } from '@/core/ui/utils/vscode-api';
 import { getNativeBlockLibraries, getDefaultBlockLibraryIds } from '@/features/project-creation/services/blockLibraryLoader';
-import { getResolvedMeshRequirement } from '@/features/project-creation/services/demoPackageLoader';
 
 const mockGitSource: GitSource = {
     type: 'git',

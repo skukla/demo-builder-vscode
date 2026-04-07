@@ -6,7 +6,7 @@ import React from 'react';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
 import { StoreConfigFieldRow } from '../components/StoreConfigFieldRow';
 import { ServiceGroupList } from '../components/ServiceGroupList';
-import { useComponentConfig, type UniqueField } from '../hooks/useComponentConfig';
+import { useComponentConfig } from '../hooks/useComponentConfig';
 import { useConfigNavigation } from '../hooks/useConfigNavigation';
 import { useStoreDiscovery } from '../hooks/useStoreDiscovery';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';

@@ -197,7 +197,6 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     const [searchQuery, setSearchQuery] = useState('');
 
     const {
-        modalPackageId,
         modalPackage,
         modalAddons,
         modalFeaturePacks,
