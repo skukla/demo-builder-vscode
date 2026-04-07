@@ -68,7 +68,7 @@
                     "ADOBE_COMMERCE_STORE_CODE",
                     "ADOBE_CATALOG_API_KEY"
                 ],
-                "optionalEnvVars": ["MESH_ENDPOINT", "ADOBE_ASSETS_URL", "ADOBE_COMMERCE_CUSTOMER_GROUP"]
+                "optionalEnvVars": ["MESH_ENDPOINT", "ADOBE_ASSETS_URL"]
             },
             "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
             "dependencies": {
@@ -96,7 +96,7 @@
                     "ADOBE_COMMERCE_ENVIRONMENT_ID",
                     "ADOBE_CATALOG_API_KEY"
                 ],
-                "optionalEnvVars": ["ADOBE_COMMERCE_CUSTOMER_GROUP"]
+                "optionalEnvVars": []
             }
         },
         "adobe-commerce-accs": {
@@ -110,7 +110,7 @@
                     "ACCS_STORE_CODE",
                     "ACCS_STORE_VIEW_CODE"
                 ],
-                "optionalEnvVars": ["ACCS_CUSTOMER_GROUP"]
+                "optionalEnvVars": []
             }
         }
     },
@@ -177,7 +177,7 @@
                     "ACCS_STORE_CODE",
                     "ACCS_STORE_VIEW_CODE"
                 ],
-                "optionalEnvVars": ["ACCS_CUSTOMER_GROUP"],
+                "optionalEnvVars": [],
                 "providesEnvVars": ["MESH_ENDPOINT"]
             }
         },
