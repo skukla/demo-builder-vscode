@@ -309,7 +309,7 @@ describe('handleDiscoverStoreStructure', () => {
 
         expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
             success: false,
-            error: 'Unexpected crash',
+            error: 'Store discovery failed. Please try again.',
         }));
         // Handler itself succeeds (discovery failed, not handler)
         expect(result.success).toBe(true);

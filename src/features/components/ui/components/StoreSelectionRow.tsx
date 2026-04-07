@@ -1,9 +1,11 @@
 /**
  * StoreSelectionRow
  *
- * Renders website, store, and store view Pickers in a single horizontal row
- * after Auto-Detect populates store data. Cascading selection: website filters
- * stores, store filters views.
+ * Renders website, store, and store view Pickers in a single row
+ * after Auto-Detect populates store data. Cascading selection: website
+ * filters stores, store filters views.
+ *
+ * Each picker uses flex={1} to share available width equally.
  *
  * @module features/components/ui/components/StoreSelectionRow
  */
@@ -72,7 +74,7 @@ export function StoreSelectionRow({
     const selectedStore = lookupComponentConfigValue(componentConfigs, keys.store) || '';
 
     return (
-        <Flex gap="size-200" wrap>
+        <Flex gap="size-200" alignItems="end" marginBottom="size-200">
             {websiteField && (
                 <StoreStructureSelector
                     label="Website"

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **storeFieldHelpers**: Shared helpers (`isWebsiteCodeField`, `isStoreCodeField`, `CONNECTION_FIELDS`) for routing store config field rendering across components.
+- **useAutoStoreDetect**: Hook that watches connection fields and triggers store discovery automatically when all required fields are filled.
+
+### Changed
+- **Connect Commerce wizard step**: Replaces "Settings Collection" with a simplified single-column layout and progressive disclosure. Repositioned after Adobe auth steps so Commerce connection happens right after workspace selection. Shows for all flows (no longer conditional on `showWhenNoStack`).
+
+### Refactored
+- **ArchitectureModal Extraction**: Extracted step content into `ArchitectureStepContent` and `BlockLibrariesStepContent` sub-components. Extracted modal state management into `useModalState` hook. Generalized step navigation from hardcoded 2-step to computed N-step sequence.
+- **useComponentConfig Narrow Interface**: Replaced `WizardState` dependency with specific props (`selectedStack`, `componentConfigs`, `packageConfigDefaults`), making the hook reusable outside the wizard context.
+- **Prop Grouping**: Grouped related props into domain-specific objects (ArchitectureStepContent) to reduce prop drilling.
+- **BlockLibrariesStepContent prop rename**: Event handler props renamed from `handle*` to `on*` convention (`onBlockLibraryToggle`, `onCustomLibraryToggle`, `onOpenCustomSettings`).
+
 ## [1.0.0-beta.108] - 2026-03-25
 
 ### Changed

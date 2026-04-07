@@ -60,11 +60,10 @@ export function StoreStructureSelector({
             onSelectionChange={(key) => onSelect(String(key))}
             isRequired={isRequired}
             flex={1}
-            minWidth="size-2000"
-            menuWidth="auto"
+            menuWidth="size-3000"
         >
             {items.map(item => (
-                <Item key={item.code}>{item.name} ({item.code})</Item>
+                <Item key={item.code}>{item.name}</Item>
             ))}
         </Picker>
     );

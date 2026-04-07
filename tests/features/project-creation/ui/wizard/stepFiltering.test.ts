@@ -352,6 +352,110 @@ describe('stepFiltering', () => {
             expect(stepIds).not.toContain('adobe-workspace');
         });
 
+        it('should hide settings step when a stack is selected (showWhenNoStack)', () => {
+            // Given: Steps including a settings step with showWhenNoStack condition
+            const stepsWithSettings: WizardStepWithCondition[] = [
+                { id: 'welcome', name: 'Welcome' },
+                { id: 'settings', name: 'Settings Collection', condition: { showWhenNoStack: true } },
+                { id: 'review', name: 'Review' },
+            ];
+
+            // When: Filtering with a stack selected
+            const result = filterStepsForStack(stepsWithSettings, edgeDeliveryStack);
+
+            // Then: Settings step should be hidden
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).not.toContain('settings');
+            // And: Other steps should remain
+            expect(stepIds).toContain('welcome');
+            expect(stepIds).toContain('review');
+        });
+
+        it('should show settings step when no stack is selected (showWhenNoStack)', () => {
+            // Given: Steps including a settings step with showWhenNoStack condition
+            const stepsWithSettings: WizardStepWithCondition[] = [
+                { id: 'welcome', name: 'Welcome' },
+                { id: 'settings', name: 'Settings Collection', condition: { showWhenNoStack: true } },
+                { id: 'review', name: 'Review' },
+            ];
+
+            // When: Filtering with no stack selected
+            const result = filterStepsForStack(stepsWithSettings, undefined);
+
+            // Then: Settings step should be shown
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).toContain('settings');
+        });
+
+        it('should hide multiple showWhenNoStack steps when a stack is selected', () => {
+            // Given: Multiple steps with showWhenNoStack
+            const steps: WizardStepWithCondition[] = [
+                { id: 'welcome', name: 'Welcome' },
+                { id: 'component-selection', name: 'Component Selection', condition: { showWhenNoStack: true } },
+                { id: 'settings', name: 'Settings', condition: { showWhenNoStack: true } },
+                { id: 'review', name: 'Review' },
+            ];
+
+            // When: Filtering with a stack selected
+            const result = filterStepsForStack(steps, headlessStack);
+
+            // Then: Both showWhenNoStack steps should be hidden
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).not.toContain('component-selection');
+            expect(stepIds).not.toContain('settings');
+            expect(stepIds).toContain('welcome');
+            expect(stepIds).toContain('review');
+        });
+
+        it('should show the settings step from wizard-steps.json for all flows (no condition)', () => {
+            // Given: The actual wizard-steps.json configuration
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const wizardStepsConfig = require('@/features/project-creation/config/wizard-steps.json');
+            const steps: WizardStepWithCondition[] = wizardStepsConfig.steps;
+
+            // When: Filtering with a stack selected
+            const result = filterStepsForStack(steps, edgeDeliveryStack);
+
+            // Then: Settings step should be shown (unconditional)
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).toContain('settings');
+        });
+
+        it('should position settings step after adobe-workspace in wizard-steps.json', () => {
+            // Given: The actual wizard-steps.json configuration
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const wizardStepsConfig = require('@/features/project-creation/config/wizard-steps.json');
+            const steps: WizardStepWithCondition[] = wizardStepsConfig.steps;
+
+            // When: Looking at step order
+            const stepIds = steps.map((s: WizardStepWithCondition) => s.id);
+            const workspaceIndex = stepIds.indexOf('adobe-workspace');
+            const settingsIndex = stepIds.indexOf('settings');
+            const connectServicesIndex = stepIds.indexOf('eds-connect-services');
+
+            // Then: settings should be after adobe-workspace and before eds-connect-services
+            expect(settingsIndex).toBeGreaterThan(workspaceIndex);
+            expect(settingsIndex).toBeLessThan(connectServicesIndex);
+        });
+
+        it('should show all showWhenNoStack steps when no stack is selected', () => {
+            // Given: Multiple steps with showWhenNoStack
+            const steps: WizardStepWithCondition[] = [
+                { id: 'welcome', name: 'Welcome' },
+                { id: 'component-selection', name: 'Component Selection', condition: { showWhenNoStack: true } },
+                { id: 'settings', name: 'Settings', condition: { showWhenNoStack: true } },
+                { id: 'review', name: 'Review' },
+            ];
+
+            // When: No stack selected
+            const result = filterStepsForStack(steps, undefined);
+
+            // Then: Both showWhenNoStack steps should be shown
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).toContain('component-selection');
+            expect(stepIds).toContain('settings');
+        });
+
         it('should exclude step when stackRequiresAny has no matching properties', () => {
             // Given: A step with stackRequiresAny condition
             const stepsWithRequiresAny: WizardStepWithCondition[] = [

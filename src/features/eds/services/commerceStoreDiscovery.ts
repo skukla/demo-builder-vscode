@@ -187,8 +187,7 @@ export async function discoverStoreStructure(
     }
 
     try {
-        // Validate base URL (allow http for PaaS dev instances; localhost still blocked by SSRF check)
-        validateURL(params.baseUrl, ['https', 'http']);
+        validateURL(params.baseUrl, ['https']);
     } catch (error) {
         return { success: false, error: (error as Error).message };
     }
@@ -207,6 +206,12 @@ export async function discoverStoreStructure(
         // ACCS path — uses discovery service
         if (!params.discoveryServiceUrl || !params.imsToken) {
             return { success: false, error: 'Discovery service not configured or IMS token missing.' };
+        }
+
+        try {
+            validateURL(params.discoveryServiceUrl, ['https']);
+        } catch (error) {
+            return { success: false, error: (error as Error).message };
         }
 
         const accsEndpoint = params.accsGraphqlEndpoint || params.baseUrl;

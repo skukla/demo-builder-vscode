@@ -50,7 +50,7 @@ interface UseStoreDiscoveryReturn {
     isStoreGroup: (groupId: string) => boolean;
 }
 
-interface FetchStoresParams {
+export interface FetchStoresParams {
     backendType: 'paas' | 'accs';
     baseUrl: string;
     username?: string;
@@ -96,7 +96,7 @@ export function useStoreDiscovery(): UseStoreDiscoveryReturn {
         webviewClient.postMessage('discover-store-structure', params);
     }, []);
 
-    const isStoreGroup = (groupId: string) => groupId === 'accs' || groupId === 'adobe-commerce';
+    const isStoreGroup = useCallback((groupId: string) => groupId === 'accs' || groupId === 'adobe-commerce', []);
 
     const hasStoreData = state.storeData !== null;
 
@@ -112,7 +112,7 @@ export function useStoreDiscovery(): UseStoreDiscoveryReturn {
         if (!state.storeData) return [];
         const { websites, storeGroups } = state.storeData;
         const website = websites.find(w => w.code === websiteCode);
-        if (!website) return storeGroups.map(sg => ({ code: sg.code, name: sg.name, numericId: sg.id }));
+        if (!website) return [];
         return storeGroups
             .filter(sg => sg.website_id === website.id)
             .map(sg => ({ code: sg.code, name: sg.name, numericId: sg.id }));
@@ -122,10 +122,10 @@ export function useStoreDiscovery(): UseStoreDiscoveryReturn {
         if (!state.storeData) return [];
         const { storeGroups, storeViews } = state.storeData;
         const storeGroup = storeGroups.find(sg => sg.code === storeGroupCode);
-        const filtered = storeGroup
-            ? storeViews.filter(sv => sv.store_group_id === storeGroup.id && sv.is_active)
-            : storeViews.filter(sv => sv.is_active && sv.code !== 'admin');
-        return filtered.map(sv => ({ code: sv.code, name: sv.name, numericId: sv.id }));
+        if (!storeGroup) return [];
+        return storeViews
+            .filter(sv => sv.store_group_id === storeGroup.id && sv.is_active)
+            .map(sv => ({ code: sv.code, name: sv.name, numericId: sv.id }));
     }, [state.storeData]);
 
     return {

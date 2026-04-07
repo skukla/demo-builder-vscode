@@ -1,17 +1,9 @@
 /**
  * EDS Handlers
  *
- * Message handlers for EDS (Edge Delivery Services) wizard operations.
- *
- * This module re-exports handlers from domain-specific files:
- * - `edsGitHubHandlers.ts` - GitHub authentication and repository operations
- * - `edsDaLiveHandlers.ts` - DA.live authentication and organization operations
- *   (re-exports from `edsDaLiveAuthHandlers.ts` and `edsDaLiveOrgHandlers.ts`)
- * - `storefrontSetupHandlers.ts` - Storefront setup orchestration
- *
- * Additionally provides:
- * - `handleValidateAccsCredentials` - ACCS endpoint validation
- * - `handleDiscoverStoreStructure` - Commerce store hierarchy discovery
+ * Provides ACCS endpoint validation and Commerce store hierarchy discovery.
+ * Domain-specific handlers (GitHub, DA.live, Storefront Setup) live in
+ * their respective files and are exported via index.ts.
  *
  * All handlers follow the standard MessageHandler signature:
  * - Accept HandlerContext for logging and messaging
@@ -53,29 +45,7 @@ import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/typ
 import { discoverStoreStructure } from '../services/commerceStoreDiscovery';
 import type { StoreDiscoveryParams } from '@/types/commerceStore';
 
-// Re-export all GitHub handlers
-export {
-    handleCheckGitHubAuth,
-    handleGitHubOAuth,
-    handleGitHubChangeAccount,
-    handleGetGitHubRepos,
-    handleVerifyGitHubRepo,
-    handleCreateGitHubRepo,
-} from './edsGitHubHandlers';
-
-// Re-export all DA.live handlers
-export {
-    handleVerifyDaLiveOrg,
-    handleGetDaLiveSites,
-    handleListDaLiveOrgs,
-    handleCheckDaLiveAuth,
-    handleOpenDaLiveLogin,
-    handleStoreDaLiveToken,
-    handleStoreDaLiveTokenWithOrg,
-    handleClearDaLiveAuth,
-} from './edsDaLiveHandlers';
-
-// Re-export clearServiceCache for backward compatibility
+// clearServiceCache is an internal helper — re-exported here to keep edsHelpers internal
 export { clearServiceCache } from './edsHelpers';
 
 // ==========================================================
@@ -159,9 +129,10 @@ export async function handleValidateAccsCredentials(
             return { success: true }; // Handler succeeded, validation failed
         }
     } catch (error) {
-        const errorMessage = (error as Error).message.includes('abort')
-            ? 'Connection timed out'
-            : `Connection failed: ${(error as Error).message}`;
+        const msg = (error as Error).message;
+        const errorMessage = msg.includes('abort') || msg.includes('timeout')
+            ? 'Connection timed out. Check the Commerce URL and try again.'
+            : 'Connection failed. Check the Commerce URL and try again.';
 
         context.logger.error('[EDS] ACCS validation error:', error as Error);
         await context.sendMessage('accs-validation-result', {
@@ -188,8 +159,6 @@ function getDiscoveryServices(): AccsDiscoveryService[] {
     return vscode.workspace.getConfiguration('demoBuilder.accsDiscovery')
         .get<AccsDiscoveryService[]>('services', []);
 }
-
-
 
 // ==========================================================
 // Store Discovery Handler
@@ -293,7 +262,10 @@ export async function handleDiscoverStoreStructure(
             }
 
             params.imsToken = imsToken;
-            params.discoveryServiceUrl = services[0].serviceUrl;
+            const service = payload.orgId
+                ? (services.find(s => s.orgId === payload.orgId) ?? services[0])
+                : services[0];
+            params.discoveryServiceUrl = service.serviceUrl;
             params.accsGraphqlEndpoint = payload.accsGraphqlEndpoint;
         }
 
@@ -311,11 +283,10 @@ export async function handleDiscoverStoreStructure(
         await context.sendMessage('store-discovery-result', result);
         return { success: true };
     } catch (error) {
-        const errorMessage = (error as Error).message;
         context.logger.error('[EDS] Store discovery error:', error as Error);
         await context.sendMessage('store-discovery-result', {
             success: false,
-            error: errorMessage,
+            error: 'Store discovery failed. Please try again.',
         });
         return { success: true }; // Handler succeeded, discovery failed
     }
