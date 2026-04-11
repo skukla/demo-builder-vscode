@@ -138,7 +138,7 @@ features/my-feature/
 - `HelixService` - Helix Admin API (preview/publish/unpublish, API key management)
 - `CleanupService` - External resource cleanup on project deletion
 - `ToolManager` - Commerce demo ingestion tool management
-- `edsResetService` + `edsResetUI` - Project reset (core logic + UI orchestration)
+- `edsResetParams` + `edsResetRepoHelper` + `edsResetMeshHelper` + `edsResetService` + `edsResetUI` - Project reset (parameter validation, repo helpers, mesh redeploy, pipeline orchestration, UI)
 - `blockCollectionHelpers` - Block collection installation from config-driven source
 - `inspectorHelpers` - Demo Inspector SDK vendoring and tagging
 - Error formatters for user-friendly error messages

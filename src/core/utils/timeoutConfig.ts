@@ -230,6 +230,10 @@ export const TIMEOUTS = {
     /** EDS code sync poll interval (5 seconds) */
     EDS_CODE_SYNC_POLL: 5000,
 
+    /** Delay before retrying Configuration Service registration on new repos (10 seconds)
+     * Allows admin role propagation after GitHub App installation */
+    CONFIG_SERVICE_RETRY_DELAY: 10000,
+
     /** Rate limit window (1 second) */
     RATE_LIMIT_WINDOW: 1000,
 

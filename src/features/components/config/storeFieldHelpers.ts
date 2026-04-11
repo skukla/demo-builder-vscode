@@ -21,6 +21,12 @@ import {
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
 } from './envVarKeys';
 
+/** Service group IDs for PaaS and ACCS commerce backends */
+export const STORE_GROUP_IDS = {
+    ACCS: 'accs',
+    PAAS: 'adobe-commerce',
+} as const;
+
 /** Whether a field is a website code field (where store selection row appears) */
 export const isWebsiteCodeField = (key: string): boolean =>
     key === PAAS_WEBSITE_CODE || key === ACCS_WEBSITE_CODE;

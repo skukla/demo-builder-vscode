@@ -17,23 +17,24 @@
 
 import { toComponentDataArray, toDependencyData } from '../services/componentTransforms';
 import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
-import { ComponentSelection } from '@/types/components';
+import { ComponentSelection, type ComponentConfigs as ComponentConfigsData } from '@/types/components';
 import { toAppError } from '@/types/errors';
+import type { ComponentConfigs } from '@/types/webview';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
 import { getEntryCount } from '@/types/typeGuards';
 
 /**
- * Get or create ComponentRegistryManager from context
+ * Create a ComponentRegistryManager for the current extension context
  */
-function getRegistryManager(context: HandlerContext): ComponentRegistryManager {
+function createRegistryManager(context: HandlerContext): ComponentRegistryManager {
     return new ComponentRegistryManager(context.context.extensionPath);
 }
 
 /**
- * Get or create DependencyResolver from context
+ * Create a DependencyResolver backed by a fresh ComponentRegistryManager
  */
-function getDependencyResolver(context: HandlerContext): DependencyResolver {
-    const registryManager = getRegistryManager(context);
+function createDependencyResolver(context: HandlerContext): DependencyResolver {
+    const registryManager = createRegistryManager(context);
     return new DependencyResolver(registryManager);
 }
 
@@ -46,6 +47,10 @@ export const handleUpdateComponentSelection: MessageHandler = async (
     context: HandlerContext,
     payload?: unknown,
 ) => {
+    if (!payload || typeof payload !== 'object') {
+        context.logger.error('[Components] handleUpdateComponentSelection: invalid payload');
+        return { success: false, error: 'Invalid payload' };
+    }
     const selection = payload as ComponentSelection;
     context.sharedState.currentComponentSelection = selection;
     context.logger.debug(`Updated component selection: ${selection.frontend || 'none'}/${selection.backend || 'none'} + ${selection.dependencies?.length || 0} deps + ${selection.services?.length || 0} services`);
@@ -61,9 +66,33 @@ export const handleUpdateComponentsData: MessageHandler = async (
     context: HandlerContext,
     payload?: unknown,
 ) => {
-    const componentsData = payload as import('../../../types/components').ComponentConfigs;
+    if (!payload || typeof payload !== 'object') {
+        context.logger.error('[Components] handleUpdateComponentsData: invalid payload');
+        return { success: false, error: 'Invalid payload' };
+    }
+    const componentsData = payload as ComponentConfigsData;
     context.sharedState.componentsData = componentsData;
     context.logger.debug('Updated components data');
+    return { success: true };
+};
+
+/**
+ * sync-component-configs - Store current user-entered component config values
+ *
+ * Keeps a server-side copy so handlers can read credentials without
+ * requiring the webview to include them in subsequent postMessage payloads.
+ */
+export const handleSyncComponentConfigs: MessageHandler = async (
+    context: HandlerContext,
+    payload?: unknown,
+) => {
+    // Trust boundary: payload originates from the extension's own webview (same process),
+    // not from untrusted external input. Shape validation is omitted intentionally.
+    if (!payload || typeof payload !== 'object') {
+        context.logger.warn('sync-component-configs: invalid payload');
+        return { success: true };
+    }
+    context.sharedState.currentComponentConfigs = payload as ComponentConfigs;
     return { success: true };
 };
 
@@ -74,7 +103,7 @@ export const handleUpdateComponentsData: MessageHandler = async (
  */
 export const handleLoadComponents: MessageHandler = async (context: HandlerContext) => {
     try {
-        const registryManager = getRegistryManager(context);
+        const registryManager = createRegistryManager(context);
 
         const frontends = await registryManager.getFrontends();
         const backends = await registryManager.getBackends();
@@ -117,7 +146,7 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
  */
 export const handleGetComponentsData: MessageHandler = async (context: HandlerContext) => {
     try {
-        const registryManager = getRegistryManager(context);
+        const registryManager = createRegistryManager(context);
 
         const frontends = await registryManager.getFrontends();
         const backends = await registryManager.getBackends();
@@ -168,8 +197,14 @@ export const handleCheckCompatibility: MessageHandler = async (
     payload?: unknown,
 ) => {
     try {
+        if (!payload || typeof payload !== 'object') {
+            return { success: false, error: 'Invalid payload' };
+        }
         const { frontend, backend } = payload as { frontend: string; backend: string };
-        const registryManager = getRegistryManager(context);
+        if (typeof frontend !== 'string' || typeof backend !== 'string') {
+            return { success: false, error: 'Invalid payload' };
+        }
+        const registryManager = createRegistryManager(context);
 
         const compatible = await registryManager.checkCompatibility(frontend, backend);
 
@@ -200,8 +235,14 @@ export const handleLoadDependencies: MessageHandler = async (
     payload?: unknown,
 ) => {
     try {
+        if (!payload || typeof payload !== 'object') {
+            return { success: false, error: 'Invalid payload' };
+        }
         const { frontend, backend } = payload as { frontend: string; backend: string };
-        const dependencyResolver = getDependencyResolver(context);
+        if (typeof frontend !== 'string' || typeof backend !== 'string') {
+            return { success: false, error: 'Invalid payload' };
+        }
+        const dependencyResolver = createDependencyResolver(context);
 
         const resolved = await dependencyResolver.resolveDependencies(frontend, backend);
 
@@ -237,8 +278,14 @@ export const handleLoadPreset: MessageHandler = async (
     payload?: unknown,
 ) => {
     try {
+        if (!payload || typeof payload !== 'object') {
+            return { success: false, error: 'Invalid payload' };
+        }
         const { presetId } = payload as { presetId: string };
-        const registryManager = getRegistryManager(context);
+        if (typeof presetId !== 'string') {
+            return { success: false, error: 'Invalid payload' };
+        }
+        const registryManager = createRegistryManager(context);
 
         const presets = await registryManager.getPresets();
         const preset = presets.find(p => p.id === presetId);
@@ -278,12 +325,22 @@ export const handleValidateSelection: MessageHandler = async (
     payload?: unknown,
 ) => {
     try {
+        if (!payload || typeof payload !== 'object') {
+            return { success: false, error: 'Invalid payload' };
+        }
         const { frontend, backend, dependencies } = payload as {
             frontend: string;
             backend: string;
             dependencies: string[];
         };
-        const dependencyResolver = getDependencyResolver(context);
+        if (
+            typeof frontend !== 'string' ||
+            typeof backend !== 'string' ||
+            !Array.isArray(dependencies)
+        ) {
+            return { success: false, error: 'Invalid payload' };
+        }
+        const dependencyResolver = createDependencyResolver(context);
 
         const resolved = await dependencyResolver.resolveDependencies(
             frontend,

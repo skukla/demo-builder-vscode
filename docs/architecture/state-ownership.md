@@ -120,6 +120,30 @@ be removed in a future version.
 
 ---
 
+---
+
+## WizardState Caches
+
+The wizard-side `WizardState` (React, not persisted to disk) contains caches that survive backward navigation but are cleared on stack or architecture change.
+
+| Field | Purpose | Write Authority | Cleared When |
+|-------|---------|-----------------|--------------|
+| `storeDiscoveryData` | Commerce store hierarchy (websites / store groups / store views) fetched from the REST API during the Connect Commerce step | `WizardContainer` via `onStoreDiscoveryDataChange` callback | Architecture change (`handleArchitectureChange`) |
+
+`storeDiscoveryData` is **not** part of the extension-side `Project` type and is **not** persisted to disk. It is a transient wizard cache that drives the progressive store-code pickers.
+
+## SharedState Runtime Fields
+
+`SharedState` (the `context.sharedState` bag on `HandlerContext`) holds transient runtime fields that are never persisted to disk. These fields are set and read by different handlers to avoid passing sensitive values through postMessage payloads.
+
+| Field | Purpose | Write Authority | Read By |
+|-------|---------|-----------------|---------|
+| `currentComponentConfigs` | User-entered component config values (including Commerce admin credentials) synced from the wizard webview | `handleSyncComponentConfigs` in `componentHandlers.ts` | `handleDiscoverStoreStructure` in `edsHandlers.ts` |
+
+`currentComponentConfigs` is cleared when the webview disconnects. Credentials are read server-side to avoid re-transmitting them in each subsequent postMessage payload.
+
+---
+
 ## Audit Findings
 
 ### Resolved: Mesh Endpoint Single Source of Truth (Fixed)

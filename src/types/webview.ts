@@ -1,6 +1,7 @@
 // Shared types for the webview application
 
 import type { CustomBlockLibrary } from './blockLibraries';
+import type { CommerceStoreStructure } from './commerceStore';
 import { ErrorCode } from './errorCodes';
 
 export type ThemeMode = 'light' | 'dark';
@@ -54,6 +55,7 @@ export interface WizardState {
     edsConfig?: EDSConfig;  // EDS (Edge Delivery Services) configuration
 
     // Persistent caches to prevent re-fetching on backward navigation
+    storeDiscoveryData?: CommerceStoreStructure;  // Store structure from discovery (avoids re-fetch on back navigation)
     projectsCache?: AdobeProject[];
     workspacesCache?: Workspace[];
     organizationsCache?: Organization[];

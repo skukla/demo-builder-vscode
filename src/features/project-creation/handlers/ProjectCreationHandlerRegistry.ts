@@ -43,6 +43,7 @@ export const projectCreationHandlers = defineHandlers({
     // Component handlers
     'update-component-selection': components.handleUpdateComponentSelection,
     'update-components-data': components.handleUpdateComponentsData,
+    'sync-component-configs': components.handleSyncComponentConfigs,
     'loadComponents': components.handleLoadComponents,
     'get-components-data': components.handleGetComponentsData,
     'checkCompatibility': components.handleCheckCompatibility,

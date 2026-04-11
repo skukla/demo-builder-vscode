@@ -250,13 +250,26 @@ describe('EDS Handlers', () => {
             const result = await handleValidateAccsCredentials(mockContext, {
                 accsHost: 'https://accs.example.com',
                 storeViewCode: 'default',
-                customerGroup: 'general',
             });
 
             // Then: Should return validation success
             expect(result.success).toBe(true);
             expect(mockContext.sendMessage).toHaveBeenCalledWith('accs-validation-result', expect.objectContaining({
                 valid: true,
+            }));
+        });
+
+        it('should reject storeViewCode containing CRLF or special chars (header injection guard)', async () => {
+            const { handleValidateAccsCredentials } = await import('@/features/eds/handlers/edsHandlers');
+
+            const result = await handleValidateAccsCredentials(mockContext, {
+                accsHost: 'https://accs.example.com',
+                storeViewCode: 'default\r\nX-Injected: header',
+            });
+
+            expect(result.success).toBe(false);
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('accs-validation-result', expect.objectContaining({
+                valid: false,
             }));
         });
     });

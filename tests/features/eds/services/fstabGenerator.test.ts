@@ -14,13 +14,28 @@ describe('fstabGenerator', () => {
 
             const content = generateFstabContent(config);
 
-            // Verify mountpoints section
+            // Verify mountpoints section with simple DA.live URL format
             expect(content).toContain('mountpoints:');
-            expect(content).toContain('url: https://content.da.live/my-org/my-site/');
-            expect(content).toContain('type: markup');
+            expect(content).toContain('https://content.da.live/my-org/my-site/');
+
+            // Must NOT use nested BYOM format — that causes "invalid fstab" in da.live editor
+            expect(content).not.toContain('type: markup');
+            expect(content).not.toContain('url:');
 
             // Folder mapping is handled by Configuration Service API, not fstab.yaml
             expect(content).not.toContain('folders:');
+        });
+
+        it('should use the simple string format (not nested object format)', () => {
+            const config: FstabConfig = {
+                daLiveOrg: 'my-org',
+                daLiveSite: 'my-site',
+            };
+
+            const content = generateFstabContent(config);
+
+            // Simple format: "/: https://..." on a single line
+            expect(content).toMatch(/\/:\s+https:\/\/content\.da\.live\/my-org\/my-site\//);
         });
 
         it('should use the correct DA.live URL format', () => {
@@ -53,18 +68,13 @@ describe('fstabGenerator', () => {
 
             const content = generateFstabContent(config);
 
-            // Check YAML structure (indentation matters)
             const lines = content.split('\n');
 
             // mountpoints is root level
             expect(lines[0]).toBe('mountpoints:');
 
-            // / is indented under mountpoints
-            expect(lines[1]).toMatch(/^\s{2}\/:/);
-
-            // url and type are indented under /
-            expect(lines[2]).toMatch(/^\s{4}url:/);
-            expect(lines[3]).toMatch(/^\s{4}type:/);
+            // /: URL is indented under mountpoints (simple string format)
+            expect(lines[1]).toMatch(/^\s{2}\/:\s+https:\/\//);
         });
 
         it('should include trailing slash in DA.live URL', () => {
@@ -75,8 +85,34 @@ describe('fstabGenerator', () => {
 
             const content = generateFstabContent(config);
 
-            // URL should end with trailing slash
             expect(content).toContain('https://content.da.live/org/site/');
+        });
+    });
+
+    describe('input validation', () => {
+        it('should throw when daLiveOrg contains a newline', () => {
+            expect(() => generateFstabContent({ daLiveOrg: 'org\nredir:', daLiveSite: 'site' }))
+                .toThrow('daLiveOrg');
+        });
+
+        it('should throw when daLiveSite contains a newline', () => {
+            expect(() => generateFstabContent({ daLiveOrg: 'org', daLiveSite: 'site\nattack:' }))
+                .toThrow('daLiveSite');
+        });
+
+        it('should throw when daLiveOrg contains a space', () => {
+            expect(() => generateFstabContent({ daLiveOrg: 'my org', daLiveSite: 'site' }))
+                .toThrow('daLiveOrg');
+        });
+
+        it('should throw when daLiveSite contains a colon', () => {
+            expect(() => generateFstabContent({ daLiveOrg: 'org', daLiveSite: 'site:bad' }))
+                .toThrow('daLiveSite');
+        });
+
+        it('should accept valid org and site names with dashes and underscores', () => {
+            expect(() => generateFstabContent({ daLiveOrg: 'my-org', daLiveSite: 'my_site' }))
+                .not.toThrow();
         });
     });
 });

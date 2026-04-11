@@ -10,7 +10,7 @@
  *
  * Shared by ComponentConfigStep and ConnectStoreStepContent.
  */
-import { Flex, ProgressCircle, Text } from '@adobe/react-spectrum';
+import { Button, Flex, ProgressCircle, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { ConfigFieldRenderer } from './ConfigFieldRenderer';
 import { StoreSelectionRow } from './StoreSelectionRow';
@@ -40,6 +40,8 @@ export interface StoreConfigFieldRowProps {
     getStoreGroupItems: (websiteCode: string) => StoreListItem[];
     getStoreViewItems: (storeGroupCode: string) => StoreListItem[];
     componentConfigs: ComponentConfigs;
+    /** Called when user clicks the Re-detect button to re-run store discovery */
+    onRefresh?: () => void;
 }
 
 export function StoreConfigFieldRow({
@@ -59,6 +61,7 @@ export function StoreConfigFieldRow({
     getStoreGroupItems,
     getStoreViewItems,
     componentConfigs,
+    onRefresh,
 }: StoreConfigFieldRowProps): React.ReactNode {
     const fieldProps = {
         field,
@@ -95,15 +98,24 @@ export function StoreConfigFieldRow({
                     </Flex>
                 )}
                 {hasStoreData && (
-                    <StoreSelectionRow
-                        group={group}
-                        getFieldValue={getFieldValue}
-                        updateField={updateField}
-                        getWebsiteItems={getWebsiteItems}
-                        getStoreGroupItems={getStoreGroupItems}
-                        getStoreViewItems={getStoreViewItems}
-                        componentConfigs={componentConfigs}
-                    />
+                    <>
+                        <StoreSelectionRow
+                            group={group}
+                            getFieldValue={getFieldValue}
+                            updateField={updateField}
+                            getWebsiteItems={getWebsiteItems}
+                            getStoreGroupItems={getStoreGroupItems}
+                            getStoreViewItems={getStoreViewItems}
+                            componentConfigs={componentConfigs}
+                        />
+                        {onRefresh && (
+                            <Flex marginTop="size-100" marginStart="size-50">
+                                <Button variant="secondary" onPress={onRefresh} UNSAFE_className="btn-standard text-base">
+                                    Re-detect
+                                </Button>
+                            </Flex>
+                        )}
+                    </>
                 )}
                 {fetchError && (
                     <>
@@ -120,6 +132,6 @@ export function StoreConfigFieldRow({
         return null;
     }
 
-    /* Other dependent fields (e.g., Customer Group) — show after prerequisites met */
+    /* Other dependent fields — show after prerequisites met */
     return <ConfigFieldRenderer {...fieldProps} />;
 }

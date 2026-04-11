@@ -5,10 +5,9 @@
  * connection fields are filled. Used by both ComponentConfigStep (wizard)
  * and ConnectStoreStepContent (connect-store step).
  *
- * The SSRF-safe ACCS path parses the endpoint URL and uses only the
- * validated protocol+host as baseUrl. Invalid URLs are skipped silently —
- * the autoDetectKey guard already requires a parseable URL with /graphql
- * before this callback is called.
+ * Both ACCS and PaaS paths parse the user-supplied URL and restrict the
+ * protocol to http/https before forwarding as baseUrl. Invalid URLs or
+ * non-http(s) schemes (file://, ftp://, etc.) are skipped silently.
  *
  * @module features/components/ui/hooks/useAutoStoreDetect
  */
@@ -21,8 +20,15 @@ import {
     PAAS_ADMIN_PASSWORD,
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
 } from '@/features/components/config/envVarKeys';
+import { STORE_GROUP_IDS } from '@/features/components/config/storeFieldHelpers';
+import { validateURL } from '@/core/validation/URLValidator';
 import type { FetchStoresParams } from './useStoreDiscovery';
 import type { ComponentConfigs } from '@/types/webview';
+
+/** Derive the component service group ID from an autoDetectKey prefix. */
+function groupIdFromKey(key: string): string {
+    return key.startsWith('accs:') ? STORE_GROUP_IDS.ACCS : STORE_GROUP_IDS.PAAS;
+}
 
 export interface UseAutoStoreDetectProps {
     configs: ComponentConfigs;
@@ -34,6 +40,8 @@ export interface UseAutoStoreDetectProps {
 
 export interface UseAutoStoreDetectReturn {
     autoDetectKey: string | undefined;
+    /** Imperatively re-trigger store discovery, bypassing the hasStoreData guard */
+    forceFetch: () => void;
 }
 
 export function useAutoStoreDetect({
@@ -45,20 +53,32 @@ export function useAutoStoreDetect({
 }: UseAutoStoreDetectProps): UseAutoStoreDetectReturn {
     /** Build and send the store discovery request for a given group */
     const handleFetchStores = useCallback((groupId: string) => {
-        const isPaas = groupId === 'adobe-commerce';
+        const isPaas = groupId === STORE_GROUP_IDS.PAAS;
 
         if (isPaas) {
-            const baseUrl = lookupComponentConfigValue(configs, PAAS_URL);
-            const username = lookupComponentConfigValue(configs, PAAS_ADMIN_USERNAME);
-            const password = lookupComponentConfigValue(configs, PAAS_ADMIN_PASSWORD);
-            if (!baseUrl) return;
+            const rawBaseUrl = lookupComponentConfigValue(configs, PAAS_URL);
+            if (!rawBaseUrl) return;
 
-            fetchStores({
-                backendType: 'paas',
-                baseUrl,
-                username: username || undefined,
-                password: password || undefined,
-            });
+            // Restrict to http/https to prevent SSRF via file://, ftp://, etc.
+            let parsedUrl: URL;
+            try {
+                parsedUrl = new URL(rawBaseUrl);
+            } catch {
+                return; // Invalid URL — skip silently
+            }
+            if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') return;
+            const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}`;
+
+            // Block private IPs / SSRF targets before forwarding to store discovery
+            try {
+                validateURL(baseUrl, ['http', 'https']);
+            } catch {
+                return;
+            }
+
+            // Credentials are NOT included — the extension handler reads them from
+            // sharedState.currentComponentConfigs (synced via WizardContainer effect).
+            fetchStores({ backendType: 'paas', baseUrl });
         } else {
             const accsEndpoint = lookupComponentConfigValue(configs, ACCS_ENDPOINT_KEY);
             if (!accsEndpoint) return;
@@ -68,6 +88,14 @@ export function useAutoStoreDetect({
                 url = new URL(accsEndpoint);
             } catch {
                 return; // Invalid URL — skip silently (autoDetectKey already requires a valid URL)
+            }
+            if (url.protocol !== 'https:' && url.protocol !== 'http:') return;
+
+            // Block private IPs / SSRF targets before forwarding to store discovery
+            try {
+                validateURL(`${url.protocol}//${url.host}`, ['http', 'https']);
+            } catch {
+                return;
             }
 
             fetchStores({
@@ -94,9 +122,12 @@ export function useAutoStoreDetect({
             } catch { /* not valid yet */ }
         }
 
-        // PaaS: URL + username + password all filled
+        // PaaS: all three fields must be filled to trigger detection.
+        // paasUser is checked in the guard above but excluded from the key string itself —
+        // the URL is sufficient to distinguish detection runs per store endpoint,
+        // and omitting the username avoids embedding a credential in a cache key.
         if (paasUrl && paasUser && paasPass) {
-            return `paas:${paasUrl}:${paasUser}`;
+            return `paas:${paasUrl}`;
         }
 
         return undefined;
@@ -110,9 +141,17 @@ export function useAutoStoreDetect({
 
         if (hasStoreData || isFetching) return;
 
-        const backendType = autoDetectKey.startsWith('accs:') ? 'accs' : 'adobe-commerce';
-        handleFetchStores(backendType);
+        const groupId = groupIdFromKey(autoDetectKey);
+        handleFetchStores(groupId);
     }, [autoDetectKey, hasStoreData, isFetching, handleFetchStores]);
 
-    return { autoDetectKey };
+    const forceFetch = useCallback(() => {
+        if (!autoDetectKey) return;
+        // Keep ref in sync so the auto-detect effect doesn't double-trigger afterward
+        prevAutoDetectKeyRef.current = autoDetectKey;
+        const groupId = groupIdFromKey(autoDetectKey);
+        handleFetchStores(groupId);
+    }, [autoDetectKey, handleFetchStores]);
+
+    return { autoDetectKey, forceFetch };
 }

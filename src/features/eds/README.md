@@ -34,7 +34,10 @@ src/features/eds/
 │   ├── toolManager.ts              # Commerce demo ingestion tool management
 │   ├── contentPatchRegistry.ts     # Content patch definitions for demo customization
 │   ├── blockCollectionHelpers.ts   # Block collection installation from source repo with version tracking
-│   ├── edsResetService.ts          # Core reset logic (template reset, code sync)
+│   ├── edsResetParams.ts            # Reset parameter types and extractResetParams validation
+│   ├── edsResetRepoHelper.ts        # Repo reset helpers (template reset, block libraries, inspector)
+│   ├── edsResetMeshHelper.ts        # Mesh redeploy helpers (auth re-validation + deployMesh)
+│   ├── edsResetService.ts          # Core reset orchestration (pipeline, CDN sync, finalization)
 │   ├── edsResetUI.ts               # Reset UI orchestration (auth, progress, notifications)
 │   ├── edsPipeline.ts              # EDS setup pipeline orchestration
 │   ├── featurePackInstaller.ts     # Feature pack artifact installation
@@ -85,7 +88,12 @@ src/features/eds/
 │   ├── edsDaLiveOrgHandlers.ts     # DA.live org handlers
 │   ├── edsDaLiveOrgConfigHandlers.ts # DA.live org config handlers
 │   ├── storefrontSetupHandlers.ts  # Storefront setup orchestration + cleanup
-│   ├── storefrontSetupPhases.ts    # Storefront setup phase executors
+│   ├── storefrontSetupTypes.ts     # Shared types: StorefrontSetupResult, SetupServices, RepoInfo
+│   ├── storefrontSetupPhase1.ts    # Phase 1: GitHub repo creation/selection
+│   ├── storefrontSetupPhase2.ts    # Phase 2: Helix config (fstab, block collections, inspector)
+│   ├── storefrontSetupPhase3.ts    # Phase 3: code sync + config service registration
+│   ├── storefrontSetupPhaseHelpers.ts # Shared phase helpers (GitHub App check)
+│   ├── storefrontSetupPhases.ts    # Main orchestrator (delegates to phase1/2/3 files)
 │   ├── edsHelpers.ts               # Shared handler utilities (ensureDaLiveAuth, service cache)
 │   └── cleanupDaLiveSitesHandler.ts # DA.live site cleanup handler
 └── index.ts                         # Public API exports
@@ -93,7 +101,9 @@ src/features/eds/
 
 ## Key Services
 
-### Storefront Setup (storefrontSetupHandlers + storefrontSetupPhases)
+### Storefront Setup (storefrontSetupHandlers + storefrontSetupPhase1/2/3 + storefrontSetupTypes)
+
+Phase 1 (GitHub repo) lives in `storefrontSetupPhase1.ts`, Phase 2 (Helix config) in `storefrontSetupPhase2.ts`, the main orchestrator in `storefrontSetupPhases.ts`, Phase 3 (code sync + config service) in `storefrontSetupPhase3.ts`. Shared types (`StorefrontSetupResult`, `SetupServices`, `RepoInfo`) are in `storefrontSetupTypes.ts`. Shared phase helpers (`checkGitHubAppForExistingRepo`) that do not belong to a specific phase live in `storefrontSetupPhaseHelpers.ts`, kept separate to avoid cross-phase import cycles.
 
 Orchestrates complete EDS project setup through phases:
 
@@ -101,8 +111,8 @@ Orchestrates complete EDS project setup through phases:
 |-------|----------|------------|
 | `repository` | 0-15% | Create/configure GitHub repository from template |
 | `storefront-code` | 15-35% | Push fstab.yaml, install block libraries (built-in + custom) with inspector tagging, install feature packs |
-| `code-sync` | 35-42% | Verify code synchronization, publish code to CDN |
-| `site-config` | 42-49% | Configure DA.live permissions, register with Configuration Service, set folder mapping |
+| `code-sync` | 40-45% | Verify code synchronization, publish code to CDN |
+| `site-config` | 46-49% | Configure DA.live permissions, register with Configuration Service, set folder mapping |
 | `content` | 49-58% | Clear existing DA.live content, copy demo content from source |
 | `block-library` | 58-65% | Create block library in DA.live, apply EDS settings |
 | `publish` | 65-95% | Purge CDN cache, publish content and block library to CDN |
@@ -142,6 +152,8 @@ Fetches store hierarchy (websites, store groups, store views) from the Commerce 
 - **fetchStoreStructurePaas** — PaaS store hierarchy (Bearer token auth)
 - **fetchStoreStructureAccs** — ACCS store hierarchy (IMS OAuth + x-api-key auth)
 - **extractTenantId** — Extract tenant ID from ACCS GraphQL endpoint URL
+
+**PaaS credential sourcing**: Admin username and password are never passed in the postMessage payload. The handler (`handleDiscoverStoreStructure` in `edsHandlers.ts`) reads them from `sharedState.currentComponentConfigs` (synced by `WizardContainer`) or the saved project's `componentConfigs`.
 
 ### Error Formatters
 
@@ -221,7 +233,5 @@ The feature uses timeouts from `@/core/utils/timeoutConfig`:
 
 | Timeout | Default | Description |
 |---------|---------|-------------|
-| `EDS_HELIX_CONFIG` | 30s | Helix configuration API timeout |
-| `EDS_CODE_SYNC_POLL` | 5s | Code sync polling interval |
-| `EDS_CODE_SYNC_TOTAL` | 125s | Total code sync timeout |
-| `DA_LIVE_API` | 30s | DA.live API timeout |
+| `NORMAL` | 30s | Helix configuration and DA.live API calls |
+| `EDS_CODE_SYNC_POLL` | 5s | Registered timeout — phase 3 overrides to 2s via `CODE_SYNC_POLL_INTERVAL_MS` constant |

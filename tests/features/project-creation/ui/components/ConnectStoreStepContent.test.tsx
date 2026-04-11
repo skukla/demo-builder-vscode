@@ -11,6 +11,7 @@ import { render, screen, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
+import type { UseStoreDiscoveryConfig } from '@/features/components/ui/hooks/useStoreDiscovery';
 
 // ---------------------------------------------------------------------------
 // Types for mock return values
@@ -194,6 +195,9 @@ const catalogServiceGroup: MockServiceGroup = {
 // Mock setup
 // ---------------------------------------------------------------------------
 
+// Track captured config from useStoreDiscovery
+let capturedStoreDiscoveryConfig: UseStoreDiscoveryConfig;
+
 // Track mock return values so tests can modify them
 const mockUseComponentConfig = {
     isLoading: false,
@@ -230,7 +234,10 @@ jest.mock('@/features/components/ui/hooks/useComponentConfig', () => ({
 }));
 
 jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
-    useStoreDiscovery: () => mockUseStoreDiscovery,
+    useStoreDiscovery: (config: any = {}) => {
+        capturedStoreDiscoveryConfig = config;
+        return mockUseStoreDiscovery;
+    },
 }));
 
 // Mock ConfigFieldRenderer to simplify testing (avoid Spectrum internals)
@@ -334,6 +341,7 @@ describe('ConnectStoreStepContent', () => {
         jest.clearAllMocks();
         capturedSetCanProceed = undefined;
         capturedUpdateState = undefined;
+        capturedStoreDiscoveryConfig = undefined;
 
         // Reset mock defaults
         mockUseComponentConfig.isLoading = false;
@@ -971,6 +979,129 @@ describe('ConnectStoreStepContent', () => {
             await user.tab(); // blur
 
             expect(mockUseComponentConfig.normalizeUrlField).toHaveBeenCalled();
+        });
+    });
+
+    // -----------------------------------------------------------------------
+    // Store discovery persistence: initialStoreData + onStoreDiscoveryDataChange
+    // -----------------------------------------------------------------------
+
+    describe('store discovery persistence', () => {
+        it('should pass storeDiscoveryData to useStoreDiscovery as initialStoreData', () => {
+            const storeData = { websites: [], storeGroups: [], storeViews: [] } as any;
+            mockUseComponentConfig.serviceGroups = [];
+
+            renderWithProvider(
+                <ConnectStoreStepContent
+                    {...defaultProps}
+                    storeDiscoveryData={storeData}
+                />,
+            );
+
+            expect(capturedStoreDiscoveryConfig?.initialStoreData).toBe(storeData);
+        });
+
+        it('should pass onStoreDiscoveryDataChange to useStoreDiscovery as onStoreDataChange', () => {
+            const onStoreDiscoveryDataChange = jest.fn();
+            mockUseComponentConfig.serviceGroups = [];
+
+            renderWithProvider(
+                <ConnectStoreStepContent
+                    {...defaultProps}
+                    onStoreDiscoveryDataChange={onStoreDiscoveryDataChange}
+                />,
+            );
+
+            expect(capturedStoreDiscoveryConfig?.onStoreDataChange).toBe(onStoreDiscoveryDataChange);
+        });
+
+        it('should not re-trigger auto-detect when storeDiscoveryData is provided (hasStoreData starts true)', () => {
+            const storeData = { websites: [], storeGroups: [], storeViews: [] } as any;
+            mockUseStoreDiscovery.hasStoreData = true;
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            configurePaasLookup();
+
+            renderWithProvider(
+                <ConnectStoreStepContent
+                    {...defaultProps}
+                    storeDiscoveryData={storeData}
+                    selectedStackId="headless-paas"
+                    componentConfigs={{
+                        'adobe-commerce': {
+                            [PAAS_URL]: 'https://example.com',
+                            [PAAS_ADMIN_USERNAME]: 'admin',
+                            [PAAS_ADMIN_PASSWORD]: 'pass123',
+                        },
+                    }}
+                />,
+            );
+
+            expect(mockUseStoreDiscovery.fetchStores).not.toHaveBeenCalled();
+        });
+    });
+
+    // -----------------------------------------------------------------------
+    // Refresh button
+    // -----------------------------------------------------------------------
+
+    describe('refresh button', () => {
+        it('should show refresh button when hasStoreData is true and autoDetectKey is set', () => {
+            mockUseStoreDiscovery.hasStoreData = true;
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            configurePaasLookup();
+
+            renderWithProvider(
+                <ConnectStoreStepContent
+                    {...defaultProps}
+                    selectedStackId="headless-paas"
+                    componentConfigs={{
+                        'adobe-commerce': {
+                            [PAAS_URL]: 'https://example.com',
+                            [PAAS_ADMIN_USERNAME]: 'admin',
+                            [PAAS_ADMIN_PASSWORD]: 'pass123',
+                        },
+                    }}
+                />,
+            );
+
+            expect(screen.getByRole('button', { name: /re-detect/i })).toBeInTheDocument();
+        });
+
+        it('should not show refresh button when hasStoreData is false', () => {
+            mockUseStoreDiscovery.hasStoreData = false;
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            configurePaasLookup();
+
+            renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
+
+            expect(screen.queryByRole('button', { name: /re-detect/i })).not.toBeInTheDocument();
+        });
+
+        it('should call fetchStores when refresh button is clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            mockUseStoreDiscovery.hasStoreData = true;
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            configurePaasLookup();
+
+            renderWithProvider(
+                <ConnectStoreStepContent
+                    {...defaultProps}
+                    selectedStackId="headless-paas"
+                    componentConfigs={{
+                        'adobe-commerce': {
+                            [PAAS_URL]: 'https://example.com',
+                            [PAAS_ADMIN_USERNAME]: 'admin',
+                            [PAAS_ADMIN_PASSWORD]: 'pass123',
+                        },
+                    }}
+                />,
+            );
+
+            await user.click(screen.getByRole('button', { name: /re-detect/i }));
+
+            expect(mockUseStoreDiscovery.fetchStores).toHaveBeenCalledWith(
+                expect.objectContaining({ backendType: 'paas' }),
+            );
         });
     });
 

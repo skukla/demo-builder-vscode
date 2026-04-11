@@ -18,6 +18,7 @@ import {
     PAAS_WEBSITE_CODE, PAAS_STORE_CODE, PAAS_STORE_VIEW_CODE,
     ACCS_WEBSITE_CODE, ACCS_STORE_CODE, ACCS_STORE_VIEW_CODE,
 } from '../../config/envVarKeys';
+import { STORE_GROUP_IDS } from '../../config/storeFieldHelpers';
 import type { UniqueField, ServiceGroup } from '../hooks/useComponentConfig';
 import type { StoreListItem } from '../hooks/useStoreDiscovery';
 
@@ -40,7 +41,7 @@ interface StoreSelectionRowProps {
 // ==========================================================
 
 function getFieldKeys(groupId: string) {
-    const isPaas = groupId === 'adobe-commerce';
+    const isPaas = groupId === STORE_GROUP_IDS.PAAS;
     return {
         website: isPaas ? PAAS_WEBSITE_CODE : ACCS_WEBSITE_CODE,
         store: isPaas ? PAAS_STORE_CODE : ACCS_STORE_CODE,
@@ -73,6 +74,28 @@ export function StoreSelectionRow({
     const selectedWebsite = lookupComponentConfigValue(componentConfigs, keys.website) || '';
     const selectedStore = lookupComponentConfigValue(componentConfigs, keys.store) || '';
 
+    const handleWebsiteSelect = (code: string) => {
+        if (!websiteField) return;
+        updateField(websiteField, code);
+        const storeItems = getStoreGroupItems(code);
+        if (storeItems.length === 1 && storeField) {
+            updateField(storeField, storeItems[0].code);
+            const viewItems = getStoreViewItems(storeItems[0].code);
+            if (viewItems.length === 1 && storeViewField) {
+                updateField(storeViewField, viewItems[0].code);
+            }
+        }
+    };
+
+    const handleStoreSelect = (code: string) => {
+        if (!storeField) return;
+        updateField(storeField, code);
+        const viewItems = getStoreViewItems(code);
+        if (viewItems.length === 1 && storeViewField) {
+            updateField(storeViewField, viewItems[0].code);
+        }
+    };
+
     return (
         <Flex gap="size-200" alignItems="end" marginBottom="size-200">
             {websiteField && (
@@ -80,7 +103,7 @@ export function StoreSelectionRow({
                     label="Website"
                     items={getWebsiteItems()}
                     selectedCode={String(getFieldValue(websiteField) || '')}
-                    onSelect={(code) => updateField(websiteField, code)}
+                    onSelect={handleWebsiteSelect}
                     isRequired={websiteField.required}
                 />
             )}
@@ -89,7 +112,7 @@ export function StoreSelectionRow({
                     label="Store"
                     items={getStoreGroupItems(selectedWebsite)}
                     selectedCode={String(getFieldValue(storeField) || '')}
-                    onSelect={(code) => updateField(storeField, code)}
+                    onSelect={handleStoreSelect}
                     isRequired={storeField.required}
                 />
             )}

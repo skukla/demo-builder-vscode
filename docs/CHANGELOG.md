@@ -7,18 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- **storeFieldHelpers**: Shared helpers (`isWebsiteCodeField`, `isStoreCodeField`, `CONNECTION_FIELDS`) for routing store config field rendering across components.
-- **useAutoStoreDetect**: Hook that watches connection fields and triggers store discovery automatically when all required fields are filled.
+### Fixed
+- **Config Service lookup key**: `buildSiteConfigParams` now uses DA.live org/site as the Configuration Service lookup key instead of GitHub repo identifiers. The da.live editor resolves preview URLs from the DA.live site path; using GitHub identifiers caused "invalid fstab" errors when the site name differed from the repo name.
+- **fstab input validation**: `generateFstabContent` validates `daLiveOrg` and `daLiveSite` for characters unsafe in URL path segments (newlines, whitespace, colons) before constructing the mountpoint URL.
+- **EDS Reset bounded loop**: Replaced `while(true)` with `while(pipelineAttempt <= MAX_REAUTH_ATTEMPTS)` to make the DA.live re-auth retry bound explicit.
 
-### Changed
-- **Connect Commerce wizard step**: Replaces "Settings Collection" with a simplified single-column layout and progressive disclosure. Repositioned after Adobe auth steps so Commerce connection happens right after workspace selection. Shows for all flows (no longer conditional on `showWhenNoStack`).
+### Security
+- **SSRF protection in useAutoStoreDetect**: URL protocol is validated to `http:` or `https:` before forwarding `baseUrl` to store discovery, preventing Server-Side Request Forgery via `file://`, `ftp://`, or other non-HTTP schemes in component config fields.
+- **SSRF protection in extractResetParams**: `repoOwner`, `repoName`, `daLiveOrg`, and `daLiveSite` are validated against the slug allowlist (`^[a-zA-Z0-9_-]+$`) before they reach Helix Admin API and DA.live URL construction. Invalid slugs return `CONFIG_INVALID` without making any outbound request.
 
 ### Refactored
+- **EDS Reset static imports**: Removed all 24 dynamic `await import()` calls in `edsResetService.ts`, replacing them with static top-level imports for tree-shaking and load-time consistency.
+- **EDS Reset helper extraction**: Decomposed oversized functions in `edsResetService.ts` into focused private helpers: `reinstallBlockLibraries`, `collectLibrarySources`, `installWithBlockLibraries`, `installInspectorOnly`, `publishConfigAndRegisterSite`, `handlePipelineAuthRetry`, `runContentPipeline`, `finalizeReset`, and `assertValidGitHubSlug`.
+- **EDS Reset mesh helpers extracted**: `redeployApiMesh` and `deployMeshAndPersist` moved to `edsResetMeshHelper.ts`, keeping `edsResetService.ts` within a manageable size and isolating the Adobe I/O auth re-validation logic.
+- **EDS Reset params extracted**: `EdsResetParams`, `EdsResetProgress`, `EdsResetResult`, `ExtractParamsResult`, `assertValidGitHubSlug`, and `extractResetParams` moved to `edsResetParams.ts`. Re-exported from `edsResetService.ts` for backward compatibility.
+- **EDS Reset repo helpers extracted**: `resetRepoToTemplate`, `reinstallBlockLibraries`, `collectLibrarySources`, `installWithBlockLibraries`, `installInspectorOnly`, and `fetchPlaceholderFiles` moved to `edsResetRepoHelper.ts`. Brings `edsResetService.ts` to ~330 lines.
+- **`mapPipelineProgress` extracted**: Inline progress-mapping callback in `runContentPipeline` extracted to a named function.
+- **`handleResetError` extracted**: Catch block in `executeEdsReset` extracted to a named function, trimming the function under 50 lines.
 - **ArchitectureModal Extraction**: Extracted step content into `ArchitectureStepContent` and `BlockLibrariesStepContent` sub-components. Extracted modal state management into `useModalState` hook. Generalized step navigation from hardcoded 2-step to computed N-step sequence.
 - **useComponentConfig Narrow Interface**: Replaced `WizardState` dependency with specific props (`selectedStack`, `componentConfigs`, `packageConfigDefaults`), making the hook reusable outside the wizard context.
 - **Prop Grouping**: Grouped related props into domain-specific objects (ArchitectureStepContent) to reduce prop drilling.
 - **BlockLibrariesStepContent prop rename**: Event handler props renamed from `handle*` to `on*` convention (`onBlockLibraryToggle`, `onCustomLibraryToggle`, `onOpenCustomSettings`).
+
+### Added
+- **storeFieldHelpers**: Shared helpers (`isWebsiteCodeField`, `isStoreCodeField`, `CONNECTION_FIELDS`, `STORE_GROUP_IDS`) for routing store config field rendering across components.
+- **useAutoStoreDetect**: Hook that watches connection fields and triggers store discovery automatically when all required fields are filled.
+- **`storeDiscoveryData` on `WizardState`**: New optional field (`storeDiscoveryData?: CommerceStoreStructure`) persists the discovered store structure (websites, store groups, store views) across wizard steps.
+- **`currentComponentConfigs` on `SharedState`**: New optional field (`currentComponentConfigs?: ComponentConfigs`) syncs user-entered component config values from the webview to the extension host, enabling credential access during store discovery without re-passing them in each postMessage payload.
+- **Customer Group removed from `optionalEnvVars`**: Removed `ACCS_CUSTOMER_GROUP` and `ADOBE_COMMERCE_CUSTOMER_GROUP` from component service group `optionalEnvVars` lists. The storefront auth dropin manages customer group headers at runtime.
+
+### Changed
+- **Connect Commerce wizard step**: Replaces "Settings Collection" with a simplified single-column layout and progressive disclosure. Repositioned after Adobe auth steps so Commerce connection happens right after workspace selection. Shows for all flows (no longer conditional on `showWhenNoStack`).
 
 ## [1.0.0-beta.108] - 2026-03-25
 

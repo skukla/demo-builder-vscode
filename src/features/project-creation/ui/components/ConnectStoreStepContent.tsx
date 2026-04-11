@@ -24,6 +24,7 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import type { ComponentConfigs } from '@/types/webview';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
 
 import {
     ACCS_STORE_VIEW_CODE,
@@ -44,6 +45,10 @@ export interface ConnectStoreStepContentProps {
     adobeOrg?: { id: string };
     onComponentConfigsChange: (configs: ComponentConfigs) => void;
     onValidationChange: (allValid: boolean) => void;
+    /** Persisted store structure — skips auto-detect on step re-entry */
+    storeDiscoveryData?: CommerceStoreStructure;
+    /** Called when store structure changes — persist to wizard state */
+    onStoreDiscoveryDataChange?: (data: CommerceStoreStructure | null) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -57,6 +62,8 @@ export function ConnectStoreStepContent({
     adobeOrg,
     onComponentConfigsChange,
     onValidationChange,
+    storeDiscoveryData,
+    onStoreDiscoveryDataChange,
 }: ConnectStoreStepContentProps) {
     const {
         componentConfigs: liveConfigs,
@@ -85,7 +92,10 @@ export function ConnectStoreStepContent({
         getStoreGroupItems,
         getStoreViewItems,
         isStoreGroup,
-    } = useStoreDiscovery();
+    } = useStoreDiscovery({
+        initialStoreData: storeDiscoveryData,
+        onStoreDataChange: onStoreDiscoveryDataChange,
+    });
 
     // -----------------------------------------------------------------------
     // Store discovery trigger
@@ -93,7 +103,7 @@ export function ConnectStoreStepContent({
     // to avoid a one-render-cycle delay from the parent round-trip.
     // -----------------------------------------------------------------------
 
-    const { autoDetectKey } = useAutoStoreDetect({
+    const { autoDetectKey, forceFetch } = useAutoStoreDetect({
         configs: liveConfigs ?? {},
         orgId: adobeOrg?.id,
         fetchStores,
@@ -166,6 +176,7 @@ export function ConnectStoreStepContent({
                             getStoreGroupItems={getStoreGroupItems}
                             getStoreViewItems={getStoreViewItems}
                             componentConfigs={liveConfigs ?? {}}
+                            onRefresh={forceFetch}
                         />
                     )}
                 />

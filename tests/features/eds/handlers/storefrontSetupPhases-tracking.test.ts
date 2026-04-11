@@ -91,7 +91,7 @@ jest.mock('@/features/eds/services/configurationService', () => ({
     })),
     DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
     buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org: owner, site: repo, codeOwner: owner, codeRepo: repo,
+        org, site, codeOwner: owner, codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${org}/${site}/`,
     }),
 }));
@@ -106,7 +106,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000 },
+    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, UI: { MIN_LOADING: 200 } },
 }));
 
 jest.mock('@/features/eds/services/edsPipeline', () => ({
@@ -114,6 +114,12 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
         success: true,
         contentFilesCopied: 0,
         libraryPaths: [],
+    }),
+}));
+
+jest.mock('@/features/eds/services/featurePackInstaller', () => ({
+    installFeaturePacks: jest.fn().mockResolvedValue({
+        success: true, blocksInstalled: 0, initializersInstalled: 0, dependenciesAdded: 0,
     }),
 }));
 
@@ -234,8 +240,7 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
         // When: Executing storefront setup with block libraries
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            ['isle5'],
-            customLibs,
+            { selectedBlockLibraries: ['isle5'], customBlockLibraries: customLibs },
         );
 
         // Then: stateManager.saveProject should have been called with installedBlockLibraries
@@ -268,8 +273,10 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
         // When: Executing storefront setup
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            ['isle5'],
-            [{ name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks', branch: 'v2' } }],
+            {
+                selectedBlockLibraries: ['isle5'],
+                customBlockLibraries: [{ name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks', branch: 'v2' } }],
+            },
         );
 
         // Then: Saved data should match expected structure
@@ -317,7 +324,7 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
         // When: Executing storefront setup with block libraries that fail to install
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            ['isle5'],
+            { selectedBlockLibraries: ['isle5'] },
         );
 
         // Then: saveProject should NOT have been called with installedBlockLibraries

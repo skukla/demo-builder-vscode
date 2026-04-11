@@ -82,6 +82,9 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
         },
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: {},
+        stateManager: {
+            getCurrentProject: jest.fn().mockResolvedValue(null),
+        } as unknown as HandlerContext['stateManager'],
         authManager: {
             getTokenManager: jest.fn().mockReturnValue({
                 getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
@@ -89,6 +92,20 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
         },
         ...overrides,
     } as unknown as HandlerContext;
+}
+
+/** Creates a context pre-loaded with PaaS credentials in sharedState. */
+function createPaasContext(username: string, password: string): HandlerContext {
+    return createMockContext({
+        sharedState: {
+            currentComponentConfigs: {
+                paas: {
+                    ADOBE_COMMERCE_ADMIN_USERNAME: username,
+                    ADOBE_COMMERCE_ADMIN_PASSWORD: password,
+                },
+            },
+        },
+    });
 }
 
 const MOCK_STORE_DATA = {
@@ -144,14 +161,13 @@ describe('handleDiscoverStoreStructure', () => {
     // ----------------------------------------------------------
 
     it('should delegate to discoverStoreStructure for PaaS path', async () => {
-        const context = createMockContext();
+        // Credentials are read from sharedState, not from the payload
+        const context = createPaasContext('admin', 'admin123');
         mockDiscoverStoreStructure.mockResolvedValue({ success: true, data: MOCK_STORE_DATA });
 
         await handleDiscoverStoreStructure(context, {
             backendType: 'paas',
             baseUrl: 'https://magento.test',
-            username: 'admin',
-            password: 'admin123',
         });
 
         expect(mockDiscoverStoreStructure).toHaveBeenCalledWith(expect.objectContaining({
@@ -277,7 +293,7 @@ describe('handleDiscoverStoreStructure', () => {
     // ----------------------------------------------------------
 
     it('should send discovery error result on service failure', async () => {
-        const context = createMockContext();
+        const context = createPaasContext('admin', 'pass');
         mockDiscoverStoreStructure.mockResolvedValue({
             success: false,
             error: 'Connection timed out',
@@ -286,8 +302,6 @@ describe('handleDiscoverStoreStructure', () => {
         await handleDiscoverStoreStructure(context, {
             backendType: 'paas',
             baseUrl: 'https://magento.test',
-            username: 'admin',
-            password: 'pass',
         });
 
         expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
@@ -297,14 +311,12 @@ describe('handleDiscoverStoreStructure', () => {
     });
 
     it('should handle unexpected exceptions gracefully', async () => {
-        const context = createMockContext();
+        const context = createPaasContext('admin', 'pass');
         mockDiscoverStoreStructure.mockRejectedValue(new Error('Unexpected crash'));
 
         const result = await handleDiscoverStoreStructure(context, {
             backendType: 'paas',
             baseUrl: 'https://magento.test',
-            username: 'admin',
-            password: 'pass',
         });
 
         expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
@@ -320,14 +332,12 @@ describe('handleDiscoverStoreStructure', () => {
     // ----------------------------------------------------------
 
     it('should log success details', async () => {
-        const context = createMockContext();
+        const context = createPaasContext('admin', 'pass');
         mockDiscoverStoreStructure.mockResolvedValue({ success: true, data: MOCK_STORE_DATA });
 
         await handleDiscoverStoreStructure(context, {
             backendType: 'paas',
             baseUrl: 'https://magento.test',
-            username: 'admin',
-            password: 'pass',
         });
 
         expect(context.logger.info).toHaveBeenCalledWith(
