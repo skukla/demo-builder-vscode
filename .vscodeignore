@@ -1,17 +1,32 @@
-# Source files (bundled by esbuild/webpack)
+# Source files (bundled by esbuild)
 .vscode/**
 .vscode-test/**
 src/**
 webview-ui/**
 
-# Include feature config files (JSON configs distributed across features)
+# Include feature config files loaded at runtime via fs (not bundled by esbuild)
 !src/features/*/config/**/*.json
 !src/core/*/config/**/*.json
 
 # Dependencies (bundled by esbuild)
 node_modules/**
 
-# Build config
+# Development tool caches — never part of the extension
+.serena/**
+.playwright-mcp/**
+
+# TypeScript-compiled individual JS files are redundant: esbuild bundles
+# everything into dist/extension.js. Only the esbuild outputs are needed.
+dist/commands/**
+dist/core/**
+dist/features/**
+dist/types/**
+dist/utils/**
+
+# Source maps (development only)
+dist/**/*.map
+
+# Build / tooling config
 .gitignore
 .eslintrc.json
 tsconfig.json
@@ -27,7 +42,6 @@ package.json.backup
 package-lock.json
 
 # Development files
-**/*.map
 **/*.ts
 **/.git/**
 .github/**
@@ -42,7 +56,7 @@ report/**
 # Scripts (except required ones)
 scripts/keys.json
 
-# Documentation (keep README)
+# Documentation (keep README and CHANGELOG)
 *.md
 !README.md
 !CHANGELOG.md

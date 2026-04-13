@@ -7,8 +7,8 @@ import { WebviewCommunicationManager } from '@/core/communication';
 import { ServiceLocator } from '@/core/di';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
-import { createBundleUris } from '@/core/utils/bundleUri';
-import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
+import { getBundleUri } from '@/core/utils/bundleUri';
+import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { ProgressUnifier } from '@/core/utils/progressUnifier';
 import { AuthenticationService } from '@/features/authentication';
@@ -218,7 +218,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         if (!this.panel) {
             throw new Error('Panel must be created before getting webview content');
         }
-        const bundleUris = createBundleUris({
+        const scriptUri = getBundleUri({
             webview: this.panel.webview,
             extensionPath: this.context.extensionPath,
             featureBundleName: 'wizard',
@@ -230,8 +230,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
         const baseUri = this.panel.webview.asWebviewUri(mediaPath);
 
-        return getWebviewHTMLWithBundles({
-            bundleUris,
+        return getWebviewHTML({
+            scriptUri,
             nonce,
             cspSource: this.panel.webview.cspSource,
             title: 'Adobe Demo Builder',

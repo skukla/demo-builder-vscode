@@ -5,9 +5,9 @@ import { ProjectDashboardWebviewCommand } from './showDashboard';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ServiceLocator } from '@/core/di';
-import { createBundleUris } from '@/core/utils/bundleUri';
+import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
-import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
+import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { normalizeIfUrl } from '@/core/validation/Validator';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
@@ -95,7 +95,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         if (!this.panel) {
             throw new Error('Panel must be created before getting webview content');
         }
-        const bundleUris = createBundleUris({
+        const scriptUri = getBundleUri({
             webview: this.panel.webview,
             extensionPath: this.context.extensionPath,
             featureBundleName: 'configure',
@@ -107,8 +107,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
         const baseUri = this.panel.webview.asWebviewUri(mediaPath);
 
-        return getWebviewHTMLWithBundles({
-            bundleUris,
+        return getWebviewHTML({
+            scriptUri,
             nonce,
             cspSource: this.panel.webview.cspSource,
             title: 'Configure Project',

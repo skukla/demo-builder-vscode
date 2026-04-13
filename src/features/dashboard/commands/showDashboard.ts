@@ -5,8 +5,8 @@ import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
-import { createBundleUris } from '@/core/utils/bundleUri';
-import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
+import { getBundleUri } from '@/core/utils/bundleUri';
+import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
@@ -51,7 +51,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         if (!this.panel) {
             throw new Error('Panel must be created before getting webview content');
         }
-        const bundleUris = createBundleUris({
+        const scriptUri = getBundleUri({
             webview: this.panel.webview,
             extensionPath: this.context.extensionPath,
             featureBundleName: 'dashboard',
@@ -59,9 +59,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
         const nonce = this.getNonce();
 
-        // Build HTML with 4-bundle pattern
-        return getWebviewHTMLWithBundles({
-            bundleUris,
+        return getWebviewHTML({
+            scriptUri,
             nonce,
             cspSource: this.panel.webview.cspSource,
             title: 'Project Dashboard',

@@ -530,16 +530,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     /**
-     * Generate HTML content for the webview
-     * Uses the 4-bundle pattern for webpack code splitting
-     * Includes inline spinner that shows until React mounts
+     * Generate HTML content for the webview.
+     * Loads the single esbuild IIFE bundle; inline spinner shows until React mounts.
      */
     private getHtmlContent(webview: vscode.Webview): string {
-        // Build URIs for all 4 bundles (webpack code splitting)
         const webviewDir = vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview');
-        const runtimeUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'runtime-bundle.js'));
-        const vendorsUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'vendors-bundle.js'));
-        const commonUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'common-bundle.js'));
         const featureUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'sidebar-bundle.js'));
 
         // Generate nonce for CSP
@@ -598,9 +593,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             <div class="spinner"></div>
         </div>
     </div>
-    <script nonce="${nonce}" src="${runtimeUri}"></script>
-    <script nonce="${nonce}" src="${vendorsUri}"></script>
-    <script nonce="${nonce}" src="${commonUri}"></script>
     <script nonce="${nonce}" src="${featureUri}"></script>
 </body>
 </html>`;

@@ -1,12 +1,9 @@
 /**
  * Bundle URI Utility
  *
- * Consolidates the webview bundle URI construction pattern that was duplicated
- * across 4 command files. Creates VS Code webview URIs for webpack's 4-bundle
- * code-splitting pattern (runtime, vendors, common, feature).
- *
- * This utility eliminates ~60 lines of duplicated code while maintaining
- * type safety with the existing BundleUris interface.
+ * Returns the webview URI for a feature's esbuild IIFE bundle.
+ * Each feature has a single self-contained bundle; no shared
+ * runtime/vendors/common split is needed with esbuild.
  *
  * @module core/utils/bundleUri
  */
@@ -14,70 +11,44 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-// Re-export BundleUris type from getWebviewHTMLWithBundles for convenience
-export type { BundleUris } from './getWebviewHTMLWithBundles';
-
-/**
- * Options for creating bundle URIs.
- */
 export interface BundleUriOptions {
-    /** VS Code webview instance (from panel.webview) */
+    /** VS Code webview instance */
     webview: vscode.Webview;
 
-    /** Extension installation path (from context.extensionPath) */
+    /** Extension installation path (context.extensionPath) */
     extensionPath: string;
 
-    /** Feature-specific bundle name (e.g., 'dashboard', 'wizard', 'configure') */
+    /** Bundle name without the suffix, e.g. 'wizard', 'dashboard' */
     featureBundleName: string;
 }
 
 /**
- * Creates bundle URIs for webpack code-split bundles.
- *
- * Webpack code splitting requires loading bundles in order:
- * 1. runtime (webpack runtime and chunk loading)
- * 2. vendors (React, Spectrum, third-party libraries)
- * 3. common (shared code including WebviewClient)
- * 4. feature (feature-specific code)
- *
- * This pattern eliminates single-bundle timeout issues in VS Code webviews.
- *
- * @param options - Bundle URI creation options
- * @returns BundleUris object compatible with getWebviewHTMLWithBundles
- *
- * @example
- * ```typescript
- * const bundleUris = createBundleUris({
- *     webview: this.panel!.webview,
- *     extensionPath: this.context.extensionPath,
- *     featureBundleName: 'dashboard',
- * });
- *
- * return getWebviewHTMLWithBundles({
- *     bundleUris,
- *     nonce,
- *     cspSource: this.panel!.webview.cspSource,
- *     title: 'Project Dashboard',
- * });
- * ```
+ * Returns the webview URI for `dist/webview/<featureBundleName>-bundle.js`.
  */
-export function createBundleUris(options: BundleUriOptions): import('./getWebviewHTMLWithBundles').BundleUris {
+export function getBundleUri(options: BundleUriOptions): vscode.Uri {
     const { webview, extensionPath, featureBundleName } = options;
-
-    const webviewPath = path.join(extensionPath, 'dist', 'webview');
-
-    return {
-        runtime: webview.asWebviewUri(
-            vscode.Uri.file(path.join(webviewPath, 'runtime-bundle.js')),
-        ),
-        vendors: webview.asWebviewUri(
-            vscode.Uri.file(path.join(webviewPath, 'vendors-bundle.js')),
-        ),
-        common: webview.asWebviewUri(
-            vscode.Uri.file(path.join(webviewPath, 'common-bundle.js')),
-        ),
-        feature: webview.asWebviewUri(
-            vscode.Uri.file(path.join(webviewPath, `${featureBundleName}-bundle.js`)),
-        ),
-    };
+    const bundlePath = path.join(
+        extensionPath,
+        'dist',
+        'webview',
+        `${featureBundleName}-bundle.js`,
+    );
+    return webview.asWebviewUri(vscode.Uri.file(bundlePath));
 }
+
+// ---------------------------------------------------------------------------
+// Legacy alias — kept for incremental migration of callers.
+// ---------------------------------------------------------------------------
+/** @deprecated Use {@link getBundleUri} instead */
+export function createBundleUris(options: BundleUriOptions): {
+    runtime: vscode.Uri;
+    vendors: vscode.Uri;
+    common: vscode.Uri;
+    feature: vscode.Uri;
+} {
+    const uri = getBundleUri(options);
+    return { runtime: uri, vendors: uri, common: uri, feature: uri };
+}
+
+/** @deprecated Use {@link BundleUriOptions} instead */
+export type { BundleUriOptions as BundleUris };

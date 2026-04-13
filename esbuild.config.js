@@ -1,40 +1,49 @@
 /**
- * esbuild configuration for bundling the VS Code extension host
+ * esbuild configuration for bundling the VS Code extension and webview UI.
  *
- * This bundles all extension code into a single file, dramatically reducing
- * the VSIX size by eliminating the need to ship node_modules.
+ * Extension host: CJS bundle, Node platform, single output file.
+ * Webview UI:     IIFE bundles, browser platform, one file per entry point.
+ *                 CSS imports are injected as <style> tags at runtime (mirrors
+ *                 webpack style-loader behaviour, no separate .css files needed).
+ *
+ * Flags:
+ *   --production       Minify output, no source maps
+ *   --watch            Rebuild on file changes
+ *   --extension-only   Build extension host only
+ *   --webview-only     Build webview UI only
  */
 
 const esbuild = require('esbuild');
+const fs = require('fs');
 const path = require('path');
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
+const extensionOnly = process.argv.includes('--extension-only');
+const webviewOnly = process.argv.includes('--webview-only');
 
-/**
- * Plugin to resolve path aliases (@/core, @/features, etc.)
- * Handles TypeScript extensions and barrel files (index.ts)
- */
+const buildExtension = !webviewOnly;
+const buildWebviews = !extensionOnly;
+
+// ---------------------------------------------------------------------------
+// Plugin: resolve @/ path aliases to src/
+// ---------------------------------------------------------------------------
 const aliasPlugin = {
     name: 'alias',
     setup(build) {
-        const fs = require('fs');
-
-        // Resolve @/ aliases to src/
         build.onResolve({ filter: /^@\// }, args => {
             const aliasPath = args.path.replace(/^@\//, '');
             const basePath = path.resolve(__dirname, 'src', aliasPath);
 
-            // Try direct file with extensions
-            const extensions = ['.ts', '.tsx', '.js', '.jsx', ''];
-            for (const ext of extensions) {
+            // Try direct file with common extensions
+            for (const ext of ['.ts', '.tsx', '.js', '.jsx', '']) {
                 const filePath = basePath + ext;
                 if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
                     return { path: filePath };
                 }
             }
 
-            // Try as directory with index file
+            // Try index file inside directory
             if (fs.existsSync(basePath) && fs.statSync(basePath).isDirectory()) {
                 for (const ext of ['.ts', '.tsx', '.js', '.jsx']) {
                     const indexPath = path.join(basePath, 'index' + ext);
@@ -44,34 +53,35 @@ const aliasPlugin = {
                 }
             }
 
-            // Fall back to original resolution
             return { path: basePath };
         });
     },
 };
 
-/**
- * Plugin to mark problematic modules as external
- * Some modules with native bindings or dynamic requires can't be bundled
- */
-const externalsPlugin = {
-    name: 'externals',
+// ---------------------------------------------------------------------------
+// Plugin: convert CSS imports to style-tag injection (replaces style-loader)
+// ---------------------------------------------------------------------------
+const cssInjectionPlugin = {
+    name: 'css-injection',
     setup(build) {
-        // Mark native/problematic modules as external if needed
-        // These will need to be in node_modules at runtime
-        const externalModules = [
-            // Add any modules that fail to bundle here
-        ];
-
-        for (const mod of externalModules) {
-            build.onResolve({ filter: new RegExp(`^${mod}$`) }, () => ({
-                external: true,
-            }));
-        }
+        build.onLoad({ filter: /\.css$/ }, async (args) => {
+            const css = await fs.promises.readFile(args.path, 'utf8');
+            return {
+                contents: `
+const __s = document.createElement('style');
+__s.textContent = ${JSON.stringify(css)};
+document.head.appendChild(__s);
+`,
+                loader: 'js',
+            };
+        });
     },
 };
 
-async function main() {
+// ---------------------------------------------------------------------------
+// Extension host build
+// ---------------------------------------------------------------------------
+async function runExtensionBuild() {
     const ctx = await esbuild.context({
         entryPoints: ['src/extension.ts'],
         bundle: true,
@@ -82,39 +92,99 @@ async function main() {
         platform: 'node',
         outfile: 'dist/extension.js',
         external: [
-            'vscode', // Provided by VS Code runtime
-            'fs', // Node.js fs module - externalize to prevent minification issues with fs/promises vs fs
+            'vscode',
+            // Externalise fs so fs/promises and fs don't get merged — Node provides both at runtime.
+            'fs',
         ],
-        loader: {
-            '.node': 'copy', // Handle native modules if any
-        },
-        plugins: [
-            aliasPlugin,
-            externalsPlugin,
-        ],
-        // Log level
+        loader: { '.node': 'copy' },
+        plugins: [aliasPlugin],
         logLevel: 'info',
-        // Metafile for bundle analysis
         metafile: true,
     });
 
     if (watch) {
         await ctx.watch();
-        console.log('[esbuild] Watching for changes...');
+        console.log('[esbuild] extension: watching…');
     } else {
         const result = await ctx.rebuild();
-
-        // Log bundle size
-        if (result.metafile) {
-            const outputs = Object.entries(result.metafile.outputs);
-            for (const [file, info] of outputs) {
-                const size = (info.bytes / 1024 / 1024).toFixed(2);
-                console.log(`[esbuild] ${file}: ${size} MB`);
-            }
-        }
-
+        logOutputSizes(result.metafile);
         await ctx.dispose();
     }
+}
+
+// ---------------------------------------------------------------------------
+// Webview UI builds (one IIFE bundle per entry point)
+// ---------------------------------------------------------------------------
+const WEBVIEW_ENTRIES = {
+    wizard:       'src/features/project-creation/ui/wizard/index.tsx',
+    dashboard:    'src/features/dashboard/ui/index.tsx',
+    configure:    'src/features/dashboard/ui/configure/index.tsx',
+    sidebar:      'src/features/sidebar/ui/index.tsx',
+    projectsList: 'src/features/projects-dashboard/ui/index.tsx',
+};
+
+async function runWebviewBuild() {
+    const ctx = await esbuild.context({
+        entryPoints: WEBVIEW_ENTRIES,
+        bundle: true,
+        format: 'iife',
+        platform: 'browser',
+        target: ['chrome91'], // VS Code ships Chromium 91+
+        minify: production,
+        sourcemap: !production,
+        sourcesContent: false,
+        outdir: 'dist/webview',
+        entryNames: '[name]-bundle',
+        loader: {
+            '.png': 'dataurl',
+            '.jpg': 'dataurl',
+            '.svg': 'dataurl',
+            '.gif': 'dataurl',
+        },
+        define: {
+            // Required for React's dead-code elimination of development warnings
+            'process.env.NODE_ENV': production ? '"production"' : '"development"',
+        },
+        plugins: [aliasPlugin, cssInjectionPlugin],
+        logLevel: 'info',
+        metafile: true,
+    });
+
+    if (watch) {
+        await ctx.watch();
+        console.log('[esbuild] webview: watching…');
+    } else {
+        const result = await ctx.rebuild();
+        logOutputSizes(result.metafile);
+        await ctx.dispose();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function logOutputSizes(metafile) {
+    if (!metafile) {
+        return;
+    }
+    for (const [file, info] of Object.entries(metafile.outputs)) {
+        const kb = (info.bytes / 1024).toFixed(1);
+        console.log(`[esbuild] ${file}: ${kb} KB`);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
+async function main() {
+    const tasks = [];
+    if (buildExtension) {
+        tasks.push(runExtensionBuild());
+    }
+    if (buildWebviews) {
+        tasks.push(runWebviewBuild());
+    }
+    await Promise.all(tasks);
 }
 
 main().catch(e => {
