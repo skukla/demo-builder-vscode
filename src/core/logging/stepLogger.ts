@@ -68,7 +68,7 @@ export class StepLogger {
             'adobe-context': 'Adobe Setup',
             'org-selection': 'Adobe Setup',
             'project-selection': 'Adobe Setup',
-            'settings': 'Settings Collection',
+            'settings': 'Connect Commerce',
             'commerce-config': 'Configuration',  // Legacy
             'review': 'Review',
             'creating': 'Creating',

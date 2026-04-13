@@ -595,7 +595,6 @@ describe('DaLiveServiceCard', () => {
             );
 
             // Fill in token and submit
-            const orgInput = screen.getByPlaceholderText(/organization/i) as HTMLInputElement;
             const tokenInput = screen.getByPlaceholderText(/token/i) as HTMLInputElement;
             fireEvent.change(tokenInput, { target: { value: 'my-token' } });
             fireEvent.click(screen.getByRole('button', { name: /verify/i }));

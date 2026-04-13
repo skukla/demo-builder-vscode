@@ -8,6 +8,10 @@
  */
 
 import { getLogger } from '@/core/logging';
+import {
+    PAAS_ENVIRONMENT_ID, PAAS_STORE_VIEW_CODE, PAAS_STORE_CODE,
+    PAAS_WEBSITE_CODE, PAAS_CUSTOMER_GROUP, CATALOG_API_KEY,
+} from '@/features/components/config/envVarKeys';
 import type { Project } from '@/types';
 import { isEdsProject } from '@/types/typeGuards';
 
@@ -40,12 +44,12 @@ export interface StorefrontChanges {
  * Changes to these require republishing the storefront config.
  */
 const STOREFRONT_CONFIG_ENV_VARS = [
-    'ADOBE_COMMERCE_ENVIRONMENT_ID',
-    'ADOBE_CATALOG_API_KEY',
-    'ADOBE_COMMERCE_STORE_VIEW_CODE',
-    'ADOBE_COMMERCE_STORE_CODE',
-    'ADOBE_COMMERCE_WEBSITE_CODE',
-    'ADOBE_COMMERCE_CUSTOMER_GROUP',
+    PAAS_ENVIRONMENT_ID,
+    CATALOG_API_KEY,
+    PAAS_STORE_VIEW_CODE,
+    PAAS_STORE_CODE,
+    PAAS_WEBSITE_CODE,
+    PAAS_CUSTOMER_GROUP,
     'AEM_ASSETS_ENABLED',
 ];
 

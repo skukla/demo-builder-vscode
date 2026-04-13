@@ -108,9 +108,11 @@ features/my-feature/
 
 ### dashboard
 
-**Purpose**: Project dashboard UI and controls
+**Purpose**: Project dashboard UI, controls, and per-project configuration
 
 **Key Services:**
+- `dashboardHandlers` - Handler map for project dashboard messages
+- `configureHandlers` - Handler map for Configure screen messages (cancel, components data, store discovery)
 - Dashboard state management
 - Component browser integration
 - Mesh status display
@@ -121,6 +123,7 @@ features/my-feature/
 - Logs/Debug channel toggle
 - Component file browser (with .env hiding)
 - Mesh deployment status
+- Project configuration editing (Configure screen)
 
 **Path Alias**: `@/features/dashboard`
 
@@ -135,7 +138,7 @@ features/my-feature/
 - `HelixService` - Helix Admin API (preview/publish/unpublish, API key management)
 - `CleanupService` - External resource cleanup on project deletion
 - `ToolManager` - Commerce demo ingestion tool management
-- `edsResetService` + `edsResetUI` - Project reset (core logic + UI orchestration)
+- `edsResetParams` + `edsResetRepoHelper` + `edsResetMeshHelper` + `edsResetService` + `edsResetUI` - Project reset (parameter validation, repo helpers, mesh redeploy, pipeline orchestration, UI)
 - `blockCollectionHelpers` - Block collection installation from config-driven source
 - `inspectorHelpers` - Demo Inspector SDK vendoring and tagging
 - Error formatters for user-friendly error messages

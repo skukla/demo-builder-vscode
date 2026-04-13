@@ -24,10 +24,17 @@ export interface StepCondition {
     stackRequiresAny?: Array<'requiresGitHub' | 'requiresDaLive'>;
 
     /**
-     * If true, this step is only shown when an API Mesh component is included
-     * in the project (either required by package or selected by user).
+     * If true, this step is only shown when Adobe I/O project/workspace are needed.
+     * Currently: only when API Mesh is included.
      */
-    requiresMesh?: boolean;
+    requiresAdobeIO?: boolean;
+
+    /**
+     * If true, this step is only shown when Adobe authentication is needed.
+     * Broader than requiresAdobeIO — includes mesh OR ACCS backend
+     * (ACCS store discovery requires IMS token).
+     */
+    requiresAdobeAuth?: boolean;
 
     /**
      * If true, this step is only shown when NO predefined stack is selected.
@@ -72,8 +79,10 @@ export interface WizardStepWithCondition {
 export interface FilterOptions {
     /** Whether the wizard is in edit mode (editing existing project) */
     isEditMode?: boolean;
-    /** Whether the project includes an API Mesh component */
-    hasMesh?: boolean;
+    /** Whether the project requires Adobe I/O project/workspace (mesh included) */
+    hasAdobeIO?: boolean;
+    /** Whether the project requires Adobe authentication (mesh OR ACCS backend) */
+    hasAdobeAuth?: boolean;
 }
 
 /**
@@ -127,10 +136,15 @@ export function filterStepsForStack(
             return true;
         }
 
-        const { stackRequires, stackRequiresAny, showWhenNoStack, requiresMesh } = step.condition;
+        const { stackRequires, stackRequiresAny, showWhenNoStack, requiresAdobeIO, requiresAdobeAuth } = step.condition;
 
-        // Steps that require mesh are hidden when no mesh is included
-        if (requiresMesh && !options.hasMesh) {
+        // Steps that require Adobe auth are hidden when no auth is needed
+        if (requiresAdobeAuth && !options.hasAdobeAuth) {
+            return false;
+        }
+
+        // Steps that require Adobe I/O project/workspace are hidden when not needed
+        if (requiresAdobeIO && !options.hasAdobeIO) {
             return false;
         }
 

@@ -15,6 +15,13 @@ import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
 import { getFrontendEnvVars } from '@/core/state';
+import {
+    PAAS_URL, PAAS_GRAPHQL_ENDPOINT, PAAS_ENVIRONMENT_ID,
+    PAAS_WEBSITE_CODE, PAAS_STORE_VIEW_CODE, PAAS_STORE_CODE,
+    CATALOG_SERVICE_ENDPOINT, CATALOG_API_KEY,
+    ACCS_GRAPHQL_ENDPOINT, ACCS_WEBSITE_CODE, ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE, ACCS_CUSTOMER_GROUP,
+} from '@/features/components/config/envVarKeys';
 import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
 import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
@@ -26,25 +33,25 @@ export type { MeshState, MeshChanges };
  * PaaS-specific mesh env vars (matches eds-commerce-mesh in components.json)
  */
 const PAAS_MESH_ENV_VARS = [
-    'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
-    'ADOBE_COMMERCE_URL',
-    'ADOBE_CATALOG_SERVICE_ENDPOINT',
-    'ADOBE_CATALOG_API_KEY',
-    'ADOBE_COMMERCE_ENVIRONMENT_ID',
-    'ADOBE_COMMERCE_WEBSITE_CODE',
-    'ADOBE_COMMERCE_STORE_VIEW_CODE',
-    'ADOBE_COMMERCE_STORE_CODE',
+    PAAS_GRAPHQL_ENDPOINT,
+    PAAS_URL,
+    CATALOG_SERVICE_ENDPOINT,
+    CATALOG_API_KEY,
+    PAAS_ENVIRONMENT_ID,
+    PAAS_WEBSITE_CODE,
+    PAAS_STORE_VIEW_CODE,
+    PAAS_STORE_CODE,
 ];
 
 /**
  * ACCS-specific mesh env vars (matches eds-accs-mesh in components.json)
  */
 const ACCS_MESH_ENV_VARS = [
-    'ACCS_GRAPHQL_ENDPOINT',
-    'ACCS_WEBSITE_CODE',
-    'ACCS_STORE_CODE',
-    'ACCS_STORE_VIEW_CODE',
-    'ACCS_CUSTOMER_GROUP',
+    ACCS_GRAPHQL_ENDPOINT,
+    ACCS_WEBSITE_CODE,
+    ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE,
+    ACCS_CUSTOMER_GROUP,
 ];
 
 /**

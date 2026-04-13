@@ -6,7 +6,6 @@
  * to keep file sizes under the 500-line SOP limit.
  */
 
-import { Text, Checkbox, Divider, Link } from '@adobe/react-spectrum';
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import stacksConfig from '../../config/stacks.json';
 import {
@@ -18,6 +17,8 @@ import {
     getNativeFeaturePacks,
 } from '../../services/featurePackLoader';
 import { filterAddonsByPackage } from './brandGalleryHelpers';
+import { ArchitectureStepContent } from './ArchitectureStepContent';
+import { BlockLibrariesStepContent } from './BlockLibrariesStepContent';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
 import { cn } from '@/core/ui/utils/classNames';
@@ -94,13 +95,6 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         autoFocusFirst: true,
         orientation: 'both',
     });
-
-    const handleStackClick = useCallback(
-        (stackId: string) => {
-            onStackSelect(stackId);
-        },
-        [onStackSelect],
-    );
 
     const handleAddonToggle = useCallback(
         (addonId: string, isSelected: boolean) => {
@@ -238,10 +232,29 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     }
     const displayAddons = availableAddons.length > 0 ? availableAddons : lastAddonsRef.current;
 
+    // Compute required addon IDs from package config
+    const requiredAddonIds = useMemo(() => {
+        if (!pkg.addons) return [];
+        return Object.entries(pkg.addons)
+            .filter(([, config]) => config === 'required')
+            .map(([id]) => id);
+    }, [pkg.addons]);
+
+    // Compute step sequence dynamically based on selected stack
+    const steps: ModalStep[] = useMemo(() => {
+        const s: ModalStep[] = ['architecture'];
+        if (isEdsStack) s.push('block-libraries');
+        return s;
+    }, [isEdsStack]);
+
+    const currentIndex = steps.indexOf(modalStep);
+    const isFirstStep = currentIndex === 0;
+    const isLastStep = currentIndex === steps.length - 1;
+
     // Transition state for smooth crossfade between modal steps
     const [isStepTransitioning, setIsStepTransitioning] = useState(false);
     const transitionDirection = useRef<'forward' | 'backward'>('forward');
-    const pendingStep = useRef<'architecture' | 'block-libraries' | null>(null);
+    const pendingStep = useRef<ModalStep | null>(null);
 
     // After fade-out completes, switch step and fade back in
     useEffect(() => {
@@ -256,36 +269,36 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         return () => clearTimeout(timer);
     }, [isStepTransitioning]);
 
-    // Step 1 footer: "Next" for EDS stacks, "Done" for non-EDS
-    const handleArchitectureNext = useCallback(() => {
-        if (isEdsStack) {
-            transitionDirection.current = 'forward';
-            pendingStep.current = 'block-libraries';
-            setIsStepTransitioning(true);
-        } else {
+    const handleNext = useCallback(() => {
+        if (isLastStep) {
             onDone();
+        } else {
+            transitionDirection.current = 'forward';
+            pendingStep.current = steps[currentIndex + 1];
+            setIsStepTransitioning(true);
         }
-    }, [isEdsStack, onDone]);
+    }, [isLastStep, onDone, steps, currentIndex]);
 
-    const handleBlockLibrariesBack = useCallback(() => {
+    const handleBack = useCallback(() => {
         transitionDirection.current = 'backward';
-        pendingStep.current = 'architecture';
+        pendingStep.current = steps[currentIndex - 1];
         setIsStepTransitioning(true);
-    }, []);
+    }, [steps, currentIndex]);
 
-    // Build action buttons based on current step
+    // Build action buttons from position in step sequence
     const actionButtons = useMemo(() => {
-        if (modalStep === 'architecture') {
-            if (!selectedStackId) return [];
-            const label = isEdsStack ? 'Next' : 'Done';
-            return [{ label, variant: 'primary' as const, onPress: handleArchitectureNext }];
+        if (modalStep === 'architecture' && !selectedStackId) return [];
+        const buttons: { label: string; variant: 'primary' | 'secondary'; onPress: () => void; isDisabled?: boolean }[] = [];
+        if (!isFirstStep) {
+            buttons.push({ label: 'Back', variant: 'secondary', onPress: handleBack });
         }
-        // Block libraries step
-        return [
-            { label: 'Back', variant: 'secondary' as const, onPress: handleBlockLibrariesBack },
-            { label: 'Done', variant: 'primary' as const, onPress: onDone },
-        ];
-    }, [modalStep, selectedStackId, isEdsStack, handleArchitectureNext, handleBlockLibrariesBack, onDone]);
+        if (isLastStep) {
+            buttons.push({ label: 'Done', variant: 'primary', onPress: handleNext });
+        } else {
+            buttons.push({ label: 'Next', variant: 'primary', onPress: handleNext });
+        }
+        return buttons;
+    }, [modalStep, selectedStackId, isFirstStep, isLastStep, handleBack, handleNext]);
 
     return (
         <Modal
@@ -300,208 +313,50 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                 isStepTransitioning && transitionDirection.current,
             )}>
                 {modalStep === 'architecture' && (
-                    <>
-                        <Text UNSAFE_className="description-block">
-                            How should it be built?
-                        </Text>
-                        <div className="architecture-modal-options" role="radiogroup" aria-label="Architecture options">
-                            {filteredStacks.map((stack, index) => {
-                                const isSelected = selectedStackId === stack.id;
-                                const itemProps = getItemProps(index);
-                                return (
-                                    <div
-                                        key={stack.id}
-                                        ref={itemProps.ref}
-                                        role="radio"
-                                        tabIndex={itemProps.tabIndex}
-                                        aria-checked={isSelected}
-                                        data-selected={isSelected ? 'true' : 'false'}
-                                        className={cn(
-                                            'architecture-modal-option',
-                                            isSelected && 'selected',
-                                        )}
-                                        onClick={() => handleStackClick(stack.id)}
-                                        onKeyDown={itemProps.onKeyDown}
-                                    >
-                                        <div className="architecture-radio">
-                                            {isSelected && <div className="architecture-radio-dot" />}
-                                        </div>
-                                        <div className="architecture-content">
-                                            <Text UNSAFE_className="architecture-name">
-                                                {stack.name}
-                                            </Text>
-                                            <Text UNSAFE_className="architecture-description">
-                                                {stack.description}
-                                            </Text>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {/* Services Section - always rendered, animated in/out via CSS */}
-                        <div className={cn('addons-section', availableAddons.length > 0 && 'addons-visible')}>
-                            <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-                            <Text UNSAFE_className="description-block-sm">
-                                Optional Services
-                            </Text>
-                            <div className="architecture-addons">
-                                {displayAddons.map((optionalAddon) => {
-                                    const addonMeta = ADDON_METADATA[optionalAddon.id];
-                                    if (!addonMeta) return null;
-                                    const addonConfig = pkg.addons?.[optionalAddon.id];
-                                    const isRequired = addonConfig === 'required';
-                                    const isChecked = isRequired || selectedAddons.includes(optionalAddon.id);
-                                    return (
-                                        <Checkbox
-                                            key={optionalAddon.id}
-                                            isSelected={isChecked}
-                                            isDisabled={isRequired}
-                                            onChange={(isSelected) => handleAddonToggle(optionalAddon.id, isSelected)}
-                                        >
-                                            <span className="addon-label">
-                                                <span className="addon-name">{addonMeta.name}</span>
-                                                <span className="addon-description">{addonMeta.description}</span>
-                                            </span>
-                                        </Checkbox>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Feature Packs Section - shown when packs are available for this stack/package */}
-                        {hasFeaturePacks && (
-                            <div className="addons-section addons-visible">
-                                <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-                                <Text UNSAFE_className="description-block-sm">
-                                    Feature Packs
-                                </Text>
-                                <div className="architecture-addons">
-                                    {nativeFeaturePacks.map((pack) => (
-                                        <Checkbox
-                                            key={pack.id}
-                                            isSelected={true}
-                                            isDisabled={true}
-                                            onChange={() => {}}
-                                        >
-                                            <span className="addon-label">
-                                                <span className="addon-name">{pack.name}</span>
-                                                <span className="addon-description">{pack.description}</span>
-                                            </span>
-                                        </Checkbox>
-                                    ))}
-                                    {availableFeaturePacks.map((pack) => (
-                                        <Checkbox
-                                            key={pack.id}
-                                            isSelected={selectedFeaturePacks.includes(pack.id)}
-                                            onChange={(isSelected) => handleFeaturePackToggle(pack.id, isSelected)}
-                                        >
-                                            <span className="addon-label">
-                                                <span className="addon-name">{pack.name}</span>
-                                                <span className="addon-description">{pack.description}</span>
-                                            </span>
-                                        </Checkbox>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* API Mesh Section - shown when mesh is optional or auto-included */}
-                        {(showMeshToggle || isMeshAutoIncluded) && (
-                            <div className="addons-section addons-visible">
-                                <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-                                <Text UNSAFE_className="description-block-sm">
-                                    API Mesh
-                                </Text>
-                                <div className="architecture-addons">
-                                    <Checkbox
-                                        isSelected={isMeshAutoIncluded || isMeshSelected}
-                                        isDisabled={isMeshAutoIncluded}
-                                        onChange={handleMeshToggle}
-                                    >
-                                        <span className="addon-label">
-                                            <span className="addon-name">Include API Mesh</span>
-                                            <span className="addon-description">
-                                                Deploy an API Mesh for GraphQL query routing. Not required for direct backend connections.
-                                            </span>
-                                        </span>
-                                    </Checkbox>
-                                </div>
-                            </div>
-                        )}
-                    </>
+                    <ArchitectureStepContent
+                        stackSelection={{
+                            filteredStacks,
+                            selectedStackId,
+                            getItemProps,
+                            onStackClick: onStackSelect,
+                        }}
+                        addonSelection={{
+                            availableAddons,
+                            displayAddons,
+                            selectedAddons,
+                            onAddonToggle: handleAddonToggle,
+                            addonMetadata: ADDON_METADATA,
+                            requiredAddonIds,
+                        }}
+                        featurePacks={{
+                            hasFeaturePacks,
+                            nativeFeaturePacks,
+                            availableFeaturePacks,
+                            selectedFeaturePacks,
+                            onFeaturePackToggle: handleFeaturePackToggle,
+                        }}
+                        mesh={{
+                            showMeshToggle,
+                            isMeshAutoIncluded,
+                            isMeshSelected,
+                            onMeshToggle: handleMeshToggle,
+                        }}
+                    />
                 )}
 
                 {modalStep === 'block-libraries' && (
-                    <>
-                        <Text UNSAFE_className="description-block">
-                            Which block libraries should be included?
-                        </Text>
-                        <Text UNSAFE_className="description-block-sm block-libraries-intro">
-                            Your storefront's native blocks are always included. These additional libraries add extra blocks to your project.
-                        </Text>
-                        <div className="architecture-addons">
-                            {nativeBlockLibraries.map((lib) => (
-                                <Checkbox
-                                    key={lib.id}
-                                    isSelected={true}
-                                    isDisabled={true}
-                                    onChange={() => {}}
-                                >
-                                    <span className="addon-label">
-                                        <span className="addon-name">{lib.name}</span>
-                                        <span className="addon-description">Included with your storefront</span>
-                                    </span>
-                                </Checkbox>
-                            ))}
-                            {availableBlockLibraries.map((lib) => (
-                                <Checkbox
-                                    key={lib.id}
-                                    isSelected={selectedBlockLibraries.includes(lib.id)}
-                                    onChange={(isSelected) => handleBlockLibraryToggle(lib.id, isSelected)}
-                                >
-                                    <span className="addon-label">
-                                        <span className="addon-name">{lib.name}</span>
-                                        <span className="addon-description">{lib.description}</span>
-                                    </span>
-                                </Checkbox>
-                            ))}
-                        </div>
-
-                        {/* Custom block libraries from VS Code settings */}
-                        {customBlockLibraryDefaults.length > 0 && (
-                            <>
-                                <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-                                <Text UNSAFE_className="description-block-sm">
-                                    Custom Libraries
-                                </Text>
-                                <div className="architecture-addons">
-                                    {customBlockLibraryDefaults.map((lib) => (
-                                        <Checkbox
-                                            key={`${lib.source.owner}/${lib.source.repo}`}
-                                            isSelected={customBlockLibraries.some(
-                                                c => c.source.owner === lib.source.owner && c.source.repo === lib.source.repo,
-                                            )}
-                                            onChange={(isSelected) => handleCustomLibraryToggle(lib, isSelected)}
-                                        >
-                                            <span className="addon-label">
-                                                <span className="addon-name">{lib.name}</span>
-                                                <span className="addon-description">
-                                                    {lib.source.owner}/{lib.source.repo}
-                                                </span>
-                                            </span>
-                                        </Checkbox>
-                                    ))}
-                                </div>
-                                <div className="settings-link">
-                                    <Link isQuiet onPress={handleOpenCustomSettings}>
-                                        Configure custom libraries in Settings
-                                    </Link>
-                                </div>
-                            </>
-                        )}
-                    </>
+                    <BlockLibrariesStepContent
+                        nativeBlockLibraries={nativeBlockLibraries}
+                        availableBlockLibraries={availableBlockLibraries}
+                        selectedBlockLibraries={selectedBlockLibraries}
+                        onBlockLibraryToggle={handleBlockLibraryToggle}
+                        customBlockLibraryDefaults={customBlockLibraryDefaults}
+                        customBlockLibraries={customBlockLibraries}
+                        onCustomLibraryToggle={handleCustomLibraryToggle}
+                        onOpenCustomSettings={handleOpenCustomSettings}
+                    />
                 )}
+
             </div>
         </Modal>
     );

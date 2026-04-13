@@ -264,12 +264,14 @@ async function buildMergedComponentDefinitionMultiSource(
     destRepo: string,
     libraryBlockFiles: LibraryBlockData[],
 ): Promise<string | null> {
-    // Collect entries tagged by group from all source repos
+    // Collect entries tagged by group from all source repos.
+    // Cache parsed source definitions for the unsafeHTML enrichment pass below.
     const entriesByGroup = new Map<string, {
         title: string;
         entries: Array<{ id: string; [key: string]: unknown }>;
     }>();
     const collectedIds = new Set<string>();
+    const sourceDefinitions: Array<{ groups: Array<{ components?: Array<{ id: string; plugins?: { da?: { unsafeHTML?: string } } }> }> }> = [];
 
     for (const libData of libraryBlockFiles) {
         const sourceFile = await githubFileOps.getFileContent(
@@ -279,6 +281,8 @@ async function buildMergedComponentDefinitionMultiSource(
 
         const sourceDef = JSON.parse(sourceFile.content);
         if (!sourceDef.groups) continue;
+
+        sourceDefinitions.push(sourceDef);
 
         for (const group of sourceDef.groups) {
             if (!group.components) continue;
@@ -298,9 +302,7 @@ async function buildMergedComponentDefinitionMultiSource(
         }
     }
 
-    if (entriesByGroup.size === 0) return null;
-
-    // Merge into destination
+    // Fetch destination — needed for both the new-entry merge and the enrichment pass.
     const destFile = await githubFileOps.getFileContent(
         destOwner, destRepo, 'component-definition.json',
     );
@@ -309,6 +311,7 @@ async function buildMergedComponentDefinitionMultiSource(
     const destDef = JSON.parse(destFile.content);
     if (!destDef.groups) return null;
 
+    // Pass 1: merge component-definition entries for newly-installed (unique) blocks.
     let addedCount = 0;
     for (const [groupId, groupData] of entriesByGroup) {
         let destGroup = destDef.groups.find((g: { id: string }) => g.id === groupId);
@@ -326,7 +329,35 @@ async function buildMergedComponentDefinitionMultiSource(
         }
     }
 
-    return addedCount > 0 ? JSON.stringify(destDef, null, 2) : null;
+    // Pass 2: enrich unsafeHTML for blocks already present in the destination but
+    // without unsafeHTML. Covers deduplicated blocks whose component-definition entries
+    // came from the template rather than the library — their block files were correctly
+    // preserved, but their metadata may lack unsafeHTML that the library source has.
+    // Additive only: never overwrites existing unsafeHTML, never touches block files.
+    let enrichedCount = 0;
+    for (const sourceDef of sourceDefinitions) {
+        for (const group of sourceDef.groups) {
+            if (!group.components) continue;
+            for (const entry of group.components) {
+                const sourceUnsafeHTML = entry.plugins?.da?.unsafeHTML;
+                if (!sourceUnsafeHTML) continue;
+
+                for (const destGroup of destDef.groups) {
+                    const destEntry = destGroup.components?.find(
+                        (c: { id: string }) => c.id === entry.id,
+                    );
+                    if (!destEntry || destEntry.plugins?.da?.unsafeHTML) continue;
+                    destEntry.plugins = destEntry.plugins ?? {};
+                    destEntry.plugins.da = destEntry.plugins.da ?? {};
+                    destEntry.plugins.da.unsafeHTML = sourceUnsafeHTML;
+                    enrichedCount++;
+                }
+            }
+        }
+    }
+
+    if (addedCount === 0 && enrichedCount === 0) return null;
+    return JSON.stringify(destDef, null, 2);
 }
 
 /**

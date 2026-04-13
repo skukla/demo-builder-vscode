@@ -11,12 +11,14 @@ import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundle
 import { normalizeIfUrl } from '@/core/validation/Validator';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
+import { configureHandlers } from '../handlers/configureHandlers';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, SharedState } from '@/types/handlers';
-import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
+import { getComponentInstanceEntries } from '@/types/typeGuards';
 
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;
@@ -155,7 +157,18 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
-        // Handle save configuration
+        // Register standard handlers from handler map (cancel, get-components-data,
+        // openExternal, open-eds-settings, discover-store-structure)
+        const messageTypes = getRegisteredTypes(configureHandlers);
+        for (const messageType of messageTypes) {
+            comm.onStreaming(messageType, async (data: unknown) => {
+                const context = this.createHandlerContext();
+                return dispatchHandler(configureHandlers, context, messageType, data);
+            });
+        }
+
+        // save-configuration stays inline — depends on private notification/deployment
+        // methods that need `this` binding (same mixed pattern as Wizard)
         comm.onStreaming('save-configuration', async (data: { componentConfigs: ComponentConfigs; newProjectName?: string }) => {
             try {
                 let project = await this.stateManager.getCurrentProject();
@@ -189,18 +202,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
                 // Update project state
                 project.componentConfigs = data.componentConfigs;
-                // Persist mesh staleness for card grid (only mark stale; don't overwrite with deployed)
                 if (meshChanges.hasChanges) {
                     project.meshStatusSummary = 'stale';
                 }
-                // Persist storefront staleness for EDS projects
                 if (storefrontChanges.hasChanges) {
                     project.edsStorefrontStatusSummary = 'stale';
                 }
                 await this.stateManager.saveProject(project);
 
                 // Register programmatic writes BEFORE writing files
-                // This prevents file watcher from showing duplicate notifications
                 await this.registerProgrammaticWrites(project, data.componentConfigs);
 
                 // Regenerate .env files
@@ -208,7 +218,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
                 // Return success immediately so UI can reset (don't block on notifications)
                 const result = { success: true };
-                
+
                 // Show success notification after returning (non-blocking)
                 setImmediate(() => {
                     this.showPostSaveNotifications(project, meshChanges, storefrontChanges);
@@ -220,37 +230,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 await vscode.window.showErrorMessage(`Failed to save configuration: ${(error as Error).message}`);
                 return { success: false, error: (error as Error).message, code: ErrorCode.CONFIG_INVALID };
             }
-        });
-
-        // Handle cancel
-        comm.onStreaming('cancel', async () => {
-            this.panel?.dispose();
-            return { success: true };
-        });
-
-        // Handle get components data
-        comm.onStreaming('get-components-data', async () => {
-            const componentsPath = path.join(this.context.extensionPath, 'src', 'features', 'components', 'config', 'components.json');
-            const componentsContent = await fs.readFile(componentsPath, 'utf-8');
-            const componentsData = parseJSON<Record<string, unknown>>(componentsContent);
-            if (!componentsData) {
-                throw new Error('Failed to parse components.json');
-            }
-            return componentsData;
-        });
-
-        // Handle open external URL (for help links)
-        comm.onStreaming('openExternal', async (data: { url: string }) => {
-            if (data.url) {
-                await vscode.env.openExternal(vscode.Uri.parse(data.url));
-            }
-            return { success: true };
-        });
-
-        // Handle open EDS extension settings
-        comm.onStreaming('open-eds-settings', async () => {
-            await vscode.commands.executeCommand('workbench.action.openSettings', 'demoBuilder.daLive');
-            return { success: true };
         });
     }
 
@@ -385,7 +364,17 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     private formatEnvValues(values: Record<string, string>): string {
-        return Object.entries(values).map(([k, v]) => `${k}=${v}`).join('\n');
+        return Object.entries(values)
+            .filter(([k]) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(k)) // skip invalid keys
+            .map(([k, v]) => {
+                // Quote values containing newlines, spaces, or special characters
+                const needsQuoting = /[\n\r\s"'\\#]/.test(v);
+                const safeValue = needsQuoting
+                    ? `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}"`
+                    : v;
+                return `${k}=${safeValue}`;
+            })
+            .join('\n');
     }
 
     /**
@@ -616,7 +605,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         return {
             // Managers (Configure doesn't use all managers, but context requires them)
             prereqManager: undefined as unknown as HandlerContext['prereqManager'],
-            authManager: undefined as unknown as HandlerContext['authManager'],
+            authManager: ServiceLocator.getAuthenticationService(),
             errorLogger: undefined as unknown as HandlerContext['errorLogger'],
             progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
             stepLogger: undefined as unknown as HandlerContext['stepLogger'],

@@ -362,21 +362,47 @@ describe('blockLibraryLoader', () => {
         const defaultValue: string[] = settingSchema?.default ?? [];
 
         // Extract library data from block-libraries.json
-        const libraries: Array<{ id: string; name: string; description: string; default?: boolean }> =
-            blockLibrariesJson.libraries;
-        const libraryIds = libraries.map((l: { id: string }) => l.id);
+        type LibraryEntry = {
+            id: string;
+            name: string;
+            description: string;
+            default?: boolean;
+            onlyForPackages?: string[];
+        };
+        const libraries: LibraryEntry[] = blockLibrariesJson.libraries;
 
-        it('should have the same library IDs in both files', () => {
-            expect(enumValues).toEqual(libraryIds);
+        // Global libraries: those without onlyForPackages — safe to offer as global defaults.
+        // Brand-scoped libraries (onlyForPackages set) must NOT appear in the settings enum
+        // because they would mislead users into selecting them for incompatible brands.
+        // Note: matches production blockLibraryLoader logic — presence of onlyForPackages (even [])
+        // marks a library as brand-scoped, consistent with isBlockLibraryAvailableForPackage.
+        const globalLibraries = libraries.filter(l => !l.onlyForPackages);
+        const globalLibraryIds = globalLibraries.map(l => l.id);
+
+        it('should only include global (non-brand-scoped) library IDs in the settings enum', () => {
+            // Use order-independent comparison: both arrays must contain the same IDs.
+            // Ordering is maintained manually across both files but does not affect correctness.
+            expect(enumValues).toHaveLength(globalLibraryIds.length);
+            expect(enumValues).toEqual(expect.arrayContaining(globalLibraryIds));
         });
 
-        it('should have one enumDescription per library', () => {
-            expect(enumDescriptions).toHaveLength(libraries.length);
+        it('should not include brand-scoped libraries (onlyForPackages) in the settings enum', () => {
+            const brandScopedIds = libraries
+                .filter(l => l.onlyForPackages)
+                .map(l => l.id);
+            for (const id of brandScopedIds) {
+                expect(enumValues).not.toContain(id);
+            }
         });
 
-        it('should include each library name in its enumDescription', () => {
-            libraries.forEach((lib, i) => {
-                expect(enumDescriptions[i]).toContain(lib.name);
+        it('should have one enumDescription per global library', () => {
+            expect(enumDescriptions).toHaveLength(globalLibraries.length);
+        });
+
+        it('should include each global library name in its enumDescription', () => {
+            // Order-independent: verify each global library has some enumDescription containing its name.
+            globalLibraries.forEach((lib) => {
+                expect(enumDescriptions.some(d => d.includes(lib.name))).toBe(true);
             });
         });
 

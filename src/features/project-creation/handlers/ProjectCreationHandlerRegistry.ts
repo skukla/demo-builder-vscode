@@ -43,6 +43,7 @@ export const projectCreationHandlers = defineHandlers({
     // Component handlers
     'update-component-selection': components.handleUpdateComponentSelection,
     'update-components-data': components.handleUpdateComponentsData,
+    'sync-component-configs': components.handleSyncComponentConfigs,
     'loadComponents': components.handleLoadComponents,
     'get-components-data': components.handleGetComponentsData,
     'checkCompatibility': components.handleCheckCompatibility,
@@ -63,6 +64,7 @@ export const projectCreationHandlers = defineHandlers({
     // Workspace handlers
     'get-workspaces': authentication.handleGetWorkspaces,
     'select-workspace': authentication.handleSelectWorkspace,
+    'create-workspace-credential': authentication.handleCreateWorkspaceCredential,
 
     // Mesh handlers
     'check-api-mesh': mesh.handleCheckApiMesh,
@@ -90,6 +92,9 @@ export const projectCreationHandlers = defineHandlers({
 
     // EDS handlers - ACCS
     'validate-accs-credentials': eds.handleValidateAccsCredentials,
+
+    // EDS handlers - Store Discovery
+    'discover-store-structure': eds.handleDiscoverStoreStructure,
 
     // EDS handlers - Storefront Setup (renamed from Preflight)
     'storefront-setup-start': eds.handleStartStorefrontSetup,

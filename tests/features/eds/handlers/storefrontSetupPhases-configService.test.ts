@@ -33,7 +33,7 @@ jest.mock('@/features/eds/services/configurationService', () => ({
     })),
     DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
     buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org: owner, site: repo, codeOwner: owner, codeRepo: repo,
+        org, site, codeOwner: owner, codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${org}/${site}/`,
     }),
 }));
@@ -120,7 +120,7 @@ jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
 }));
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000 },
+    TIMEOUTS: { QUICK: 5000, CONFIG_SERVICE_RETRY_DELAY: 0 },
 }));
 
 // Mock fetch for code sync verification
@@ -312,5 +312,138 @@ describe('registerConfigurationService - folder mapping failure visibility', () 
             (call: string[]) => call[0].includes('Folder mapping'),
         );
         expect(hasFolderMappingError).toBe(false);
+    });
+
+});
+
+describe('registerConfigurationService - registerSite non-auth failure visibility', () => {
+    let context: HandlerContext;
+
+    function createExistingRepoEdsConfig() {
+        return {
+            ...createEdsConfig(),
+            repoMode: 'existing' as const,
+            existingRepo: 'test-owner/test-repo',
+        };
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        context = createMockContext();
+        mockSetFolderMapping.mockResolvedValue({ success: true });
+    });
+
+    it('should send warning and skip folder mapping for existing repo 403 (no retry)', async () => {
+        mockRegisterSite.mockResolvedValue({
+            success: false, statusCode: 403, error: 'Forbidden — no admin access',
+        });
+
+        await executeStorefrontSetupPhases(
+            context, createExistingRepoEdsConfig(), new AbortController().signal,
+        );
+
+        // Should notify user — existing repo 403 is a genuine permission problem
+        const sendCalls = (context.sendMessage as jest.Mock).mock.calls;
+        const warningCall = sendCalls.find(
+            ([type, payload]: [string, { phase?: string; message?: string }]) =>
+                type === 'storefront-setup-progress'
+                && payload.phase === 'site-config'
+                && payload.message?.includes('da.live preview'),
+        );
+        expect(warningCall).toBeDefined();
+        // Should not retry — existing repo means the App was already installed
+        expect(mockRegisterSite).toHaveBeenCalledTimes(1);
+        // Should skip folder mapping — no site record
+        expect(mockSetFolderMapping).not.toHaveBeenCalled();
+    });
+});
+
+describe('registerConfigurationService - new repo 403 retry on propagation delay', () => {
+    let context: HandlerContext;
+
+    function createNewRepoEdsConfig() {
+        return { ...createEdsConfig(), repoMode: 'new' as const };
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        context = createMockContext();
+        mockSetFolderMapping.mockResolvedValue({ success: true });
+    });
+
+    it('retries once and succeeds when first 403 was a propagation race', async () => {
+        mockRegisterSite
+            .mockResolvedValueOnce({ success: false, statusCode: 403, error: 'Forbidden' })
+            .mockResolvedValueOnce({ success: true });
+
+        await executeStorefrontSetupPhases(
+            context, createNewRepoEdsConfig(), new AbortController().signal,
+        );
+
+        expect(mockRegisterSite).toHaveBeenCalledTimes(2);
+        // No warning message — retry succeeded
+        const sendCalls = (context.sendMessage as jest.Mock).mock.calls;
+        const hasWarning = sendCalls.some(
+            ([type, payload]: [string, { message?: string }]) =>
+                type === 'storefront-setup-progress' && payload.message?.includes('da.live preview'),
+        );
+        expect(hasWarning).toBe(false);
+        // Folder mapping should run after successful retry
+        expect(mockSetFolderMapping).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles 409 on retry by updating site config', async () => {
+        mockRegisterSite
+            .mockResolvedValueOnce({ success: false, statusCode: 403, error: 'Forbidden' })
+            .mockResolvedValueOnce({ success: false, statusCode: 409, error: 'Conflict' });
+        mockUpdateSiteConfig.mockResolvedValue({ success: true });
+
+        await executeStorefrontSetupPhases(
+            context, createNewRepoEdsConfig(), new AbortController().signal,
+        );
+
+        expect(mockRegisterSite).toHaveBeenCalledTimes(2);
+        expect(mockUpdateSiteConfig).toHaveBeenCalledTimes(1);
+        expect(mockSetFolderMapping).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows warning and skips folder mapping when retry also fails', async () => {
+        mockRegisterSite.mockResolvedValue({
+            success: false, statusCode: 403, error: 'Forbidden',
+        });
+
+        await executeStorefrontSetupPhases(
+            context, createNewRepoEdsConfig(), new AbortController().signal,
+        );
+
+        expect(mockRegisterSite).toHaveBeenCalledTimes(2);
+        const sendCalls = (context.sendMessage as jest.Mock).mock.calls;
+        const warningCall = sendCalls.find(
+            ([type, payload]: [string, { phase?: string; message?: string }]) =>
+                type === 'storefront-setup-progress'
+                && payload.phase === 'site-config'
+                && payload.message?.includes('da.live preview'),
+        );
+        expect(warningCall).toBeDefined();
+        expect(mockSetFolderMapping).not.toHaveBeenCalled();
+    });
+
+    it('triggers re-auth when retry returns 401 then succeeds', async () => {
+        // 403 → retry → 401 → recovery loop re-auths → 200
+        mockRegisterSite
+            .mockResolvedValueOnce({ success: false, statusCode: 403, error: 'Forbidden' })
+            .mockResolvedValueOnce({ success: false, statusCode: 401, error: 'Unauthorized' })
+            .mockResolvedValueOnce({ success: true });
+        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
+
+        await executeStorefrontSetupPhases(
+            context, createNewRepoEdsConfig(), new AbortController().signal,
+        );
+
+        // Should have prompted re-auth
+        expect(mockEnsureDaLiveAuth).toHaveBeenCalled();
+        // 403 attempt + 401 attempt + post-re-auth attempt
+        expect(mockRegisterSite).toHaveBeenCalledTimes(3);
+        expect(mockSetFolderMapping).toHaveBeenCalled();
     });
 });

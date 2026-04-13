@@ -86,7 +86,7 @@ jest.mock('@/features/eds/services/configurationService', () => ({
     })),
     DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
     buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org: owner, site: repo, codeOwner: owner, codeRepo: repo,
+        org, site, codeOwner: owner, codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${org}/${site}/`,
     }),
 }));
@@ -101,7 +101,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000 },
+    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, UI: { MIN_LOADING: 200 } },
 }));
 
 jest.mock('@/features/eds/services/edsPipeline', () => ({
@@ -109,6 +109,12 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
         success: true,
         contentFilesCopied: 0,
         libraryPaths: [],
+    }),
+}));
+
+jest.mock('@/features/eds/services/featurePackInstaller', () => ({
+    installFeaturePacks: jest.fn().mockResolvedValue({
+        success: true, blocksInstalled: 0, initializersInstalled: 0, dependenciesAdded: 0,
     }),
 }));
 
@@ -201,8 +207,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         // When: Executing setup with both built-in and custom libraries
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            ['isle5'], // selectedBlockLibraries (built-in)
-            CUSTOM_LIBS, // customBlockLibraries
+            { selectedBlockLibraries: ['isle5'], customBlockLibraries: CUSTOM_LIBS },
         );
 
         // Then: installBlockCollections (plural) should be called ONCE with all sources combined
@@ -229,8 +234,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         // When: Executing setup without custom libraries
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            ['isle5'], // selectedBlockLibraries
-            undefined, // no customBlockLibraries
+            { selectedBlockLibraries: ['isle5'] },
         );
 
         // Then: installBlockCollections (plural) called with only built-in source
@@ -251,8 +255,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
 
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            ['isle5'],
-            [], // empty custom libraries
+            { selectedBlockLibraries: ['isle5'], customBlockLibraries: [] },
         );
 
         // Then: Still only built-in library in the call
@@ -276,8 +279,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         // When: Executing setup with only custom libraries
         await executeStorefrontSetupPhases(
             context, edsConfig, AbortSignal.timeout(30000),
-            undefined, // no built-in block libraries
-            customLibs, // customBlockLibraries
+            { customBlockLibraries: customLibs },
         );
 
         // Then: Progress message should mention the library count

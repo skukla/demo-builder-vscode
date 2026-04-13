@@ -37,6 +37,7 @@ export {
 export {
     handleGetWorkspaces,
     handleSelectWorkspace,
+    handleCreateWorkspaceCredential,
 } from './handlers/workspaceHandlers';
 
 // Types

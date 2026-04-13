@@ -24,7 +24,6 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
 const mockSelectOrganization = jest.fn().mockResolvedValue(undefined);
 const mockSelectProject = jest.fn().mockResolvedValue(undefined);
 const mockSelectWorkspace = jest.fn().mockResolvedValue(undefined);
-const mockIsAuthenticated = jest.fn().mockResolvedValue(true);
 
 jest.mock('vscode', () => ({
     window: { showWarningMessage: jest.fn(), showInformationMessage: jest.fn() },
@@ -33,7 +32,7 @@ jest.mock('vscode', () => ({
 }), { virtual: true });
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000 },
+    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
 }));
 
 jest.mock('@/core/constants', () => ({
@@ -43,7 +42,7 @@ jest.mock('@/core/constants', () => ({
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
-            isAuthenticated: mockIsAuthenticated,
+            isAuthenticated: jest.fn().mockResolvedValue(true),
             selectOrganization: mockSelectOrganization,
             selectProject: mockSelectProject,
             selectWorkspace: mockSelectWorkspace,
@@ -54,10 +53,10 @@ jest.mock('@/core/di', () => ({
 }));
 
 jest.mock('@/types/typeGuards', () => ({
-    getMeshComponentInstance: jest.fn((project: any) => {
+    getMeshComponentInstance: jest.fn((project: Project) => {
         if (!project?.componentInstances) return undefined;
         return Object.values(project.componentInstances).find(
-            (c: any) => c.subType === 'mesh',
+            (c) => (c as { subType?: string }).subType === 'mesh',
         );
     }),
     hasEntries: jest.fn((obj: any) => obj && Object.keys(obj).length > 0),
@@ -79,6 +78,7 @@ jest.mock('@/features/project-creation/config/demo-packages.json', () => ({
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
+    getBlockLibraryContentSource: jest.fn().mockReturnValue(null),
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
@@ -150,7 +150,7 @@ jest.mock('@/features/eds/services/configurationService', () => ({
     })),
     DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
     buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org: owner, site: repo, codeOwner: owner, codeRepo: repo,
+        org, site, codeOwner: owner, codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${org}/${site}/`,
     }),
 }));
@@ -266,6 +266,12 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         mockSelectOrganization.mockImplementation(async () => {
             callOrder.push('selectOrganization');
         });
+        mockSelectProject.mockImplementation(async () => {
+            callOrder.push('selectProject');
+        });
+        mockSelectWorkspace.mockImplementation(async () => {
+            callOrder.push('selectWorkspace');
+        });
 
         // When: Executing reset with mesh redeployment
         await executeEdsReset(
@@ -278,11 +284,12 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
             context, mockTokenProvider,
         );
 
-        // Then: ensureAdobeIOAuth should be called BEFORE selectOrganization
+        // Then: ensureAdobeIOAuth should be called BEFORE all three Adobe context calls
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
-        expect(callOrder.indexOf('ensureAdobeIOAuth')).toBeLessThan(
-            callOrder.indexOf('selectOrganization'),
-        );
+        const authIdx = callOrder.indexOf('ensureAdobeIOAuth');
+        expect(authIdx).toBeLessThan(callOrder.indexOf('selectOrganization'));
+        expect(authIdx).toBeLessThan(callOrder.indexOf('selectProject'));
+        expect(authIdx).toBeLessThan(callOrder.indexOf('selectWorkspace'));
     });
 
     it('should pass project adobe context to ensureAdobeIOAuth', async () => {

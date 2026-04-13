@@ -260,7 +260,7 @@ export async function handleStartStorefrontSetup(
     const abortController = new AbortController();
     context.sharedState.storefrontSetupAbortController = abortController;
 
-    // Pre-flight: Check Adobe I/O authentication only when mesh is included
+    // Pre-flight: Check Adobe I/O authentication when mesh is included
     const needsMesh = hasMeshInDependencies(payload.dependencies ?? []);
     if (needsMesh) {
         if (!context.authManager) {
@@ -309,10 +309,12 @@ export async function handleStartStorefrontSetup(
             context,
             edsConfig,
             abortController.signal,
-            payload.selectedBlockLibraries,
-            payload.customBlockLibraries,
-            payload.selectedPackage,
-            payload.selectedFeaturePacks,
+            {
+                selectedBlockLibraries: payload.selectedBlockLibraries,
+                customBlockLibraries: payload.customBlockLibraries,
+                packageId: payload.selectedPackage,
+                selectedFeaturePacks: payload.selectedFeaturePacks,
+            },
         );
 
         if (result.success) {
@@ -355,14 +357,16 @@ export async function handleResumeStorefrontSetup(
 ): Promise<HandlerResponse> {
     context.logger.info('[Storefront Setup] Resume requested after GitHub App installation');
 
-    // Continue from code-sync phase (after GitHub App installation)
-    await context.sendMessage('storefront-setup-progress', {
-        phase: 'code-sync',
-        message: 'Verifying code synchronization...',
-        progress: 36,
+    // TODO: Re-enter the storefront setup pipeline from the code-sync phase.
+    // Implement by re-invoking executePhaseCodeSync with the stored abort signal and edsConfig.
+    // Until then, return failure so the UI surfaces the incomplete state rather than
+    // silently claiming success.
+    await context.sendMessage('storefront-setup-error', {
+        message: 'Resume not yet supported',
+        error: 'Please restart the storefront setup from the beginning after installing the GitHub App.',
     });
 
-    return { success: true };
+    return { success: false, error: 'Setup resume is not yet implemented' };
 }
 
 // ==========================================================
@@ -433,6 +437,11 @@ async function cleanupStorefrontSetupResources(
  * @returns Configured CleanupService
  */
 async function createCleanupService(context: HandlerContext): Promise<CleanupService> {
+    // Fail fast — all downstream services require AuthenticationService
+    if (!context.authManager) {
+        throw new Error('AuthenticationService required for cleanup');
+    }
+
     // Create service dependencies
     const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
     const githubRepoOps = new GitHubRepoOperations(githubTokenService, context.logger);
@@ -441,11 +450,6 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     const tokenProvider = createDaLiveTokenProvider(context.authManager);
 
     const daLiveOrgOps = new DaLiveOrgOperations(tokenProvider, context.logger);
-
-    // HelixService requires AuthenticationService
-    if (!context.authManager) {
-        throw new Error('AuthenticationService required for cleanup');
-    }
 
     // IMPORTANT: HelixService also needs DA.live token provider for x-content-source-authorization
     // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
@@ -463,9 +467,3 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     );
 }
 
-// ==========================================================
-// Backward Compatibility Exports
-// ==========================================================
-
-/** @deprecated Use StorefrontSetupPartialState instead. Remove after migration. */
-export type PreflightPartialState = StorefrontSetupPartialState;
