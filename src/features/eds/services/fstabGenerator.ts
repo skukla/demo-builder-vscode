@@ -23,6 +23,13 @@ export interface FstabConfig {
     daLiveSite: string;
 }
 
+/** Validate that an org or site name is safe to embed in a URL path (no newlines, spaces, or colons). */
+function validatePathSegment(value: string, field: string): void {
+    if (/[\n\r\s:]/.test(value)) {
+        throw new Error(`Invalid fstab config: ${field} contains characters not allowed in a URL path segment`);
+    }
+}
+
 /**
  * Generate fstab.yaml content for Helix 5
  *
@@ -39,18 +46,21 @@ export interface FstabConfig {
  * });
  * // Returns:
  * // mountpoints:
- * //   /:
- * //     url: https://content.da.live/my-org/my-site/
- * //     type: markup
+ * //   /: https://content.da.live/my-org/my-site/
  */
 export function generateFstabContent(config: FstabConfig): string {
     const { daLiveOrg, daLiveSite } = config;
 
-    // fstab.yaml format for Helix 5
-    // - mountpoints: Maps root path to DA.live content source
+    validatePathSegment(daLiveOrg, 'daLiveOrg');
+    validatePathSegment(daLiveSite, 'daLiveSite');
+
+    // Simple string format — the standard fstab for DA.live content sources.
+    // The Helix admin recognizes content.da.live URLs natively (sourceLocation: "da:...").
+    // The nested `url:` + `type: markup` format is for external BYOM markup services only;
+    // using it for DA.live causes the admin to treat the source as generic BYOM, which
+    // requires Config Service to resolve and returns "invalid fstab" if that registration
+    // is absent during a fresh POST preview call.
     return `mountpoints:
-  /:
-    url: https://content.da.live/${daLiveOrg}/${daLiveSite}/
-    type: markup
+  /: https://content.da.live/${daLiveOrg}/${daLiveSite}/
 `;
 }

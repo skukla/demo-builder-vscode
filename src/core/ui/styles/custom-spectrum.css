@@ -1196,6 +1196,14 @@ button[class*="spectrum-Button"][disabled],
     opacity: 1 !important;
 }
 
+/* Picker dropdown menu: prevent item text wrapping, ensure items fit content */
+[role="listbox"] [role="option"] {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    min-width: fit-content !important;
+}
+
 /* Modal step crossfade transition (architecture ↔ block libraries) */
 .modal-step-content {
     opacity: 1 !important;

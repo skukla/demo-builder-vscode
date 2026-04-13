@@ -25,10 +25,10 @@
     {
       "id": "adobe-auth",
       "name": "Adobe Authentication",
-      "description": "Authenticate with Adobe to deploy your API Mesh and access Adobe services.",
+      "description": "Authenticate with Adobe to access Adobe services and store discovery.",
       "enabled": true,
       "condition": {
-        "requiresMesh": true
+        "requiresAdobeAuth": true
       }
     },
     {
@@ -37,7 +37,7 @@
       "description": "Select the Adobe I/O project for your demo.",
       "enabled": true,
       "condition": {
-        "requiresMesh": true
+        "requiresAdobeIO": true
       }
     },
     {
@@ -46,8 +46,14 @@
       "description": "Select the workspace within your project.",
       "enabled": true,
       "condition": {
-        "requiresMesh": true
+        "requiresAdobeIO": true
       }
+    },
+    {
+      "id": "settings",
+      "name": "Connect Commerce",
+      "description": "Connect to your Commerce backend and configure store settings.",
+      "enabled": true
     },
     {
       "id": "eds-connect-services",
@@ -76,12 +82,6 @@
       "condition": {
         "stackRequires": "requiresDaLive"
       }
-    },
-    {
-      "id": "settings",
-      "name": "Settings Collection",
-      "description": "Configure the settings for your selected components.",
-      "enabled": true
     },
     {
       "id": "review",

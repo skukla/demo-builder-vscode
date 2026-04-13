@@ -47,7 +47,7 @@ Three interconnected capabilities that combine into a "Demo Data" wizard step:
 | 7 | `eds-connect-services` | Connect Services | EDS stacks |
 | 8 | `eds-repository-config` | Repository Configuration | EDS stacks |
 | 9 | `eds-data-source` | Content Configuration | EDS stacks |
-| 10 | `settings` | Settings Collection | Always |
+| 7 | `settings` | Connect Commerce | Always (unconditional, repositioned after adobe-workspace) |
 | 11 | `review` | Final Review | Always |
 | 12 | `storefront-setup` | Publish Storefront | EDS stacks |
 | 13 | `create-project` | Create Project | Always |
@@ -63,8 +63,8 @@ Three interconnected capabilities that combine into a "Demo Data" wizard step:
 
 ### Natural Insertion Points for New Steps
 
-- **Between `eds-data-source` (9) and `settings` (10)**: For additional EDS/data configuration
-- **Between `settings` (10) and `review` (11)**: For pre-review configuration
+- **Between `eds-data-source` and `review`**: For additional EDS/data configuration
+- **Between ArchitectureModal steps**: New modal steps can be added to the computed step sequence
 - **New condition types available**: `stackRequires`, `stackRequiresAny`, `requiresMesh`, `showWhenNoStack`, `createModeOnly`
 
 ### WizardState Key Fields

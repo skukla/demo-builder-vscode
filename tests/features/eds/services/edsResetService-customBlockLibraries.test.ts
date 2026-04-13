@@ -22,7 +22,7 @@ jest.mock('vscode', () => ({
 }), { virtual: true });
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000 },
+    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
 }));
 
 jest.mock('@/core/constants', () => ({
@@ -45,6 +45,7 @@ jest.mock('@/features/project-creation/config/demo-packages.json', () => ({
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
+    getBlockLibraryContentSource: jest.fn(),
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
@@ -72,6 +73,11 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
         },
     }),
     configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),
+    getDaLiveAuthService: jest.fn().mockReturnValue({
+        getAccessToken: jest.fn().mockResolvedValue('token'),
+        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
+    }),
+    ensureDaLiveAuth: jest.fn().mockResolvedValue({ authenticated: true }),
 }));
 
 jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
@@ -100,7 +106,7 @@ jest.mock('@/features/eds/services/configurationService', () => ({
     })),
     DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
     buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org: owner, site: repo, codeOwner: owner, codeRepo: repo,
+        org, site, codeOwner: owner, codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${org}/${site}/`,
     }),
 }));
@@ -113,6 +119,10 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
 
 jest.mock('@/features/eds/services/storefrontStalenessDetector', () => ({
     updateStorefrontState: jest.fn(),
+}));
+
+jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+    updateMeshState: jest.fn(),
 }));
 
 // Mock fetch for placeholder files

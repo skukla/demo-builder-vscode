@@ -331,17 +331,21 @@ export function useWizardState({
             };
         });
 
-        // Step 4: Determine if mesh is included (from stack dependencies + user optional selections)
+        // Step 4: Determine if Adobe I/O credentials are needed
+        // Adobe I/O project/workspace required when mesh is included
+        // Adobe auth (sign-in only) required when mesh OR ACCS backend
         const effectiveDeps = [
             ...(selectedStack?.dependencies || []),
             ...(state.selectedOptionalDependencies || []),
         ];
         const meshIncluded = hasMeshInDependencies(effectiveDeps);
+        const isAccsBackend = selectedStack?.backend === 'adobe-commerce-accs';
 
-        // Step 5: Apply stack-based, mode-based, and mesh-based filtering
+        // Step 5: Apply stack-based, mode-based, and Adobe I/O-based filtering
         const filteredSteps = filterStepsForStack(stepsWithConditions, selectedStack, {
             isEditMode: !!editProject,
-            hasMesh: meshIncluded,
+            hasAdobeIO: meshIncluded,
+            hasAdobeAuth: meshIncluded || isAccsBackend,
         });
 
         return filteredSteps.map(step => ({

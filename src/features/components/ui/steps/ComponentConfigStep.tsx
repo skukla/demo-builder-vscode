@@ -1,19 +1,19 @@
 import {
     Text,
-    Flex,
     Form,
-    Heading,
-    Divider,
 } from '@adobe/react-spectrum';
 import React from 'react';
-import { ConfigFieldRenderer } from '../components/ConfigFieldRenderer';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
+import { StoreConfigFieldRow } from '../components/StoreConfigFieldRow';
+import { ServiceGroupList } from '../components/ServiceGroupList';
 import { useComponentConfig } from '../hooks/useComponentConfig';
 import { useConfigNavigation } from '../hooks/useConfigNavigation';
+import { useStoreDiscovery } from '../hooks/useStoreDiscovery';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { BaseStepProps } from '@/types/wizard';
+import { useAutoStoreDetect } from '../hooks/useAutoStoreDetect';
 
 // Re-export types for component consumption
 export type { ComponentConfigs } from '@/types/webview';
@@ -29,7 +29,13 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         updateField,
         getFieldValue,
         normalizeUrlField,
-    } = useComponentConfig({ state, updateState, setCanProceed });
+    } = useComponentConfig({
+        selectedStack: state.selectedStack,
+        componentConfigs: state.componentConfigs || {},
+        packageConfigDefaults: state.packageConfigDefaults,
+        onConfigsChange: (configs) => updateState({ componentConfigs: configs }),
+        onValidationChange: setCanProceed,
+    });
 
     const {
         expandedNavSections,
@@ -40,6 +46,25 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         getSectionCompletion,
         isFieldComplete,
     } = useConfigNavigation({ serviceGroups, isLoading, getFieldValue });
+
+    const {
+        isFetching,
+        fetchError,
+        hasStoreData,
+        fetchStores,
+        getWebsiteItems,
+        getStoreGroupItems,
+        getStoreViewItems,
+        isStoreGroup,
+    } = useStoreDiscovery();
+
+    const { autoDetectKey } = useAutoStoreDetect({
+        configs: state.componentConfigs ?? {},
+        orgId: state.adobeOrg?.id,
+        fetchStores,
+        hasStoreData,
+        isFetching,
+    });
 
     /**
      * Render main content based on loading/error/data state
@@ -77,39 +102,29 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
 
         return (
             <Form UNSAFE_className="container-form">
-                {serviceGroups.map((group, index) => (
-                    <React.Fragment key={group.id}>
-                        {index > 0 && (
-                            <Divider
-                                size="S"
-                                marginTop="size-100"
-                                marginBottom="size-100"
-                            />
-                        )}
-
-                        <div id={`section-${group.id}`} className={index > 0 ? 'config-section-with-padding' : 'config-section'}>
-                            {/* Section Header */}
-                            <div className="config-section-header">
-                                <Heading level={3}>{group.label}</Heading>
-                            </div>
-
-                            {/* Section Content */}
-                            <Flex direction="column" marginBottom="size-100">
-                                {group.fields.map(field => (
-                                    <ConfigFieldRenderer
-                                        key={field.key}
-                                        field={field}
-                                        value={getFieldValue(field)}
-                                        error={validationErrors[field.key]}
-                                        isTouched={touchedFields.has(field.key)}
-                                        onUpdate={updateField}
-                                        onNormalizeUrl={normalizeUrlField}
-                                    />
-                                ))}
-                            </Flex>
-                        </div>
-                    </React.Fragment>
-                ))}
+                <ServiceGroupList
+                    groups={serviceGroups}
+                    renderFieldRow={(field, group) => (
+                        <StoreConfigFieldRow
+                            field={field}
+                            group={group}
+                            autoDetectKey={autoDetectKey}
+                            isFetching={isFetching}
+                            hasStoreData={hasStoreData}
+                            fetchError={fetchError}
+                            isStoreGroup={isStoreGroup}
+                            getFieldValue={getFieldValue}
+                            updateField={updateField}
+                            validationErrors={validationErrors}
+                            touchedFields={touchedFields}
+                            normalizeUrlField={normalizeUrlField}
+                            getWebsiteItems={getWebsiteItems}
+                            getStoreGroupItems={getStoreGroupItems}
+                            getStoreViewItems={getStoreViewItems}
+                            componentConfigs={state.componentConfigs ?? {}}
+                        />
+                    )}
+                />
             </Form>
         );
     };

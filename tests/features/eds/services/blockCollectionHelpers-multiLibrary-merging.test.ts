@@ -313,6 +313,175 @@ describe('installBlockCollections', () => {
         });
     });
 
+    describe('unsafeHTML enrichment for deduplicated blocks', () => {
+        it('should add unsafeHTML from source to destination entries that lack it', async () => {
+            // cards and hero exist in destination (deduplicated) — source has unsafeHTML for them
+            mockGithubFileOps.listRepoFiles.mockImplementation(
+                async (owner: string, _repo: string) => {
+                    if (owner === 'dest-owner') return createBlockFileEntries(['cards', 'hero']);
+                    if (owner === SOURCE_A.owner) return createBlockFileEntries(['cards', 'hero', 'newsletter']);
+                    return [];
+                },
+            );
+
+            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
+
+            const sourceCompDef = createComponentDef([
+                { title: 'Cards', id: 'cards', unsafeHTML: '<div class="cards"><div><div>Content</div></div></div>' },
+                { title: 'Hero', id: 'hero', unsafeHTML: '<div class="hero"><div><div>Heading</div></div></div>' },
+                { title: 'Newsletter', id: 'newsletter', unsafeHTML: '<div class="newsletter"><div><div>Email</div></div></div>' },
+            ]);
+            const destCompDef = createDestComponentDef([
+                { title: 'Cards', id: 'cards' },
+                { title: 'Hero', id: 'hero' },
+            ]);
+
+            mockGithubFileOps.getFileContent.mockImplementation(
+                async (owner: string, repo: string, path: string) => {
+                    if (path === 'component-filters.json' || path === 'component-models.json') return null;
+                    if (owner === SOURCE_A.owner) return { content: sourceCompDef, sha: 'source-sha' };
+                    return { content: destCompDef, sha: 'dest-sha' };
+                },
+            );
+
+            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
+            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
+            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
+            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+
+            await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: SOURCE_A, name: 'Isle5' }],
+                mockLogger,
+            );
+
+            const treeEntries = mockGithubFileOps.createTree.mock.calls[0][2] as Array<{ path: string; content?: string }>;
+            const compDefEntry = treeEntries.find(e => e.path === 'component-definition.json');
+            expect(compDefEntry).toBeDefined();
+
+            const merged = JSON.parse(compDefEntry!.content!);
+            const blocksGroup = merged.groups.find((g: { id: string }) => g.id === 'blocks');
+            const cardsEntry = blocksGroup.components.find((c: { id: string }) => c.id === 'cards');
+            const heroEntry = blocksGroup.components.find((c: { id: string }) => c.id === 'hero');
+
+            expect(cardsEntry.plugins.da.unsafeHTML).toBe('<div class="cards"><div><div>Content</div></div></div>');
+            expect(heroEntry.plugins.da.unsafeHTML).toBe('<div class="hero"><div><div>Heading</div></div></div>');
+        });
+
+        it('should not overwrite unsafeHTML already present in the destination', async () => {
+            mockGithubFileOps.listRepoFiles.mockImplementation(
+                async (owner: string, _repo: string) => {
+                    if (owner === 'dest-owner') return createBlockFileEntries(['cards', 'hero']);
+                    if (owner === SOURCE_A.owner) return createBlockFileEntries(['cards', 'hero', 'newsletter']);
+                    return [];
+                },
+            );
+
+            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
+
+            const sourceCompDef = createComponentDef([
+                { title: 'Cards', id: 'cards', unsafeHTML: '<div class="cards">FROM SOURCE</div>' },
+                { title: 'Newsletter', id: 'newsletter' },
+            ]);
+            // Destination already has unsafeHTML for cards
+            const destCompDef = JSON.stringify({
+                groups: [{
+                    id: 'blocks',
+                    title: 'Blocks',
+                    components: [
+                        { title: 'Cards', id: 'cards', plugins: { da: { unsafeHTML: '<div class="cards">ORIGINAL</div>' } } },
+                        { title: 'Hero', id: 'hero' },
+                    ],
+                }],
+            });
+
+            mockGithubFileOps.getFileContent.mockImplementation(
+                async (owner: string, repo: string, path: string) => {
+                    if (path === 'component-filters.json' || path === 'component-models.json') return null;
+                    if (owner === SOURCE_A.owner) return { content: sourceCompDef, sha: 'source-sha' };
+                    return { content: destCompDef, sha: 'dest-sha' };
+                },
+            );
+
+            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
+            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
+            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
+            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+
+            await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: SOURCE_A, name: 'Isle5' }],
+                mockLogger,
+            );
+
+            const treeEntries = mockGithubFileOps.createTree.mock.calls[0][2] as Array<{ path: string; content?: string }>;
+            const compDefEntry = treeEntries.find(e => e.path === 'component-definition.json');
+            expect(compDefEntry).toBeDefined();
+
+            const merged = JSON.parse(compDefEntry!.content!);
+            const blocksGroup = merged.groups.find((g: { id: string }) => g.id === 'blocks');
+            const cardsEntry = blocksGroup.components.find((c: { id: string }) => c.id === 'cards');
+
+            // Original value must be preserved
+            expect(cardsEntry.plugins.da.unsafeHTML).toBe('<div class="cards">ORIGINAL</div>');
+        });
+
+        it('should enrich deduplicated blocks while still adding new block entries', async () => {
+            // cards is deduplicated (in dest already), newsletter is new
+            mockGithubFileOps.listRepoFiles.mockImplementation(
+                async (owner: string, _repo: string) => {
+                    if (owner === 'dest-owner') return createBlockFileEntries(['cards']);
+                    if (owner === SOURCE_A.owner) return createBlockFileEntries(['cards', 'newsletter']);
+                    return [];
+                },
+            );
+
+            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
+
+            const sourceCompDef = createComponentDef([
+                { title: 'Cards', id: 'cards', unsafeHTML: '<div class="cards"><div><div>Content</div></div></div>' },
+                { title: 'Newsletter', id: 'newsletter', unsafeHTML: '<div class="newsletter"><div><div>Email</div></div></div>' },
+            ]);
+            const destCompDef = createDestComponentDef([{ title: 'Cards', id: 'cards' }]);
+
+            mockGithubFileOps.getFileContent.mockImplementation(
+                async (owner: string, repo: string, path: string) => {
+                    if (path === 'component-filters.json' || path === 'component-models.json') return null;
+                    if (owner === SOURCE_A.owner) return { content: sourceCompDef, sha: 'source-sha' };
+                    return { content: destCompDef, sha: 'dest-sha' };
+                },
+            );
+
+            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
+            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
+            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
+            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+
+            await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: SOURCE_A, name: 'Isle5' }],
+                mockLogger,
+            );
+
+            const treeEntries = mockGithubFileOps.createTree.mock.calls[0][2] as Array<{ path: string; content?: string }>;
+            const compDefEntry = treeEntries.find(e => e.path === 'component-definition.json');
+            expect(compDefEntry).toBeDefined();
+
+            const merged = JSON.parse(compDefEntry!.content!);
+            const blocksGroup = merged.groups.find((g: { id: string }) => g.id === 'blocks');
+            const ids = blocksGroup.components.map((c: { id: string }) => c.id);
+
+            // newsletter was newly added
+            expect(ids).toContain('newsletter');
+            // cards was enriched with unsafeHTML
+            const cardsEntry = blocksGroup.components.find((c: { id: string }) => c.id === 'cards');
+            expect(cardsEntry.plugins.da.unsafeHTML).toBe('<div class="cards"><div><div>Content</div></div></div>');
+            // newsletter also has unsafeHTML from its new entry
+            const newsletterEntry = blocksGroup.components.find((c: { id: string }) => c.id === 'newsletter');
+            expect(newsletterEntry.plugins.da.unsafeHTML).toBe('<div class="newsletter"><div><div>Email</div></div></div>');
+        });
+    });
+
     describe('component-filters merge (multi-library)', () => {
         it('should merge filters from multiple libraries', async () => {
             mockGithubFileOps.listRepoFiles

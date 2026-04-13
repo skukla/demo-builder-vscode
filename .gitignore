@@ -65,3 +65,4 @@ jscpd-output/
 .jest-cache/
 .playwright-mcp/
 .worktrees/
+.serena/

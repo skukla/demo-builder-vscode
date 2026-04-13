@@ -115,7 +115,7 @@ describe('EDS Handlers', () => {
             });
 
             // Import handler after mocks are set up
-            const { handleCheckGitHubAuth } = await import('@/features/eds/handlers/edsHandlers');
+            const { handleCheckGitHubAuth } = await import('@/features/eds/handlers/edsGitHubHandlers');
 
             // When: Check GitHub auth (no service parameter - uses internal cache)
             const result = await handleCheckGitHubAuth(mockContext);
@@ -132,7 +132,7 @@ describe('EDS Handlers', () => {
             // Given: No GitHub token exists
             mockGitHubTokenService.getToken.mockResolvedValue(undefined);
 
-            const { handleCheckGitHubAuth } = await import('@/features/eds/handlers/edsHandlers');
+            const { handleCheckGitHubAuth } = await import('@/features/eds/handlers/edsGitHubHandlers');
 
             // When: Check GitHub auth
             const result = await handleCheckGitHubAuth(mockContext);
@@ -149,7 +149,7 @@ describe('EDS Handlers', () => {
             mockGitHubTokenService.getToken.mockResolvedValue({ token: 'expired-token', scopes: [] });
             mockGitHubTokenService.validateToken.mockResolvedValue({ valid: false });
 
-            const { handleCheckGitHubAuth } = await import('@/features/eds/handlers/edsHandlers');
+            const { handleCheckGitHubAuth } = await import('@/features/eds/handlers/edsGitHubHandlers');
 
             // When: Check GitHub auth
             const result = await handleCheckGitHubAuth(mockContext);
@@ -180,7 +180,7 @@ describe('EDS Handlers', () => {
                 },
             });
 
-            const { handleGitHubOAuth } = await import('@/features/eds/handlers/edsHandlers');
+            const { handleGitHubOAuth } = await import('@/features/eds/handlers/edsGitHubHandlers');
 
             // When: Start OAuth flow (uses VS Code auth internally)
             const result = await handleGitHubOAuth(mockContext);
@@ -199,7 +199,7 @@ describe('EDS Handlers', () => {
             const vscode = await import('vscode');
             (vscode.authentication.getSession as jest.Mock).mockResolvedValue(null);
 
-            const { handleGitHubOAuth } = await import('@/features/eds/handlers/edsHandlers');
+            const { handleGitHubOAuth } = await import('@/features/eds/handlers/edsGitHubHandlers');
 
             // When: Start OAuth flow
             const result = await handleGitHubOAuth(mockContext);
@@ -221,7 +221,7 @@ describe('EDS Handlers', () => {
             });
             global.fetch = mockFetch;
 
-            const { handleVerifyDaLiveOrg } = await import('@/features/eds/handlers/edsHandlers');
+            const { handleVerifyDaLiveOrg } = await import('@/features/eds/handlers/edsDaLiveHandlers');
 
             // When: Verify DA.live org (payload contains orgName)
             const result = await handleVerifyDaLiveOrg(mockContext, { orgName: 'test-org' });
@@ -250,13 +250,26 @@ describe('EDS Handlers', () => {
             const result = await handleValidateAccsCredentials(mockContext, {
                 accsHost: 'https://accs.example.com',
                 storeViewCode: 'default',
-                customerGroup: 'general',
             });
 
             // Then: Should return validation success
             expect(result.success).toBe(true);
             expect(mockContext.sendMessage).toHaveBeenCalledWith('accs-validation-result', expect.objectContaining({
                 valid: true,
+            }));
+        });
+
+        it('should reject storeViewCode containing CRLF or special chars (header injection guard)', async () => {
+            const { handleValidateAccsCredentials } = await import('@/features/eds/handlers/edsHandlers');
+
+            const result = await handleValidateAccsCredentials(mockContext, {
+                accsHost: 'https://accs.example.com',
+                storeViewCode: 'default\r\nX-Injected: header',
+            });
+
+            expect(result.success).toBe(false);
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('accs-validation-result', expect.objectContaining({
+                valid: false,
             }));
         });
     });

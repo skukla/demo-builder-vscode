@@ -136,6 +136,8 @@ export interface SharedState {
     // Component selection and data
     currentComponentSelection?: ComponentSelection;
     componentsData?: ComponentConfigs;
+    // User-entered component config values (synced from webview for credential access)
+    currentComponentConfigs?: ComponentConfigs;
 
     // Prerequisites tracking
     currentPrerequisites?: PrerequisiteDefinition[];

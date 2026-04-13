@@ -11,7 +11,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation';
 import type { AdobeWorkspace } from '@/features/authentication/services/types';
 import { toAppError, isTimeout } from '@/types/errors';
-import { HandlerContext } from '@/types/handlers';
+import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 
@@ -120,5 +120,38 @@ export async function handleSelectWorkspace(
         });
         // Re-throw so the handler can send proper response
         throw error;
+    }
+}
+
+/**
+ * Create an OAuth S2S credential on the current workspace.
+ *
+ * Called from the Settings step when "Auto-Detect" finds no credential.
+ * Uses the Adobe Console SDK to create a bare OAuth S2S credential.
+ */
+export async function handleCreateWorkspaceCredential(
+    context: HandlerContext,
+): Promise<HandlerResponse> {
+    if (!context.authManager) {
+        return { success: false, error: 'Authentication not available' };
+    }
+
+    try {
+        context.logger.info('[Workspace] Creating OAuth S2S credential');
+
+        const credential = await context.authManager.createWorkspaceCredential(
+            'Demo Builder Commerce',
+            'OAuth credential for Commerce REST API access (auto-created by Demo Builder)',
+        );
+
+        if (!credential?.clientId) {
+            return { success: false, error: 'Failed to create credential. Check that you have admin access to this workspace.' };
+        }
+
+        context.logger.info(`[Workspace] OAuth S2S credential created: ${credential.name}`);
+        return { success: true, data: { clientId: credential.clientId } };
+    } catch (error) {
+        context.logger.error('[Workspace] Failed to create credential:', error as Error);
+        return { success: false, error: `Failed to create credential: ${(error as Error).message}` };
     }
 }

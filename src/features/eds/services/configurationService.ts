@@ -35,7 +35,7 @@ const ADMIN_API_URL = 'https://admin.hlx.page';
  * Parameters for site registration with the Configuration Service
  */
 export interface SiteRegistrationParams {
-    /** GitHub org or user that owns the config (used in URL path) */
+    /** DA.live org name — used as the Configuration Service lookup key (URL path) */
     org: string;
     /** Site name in the Configuration Service */
     site: string;
@@ -66,8 +66,12 @@ function buildContentSourceUrl(daLiveOrg: string, daLiveSite: string): string {
 export function buildSiteConfigParams(
     repoOwner: string, repoName: string, daLiveOrg: string, daLiveSite: string,
 ): SiteRegistrationParams {
+    // The Config Service lookup key must use the DA.live org/site, not the GitHub repo name.
+    // The da.live editor constructs its preview URL from the DA.live site path
+    // (e.g. /preview/skukla/b2b-content/...), so Helix looks up /config/skukla/sites/b2b-content.json.
+    // codeOwner/codeRepo tells Helix where to find the GitHub code repository (blocks, config, etc.).
     return {
-        org: repoOwner, site: repoName,
+        org: daLiveOrg, site: daLiveSite,
         codeOwner: repoOwner, codeRepo: repoName,
         contentSourceUrl: buildContentSourceUrl(daLiveOrg, daLiveSite),
     };
@@ -120,7 +124,7 @@ export class ConfigurationService {
      */
     async registerSite(params: SiteRegistrationParams): Promise<ConfigServiceResult> {
         const { org, site, codeOwner, codeRepo, contentSourceUrl, contentSourceType } = params;
-        const url = `${ADMIN_API_URL}/config/${org}/sites/${site}.json`;
+        const url = `${ADMIN_API_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
 
         this.logger.info(`[ConfigService] Registering site: ${org}/${site}`);
         this.logger.debug(`[ConfigService] Code: ${codeOwner}/${codeRepo}, Content: ${contentSourceUrl}`);
@@ -152,8 +156,8 @@ export class ConfigurationService {
      * Configures URL prefix routing (e.g., /products/ -> /products/default)
      * via the Configuration Service. This replaces the fstab.yaml folders section.
      *
-     * @param org - GitHub org or user
-     * @param site - Site name
+     * @param org - DA.live org name (Configuration Service lookup key)
+     * @param site - DA.live site name
      * @param folders - Folder mapping (e.g., { "/products/": "/products/default" })
      * @returns Result with success/error status
      */
@@ -162,7 +166,7 @@ export class ConfigurationService {
         site: string,
         folders: FolderMapping,
     ): Promise<ConfigServiceResult> {
-        const url = `${ADMIN_API_URL}/config/${org}/sites/${site}/folders.json`;
+        const url = `${ADMIN_API_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}/folders.json`;
 
         this.logger.info(`[ConfigService] Setting folder mapping for ${org}/${site}`);
         this.logger.debug(`[ConfigService] Folders: ${JSON.stringify(folders)}`);
@@ -193,6 +197,9 @@ export class ConfigurationService {
             this.logger.error(`[ConfigService] Failed to clear existing config: ${deleteResult.error}`);
             return { success: false, error: `Failed to clear existing config: ${deleteResult.error}` };
         }
+        if (deleteResult.statusCode === 404) {
+            this.logger.warn(`[ConfigService] Site config already absent during update (404) — re-registering`);
+        }
 
         return this.registerSite(params);
     }
@@ -207,12 +214,12 @@ export class ConfigurationService {
      * Removes the entire site config entry. Should be called during
      * project cleanup, before deleting the GitHub repo.
      *
-     * @param org - GitHub org or user
-     * @param site - Site name
+     * @param org - DA.live org name (Configuration Service lookup key)
+     * @param site - DA.live site name
      * @returns Result with success/error status
      */
     async deleteSiteConfig(org: string, site: string): Promise<ConfigServiceResult> {
-        const url = `${ADMIN_API_URL}/config/${org}/sites/${site}.json`;
+        const url = `${ADMIN_API_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
 
         this.logger.info(`[ConfigService] Deleting site config: ${org}/${site}`);
 
@@ -262,34 +269,34 @@ export class ConfigurationService {
                 return { success: true, statusCode: 404 };
             }
 
-            // Extract error details
-            let errorBody = '';
-            try {
-                errorBody = await response.text();
-            } catch {
-                // Ignore parse errors
-            }
-
-            // Debug: log raw response body for auth failures to diagnose token type issues
-            if (response.status === 401 || response.status === 403) {
-                this.logger.debug(`[ConfigService] Auth failure raw response: ${errorBody}`);
-            }
-
-            const errorMessage = this.formatError(response.status, errorBody);
-            // 409 (conflict) is handled by callers (delete + re-create) — log at info, not error
-            const logLevel = response.status === 409 ? 'info' : 'error';
-            this.logger[logLevel](`[ConfigService] ${method} ${url} -> ${response.status}: ${errorMessage}`);
-
-            return {
-                success: false,
-                error: errorMessage,
-                statusCode: response.status,
-            };
+            return await this.handleErrorResponse(method, url, response);
         } catch (error) {
             const message = (error as Error).message;
             this.logger.error(`[ConfigService] Request failed: ${message}`);
             return { success: false, error: message };
         }
+    }
+
+    /** Handle a non-OK, non-404-DELETE response from the Configuration Service API. */
+    private async handleErrorResponse(method: string, url: string, response: Response): Promise<ConfigServiceResult> {
+        let errorBody = '';
+        try {
+            errorBody = await response.text();
+        } catch {
+            // Ignore parse errors
+        }
+
+        // Debug: log raw response body for auth failures to diagnose token type issues
+        if (response.status === 401 || response.status === 403) {
+            const safeBody = errorBody.replace(/[\r\n]/g, ' ').substring(0, 200);
+            this.logger.debug(`[ConfigService] Auth failure raw response: ${safeBody}`);
+        }
+
+        const errorMessage = this.formatError(response.status, errorBody);
+        // 409 (conflict) is handled by callers (delete + re-create) — log at info, not error
+        const logLevel = response.status === 409 ? 'info' : 'error';
+        this.logger[logLevel](`[ConfigService] ${method} ${url} -> ${response.status}: ${errorMessage}`);
+        return { success: false, error: errorMessage, statusCode: response.status };
     }
 
     /**

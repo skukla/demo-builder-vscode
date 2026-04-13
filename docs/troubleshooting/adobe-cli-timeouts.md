@@ -2,7 +2,7 @@
 
 ## Problem Overview
 
-Adobe I/O CLI commands frequently succeed but timeout due to the extension's timeout values being too restrictive. This creates a disconnect where:
+Adobe I/O CLI commands frequently succeed but appear to timeout because the extension's timeout values are too restrictive. This creates a disconnect where:
 
 1. **Backend logs show success**: Commands complete with success indicators in stdout
 2. **UI shows errors**: "Error Loading Projects" or similar timeout messages
@@ -10,7 +10,7 @@ Adobe I/O CLI commands frequently succeed but timeout due to the extension's tim
 
 ## Root Cause
 
-The Adobe CLI (`aio console project select`, `aio console workspace list`, etc.) often takes 8-10 seconds to complete, but the extension was using 5-second timeouts. The commands succeed but the extension gives up waiting too early.
+The Adobe CLI (`aio console project select`, `aio console workspace list`, etc.) often takes 8-10 seconds to complete, but the extension was using 5-second timeouts. The commands succeed, but the extension gives up waiting too early.
 
 ## Symptoms
 
@@ -26,48 +26,49 @@ The Adobe CLI (`aio console project select`, `aio console workspace list`, etc.)
 [ERROR] Command timed out after 5000ms
 ```
 
-Notice the contradiction: stdout shows success, but timeout error is thrown.
+Notice the contradiction: stdout shows success, but a timeout error is thrown.
 
 ## Solution: Two-Part Fix
 
-### 1. Increased Timeout Values
+### 1. Semantic Timeout Buckets
 
-Updated `src/utils/timeoutConfig.ts`:
+Timeouts are configured in `src/core/utils/timeoutConfig.ts` (exported as `TIMEOUTS`):
 
 ```typescript
-export const TIMEOUT_CONFIG = {
-    // Adobe CLI operations - increased timeouts
-    AUTH_CHECK: 8000,        // Was: 5000
-    ORG_FETCH: 12000,        // Was: 8000
-    PROJECT_FETCH: 15000,    // Was: 10000
-    WORKSPACE_FETCH: 10000,  // Was: 8000
-    CONFIG_WRITE: 10000,     // Was: 5000 ⭐ KEY FIX
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
-    // Other timeouts remain the same
-    QUICK_COMMAND: 5000,
-    LONG_COMMAND: 30000,
-    // ...
+export const TIMEOUTS = {
+    /** Fast operations: config reads, shell checks, quick validations (5 seconds) */
+    QUICK: 5000,
+
+    /** Standard operations: API calls, data loading, list fetching (30 seconds) */
+    NORMAL: 30000,
+
+    /** Complex operations: mesh deployment, installations, builds (3 minutes) */
+    LONG: 180000,
+
+    // ...plus UI, POLL, AUTH sub-objects and named operation constants
 };
 ```
 
-**Critical Change**: `CONFIG_WRITE` increased from 5000ms to 10000ms for project/workspace selection operations.
+Adobe CLI operations (org list, project select, workspace list) use `TIMEOUTS.NORMAL` (30 seconds), which is sufficient for even slow CLI responses.
 
 ### 2. Success Detection in Timeout Scenarios
 
-Added success detection in catch blocks throughout `src/utils/adobeAuthManager.ts`:
+Added success detection in catch blocks throughout `src/features/authentication/services/authenticationService.ts`:
 
 ```typescript
 async selectProject(projectId: string): Promise<boolean> {
     try {
         const result = await executeCommand(
             `aio console project select ${projectId}`,
-            { timeout: TIMEOUT_CONFIG.CONFIG_WRITE }
+            { timeout: TIMEOUTS.NORMAL }
         );
         return result.code === 0;
     } catch (error) {
         const err = error as any;
 
-        // ⭐ KEY FIX: Check for success indicators even in timeout
+        // KEY FIX: Check for success indicators even on timeout
         if (err.stdout && err.stdout.includes('Project selected :')) {
             logger.info('Project selection succeeded (detected via stdout)');
             return true;
@@ -97,7 +98,6 @@ if (err.stdout && err.stdout.includes('Project selected :')) {
 
 ```typescript
 if (err.stdout && err.stdout.trim().startsWith('[')) {
-    // Likely JSON response despite timeout
     try {
         const data = JSON.parse(err.stdout);
         return data;
@@ -113,7 +113,6 @@ if (err.stdout && err.stdout.trim().startsWith('[')) {
 
 ```typescript
 if (err.stdout && err.stdout.includes('"id"') && err.stdout.includes('"name"')) {
-    // Looks like organization data
     try {
         return JSON.parse(err.stdout);
     } catch (parseError) {
@@ -127,22 +126,19 @@ if (err.stdout && err.stdout.includes('"id"') && err.stdout.includes('"name"')) 
 ### Standard Timeout Handling Pattern
 
 ```typescript
-import { TIMEOUT_CONFIG } from './timeoutConfig';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 async function executeAdobeCommand(command: string): Promise<any> {
     try {
-        // Use appropriate timeout for command type
         const result = await executeCommand(command, {
-            timeout: TIMEOUT_CONFIG.CONFIG_WRITE  // or appropriate timeout
+            timeout: TIMEOUTS.NORMAL  // 30s covers all Adobe CLI operations
         });
-
         return result;
     } catch (error) {
         const err = error as any;
 
         // Check for success indicators in stdout
         if (err.stdout) {
-            // Command-specific success detection
             if (command.includes('project select') && err.stdout.includes('Project selected :')) {
                 return { success: true, stdout: err.stdout };
             }
@@ -156,7 +152,6 @@ async function executeAdobeCommand(command: string): Promise<any> {
             }
         }
 
-        // No success indicators found, re-throw error
         throw error;
     }
 }
@@ -165,13 +160,11 @@ async function executeAdobeCommand(command: string): Promise<any> {
 ### Webview Message Handler Pattern
 
 ```typescript
-// In command message handlers
 comm.on('select-project', async (payload) => {
     try {
         const result = await this.adobeAuth.selectProject(payload.projectId);
         return { success: true, data: result };
     } catch (error) {
-        // Error already includes success detection logic
         logger.error('Project selection failed', error);
         return {
             success: false,
@@ -186,11 +179,9 @@ comm.on('select-project', async (payload) => {
 ### 1. Enable Debug Logging
 
 ```typescript
-// Add debug logging before commands
 logger.debug(`Executing Adobe CLI command: ${command}`);
 logger.debug(`Timeout set to: ${timeout}ms`);
 
-// Log detailed results
 logger.debug('Command result:', {
     code: result.code,
     stdout: result.stdout,
@@ -232,23 +223,25 @@ time aio console project select <project-id>
 
 | Operation | Timeout | Typical Duration | Notes |
 |-----------|---------|------------------|-------|
-| `aio auth check` | 8000ms | 2-4s | Usually fast |
-| `aio console org list` | 12000ms | 4-8s | Moderate |
-| `aio console project list` | 15000ms | 6-12s | Slower with many projects |
-| `aio console project select` | 10000ms | 6-10s | ⭐ Most problematic |
-| `aio console workspace list` | 10000ms | 4-8s | Moderate |
+| `aio auth check` | `TIMEOUTS.QUICK` (5s) | 2-4s | Usually fast |
+| `aio console org list` | `TIMEOUTS.NORMAL` (30s) | 4-8s | Moderate |
+| `aio console project list` | `TIMEOUTS.NORMAL` (30s) | 6-12s | Slower with many projects |
+| `aio console project select` | `TIMEOUTS.NORMAL` (30s) | 6-10s | Most problematic |
+| `aio console workspace list` | `TIMEOUTS.NORMAL` (30s) | 4-8s | Moderate |
 
 ## Prevention
 
 ### 1. Use Centralized Timeouts
 
-Always import from `timeoutConfig.ts`:
+Always import from `timeoutConfig.ts` using the path alias:
 
 ```typescript
-import { TIMEOUT_CONFIG } from '../utils/timeoutConfig';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
-// Use specific timeout for operation type
-const timeout = TIMEOUT_CONFIG.CONFIG_WRITE;
+// Use the semantic bucket that fits the operation
+const timeout = TIMEOUTS.NORMAL;   // Adobe CLI calls
+const timeout = TIMEOUTS.QUICK;    // Fast checks, config reads
+const timeout = TIMEOUTS.LONG;     // Installations, deployments
 ```
 
 ### 2. Always Include Success Detection
@@ -265,7 +258,7 @@ catch (error) {
 
 ### 3. Test with Slow Networks
 
-Adobe CLI performance varies significantly with:
+Adobe CLI performance varies with:
 - Network latency
 - Adobe service responsiveness
 - Authentication token freshness
@@ -275,4 +268,4 @@ Adobe CLI performance varies significantly with:
 
 - **Pre v1.5.0**: Fixed 5-second timeouts caused frequent false failures
 - **v1.5.0**: Increased timeouts + success detection pattern
-- **Future**: Consider adaptive timeouts based on network conditions
+- **v1.6.0+**: Timeout config moved to `src/core/utils/timeoutConfig.ts`, renamed from `TIMEOUT_CONFIG` to `TIMEOUTS` with semantic bucket keys

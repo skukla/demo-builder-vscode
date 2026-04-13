@@ -7,6 +7,11 @@
 
 import { Project } from '@/types';
 import { getComponentInstancesByType } from '@/types/typeGuards';
+import {
+    PAAS_URL, PAAS_ENVIRONMENT_ID, PAAS_STORE_VIEW_CODE,
+    PAAS_WEBSITE_CODE, PAAS_STORE_CODE, PAAS_CUSTOMER_GROUP,
+    CATALOG_API_KEY,
+} from '@/features/components/config/envVarKeys';
 
 /**
  * Frontend env vars tracked for change detection.
@@ -14,14 +19,14 @@ import { getComponentInstancesByType } from '@/types/typeGuards';
  */
 const FRONTEND_ENV_VARS = [
     'MESH_ENDPOINT',
-    'ADOBE_COMMERCE_URL',
-    'ADOBE_COMMERCE_ENVIRONMENT_ID',
-    'ADOBE_COMMERCE_STORE_VIEW_CODE',
-    'ADOBE_COMMERCE_WEBSITE_CODE',
-    'ADOBE_COMMERCE_STORE_CODE',
-    'ADOBE_CATALOG_API_KEY',
+    PAAS_URL,
+    PAAS_ENVIRONMENT_ID,
+    PAAS_STORE_VIEW_CODE,
+    PAAS_WEBSITE_CODE,
+    PAAS_STORE_CODE,
+    CATALOG_API_KEY,
     'ADOBE_ASSETS_URL',
-    'ADOBE_COMMERCE_CUSTOMER_GROUP',
+    PAAS_CUSTOMER_GROUP,
 ];
 
 /**

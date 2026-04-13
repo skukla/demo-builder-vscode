@@ -36,7 +36,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
-import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
+import { ConnectStoreStepContent } from '@/features/project-creation/ui/components/ConnectStoreStepContent';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
 import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';
 import { DaLiveSetupStep } from '@/features/eds/ui/steps/DaLiveSetupStep';
@@ -156,6 +156,12 @@ export function WizardContainer({
             updateState({ customBlockLibraries: filtered });
         }
     }, [customBlockLibraryDefaults, state.customBlockLibraries, updateState]);
+
+    // Sync component configs to extension host so handlers can read credentials
+    // without requiring the webview to include them in postMessage payloads.
+    useEffect(() => {
+        vscode.postMessage('sync-component-configs', state.componentConfigs ?? {});
+    }, [state.componentConfigs]);
 
     // Navigation hook
     const {
@@ -282,7 +288,18 @@ export function WizardContainer({
 
         switch (state.currentStep) {
             case 'welcome':
-                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} initialViewMode={projectsViewMode} packages={packages} stacks={stacks} onArchitectureChange={handleArchitectureChange} blockLibraryDefaults={blockLibraryDefaults} customBlockLibraryDefaults={customBlockLibraryDefaults} />;
+                return (
+                    <WelcomeStep
+                        {...props}
+                        existingProjectNames={existingProjectNames}
+                        initialViewMode={projectsViewMode}
+                        packages={packages}
+                        stacks={stacks}
+                        onArchitectureChange={handleArchitectureChange}
+                        blockLibraryDefaults={blockLibraryDefaults}
+                        customBlockLibraryDefaults={customBlockLibraryDefaults}
+                    />
+                );
             case 'component-selection':
                 return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
             case 'prerequisites':
@@ -306,7 +323,18 @@ export function WizardContainer({
             case 'storefront-setup':
                 return <StorefrontSetupStep {...props} />;
             case 'settings':
-                return <ComponentConfigStep {...props} />;
+                return (
+                    <ConnectStoreStepContent
+                        selectedStackId={state.selectedStack ?? ''}
+                        componentConfigs={state.componentConfigs ?? {}}
+                        packageConfigDefaults={state.packageConfigDefaults}
+                        adobeOrg={state.adobeOrg}
+                        onComponentConfigsChange={(configs) => updateState({ componentConfigs: configs })}
+                        onValidationChange={setCanProceed}
+                        storeDiscoveryData={state.storeDiscoveryData}
+                        onStoreDiscoveryDataChange={(data) => updateState({ storeDiscoveryData: data ?? undefined })}
+                    />
+                );
             case 'review':
                 return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} packages={packages} stacks={stacks} />;
             case 'create-project':
@@ -443,27 +471,6 @@ export function WizardContainer({
                     transform: translateX(20px);
                 }
 
-                @keyframes slideInFromRight {
-                    from {
-                        opacity: 0;
-                        transform: translateX(20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(0);
-                    }
-                }
-
-                @keyframes slideInFromLeft {
-                    from {
-                        opacity: 0;
-                        transform: translateX(-20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(0);
-                    }
-                }
             `}</style>
         </View>
     );

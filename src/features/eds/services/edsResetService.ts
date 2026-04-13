@@ -22,339 +22,45 @@
  */
 
 import type { TokenProvider } from './daLiveOrgOperations';
-import type { GitHubTreeInput } from './types';
+import type { Logger } from '@/types/logger';
+import type { GitHubFileOperations } from './githubFileOperations';
+import type { GitHubTokenService } from './githubTokenService';
+import type { HandlerContext } from '@/types/handlers';
+import type { EdsResetParams, EdsResetProgress, EdsResetResult } from './edsResetParams';
+import { DaLiveAuthError, GitHubAppNotInstalledError } from './types';
 import { DEFAULT_FOLDER_MAPPING, buildSiteConfigParams, ConfigurationService } from './configurationService';
-import { COMPONENT_IDS } from '@/core/constants';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
-import { getBlockLibrarySource, getBlockLibraryContentSource, getBlockLibraryName, isBlockLibraryAvailableForPackage } from '@/features/project-creation/services/blockLibraryLoader';
-import type { Project } from '@/types/base';
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import { HelixService } from './helixService';
+import { DaLiveContentOperations } from './daLiveContentOperations';
+import { executeEdsPipeline } from './edsPipeline';
+import { verifyCdnResources } from './configSyncService';
+import { updateStorefrontState } from './storefrontStalenessDetector';
+import { getGitHubServices, configureDaLivePermissions, getDaLiveAuthService, ensureDaLiveAuth } from '../handlers/edsHelpers';
+import { redeployApiMesh } from './edsResetMeshHelper';
+import { resetRepoToTemplate } from './edsResetRepoHelper';
 
 // ==========================================================
-// Types
+// Re-exports for backward compatibility
 // ==========================================================
 
-/**
- * Parameters for EDS reset operation
- */
-export interface EdsResetParams {
-    // Repository
-    repoOwner: string;
-    repoName: string;
+export type { EdsResetParams, EdsResetProgress, EdsResetResult, ExtractParamsResult } from './edsResetParams';
+export { extractResetParams } from './edsResetParams';
 
-    // DA.live
-    daLiveOrg: string;
-    daLiveSite: string;
+// ==========================================================
+// Constants
+// ==========================================================
 
-    // Template
-    templateOwner: string;
-    templateRepo: string;
-    contentSource?: {
-        org: string;
-        site: string;
-        indexPath?: string;
-    };
+/** Maximum number of DA.live re-authentication attempts in the content pipeline. */
+const MAX_REAUTH_ATTEMPTS = 2;
 
-    // Project data for config generation
-    project: Project;
-
-    // Optional features
-    /** Include block library configuration (default: false) */
-    includeBlockLibrary?: boolean;
-    /** Verify CDN resources after publish (default: false) */
-    verifyCdn?: boolean;
-    /** Redeploy API Mesh after reset (default: false) */
-    redeployMesh?: boolean;
-    /** Content patches to apply during content copy */
-    contentPatches?: string[];
-}
-
-/**
- * Progress callback info for EDS reset
- */
-export interface EdsResetProgress {
-    step: number;
-    totalSteps: number;
-    message: string;
-}
-
-/**
- * Result of EDS reset operation
- */
-export interface EdsResetResult extends HandlerResponse {
-    /** Number of files reset in repository */
-    filesReset?: number;
-    /** Number of content files copied */
-    contentCopied?: number;
-    /** Whether mesh was redeployed */
-    meshRedeployed?: boolean;
-    /** Specific error type for UI handling */
-    errorType?: string;
-    /** Additional error details */
-    errorDetails?: Record<string, unknown>;
-}
-
-/**
- * Result of parameter extraction
- */
-export type ExtractParamsResult = {
-    success: true;
-    params: EdsResetParams;
-} | {
-    success: false;
-    error: string;
-    code?: string;
+/** Maps EDS pipeline operation names to wizard step numbers for progress reporting. */
+const PIPELINE_STEP_MAP: Record<string, number> = {
+    'content-clear': 8, 'content-copy': 8, 'block-library': 9,
+    'eds-settings': 10, 'cache-purge': 11, 'content-publish': 11, 'library-publish': 11,
 };
 
 // ==========================================================
-// Parameter Extraction
+// Core Reset Implementation
 // ==========================================================
-
-/**
- * Extract reset parameters from a project
- *
- * Reads EDS metadata and template configuration from project and demo packages.
- *
- * @param project - Project to extract parameters from
- * @returns Extraction result with params or error
- */
-export function extractResetParams(project: Project): ExtractParamsResult {
-    // Get EDS metadata from component instance (project-specific data)
-    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
-    const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
-    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
-
-    // Derive template config from brand+stack (source of truth)
-    const pkg = demoPackagesConfig.packages.find((p: { id: string }) => p.id === project.selectedPackage);
-    const storefronts = pkg?.storefronts as Record<string, {
-        templateOwner?: string;
-        templateRepo?: string;
-        contentSource?: { org: string; site: string; indexPath?: string };
-        contentPatches?: string[];
-    }> | undefined;
-    const storefront = project.selectedStack ? storefronts?.[project.selectedStack] : undefined;
-    const templateOwner = storefront?.templateOwner;
-    const templateRepo = storefront?.templateRepo;
-    const contentSourceConfig = storefront?.contentSource;
-    const contentPatches = storefront?.contentPatches;
-
-    // Validate required fields
-    if (!repoFullName) {
-        return {
-            success: false,
-            error: 'EDS metadata missing - no GitHub repository configured',
-            code: 'CONFIG_INVALID',
-        };
-    }
-
-    const [repoOwner, repoName] = repoFullName.split('/');
-    if (!repoOwner || !repoName) {
-        return {
-            success: false,
-            error: 'Invalid repository format',
-            code: 'CONFIG_INVALID',
-        };
-    }
-
-    if (!daLiveOrg || !daLiveSite) {
-        return {
-            success: false,
-            error: 'DA.live configuration missing',
-            code: 'CONFIG_INVALID',
-        };
-    }
-
-    if (!templateOwner || !templateRepo) {
-        return {
-            success: false,
-            error: 'Template configuration missing. Cannot reset without knowing the template repository.',
-            code: 'CONFIG_INVALID',
-        };
-    }
-
-    return {
-        success: true,
-        params: {
-            repoOwner,
-            repoName,
-            daLiveOrg,
-            daLiveSite,
-            templateOwner,
-            templateRepo,
-            ...(contentSourceConfig && { contentSource: contentSourceConfig }),
-            project,
-            contentPatches,
-        },
-    };
-}
-
-// ==========================================================
-// Reset Step Helpers
-// ==========================================================
-
-/** Fetch placeholder JSON files from template source into file overrides map. */
-async function fetchPlaceholderFiles(
-    fileOverrides: Map<string, string>,
-    templateOwner: string,
-    templateRepo: string,
-    logger: import('@/types/logger').Logger,
-): Promise<void> {
-    const placeholderPaths = [
-        'placeholders/global', 'placeholders/auth', 'placeholders/cart',
-        'placeholders/checkout', 'placeholders/order', 'placeholders/account',
-        'placeholders/payment-services', 'placeholders/recommendations', 'placeholders/wishlist',
-    ];
-
-    for (const placeholderPath of placeholderPaths) {
-        try {
-            const sourceUrl = `https://main--${templateRepo}--${templateOwner}.aem.live/${placeholderPath}.json`;
-            const response = await fetch(sourceUrl, {
-                signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
-            });
-            if (response.ok) {
-                const jsonContent = await response.text();
-                fileOverrides.set(`${placeholderPath}.json`, jsonContent);
-                logger.info(`[EdsReset] Added ${placeholderPath}.json to code files`);
-            }
-        } catch {
-            logger.warn(`[EdsReset] Failed to fetch ${placeholderPath}.json from source`);
-        }
-    }
-}
-
-/**
- * Step 1: Reset repository to template using bulk Git Tree operations.
- * Builds file overrides (fstab.yaml, config.json, placeholders) and pushes a single commit.
- * @returns Number of files reset and optional block collection IDs.
- */
-async function resetRepoToTemplate(
-    params: EdsResetParams,
-    context: HandlerContext,
-    githubFileOps: import('./githubFileOperations').GitHubFileOperations,
-    report: (step: number, message: string) => void,
-): Promise<{ filesReset: number; blockCollectionIds?: string[] }> {
-    const { repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo, project, includeBlockLibrary = false } = params;
-
-    // Step 1: Reset repository to template
-    report(1, 'Resetting repository to template...');
-    context.logger.info(`[EdsReset] Resetting repo using bulk tree operations`);
-
-    const { generateFstabContent } = await import('./fstabGenerator');
-    const { generateConfigJson, extractConfigParams } = await import('./configGenerator');
-
-    const fstabContent = generateFstabContent({ daLiveOrg, daLiveSite });
-    const fileOverrides = new Map<string, string>();
-    fileOverrides.set('fstab.yaml', fstabContent);
-
-    // Generate config.json with Commerce configuration
-    const configParams = {
-        githubOwner: repoOwner, repoName, daLiveOrg, daLiveSite,
-        ...extractConfigParams(project),
-    };
-    const configResult = generateConfigJson(configParams, context.logger);
-    if (configResult.success && configResult.content) {
-        fileOverrides.set('config.json', configResult.content);
-        fileOverrides.set('demo-config.json', configResult.content);
-        context.logger.info('[EdsReset] Generated config.json for reset');
-    } else {
-        context.logger.warn(`[EdsReset] Failed to generate demo-config.json: ${configResult.error}`);
-    }
-
-    if (includeBlockLibrary) {
-        await fetchPlaceholderFiles(fileOverrides, templateOwner, templateRepo, context.logger);
-    }
-
-    const resetResult = await githubFileOps.resetRepoToTemplate(
-        templateOwner, templateRepo, repoOwner, repoName, fileOverrides, 'main',
-    );
-
-    context.logger.info(`[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
-    report(1, `Reset ${resetResult.fileCount} files`);
-
-    // Step 2: Install block libraries
-    report(2, 'Preparing block libraries...');
-
-    // Generate inspector tree entries (always, for consistency with storefront setup)
-    let inspectorEntries: GitHubTreeInput[] = [];
-    try {
-        const { generateInspectorTreeEntries } = await import('./inspectorHelpers');
-        inspectorEntries = await generateInspectorTreeEntries(
-            githubFileOps, repoOwner, repoName, project.selectedPackage, context.logger,
-        );
-    } catch (error) {
-        context.logger.warn(`[EdsReset] Inspector tagging skipped: ${(error as Error).message}`);
-    }
-
-    // Re-install block libraries if project had them (deduped, single commit)
-    // Only install what's explicitly configured. No fallbacks.
-    const effectiveBlockLibraries = project.selectedBlockLibraries ?? [];
-
-    context.logger.info('[EdsReset] Block library config', {
-        selectedBlockLibraries: project.selectedBlockLibraries,
-        customBlockLibraries: project.customBlockLibraries?.map(l => `${l.source.owner}/${l.source.repo}`),
-        package: project.selectedPackage,
-    });
-
-    const allLibraries: Array<{ source: import('@/types/demoPackages').AddonSource; name: string }> = [];
-
-    // Collect built-in library sources (filter by package compatibility)
-    const packageId = project.selectedPackage ?? '';
-    for (const libraryId of effectiveBlockLibraries) {
-        if (!isBlockLibraryAvailableForPackage(libraryId, packageId)) {
-            context.logger.info(`[EdsReset] Skipping block library '${libraryId}' — not available for package '${packageId}' (onlyForPackages)`);
-            continue;
-        }
-        const source = getBlockLibrarySource(libraryId);
-        if (source) {
-            allLibraries.push({ source, name: getBlockLibraryName(libraryId) || libraryId });
-        } else {
-            context.logger.warn(`[EdsReset] Block library '${libraryId}' selected but no source configured`);
-        }
-    }
-
-    // Collect custom library sources
-    if (project.customBlockLibraries && project.customBlockLibraries.length > 0) {
-        for (const lib of project.customBlockLibraries) {
-            allLibraries.push({ source: lib.source, name: lib.name });
-        }
-    }
-
-    context.logger.info('[EdsReset] Installing blocks from', allLibraries.map(l => `${l.source.owner}/${l.source.repo}`));
-
-    const { installBlockCollections } = await import('./blockCollectionHelpers');
-    const { installInspectorTagging } = await import('./inspectorHelpers');
-
-    let allBlockIds: string[] = [];
-    if (allLibraries.length > 0) {
-        report(2, `Re-installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`);
-        const blockResult = await installBlockCollections(
-            githubFileOps, repoOwner, repoName, allLibraries, context.logger, inspectorEntries,
-        );
-        if (blockResult.success) {
-            allBlockIds = blockResult.blockIds;
-            context.logger.info(`[EdsReset] Reinstalled ${blockResult.blocksCount} unique blocks from ${allLibraries.length} libraries (+ inspector tagging)`);
-        } else {
-            context.logger.warn(`[EdsReset] Block library reinstall failed: ${blockResult.error}`);
-        }
-    } else if (inspectorEntries.length > 0) {
-        // Step 3: No block libraries — inspector makes its own standalone commit
-        report(3, 'Installing inspector tagging...');
-        const inspectorResult = await installInspectorTagging(
-            githubFileOps, repoOwner, repoName, project.selectedPackage, context.logger,
-        );
-        if (inspectorResult.success) {
-            context.logger.info('[EdsReset] Inspector tagging installed (standalone)');
-        } else {
-            context.logger.warn(`[EdsReset] Inspector tagging skipped: ${inspectorResult.error}`);
-        }
-    }
-
-    const blockCollectionIds = allBlockIds.length > 0 ? allBlockIds : undefined;
-
-    return { filesReset: resetResult.fileCount, blockCollectionIds };
-}
 
 /**
  * Steps 4-5: Sync code to CDN and configure DA.live permissions.
@@ -362,16 +68,14 @@ async function resetRepoToTemplate(
 async function syncCodeAndPermissions(
     params: EdsResetParams,
     context: HandlerContext,
-    githubTokenService: import('./githubTokenService').GitHubTokenService,
+    githubTokenService: GitHubTokenService,
     tokenProvider: TokenProvider,
     report: (step: number, message: string) => void,
 ): Promise<void> {
     const { repoOwner, repoName, daLiveOrg, daLiveSite } = params;
-    const { HelixService } = await import('./helixService');
-    const { configureDaLivePermissions } = await import('../handlers/edsHelpers');
-
     // Step 4: Sync code to CDN
     report(4, 'Syncing code to CDN...');
+    // tokenProvider required: DA.live auth headers needed for unpublish during bulk sync
     const helixServiceForCodeSync = new HelixService(context.logger, githubTokenService, tokenProvider);
     try {
         await helixServiceForCodeSync.previewCode(repoOwner, repoName, '/*');
@@ -384,7 +88,6 @@ async function syncCodeAndPermissions(
 
     // Step 5: Configure site permissions
     report(5, 'Configuring site permissions...');
-    const { getDaLiveAuthService } = await import('../handlers/edsHelpers');
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const userEmail = await daLiveAuthService.getUserEmail();
     if (userEmail) {
@@ -395,104 +98,210 @@ async function syncCodeAndPermissions(
 }
 
 /**
- * Step 12: Redeploy API Mesh.
- * @returns Partial-success result if mesh failed, or null on success/skip.
+ * Steps 6-7: Publish config.json to CDN and register site with Configuration Service.
+ *
+ * Step 6 (config.json publish) runs before Config Service registration so the bulk
+ * code sync (previewCode '/*') has fully settled before we write to the Config Service.
+ * The bulk sync is async on Helix's side and can race with a Config Service write if
+ * we register immediately after.
+ *
+ * Step 7 (Config Service registration) runs after all code sync operations to avoid
+ * a race where Helix's async bulk processing overwrites or clears the Config Service entry.
  */
-async function redeployApiMesh(
-    project: Project,
-    repoOwner: string,
-    repoName: string,
+async function publishConfigAndRegisterSite(
+    { repoOwner, repoName, daLiveOrg, daLiveSite }: Pick<EdsResetParams, 'repoOwner' | 'repoName' | 'daLiveOrg' | 'daLiveSite'>,
+    githubTokenService: GitHubTokenService,
+    tokenProvider: TokenProvider,
+    logger: Logger,
+    report: (step: number, message: string) => void,
+): Promise<void> {
+    // Step 6: Publish config.json to CDN
+    // No tokenProvider: publishing config.json only needs GitHub token (no DA.live auth)
+    report(6, 'Publishing config.json to CDN...');
+    logger.info(`[EdsReset] Publishing config.json to CDN for ${repoOwner}/${repoName}`);
+    const helixServiceForCode = new HelixService(logger, githubTokenService);
+    try {
+        await helixServiceForCode.previewCode(repoOwner, repoName, '/config.json');
+        logger.info('[EdsReset] config.json published to CDN');
+        report(6, 'config.json published');
+    } catch (configError) {
+        logger.warn(`[EdsReset] Failed to publish config.json: ${(configError as Error).message}`);
+        report(6, 'config.json publish failed, continuing...');
+    }
+
+    // Step 7: Update Configuration Service with current content source
+    report(7, 'Updating Configuration Service...');
+    const configService = new ConfigurationService(tokenProvider, logger);
+    try {
+        const configResult = await configService.updateSiteConfig(
+            buildSiteConfigParams(repoOwner, repoName, daLiveOrg, daLiveSite),
+        );
+        if (configResult.success) {
+            logger.info('[EdsReset] Configuration Service updated');
+            report(7, 'Configuring folder mapping...');
+            const folderResult = await configService.setFolderMapping(
+                daLiveOrg, daLiveSite, DEFAULT_FOLDER_MAPPING,
+            );
+            if (folderResult.success) {
+                logger.info('[EdsReset] Folder mapping configured');
+            } else {
+                logger.warn(`[EdsReset] Folder mapping warning: ${folderResult.error}`);
+            }
+            report(7, 'Configuration Service updated');
+        } else {
+            logger.warn(`[EdsReset] Configuration Service update warning: ${configResult.error}`);
+        }
+    } catch (configError) {
+        logger.warn(`[EdsReset] Configuration Service update skipped: ${(configError as Error).message}`);
+    }
+}
+
+/**
+ * Handle a DA.live authentication failure mid-pipeline by prompting re-authentication.
+ * Returns on success (caller should continue the pipeline loop); throws on cancellation.
+ */
+async function handlePipelineAuthRetry(
+    context: HandlerContext,
+    attempt: number,
+    report: (step: number, message: string) => void,
+): Promise<void> {
+    context.logger.warn(`[EdsReset] DA.live token expired mid-pipeline (attempt ${attempt})`);
+    report(8, 'DA.live session expired. Please re-authenticate...');
+
+    const authResult = await ensureDaLiveAuth(context, '[EdsReset]');
+    if (!authResult.authenticated) {
+        throw new Error(
+            authResult.cancelled
+                ? 'Reset cancelled — DA.live re-authentication required'
+                : `DA.live re-authentication failed: ${authResult.error}`,
+        );
+    }
+
+    context.logger.info('[EdsReset] DA.live re-authenticated, resuming pipeline');
+    report(8, 'Resuming content pipeline...');
+}
+
+/** Map a pipeline progress event to the wizard step number and format the message. */
+function mapPipelineProgress(
+    info: { operation: string; message: string; current?: number; total?: number },
+    report: (step: number, message: string) => void,
+): void {
+    let message = info.message;
+    if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
+        message = `Publishing to CDN (${info.current}/${info.total} pages)`;
+    }
+    report(PIPELINE_STEP_MAP[info.operation] ?? 8, message);
+}
+
+/**
+ * Steps 8-11: Run the EDS content pipeline with automatic DA.live re-auth retry.
+ * Returns the number of content files copied.
+ */
+async function runContentPipeline(
+    params: EdsResetParams,
+    repoResetResult: { blockCollectionIds?: string[]; libraryContentSources: Array<{ org: string; site: string }> },
+    daLiveContentOps: DaLiveContentOperations,
+    githubFileOps: GitHubFileOperations,
+    githubTokenService: GitHubTokenService,
+    tokenProvider: TokenProvider,
+    context: HandlerContext,
+    report: (step: number, message: string) => void,
+): Promise<number> {
+    const {
+        repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
+        contentSource: contentSourceConfig, includeBlockLibrary = false, contentPatches,
+    } = params;
+
+    // tokenProvider required: DA.live content operations (copy, publish) need IMS token
+    const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
+    let pipelineAttempt = 0;
+
+    while (pipelineAttempt <= MAX_REAUTH_ATTEMPTS) {
+        try {
+            const pipelineResult = await executeEdsPipeline(
+                {
+                    repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
+                    clearExistingContent: true, skipContent: !contentSourceConfig,
+                    contentSource: contentSourceConfig, contentPatches, includeBlockLibrary,
+                    blockCollectionIds: repoResetResult.blockCollectionIds,
+                    libraryContentSources: repoResetResult.libraryContentSources,
+                    purgeCache: true, skipPublish: false,
+                },
+                { daLiveContentOps, githubFileOps, helixService, logger: context.logger },
+                (info) => mapPipelineProgress(info, report),
+            );
+
+            if (!pipelineResult.success) {
+                throw new Error(pipelineResult.error || 'Content pipeline failed');
+            }
+
+            context.logger.info('[EdsReset] Content pipeline completed successfully');
+            return pipelineResult.contentFilesCopied;
+        } catch (error) {
+            if (error instanceof DaLiveAuthError && pipelineAttempt < MAX_REAUTH_ATTEMPTS) {
+                pipelineAttempt++;
+                await handlePipelineAuthRetry(context, pipelineAttempt, report);
+                continue;
+            }
+            throw error;
+        }
+    }
+
+    /* istanbul ignore next */
+    return 0; // Unreachable: loop throws or returns above
+}
+
+/**
+ * Final steps: optional CDN verification, optional mesh redeploy, and state persistence.
+ */
+async function finalizeReset(
+    params: EdsResetParams,
     context: HandlerContext,
     report: (step: number, message: string) => void,
     filesReset: number,
     contentCopied: number,
-): Promise<EdsResetResult | null> {
-    const { getMeshComponentInstance } = await import('@/types/typeGuards');
-    const { ServiceLocator } = await import('@/core/di');
+): Promise<EdsResetResult> {
+    const { repoOwner, repoName, project, verifyCdn = false, redeployMesh = false } = params;
 
-    const meshComponent = getMeshComponentInstance(project);
-    if (!meshComponent?.path) {
-        return null;
-    }
-
-    // Re-validate Adobe I/O auth — the token may have expired during the reset pipeline
-    const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
-    const authService = ServiceLocator.getAuthenticationService();
-
-    report(12, 'Checking Adobe I/O authentication...');
-    const authResult = await ensureAdobeIOAuth({
-        authManager: authService,
-        logger: context.logger,
-        logPrefix: '[EdsReset]',
-        projectContext: {
-            organization: project.adobe?.organization,
-            projectId: project.adobe?.projectId,
-            workspace: project.adobe?.workspace,
-        },
-        warningMessage: 'Your Adobe I/O session has expired. Please sign in to continue the mesh redeployment.',
-    });
-
-    if (!authResult.authenticated) {
-        context.logger.warn('[EdsReset] Adobe I/O auth failed before mesh redeployment');
-        return {
-            success: true,
-            filesReset,
-            contentCopied,
-            meshRedeployed: false,
-            error: 'Reset completed but mesh redeployment skipped: Adobe I/O authentication required',
-            errorType: 'MESH_REDEPLOY_FAILED',
-        };
-    }
-
-    report(12, 'Setting Adobe context...');
-    if (project.adobe?.organization) {
-        await authService.selectOrganization(project.adobe.organization, { skipPermissionCheck: true });
-    }
-    if (project.adobe?.projectId && project.adobe?.organization) {
-        await authService.selectProject(project.adobe.projectId, project.adobe.organization);
-    }
-    if (project.adobe?.workspace && project.adobe?.projectId) {
-        await authService.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
-    }
-
-    report(12, 'Redeploying API Mesh...');
-    context.logger.info(`[EdsReset] Redeploying mesh for ${repoOwner}/${repoName}`);
-
-    try {
-        const { deployMeshComponent } = await import('@/features/mesh/services/meshDeployment');
-        const existingMeshId = (meshComponent.metadata?.meshId as string) || '';
-        const commandManager = ServiceLocator.getCommandExecutor();
-
-        const meshDeployResult = await deployMeshComponent(
-            meshComponent.path, commandManager, context.logger,
-            (msg, sub) => report(12, sub || msg), existingMeshId,
-        );
-
-        if (meshDeployResult.success && meshDeployResult.data?.endpoint) {
-            const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
-            await updateMeshState(project, meshDeployResult.data.endpoint);
-            await context.stateManager.saveProject(project);
-            context.logger.info(`[EdsReset] Mesh redeployed: ${meshDeployResult.data.endpoint}`);
-            return null; // Success
+    if (verifyCdn) {
+        report(11, 'Verifying configuration...');
+        const verification = await verifyCdnResources(repoOwner, repoName, context.logger);
+        if (verification.configVerified) {
+            report(11, 'Configuration verified');
+            context.logger.info('[EdsReset] config.json verified on CDN');
+        } else {
+            report(11, 'Configuration propagating...');
+            context.logger.warn('[EdsReset] config.json CDN verification timed out - may need more time to propagate');
         }
-
-        throw new Error(meshDeployResult.error || 'Mesh deployment failed');
-    } catch (meshError) {
-        context.logger.error('[EdsReset] Mesh redeployment error', meshError as Error);
-        return {
-            success: true,
-            filesReset,
-            contentCopied,
-            meshRedeployed: false,
-            error: `Reset completed but mesh redeployment failed: ${(meshError as Error).message}`,
-            errorType: 'MESH_REDEPLOY_FAILED',
-        };
     }
+
+    if (redeployMesh) {
+        const meshResult = await redeployApiMesh(project, repoOwner, repoName, context, report, filesReset, contentCopied);
+        if (meshResult) return meshResult; // Partial success
+    }
+
+    updateStorefrontState(project, project.componentConfigs || {});
+    project.edsStorefrontStatusSummary = 'published';
+    await context.stateManager.saveProject(project);
+    context.logger.info('[EdsReset] EDS project reset successfully');
+    return { success: true, filesReset, contentCopied, meshRedeployed: redeployMesh };
 }
 
-// ==========================================================
-// Core Reset Implementation
-// ==========================================================
+/** Map an unknown caught error to a structured EdsResetResult. */
+function handleResetError(error: unknown, logger: Logger): EdsResetResult {
+    if (error instanceof GitHubAppNotInstalledError) {
+        logger.info(`[EdsReset] GitHub App not installed: ${error.message}`);
+        return {
+            success: false,
+            error: error.message,
+            errorType: 'GITHUB_APP_NOT_INSTALLED',
+            errorDetails: { owner: error.owner, repo: error.repo, installUrl: error.installUrl },
+        };
+    }
+    const errorMessage = (error as Error).message;
+    logger.error('[EdsReset] Reset failed', error as Error);
+    return { success: false, error: errorMessage };
+}
 
 /**
  * Execute EDS project reset
@@ -512,21 +321,13 @@ export async function executeEdsReset(
     tokenProvider: TokenProvider,
     onProgress?: (progress: EdsResetProgress) => void,
 ): Promise<EdsResetResult> {
-    const {
-        repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
-        contentSource: contentSourceConfig, project,
-        includeBlockLibrary = false, verifyCdn = false, redeployMesh = false, contentPatches,
-    } = params;
+    const { redeployMesh = false } = params;
 
     const baseSteps = 11;
     const totalSteps = redeployMesh ? baseSteps + 1 : baseSteps;
     const report = (step: number, message: string) => {
         onProgress?.({ step, totalSteps, message });
     };
-
-    const { getGitHubServices } = await import('../handlers/edsHelpers');
-    const { DaLiveContentOperations } = await import('./daLiveContentOperations');
-    const { HelixService } = await import('./helixService');
 
     const { tokenService: githubTokenService, fileOperations: githubFileOps } = getGitHubServices(context);
     const daLiveContentOps = new DaLiveContentOperations(tokenProvider, context.logger);
@@ -539,165 +340,22 @@ export async function executeEdsReset(
         const repoResetResult = await resetRepoToTemplate(params, context, githubFileOps, report);
         filesReset = repoResetResult.filesReset;
 
-        // Step 2: Sync code to CDN + configure permissions
+        // Steps 4-5: Sync code to CDN + configure permissions
         await syncCodeAndPermissions(params, context, githubTokenService, tokenProvider, report);
 
-        // Step 6: Update Configuration Service with current content source
-        report(6, 'Updating Configuration Service...');
-        const configService = new ConfigurationService(tokenProvider, context.logger);
-        try {
-            const configResult = await configService.updateSiteConfig(
-                buildSiteConfigParams(repoOwner, repoName, daLiveOrg, daLiveSite),
-            );
-            if (configResult.success) {
-                context.logger.info('[EdsReset] Configuration Service updated');
-                report(6, 'Configuring folder mapping...');
-                // Also update folder mapping
-                await configService.setFolderMapping(
-                    repoOwner, repoName, DEFAULT_FOLDER_MAPPING,
-                );
-                report(6, 'Configuration Service updated');
-            } else {
-                context.logger.warn(`[EdsReset] Configuration Service update warning: ${configResult.error}`);
-            }
-        } catch (configError) {
-            context.logger.warn(`[EdsReset] Configuration Service update skipped: ${(configError as Error).message}`);
-        }
+        await publishConfigAndRegisterSite(
+            params, githubTokenService, tokenProvider, context.logger, report,
+        );
 
-        // Step 7: Publish config.json to CDN
-        report(7, 'Publishing config.json to CDN...');
-        context.logger.info(`[EdsReset] Publishing config.json to CDN for ${repoOwner}/${repoName}`);
+        // Steps 8-11: Content Pipeline (with DA.live re-auth retry)
+        contentCopied = await runContentPipeline(
+            params, repoResetResult, daLiveContentOps, githubFileOps,
+            githubTokenService, tokenProvider, context, report,
+        );
 
-        const helixServiceForCode = new HelixService(context.logger, githubTokenService);
-        try {
-            await helixServiceForCode.previewCode(repoOwner, repoName, '/config.json');
-            context.logger.info('[EdsReset] config.json published to CDN');
-            report(7, 'config.json published');
-        } catch (configError) {
-            context.logger.warn(`[EdsReset] Failed to publish config.json: ${(configError as Error).message}`);
-            report(7, 'config.json publish failed, continuing...');
-        }
-
-        // Steps 8-11: Content Pipeline
-        // Build library content sources for block doc page copying
-        const libraryContentSources: Array<{ org: string; site: string }> = [];
-        for (const libraryId of (project.selectedBlockLibraries ?? [])) {
-            const cs = getBlockLibraryContentSource(libraryId);
-            if (cs) libraryContentSources.push(cs);
-        }
-
-        const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
-        const { executeEdsPipeline } = await import('./edsPipeline');
-        const { DaLiveAuthError } = await import('./types');
-        const { ensureDaLiveAuth } = await import('../handlers/edsHelpers');
-
-        const MAX_REAUTH_ATTEMPTS = 2;
-        let pipelineAttempt = 0;
-
-        while (true) {
-            try {
-                const pipelineResult = await executeEdsPipeline(
-                    {
-                        repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
-                        clearExistingContent: true,
-                        skipContent: !contentSourceConfig,
-                        contentSource: contentSourceConfig,
-                        contentPatches, includeBlockLibrary,
-                        blockCollectionIds: repoResetResult.blockCollectionIds,
-                        libraryContentSources,
-                        purgeCache: true, skipPublish: false,
-                    },
-                    {
-                        daLiveContentOps, githubFileOps, helixService, logger: context.logger,
-                    },
-                    (info) => {
-                        const stepMap: Record<string, number> = {
-                            'content-clear': 8, 'content-copy': 8, 'block-library': 9,
-                            'eds-settings': 10, 'cache-purge': 11, 'content-publish': 11, 'library-publish': 11,
-                        };
-                        let message = info.message;
-                        if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
-                            message = `Publishing to CDN (${info.current}/${info.total} pages)`;
-                        }
-                        report(stepMap[info.operation] ?? 8, message);
-                    },
-                );
-
-                if (!pipelineResult.success) {
-                    throw new Error(pipelineResult.error || 'Content pipeline failed');
-                }
-
-                contentCopied = pipelineResult.contentFilesCopied;
-                context.logger.info('[EdsReset] Content pipeline completed successfully');
-                break;
-            } catch (error) {
-                if (error instanceof DaLiveAuthError && pipelineAttempt < MAX_REAUTH_ATTEMPTS) {
-                    pipelineAttempt++;
-                    context.logger.warn(`[EdsReset] DA.live token expired mid-pipeline (attempt ${pipelineAttempt})`);
-                    report(8, 'DA.live session expired. Please re-authenticate...');
-
-                    const authResult = await ensureDaLiveAuth(context, '[EdsReset]');
-                    if (!authResult.authenticated) {
-                        throw new Error(
-                            authResult.cancelled
-                                ? 'Reset cancelled — DA.live re-authentication required'
-                                : `DA.live re-authentication failed: ${authResult.error}`,
-                        );
-                    }
-
-                    context.logger.info('[EdsReset] DA.live re-authenticated, resuming pipeline');
-                    report(8, 'Resuming content pipeline...');
-                    continue;
-                }
-                throw error;
-            }
-        }
-
-        // Verify CDN if requested
-        if (verifyCdn) {
-            report(11, 'Verifying configuration...');
-            const { verifyCdnResources } = await import('./configSyncService');
-            const verification = await verifyCdnResources(repoOwner, repoName, context.logger);
-            if (verification.configVerified) {
-                report(11, 'Configuration verified');
-                context.logger.info('[EdsReset] config.json verified on CDN');
-            } else {
-                report(11, 'Configuration propagating...');
-                context.logger.warn('[EdsReset] config.json CDN verification timed out - may need more time to propagate');
-            }
-        }
-
-        // Step 12: Redeploy API Mesh (optional)
-        if (redeployMesh) {
-            const meshResult = await redeployApiMesh(project, repoOwner, repoName, context, report, filesReset, contentCopied);
-            if (meshResult) {
-                return meshResult; // Partial success
-            }
-        }
-
-        // Update storefront state
-        const { updateStorefrontState } = await import('./storefrontStalenessDetector');
-        updateStorefrontState(project, project.componentConfigs || {});
-        project.edsStorefrontStatusSummary = 'published';
-        await context.stateManager.saveProject(project);
-
-        context.logger.info('[EdsReset] EDS project reset successfully');
-
-        return { success: true, filesReset, contentCopied, meshRedeployed: redeployMesh };
+        // Steps 11-12: CDN verification + optional mesh redeploy + state persistence
+        return await finalizeReset(params, context, report, filesReset, contentCopied);
     } catch (error) {
-        const { GitHubAppNotInstalledError } = await import('./types');
-        if (error instanceof GitHubAppNotInstalledError) {
-            context.logger.info(`[EdsReset] GitHub App not installed: ${error.message}`);
-            return {
-                success: false,
-                error: error.message,
-                errorType: 'GITHUB_APP_NOT_INSTALLED',
-                errorDetails: { owner: error.owner, repo: error.repo, installUrl: error.installUrl },
-            };
-        }
-
-        const errorMessage = (error as Error).message;
-        context.logger.error('[EdsReset] Reset failed', error as Error);
-        return { success: false, error: errorMessage };
+        return handleResetError(error, context.logger);
     }
 }

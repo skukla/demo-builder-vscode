@@ -72,9 +72,13 @@ Multi-step React-based wizard for guided project setup:
 1. Welcome & Project Details
 2. Component Selection (Frontend, Backend, Dependencies)
 3. Prerequisites Check & Installation
-4. Adobe Authentication & Setup
-5. Commerce Configuration
-6. Review & Creation
+4. Adobe Authentication (auth, project, workspace — conditional on mesh dependency)
+5. Connect Commerce (store connection, progressive disclosure — all flows)
+6. Connect Services — GitHub + DA.live auth (EDS stacks only)
+7. Repository Config — GitHub repo selection/creation (EDS stacks only)
+8. Data Source Config — Commerce endpoint and store selection (EDS stacks only)
+9. Review & Creation
+10. Storefront Setup — GitHub repo, Helix config, content pipeline (EDS stacks only)
 
 **Key Features**:
 - Backend Call on Continue pattern (instant UI feedback)
@@ -84,7 +88,7 @@ Multi-step React-based wizard for guided project setup:
 
 ### 2. State Management System
 
-**StateManager** (`src/utils/stateManager.ts`):
+**StateManager** (`src/core/state/stateManager.ts`):
 - Persists project configuration in `.demo-builder.json`
 - Tracks component instances, versions, and status
 - Manages workspace state via VS Code API
@@ -326,11 +330,13 @@ npm run package
 
 ### Adding New Utilities
 
-1. Create utility file in `src/utils/`
-2. Export from `src/utils/index.ts`
+Prefer adding to `src/features/<feature>/services/` or `src/core/utils/` rather than the legacy `src/utils/` directory (being phased out).
+
+1. Create utility file in the relevant feature or core module
+2. Export from the feature's `index.ts`
 3. Add TypeScript types
-4. Document in `src/utils/CLAUDE.md`
-5. Add unit tests (future)
+4. Document in the feature's CLAUDE.md or README
+5. Add unit tests
 
 ## File Organization
 
@@ -344,23 +350,18 @@ demo-builder-vscode/
 │   │   ├── stopDemo.ts              # Stop demo
 │   │   ├── deployMesh.ts            # Deploy mesh
 │   │   └── checkUpdates.ts          # Auto-update
-│   ├── utils/                    # Core utilities
-│   │   ├── stateManager.ts          # State persistence
-│   │   ├── adobeAuthManager.ts      # Adobe auth
-│   │   ├── componentManager.ts      # Component lifecycle
-│   │   ├── updateManager.ts         # Update checking
-│   │   ├── componentUpdater.ts      # Component updates
-│   │   └── stalenessDetector.ts     # Mesh staleness
+│   ├── utils/                    # Legacy utilities (being phased out — prefer src/features/ or src/core/)
 │   ├── providers/                # VS Code providers
 │   │   ├── projectTreeProvider.ts   # Project tree view
 │   │   ├── componentTreeProvider.ts # Component browser
 │   │   └── statusBar.ts             # Status bar
-│   ├── webviews/                 # React applications
-│   │   ├── app/                     # Wizard app
-│   │   ├── welcome/                 # Welcome screen
-│   │   ├── dashboard/               # Project dashboard
-│   │   └── components/              # Shared components
+│   ├── features/project-creation/ui/ # Wizard React app (entry point)
 │   └── types/                    # TypeScript definitions
+├── webview-ui/src/               # Webview React apps (outside src/)
+│   ├── welcome/                     # Welcome screen
+│   ├── dashboard/                   # Project dashboard
+│   ├── configure/                   # Project configuration UI
+│   └── shared/                      # Shared utilities (WebviewClient)
 ├── docs/                         # Documentation
 │   ├── architecture/                # Architecture docs
 │   ├── patterns/                    # Design patterns

@@ -216,10 +216,10 @@ describe('WizardContainer - Navigation', () => {
             await user.click(getButton());
             await screen.findByTestId('prerequisites-step', {}, { timeout: 1000 });
 
-            // prerequisites → settings (component-config)
+            // prerequisites → settings (connect-store)
             // Note: api-mesh step is disabled, so we skip directly to settings
             await user.click(getButton());
-            await screen.findByTestId('component-config-step', {}, { timeout: 1000 });
+            await screen.findByTestId('connect-store-step', {}, { timeout: 1000 });
 
             // settings → review
             await user.click(getButton());

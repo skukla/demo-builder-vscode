@@ -26,7 +26,7 @@ jest.mock('vscode', () => ({
 }), { virtual: true });
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000 },
+    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
 }));
 
 jest.mock('@/core/constants', () => ({
@@ -101,6 +101,10 @@ jest.mock('@/features/eds/services/storefrontStalenessDetector', () => ({
     updateStorefrontState: jest.fn(),
 }));
 
+jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+    updateMeshState: jest.fn(),
+}));
+
 jest.mock('@/features/eds/services/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
@@ -108,7 +112,7 @@ jest.mock('@/features/eds/services/configurationService', () => ({
     })),
     DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
     buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org: owner, site: repo, codeOwner: owner, codeRepo: repo,
+        org, site, codeOwner: owner, codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${org}/${site}/`,
     }),
 }));

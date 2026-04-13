@@ -132,10 +132,14 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 ```
 features/dashboard/
 ├── index.ts                     # Public API exports
+├── commands/
+│   ├── showDashboard.ts        # Project dashboard webview command
+│   └── configure.ts            # Configure project webview command
 ├── handlers/
 │   ├── index.ts                # Handler exports
-│   ├── dashboardHandlers.ts    # Message handlers
-│   └── HandlerRegistry.ts      # Handler registration
+│   ├── dashboardHandlers.ts    # Dashboard message handlers
+│   ├── configureHandlers.ts    # Configure screen handler map
+│   └── meshStatusHelpers.ts    # Mesh status helper functions
 └── README.md                   # This file
 ```
 
@@ -145,7 +149,7 @@ Dashboard Webview (React)
     │
     │ postMessage({ type: 'requestStatus' })
     ↓
-HandlerRegistry
+dashboardHandlers (handler map)
     ↓
 handleRequestStatus()
     ├─→ Get project

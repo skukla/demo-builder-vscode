@@ -18,6 +18,12 @@ import {
 } from '../services/dashboardStatusService';
 import { COMPONENT_IDS } from '@/core/constants';
 import { parseEnvFile } from '@/core/utils/envParser';
+import {
+    PAAS_URL, PAAS_GRAPHQL_ENDPOINT, PAAS_ENVIRONMENT_ID,
+    PAAS_STORE_VIEW_CODE, PAAS_WEBSITE_CODE, PAAS_STORE_CODE,
+    CATALOG_SERVICE_ENDPOINT, CATALOG_API_KEY,
+    ACCS_GRAPHQL_ENDPOINT, ACCS_WEBSITE_CODE, ACCS_STORE_CODE, ACCS_STORE_VIEW_CODE,
+} from '@/features/components/config/envVarKeys';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { Project, ComponentInstance } from '@/types';
 import { HandlerContext } from '@/types/handlers';
@@ -89,21 +95,21 @@ export function hasAdobeProjectContext(project: Project | null | undefined): pro
  * and is checked separately.
  */
 const REQUIRED_PAAS_MESH_ENV_VARS = [
-    'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
-    'ADOBE_CATALOG_SERVICE_ENDPOINT',
-    'ADOBE_COMMERCE_URL',
-    'ADOBE_COMMERCE_ENVIRONMENT_ID',
-    'ADOBE_COMMERCE_STORE_VIEW_CODE',
-    'ADOBE_COMMERCE_WEBSITE_CODE',
-    'ADOBE_COMMERCE_STORE_CODE',
-    'ADOBE_CATALOG_API_KEY',
+    PAAS_GRAPHQL_ENDPOINT,
+    CATALOG_SERVICE_ENDPOINT,
+    PAAS_URL,
+    PAAS_ENVIRONMENT_ID,
+    PAAS_STORE_VIEW_CODE,
+    PAAS_WEBSITE_CODE,
+    PAAS_STORE_CODE,
+    CATALOG_API_KEY,
 ];
 
 const REQUIRED_ACCS_MESH_ENV_VARS = [
-    'ACCS_GRAPHQL_ENDPOINT',
-    'ACCS_WEBSITE_CODE',
-    'ACCS_STORE_CODE',
-    'ACCS_STORE_VIEW_CODE',
+    ACCS_GRAPHQL_ENDPOINT,
+    ACCS_WEBSITE_CODE,
+    ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE,
 ];
 
 /** Get required env vars based on mesh component type */

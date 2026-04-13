@@ -4,30 +4,32 @@
  * Exports the handler map and individual handlers.
  */
 
-// Export handler map (preferred - Step 3: Handler Registry Simplification)
+// Export handler map
 export { edsHandlers } from './edsHandlers';
 
-// Export individual handlers (backward compatibility)
+// Export individual handlers
+export { handleValidateAccsCredentials, handleDiscoverStoreStructure } from './edsHandlers';
 export {
     handleCheckGitHubAuth,
     handleGitHubOAuth,
     handleGitHubChangeAccount,
     handleGetGitHubRepos,
+    handleVerifyGitHubRepo,
+    handleCreateGitHubRepo,
+} from './edsGitHubHandlers';
+export {
+    handleVerifyDaLiveOrg,
     handleGetDaLiveSites,
     handleListDaLiveOrgs,
-    handleVerifyDaLiveOrg,
-    handleVerifyGitHubRepo,
-    handleValidateAccsCredentials,
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,
     handleStoreDaLiveTokenWithOrg,
     handleClearDaLiveAuth,
-    handleCreateGitHubRepo,
-    clearServiceCache,
-} from './edsHandlers';
+} from './edsDaLiveHandlers';
+export { clearServiceCache } from './edsHandlers';
 
-// Export storefront setup handlers (renamed from preflight)
+// Export storefront setup handlers
 export {
     handleStartStorefrontSetup,
     handleCancelStorefrontSetup,

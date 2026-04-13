@@ -14,7 +14,6 @@ interface ReviewState {
     adobeOrg?: { id?: string };
     adobeProject?: { id?: string };
     adobeWorkspace?: { id?: string };
-    selectedStack?: string;
     selectedOptionalDependencies?: string[];
 }
 
@@ -23,13 +22,12 @@ interface ReviewState {
  *
  * Required:
  * - Project name (non-empty)
- * - Adobe organization, project, and workspace (only when mesh is included)
+ * - Adobe organization, project, and workspace (when mesh is included)
  */
 export function hasRequiredReviewData(state: ReviewState): boolean {
     if (!state.projectName) return false;
 
-    // Adobe I/O selections only required when mesh is included.
-    // Mesh is always in optionalDependencies (never in required stack dependencies).
+    // Adobe I/O selections required when mesh is included
     const deps = [...(state.selectedOptionalDependencies || [])];
     if (hasMeshInDependencies(deps)) {
         if (!state.adobeOrg?.id) return false;

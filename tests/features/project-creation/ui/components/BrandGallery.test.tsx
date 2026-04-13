@@ -88,8 +88,6 @@ const comingSoonPackage: DemoPackage = {
  * Uses fake timers to handle the 200ms step transition.
  */
 function openBlockLibrariesStep(props: Record<string, unknown> = {}) {
-    jest.useFakeTimers();
-
     const onPackageSelect = jest.fn();
     const onStackSelect = jest.fn();
     const onAddonsChange = jest.fn();
@@ -127,8 +125,6 @@ function openBlockLibrariesStep(props: Record<string, unknown> = {}) {
     act(() => {
         jest.advanceTimersByTime(250);
     });
-
-    jest.useRealTimers();
 
     return {
         ...result,
@@ -192,6 +188,9 @@ describe('BrandGallery', () => {
     });
 
     describe('custom block libraries (checkbox UX)', () => {
+        beforeEach(() => jest.useFakeTimers());
+        afterEach(() => jest.useRealTimers());
+
         const mockCustomDefaults: CustomBlockLibrary[] = [
             { name: 'Acme Blocks', source: { owner: 'acme', repo: 'custom-blocks', branch: 'main' } },
             { name: 'Beta Lib', source: { owner: 'beta-org', repo: 'beta-blocks', branch: 'main' } },
@@ -280,11 +279,12 @@ describe('BrandGallery', () => {
                 // Defaults will be pre-selected (fallback behavior)
             });
 
+            // openBlockLibrariesStep leaves us on block-libraries step (last step for EDS)
             // Click Done on the block-libraries step
             const doneButton = screen.getByText('Done');
             fireEvent.click(doneButton);
 
-            // Custom libraries should be synced to parent
+            // Custom libraries should be synced to parent via handleModalDone
             expect(onCustomBlockLibrariesChange).toHaveBeenCalledWith(mockCustomDefaults);
         });
     });

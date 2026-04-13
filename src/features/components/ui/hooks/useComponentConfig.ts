@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { findComponentById } from '@/core/ui/utils/componentDataHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
+import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import { toServiceGroupWithSortedFields, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
 import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
-import { ComponentEnvVar, ComponentConfigs, WizardState } from '@/types/webview';
+import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
 
 const log = webviewLogger('useComponentConfig');
 
@@ -57,10 +58,12 @@ export interface ServiceGroup {
     fields: UniqueField[];
 }
 
-interface UseComponentConfigProps {
-    state: WizardState;
-    updateState: (updates: Partial<WizardState>) => void;
-    setCanProceed: (canProceed: boolean) => void;
+export interface UseComponentConfigProps {
+    selectedStack?: string;
+    componentConfigs: ComponentConfigs;
+    packageConfigDefaults?: Record<string, string>;
+    onConfigsChange: (configs: ComponentConfigs) => void;
+    onValidationChange: (allValid: boolean) => void;
 }
 
 interface UseComponentConfigReturn {
@@ -72,7 +75,6 @@ interface UseComponentConfigReturn {
     touchedFields: Set<string>;
     updateField: (field: UniqueField, value: string | boolean) => void;
     getFieldValue: (field: UniqueField) => string | boolean | undefined;
-    markFieldTouched: (fieldKey: string) => void;
     /** Normalize URL field on blur (removes trailing slashes for visual feedback) */
     normalizeUrlField: (field: UniqueField) => void;
 }
@@ -111,11 +113,13 @@ function applyFieldDefaults(
 }
 
 export function useComponentConfig({
-    state,
-    updateState,
-    setCanProceed,
+    selectedStack,
+    componentConfigs: initialConfigs,
+    packageConfigDefaults,
+    onConfigsChange,
+    onValidationChange,
 }: UseComponentConfigProps): UseComponentConfigReturn {
-    const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(state.componentConfigs || {});
+    const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(initialConfigs || {});
     const [hasInitializedFromState, setHasInitializedFromState] = useState(false);
     const [componentsData, setComponentsData] = useState<ComponentsData>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -123,16 +127,22 @@ export function useComponentConfig({
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
 
-    // Sync imported configs from state (handles case where state arrives after first render)
+    // Stable refs for callbacks to avoid re-render loops in effects
+    const onConfigsChangeRef = useRef(onConfigsChange);
+    onConfigsChangeRef.current = onConfigsChange;
+    const onValidationChangeRef = useRef(onValidationChange);
+    onValidationChangeRef.current = onValidationChange;
+
+    // Sync imported configs from props (handles case where configs arrive after first render)
     useEffect(() => {
-        if (!hasInitializedFromState && state.componentConfigs && Object.keys(state.componentConfigs).length > 0) {
-            log.info('Syncing componentConfigs from state', {
-                configKeys: Object.keys(state.componentConfigs),
+        if (!hasInitializedFromState && initialConfigs && Object.keys(initialConfigs).length > 0) {
+            log.info('Syncing componentConfigs from props', {
+                configKeys: Object.keys(initialConfigs),
             });
             setComponentConfigs(prev => {
-                // Merge: state configs take priority, but preserve any user edits
-                const merged = { ...state.componentConfigs };
-                // Keep any keys that exist in prev but not in state (user edits)
+                // Merge: incoming configs take priority, but preserve any user edits
+                const merged = { ...initialConfigs };
+                // Keep any keys that exist in prev but not in incoming (user edits)
                 for (const key of Object.keys(prev)) {
                     if (!merged[key]) {
                         merged[key] = prev[key];
@@ -142,14 +152,14 @@ export function useComponentConfig({
             });
             setHasInitializedFromState(true);
         }
-    }, [state.componentConfigs, hasInitializedFromState]);
+    }, [initialConfigs, hasInitializedFromState]);
 
     // Load components data
     useEffect(() => {
         const loadData = async () => {
             try {
                 const response = await vscode.request<{ success: boolean; type: string; data: ComponentsData }>('get-components-data');
-                const data = (response as { success: boolean; type: string; data: ComponentsData }).data;
+                const data = response.data;
                 setComponentsData(data);
                 setIsLoading(false);
             } catch (error) {
@@ -167,7 +177,7 @@ export function useComponentConfig({
         const components: Array<{ id: string; data: ComponentData; type: string }> = [];
 
         // Get stack directly from config - no derivation needed
-        const stack = state.selectedStack ? getStackById(state.selectedStack) : undefined;
+        const stack = selectedStack ? getStackById(selectedStack) : undefined;
         if (!stack) return components;
 
         const addComponentWithDeps = (comp: ComponentData, type: string) => {
@@ -228,12 +238,13 @@ export function useComponentConfig({
         });
 
         return components;
-    }, [state.selectedStack, componentsData]);
+    }, [selectedStack, componentsData]);
 
     // Build service groups from selected components
     const serviceGroups = useMemo(() => {
         const fieldMap = new Map<string, UniqueField>();
         const envVarDefs = componentsData.envVars || {};
+        const stack = selectedStack ? getStackById(selectedStack) : undefined;
 
         selectedComponents.forEach(({ id, data }) => {
             const addField = (envVarKey: string) => {
@@ -263,8 +274,6 @@ export function useComponentConfig({
 
             // Add backend-specific service env vars using inline resolution
             // (This logic mirrors resolveComponentEnvVars but uses browser-loaded componentsData)
-            // Get backend from stack directly - no derivation needed
-            const stack = state.selectedStack ? getStackById(state.selectedStack) : undefined;
             if (data.configuration?.requiredServices && stack?.backend) {
                 const backendId = stack.backend;
                 data.configuration.requiredServices.forEach(serviceId => {
@@ -289,7 +298,7 @@ export function useComponentConfig({
             groups[groupKey].push(field);
         });
 
-            return SERVICE_GROUP_DEFINITIONS
+        return SERVICE_GROUP_DEFINITIONS
             .map(def => toServiceGroupWithSortedFields(def, groups))
             .filter(group => group.fields.length > 0)
             .sort((a, b) => {
@@ -297,21 +306,21 @@ export function useComponentConfig({
                 const bOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === b.id)?.order || 99;
                 return aOrder - bOrder;
             });
-    }, [selectedComponents, componentsData.envVars, componentsData.services, state.selectedStack]);
+    }, [selectedComponents, componentsData.envVars, componentsData.services, selectedStack]);
 
     // Initialize defaults (field defaults + brand-specific defaults)
     useEffect(() => {
         if (serviceGroups.length === 0) return;
 
-        setComponentConfigs(prevConfigs => applyFieldDefaults(prevConfigs, serviceGroups, state.packageConfigDefaults));
-    }, [serviceGroups, state.packageConfigDefaults]);
+        setComponentConfigs(prevConfigs => applyFieldDefaults(prevConfigs, serviceGroups, packageConfigDefaults));
+    }, [serviceGroups, packageConfigDefaults]);
 
     // Note: Auto-fill mesh endpoint effect removed - MESH_ENDPOINT is now auto-configured
     // during project creation (after mesh deployment), not collected in Settings Collection
 
     // Validation
     useEffect(() => {
-        updateState({ componentConfigs });
+        onConfigsChangeRef.current(componentConfigs);
 
         let allValid = true;
         const errors: Record<string, string> = {};
@@ -362,8 +371,8 @@ export function useComponentConfig({
         });
 
         setValidationErrors(errors);
-        setCanProceed(allValid);
-    }, [componentConfigs, serviceGroups, updateState, setCanProceed]);
+        onValidationChangeRef.current(allValid);
+    }, [componentConfigs, serviceGroups]);
 
     const updateField = useCallback((field: UniqueField, value: string | boolean) => {
         setTouchedFields(prev => new Set(prev).add(field.key));
@@ -374,10 +383,10 @@ export function useComponentConfig({
                 newConfigs[componentId][field.key] = value;
             });
 
-            // Linked field: ADOBE_COMMERCE_URL → ADOBE_COMMERCE_GRAPHQL_ENDPOINT
+            // Linked field: PAAS_URL → PAAS_GRAPHQL_ENDPOINT
             // Only auto-derive if GraphQL hasn't been manually touched
-            if (field.key === 'ADOBE_COMMERCE_URL' && typeof value === 'string') {
-                const graphqlKey = 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT';
+            if (field.key === PAAS_URL && typeof value === 'string') {
+                const graphqlKey = PAAS_GRAPHQL_ENDPOINT;
                 if (!touchedFields.has(graphqlKey)) {
                     const derivedGraphql = deriveGraphqlEndpoint(value);
                     field.componentIds.forEach(componentId => {
@@ -407,10 +416,6 @@ export function useComponentConfig({
         if (field.default !== undefined && field.default !== '') return field.default;
         return '';
     }, [componentConfigs, touchedFields]);
-
-    const markFieldTouched = useCallback((fieldKey: string) => {
-        setTouchedFields(prev => new Set(prev).add(fieldKey));
-    }, []);
 
     /**
      * Normalize URL field on blur - removes trailing slashes for visual feedback.
@@ -454,7 +459,6 @@ export function useComponentConfig({
         touchedFields,
         updateField,
         getFieldValue,
-        markFieldTouched,
         normalizeUrlField,
     };
 }

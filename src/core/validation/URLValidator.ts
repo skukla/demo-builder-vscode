@@ -98,8 +98,16 @@ export function validateURL(url: string, allowedProtocols: string[] = ['https'])
         // Prevent localhost/private IPs (SSRF protection)
         const hostname = parsed.hostname.toLowerCase();
 
-        // Check for localhost variants
-        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]') {
+        // Check for localhost variants (including 0.0.0.0 and unspecified IPv6 ::)
+        if (
+            hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname === '[::1]' ||
+            hostname === '0.0.0.0' ||
+            hostname === '[::]' ||
+            hostname === '[::ffff:127.0.0.1]' ||
+            hostname === '[::ffff:0.0.0.0]'
+        ) {
             throw new Error('URLs pointing to localhost are not allowed');
         }
 
