@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.109] - 2026-04-13
+
 ### Fixed
 - **Config Service lookup key**: `buildSiteConfigParams` now uses DA.live org/site as the Configuration Service lookup key instead of GitHub repo identifiers. The da.live editor resolves preview URLs from the DA.live site path; using GitHub identifiers caused "invalid fstab" errors when the site name differed from the repo name.
 - **fstab input validation**: `generateFstabContent` validates `daLiveOrg` and `daLiveSite` for characters unsafe in URL path segments (newlines, whitespace, colons) before constructing the mountpoint URL.
