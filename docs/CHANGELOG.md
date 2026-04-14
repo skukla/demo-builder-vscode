@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.110] - 2026-04-14
+
+### Changed
+- **Build: webpack → esbuild for webview bundles**: Replaces webpack's 4-bundle code-split output (runtime + vendors + common + feature) with a single self-contained esbuild IIFE bundle per webview entry point. VSIX size drops from 15.3 MB to 5.8 MB (62% reduction, 528 files → 68 files).
+
 ## [1.0.0-beta.109] - 2026-04-13
 
 ### Fixed
