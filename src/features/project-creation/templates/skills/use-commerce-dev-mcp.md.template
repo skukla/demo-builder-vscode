@@ -1,0 +1,35 @@
+# Use Commerce Dev MCP
+
+The `adobe-commerce-dev` MCP provides GraphQL schema introspection for Adobe Commerce.
+
+## No authentication required
+
+This MCP works offline against a bundled Commerce GraphQL schema — no Commerce instance,
+API keys, or network access needed.
+
+## This project's Commerce endpoint
+
+- **Commerce URL:** {commerceEndpoint}
+- **Store view:** {storeViewCode}
+
+## Available tools
+
+| Tool | Description |
+|---|---|
+| `introspect_admin_schema` | Introspect the Commerce Admin GraphQL schema |
+| `introspect_storefront_schema` | Introspect the Storefront GraphQL schema |
+| `get_type` | Get the definition of a specific GraphQL type |
+
+## Example
+
+```
+> adobe-commerce-dev::introspect_storefront_schema
+> adobe-commerce-dev::get_type name="ProductInterface"
+```
+
+## Notes
+
+- The bundled schema is based on Adobe Commerce 2.4.7 (current LTS).
+- Use introspection to understand available fields before writing mutations.
+- For live data queries, use the actual Commerce GraphQL endpoint directly with the
+  credentials from your project's component `.env` file.

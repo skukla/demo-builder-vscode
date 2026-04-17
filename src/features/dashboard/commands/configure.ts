@@ -1,18 +1,19 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { configureHandlers } from '../handlers/configureHandlers';
+import { mergeEnvValuesFromSources } from './configureEnvLoader';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ServiceLocator } from '@/core/di';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { normalizeIfUrl } from '@/core/validation/Validator';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
-import { configureHandlers } from '../handlers/configureHandlers';
-import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project } from '@/types';
@@ -38,6 +39,8 @@ interface ConfigureInitialData {
     };
     existingEnvValues: Record<string, Record<string, string>>;
     existingProjectNames: string[];
+    extensionDistPath: string;
+    activeView?: 'configure' | 'ai-setup';
 }
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
@@ -68,7 +71,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         return 'Loading project configuration...';
     }
 
-    public async execute(): Promise<void> {
+    public async execute(options?: { activeView?: 'configure' | 'ai-setup' }): Promise<void> {
         try {
             // Get current project
             const project = await this.stateManager.getCurrentProject();
@@ -76,6 +79,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 await this.showWarning('No project found to configure.');
                 return;
             }
+
+            // Store requested view so getInitialData() can include it
+            this._requestedActiveView = options?.activeView;
 
             // Create or reveal the webview panel
             await this.createOrRevealPanel();
@@ -85,11 +91,14 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 await this.initializeCommunication();
             }
 
-            this.logger.debug(`[Configure] Opened configuration for project: ${project.name}`);
+            this.logger.debug(`[Configure] Opened configuration for project: ${project.name}${options?.activeView ? ` (view: ${options.activeView})` : ''}`);
         } catch (error) {
             await this.showError('Failed to open configuration', error as Error);
         }
     }
+
+    /** Active view requested via execute() options — forwarded to webview as initial data. */
+    private _requestedActiveView?: 'configure' | 'ai-setup';
 
     protected async getWebviewContent(): Promise<string> {
         if (!this.panel) {
@@ -153,6 +162,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             componentsData,
             existingEnvValues,
             existingProjectNames,
+            extensionDistPath: path.join(this.context.extensionPath, 'dist'),
+            activeView: this._requestedActiveView,
         };
     }
 
@@ -271,41 +282,19 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         }
 
         // Also read project root .env for values from non-installed components
-        // (e.g., backend configs like adobe-commerce-accs that don't have componentInstances)
-        // These values are merged into project.componentConfigs which the UI also checks
+        // (e.g., backend configs like adobe-commerce-accs that don't have componentInstances).
+        // Non-installed components may also store values exclusively in .demo-builder.json —
+        // the merge helper handles both sources with the correct precedence.
+        let rootEnvValues: Record<string, string> = {};
         try {
             const rootEnvPath = path.join(project.path, '.env');
             const rootEnvContent = await fs.readFile(rootEnvPath, 'utf-8');
-            const rootEnvValues = parseEnvFile(rootEnvContent);
-
-            // Merge root .env values into any componentConfigs that exist in project state
-            // but don't have componentInstances (non-installed components like backends)
-            if (project.componentConfigs) {
-                for (const [componentId, config] of Object.entries(project.componentConfigs)) {
-                    // Skip components that already have loaded env values
-                    if (envValues[componentId] && Object.keys(envValues[componentId]).length > 0) {
-                        continue;
-                    }
-
-                    // For components without instances, use their config keys to extract
-                    // corresponding values from root .env
-                    const componentEnv: Record<string, string> = {};
-                    for (const key of Object.keys(config)) {
-                        if (rootEnvValues[key] !== undefined) {
-                            componentEnv[key] = rootEnvValues[key];
-                        }
-                    }
-
-                    if (Object.keys(componentEnv).length > 0) {
-                        envValues[componentId] = componentEnv;
-                    }
-                }
-            }
+            rootEnvValues = parseEnvFile(rootEnvContent);
         } catch {
-            // Root .env doesn't exist or can't be read - that's fine
+            // Root .env doesn't exist or can't be read — fall through to manifest-only values.
         }
 
-        return envValues;
+        return mergeEnvValuesFromSources(envValues, rootEnvValues, project.componentConfigs ?? {});
     }
 
 
@@ -674,5 +663,3 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 }
-
-

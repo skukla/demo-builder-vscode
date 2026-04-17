@@ -201,6 +201,28 @@ export class CommandManager {
         );
         this.registerCommand('demoBuilder.checkForUpdates', () => checkUpdates.execute());
 
+        // Navigate — internal routing command for sidebar nav clicks.
+        // Intentionally omitted from package.json contributions (not user-facing).
+        this.registerCommand('demoBuilder.navigate', async (...args: unknown[]) => {
+            const payload = args[0] as { target?: string } | undefined;
+            switch (payload?.target) {
+                case 'overview':
+                    await projectDashboard.execute();
+                    break;
+                case 'configure':
+                    await configureProject.execute();
+                    break;
+                case 'ai-setup':
+                    await configureProject.execute({ activeView: 'ai-setup' });
+                    break;
+                case 'updates':
+                    await checkUpdates.execute();
+                    break;
+                default:
+                    this.logger.warn(`[Navigate] Unknown target: ${payload?.target}`);
+            }
+        });
+
         // Reset All (Development only)
         if (this.context.extensionMode === vscode.ExtensionMode.Development) {
             const resetAll = new ResetAllCommand(

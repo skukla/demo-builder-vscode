@@ -1,0 +1,374 @@
+/**
+ * Demo Builder MCP Server
+ *
+ * Standalone Node.js process (not VS Code extension host) that exposes
+ * Demo Builder project tools to AI agents via the MCP protocol.
+ *
+ * IMPORTANT: This file MUST NOT import 'vscode' — it runs as a separate
+ * process and the vscode API is unavailable.
+ *
+ * Started by the MCP client (Claude Code, Cursor, Codex CLI) with:
+ *   DEMO_BUILDER_PROJECT_PATH=/path/to/project node dist/mcp-server.js
+ */
+
+import * as childProcess from 'child_process';
+import * as fsPromises from 'fs/promises';
+import * as path from 'path';
+import { promisify } from 'util';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod';
+
+const execFile = promisify(childProcess.execFile);
+
+// Maximum number of files returned by getBlockSource — prevents unbounded memory use
+// when a block directory contains many large assets.
+const MAX_BLOCK_FILES = 50;
+// Maximum bytes read per file — prevents oversized MCP responses from vendored or minified assets.
+const MAX_FILE_BYTES = 100_000; // 100 KB
+
+// ─── Error boundary ──────────────────────────────────────────────────────────
+
+// Local definition: cannot import from @/core/handlers — that module transitively
+// imports vscode, which is unavailable in this standalone process.
+/** @internal — exported only for unit tests; not part of the public API */
+export async function wrapHandler<T>(
+    fn: () => Promise<T>,
+): Promise<{ content: Array<{ type: 'text'; text: string }>; isError?: boolean }> {
+    try {
+        const result = await fn();
+        return { content: [{ type: 'text', text: String(result) }] };
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { content: [{ type: 'text', text: msg }], isError: true };
+    }
+}
+
+// ─── Security helpers ─────────────────────────────────────────────────────────
+
+async function assertInsideProject(
+    projectPath: string,
+    resolved: string,
+): Promise<{ realProjectPath: string; realResolved: string }> {
+    // Canonicalize both paths so symlinks (e.g. macOS /tmp → /private/tmp) don't
+    // cause the prefix check to fail for legitimate paths. The canonical paths are
+    // returned so callers can pass them to isAllowedConfigPath — ensuring the allowlist
+    // check operates on the actual filesystem target, not a lexical (pre-symlink) path.
+    let realProjectPath: string;
+    try {
+        realProjectPath = await fsPromises.realpath(projectPath);
+    } catch {
+        realProjectPath = projectPath;
+    }
+    // Two-branch resolution for `resolved`:
+    //   1. realpath(resolved)          — file exists; resolves all symlinks
+    //   2. realpath(parent) + basename — file is new (ENOENT) but parent exists; catches intermediate symlinks
+    //   If the parent also doesn't exist, the path cannot be safely verified — reject the operation.
+    let realResolved: string;
+    try {
+        realResolved = await fsPromises.realpath(resolved);
+    } catch {
+        // Path doesn't exist yet (new file being written).
+        // Canonicalize the parent directory to catch intermediate symlinks pointing outside the project.
+        try {
+            const realParent = await fsPromises.realpath(path.dirname(resolved));
+            realResolved = path.join(realParent, path.basename(resolved));
+        } catch {
+            // Parent also doesn't exist — cannot safely canonicalize; reject rather than allow
+            // an unverified lexical check that could pass for symlinks pointing outside the project.
+            throw new Error(`Cannot verify path safety: parent directory does not exist for ${resolved}`);
+        }
+    }
+    if (!realResolved.startsWith(realProjectPath + path.sep) && realResolved !== realProjectPath) {
+        throw new Error(`Path escapes project directory: ${realResolved}`);
+    }
+    return { realProjectPath, realResolved };
+}
+
+// Values that pass this regex are safe to source unquoted — no shell expansion, no
+// word splitting, no glob, no redirection, no command invocation. The allowlist is
+// intentionally narrow: URL query strings (with `?` or `&`), values with whitespace,
+// tildes, and other common but unsafe characters must be quoted.
+const SAFE_UNQUOTED_VALUE = /^[A-Za-z0-9_.:/@+,=%-]*$/;
+// Single-quoted values are literal — no expansion, no escape processing. Embedded
+// single quotes would close the quoting, so they are disallowed.
+const SINGLE_QUOTED_VALUE = /^'[^']*'$/;
+// Double-quoted values permit most characters, but `$`, backtick, and `\` trigger
+// expansion/escaping on source. Disallow all three to keep the value inert.
+const DOUBLE_QUOTED_VALUE_NO_EXPANSION = /^"[^"$`\\]*"$/;
+
+/**
+ * Validate the content of a .env file before writing.
+ *
+ * Allowlist approach (supersedes prior denylist). A value is accepted if and only if:
+ *   - It is empty (`KEY=`), OR
+ *   - It matches {@link SAFE_UNQUOTED_VALUE}: alphanumeric + `_.:/@+,=%-`, OR
+ *   - It is single-quoted with no embedded `'`, OR
+ *   - It is double-quoted with no `$`, backtick, or `\` inside.
+ *
+ * Defense-in-depth rationale: the MCP server lets AI agents write `.env` content that
+ * a user's startup scripts may then `source`. Denylist approaches (block `$(`, then
+ * `<(`, then `>`, then whitespace, then globs…) leak — three prior review iterations
+ * found four distinct bypasses, culminating in a confirmed RCE via the bash
+ * `VAR=value command args` assignment-prefix grammar. The allowlist closes that class
+ * of bypasses in one rule.
+ *
+ * Specific-category guards (subshell, process substitution, parameter expansion,
+ * shell metacharacters) still run for improved error messages — they help AI agents
+ * diagnose and correct their output. The allowlist is the final safety net.
+ *
+ * @throws {Error} on the first line that fails validation.
+ * @internal — exported only for unit tests
+ */
+export function validateEnvContent(content: string): void {
+    for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (trimmed === '' || trimmed.startsWith('#')) continue;
+        if (!/^[A-Za-z_][A-Za-z0-9_]*=/.test(trimmed)) {
+            throw new Error(
+                `Invalid .env line (must be KEY=VALUE, a comment, or blank): ${trimmed.slice(0, 80)}`,
+            );
+        }
+        const value = trimmed.slice(trimmed.indexOf('=') + 1);
+
+        // Quoted escape hatches — short-circuit on properly-formed quoted values so the
+        // specific guards below do not false-positive on literal `$(` inside single quotes.
+        if (SINGLE_QUOTED_VALUE.test(value) || DOUBLE_QUOTED_VALUE_NO_EXPANSION.test(value)) continue;
+
+        // Specific guards for clearer error messages on common dangerous unquoted patterns.
+        // These do not change the set of rejected values (the final allowlist already rejects
+        // them); they produce category-specific errors that help AI agents self-correct.
+        if (/\$\(/.test(value) || /`/.test(value)) {
+            throw new Error(`.env value must not contain subshell syntax ($(...) or backticks)`);
+        }
+        if (/[<>=]\(/.test(value)) {
+            throw new Error('.env value must not contain process substitution syntax (<(...), >(...), or =(...))');
+        }
+        if (/\$[A-Za-z_0-9@?!#*$\-{]/.test(value)) {
+            throw new Error('.env value must not contain shell parameter expansion ($VAR, ${VAR}, $1, $@, etc.)');
+        }
+        if (/[<>|&;]/.test(value)) {
+            throw new Error('.env value must not contain unquoted shell metacharacters (<, >, |, &, ;) — quote the value if it needs these characters');
+        }
+
+        // Allowlist backstop. Catches remaining dangerous grammar not hit by the specific
+        // guards above: whitespace (prefix-env command invocation `KEY=x whoami`), glob
+        // metacharacters (`*`, `?`, `[`), tilde expansion (`~`), brace expansion (`{a,b}`),
+        // deprecated arithmetic (`$[...]`), and any other character outside the safe set.
+        if (value === '' || SAFE_UNQUOTED_VALUE.test(value)) continue;
+        throw new Error(
+            `.env value must be safe-chars-only, single-quoted, or double-quoted without expansion: ${value.slice(0, 80)}`,
+        );
+    }
+}
+
+/**
+ * Check if a canonical path is on the allowlist. Both arguments must be canonicalized
+ * (via realpath) by the caller — otherwise a symlinked `.demo-builder.json` could pass
+ * this check while the actual write lands on the symlink target. `assertInsideProject`
+ * returns canonical paths for exactly this purpose.
+ */
+function isAllowedConfigPath(realProjectPath: string, realResolved: string): boolean {
+    if (realResolved === path.resolve(realProjectPath, '.demo-builder.json')) return true;
+    // Allow .env files anywhere inside the project, excluding node_modules and .git
+    // (AI agents need to update component .env files at any nesting level).
+    if (path.basename(realResolved) === '.env') {
+        const rel = path.relative(realProjectPath, realResolved);
+        const parts = rel.split(path.sep);
+        if (!rel.startsWith('..') && !parts.includes('node_modules') && !parts.includes('.git')) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ─── Tool handlers (exported for unit tests) ─────────────────────────────────
+
+/** @internal — exported only for unit tests; not part of the public API */
+export const toolHandlers = {
+    async getProject(projectPath: string): Promise<string> {
+        const jsonPath = path.join(projectPath, '.demo-builder.json');
+        try {
+            const raw = await fsPromises.readFile(jsonPath, 'utf-8');
+            return JSON.stringify(JSON.parse(raw), null, 2);
+        } catch (err) {
+            return `Error reading project state: ${err instanceof Error ? err.message : String(err)}`;
+        }
+    },
+
+    async getComponentConfig(projectPath: string, configRelPath: string): Promise<string> {
+        const resolved = path.resolve(projectPath, configRelPath);
+        // Allowlist check runs on canonical paths returned by assertInsideProject so a
+        // symlinked .demo-builder.json pointing at a sensitive file cannot bypass the guard.
+        const { realProjectPath, realResolved } = await assertInsideProject(projectPath, resolved);
+        if (!isAllowedConfigPath(realProjectPath, realResolved)) {
+            throw new Error(`Reading ${configRelPath} is not permitted. Allowed: .demo-builder.json, .env files.`);
+        }
+        return fsPromises.readFile(resolved, 'utf-8');
+    },
+
+    async updateProjectConfig(projectPath: string, configRelPath: string, content: string): Promise<string> {
+        const resolved = path.resolve(projectPath, configRelPath);
+        // Allowlist check runs on canonical paths returned by assertInsideProject so a
+        // symlinked .demo-builder.json pointing at a sensitive file cannot bypass the guard.
+        const { realProjectPath, realResolved } = await assertInsideProject(projectPath, resolved);
+        if (!isAllowedConfigPath(realProjectPath, realResolved)) {
+            throw new Error(`Writing to ${configRelPath} is not permitted. Allowed: .demo-builder.json, .env files.`);
+        }
+        // For .env files, validate content structure before writing to guard against
+        // subshell-executable content that shell-sourcing startup scripts may evaluate.
+        if (path.basename(realResolved) === '.env') {
+            validateEnvContent(content);
+        }
+        await fsPromises.mkdir(path.dirname(resolved), { recursive: true });
+        await fsPromises.writeFile(resolved, content, 'utf-8');
+        return `Updated ${configRelPath}`;
+    },
+
+    async syncStorefront(projectPath: string, storefrontPath: string, commitMessage: string): Promise<string> {
+        if (!path.isAbsolute(storefrontPath)) {
+            throw new Error(`storefrontPath must be an absolute path: ${storefrontPath}`);
+        }
+        await assertInsideProject(projectPath, storefrontPath);
+        // Guard against git -C traversing upward to a parent repo when storefrontPath is not a git root.
+        try {
+            await fsPromises.stat(path.join(storefrontPath, '.git'));
+        } catch {
+            throw new Error(`storefrontPath is not a git repository root: ${storefrontPath}`);
+        }
+        // Strip newlines to prevent git argument injection via crafted commit messages
+        const safeCommitMessage = commitMessage.replace(/[\n\r]/g, ' ').trim() || 'AI: sync files';
+        const git = (args: string[]) => execFile('git', ['-C', storefrontPath, ...args]);
+        await git(['add', '-A']);
+        try {
+            await git(['commit', '-m', safeCommitMessage]);
+        } catch (err) {
+            // execFile rejects with { stderr } when git exits non-zero
+            const stderr = (err as NodeJS.ErrnoException & { stderr?: string }).stderr ?? '';
+            const msg = err instanceof Error ? err.message : String(err);
+            if (stderr.includes('nothing to commit') || msg.includes('nothing to commit')) {
+                return 'Nothing to commit';
+            }
+            throw err;
+        }
+        await git(['push']);
+        return 'Storefront synced successfully';
+    },
+
+    async listBlocks(projectPath: string, storefrontPath: string): Promise<string> {
+        if (!path.isAbsolute(storefrontPath)) {
+            throw new Error(`storefrontPath must be an absolute path: ${storefrontPath}`);
+        }
+        await assertInsideProject(projectPath, storefrontPath);
+        const blocksDir = path.join(storefrontPath, 'blocks');
+        try {
+            const entries = await fsPromises.readdir(blocksDir, { withFileTypes: true });
+            return JSON.stringify(entries.filter(e => e.isDirectory()).map(e => e.name));
+        } catch {
+            return JSON.stringify([]);
+        }
+    },
+
+    async getBlockSource(projectPath: string, storefrontPath: string, blockName: string): Promise<string> {
+        if (!path.isAbsolute(storefrontPath)) {
+            throw new Error(`storefrontPath must be an absolute path: ${storefrontPath}`);
+        }
+        await assertInsideProject(projectPath, storefrontPath);
+        const resolved = path.resolve(path.join(storefrontPath, 'blocks'), blockName);
+        await assertInsideProject(path.join(storefrontPath, 'blocks'), resolved);
+        const entries = await fsPromises.readdir(resolved, { withFileTypes: true });
+        // isFile() returns false for symlinks in withFileTypes mode (Node.js ≥ 18) — this filter
+        // also guards against symlink traversal within the block directory without a separate realpath call.
+        const files = entries.filter(e => e.isFile()).slice(0, MAX_BLOCK_FILES);
+        const sources = await Promise.all(
+            files.map(async f => {
+                const filePath = path.join(resolved, f.name);
+                const { size } = await fsPromises.stat(filePath);
+                const content =
+                    size > MAX_FILE_BYTES
+                        ? `[truncated: ${size} bytes — file exceeds ${MAX_FILE_BYTES / 1000} KB]`
+                        : await fsPromises.readFile(filePath, 'utf-8');
+                return { name: f.name, content };
+            }),
+        );
+        return JSON.stringify(sources, null, 2);
+    },
+};
+
+// ─── MCP server wiring ────────────────────────────────────────────────────────
+
+// Only start the server when running as a standalone process (not in tests).
+if (process.env.NODE_ENV !== 'test') {
+    const PROJECT_PATH = process.env.DEMO_BUILDER_PROJECT_PATH ?? '';
+    if (!PROJECT_PATH || !path.isAbsolute(PROJECT_PATH)) {
+        process.stderr.write('DEMO_BUILDER_PROJECT_PATH must be set to an absolute path\n');
+        process.exit(1);
+    }
+
+    // Typed as `any` to avoid TS2589 (deep type instantiation with inline Zod schema inference).
+    // The MCP SDK validates all inputs at runtime — the cast is safe.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const server: any = new McpServer({ name: 'demo-builder', version: '1.0.0' });
+
+    server.registerTool('get_project', {
+        title: 'Get Project',
+        description: 'Read the Demo Builder project state (.demo-builder.json)',
+        inputSchema: {},
+    }, async () => wrapHandler(() => toolHandlers.getProject(PROJECT_PATH)));
+
+    // TypeScript hits a depth limit inferring the generic from inline Zod schemas.
+    // The `as any` cast on args is safe: values are validated by the MCP SDK at runtime.
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    server.registerTool('get_component_config', {
+        title: 'Get Component Config',
+        description: 'Read .demo-builder.json or a .env file within the project directory (path must not escape the project root)',
+        inputSchema: { configRelPath: z.string().describe('Relative path to config file within project') },
+    }, async (args: any) =>
+        wrapHandler(() => toolHandlers.getComponentConfig(PROJECT_PATH, args.configRelPath as string)));
+
+    server.registerTool('update_project_config', {
+        title: 'Update Project Config',
+        description: 'Write content to .demo-builder.json or a .env file inside the project directory (path must not escape the project root)',
+        inputSchema: {
+            configRelPath: z.string().describe('Relative path (.demo-builder.json or path to .env file)'),
+            content: z.string().max(1_000_000).describe('New file content'),
+        },
+    }, async (args: any) =>
+        wrapHandler(() => toolHandlers.updateProjectConfig(PROJECT_PATH, args.configRelPath as string, args.content as string)));
+
+    server.registerTool('sync_storefront', {
+        title: 'Sync Storefront',
+        description: 'Git add, commit, and push changes in the storefront directory',
+        inputSchema: {
+            storefrontPath: z.string().max(4096).describe('Absolute path to the storefront git repository'),
+            commitMessage: z.string().max(500).describe('Git commit message'),
+        },
+    }, async (args: any) =>
+        wrapHandler(() => toolHandlers.syncStorefront(PROJECT_PATH, args.storefrontPath as string, args.commitMessage as string)));
+
+    server.registerTool('list_blocks', {
+        title: 'List Blocks',
+        description: 'List all block directories in the storefront blocks/ directory',
+        inputSchema: { storefrontPath: z.string().max(4096).describe('Absolute path to the storefront root') },
+    }, async (args: any) =>
+        wrapHandler(() => toolHandlers.listBlocks(PROJECT_PATH, args.storefrontPath as string)));
+
+    server.registerTool('get_block_source', {
+        title: 'Get Block Source',
+        description: 'Read all source files for a named block in the storefront',
+        inputSchema: {
+            storefrontPath: z.string().max(4096).describe('Absolute path to the storefront root'),
+            blockName: z.string().regex(/^[a-zA-Z0-9_-]+$/).describe('Name of the block directory inside blocks/'),
+        },
+    }, async (args: any) =>
+        wrapHandler(() => toolHandlers.getBlockSource(PROJECT_PATH, args.storefrontPath as string, args.blockName as string)));
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+
+    (async () => {
+        const transport = new StdioServerTransport();
+        await server.connect(transport);
+    })().catch(err => {
+        process.stderr.write(`Fatal: ${(err as Error).message}\n`);
+        process.exit(1);
+    });
+}

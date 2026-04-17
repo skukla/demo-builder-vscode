@@ -64,6 +64,16 @@ export function useServiceGroups({
             });
         });
 
+        // MESH_ENDPOINT is auto-populated from project.meshState.endpoint — it's never
+        // user-editable and is declared as an optional env var on the EDS/headless
+        // frontends. When the project has no mesh component, rendering the field
+        // creates a spurious "API Mesh" section with a single uneditable empty row.
+        const meshComponentIds = new Set((componentsData.mesh ?? []).map(m => m.id));
+        const hasMeshSelected = selectedComponents.some(c => meshComponentIds.has(c.id));
+        if (!hasMeshSelected) {
+            fieldMap.delete('MESH_ENDPOINT');
+        }
+
         const groups: Record<string, UniqueField[]> = {};
 
         fieldMap.forEach((field) => {
@@ -86,5 +96,5 @@ export function useServiceGroups({
             });
 
         return orderedGroups;
-    }, [selectedComponents, componentsData.envVars]);
+    }, [selectedComponents, componentsData.envVars, componentsData.mesh]);
 }

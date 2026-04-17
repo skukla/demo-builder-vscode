@@ -1,0 +1,114 @@
+/**
+ * AI Setup Verifier
+ *
+ * Verifies that a project's AI context files are present and valid:
+ * - CLAUDE.md: exists and non-empty
+ * - .claude/mcp.json: exists, valid JSON, has mcpServers key
+ * - mcp-binary: dist/mcp-server.js present at extension dist path
+ * - skill-files: at least one .md in .claude/skills/
+ *
+ * Pure fs/promises — no VS Code imports, easily unit-tested.
+ */
+
+import * as fsPromises from 'fs/promises';
+import * as path from 'path';
+
+// ─── Public types ─────────────────────────────────────────────────────────────
+
+export interface AiCheckResult {
+    name: string;
+    status: 'ok' | 'warning' | 'error';
+    message?: string;
+}
+
+export interface AiVerificationResult {
+    status: 'ok' | 'warning' | 'error';
+    checks: AiCheckResult[];
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+export async function verifyAiSetup(
+    projectPath: string,
+    extensionDistPath: string,
+): Promise<AiVerificationResult> {
+    const checks = await Promise.all([
+        checkClaudeMd(projectPath),
+        checkMcpConfig(projectPath),
+        checkMcpBinary(extensionDistPath),
+        checkSkillFiles(projectPath),
+    ]);
+
+    return { status: aggregateStatus(checks), checks };
+}
+
+// ─── Individual checks ────────────────────────────────────────────────────────
+
+async function checkClaudeMd(projectPath: string): Promise<AiCheckResult> {
+    const filePath = path.join(projectPath, '.claude', 'CLAUDE.md');
+    try {
+        const content = await fsPromises.readFile(filePath, 'utf-8');
+        if (!content.trim()) {
+            return { name: 'CLAUDE.md', status: 'warning', message: 'File is empty — run Regenerate to fix' };
+        }
+        return { name: 'CLAUDE.md', status: 'ok' };
+    } catch {
+        return { name: 'CLAUDE.md', status: 'warning', message: 'Missing — run Regenerate to fix' };
+    }
+}
+
+async function checkMcpConfig(projectPath: string): Promise<AiCheckResult> {
+    const filePath = path.join(projectPath, '.claude', 'mcp.json');
+    let raw: string;
+    try {
+        raw = await fsPromises.readFile(filePath, 'utf-8');
+    } catch {
+        return { name: '.claude/mcp.json', status: 'warning', message: 'Missing — run Regenerate to fix' };
+    }
+
+    try {
+        const parsed = JSON.parse(raw);
+        if (!parsed.mcpServers) {
+            return { name: '.claude/mcp.json', status: 'warning', message: 'Missing mcpServers key — run Regenerate to fix' };
+        }
+        return { name: '.claude/mcp.json', status: 'ok' };
+    } catch {
+        return { name: '.claude/mcp.json', status: 'error', message: 'Invalid JSON — run Regenerate to fix' };
+    }
+}
+
+async function checkMcpBinary(extensionDistPath: string): Promise<AiCheckResult> {
+    const binaryPath = path.join(extensionDistPath, 'mcp-server.js');
+    try {
+        await fsPromises.access(binaryPath);
+        return { name: 'mcp-binary', status: 'ok' };
+    } catch {
+        return {
+            name: 'mcp-binary',
+            status: 'warning',
+            message: 'MCP server binary not found — run npm run build to compile it',
+        };
+    }
+}
+
+async function checkSkillFiles(projectPath: string): Promise<AiCheckResult> {
+    const skillsDir = path.join(projectPath, '.claude', 'skills');
+    try {
+        const entries = await fsPromises.readdir(skillsDir, { withFileTypes: true });
+        const mdFiles = entries.filter(e => e.isFile() && e.name.endsWith('.md'));
+        if (mdFiles.length === 0) {
+            return { name: 'skill-files', status: 'warning', message: 'No skill files found — run Regenerate to fix' };
+        }
+        return { name: 'skill-files', status: 'ok' };
+    } catch {
+        return { name: 'skill-files', status: 'warning', message: 'Skills directory missing — run Regenerate to fix' };
+    }
+}
+
+// ─── Aggregation ──────────────────────────────────────────────────────────────
+
+function aggregateStatus(checks: AiCheckResult[]): 'ok' | 'warning' | 'error' {
+    if (checks.some(c => c.status === 'error')) return 'error';
+    if (checks.some(c => c.status === 'warning')) return 'warning';
+    return 'ok';
+}

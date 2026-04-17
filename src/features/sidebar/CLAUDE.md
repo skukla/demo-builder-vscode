@@ -50,7 +50,7 @@ type SidebarContext =
 
 ### Project Detail Context
 - Header: Project name
-- Navigation: Overview, Configure, Updates
+- Navigation: Overview, Configure, Updates, AI Setup
 - Back button: "← Projects"
 
 ### Wizard Context
@@ -60,7 +60,7 @@ type SidebarContext =
 
 ### Configure Context
 - Header: Project name
-- Navigation: Overview, Configure (active), Updates
+- Navigation: Overview, Configure (active), Updates, AI Setup
 - Back button: "← Projects"
 
 ## Components
@@ -189,6 +189,7 @@ tests/features/sidebar/
 - **projects-dashboard** - Main content when sidebar shows projects context
 - **project-creation** - Wizard that updates sidebar context
 - **dashboard** - Project detail screen
+- **ai** - AI Setup nav item opens the Configure screen in `ai-setup` mode, rendering `AiSetupTab` from `@/features/dashboard/ui/tabs/AiSetupTab`
 
 ## Package.json Configuration
 

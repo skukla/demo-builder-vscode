@@ -1,0 +1,35 @@
+# Edit Block Library
+
+Use this skill to edit blocks that were installed from a block library.
+
+## Key insight
+
+Block library files are **copied** into `blocks/` at project creation — they are NOT
+separate local repositories. Edit them in place in the storefront repo.
+
+## Installed block libraries
+
+{libraryList}
+
+## Workflow
+
+1. Edit the block file(s) in `{storefrontLocalPath}/blocks/{block-name}/`.
+2. The PostToolUse hook commits and pushes automatically when you use Write or Edit.
+3. Helix picks up the push and updates the preview URL.
+4. For live publish, call `sync_content`.
+5. **Optional**: To contribute edits back to the source library, call `promote_block_to_library`.
+
+## Promoting changes upstream
+
+```
+> promote_block_to_library blockId="hero-cta" libraryId="isle5"
+```
+
+This opens a PR on the source library repo with your block changes. The library
+maintainer can review and merge, making the improvement available for all projects.
+
+## Notes
+
+- Use `list_blocks` to see all blocks in the storefront with their file inventory.
+- Use `get_block_source` to read a block's JS and CSS before editing.
+- Use `get_component_definition` to read the DA.live block picker definition.

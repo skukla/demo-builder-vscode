@@ -109,6 +109,16 @@ export const ExtensionMode = {
     Test: 3,
 };
 
+export const chat = {
+    createChatParticipant: jest.fn(() => ({ dispose: jest.fn() })),
+};
+
+export const CancellationTokenSource = jest.fn().mockImplementation(() => ({
+    token: { isCancellationRequested: false, onCancellationRequested: jest.fn() },
+    cancel: jest.fn(),
+    dispose: jest.fn(),
+}));
+
 export const commands = {
     registerCommand: jest.fn(),
     executeCommand: jest.fn(),

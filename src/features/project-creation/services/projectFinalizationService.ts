@@ -8,12 +8,19 @@
  * Note: Manifest writing is handled by ProjectConfigWriter (single source of truth).
  */
 
+import * as path from 'path';
 import * as vscode from 'vscode';
+import stacksConfig from '../config/stacks.json';
 import { ProgressTracker } from '../handlers/shared';
+import { writeClaudeMd } from './aiContextWriter';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
+import { writeMcpConfigs } from './mcpConfigWriter';
+import { writeSkillFiles } from './skillsWriter';
 import { isMeshComponentId } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { ProjectSetupContext, generateComponentConfigFiles } from '@/features/project-creation/helpers';
+import type { Project } from '@/types/base';
+import type { Stack } from '@/types/stacks';
 import { getComponentIds, getEntryCount } from '@/types/typeGuards';
 
 export interface FinalizationContext {
@@ -146,4 +153,38 @@ export async function sendCompletionAndCleanup(
     }
 
     logger.debug('[Project Creation] ===== PROJECT CREATION WORKFLOW COMPLETE =====');
+}
+
+/**
+ * Phase 6: Generate AI context files (.claude/CLAUDE.md, .claude/mcp.json, .claude/skills/)
+ *
+ * Reads AI settings from VS Code configuration and delegates to the three writers.
+ * Non-blocking by design — callers should wrap in try/catch and log warnings on failure.
+ *
+ * @param helixToken - Optional DA.live session token to auto-populate HELIX_ADMIN_API_TOKEN
+ *        in the AEM EDS MCP server config. Pass the stored DA.live token so users do not
+ *        have to manually retrieve it from admin.hlx.page/login.
+ */
+export async function generateAIContextFiles(
+    projectPath: string,
+    project: Project,
+    extensionPath: string,
+    helixToken?: string,
+): Promise<void> {
+    const config = vscode.workspace.getConfiguration('demoBuilder.ai');
+    const externalMcpServers: string[] = config.get('externalMcpServers') ?? ['da-live', 'adobe-commerce-dev'];
+    const mcpConfigTargets: string[] = config.get('mcpConfigTargets') ?? ['claude', 'cursor', 'codex'];
+    const includeBoilerplateSkills: boolean = config.get('includeBoilerplateSkills') ?? true;
+
+    const results = await Promise.allSettled([
+        writeClaudeMd(projectPath, project, stacksConfig.stacks as Stack[]),
+        writeMcpConfigs(projectPath, project, path.join(extensionPath, 'dist'), { externalMcpServers, mcpConfigTargets }, { helixToken }),
+        writeSkillFiles(projectPath, project, { externalMcpServers, includeBoilerplateSkills }),
+    ]);
+    const errors = results
+        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+        .map(r => (r.reason instanceof Error ? r.reason.message : String(r.reason)));
+    if (errors.length > 0) {
+        throw new Error(`AI context file generation failed: ${errors.join('; ')}`);
+    }
 }

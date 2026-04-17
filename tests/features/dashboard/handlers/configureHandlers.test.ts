@@ -27,6 +27,23 @@ jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
     extractTenantId: jest.fn(),
 }));
 
+// Mock AI setup verifier (via the feature barrel)
+jest.mock('@/features/ai', () => ({
+    verifyAiSetup: jest.fn(),
+}));
+
+// Mock AI context file generator
+jest.mock('@/features/project-creation/services', () => ({
+    generateAIContextFiles: jest.fn(),
+}));
+
+// Mock DA.live auth service (used by handleRegenerateAiFiles to get the helix token)
+jest.mock('@/features/eds/services/daLiveAuthService', () => ({
+    DaLiveAuthService: jest.fn().mockImplementation(() => ({
+        getAccessToken: jest.fn().mockResolvedValue('mock-da-live-token'),
+    })),
+}));
+
 // Mock vscode
 jest.mock('vscode', () => ({
     env: {
@@ -53,8 +70,12 @@ import {
     handleGetComponentsData,
     handleOpenExternal,
     handleOpenEdsSettings,
+    handleVerifyAiSetup,
+    handleRegenerateAiFiles,
 } from '@/features/dashboard/handlers/configureHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
+import { verifyAiSetup } from '@/features/ai';
+import { generateAIContextFiles } from '@/features/project-creation/services';
 import type { HandlerContext } from '@/types/handlers';
 
 // ==========================================================
@@ -80,6 +101,13 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
             debug: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
+        },
+        stateManager: {
+            getCurrentProject: jest.fn().mockResolvedValue({
+                name: 'Test Project',
+                path: '/projects/test',
+                stack: 'paas',
+            }),
         },
         sendMessage: jest.fn().mockResolvedValue(undefined),
         panel: {
@@ -111,12 +139,15 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'openExternal')).toBe(true);
             expect(hasHandler(configureHandlers, 'open-eds-settings')).toBe(true);
             expect(hasHandler(configureHandlers, 'discover-store-structure')).toBe(true);
+            expect(hasHandler(configureHandlers, 'sync-component-configs')).toBe(true);
             expect(hasHandler(configureHandlers, 'create-workspace-credential')).toBe(true);
+            expect(hasHandler(configureHandlers, 'verify-ai-setup')).toBe(true);
+            expect(hasHandler(configureHandlers, 'regenerate-ai-files')).toBe(true);
         });
 
-        it('should have exactly 6 handlers', () => {
+        it('should have exactly 9 handlers', () => {
             const types = getRegisteredTypes(configureHandlers);
-            expect(types).toHaveLength(6);
+            expect(types).toHaveLength(9);
         });
 
         it('should have all handlers as functions', () => {
@@ -181,6 +212,80 @@ describe('configureHandlers', () => {
                 'demoBuilder.daLive',
             );
             expect(result.success).toBe(true);
+        });
+    });
+
+    describe('handleVerifyAiSetup', () => {
+        it('calls verifyAiSetup with project.path from stateManager and extensionDistPath from context', async () => {
+            const mockResult = { status: 'ok', checks: [] };
+            (verifyAiSetup as jest.Mock).mockResolvedValue(mockResult);
+
+            const context = createMockContext();
+            const result = await handleVerifyAiSetup(context);
+
+            expect(verifyAiSetup).toHaveBeenCalledWith(
+                '/projects/test', // from stateManager.getCurrentProject().path
+                expect.stringContaining('mock/extension/path'), // derived from context.extensionPath
+            );
+            expect(result).toEqual(mockResult);
+        });
+
+        it('returns error when stateManager has no current project', async () => {
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(null),
+                } as unknown as HandlerContext['stateManager'],
+            });
+            const result = await handleVerifyAiSetup(context);
+
+            expect(verifyAiSetup).not.toHaveBeenCalled();
+            expect(result).toMatchObject({ success: false });
+        });
+
+        it('propagates errors from verifyAiSetup', async () => {
+            (verifyAiSetup as jest.Mock).mockRejectedValue(new Error('fs error'));
+
+            const context = createMockContext();
+            await expect(
+                handleVerifyAiSetup(context),
+            ).rejects.toThrow('fs error');
+        });
+    });
+
+    describe('handleRegenerateAiFiles', () => {
+        it('calls generateAIContextFiles using server-side project.path (ignores payload)', async () => {
+            (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
+            const mockProject = { name: 'Test Project', path: '/projects/test', stack: 'paas' };
+
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            // Pass a different path in payload — it should be ignored in favour of project.path
+            const result = await handleRegenerateAiFiles(context, { projectPath: '/attacker/path' });
+
+            expect(generateAIContextFiles).toHaveBeenCalledWith(
+                '/projects/test', // project.path from state, not payload
+                mockProject,
+                '/mock/extension/path',
+                'mock-da-live-token', // DA.live token passed automatically (no manual entry)
+            );
+            expect(result).toEqual({ success: true });
+        });
+
+        it('returns error when project is not found', async () => {
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(null),
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            const result = await handleRegenerateAiFiles(context, { projectPath: '/projects/test' });
+
+            expect(generateAIContextFiles).not.toHaveBeenCalled();
+            expect(result).toMatchObject({ success: false });
         });
     });
 });

@@ -198,6 +198,18 @@ describe('Sidebar', () => {
             const backButton = screen.getByRole('button', { name: /projects/i });
             expect(backButton).toBeInTheDocument();
         });
+
+        it('should render AI Setup nav item in configure context', () => {
+            renderWithProvider(
+                <Sidebar
+                    context={createConfigureContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                />
+            );
+
+            expect(screen.getByText('AI Setup')).toBeInTheDocument();
+        });
     });
 
     describe('Wizard context', () => {

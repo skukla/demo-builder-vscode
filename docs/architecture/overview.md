@@ -1,7 +1,7 @@
 # Adobe Demo Builder - Architecture Overview
 
-**Last Updated**: February 2026
-**Version**: 1.6.0
+**Last Updated**: April 2026
+**Version**: 1.7.0 (AI layer — Phase 1)
 **Status**: Current Production Architecture
 
 ## Executive Summary
@@ -38,7 +38,16 @@ The Adobe Demo Builder is a VS Code extension that streamlines the creation and 
 │  ├── Welcome Screen                                         │
 │  ├── Project Creation Wizard                               │
 │  ├── Project Dashboard                                     │
-│  └── Configuration Editor                                  │
+│  └── Configuration Editor (incl. AI Setup tab)            │
+├─────────────────────────────────────────────────────────────┤
+│  AI Context Layer (Phase 1 — standalone process)           │
+│  ├── aiContextWriter — Generates .claude/CLAUDE.md         │
+│  ├── skillsWriter — Writes .claude/skills/*.md guides      │
+│  ├── mcpConfigWriter — Generates .mcp.json + tool settings │
+│  └── MCP Server (dist/mcp-server.js) — 6 project tools    │
+│      get_project · get_component_config · update_project_  │
+│      config · sync_storefront · list_blocks · get_block_   │
+│      source                                                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -226,6 +235,22 @@ getCurrentOrganization() // SDK-powered, 1-minute cache
 
 **Purpose**: Detect when local mesh configuration differs from deployed mesh
 
+### 9. AI Context Layer (Phase 1)
+
+**Purpose**: Generate AI agent context files at project creation and on demand via the Configure → AI Setup tab.
+
+**Components**:
+- **`sanitization`** (`src/features/project-creation/services/sanitization.ts`): Shared sanitization helpers used by both `aiContextWriter` and `skillsWriter`. `sanitizeTemplateValue` strips `\n`, `\r`, and `#` from text fields. `sanitizeUrl` validates the `https://` protocol (non-https values become `[invalid URL]`) and strips `\n`, `\r`, and `]()` characters to prevent Markdown link injection. `sanitizeGithubSlug` restricts owner/repo slugs to alphanumeric, dot, dash, and slash.
+- **`aiContextWriter`** (`src/features/project-creation/services/aiContextWriter.ts`): Generates `.claude/CLAUDE.md` with project-specific context (GitHub repo, live/preview URLs, Commerce endpoint, block libraries). All user-supplied values pass through the shared sanitization helpers before interpolation.
+- **`skillsWriter`** (`src/features/project-creation/services/skillsWriter.ts`): Writes `.claude/skills/*.md` procedural guides for AI agents (sync content, edit blocks, update credentials, use external MCPs).
+- **`mcpConfigWriter`** (`src/features/project-creation/services/mcpConfigWriter.ts`): Generates `.mcp.json` (project root), `.claude/mcp.json`, and `.claude/settings.json` with the Demo Builder MCP server entry and a PostToolUse hook for auto-sync. Optionally generates `.cursor/mcp.json` and `.codex/mcp.json`.
+- **`aiSetupVerifier`** (`src/features/ai/aiSetupVerifier.ts`): Health-checks the four generated file types; used by the Configure → AI Setup tab.
+- **MCP Server** (`src/mcp-server.ts` → `dist/mcp-server.js`): Standalone stdio process (no VS Code dependency) exposing 6 project tools: `get_project`, `get_component_config`, `update_project_config`, `sync_storefront`, `list_blocks`, `get_block_source`.
+
+**Integration Point**: `projectFinalizationService.generateAIContextFiles()` orchestrates all three writers as Phase 6 of project creation. The Configure → AI Setup tab calls `verifyAiSetup()` to check health and offers regeneration.
+
+**Phase 2 (not yet active)**: VS Code `@demo-builder` chat participant (`vscodeChatParticipant.ts`) — exported but not yet wired into `extension.ts`.
+
 **Comparison Strategy**:
 ```typescript
 // Compare:
@@ -343,7 +368,8 @@ Prefer adding to `src/features/<feature>/services/` or `src/core/utils/` rather 
 ```
 demo-builder-vscode/
 ├── src/
-│   ├── extension.ts              # Entry point
+│   ├── extension.ts              # VS Code extension entry point
+│   ├── mcp-server.ts             # Standalone MCP server entry point (separate process, no vscode)
 │   ├── commands/                 # Command implementations
 │   │   ├── createProjectWebview.ts   # Main wizard
 │   │   ├── startDemo.ts             # Start demo
@@ -443,7 +469,13 @@ try {
 
 ## Future Enhancements
 
+### Shipped in Phase 1 (AI layer)
+- AI context file generation at project creation (CLAUDE.md, skill guides, MCP config)
+- Standalone Demo Builder MCP server (6 project tools for AI agents)
+- AI Setup tab in Configure screen for health-checking and regenerating AI files
+
 ### Near-term (3-6 months)
+- AI Phase 2: VS Code `@demo-builder` chat participant (vscodeChatParticipant.ts — already built, not yet activated)
 - Automated testing framework
 - Performance monitoring and analytics
 - Enhanced error reporting (telemetry)

@@ -13,6 +13,7 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import stacksConfig from '../config/stacks.json';
 import {
     cloneAllComponents,
@@ -23,6 +24,7 @@ import {
     generateEnvironmentFiles,
     finalizeProject,
     sendCompletionAndCleanup,
+    generateAIContextFiles,
     ensureEdsContent,
     type ComponentDefinitionEntry,
     type MeshApiConfig,
@@ -428,6 +430,16 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     await finalizeProject(finalizationContext);
     await sendCompletionAndCleanup(finalizationContext);
+
+    // Phase 6: Generate AI context files (non-blocking — failure does not abort project creation)
+    // Pass the stored DA.live token so HELIX_ADMIN_API_TOKEN in mcp.json is auto-populated.
+    try {
+        const daLiveAuth = new DaLiveAuthService(context.context);
+        const helixToken = await daLiveAuth.getAccessToken() ?? undefined;
+        await generateAIContextFiles(projectPath, project, context.context.extensionPath, helixToken);
+    } catch (err) {
+        context.logger.warn('[Project Creation] Failed to generate AI context files', err instanceof Error ? err : undefined);
+    }
 }
 
 // ============================================================================

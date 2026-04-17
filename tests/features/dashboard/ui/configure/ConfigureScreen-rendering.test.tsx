@@ -56,6 +56,55 @@ jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
     ),
 }));
 
+// Mock AiSetupTab (tested separately; keep configure screen tests focused)
+jest.mock('@/features/dashboard/ui/tabs/AiSetupTab', () => ({
+    AiSetupTab: ({ projectPath }: any) => (
+        <div data-testid="ai-setup-tab">
+            <h3>AI Setup</h3>
+            <span>{projectPath}</span>
+        </div>
+    ),
+}));
+
+// Mock store discovery hooks & row — tested separately in ConfigureScreen-store-discovery.test.tsx.
+// Here we just need them to render benignly so the existing rendering assertions still pass.
+jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
+    useStoreDiscovery: () => ({
+        isFetching: false,
+        fetchError: null,
+        hasStoreData: false,
+        fetchStores: jest.fn(),
+        getWebsiteItems: () => [],
+        getStoreGroupItems: () => [],
+        getStoreViewItems: () => [],
+        isStoreGroup: () => false,
+    }),
+}));
+
+jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
+    useAutoStoreDetect: () => ({ autoDetectKey: undefined, forceFetch: jest.fn() }),
+}));
+
+// Minimal stand-in for StoreConfigFieldRow — renders label + input so existing
+// assertions on label text and input values continue to hold.
+jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
+    StoreConfigFieldRow: ({
+        field,
+        getFieldValue,
+    }: {
+        field: { key: string; label: string; required?: boolean };
+        getFieldValue: (field: { key: string }) => string | boolean | undefined;
+    }) => {
+        const value = getFieldValue(field);
+        return (
+            <div id={`field-${field.key}`}>
+                <label>{field.label}{field.required ? '*' : ''}</label>
+                <input value={value !== undefined && value !== null ? String(value) : ''} readOnly />
+            </div>
+        );
+    },
+}));
+
 // Mock NavigationPanel
 jest.mock('@/core/ui/components/navigation', () => ({
     NavigationPanel: ({ sections }: any) => (
@@ -238,6 +287,62 @@ describe('ConfigureScreen - Rendering', () => {
 
             const footerRight = screen.getByTestId('footer-right');
             expect(footerRight).toContainElement(screen.getByText('Save Changes'));
+        });
+    });
+
+    describe('AI Setup View', () => {
+        // AI Setup is a standalone view accessed via the sidebar nav item (activeView='ai-setup').
+        // It must NOT appear inside the default 'configure' view — rendering it there breaks the
+        // two-column flex layout by squeezing TwoColumnLayout's vertical space.
+
+        it('does not render AiSetupTab in the default configure view even when extensionDistPath is provided', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                    extensionDistPath="/ext/dist"
+                />
+            );
+
+            expect(screen.queryByTestId('ai-setup-tab')).not.toBeInTheDocument();
+        });
+
+        it('renders AiSetupTab when activeView is "ai-setup" and extensionDistPath is provided', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                    extensionDistPath="/ext/dist"
+                    activeView="ai-setup"
+                />
+            );
+
+            expect(screen.getByTestId('ai-setup-tab')).toBeInTheDocument();
+        });
+
+        it('passes projectPath to AiSetupTab in the ai-setup view', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                    extensionDistPath="/ext/dist"
+                    activeView="ai-setup"
+                />
+            );
+
+            expect(screen.getByText('/test/path')).toBeInTheDocument();
+        });
+
+        it('does not render AiSetupTab when activeView is "ai-setup" but extensionDistPath is missing', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                    activeView="ai-setup"
+                />
+            );
+
+            expect(screen.queryByTestId('ai-setup-tab')).not.toBeInTheDocument();
         });
     });
 

@@ -105,7 +105,7 @@ describe('CreateProjectWebviewCommand - Bundle Loading', () => {
         jest.clearAllMocks();
     });
 
-    it('should generate webview HTML with all 4 bundles in correct order', async () => {
+    it('should generate webview HTML with the wizard bundle', async () => {
         // Arrange: Create command instance with mocked dependencies
         const command = createWizardCommand();
 
@@ -121,21 +121,8 @@ describe('CreateProjectWebviewCommand - Bundle Loading', () => {
         // Act: Get webview content
         const html = await (command as any).getWebviewContent();
 
-        // Assert: Verify all 4 bundles present in correct order
-        expect(html).toContain('runtime-bundle.js');
-        expect(html).toContain('vendors-bundle.js');
-        expect(html).toContain('common-bundle.js');
+        // Assert: esbuild produces one self-contained bundle per feature
         expect(html).toContain('wizard-bundle.js');
-
-        // Verify load order: runtime → vendors → common → wizard
-        const runtimeIndex = html.indexOf('runtime-bundle.js');
-        const vendorsIndex = html.indexOf('vendors-bundle.js');
-        const commonIndex = html.indexOf('common-bundle.js');
-        const wizardIndex = html.indexOf('wizard-bundle.js');
-
-        expect(runtimeIndex).toBeLessThan(vendorsIndex);
-        expect(vendorsIndex).toBeLessThan(commonIndex);
-        expect(commonIndex).toBeLessThan(wizardIndex);
     });
 
     it('should apply nonces to all script tags for CSP compliance', async () => {
@@ -154,9 +141,9 @@ describe('CreateProjectWebviewCommand - Bundle Loading', () => {
         // Act
         const html = await (command as any).getWebviewContent();
 
-        // Assert: All script tags have nonce attribute (4 bundles + 1 baseUri)
+        // Assert: esbuild produces 1 bundle + 1 baseUri script = 2 script tags
         const scriptMatches = html.match(/<script nonce="([^"]+)"/g);
-        expect(scriptMatches).toHaveLength(5);
+        expect(scriptMatches).toHaveLength(2);
 
         // Verify all use same nonce
         const noncePattern = /nonce="([^"]+)"/;

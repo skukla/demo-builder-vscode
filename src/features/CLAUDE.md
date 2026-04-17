@@ -18,6 +18,7 @@ The `features/` directory contains self-contained feature modules organized by b
 
 ```
 features/
+├── ai/                  # AI context verification and VS Code chat participant
 ├── authentication/       # Adobe authentication & SDK
 │   ├── index.ts         # Public API exports
 │   ├── services/        # Authentication services
@@ -71,6 +72,25 @@ features/my-feature/
 
 ## Feature Descriptions
 
+### ai
+
+**Purpose**: AI context file verification and VS Code chat participant registration
+
+**Key Services:**
+- `verifyAiSetup(projectPath, extensionDistPath)` - Checks that `.claude/CLAUDE.md`, `.claude/mcp.json`, the MCP binary (`{extensionDistPath}/mcp-server.js`), and `.claude/skills/*.md` files are present and valid; returns `AiVerificationResult`
+- `registerChatParticipant()` - Registers the `@demo-builder` VS Code chat participant (NOT wired up — Phase 2 activation only)
+- `dist/mcp-server.js` (compiled from `src/mcp-server.ts`) - Standalone stdio MCP server exposing 6 project tools to AI agents (get_project, get_component_config, update_project_config, sync_storefront, list_blocks, get_block_source)
+
+**Responsibilities:**
+- Health-checking project AI context files (used by Configure → AI Setup tab via `AiSetupTab` component)
+- Reporting which AI context files are missing or malformed
+- VS Code chat participant for conversational project queries (Phase 2)
+- Standalone MCP server process for AI agent tool access
+
+**Path Alias**: `@/features/ai`
+
+---
+
 ### authentication
 
 **Purpose**: Adobe authentication, Console SDK integration, token management
@@ -112,7 +132,8 @@ features/my-feature/
 
 **Key Services:**
 - `dashboardHandlers` - Handler map for project dashboard messages
-- `configureHandlers` - Handler map for Configure screen messages (cancel, components data, store discovery)
+- `configureHandlers` - Handler map for Configure screen messages (cancel, components data, store discovery, verify-ai-setup, regenerate-ai-files)
+- `AiSetupTab` - React tab component for the Configure screen that runs AI context file health checks and regeneration
 - Dashboard state management
 - Component browser integration
 - Mesh status display
@@ -124,6 +145,7 @@ features/my-feature/
 - Component file browser (with .env hiding)
 - Mesh deployment status
 - Project configuration editing (Configure screen)
+- AI Setup tab: verify and regenerate AI context files
 
 **Path Alias**: `@/features/dashboard`
 
@@ -219,6 +241,10 @@ features/my-feature/
 **Key Services:**
 - Demo package loading, storefront resolution, and mesh requirement resolution (`services/demoPackageLoader.ts`)
 - Custom block library URL parsing and validation (`services/customBlockLibraryUtils.ts`)
+- `aiContextWriter.ts` - Generates `.claude/CLAUDE.md` with project-specific AI agent context
+- `mcpConfigWriter.ts` - Generates `.claude/mcp.json`, `.mcp.json`, `.claude/settings.json`, and optionally `.cursor/mcp.json` and `.codex/mcp.json`
+- `skillsWriter.ts` - Writes `.claude/skills/*.md` procedural guides for AI agents
+- `generateAIContextFiles` (in `projectFinalizationService.ts`) - Orchestrates all three AI writers as project finalization phase 6
 - Project template application
 - Environment file generation
 - Directory structure creation
@@ -234,6 +260,7 @@ features/my-feature/
 - Installing npm dependencies
 - Setting up git repository
 - Initial project configuration
+- Generating AI context files (MCP config, CLAUDE.md, skill files) at project creation and on demand
 
 **Path Alias**: `@/features/project-creation`
 

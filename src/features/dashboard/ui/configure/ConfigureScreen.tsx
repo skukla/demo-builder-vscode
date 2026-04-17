@@ -9,13 +9,13 @@ import {
     TextField,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { AiSetupTab } from '../tabs/AiSetupTab';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
-import { FormField, ConfigSection } from '@/core/ui/components/forms';
+import { ConfigSection } from '@/core/ui/components/forms';
 import { TwoColumnLayout, PageHeader, PageFooter } from '@/core/ui/components/layout';
 import { NavigationPanel, NavigationSection } from '@/core/ui/components/navigation';
 import { useFocusTrap } from '@/core/ui/hooks';
-import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
@@ -25,6 +25,9 @@ import {
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
+import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
+import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
+import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { Project } from '@/types/base';
 import { getMeshComponentInstance, hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
@@ -47,6 +50,14 @@ interface ConfigureScreenProps {
     componentsData: ComponentsData;
     existingEnvValues?: Record<string, Record<string, string>>;
     existingProjectNames?: string[];
+    /** Absolute path to the extension's dist/ directory. When provided, the AI Setup section renders. */
+    extensionDistPath?: string;
+    /**
+     * Which view to show.
+     * - `'configure'` (default): full configuration form
+     * - `'ai-setup'`: only the AI Setup tab, no configuration form
+     */
+    activeView?: 'configure' | 'ai-setup';
 }
 
 interface ComponentData {
@@ -126,58 +137,14 @@ function getSaveButtonLabel(isSaving: boolean, isDeploying: boolean): string {
     return 'Save Changes';
 }
 
-/**
- * Context for rendering form fields
- */
-interface FormFieldRenderContext {
-    getFieldValue: (field: UniqueField) => string | boolean | undefined;
-    validationErrors: Record<string, string>;
-    touchedFields: Set<string>;
-    updateField: (field: UniqueField, value: string | boolean) => void;
-    normalizeUrlField: (field: UniqueField) => void;
-    selectableDefaultProps: Record<string, unknown>;
-}
-
-/**
- * Render a FormField component with proper value/error handling
- *
- * SOP §6: Extracted callback body complexity to named helper
- *
- * @param field - The field definition
- * @param context - Render context with callbacks and state
- * @returns FormField JSX element
- */
-function renderFormField(
-    field: UniqueField,
-    context: FormFieldRenderContext,
-): React.ReactElement {
-    const value = context.getFieldValue(field);
-    const error = context.validationErrors[field.key];
-    const showError = error && context.touchedFields.has(field.key);
-    const hasDefault = value && field.default && value === field.default;
-
-    return (
-        <FormField
-            key={field.key}
-            fieldKey={field.key}
-            label={field.label}
-            type={field.type as 'text' | 'url' | 'password' | 'select' | 'number'}
-            value={value !== undefined && value !== null ? String(value) : ''}
-            onChange={(val) => context.updateField(field, val)}
-            onBlur={field.type === 'url' ? () => context.normalizeUrlField(field) : undefined}
-            placeholder={field.placeholder}
-            description={field.description}
-            required={field.required}
-            error={error}
-            showError={!!showError}
-            options={field.options}
-            selectableDefaultProps={hasDefault ? context.selectableDefaultProps : undefined}
-            help={field.help}
-        />
-    );
-}
-
-export function ConfigureScreen({ project, componentsData, existingEnvValues, existingProjectNames = [] }: ConfigureScreenProps) {
+export function ConfigureScreen({
+    project,
+    componentsData,
+    existingEnvValues,
+    existingProjectNames = [],
+    extensionDistPath,
+    activeView = 'configure',
+}: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
@@ -190,8 +157,6 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
     const fieldCountInSectionRef = useRef<number>(0);
     const [projectName, setProjectName] = useState(project.name);
     const [projectNameTouched, setProjectNameTouched] = useState(false);
-
-    const selectableDefaultProps = useSelectableDefault();
 
     // Focus trap for keyboard navigation
     const containerRef = useFocusTrap<HTMLDivElement>({
@@ -237,6 +202,41 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
 
     // Deduplicate fields and organize by service group
     const serviceGroups = useServiceGroups({ selectedComponents, componentsData });
+
+    // Commerce store discovery — matches wizard UX. Connection fields (ACCS endpoint,
+    // PaaS URL + credentials) trigger automatic discovery; store-code fields render as
+    // cascading Pickers once results arrive.
+    const {
+        isFetching,
+        fetchError,
+        hasStoreData,
+        fetchStores,
+        getWebsiteItems,
+        getStoreGroupItems,
+        getStoreViewItems,
+        isStoreGroup,
+    } = useStoreDiscovery();
+
+    // The AI Setup view (activeView === 'ai-setup') short-circuits rendering below.
+    // Feed the store hooks empty inputs so they stay inert — no autoDetectKey, no
+    // background fetch, no sync message — while still honoring the rules of hooks.
+    const isConfigureView = activeView !== 'ai-setup';
+
+    const { autoDetectKey, forceFetch } = useAutoStoreDetect({
+        configs: isConfigureView ? componentConfigs : {},
+        orgId: project.adobe?.organization,
+        fetchStores,
+        hasStoreData,
+        isFetching,
+    });
+
+    // Keep extension-side sharedState.currentComponentConfigs in sync with unsaved edits.
+    // The `discover-store-structure` handler reads credentials from this cache, so fresh
+    // URL / username / password edits must propagate before auto-detect fires.
+    useEffect(() => {
+        if (!isConfigureView) return;
+        webviewClient.postMessage('sync-component-configs', componentConfigs);
+    }, [componentConfigs, isConfigureView]);
 
     // Handle field focus to scroll section header into view
     useEffect(() => {
@@ -569,6 +569,29 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
     // Can save if no validation errors (env vars and project name)
     const canSave = !hasEntries(validationErrors) && !projectNameError;
 
+    // AI Setup view — show only the AiSetupTab with a minimal chrome
+    if (activeView === 'ai-setup' && extensionDistPath) {
+        return (
+            <div ref={containerRef} className="container-configure">
+                <View width="100%" height="100%">
+                    <div className="content-area">
+                        <PageHeader title="AI Setup" subtitle={project.name} />
+                        <AiSetupTab
+                            projectPath={project.path}
+                        />
+                        <PageFooter
+                            leftContent={
+                                <Button variant="secondary" onPress={handleCancel} isQuiet>
+                                    Close
+                                </Button>
+                            }
+                        />
+                    </div>
+                </View>
+            </div>
+        );
+    }
+
     return (
         <div
             ref={containerRef}
@@ -640,16 +663,28 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
                                                 </Flex>
                                             ) : undefined}
                                         >
-                                            {group.fields.map(field =>
-                                                renderFormField(field, {
-                                                    getFieldValue,
-                                                    validationErrors,
-                                                    touchedFields,
-                                                    updateField,
-                                                    normalizeUrlField,
-                                                    selectableDefaultProps,
-                                                }),
-                                            )}
+                                            {group.fields.map(field => (
+                                                <StoreConfigFieldRow
+                                                    key={field.key}
+                                                    field={field}
+                                                    group={group}
+                                                    autoDetectKey={autoDetectKey}
+                                                    isFetching={isFetching}
+                                                    hasStoreData={hasStoreData}
+                                                    fetchError={fetchError}
+                                                    isStoreGroup={isStoreGroup}
+                                                    getFieldValue={getFieldValue}
+                                                    updateField={updateField}
+                                                    validationErrors={validationErrors}
+                                                    touchedFields={touchedFields}
+                                                    normalizeUrlField={normalizeUrlField}
+                                                    getWebsiteItems={getWebsiteItems}
+                                                    getStoreGroupItems={getStoreGroupItems}
+                                                    getStoreViewItems={getStoreViewItems}
+                                                    componentConfigs={componentConfigs}
+                                                    onRefresh={forceFetch}
+                                                />
+                                            ))}
                                         </ConfigSection>
                                     ))}
                                 </>
