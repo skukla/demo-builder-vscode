@@ -60,9 +60,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onCheckUpdates: _onCheckUpdates,
     onWizardStepClick,
 }) => {
-    // For projects, projectsList, or project context, show UtilityBar
-    // (The detailed project controls are in the Project Dashboard main panel)
-    if (context.type === 'projects' || context.type === 'projectsList' || context.type === 'project') {
+    // For projects list screens, show UtilityBar only (no project-level nav)
+    if (context.type === 'projects' || context.type === 'projectsList') {
         return (
             <UtilityBar
                 onOpenTools={onOpenTools}

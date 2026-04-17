@@ -127,11 +127,8 @@ describe('Sidebar', () => {
     });
 
     describe('Project Detail context', () => {
-        // Note: Project context now renders UtilityBar (same as projects context)
-        // The detailed project controls are in the Project Dashboard main panel
-
-        it('should render utility bar for project context', () => {
-            const { container } = renderWithProvider(
+        it('should render project navigation items for project context', () => {
+            renderWithProvider(
                 <Sidebar
                     context={createProjectContext({ name: 'My Demo Project' })}
                     onNavigate={jest.fn()}
@@ -139,23 +136,22 @@ describe('Sidebar', () => {
                 />
             );
 
-            // Project context now renders UtilityBar, not project details
-            // With no icon callbacks, it renders an empty utility bar
-            expect(container.querySelector('.sidebar-utility-bar')).toBeInTheDocument();
+            // Project context shows nav items: Overview, Configure, Updates, AI Setup
+            expect(screen.getByText('Overview')).toBeInTheDocument();
+            expect(screen.getByText('Configure')).toBeInTheDocument();
+            expect(screen.getByText('AI Setup')).toBeInTheDocument();
         });
 
-        it('should render Tools icon when onOpenTools provided (project context)', () => {
+        it('should render project name as header in project context', () => {
             renderWithProvider(
                 <Sidebar
-                    context={createProjectContext()}
+                    context={createProjectContext({ name: 'My Demo Project' })}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                    onOpenTools={jest.fn()}
                 />
             );
 
-            // Project context uses UtilityBar with icons
-            expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
+            expect(screen.getByText('My Demo Project')).toBeInTheDocument();
         });
     });
 
