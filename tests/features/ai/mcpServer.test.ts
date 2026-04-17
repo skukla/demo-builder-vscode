@@ -2,13 +2,13 @@
  * MCP Server Tests
  *
  * Tests for the standalone Demo Builder MCP server:
- * - wrapHandler: error boundary wrapping
  * - toolHandlers.getProject: reads .demo-builder.json
  * - toolHandlers.getComponentConfig: reads config files with path traversal protection
  * - toolHandlers.updateProjectConfig: writes .demo-builder.json or .env files
  * - toolHandlers.syncStorefront: git add/commit/push
  * - toolHandlers.listBlocks: lists block directories
  * - toolHandlers.getBlockSource: reads block source files
+ * - validateEnvContent: allowlist-based .env content validator
  */
 
 import * as fsProm from 'fs/promises';
@@ -35,42 +35,10 @@ jest.mock('child_process', () => ({
     execFile: jest.fn(),
 }));
 
-import { wrapHandler, toolHandlers, validateEnvContent } from '@/mcp-server';
+import { toolHandlers, validateEnvContent } from '@/mcp-server';
 
 const PROJECT_PATH = '/projects/my-project';
 const STOREFRONT_PATH = '/projects/my-project/components/eds-storefront';
-
-// ─── wrapHandler ─────────────────────────────────────────────────────────────
-
-describe('wrapHandler', () => {
-    it('wraps successful result in content array with text type', async () => {
-        const result = await wrapHandler(async () => 'hello world');
-
-        expect(result).toEqual({
-            content: [{ type: 'text', text: 'hello world' }],
-        });
-    });
-
-    it('catches thrown Error and returns isError: true with error message', async () => {
-        const result = await wrapHandler(async () => {
-            throw new Error('something went wrong');
-        });
-
-        expect(result.isError).toBe(true);
-        expect(result.content[0].type).toBe('text');
-        expect(result.content[0].text).toContain('something went wrong');
-    });
-
-    it('catches a non-Error throw and converts it to a string', async () => {
-        const result = await wrapHandler(async () => {
-            // eslint-disable-next-line @typescript-eslint/only-throw-error
-            throw 'raw string error';
-        });
-
-        expect(result.isError).toBe(true);
-        expect(result.content[0].text).toBe('raw string error');
-    });
-});
 
 // ─── toolHandlers.getProject ──────────────────────────────────────────────────
 
@@ -597,7 +565,7 @@ describe('toolHandlers.syncStorefront', () => {
         ).rejects.toThrow(/not a git repository root/i);
     });
 
-    it('returns error text when git push fails with a real error', async () => {
+    it('throws when git push fails with a real error', async () => {
         (childProcess.execFile as jest.Mock)
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''))
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''))
@@ -605,10 +573,9 @@ describe('toolHandlers.syncStorefront', () => {
                 cb(new Error('rejected: remote rejected push'), '', ''),
             );
 
-        const result = await wrapHandler(() => toolHandlers.syncStorefront(PROJECT_PATH, STOREFRONT_PATH, 'AI: update'));
-
-        expect(result.isError).toBe(true);
-        expect(result.content[0].text).toContain('rejected');
+        await expect(
+            toolHandlers.syncStorefront(PROJECT_PATH, STOREFRONT_PATH, 'AI: update'),
+        ).rejects.toThrow(/rejected/i);
     });
 });
 
@@ -697,14 +664,14 @@ describe('toolHandlers.getBlockSource', () => {
         ).rejects.toThrow(/escapes project directory/i);
     });
 
-    it('returns error result when block directory does not exist', async () => {
+    it('throws when block directory does not exist', async () => {
         (fsProm.readdir as jest.Mock).mockRejectedValue(
             Object.assign(new Error('ENOENT'), { code: 'ENOENT' }),
         );
 
-        const result = await wrapHandler(() => toolHandlers.getBlockSource(PROJECT_PATH, STOREFRONT_PATH, 'nonexistent'));
-
-        expect(result.isError).toBe(true);
+        await expect(
+            toolHandlers.getBlockSource(PROJECT_PATH, STOREFRONT_PATH, 'nonexistent'),
+        ).rejects.toThrow(/ENOENT/);
     });
 
     it('returns empty array when block directory exists but has no files', async () => {

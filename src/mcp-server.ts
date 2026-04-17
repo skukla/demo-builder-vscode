@@ -27,23 +27,6 @@ const MAX_BLOCK_FILES = 50;
 // Maximum bytes read per file — prevents oversized MCP responses from vendored or minified assets.
 const MAX_FILE_BYTES = 100_000; // 100 KB
 
-// ─── Error boundary ──────────────────────────────────────────────────────────
-
-// Local definition: cannot import from @/core/handlers — that module transitively
-// imports vscode, which is unavailable in this standalone process.
-/** @internal — exported only for unit tests; not part of the public API */
-export async function wrapHandler<T>(
-    fn: () => Promise<T>,
-): Promise<{ content: Array<{ type: 'text'; text: string }>; isError?: boolean }> {
-    try {
-        const result = await fn();
-        return { content: [{ type: 'text', text: String(result) }] };
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return { content: [{ type: 'text', text: msg }], isError: true };
-    }
-}
-
 // ─── Security helpers ─────────────────────────────────────────────────────────
 
 async function assertInsideProject(
@@ -306,25 +289,30 @@ if (process.env.NODE_ENV !== 'test') {
     }
 
     // Typed as `any` to avoid TS2589 (deep type instantiation with inline Zod schema inference).
-    // The MCP SDK validates all inputs at runtime — the cast is safe.
+    // This is a confirmed SDK regression (issue #1180, v1.23.0+). The MCP SDK validates all
+    // inputs at runtime via the Zod schemas below — the cast is safe.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const server: any = new McpServer({ name: 'demo-builder', version: '1.0.0' });
 
+    // Tool handlers return result strings directly. The SDK's built-in error handling
+    // catches thrown errors and converts them to { isError: true } responses automatically
+    // (via createToolError in the CallToolRequestSchema handler).
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     server.registerTool('get_project', {
         title: 'Get Project',
         description: 'Read the Demo Builder project state (.demo-builder.json)',
         inputSchema: {},
-    }, async () => wrapHandler(() => toolHandlers.getProject(PROJECT_PATH)));
+    }, async () => ({
+        content: [{ type: 'text' as const, text: await toolHandlers.getProject(PROJECT_PATH) }],
+    }));
 
-    // TypeScript hits a depth limit inferring the generic from inline Zod schemas.
-    // The `as any` cast on args is safe: values are validated by the MCP SDK at runtime.
-    /* eslint-disable @typescript-eslint/no-explicit-any */
     server.registerTool('get_component_config', {
         title: 'Get Component Config',
         description: 'Read .demo-builder.json or a .env file within the project directory (path must not escape the project root)',
         inputSchema: { configRelPath: z.string().describe('Relative path to config file within project') },
-    }, async (args: any) =>
-        wrapHandler(() => toolHandlers.getComponentConfig(PROJECT_PATH, args.configRelPath as string)));
+    }, async (args: any) => ({
+        content: [{ type: 'text' as const, text: await toolHandlers.getComponentConfig(PROJECT_PATH, args.configRelPath as string) }],
+    }));
 
     server.registerTool('update_project_config', {
         title: 'Update Project Config',
@@ -333,8 +321,9 @@ if (process.env.NODE_ENV !== 'test') {
             configRelPath: z.string().describe('Relative path (.demo-builder.json or path to .env file)'),
             content: z.string().max(1_000_000).describe('New file content'),
         },
-    }, async (args: any) =>
-        wrapHandler(() => toolHandlers.updateProjectConfig(PROJECT_PATH, args.configRelPath as string, args.content as string)));
+    }, async (args: any) => ({
+        content: [{ type: 'text' as const, text: await toolHandlers.updateProjectConfig(PROJECT_PATH, args.configRelPath as string, args.content as string) }],
+    }));
 
     server.registerTool('sync_storefront', {
         title: 'Sync Storefront',
@@ -343,15 +332,17 @@ if (process.env.NODE_ENV !== 'test') {
             storefrontPath: z.string().max(4096).describe('Absolute path to the storefront git repository'),
             commitMessage: z.string().max(500).describe('Git commit message'),
         },
-    }, async (args: any) =>
-        wrapHandler(() => toolHandlers.syncStorefront(PROJECT_PATH, args.storefrontPath as string, args.commitMessage as string)));
+    }, async (args: any) => ({
+        content: [{ type: 'text' as const, text: await toolHandlers.syncStorefront(PROJECT_PATH, args.storefrontPath as string, args.commitMessage as string) }],
+    }));
 
     server.registerTool('list_blocks', {
         title: 'List Blocks',
         description: 'List all block directories in the storefront blocks/ directory',
         inputSchema: { storefrontPath: z.string().max(4096).describe('Absolute path to the storefront root') },
-    }, async (args: any) =>
-        wrapHandler(() => toolHandlers.listBlocks(PROJECT_PATH, args.storefrontPath as string)));
+    }, async (args: any) => ({
+        content: [{ type: 'text' as const, text: await toolHandlers.listBlocks(PROJECT_PATH, args.storefrontPath as string) }],
+    }));
 
     server.registerTool('get_block_source', {
         title: 'Get Block Source',
@@ -360,8 +351,9 @@ if (process.env.NODE_ENV !== 'test') {
             storefrontPath: z.string().max(4096).describe('Absolute path to the storefront root'),
             blockName: z.string().regex(/^[a-zA-Z0-9_-]+$/).describe('Name of the block directory inside blocks/'),
         },
-    }, async (args: any) =>
-        wrapHandler(() => toolHandlers.getBlockSource(PROJECT_PATH, args.storefrontPath as string, args.blockName as string)));
+    }, async (args: any) => ({
+        content: [{ type: 'text' as const, text: await toolHandlers.getBlockSource(PROJECT_PATH, args.storefrontPath as string, args.blockName as string) }],
+    }));
     /* eslint-enable @typescript-eslint/no-explicit-any */
 
     (async () => {
