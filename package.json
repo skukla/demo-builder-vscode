@@ -240,6 +240,34 @@
             "description": "ACCS Discovery Services for cross-org store structure auto-detection. Each entry maps a Commerce org to its App Builder discovery service."
           }
         }
+      },
+      {
+        "title": "AI",
+        "properties": {
+          "demoBuilder.ai.externalMcpServers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["da-live", "aem-content", "adobe-commerce-dev"]
+            },
+            "default": ["da-live", "adobe-commerce-dev"],
+            "description": "External MCP servers to include in generated project MCP config. Each server gives AI agents access to an Adobe service."
+          },
+          "demoBuilder.ai.mcpConfigTargets": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["claude", "cursor", "codex"]
+            },
+            "default": ["claude", "cursor", "codex"],
+            "description": "AI tools to generate MCP config files for. Claude writes .mcp.json + .claude/mcp.json, Cursor writes .cursor/mcp.json, Codex writes .codex/mcp.json."
+          },
+          "demoBuilder.ai.includeBoilerplateSkills": {
+            "type": "boolean",
+            "default": true,
+            "description": "Include boilerplate EDS skill files (add-block, create-block, update-styles, modify-content) in generated .claude/skills/."
+          }
+        }
       }
     ],
     "viewsContainers": {
