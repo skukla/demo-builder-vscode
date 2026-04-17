@@ -60,3 +60,39 @@ export function sanitizeUrl(value: string): string {
     if (!value.startsWith('https://')) return '[invalid URL]';
     return value.replace(/[\n\r[\]()]/g, '');
 }
+
+/**
+ * Backslash-escape Markdown structural characters in a value before interpolation.
+ *
+ * Output-escaping defense layer — runs after input sanitization (sanitizeTemplateValue)
+ * for defense-in-depth. The AI agent sees the real text without misinterpreting it as
+ * Markdown syntax.
+ *
+ * Escaped: `\ # * _ ` ~ [ ] ( ) { } | > ! +`
+ *
+ * NOT escaped: `-` and `.` — these are only structural at line-start positions
+ * (list items, ordered lists, thematic breaks). Values are interpolated into inline
+ * text, never at line start, so escaping them would add noise without benefit.
+ */
+export function escapeMarkdown(value: string): string {
+    return value.replace(/([\\#*_`~[\](){}|>!+])/g, '\\$1');
+}
+
+/**
+ * Single-pass template interpolation with automatic Markdown escaping.
+ *
+ * Replaces `{key}` tokens in `template` with `escapeMarkdown(values[key])`.
+ * Throws if a placeholder key is not found in `values`.
+ * Single-pass ensures substituted values are never re-processed.
+ *
+ * Keys must be word characters only (`[a-zA-Z0-9_]`). Hyphenated keys like
+ * `{some-key}` are silently ignored by the regex — use camelCase or snake_case.
+ */
+export function interpolateTemplate(template: string, values: Record<string, string>): string {
+    return template.replace(/\{(\w+)\}/g, (match, key: string) => {
+        if (!(key in values)) {
+            throw new Error(`interpolateTemplate: missing value for key "${key}"`);
+        }
+        return escapeMarkdown(values[key]);
+    });
+}

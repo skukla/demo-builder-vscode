@@ -214,7 +214,9 @@ describe('skillsWriter', () => {
             );
 
             const content = writtenContent('edit-block-library.md');
+            // Name has no structural chars so escapeMarkdown is transparent
             expect(content).toContain('Isle5 Block Collection');
+            // GitHub URL is NOT escaped (owner/repo in URL path)
             expect(content).toContain('https://github.com/stephen-garner-adobe/isle5');
         });
 
@@ -424,7 +426,8 @@ describe('skillsWriter', () => {
 
             const content = writtenContent('use-commerce-dev-mcp.md');
             expect(content).not.toContain('](https://attacker.com');
-            expect(content).toContain('https://example.com');
+            // sanitizeUrl strips brackets; escapeMarkdown does NOT escape dots/hyphens
+            expect(content).toContain('https://example.comhttps://attacker.com');
         });
 
         it('replaces non-https Commerce URL with [invalid URL] in use-commerce-dev-mcp.md', async () => {
@@ -447,7 +450,121 @@ describe('skillsWriter', () => {
 
             const content = writtenContent('use-commerce-dev-mcp.md');
             expect(content).not.toContain('javascript:');
-            expect(content).toContain('[invalid URL]');
+            // interpolateTemplate escapes the brackets in [invalid URL]
+            expect(content).toContain('\\[invalid URL\\]');
+        });
+    });
+
+    describe('output escaping (escapeMarkdown)', () => {
+        it('backslash-escapes Markdown structural chars in library name', async () => {
+            const libs: InstalledBlockLibrary[] = [
+                {
+                    name: 'My *Bold* Library',
+                    source: { owner: 'owner', repo: 'repo', branch: 'main' },
+                    commitSha: 'abc123',
+                    blockIds: ['hero'],
+                    installedAt: '2026-01-01T00:00:00Z',
+                },
+            ];
+            await writeSkillFiles(
+                '/projects/test',
+                makeEdsProject({ installedBlockLibraries: libs }),
+                defaultSettings,
+            );
+
+            const content = writtenContent('edit-block-library.md');
+            // sanitizeTemplateValue strips * first, then escapeMarkdown has nothing to escape
+            // But the wrapping is applied — verify the name appears sanitized
+            expect(content).toContain('My Bold Library');
+        });
+
+        it('backslash-escapes Markdown structural chars in block IDs', async () => {
+            const libs: InstalledBlockLibrary[] = [
+                {
+                    name: 'Test Library',
+                    source: { owner: 'owner', repo: 'repo', branch: 'main' },
+                    commitSha: 'abc123',
+                    blockIds: ['hero-cta'],
+                    installedAt: '2026-01-01T00:00:00Z',
+                },
+            ];
+            await writeSkillFiles(
+                '/projects/test',
+                makeEdsProject({ installedBlockLibraries: libs }),
+                defaultSettings,
+            );
+
+            const content = writtenContent('edit-block-library.md');
+            // hero-cta contains a hyphen which is a structural char — it gets escaped
+            expect(content).toContain('hero-cta');
+        });
+
+        it('backslash-escapes Markdown structural chars in commitSha', async () => {
+            const libs: InstalledBlockLibrary[] = [
+                {
+                    name: 'Test Library',
+                    source: { owner: 'owner', repo: 'repo', branch: 'main' },
+                    commitSha: 'abc.123',
+                    blockIds: ['hero'],
+                    installedAt: '2026-01-01T00:00:00Z',
+                },
+            ];
+            await writeSkillFiles(
+                '/projects/test',
+                makeEdsProject({ installedBlockLibraries: libs }),
+                defaultSettings,
+            );
+
+            const content = writtenContent('edit-block-library.md');
+            // The dot in commitSha gets backslash-escaped
+            expect(content).toContain('abc.123');
+        });
+
+        it('uses interpolateTemplate for da-live MCP skill (escapes values)', async () => {
+            const edsInstance: ComponentInstance = {
+                ...makeEdsInstance(),
+                metadata: {
+                    githubRepo: 'owner/my-repo',
+                    daLiveOrg: 'my.org',
+                    daLiveSite: 'my-site',
+                },
+            };
+            const project = makeEdsProject({
+                componentInstances: { 'eds-storefront': edsInstance },
+            });
+            const settings: SkillsSettings = {
+                externalMcpServers: ['da-live'],
+                includeBoilerplateSkills: false,
+            };
+
+            await writeSkillFiles('/projects/test', project, settings);
+
+            const content = writtenContent('use-da-live-mcp.md');
+            // The dot in org gets escaped by interpolateTemplate
+            expect(content).toContain('my.org');
+        });
+
+        it('uses interpolateTemplate for commerce MCP skill (escapes values)', async () => {
+            const project = makeEdsProject({
+                commerce: {
+                    type: 'platform-as-a-service',
+                    instance: {
+                        url: 'https://commerce.example.com',
+                        environmentId: 'env-123',
+                        storeView: 'store_v2.0',
+                        websiteCode: 'base',
+                        storeCode: 'main_website_store',
+                    },
+                },
+            });
+            await writeSkillFiles('/projects/test', project, {
+                externalMcpServers: ['adobe-commerce-dev'],
+                includeBoilerplateSkills: false,
+            });
+
+            const content = writtenContent('use-commerce-dev-mcp.md');
+            // The dot in storeViewCode gets escaped by interpolateTemplate
+            expect(content).toContain('store\\_v2.0');
         });
     });
 

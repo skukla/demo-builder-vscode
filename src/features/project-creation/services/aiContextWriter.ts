@@ -13,7 +13,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import demoPackagesJson from '../config/demo-packages.json';
-import { sanitizeTemplateValue, sanitizeGithubSlug, sanitizeUrl, sanitizeBlockId } from './sanitization';
+import { sanitizeTemplateValue, sanitizeGithubSlug, sanitizeUrl, sanitizeBlockId, escapeMarkdown } from './sanitization';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import type { DemoPackagesConfig } from '@/types/demoPackages';
@@ -73,15 +73,15 @@ export async function writeClaudeMd(
 // ─── Section builders ────────────────────────────────────────────────────────
 
 function buildHeader(project: Project, stacksConfig: Stack[]): string {
-    const packageName = sanitizeTemplateValue(resolvePackageName(project.selectedPackage));
-    const stackName = sanitizeTemplateValue(resolveStackName(project.selectedStack, stacksConfig));
+    const packageName = escapeMarkdown(sanitizeTemplateValue(resolvePackageName(project.selectedPackage)));
+    const stackName = escapeMarkdown(sanitizeTemplateValue(resolveStackName(project.selectedStack, stacksConfig)));
     const createdDateRaw = project.created instanceof Date
         ? project.created.toISOString().split('T')[0]
         : String(project.created);
-    const createdDate = sanitizeTemplateValue(createdDateRaw);
+    const createdDate = escapeMarkdown(sanitizeTemplateValue(createdDateRaw));
 
-    const name = sanitizeTemplateValue(project.name);
-    const status = sanitizeTemplateValue(project.status);
+    const name = escapeMarkdown(sanitizeTemplateValue(project.name));
+    const status = escapeMarkdown(sanitizeTemplateValue(project.status));
     return [
         `# Demo Builder Project: ${name}`,
         '',
@@ -104,27 +104,27 @@ function buildEndpoints(project: Project): string {
     const endpoints: string[] = [];
 
     if (project.commerce?.instance?.url) {
-        endpoints.push(`- **Commerce URL:** ${sanitizeUrl(project.commerce.instance.url)}`);
+        endpoints.push(`- **Commerce URL:** ${escapeMarkdown(sanitizeUrl(project.commerce.instance.url))}`);
     }
 
     const meshEndpoint = getMeshEndpointUrl(project);
     if (meshEndpoint) {
-        endpoints.push(`- **API Mesh:** ${sanitizeUrl(meshEndpoint)}`);
+        endpoints.push(`- **API Mesh:** ${escapeMarkdown(sanitizeUrl(meshEndpoint))}`);
     }
 
     const liveUrl = getEdsLiveUrl(project);
     if (liveUrl) {
-        endpoints.push(`- **Live URL:** ${sanitizeUrl(liveUrl)}`);
+        endpoints.push(`- **Live URL:** ${escapeMarkdown(sanitizeUrl(liveUrl))}`);
     }
 
     const previewUrl = getEdsPreviewUrl(project);
     if (previewUrl) {
-        endpoints.push(`- **Preview URL:** ${sanitizeUrl(previewUrl)}`);
+        endpoints.push(`- **Preview URL:** ${escapeMarkdown(sanitizeUrl(previewUrl))}`);
     }
 
     const daLiveUrl = getEdsDaLiveUrl(project);
     if (daLiveUrl) {
-        endpoints.push(`- **DA.live:** ${sanitizeUrl(daLiveUrl)}`);
+        endpoints.push(`- **DA.live:** ${escapeMarkdown(sanitizeUrl(daLiveUrl))}`);
     }
 
     if (endpoints.length === 0) return '';
@@ -137,8 +137,9 @@ function buildStorefront(project: Project): string {
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     if (!edsInstance?.path) return '';
 
+    // githubRepo is NOT escaped — it's used inside a URL path where backslash breaks things
     const githubRepo = sanitizeGithubSlug(sanitizeTemplateValue((edsInstance.metadata?.githubRepo as string | undefined) ?? ''));
-    const localPath = sanitizeTemplateValue(edsInstance.path);
+    const localPath = escapeMarkdown(sanitizeTemplateValue(edsInstance.path));
 
     const lines: string[] = [
         '## Storefront',
@@ -151,12 +152,12 @@ function buildStorefront(project: Project): string {
 
     const previewUrl = getEdsPreviewUrl(project);
     if (previewUrl) {
-        lines.push(`- **Preview URL:** ${sanitizeUrl(previewUrl)}`);
+        lines.push(`- **Preview URL:** ${escapeMarkdown(sanitizeUrl(previewUrl))}`);
     }
 
     const liveUrl = getEdsLiveUrl(project);
     if (liveUrl) {
-        lines.push(`- **Live URL:** ${sanitizeUrl(liveUrl)}`);
+        lines.push(`- **Live URL:** ${escapeMarkdown(sanitizeUrl(liveUrl))}`);
     }
 
     lines.push('');
@@ -184,18 +185,19 @@ function buildBlockLibraries(project: Project): string {
     const lines: string[] = ['## Block Libraries'];
 
     for (const lib of installed) {
+        // Owner/repo are NOT escaped — they're inside URL paths where backslash breaks things
         const owner = sanitizeGithubSlug(sanitizeTemplateValue(lib.source.owner));
         const repo = sanitizeGithubSlug(sanitizeTemplateValue(lib.source.repo));
         const type = customKeys.has(`${lib.source.owner}/${lib.source.repo}`) ? 'custom' : 'built-in';
-        const blockList = lib.blockIds.map(id => sanitizeBlockId(id)).join(', ');
-        const libName = sanitizeTemplateValue(lib.name);
+        const blockList = lib.blockIds.map(id => escapeMarkdown(sanitizeBlockId(id))).join(', ');
+        const libName = escapeMarkdown(sanitizeTemplateValue(lib.name));
 
         lines.push('');
         lines.push(`- **${libName}** (${type})`);
         lines.push(`  - Source: https://github.com/${owner}/${repo}`);
         lines.push(`  - Blocks: ${blockList}`);
         if (lib.commitSha) {
-            lines.push(`  - Source commit: ${sanitizeTemplateValue(lib.commitSha)}`);
+            lines.push(`  - Source commit: ${escapeMarkdown(sanitizeTemplateValue(lib.commitSha))}`);
         }
     }
 
@@ -213,13 +215,13 @@ function buildAdobeIo(project: Project): string {
     const lines: string[] = ['## Adobe I/O Project'];
 
     if (project.adobe.organization) {
-        lines.push(`- **Organization:** ${sanitizeTemplateValue(project.adobe.organization)}`);
+        lines.push(`- **Organization:** ${escapeMarkdown(sanitizeTemplateValue(project.adobe.organization))}`);
     }
     if (project.adobe.projectTitle ?? project.adobe.projectName) {
-        lines.push(`- **Project:** ${sanitizeTemplateValue(project.adobe.projectTitle ?? project.adobe.projectName ?? '')}`);
+        lines.push(`- **Project:** ${escapeMarkdown(sanitizeTemplateValue(project.adobe.projectTitle ?? project.adobe.projectName ?? ''))}`);
     }
     if (project.adobe.workspaceTitle ?? project.adobe.workspace) {
-        lines.push(`- **Workspace:** ${sanitizeTemplateValue(project.adobe.workspaceTitle ?? project.adobe.workspace ?? '')}`);
+        lines.push(`- **Workspace:** ${escapeMarkdown(sanitizeTemplateValue(project.adobe.workspaceTitle ?? project.adobe.workspace ?? ''))}`);
     }
 
     // length > 1 means at least one field was populated beyond the section header
@@ -247,7 +249,7 @@ function buildTryAskingClaude(project: Project): string {
 
 function buildNotesForAgents(project: Project): string {
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const localPath = edsInstance?.path ? sanitizeTemplateValue(edsInstance.path) : undefined;
+    const localPath = edsInstance?.path ? escapeMarkdown(sanitizeTemplateValue(edsInstance.path)) : undefined;
 
     const lines: string[] = [
         '## Notes for AI Agents',

@@ -21,10 +21,10 @@ import modifyContentContent from '../templates/skills/modify-content.md';
 import syncChangesContent from '../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../templates/skills/update-credentials.md';
 import updateStylesContent from '../templates/skills/update-styles.md';
-import useAemContentMcpTemplate from '../templates/skills/use-aem-content-mcp.md.template';
+import useAemContentMcpContent from '../templates/skills/use-aem-content-mcp.md';
 import useCommerceMcpTemplate from '../templates/skills/use-commerce-dev-mcp.md.template';
 import useDaLiveMcpTemplate from '../templates/skills/use-da-live-mcp.md.template';
-import { sanitizeTemplateValue, sanitizeGithubSlug, sanitizeUrl, sanitizeBlockId } from './sanitization';
+import { sanitizeTemplateValue, sanitizeGithubSlug, sanitizeUrl, sanitizeBlockId, escapeMarkdown, interpolateTemplate } from './sanitization';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
@@ -79,9 +79,12 @@ export async function writeSkillFiles(
         const installedLibs = project.installedBlockLibraries ?? [];
         if (installedLibs.length > 0) {
             const libraryList = buildLibraryList(installedLibs, storefrontPath);
+            // libraryList is pre-formatted Markdown with per-value escaping already applied
+            // in buildLibraryList — raw replacement avoids double-escaping the structure.
+            // storefrontLocalPath is escaped at the output boundary here.
             const editBlockLibContent = editBlockLibTemplate
                 .replace(/\{libraryList\}/g, libraryList)
-                .replace(/\{storefrontLocalPath\}/g, storefrontPath);
+                .replace(/\{storefrontLocalPath\}/g, escapeMarkdown(storefrontPath));
             writes.push(write('edit-block-library.md', editBlockLibContent));
         }
     }
@@ -120,16 +123,25 @@ interface McpSkill {
 // are intentional — sanitizeGithubSlug's allowlist alone is sufficient, but the layering
 // provides defense-in-depth and makes the sanitization intent explicit at each call site.
 
+/**
+ * Build pre-formatted Markdown describing installed block libraries.
+ *
+ * Returns Markdown that is ready to interpolate into a template verbatim.
+ * Values are sanitized (input layer) AND escaped (output layer) inside this
+ * function — callers must NOT re-escape the result (double-escaping would
+ * produce visible backslashes in the output).
+ */
 function buildLibraryList(libs: InstalledBlockLibrary[], storefrontPath: string): string {
     if (libs.length === 0) return '(none installed)';
     return libs
         .map(lib => {
+            // Owner/repo are NOT escaped — they're inside URL paths where backslash breaks things
             const owner = sanitizeGithubSlug(sanitizeTemplateValue(lib.source.owner));
             const repo = sanitizeGithubSlug(sanitizeTemplateValue(lib.source.repo));
             const githubUrl = `https://github.com/${owner}/${repo}`;
-            const blockList = lib.blockIds.map(id => sanitizeBlockId(id)).join(', ');
-            const name = sanitizeTemplateValue(lib.name);
-            const commitSha = sanitizeTemplateValue(lib.commitSha);
+            const blockList = lib.blockIds.map(id => escapeMarkdown(sanitizeBlockId(id))).join(', ');
+            const name = escapeMarkdown(sanitizeTemplateValue(lib.name));
+            const commitSha = escapeMarkdown(sanitizeTemplateValue(lib.commitSha));
             return (
                 `### ${name}\n` +
                 `- **Source:** ${githubUrl}\n` +
@@ -154,21 +166,20 @@ function buildMcpSkill(serverId: string, project: Project): McpSkill | null {
         case 'da-live':
             return {
                 filename: 'use-da-live-mcp.md',
-                content: useDaLiveMcpTemplate
-                    .replace(/\{daLiveOrg\}/g, daLiveOrg)
-                    .replace(/\{daLiveSite\}/g, daLiveSite),
+                content: interpolateTemplate(useDaLiveMcpTemplate, { daLiveOrg, daLiveSite }),
             };
         case 'aem-content':
             return {
                 filename: 'use-aem-content-mcp.md',
-                content: useAemContentMcpTemplate,
+                content: useAemContentMcpContent,
             };
         case 'adobe-commerce-dev':
             return {
                 filename: 'use-commerce-dev-mcp.md',
-                content: useCommerceMcpTemplate
-                    .replace(/\{commerceEndpoint\}/g, commerceUrl)
-                    .replace(/\{storeViewCode\}/g, storeViewCode),
+                content: interpolateTemplate(useCommerceMcpTemplate, {
+                    commerceEndpoint: commerceUrl,
+                    storeViewCode,
+                }),
             };
         default:
             return null;

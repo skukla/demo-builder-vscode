@@ -11,6 +11,8 @@ import {
     sanitizeGithubSlug,
     sanitizeUrl,
     sanitizeBlockId,
+    escapeMarkdown,
+    interpolateTemplate,
 } from '@/features/project-creation/services/sanitization';
 
 // ─── sanitizeTemplateValue ────────────────────────────────────────────────────
@@ -182,3 +184,74 @@ describe('sanitizeBlockId', () => {
         expect(sanitizeBlockId('')).toBe('');
     });
 });
+
+// ─── escapeMarkdown ─────────────────────────────────────────────────────────
+
+describe('escapeMarkdown', () => {
+    it('backslash-escapes each Markdown structural char', () => {
+        const structural = '\\#*_`~[](){}|>!+';
+        const result = escapeMarkdown(structural);
+
+        // Each char should be preceded by a backslash
+        for (const ch of structural) {
+            expect(result).toContain(`\\${ch}`);
+        }
+    });
+
+    it('preserves safe characters (letters, digits, spaces, /, :, @)', () => {
+        const safe = 'Hello World 123 foo/bar : user@example';
+        expect(escapeMarkdown(safe)).toBe(safe);
+    });
+
+    it('does not escape hyphens or dots (only structural at line-start, not in inline text)', () => {
+        expect(escapeMarkdown('my-project')).toBe('my-project');
+        expect(escapeMarkdown('example.com')).toBe('example.com');
+        expect(escapeMarkdown('https://main--my-repo--owner.aem.live')).toBe(
+            'https://main--my-repo--owner.aem.live',
+        );
+    });
+
+    it('returns empty string for empty input', () => {
+        expect(escapeMarkdown('')).toBe('');
+    });
+});
+
+// ─── interpolateTemplate ────────────────────────────────────────────────────
+
+describe('interpolateTemplate', () => {
+    it('replaces {key} placeholders with escaped values', () => {
+        const result = interpolateTemplate('Hello {name}!', { name: 'World' });
+
+        expect(result).toBe('Hello World!');
+    });
+
+    it('throws on missing key', () => {
+        expect(() => interpolateTemplate('Hello {name}!', {}))
+            .toThrow(/missing.*name/i);
+    });
+
+    it('handles multiple occurrences of the same placeholder', () => {
+        const result = interpolateTemplate('{x} and {x}', { x: 'val' });
+
+        expect(result).toBe('val and val');
+    });
+
+    it('returns template unchanged when no placeholders', () => {
+        const template = 'No placeholders here.';
+        expect(interpolateTemplate(template, { extra: 'ignored' })).toBe(template);
+    });
+
+    it('does not re-process placeholders inside substituted values', () => {
+        const result = interpolateTemplate('{a}', { a: '{b}', b: 'SHOULD_NOT_APPEAR' });
+
+        expect(result).toBe('\\{b\\}');
+        expect(result).not.toContain('SHOULD_NOT_APPEAR');
+    });
+
+    it('escapes Markdown structural chars in substituted values', () => {
+        const result = interpolateTemplate('Name: {name}', { name: 'My *Bold* Project' });
+
+        expect(result).toContain('\\*Bold\\*');
+    });
+});
+

@@ -116,7 +116,8 @@ describe('aiContextWriter', () => {
                 const project = makeEdsProject();
                 const result = generateClaudeMd(project, STACKS);
 
-                expect(result).toContain('https://da.live/#/my-org/my-site');
+                // # is escaped by escapeMarkdown at the output boundary
+                expect(result).toContain('https://da.live/\\#/my-org/my-site');
             });
 
             it('includes the local storefront path', () => {
@@ -303,14 +304,16 @@ describe('aiContextWriter', () => {
                 const result = generateClaudeMd(project, STACKS);
 
                 expect(result).not.toContain('javascript:');
-                expect(result).toContain('[invalid URL]');
+                // Brackets escaped by escapeMarkdown
+                expect(result).toContain('\\[invalid URL\\]');
             });
 
-            it('preserves # in DA.live URL (fragment separator)', () => {
+            it('preserves # in DA.live URL (fragment separator, escaped at output boundary)', () => {
                 const project = makeEdsProject();
                 const result = generateClaudeMd(project, STACKS);
 
-                expect(result).toContain('https://da.live/#/my-org/my-site');
+                // sanitizeUrl preserves # (valid fragment separator), escapeMarkdown then escapes it
+                expect(result).toContain('https://da.live/\\#/my-org/my-site');
             });
 
             it('strips # from adobe organization field to prevent heading injection', () => {
@@ -395,7 +398,8 @@ describe('aiContextWriter', () => {
                 const project = makeEdsProject();
                 const result = generateClaudeMd(project, STACKS);
 
-                expect(result).toContain('Edge Delivery + PaaS');
+                // + is escaped by escapeMarkdown at the output boundary
+                expect(result).toContain('Edge Delivery \\+ PaaS');
             });
 
             it('includes Try asking Claude section for EDS projects', () => {
