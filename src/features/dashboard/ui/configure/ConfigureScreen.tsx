@@ -7,6 +7,10 @@ import {
     Link,
     Flex,
     TextField,
+    Tabs,
+    TabList,
+    TabPanels,
+    Item,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { AiSetupTab } from '../tabs/AiSetupTab';
@@ -569,28 +573,12 @@ export function ConfigureScreen({
     // Can save if no validation errors (env vars and project name)
     const canSave = !hasEntries(validationErrors) && !projectNameError;
 
-    // AI Setup view — show only the AiSetupTab with a minimal chrome
-    if (activeView === 'ai-setup' && extensionDistPath) {
-        return (
-            <div ref={containerRef} className="container-configure">
-                <View width="100%" height="100%">
-                    <div className="content-area">
-                        <PageHeader title="AI Setup" subtitle={project.name} />
-                        <AiSetupTab
-                            projectPath={project.path}
-                        />
-                        <PageFooter
-                            leftContent={
-                                <Button variant="secondary" onPress={handleCancel} isQuiet>
-                                    Close
-                                </Button>
-                            }
-                        />
-                    </div>
-                </View>
-            </div>
-        );
-    }
+    // Tab state — "configuration" or "ai-setup". Default from activeView prop
+    // (sidebar can deep-link to AI Setup via activeView='ai-setup').
+    const [selectedTab, setSelectedTab] = useState<string>(
+        activeView === 'ai-setup' ? 'ai-setup' : 'configuration',
+    );
+    const isConfigTab = selectedTab === 'configuration';
 
     return (
         <div
@@ -605,7 +593,7 @@ export function ConfigureScreen({
                     subtitle={projectName}
                 />
 
-                {/* Content */}
+                {/* Content — tabbed: Configuration | AI Setup */}
                 <TwoColumnLayout
                     leftMaxWidth="800px"
                     leftPadding="size-300"
@@ -613,94 +601,115 @@ export function ConfigureScreen({
                     gap={0}
                     leftContent={
                         <div className="flex-column h-full">
-                            <Heading level={2} marginBottom="size-300">Configuration Settings</Heading>
-                            <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
-                                Update the settings for your project components. Required fields are marked with an asterisk.
-                            </Text>
+                            <Tabs
+                                selectedKey={selectedTab}
+                                onSelectionChange={(key) => setSelectedTab(String(key))}
+                                UNSAFE_className="configure-tabs"
+                            >
+                                <TabList>
+                                    <Item key="configuration">Configuration</Item>
+                                    <Item key="ai-setup">AI Setup</Item>
+                                </TabList>
+                                <TabPanels UNSAFE_className="flex-1 min-h-0 overflow-hidden">
+                                    <Item key="configuration">
+                                        <div className="flex-column h-full">
+                                            <Heading level={2} marginBottom="size-300" marginTop="size-300">Configuration Settings</Heading>
+                                            <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
+                                                Update the settings for your project components. Required fields are marked with an asterisk.
+                                            </Text>
 
-                            <Form UNSAFE_className="container-form">
-                                {/* Project Name Field */}
-                                <ConfigSection
-                                    id="project-info"
-                                    label="Project"
-                                    showDivider={false}
-                                >
-                                    <TextField
-                                        label="Project Name"
-                                        value={projectName}
-                                        onChange={handleProjectNameChange}
-                                        isRequired
-                                        width="100%"
-                                        validationState={getValidationState(!!projectNameError, projectNameTouched)}
-                                        errorMessage={projectNameError}
-                                        description="Lowercase letters, numbers, and hyphens only. Must start with a letter."
-                                    />
-                                </ConfigSection>
+                                            <Form UNSAFE_className="container-form">
+                                                {/* Project Name Field */}
+                                                <ConfigSection
+                                                    id="project-info"
+                                                    label="Project"
+                                                    showDivider={false}
+                                                >
+                                                    <TextField
+                                                        label="Project Name"
+                                                        value={projectName}
+                                                        onChange={handleProjectNameChange}
+                                                        isRequired
+                                                        width="100%"
+                                                        validationState={getValidationState(!!projectNameError, projectNameTouched)}
+                                                        errorMessage={projectNameError}
+                                                        description="Lowercase letters, numbers, and hyphens only. Must start with a letter."
+                                                    />
+                                                </ConfigSection>
 
-                            {serviceGroups.length === 0 ? (
-                                <Text UNSAFE_className="text-gray-600">
-                                    No components requiring configuration were found.
-                                </Text>
-                            ) : (
-                                <>
-                                    {serviceGroups.map((group, index) => (
-                                        <ConfigSection
-                                            key={group.id}
-                                            id={group.id}
-                                            label={group.label}
-                                            showDivider={index > 0}
-                                            footer={group.id === 'adobe-assets' ? (
-                                                <Flex marginTop="size-200">
-                                                    <Text UNSAFE_className="text-gray-600 text-sm">
-                                                        Universal Editor settings are configured in{' '}
-                                                        <Link
-                                                            onPress={() => webviewClient.postMessage('open-eds-settings')}
-                                                            UNSAFE_className="cursor-pointer"
+                                            {serviceGroups.length === 0 ? (
+                                                <Text UNSAFE_className="text-gray-600">
+                                                    No components requiring configuration were found.
+                                                </Text>
+                                            ) : (
+                                                <>
+                                                    {serviceGroups.map((group, index) => (
+                                                        <ConfigSection
+                                                            key={group.id}
+                                                            id={group.id}
+                                                            label={group.label}
+                                                            showDivider={index > 0}
+                                                            footer={group.id === 'adobe-assets' ? (
+                                                                <Flex marginTop="size-200">
+                                                                    <Text UNSAFE_className="text-gray-600 text-sm">
+                                                                        Universal Editor settings are configured in{' '}
+                                                                        <Link
+                                                                            onPress={() => webviewClient.postMessage('open-eds-settings')}
+                                                                            UNSAFE_className="cursor-pointer"
+                                                                        >
+                                                                            Extension Settings
+                                                                        </Link>
+                                                                    </Text>
+                                                                </Flex>
+                                                            ) : undefined}
                                                         >
-                                                            Extension Settings
-                                                        </Link>
-                                                    </Text>
-                                                </Flex>
-                                            ) : undefined}
-                                        >
-                                            {group.fields.map(field => (
-                                                <StoreConfigFieldRow
-                                                    key={field.key}
-                                                    field={field}
-                                                    group={group}
-                                                    autoDetectKey={autoDetectKey}
-                                                    isFetching={isFetching}
-                                                    hasStoreData={hasStoreData}
-                                                    fetchError={fetchError}
-                                                    isStoreGroup={isStoreGroup}
-                                                    getFieldValue={getFieldValue}
-                                                    updateField={updateField}
-                                                    validationErrors={validationErrors}
-                                                    touchedFields={touchedFields}
-                                                    normalizeUrlField={normalizeUrlField}
-                                                    getWebsiteItems={getWebsiteItems}
-                                                    getStoreGroupItems={getStoreGroupItems}
-                                                    getStoreViewItems={getStoreViewItems}
-                                                    componentConfigs={componentConfigs}
-                                                    onRefresh={forceFetch}
-                                                />
-                                            ))}
-                                        </ConfigSection>
-                                    ))}
-                                </>
-                            )}
-                            </Form>
+                                                            {group.fields.map(field => (
+                                                                <StoreConfigFieldRow
+                                                                    key={field.key}
+                                                                    field={field}
+                                                                    group={group}
+                                                                    autoDetectKey={autoDetectKey}
+                                                                    isFetching={isFetching}
+                                                                    hasStoreData={hasStoreData}
+                                                                    fetchError={fetchError}
+                                                                    isStoreGroup={isStoreGroup}
+                                                                    getFieldValue={getFieldValue}
+                                                                    updateField={updateField}
+                                                                    validationErrors={validationErrors}
+                                                                    touchedFields={touchedFields}
+                                                                    normalizeUrlField={normalizeUrlField}
+                                                                    getWebsiteItems={getWebsiteItems}
+                                                                    getStoreGroupItems={getStoreGroupItems}
+                                                                    getStoreViewItems={getStoreViewItems}
+                                                                    componentConfigs={componentConfigs}
+                                                                    onRefresh={forceFetch}
+                                                                />
+                                                            ))}
+                                                        </ConfigSection>
+                                                    ))}
+                                                </>
+                                            )}
+                                            </Form>
+                                        </div>
+                                    </Item>
+                                    <Item key="ai-setup">
+                                        <AiSetupTab projectPath={project.path} />
+                                    </Item>
+                                </TabPanels>
+                            </Tabs>
                         </div>
                     }
                     rightContent={
-                        <NavigationPanel
-                            sections={navigationSections}
-                            activeSection={activeSection}
-                            activeField={activeField}
-                            expandedSections={expandedNavSections}
-                            onToggleSection={toggleNavSection}
-                            onNavigateToField={navigateToField}
-                        />
+                        isConfigTab ? (
+                            <NavigationPanel
+                                sections={navigationSections}
+                                activeSection={activeSection}
+                                activeField={activeField}
+                                expandedSections={expandedNavSections}
+                                onToggleSection={toggleNavSection}
+                                onNavigateToField={navigateToField}
+                            />
+                        ) : null
                     }
                 />
 

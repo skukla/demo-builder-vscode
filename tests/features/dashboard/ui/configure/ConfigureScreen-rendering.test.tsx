@@ -333,7 +333,7 @@ describe('ConfigureScreen - Rendering', () => {
             expect(screen.getByText('/test/path')).toBeInTheDocument();
         });
 
-        it('does not render AiSetupTab when activeView is "ai-setup" but extensionDistPath is missing', () => {
+        it('renders AiSetupTab even without extensionDistPath (tab is always available)', () => {
             renderWithProvider(
                 <ConfigureScreen
                     project={mockProject as any}
@@ -342,7 +342,8 @@ describe('ConfigureScreen - Rendering', () => {
                 />
             );
 
-            expect(screen.queryByTestId('ai-setup-tab')).not.toBeInTheDocument();
+            // AI Setup is now a tab, not gated on extensionDistPath
+            expect(screen.getByTestId('ai-setup-tab')).toBeInTheDocument();
         });
     });
 

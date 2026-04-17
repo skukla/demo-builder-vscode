@@ -641,3 +641,43 @@ export const DialogContainer: React.FC<any> = ({ children, _onDismiss, ...props 
         {children}
     </div>
 );
+
+// Tabs mock — renders selected tab panel only (matches Spectrum behavior)
+export const Tabs: React.FC<any> = ({ children, selectedKey, onSelectionChange, ...props }) => (
+    <div data-testid="spectrum-tabs" data-selected-key={selectedKey} {...filterSpectrumProps(props)}>
+        {React.Children.map(children, (child: any) =>
+            React.isValidElement(child)
+                ? React.cloneElement(child as React.ReactElement<any>, { selectedKey, onSelectionChange })
+                : child,
+        )}
+    </div>
+);
+
+export const TabList: React.FC<any> = ({ children, selectedKey, onSelectionChange }) => (
+    <div data-testid="spectrum-tablist" role="tablist">
+        {React.Children.map(children, (child: any) => {
+            const key = getOriginalKey(child.key);
+            return (
+                <button
+                    key={key}
+                    role="tab"
+                    aria-selected={key === selectedKey}
+                    data-key={key}
+                    onClick={() => onSelectionChange?.(key)}
+                >
+                    {child.props?.children}
+                </button>
+            );
+        })}
+    </div>
+);
+
+export const TabPanels: React.FC<any> = ({ children, selectedKey, ...props }) => {
+    const panels = React.Children.toArray(children);
+    const active = panels.find((child: any) => getOriginalKey(child.key) === selectedKey);
+    return (
+        <div data-testid="spectrum-tabpanels" {...filterSpectrumProps(props)}>
+            {active ? (active as React.ReactElement).props?.children : null}
+        </div>
+    );
+};
