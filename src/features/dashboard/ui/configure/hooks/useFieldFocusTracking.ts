@@ -16,20 +16,16 @@ interface UseFieldFocusTrackingProps {
     setExpandedNavSections: Dispatch<SetStateAction<Set<string>>>;
 }
 
-interface UseFieldFocusTrackingReturn {
-    lastFocusedSectionRef: React.MutableRefObject<string | null>;
-    fieldCountInSectionRef: React.MutableRefObject<number>;
-}
-
 /**
- * Hook to handle field focus tracking and auto-scrolling
+ * Hook to handle field focus tracking and auto-scrolling.
+ * Refs are internal — callers only need the side effects (scroll, state updates).
  */
 export function useFieldFocusTracking({
     serviceGroups,
     setActiveSection,
     setActiveField,
     setExpandedNavSections,
-}: UseFieldFocusTrackingProps): UseFieldFocusTrackingReturn {
+}: UseFieldFocusTrackingProps): void {
     const lastFocusedSectionRef = useRef<string | null>(null);
     const fieldCountInSectionRef = useRef<number>(0);
 
@@ -116,8 +112,4 @@ export function useFieldFocusTracking({
         };
     }, [serviceGroups, setActiveSection, setActiveField, setExpandedNavSections]);
 
-    return {
-        lastFocusedSectionRef,
-        fieldCountInSectionRef,
-    };
 }

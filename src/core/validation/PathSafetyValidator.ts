@@ -93,8 +93,11 @@ export function validateProjectPath(providedPath: string): void {
     const resolvedPath = path.resolve(normalizedPath);
 
     // Resolve symlinks via realpathSync to prevent symlink escape attacks.
-    // If the path doesn't exist yet (ENOENT), fall back to the lexical path -
+    // If the path doesn't exist yet (ENOENT), fall back to the lexical path —
     // a non-existent path can't be a symlink.
+    // Note: inherent TOCTOU gap between validation and use. A symlink could be
+    // created after this check. Acceptable for a local desktop extension where
+    // an attacker with that access has already compromised the session.
     let canonicalPath: string;
     try {
         canonicalPath = fs.realpathSync(resolvedPath);

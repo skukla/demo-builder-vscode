@@ -381,7 +381,12 @@ const ProjectsDashboardApp: React.FC = () => {
         onCopyPath: handleCopyPath,
         onExport: handleExportProject,
         onDelete: handleDeleteProject,
-    }), [handleStartDemo, handleStopDemo, handleOpenBrowser, handleOpenLiveSite, handleOpenDaLive, handleResetProject, handleRepublishContent, handleEditProject, handleRenameProject, handleOpenFolder, handleCopyPath, handleExportProject, handleDeleteProject]);
+    }), [
+        handleStartDemo, handleStopDemo, handleOpenBrowser, handleOpenLiveSite,
+        handleOpenDaLive, handleResetProject, handleRepublishContent, handleEditProject,
+        handleRenameProject, handleOpenFolder, handleCopyPath, handleExportProject,
+        handleDeleteProject,
+    ]);
 
     return (
         <>
