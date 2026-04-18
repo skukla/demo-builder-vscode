@@ -18,6 +18,7 @@ import { promisify } from 'util';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { assertPathInside } from '@/core/validation';
 
 const execFile = promisify(childProcess.execFile);
 
@@ -29,42 +30,23 @@ const MAX_FILE_BYTES = 100_000; // 100 KB
 
 // ─── Security helpers ─────────────────────────────────────────────────────────
 
+/**
+ * Validate that `resolved` is inside `projectPath`, returning canonical paths
+ * for downstream allowlist checks (e.g., isAllowedConfigPath).
+ */
 async function assertInsideProject(
     projectPath: string,
     resolved: string,
 ): Promise<{ realProjectPath: string; realResolved: string }> {
-    // Canonicalize both paths so symlinks (e.g. macOS /tmp → /private/tmp) don't
-    // cause the prefix check to fail for legitimate paths. The canonical paths are
-    // returned so callers can pass them to isAllowedConfigPath — ensuring the allowlist
-    // check operates on the actual filesystem target, not a lexical (pre-symlink) path.
+    // Canonicalize projectPath first, then pass the canonical base to assertPathInside.
+    // This avoids a redundant realpath call on the base inside assertPathInside.
     let realProjectPath: string;
     try {
         realProjectPath = await fsPromises.realpath(projectPath);
     } catch {
         realProjectPath = projectPath;
     }
-    // Two-branch resolution for `resolved`:
-    //   1. realpath(resolved)          — file exists; resolves all symlinks
-    //   2. realpath(parent) + basename — file is new (ENOENT) but parent exists; catches intermediate symlinks
-    //   If the parent also doesn't exist, the path cannot be safely verified — reject the operation.
-    let realResolved: string;
-    try {
-        realResolved = await fsPromises.realpath(resolved);
-    } catch {
-        // Path doesn't exist yet (new file being written).
-        // Canonicalize the parent directory to catch intermediate symlinks pointing outside the project.
-        try {
-            const realParent = await fsPromises.realpath(path.dirname(resolved));
-            realResolved = path.join(realParent, path.basename(resolved));
-        } catch {
-            // Parent also doesn't exist — cannot safely canonicalize; reject rather than allow
-            // an unverified lexical check that could pass for symlinks pointing outside the project.
-            throw new Error(`Cannot verify path safety: parent directory does not exist for ${resolved}`);
-        }
-    }
-    if (!realResolved.startsWith(realProjectPath + path.sep) && realResolved !== realProjectPath) {
-        throw new Error(`Path escapes project directory: ${realResolved}`);
-    }
+    const realResolved = await assertPathInside(resolved, realProjectPath);
     return { realProjectPath, realResolved };
 }
 

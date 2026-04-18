@@ -113,13 +113,13 @@ describe('toolHandlers.getComponentConfig', () => {
     it('throws when relative path contains ../ (path traversal)', async () => {
         await expect(
             toolHandlers.getComponentConfig(PROJECT_PATH, '../outside/file.txt'),
-        ).rejects.toThrow(/escapes project directory/i);
+        ).rejects.toThrow(/escapes allowed directory/i);
     });
 
     it('throws when resolved path is outside projectPath', async () => {
         await expect(
             toolHandlers.getComponentConfig(PROJECT_PATH, '../../etc/passwd'),
-        ).rejects.toThrow(/escapes project directory/i);
+        ).rejects.toThrow(/escapes allowed directory/i);
     });
 
     it('allows a .env file when realpath resolves a symlink that stays inside the project', async () => {
@@ -141,9 +141,12 @@ describe('toolHandlers.getComponentConfig', () => {
         const symlinkedProjectPath = '/tmp/my-project';
         const canonicalProjectPath = '/private/tmp/my-project';
 
-        (fsProm.realpath as jest.Mock)
-            .mockImplementationOnce(() => Promise.resolve(canonicalProjectPath)) // projectPath symlink resolved
-            .mockImplementationOnce(() => Promise.resolve(canonicalProjectPath + '/.demo-builder.json')); // resolved
+        // Route-based mock: /tmp/... paths resolve to /private/tmp/..., already-canonical paths pass through
+        (fsProm.realpath as jest.Mock).mockImplementation((p: string) => {
+            const s = String(p);
+            if (s.startsWith('/tmp/')) return Promise.resolve(s.replace('/tmp/', '/private/tmp/'));
+            return Promise.resolve(s);
+        });
         (fsProm.readFile as jest.Mock).mockResolvedValue('{"name":"test"}');
 
         // Should NOT throw even though lexical paths differ after symlink resolution
@@ -238,17 +241,19 @@ describe('toolHandlers.updateProjectConfig', () => {
 
         await expect(
             toolHandlers.updateProjectConfig(PROJECT_PATH, 'components/link/.env', 'KEY=value'),
-        ).rejects.toThrow(/escapes project directory/i);
+        ).rejects.toThrow(/escapes allowed directory/i);
     });
 
     it('allows writing a new .env file when the parent symlink resolves inside the project', async () => {
+        const resolvedTarget = path.resolve(PROJECT_PATH, 'components/link/.env');
         const insideParent = `${PROJECT_PATH}/components/eds-storefront`;
-        (fsProm.realpath as jest.Mock)
-            .mockImplementationOnce((p: string) => Promise.resolve(p))            // #1: projectPath
-            .mockImplementationOnce(() =>                                          // #2: resolved — ENOENT (new file)
-                Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-            )
-            .mockImplementationOnce(() => Promise.resolve(insideParent));          // #3: parent dir stays inside
+        const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+
+        (fsProm.realpath as jest.Mock).mockImplementation((p: string) => {
+            if (String(p) === resolvedTarget) return Promise.reject(enoent);
+            if (String(p) === path.dirname(resolvedTarget)) return Promise.resolve(insideParent);
+            return Promise.resolve(p);
+        });
 
         const result = await toolHandlers.updateProjectConfig(PROJECT_PATH, 'components/link/.env', 'KEY=value');
 
@@ -257,13 +262,12 @@ describe('toolHandlers.updateProjectConfig', () => {
     });
 
     it('rejects when a symlinked .demo-builder.json points to a different file (allowlist uses canonical path)', async () => {
-        // Defense-in-depth: if .demo-builder.json is a symlink whose target is another file
-        // inside the project (e.g. src/secret.ts), a lexical allowlist check would pass because
-        // the lexical path matches `.demo-builder.json` — but the write would land on the target.
-        // isAllowedConfigPath must operate on the canonical path returned by assertInsideProject.
-        (fsProm.realpath as jest.Mock)
-            .mockImplementationOnce((p: string) => Promise.resolve(p))                                  // #1: projectPath
-            .mockImplementationOnce(() => Promise.resolve(`${PROJECT_PATH}/src/secret.ts`));            // #2: symlinked config → secret
+        const resolvedTarget = path.resolve(PROJECT_PATH, '.demo-builder.json');
+
+        (fsProm.realpath as jest.Mock).mockImplementation((p: string) => {
+            if (String(p) === resolvedTarget) return Promise.resolve(`${PROJECT_PATH}/src/secret.ts`);
+            return Promise.resolve(p);
+        });
 
         await expect(
             toolHandlers.updateProjectConfig(PROJECT_PATH, '.demo-builder.json', '{"name":"evil"}'),
@@ -272,9 +276,12 @@ describe('toolHandlers.updateProjectConfig', () => {
     });
 
     it('rejects reading a symlinked .demo-builder.json that resolves to a non-allowlisted file', async () => {
-        (fsProm.realpath as jest.Mock)
-            .mockImplementationOnce((p: string) => Promise.resolve(p))                                  // #1: projectPath
-            .mockImplementationOnce(() => Promise.resolve(`${PROJECT_PATH}/src/secret.ts`));            // #2: symlink target
+        const resolvedTarget = path.resolve(PROJECT_PATH, '.demo-builder.json');
+
+        (fsProm.realpath as jest.Mock).mockImplementation((p: string) => {
+            if (String(p) === resolvedTarget) return Promise.resolve(`${PROJECT_PATH}/src/secret.ts`);
+            return Promise.resolve(p);
+        });
 
         await expect(
             toolHandlers.getComponentConfig(PROJECT_PATH, '.demo-builder.json'),
@@ -283,15 +290,14 @@ describe('toolHandlers.updateProjectConfig', () => {
     });
 
     it('throws when both resolved path and parent directory do not exist (cannot canonicalize)', async () => {
-        // branch 3: both realpath(resolved) and realpath(parent) throw — reject instead of lexical fallback
-        (fsProm.realpath as jest.Mock)
-            .mockImplementationOnce((p: string) => Promise.resolve(p))            // #1: projectPath
-            .mockImplementationOnce(() =>                                          // #2: resolved — ENOENT
-                Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-            )
-            .mockImplementationOnce(() =>                                          // #3: parent dir — ENOENT
-                Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-            );
+        const resolvedTarget = path.resolve(PROJECT_PATH, 'deep/nonexistent/dir/.env');
+        const parentDir = path.dirname(resolvedTarget);
+        const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+
+        (fsProm.realpath as jest.Mock).mockImplementation((p: string) => {
+            if (String(p) === resolvedTarget || String(p) === parentDir) return Promise.reject(enoent);
+            return Promise.resolve(p);
+        });
 
         await expect(
             toolHandlers.updateProjectConfig(PROJECT_PATH, 'deep/nonexistent/dir/.env', 'KEY=value'),
@@ -488,7 +494,7 @@ describe('toolHandlers.syncStorefront', () => {
     it('throws when storefrontPath is outside the project directory', async () => {
         await expect(
             toolHandlers.syncStorefront(PROJECT_PATH, '/other/path', 'AI: test'),
-        ).rejects.toThrow(/escapes project directory/i);
+        ).rejects.toThrow(/escapes allowed directory/i);
     });
 
     it('calls execFile for git add -A, git commit, git push in sequence', async () => {
@@ -621,7 +627,7 @@ describe('toolHandlers.listBlocks', () => {
     it('throws when storefrontPath is outside project directory (listBlocks)', async () => {
         await expect(
             toolHandlers.listBlocks(PROJECT_PATH, '/other/path/storefront'),
-        ).rejects.toThrow(/escapes project directory/i);
+        ).rejects.toThrow(/escapes allowed directory/i);
     });
 
     it('throws when storefrontPath is a relative path (listBlocks)', async () => {
@@ -661,7 +667,7 @@ describe('toolHandlers.getBlockSource', () => {
     it('throws when blockName contains ../', async () => {
         await expect(
             toolHandlers.getBlockSource(PROJECT_PATH, STOREFRONT_PATH, '../secret'),
-        ).rejects.toThrow(/escapes project directory/i);
+        ).rejects.toThrow(/escapes allowed directory/i);
     });
 
     it('throws when block directory does not exist', async () => {
@@ -713,7 +719,7 @@ describe('toolHandlers.getBlockSource', () => {
     it('throws when storefrontPath is outside project directory (getBlockSource)', async () => {
         await expect(
             toolHandlers.getBlockSource(PROJECT_PATH, '/other/path/storefront', 'hero'),
-        ).rejects.toThrow(/escapes project directory/i);
+        ).rejects.toThrow(/escapes allowed directory/i);
     });
 
     it('throws when storefrontPath is a relative path (getBlockSource)', async () => {
@@ -733,7 +739,7 @@ describe('toolHandlers.getBlockSource', () => {
 
         await expect(
             toolHandlers.getBlockSource(PROJECT_PATH, STOREFRONT_PATH, 'evil-block'),
-        ).rejects.toThrow(/escapes project directory/i);
+        ).rejects.toThrow(/escapes allowed directory/i);
     });
 
     it('allows access when a block directory symlink resolves to a renamed path inside blocks/', async () => {
