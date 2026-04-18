@@ -11,6 +11,7 @@
 import { Flex, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo } from 'react';
 import { ProjectActionsMenu } from './ProjectActionsMenu';
+import type { ProjectActions } from './ProjectActionsMenu';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
@@ -32,32 +33,8 @@ export interface ProjectCardProps {
     isRunning?: boolean;
     /** Callback when the card is selected */
     onSelect: (project: Project) => void;
-    /** Callback to start the demo */
-    onStartDemo?: (project: Project) => void;
-    /** Callback to stop the demo */
-    onStopDemo?: (project: Project) => void;
-    /** Callback to open the demo in browser (for non-EDS projects) */
-    onOpenBrowser?: (project: Project) => void;
-    /** Callback to open the live site (for EDS projects) */
-    onOpenLiveSite?: (project: Project) => void;
-    /** Callback to open DA.live for authoring (for EDS projects) */
-    onOpenDaLive?: (project: Project) => void;
-    /** Callback to reset project (re-clone components or reset from template) */
-    onResetProject?: (project: Project) => void;
-    /** Callback to republish content to CDN (for EDS projects) */
-    onRepublishContent?: (project: Project) => void;
-    /** Callback to edit project settings */
-    onEdit?: (project: Project) => void;
-    /** Callback to rename project */
-    onRename?: (project: Project) => void;
-    /** Callback to open project folder in VS Code */
-    onOpenFolder?: (project: Project) => void;
-    /** Callback to copy project path to clipboard */
-    onCopyPath?: (project: Project) => void;
-    /** Callback to export project settings */
-    onExport?: (project: Project) => void;
-    /** Callback to delete project */
-    onDelete?: (project: Project) => void;
+    /** Bundled action callbacks for the kebab menu */
+    actions?: ProjectActions;
 }
 
 /**
@@ -69,19 +46,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     project,
     isRunning = false,
     onSelect,
-    onStartDemo,
-    onStopDemo,
-    onOpenBrowser,
-    onOpenLiveSite,
-    onOpenDaLive,
-    onResetProject,
-    onRepublishContent,
-    onEdit,
-    onRename,
-    onOpenFolder,
-    onCopyPath,
-    onExport,
-    onDelete,
+    actions = {},
 }) => {
     const handleClick = useCallback(() => {
         onSelect(project);
@@ -125,19 +90,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 <ProjectActionsMenu
                     project={project}
                     isRunning={isRunning}
-                    onStartDemo={onStartDemo}
-                    onStopDemo={onStopDemo}
-                    onOpenBrowser={onOpenBrowser}
-                    onOpenLiveSite={onOpenLiveSite}
-                    onOpenDaLive={onOpenDaLive}
-                    onResetProject={onResetProject}
-                    onRepublishContent={onRepublishContent}
-                    onEdit={onEdit}
-                    onRename={onRename}
-                    onOpenFolder={onOpenFolder}
-                    onCopyPath={onCopyPath}
-                    onExport={onExport}
-                    onDelete={onDelete}
+                    actions={actions}
                     className="project-card-menu-button"
                 />
             </Flex>

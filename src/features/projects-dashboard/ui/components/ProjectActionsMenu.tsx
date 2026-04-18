@@ -1,7 +1,7 @@
 /**
  * ProjectActionsMenu Component
  *
- * Kebab menu (⋮) for project actions like Start/Stop, Open, Export, and Delete.
+ * Kebab menu (three dots) for project actions like Start/Stop, Open, Export, and Delete.
  * Handles click propagation to prevent triggering parent selection.
  * Used by both ProjectCard and ProjectRow components.
  *
@@ -34,7 +34,33 @@ interface MenuItem {
     icon: string;
 }
 
-/** Icon lookup — maps menu item icon keys to Spectrum icon components */
+/**
+ * Bundled project action callbacks.
+ *
+ * Groups the 13 action callbacks that flow through the component tree
+ * (ProjectsDashboard -> Grid/RowList -> Card/Row -> ActionsMenu) into
+ * a single object, reducing prop threading from 13 individual props to 1.
+ *
+ * `onSelect` is intentionally excluded: it is a card/row-level concern,
+ * not a menu action.
+ */
+export interface ProjectActions {
+    onStartDemo?: (project: Project) => void;
+    onStopDemo?: (project: Project) => void;
+    onOpenBrowser?: (project: Project) => void;
+    onOpenLiveSite?: (project: Project) => void;
+    onOpenDaLive?: (project: Project) => void;
+    onResetProject?: (project: Project) => void;
+    onRepublishContent?: (project: Project) => void;
+    onEdit?: (project: Project) => void;
+    onRename?: (project: Project) => void;
+    onOpenFolder?: (project: Project) => void;
+    onCopyPath?: (project: Project) => void;
+    onExport?: (project: Project) => void;
+    onDelete?: (project: Project) => void;
+}
+
+/** Icon lookup - maps menu item icon keys to Spectrum icon components */
 const ICON_MAP: Record<string, React.ReactElement> = {
     play: <Play size="S" />,
     stop: <Stop size="S" />,
@@ -59,32 +85,8 @@ export interface ProjectActionsMenuProps {
     project: Project;
     /** Whether the project demo is currently running */
     isRunning?: boolean;
-    /** Callback to start the demo */
-    onStartDemo?: (project: Project) => void;
-    /** Callback to stop the demo */
-    onStopDemo?: (project: Project) => void;
-    /** Callback to open the demo in browser (for non-EDS projects) */
-    onOpenBrowser?: (project: Project) => void;
-    /** Callback to open the live site (for EDS projects) */
-    onOpenLiveSite?: (project: Project) => void;
-    /** Callback to open DA.live for authoring (for EDS projects) */
-    onOpenDaLive?: (project: Project) => void;
-    /** Callback to reset project (re-clone components or reset from template) */
-    onResetProject?: (project: Project) => void;
-    /** Callback to republish content to CDN (for EDS projects) */
-    onRepublishContent?: (project: Project) => void;
-    /** Callback to edit project settings */
-    onEdit?: (project: Project) => void;
-    /** Callback to rename project */
-    onRename?: (project: Project) => void;
-    /** Callback to open project folder in VS Code */
-    onOpenFolder?: (project: Project) => void;
-    /** Callback to copy project path to clipboard */
-    onCopyPath?: (project: Project) => void;
-    /** Callback to export project settings */
-    onExport?: (project: Project) => void;
-    /** Callback to delete project */
-    onDelete?: (project: Project) => void;
+    /** Bundled action callbacks */
+    actions: ProjectActions;
     /** Optional CSS class for the menu button */
     className?: string;
 }
@@ -98,24 +100,28 @@ export interface ProjectActionsMenuProps {
 export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     project,
     isRunning = false,
-    onStartDemo,
-    onStopDemo,
-    onOpenBrowser,
-    onOpenLiveSite,
-    onOpenDaLive,
-    onResetProject,
-    onRepublishContent,
-    onEdit,
-    onRename,
-    onOpenFolder,
-    onCopyPath,
-    onExport,
-    onDelete,
+    actions,
     className,
 }) => {
+    const {
+        onStartDemo,
+        onStopDemo,
+        onOpenBrowser,
+        onOpenLiveSite,
+        onOpenDaLive,
+        onResetProject,
+        onRepublishContent,
+        onEdit,
+        onRename,
+        onOpenFolder,
+        onCopyPath,
+        onExport,
+        onDelete,
+    } = actions;
+
     const isEds = isEdsProject(project);
 
-    // Action dispatch map — avoids a 13-case switch statement.
+    // Action dispatch map - avoids a 13-case switch statement.
     // Each key maps to the callback that handles it.
     const actionMap = useMemo<Record<string, ((p: Project) => void) | undefined>>(() => ({
         start: onStartDemo,
@@ -204,7 +210,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             }
         }
 
-        // Reset project — available for all project types
+        // Reset project - available for all project types
         if (onResetProject) {
             items.push({ key: 'resetProject', label: 'Reset', icon: 'reset' });
         }

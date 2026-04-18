@@ -7,6 +7,7 @@
  * - Access outside allowed directories
  */
 
+import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
@@ -87,17 +88,31 @@ export function validateProjectPath(providedPath: string): void {
     // Define allowed base directory
     const allowedBase = path.join(os.homedir(), '.demo-builder', 'projects');
 
-    // Normalize and resolve the path to handle ., .., and symlinks
+    // Normalize and resolve the path to handle . and ..
     const normalizedPath = path.normalize(providedPath);
     const resolvedPath = path.resolve(normalizedPath);
 
-    // Check if resolved path starts with allowed base
-    if (!resolvedPath.startsWith(allowedBase)) {
+    // Resolve symlinks via realpathSync to prevent symlink escape attacks.
+    // If the path doesn't exist yet (ENOENT), fall back to the lexical path -
+    // a non-existent path can't be a symlink.
+    let canonicalPath: string;
+    try {
+        canonicalPath = fs.realpathSync(resolvedPath);
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            canonicalPath = resolvedPath;
+        } else {
+            throw error;
+        }
+    }
+
+    // Check if canonical path starts with allowed base
+    if (!canonicalPath.startsWith(allowedBase)) {
         throw new Error('Access denied: path outside demo-builder projects directory');
     }
 
-    // Additional check: Ensure no attempt to escape via symlinks
-    const relativePath = path.relative(allowedBase, resolvedPath);
+    // Additional check: Ensure no attempt to escape via path traversal
+    const relativePath = path.relative(allowedBase, canonicalPath);
     if (relativePath.startsWith('..')) {
         throw new Error('Access denied: path traversal attempt detected');
     }

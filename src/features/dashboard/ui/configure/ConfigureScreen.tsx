@@ -12,15 +12,15 @@ import {
     TabPanels,
     Item,
 } from '@adobe/react-spectrum';
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { AiSetupTab } from '../tabs/AiSetupTab';
+import { useFieldFocusTracking } from './hooks/useFieldFocusTracking';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
 import { ConfigSection } from '@/core/ui/components/forms';
 import { TwoColumnLayout, PageHeader, PageFooter } from '@/core/ui/components/layout';
 import { NavigationPanel, NavigationSection } from '@/core/ui/components/navigation';
 import { useFocusTrap } from '@/core/ui/hooks';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
     normalizeProjectName,
@@ -154,8 +154,6 @@ export function ConfigureScreen({
     const [expandedNavSections, setExpandedNavSections] = useState<Set<string>>(new Set());
     const [activeSection, setActiveSection] = useState<string | null>(null);
     const [activeField, setActiveField] = useState<string | null>(null);
-    const lastFocusedSectionRef = useRef<string | null>(null);
-    const fieldCountInSectionRef = useRef<number>(0);
     const [projectName, setProjectName] = useState(project.name);
     const [projectNameTouched, setProjectNameTouched] = useState(false);
 
@@ -239,89 +237,13 @@ export function ConfigureScreen({
         webviewClient.postMessage('sync-component-configs', componentConfigs);
     }, [componentConfigs, isConfigureView]);
 
-    // Handle field focus to scroll section header into view
-    useEffect(() => {
-        if (serviceGroups.length === 0) return;
-
-        const handleFieldFocus = (event: FocusEvent) => {
-            const target = event.target as HTMLElement;
-            const fieldWrapper = target.closest('[id^="field-"]');
-            if (!fieldWrapper) return;
-
-            const fieldId = fieldWrapper.id.replace('field-', '');
-            const section = serviceGroups.find(group =>
-                group.fields.some(f => f.key === fieldId),
-            );
-
-            if (!section) return;
-
-            setActiveField(fieldId);
-
-            const isNewSection = lastFocusedSectionRef.current !== section.id;
-            const fieldIndex = section.fields.findIndex(f => f.key === fieldId);
-            const isFirstFieldInSection = fieldIndex === 0;
-            const isBackwardNavigation = isNewSection && !isFirstFieldInSection;
-
-            if (isNewSection) {
-                fieldCountInSectionRef.current = isFirstFieldInSection ? 1 : fieldIndex + 1;
-                lastFocusedSectionRef.current = section.id;
-            } else {
-                fieldCountInSectionRef.current += 1;
-            }
-
-            setActiveSection(section.id);
-            setExpandedNavSections(prev => {
-                const newSet = new Set(prev);
-                newSet.add(section.id);
-                return newSet;
-            });
-
-            const shouldScroll = isNewSection || (fieldCountInSectionRef.current % 3 === 0);
-
-            if (shouldScroll) {
-                const navSectionElement = document.getElementById(`nav-${section.id}`);
-                if (navSectionElement) {
-                    navSectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-
-                if (isNewSection) {
-                    if (isBackwardNavigation) {
-                        fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    } else {
-                        const sectionElement = document.getElementById(`section-${section.id}`);
-                        if (sectionElement) {
-                            sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                    }
-                } else {
-                    fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-
-                setTimeout(() => {
-                    const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
-                    if (navFieldElement) {
-                        navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
-                }, FRONTEND_TIMEOUTS.SCROLL_ANIMATION);
-            } else {
-                const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
-                if (navFieldElement) {
-                    navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            }
-        };
-
-        const inputs = document.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-            input.addEventListener('focus', handleFieldFocus as EventListener);
-        });
-
-        return () => {
-            inputs.forEach(input => {
-                input.removeEventListener('focus', handleFieldFocus as EventListener);
-            });
-        };
-    }, [serviceGroups]);
+    // Delegate field focus tracking and auto-scrolling to extracted hook
+    useFieldFocusTracking({
+        serviceGroups,
+        setActiveSection,
+        setActiveField,
+        setExpandedNavSections,
+    });
 
     /**
      * Get value from componentConfigs for validation purposes

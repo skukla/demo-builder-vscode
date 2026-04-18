@@ -1,91 +1,190 @@
 /**
- * Focus Trap + Spectrum Picker Scroll Regression Test
+ * useFieldFocusTracking Hook Integration Test
  *
- * Regression: useFocusTrap with containFocus=true pulls focus back to the first
- * focusable element when focus moves outside the container. Spectrum Picker menus
- * render in portals (body-level), so clicking a Picker option triggers the trap.
- * The trap refocuses the first element (project name field at top), and the browser
- * scrolls to show it — observed as "column jumps to top" on website selection.
- *
- * Fix: useFocusTrap whitelists overlay content (role="listbox", role="menu", etc.)
- * so focus on Spectrum portal elements is not pulled back.
+ * Verifies that ConfigureScreen delegates field focus tracking
+ * to the useFieldFocusTracking hook instead of using inline logic.
  *
  * @jest-environment jsdom
  */
 
 import { render } from '@testing-library/react';
 import React from 'react';
-import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
+import { Provider, defaultTheme } from '@adobe/react-spectrum';
+import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
+import { mockProject, mockComponentsData } from '../ConfigureScreen.testUtils';
 
-// Test component that uses useFocusTrap and assigns the ref to a real DOM container
-function FocusTrapContainer() {
-    const containerRef = useFocusTrap<HTMLDivElement>({
-        enabled: true,
-        autoFocus: false,
-        containFocus: true,
-    });
+// Track hook calls
+const mockUseFieldFocusTracking = jest.fn().mockReturnValue({
+    lastFocusedSectionRef: { current: null },
+    fieldCountInSectionRef: { current: 0 },
+});
 
-    return (
-        <div ref={containerRef} data-testid="trap-container">
-            <input type="text" data-testid="first-input" />
-            <input type="text" data-testid="second-input" />
+// Mock the hook module
+jest.mock('@/features/dashboard/ui/configure/hooks/useFieldFocusTracking', () => ({
+    useFieldFocusTracking: (...args: unknown[]) => mockUseFieldFocusTracking(...args),
+}));
+
+// Mock hooks
+jest.mock('@/core/ui/hooks', () => ({
+    useSelectableDefault: jest.fn(() => ({})),
+    useFocusTrap: jest.fn(() => ({ current: null })),
+}));
+
+jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
+    useSelectableDefault: jest.fn(() => ({})),
+}));
+
+// Mock WebviewClient
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
+    webviewClient: {
+        postMessage: jest.fn(),
+        request: jest.fn(),
+        onMessage: jest.fn(() => jest.fn()),
+    },
+}));
+
+// Mock layout components
+jest.mock('@/core/ui/components/layout', () => ({
+    TwoColumnLayout: ({ leftContent, rightContent }: any) => (
+        <div>
+            <div data-testid="left-column">{leftContent}</div>
+            <div data-testid="right-column">{rightContent}</div>
         </div>
+    ),
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
+        </div>
+    ),
+    PageFooter: ({ leftContent, rightContent }: any) => (
+        <div data-testid="page-footer">
+            <div>{leftContent}</div>
+            <div>{rightContent}</div>
+        </div>
+    ),
+}));
+
+jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
+    TwoColumnLayout: ({ leftContent, rightContent }: any) => (
+        <div>
+            <div data-testid="left-column">{leftContent}</div>
+            <div data-testid="right-column">{rightContent}</div>
+        </div>
+    ),
+}));
+
+// Mock navigation components
+jest.mock('@/core/ui/components/navigation', () => ({
+    NavigationPanel: () => <div data-testid="navigation-panel" />,
+}));
+
+// Mock form components
+jest.mock('@/core/ui/components/forms', () => ({
+    ConfigSection: ({ children, label }: any) => (
+        <div data-testid={`section-${label}`}>{children}</div>
+    ),
+}));
+
+// Mock store discovery hooks
+jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
+    useStoreDiscovery: () => ({
+        isFetching: false,
+        fetchError: null,
+        hasStoreData: false,
+        fetchStores: jest.fn(),
+        getWebsiteItems: jest.fn(() => []),
+        getStoreGroupItems: jest.fn(() => []),
+        getStoreViewItems: jest.fn(() => []),
+        isStoreGroup: jest.fn(() => false),
+    }),
+}));
+
+jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
+    useAutoStoreDetect: () => ({
+        autoDetectKey: null,
+        forceFetch: jest.fn(),
+    }),
+}));
+
+// Mock AiSetupTab
+jest.mock('@/features/dashboard/ui/tabs/AiSetupTab', () => ({
+    AiSetupTab: () => <div data-testid="ai-setup-tab" />,
+}));
+
+const renderWithProvider = (ui: React.ReactElement) => {
+    return render(
+        <Provider theme={defaultTheme} colorScheme="light">
+            {ui}
+        </Provider>,
     );
-}
+};
 
-describe('useFocusTrap — Spectrum overlay allowlist', () => {
-    let firstInputFocusSpy: jest.SpyInstance;
-
+describe('ConfigureScreen - useFieldFocusTracking integration', () => {
     beforeEach(() => {
-        // Clean up any stray portal elements from prior tests
-        document.querySelectorAll('[data-test-portal]').forEach(el => el.remove());
+        mockUseFieldFocusTracking.mockClear();
     });
 
-    afterEach(() => {
-        firstInputFocusSpy?.mockRestore();
+    it('should call useFieldFocusTracking hook on render', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject as any}
+                componentsData={mockComponentsData}
+            />,
+        );
+
+        expect(mockUseFieldFocusTracking).toHaveBeenCalled();
     });
 
-    it('does NOT pull focus back when focus moves to a Spectrum overlay (role="listbox")', () => {
-        const { getByTestId } = render(<FocusTrapContainer />);
+    it('should pass setActiveSection to useFieldFocusTracking', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject as any}
+                componentsData={mockComponentsData}
+            />,
+        );
 
-        // Spy on the first input's focus AFTER render (so we're spying on the real DOM node)
-        const firstInput = getByTestId('first-input') as HTMLInputElement;
-        firstInputFocusSpy = jest.spyOn(firstInput, 'focus');
-
-        // Simulate a Spectrum Picker portal — a body-level listbox OUTSIDE the container
-        const portalListbox = document.createElement('div');
-        portalListbox.setAttribute('role', 'listbox');
-        portalListbox.setAttribute('data-test-portal', 'true');
-
-        const portalOption = document.createElement('div');
-        portalOption.setAttribute('role', 'option');
-        portalOption.setAttribute('tabindex', '0');
-
-        portalListbox.appendChild(portalOption);
-        document.body.appendChild(portalListbox);
-
-        // Simulate focus moving to the portal option (user clicked a Picker menu item)
-        portalOption.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-
-        // Bug: focus trap detects focus outside container → calls firstInput.focus() → scroll-to-top
-        // Fix: focus trap whitelists overlay roles → focus stays on portal option
-        expect(firstInputFocusSpy).not.toHaveBeenCalled();
+        const callArgs = mockUseFieldFocusTracking.mock.calls[0][0];
+        expect(callArgs).toHaveProperty('setActiveSection');
+        expect(typeof callArgs.setActiveSection).toBe('function');
     });
 
-    it('still pulls focus back for truly external elements (not in an overlay)', () => {
-        const { getByTestId } = render(<FocusTrapContainer />);
+    it('should pass setActiveField to useFieldFocusTracking', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject as any}
+                componentsData={mockComponentsData}
+            />,
+        );
 
-        const firstInput = getByTestId('first-input') as HTMLInputElement;
-        firstInputFocusSpy = jest.spyOn(firstInput, 'focus');
+        const callArgs = mockUseFieldFocusTracking.mock.calls[0][0];
+        expect(callArgs).toHaveProperty('setActiveField');
+        expect(typeof callArgs.setActiveField).toBe('function');
+    });
 
-        // An external button with no overlay role — focus SHOULD be pulled back
-        const externalButton = document.createElement('button');
-        externalButton.setAttribute('data-test-portal', 'true');
-        document.body.appendChild(externalButton);
+    it('should pass setExpandedNavSections to useFieldFocusTracking', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject as any}
+                componentsData={mockComponentsData}
+            />,
+        );
 
-        externalButton.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+        const callArgs = mockUseFieldFocusTracking.mock.calls[0][0];
+        expect(callArgs).toHaveProperty('setExpandedNavSections');
+        expect(typeof callArgs.setExpandedNavSections).toBe('function');
+    });
 
-        // Focus trap should pull focus back to first element inside the container
-        expect(firstInputFocusSpy).toHaveBeenCalled();
+    it('should pass serviceGroups to useFieldFocusTracking', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject as any}
+                componentsData={mockComponentsData}
+            />,
+        );
+
+        const callArgs = mockUseFieldFocusTracking.mock.calls[0][0];
+        expect(callArgs).toHaveProperty('serviceGroups');
+        expect(Array.isArray(callArgs.serviceGroups)).toBe(true);
     });
 });

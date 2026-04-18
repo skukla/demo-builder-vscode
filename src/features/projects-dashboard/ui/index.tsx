@@ -6,8 +6,9 @@
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
+import type { ProjectActions } from './components/ProjectActionsMenu';
 import { RenameProjectDialog } from './components/RenameProjectDialog';
 import { ProjectsDashboard } from './ProjectsDashboard';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
@@ -365,6 +366,23 @@ const ProjectsDashboardApp: React.FC = () => {
         webviewClient.postMessage('setViewModeOverride', { viewMode: mode });
     }, []);
 
+    // Bundle all project action callbacks into a single object
+    const projectActions: ProjectActions = useMemo(() => ({
+        onStartDemo: handleStartDemo,
+        onStopDemo: handleStopDemo,
+        onOpenBrowser: handleOpenBrowser,
+        onOpenLiveSite: handleOpenLiveSite,
+        onOpenDaLive: handleOpenDaLive,
+        onResetProject: handleResetProject,
+        onRepublishContent: handleRepublishContent,
+        onEdit: handleEditProject,
+        onRename: handleRenameProject,
+        onOpenFolder: handleOpenFolder,
+        onCopyPath: handleCopyPath,
+        onExport: handleExportProject,
+        onDelete: handleDeleteProject,
+    }), [handleStartDemo, handleStopDemo, handleOpenBrowser, handleOpenLiveSite, handleOpenDaLive, handleResetProject, handleRepublishContent, handleEditProject, handleRenameProject, handleOpenFolder, handleCopyPath, handleExportProject, handleDeleteProject]);
+
     return (
         <>
             <ProjectsDashboard
@@ -374,19 +392,7 @@ const ProjectsDashboardApp: React.FC = () => {
                 onCreateProject={handleCreateProject}
                 onCopyFromExisting={handleCopyFromExisting}
                 onImportFromFile={handleImportFromFile}
-                onStartDemo={handleStartDemo}
-                onStopDemo={handleStopDemo}
-                onOpenBrowser={handleOpenBrowser}
-                onOpenLiveSite={handleOpenLiveSite}
-                onOpenDaLive={handleOpenDaLive}
-                onResetProject={handleResetProject}
-                onRepublishContent={handleRepublishContent}
-                onEditProject={handleEditProject}
-                onRenameProject={handleRenameProject}
-                onOpenFolder={handleOpenFolder}
-                onCopyPath={handleCopyPath}
-                onExportProject={handleExportProject}
-                onDeleteProject={handleDeleteProject}
+                actions={projectActions}
                 isLoading={isLoading}
                 isRefreshing={isRefreshing}
                 onRefresh={handleRefresh}

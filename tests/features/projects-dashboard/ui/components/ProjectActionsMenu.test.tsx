@@ -6,6 +6,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ProjectActionsMenu } from '@/features/projects-dashboard/ui/components/ProjectActionsMenu';
+import type { ProjectActions } from '@/features/projects-dashboard/ui/components/ProjectActionsMenu';
 import { createMockProject } from '../../testUtils';
 
 // Wrap component with Spectrum Provider
@@ -18,48 +19,37 @@ const renderWithProvider = (ui: React.ReactElement) => {
 };
 
 describe('ProjectActionsMenu', () => {
-    describe('Open Project menu item', () => {
-        it('should show Open Project when onOpenFolder is provided', () => {
+    describe('actions prop interface', () => {
+        it('should render menu items from actions object', () => {
             const project = createMockProject({ name: 'Test' });
+            const actions: ProjectActions = {
+                onOpenFolder: jest.fn(),
+                onDelete: jest.fn(),
+            };
             renderWithProvider(
                 <ProjectActionsMenu
                     project={project}
-                    onOpenFolder={jest.fn()}
-                    onDelete={jest.fn()}
+                    actions={actions}
                 />,
             );
 
-            // Open the menu by clicking the trigger button
             const menuButton = screen.getByLabelText('More actions');
             menuButton.click();
 
             expect(screen.getByText('Open Project')).toBeInTheDocument();
+            expect(screen.getByText('Delete')).toBeInTheDocument();
         });
 
-        it('should not show Open Project when onOpenFolder is not provided', () => {
+        it('should show Copy Path from actions object', () => {
             const project = createMockProject({ name: 'Test' });
+            const actions: ProjectActions = {
+                onCopyPath: jest.fn(),
+                onDelete: jest.fn(),
+            };
             renderWithProvider(
                 <ProjectActionsMenu
                     project={project}
-                    onDelete={jest.fn()}
-                />,
-            );
-
-            const menuButton = screen.getByLabelText('More actions');
-            menuButton.click();
-
-            expect(screen.queryByText('Open Project')).not.toBeInTheDocument();
-        });
-    });
-
-    describe('Copy Path menu item', () => {
-        it('should show Copy Path when onCopyPath is provided', () => {
-            const project = createMockProject({ name: 'Test' });
-            renderWithProvider(
-                <ProjectActionsMenu
-                    project={project}
-                    onCopyPath={jest.fn()}
-                    onDelete={jest.fn()}
+                    actions={actions}
                 />,
             );
 
@@ -69,46 +59,49 @@ describe('ProjectActionsMenu', () => {
             expect(screen.getByText('Copy Path')).toBeInTheDocument();
         });
 
-        it('should not show Copy Path when onCopyPath is not provided', () => {
+        it('should not show items when callbacks are absent in actions', () => {
             const project = createMockProject({ name: 'Test' });
+            const actions: ProjectActions = {
+                onDelete: jest.fn(),
+            };
             renderWithProvider(
                 <ProjectActionsMenu
                     project={project}
-                    onDelete={jest.fn()}
+                    actions={actions}
                 />,
             );
 
             const menuButton = screen.getByLabelText('More actions');
             menuButton.click();
 
+            expect(screen.queryByText('Open Project')).not.toBeInTheDocument();
             expect(screen.queryByText('Copy Path')).not.toBeInTheDocument();
         });
-    });
 
-    describe('menu item order', () => {
-        it('should place Open Project and Copy Path after Rename and before Reset', () => {
+        it('should maintain item order with actions prop', () => {
             const project = createMockProject({ name: 'Test' });
+            const actions: ProjectActions = {
+                onEdit: jest.fn(),
+                onRename: jest.fn(),
+                onOpenFolder: jest.fn(),
+                onCopyPath: jest.fn(),
+                onResetProject: jest.fn(),
+                onExport: jest.fn(),
+                onDelete: jest.fn(),
+            };
             renderWithProvider(
                 <ProjectActionsMenu
                     project={project}
-                    onEdit={jest.fn()}
-                    onRename={jest.fn()}
-                    onOpenFolder={jest.fn()}
-                    onCopyPath={jest.fn()}
-                    onResetProject={jest.fn()}
-                    onExport={jest.fn()}
-                    onDelete={jest.fn()}
+                    actions={actions}
                 />,
             );
 
             const menuButton = screen.getByLabelText('More actions');
             menuButton.click();
 
-            // All items should be present
             const menuItems = screen.getAllByRole('menuitem');
             const labels = menuItems.map(item => item.textContent);
 
-            // Find the indices of the relevant items
             const renameIdx = labels.findIndex(l => l?.includes('Rename'));
             const openFolderIdx = labels.findIndex(l => l?.includes('Open Project'));
             const copyPathIdx = labels.findIndex(l => l?.includes('Copy Path'));
@@ -117,6 +110,27 @@ describe('ProjectActionsMenu', () => {
             expect(renameIdx).toBeLessThan(openFolderIdx);
             expect(openFolderIdx).toBeLessThan(copyPathIdx);
             expect(copyPathIdx).toBeLessThan(resetIdx);
+        });
+
+        it('should invoke correct action callback when item selected', () => {
+            const project = createMockProject({ name: 'Test' });
+            const actions: ProjectActions = {
+                onDelete: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={project}
+                    actions={actions}
+                />,
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            menuButton.click();
+
+            const deleteItem = screen.getByText('Delete');
+            deleteItem.click();
+
+            expect(actions.onDelete).toHaveBeenCalledWith(project);
         });
     });
 });

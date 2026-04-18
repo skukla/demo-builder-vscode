@@ -12,4 +12,4 @@ export { DashboardEmptyState } from './DashboardEmptyState';
 export type { DashboardEmptyStateProps } from './DashboardEmptyState';
 
 export { ProjectActionsMenu } from './ProjectActionsMenu';
-export type { ProjectActionsMenuProps } from './ProjectActionsMenu';
+export type { ProjectActionsMenuProps, ProjectActions } from './ProjectActionsMenu';
