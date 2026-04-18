@@ -9,9 +9,6 @@
  * - cancel-auth-polling: User cancels authentication
  */
 
-import * as fsPromises from 'fs/promises';
-import * as os from 'os';
-import * as path from 'path';
 import { toggleLogsPanel } from '../services/lifecycleService';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { openUrl } from '@/core/utils/browserUtils';
@@ -112,51 +109,19 @@ export async function handleCancelAuthPolling(context: HandlerContext): Promise<
  * Opens the project directory in VS Code, triggering an Extension Host restart.
  */
 export async function handleOpenProject(context: HandlerContext): Promise<SimpleResult> {
-    await import('vscode');
-
-    context.logger.info('[Project Creation] ✅ openProject message received');
-    context.logger.debug(`[Project Creation] Current panel: ${context.panel ? 'exists' : 'undefined'}`);
-
-    try {
-        // Get current project to access path
-        const project = await context.stateManager.getCurrentProject();
-
-        if (!project?.path) {
-            context.logger.error('[Project Creation] No project found or path missing');
-            throw new Error('Project not found');
-        }
-
-        // Set flag to reopen dashboard after Extension Host restart
-        try {
-            const demoBuilderDir = path.join(os.homedir(), '.demo-builder');
-            await fsPromises.mkdir(demoBuilderDir, { recursive: true });
-
-            const flagFile = path.join(demoBuilderDir, '.open-dashboard-after-restart');
-            await fsPromises.writeFile(flagFile, JSON.stringify({
-                projectName: project.name,
-                projectPath: project.path,
-                timestamp: Date.now(),
-            }), 'utf8');
-
-            context.logger.debug('[Project Creation] Set dashboard reopen flag');
-        } catch (flagError) {
-            context.logger.warn('[Project Creation] Could not set reopen flag', toError(flagError).message);
-        }
-
-        // Close any existing Projects List webview before opening project
-        const { ShowProjectsListCommand } = await import('../../projects-dashboard/commands/showProjectsList');
-        ShowProjectsListCommand.disposeActivePanel();
-        context.logger.debug('[Project Creation] Closed Projects List webview if it was open');
-
-        // Dispose this panel - wizard's dispose() will open projects list automatically
-        context.panel?.dispose();
-        context.logger.debug('[Project Creation] Wizard closed');
-
-    } catch (error) {
-        context.logger.error('[Project Creation] Error opening project', error as Error);
-        const vscodeWindow = await import('vscode');
-        vscodeWindow.window.showErrorMessage('Failed to open project. Please use the tree view or status bar to access your project.');
+    const vscode = await import('vscode');
+    const project = await context.stateManager.getCurrentProject();
+    if (!project?.path) {
+        context.logger.error('[Project Creation] No project found or path missing');
+        throw new Error('Project not found');
     }
+
+    context.logger.info(`[Project Creation] Opening project folder: ${project.path}`);
+
+    // Open the project folder in the same window — extension host will restart
+    // and Claude Code will discover .mcp.json at the new workspace root.
+    const uri = vscode.Uri.file(project.path);
+    await vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
 
     return { success: true };
 }

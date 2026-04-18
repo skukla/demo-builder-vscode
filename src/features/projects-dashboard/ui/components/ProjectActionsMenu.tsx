@@ -12,9 +12,11 @@
  */
 
 import { Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum';
+import Copy from '@spectrum-icons/workflow/Copy';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
+import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Globe from '@spectrum-icons/workflow/Globe';
 import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
 import Play from '@spectrum-icons/workflow/Play';
@@ -29,7 +31,7 @@ import { isEdsProject } from '@/types/typeGuards';
 interface MenuItem {
     key: string;
     label: string;
-    icon: 'play' | 'stop' | 'globe' | 'dalive' | 'edit' | 'rename' | 'export' | 'delete' | 'reset' | 'republish';
+    icon: 'play' | 'stop' | 'globe' | 'dalive' | 'edit' | 'rename' | 'folder' | 'copy' | 'export' | 'delete' | 'reset' | 'republish';
 }
 
 export interface ProjectActionsMenuProps {
@@ -55,6 +57,10 @@ export interface ProjectActionsMenuProps {
     onEdit?: (project: Project) => void;
     /** Callback to rename project */
     onRename?: (project: Project) => void;
+    /** Callback to open project folder in VS Code */
+    onOpenFolder?: (project: Project) => void;
+    /** Callback to copy project path to clipboard */
+    onCopyPath?: (project: Project) => void;
     /** Callback to export project settings */
     onExport?: (project: Project) => void;
     /** Callback to delete project */
@@ -81,6 +87,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     onRepublishContent,
     onEdit,
     onRename,
+    onOpenFolder,
+    onCopyPath,
     onExport,
     onDelete,
     className,
@@ -116,6 +124,12 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             case 'rename':
                 onRename?.(project);
                 break;
+            case 'openFolder':
+                onOpenFolder?.(project);
+                break;
+            case 'copyPath':
+                onCopyPath?.(project);
+                break;
             case 'export':
                 onExport?.(project);
                 break;
@@ -123,7 +137,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 onDelete?.(project);
                 break;
         }
-    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onExport, onDelete]);
+    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onOpenFolder, onCopyPath, onExport, onDelete]);
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
@@ -154,6 +168,13 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             if (onRepublishContent) {
                 items.push({ key: 'republishContent', label: 'Republish Content', icon: 'republish' });
             }
+            // Open Project / Copy Path (available for all)
+            if (onOpenFolder) {
+                items.push({ key: 'openFolder', label: 'Open Project', icon: 'folder' });
+            }
+            if (onCopyPath) {
+                items.push({ key: 'copyPath', label: 'Copy Path', icon: 'copy' });
+            }
         } else {
             // Non-EDS projects: Start/Stop based on running state
             if (isRunning && onStopDemo) {
@@ -176,6 +197,13 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             if (onRename) {
                 items.push({ key: 'rename', label: 'Rename', icon: 'rename' });
             }
+            // Open Project / Copy Path (available for all)
+            if (onOpenFolder) {
+                items.push({ key: 'openFolder', label: 'Open Project', icon: 'folder' });
+            }
+            if (onCopyPath) {
+                items.push({ key: 'copyPath', label: 'Copy Path', icon: 'copy' });
+            }
         }
 
         // Reset project — available for all project types
@@ -191,7 +219,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             items.push({ key: 'delete', label: 'Delete', icon: 'delete' });
         }
         return items;
-    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onExport, onDelete]);
+    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onOpenFolder, onCopyPath, onExport, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {
@@ -218,6 +246,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                             {item.icon === 'dalive' && <Edit size="S" />}
                             {item.icon === 'edit' && <Edit size="S" />}
                             {item.icon === 'rename' && <Rename size="S" />}
+                            {item.icon === 'folder' && <FolderOpen size="S" />}
+                            {item.icon === 'copy' && <Copy size="S" />}
                             {item.icon === 'reset' && <Revert size="S" />}
                             {item.icon === 'republish' && <Globe size="S" />}
                             {item.icon === 'export' && <Export size="S" />}

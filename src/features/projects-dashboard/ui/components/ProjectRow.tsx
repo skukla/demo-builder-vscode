@@ -47,6 +47,10 @@ export interface ProjectRowProps {
     onEdit?: (project: Project) => void;
     /** Callback to rename project */
     onRename?: (project: Project) => void;
+    /** Callback to open project folder in VS Code */
+    onOpenFolder?: (project: Project) => void;
+    /** Callback to copy project path to clipboard */
+    onCopyPath?: (project: Project) => void;
     /** Callback to export project settings */
     onExport?: (project: Project) => void;
     /** Callback to delete project */
@@ -69,6 +73,8 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
     onRepublishContent,
     onEdit,
     onRename,
+    onOpenFolder,
+    onCopyPath,
     onExport,
     onDelete,
 }) => {
@@ -132,6 +138,8 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         onRepublishContent={onRepublishContent}
                         onEdit={onEdit}
                         onRename={onRename}
+                        onOpenFolder={onOpenFolder}
+                        onCopyPath={onCopyPath}
                         onExport={onExport}
                         onDelete={onDelete}
                         className="project-row-menu-button"

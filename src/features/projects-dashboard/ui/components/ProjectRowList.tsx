@@ -34,6 +34,10 @@ export interface ProjectRowListProps {
     onEditProject?: (project: Project) => void;
     /** Callback to rename project */
     onRenameProject?: (project: Project) => void;
+    /** Callback to open project folder in VS Code */
+    onOpenFolder?: (project: Project) => void;
+    /** Callback to copy project path to clipboard */
+    onCopyPath?: (project: Project) => void;
     /** Callback to export project settings */
     onExportProject?: (project: Project) => void;
     /** Callback to delete project */
@@ -56,6 +60,8 @@ export const ProjectRowList: React.FC<ProjectRowListProps> = ({
     onRepublishContent,
     onEditProject,
     onRenameProject,
+    onOpenFolder,
+    onCopyPath,
     onExportProject,
     onDeleteProject,
 }) => {
@@ -76,6 +82,8 @@ export const ProjectRowList: React.FC<ProjectRowListProps> = ({
                     onRepublishContent={onRepublishContent}
                     onEdit={onEditProject}
                     onRename={onRenameProject}
+                    onOpenFolder={onOpenFolder}
+                    onCopyPath={onCopyPath}
                     onExport={onExportProject}
                     onDelete={onDeleteProject}
                 />

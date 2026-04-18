@@ -51,79 +51,71 @@ describe('lifecycleHandlers - Project Actions', () => {
 
     describe('handleOpenProject', () => {
         beforeEach(() => {
-            // Reset mocks before each test
             jest.clearAllMocks();
+            mockVSCode.commands.executeCommand.mockResolvedValue(undefined);
         });
 
-        it('should open project in workspace successfully', async () => {
+        it('should call vscode.openFolder with the project path', async () => {
             mockContext.stateManager.getCurrentProject.mockResolvedValue({
                 name: 'Test Project',
-                path: '/path/to/project'
+                path: '/path/to/project',
             });
 
-            mockVSCode.workspace.updateWorkspaceFolders.mockReturnValue(true);
-
-            // Execute handler
             const result = await handleOpenProject(mockContext);
 
             expect(result.success).toBe(true);
-            expect(mockContext.stateManager.getCurrentProject).toHaveBeenCalled();
-            // Note: Panel disposal and workspace folder updates happen internally
+            expect(mockVSCode.Uri.file).toHaveBeenCalledWith('/path/to/project');
+            expect(mockVSCode.commands.executeCommand).toHaveBeenCalledWith(
+                'vscode.openFolder',
+                expect.objectContaining({ fsPath: '/path/to/project' }),
+                { forceNewWindow: false },
+            );
         });
 
-        it('should handle missing project', async () => {
+        it('should throw when project is missing', async () => {
             mockContext.stateManager.getCurrentProject.mockResolvedValue(null);
 
-            const result = await handleOpenProject(mockContext);
-
-            expect(result.success).toBe(true);
+            await expect(handleOpenProject(mockContext)).rejects.toThrow('Project not found');
             expect(mockContext.logger.error).toHaveBeenCalledWith(
-                expect.stringContaining('[Project Creation] No project found')
+                expect.stringContaining('[Project Creation] No project found'),
             );
         });
 
-        it('should handle missing project path', async () => {
+        it('should throw when project path is missing', async () => {
             mockContext.stateManager.getCurrentProject.mockResolvedValue({
                 name: 'Test Project',
-                path: null
+                path: null,
             });
 
-            const result = await handleOpenProject(mockContext);
-
-            expect(result.success).toBe(true);
+            await expect(handleOpenProject(mockContext)).rejects.toThrow('Project not found');
             expect(mockContext.logger.error).toHaveBeenCalledWith(
-                expect.stringContaining('[Project Creation] No project found')
+                expect.stringContaining('[Project Creation] No project found'),
             );
         });
 
-        it('should set reopen dashboard flag', async () => {
+        it('should log the project path being opened', async () => {
             mockContext.stateManager.getCurrentProject.mockResolvedValue({
                 name: 'Test Project',
-                path: '/path/to/project'
+                path: '/path/to/project',
             });
-
-            mockVSCode.workspace.updateWorkspaceFolders.mockReturnValue(true);
 
             await handleOpenProject(mockContext);
 
-            // Dashboard flag setting is done internally via dynamic imports
-            // We can verify the project was fetched
-            expect(mockContext.stateManager.getCurrentProject).toHaveBeenCalled();
+            expect(mockContext.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('/path/to/project'),
+            );
         });
 
-        // Test removed - workspace folder manipulation was removed in beta.64
-        // handleOpenProject now directly opens dashboard without workspace manipulation
+        it('should not dispose panels or set flag files', async () => {
+            mockContext.stateManager.getCurrentProject.mockResolvedValue({
+                name: 'Test Project',
+                path: '/path/to/project',
+            });
 
-        it('should handle general errors', async () => {
-            mockContext.stateManager.getCurrentProject.mockRejectedValue(new Error('State manager error'));
+            await handleOpenProject(mockContext);
 
-            const result = await handleOpenProject(mockContext);
-
-            expect(result.success).toBe(true);
-            expect(mockContext.logger.error).toHaveBeenCalledWith(
-                expect.stringContaining('[Project Creation] Error opening project'),
-                expect.any(Error)
-            );
+            // No panel disposal - vscode.openFolder triggers extension host restart
+            expect(mockContext.panel.dispose).not.toHaveBeenCalled();
         });
     });
 
@@ -193,16 +185,21 @@ describe('lifecycleHandlers - Project Actions', () => {
     });
 
     describe('Integration Scenarios', () => {
-        it('should handle complete wizard lifecycle - project opening', async () => {
-            // Create project (simulated)
+        it('should handle complete wizard lifecycle - project opening via vscode.openFolder', async () => {
+            mockVSCode.commands.executeCommand.mockResolvedValue(undefined);
             mockContext.stateManager.getCurrentProject.mockResolvedValue({
                 name: 'Test Project',
-                path: '/path/to/project'
+                path: '/path/to/project',
             });
 
-            // Open project (workspace folder manipulation removed in beta.64)
-            await handleOpenProject(mockContext);
-            expect(mockContext.panel.dispose).toHaveBeenCalled();
+            const result = await handleOpenProject(mockContext);
+
+            expect(result.success).toBe(true);
+            expect(mockVSCode.commands.executeCommand).toHaveBeenCalledWith(
+                'vscode.openFolder',
+                expect.any(Object),
+                { forceNewWindow: false },
+            );
         });
     });
 });

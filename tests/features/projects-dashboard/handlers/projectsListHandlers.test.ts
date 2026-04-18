@@ -97,13 +97,21 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'republishContent')).toBe(true);
         });
 
-        it('should have exactly 19 handlers', () => {
+        it('should include project folder action handlers', () => {
+            // Given: projectsListHandlers object
+            // When: Checking for project folder action message types
+            // Then: Open folder and copy path handlers present
+            expect(hasHandler(projectsListHandlers, 'open-project-folder')).toBe(true);
+            expect(hasHandler(projectsListHandlers, 'copy-project-path')).toBe(true);
+        });
+
+        it('should have exactly 21 handlers', () => {
             // Given: projectsListHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(projectsListHandlers);
 
-            // Then: Exactly 19 handlers
-            expect(types).toHaveLength(19);
+            // Then: Exactly 21 handlers (19 original + open-project-folder + copy-project-path)
+            expect(types).toHaveLength(21);
         });
 
         it('should have handlers as functions', () => {

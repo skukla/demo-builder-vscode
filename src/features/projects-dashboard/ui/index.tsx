@@ -336,6 +336,28 @@ const ProjectsDashboardApp: React.FC = () => {
         setProjectToRename(null);
     }, []);
 
+    // Handle open project folder
+    const handleOpenFolder = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('open-project-folder', {
+                projectPath: project.path,
+            });
+        } catch (error) {
+            console.error('Failed to open project folder:', error);
+        }
+    }, []);
+
+    // Handle copy project path
+    const handleCopyPath = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('copy-project-path', {
+                projectPath: project.path,
+            });
+        } catch (error) {
+            console.error('Failed to copy project path:', error);
+        }
+    }, []);
+
     // Handle view mode override - saves to backend for session persistence
     const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
         setInitialViewMode(mode);
@@ -361,6 +383,8 @@ const ProjectsDashboardApp: React.FC = () => {
                 onRepublishContent={handleRepublishContent}
                 onEditProject={handleEditProject}
                 onRenameProject={handleRenameProject}
+                onOpenFolder={handleOpenFolder}
+                onCopyPath={handleCopyPath}
                 onExportProject={handleExportProject}
                 onDeleteProject={handleDeleteProject}
                 isLoading={isLoading}

@@ -126,6 +126,10 @@ export const commands = {
 
 export const env = {
     openExternal: jest.fn(),
+    clipboard: {
+        writeText: jest.fn(),
+        readText: jest.fn(),
+    },
 };
 
 export const languages = {

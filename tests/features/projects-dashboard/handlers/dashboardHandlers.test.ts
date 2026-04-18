@@ -8,6 +8,8 @@ import {
     handleGetProjects,
     handleSelectProject,
     handleCreateProject,
+    handleOpenProjectFolder,
+    handleCopyProjectPath,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import {
     createMockProject,
@@ -35,16 +37,28 @@ jest.mock('vscode', () => ({
             get: jest.fn().mockReturnValue('cards'),
         }),
     },
+    Uri: {
+        file: jest.fn((p: string) => ({ fsPath: p, path: p })),
+    },
+    env: {
+        clipboard: {
+            writeText: jest.fn(),
+        },
+    },
+    window: {
+        showInformationMessage: jest.fn(),
+    },
 }), { virtual: true });
 
 describe('dashboardHandlers', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        // Reset vscode config mock to default
+        // Reset vscode mocks to defaults
         const vscode = require('vscode');
         vscode.workspace.getConfiguration.mockReturnValue({
             get: jest.fn().mockReturnValue('cards'),
         });
+        vscode.commands.executeCommand.mockResolvedValue(undefined);
     });
 
     describe('handleGetProjects', () => {
@@ -375,6 +389,102 @@ describe('dashboardHandlers', () => {
             await handleCreateProject(context as any);
 
             expect(context.sendMessage).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('handleOpenProjectFolder', () => {
+        it('should call vscode.openFolder with the project URI', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenProjectFolder(context as any, {
+                projectPath: '/path/to/project',
+            });
+
+            expect(vscode.Uri.file).toHaveBeenCalledWith('/path/to/project');
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'vscode.openFolder',
+                expect.objectContaining({ fsPath: '/path/to/project' }),
+                { forceNewWindow: false },
+            );
+            expect(result).toEqual({ success: true });
+        });
+
+        it('should return error when projectPath is missing', async () => {
+            const context = createMockHandlerContext([]);
+
+            const result = await handleOpenProjectFolder(context as any, undefined);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBeDefined();
+        });
+
+        it('should handle command execution error', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+            vscode.commands.executeCommand.mockRejectedValue(
+                new Error('Command failed'),
+            );
+
+            const result = await handleOpenProjectFolder(context as any, {
+                projectPath: '/path/to/project',
+            });
+
+            expect(result.success).toBe(false);
+            expect(context.logger.error).toHaveBeenCalled();
+        });
+    });
+
+    describe('handleCopyProjectPath', () => {
+        it('should copy the project path to clipboard', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleCopyProjectPath(context as any, {
+                projectPath: '/path/to/project',
+            });
+
+            expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith(
+                '/path/to/project',
+            );
+            expect(result).toEqual({ success: true });
+        });
+
+        it('should show an information message after copying', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            await handleCopyProjectPath(context as any, {
+                projectPath: '/path/to/project',
+            });
+
+            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+                expect.stringContaining('copied'),
+            );
+        });
+
+        it('should return error when projectPath is missing', async () => {
+            const context = createMockHandlerContext([]);
+
+            const result = await handleCopyProjectPath(context as any, undefined);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBeDefined();
+        });
+
+        it('should handle clipboard error', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+            vscode.env.clipboard.writeText.mockRejectedValue(
+                new Error('Clipboard failed'),
+            );
+
+            const result = await handleCopyProjectPath(context as any, {
+                projectPath: '/path/to/project',
+            });
+
+            expect(result.success).toBe(false);
+            expect(context.logger.error).toHaveBeenCalled();
         });
     });
 });
