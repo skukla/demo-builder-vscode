@@ -398,13 +398,13 @@ describe('dashboardHandlers', () => {
             const vscode = require('vscode');
 
             const result = await handleOpenProjectFolder(context as any, {
-                projectPath: '/path/to/project',
+                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
             });
 
-            expect(vscode.Uri.file).toHaveBeenCalledWith('/path/to/project');
+            expect(vscode.Uri.file).toHaveBeenCalledWith(`${require('os').homedir()}/.demo-builder/projects/test-project`);
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'vscode.openFolder',
-                expect.objectContaining({ fsPath: '/path/to/project' }),
+                expect.objectContaining({ fsPath: `${require('os').homedir()}/.demo-builder/projects/test-project` }),
                 { forceNewWindow: false },
             );
             expect(result).toEqual({ success: true });
@@ -427,7 +427,7 @@ describe('dashboardHandlers', () => {
             );
 
             const result = await handleOpenProjectFolder(context as any, {
-                projectPath: '/path/to/project',
+                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
             });
 
             expect(result.success).toBe(false);
@@ -441,11 +441,11 @@ describe('dashboardHandlers', () => {
             const vscode = require('vscode');
 
             const result = await handleCopyProjectPath(context as any, {
-                projectPath: '/path/to/project',
+                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
             });
 
             expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith(
-                '/path/to/project',
+                `${require('os').homedir()}/.demo-builder/projects/test-project`,
             );
             expect(result).toEqual({ success: true });
         });
@@ -455,7 +455,7 @@ describe('dashboardHandlers', () => {
             const vscode = require('vscode');
 
             await handleCopyProjectPath(context as any, {
-                projectPath: '/path/to/project',
+                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
             });
 
             expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
@@ -480,7 +480,7 @@ describe('dashboardHandlers', () => {
             );
 
             const result = await handleCopyProjectPath(context as any, {
-                projectPath: '/path/to/project',
+                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
             });
 
             expect(result.success).toBe(false);

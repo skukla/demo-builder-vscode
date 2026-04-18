@@ -39,7 +39,6 @@ interface ConfigureInitialData {
     };
     existingEnvValues: Record<string, Record<string, string>>;
     existingProjectNames: string[];
-    extensionDistPath: string;
     activeView?: 'configure' | 'ai-setup';
 }
 
@@ -162,7 +161,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             componentsData,
             existingEnvValues,
             existingProjectNames,
-            extensionDistPath: path.join(this.context.extensionPath, 'dist'),
             activeView: this._requestedActiveView,
         };
     }

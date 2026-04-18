@@ -13,7 +13,6 @@ interface ConfigureInitData extends WebviewInitData {
     componentsData?: ComponentsData;
     existingEnvValues?: Record<string, Record<string, string>>;
     existingProjectNames?: string[];
-    extensionDistPath?: string;
     activeView?: 'configure' | 'ai-setup';
 }
 
@@ -36,7 +35,6 @@ root.render(
                     componentsData={data.componentsData}
                     existingEnvValues={data.existingEnvValues}
                     existingProjectNames={data.existingProjectNames}
-                    extensionDistPath={data.extensionDistPath}
                     activeView={data.activeView}
                 />
             ) : null;

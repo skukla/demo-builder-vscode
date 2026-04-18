@@ -54,12 +54,10 @@ interface ConfigureScreenProps {
     componentsData: ComponentsData;
     existingEnvValues?: Record<string, Record<string, string>>;
     existingProjectNames?: string[];
-    /** Absolute path to the extension's dist/ directory. When provided, the AI Setup section renders. */
-    extensionDistPath?: string;
     /**
-     * Which view to show.
-     * - `'configure'` (default): full configuration form
-     * - `'ai-setup'`: only the AI Setup tab, no configuration form
+     * Which tab to show initially.
+     * - `'configure'` (default): configuration form
+     * - `'ai-setup'`: AI Setup health checks
      */
     activeView?: 'configure' | 'ai-setup';
 }
@@ -146,7 +144,6 @@ export function ConfigureScreen({
     componentsData,
     existingEnvValues,
     existingProjectNames = [],
-    extensionDistPath,
     activeView = 'configure',
 }: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});

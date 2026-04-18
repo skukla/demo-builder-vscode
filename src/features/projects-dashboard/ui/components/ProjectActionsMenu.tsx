@@ -31,7 +31,27 @@ import { isEdsProject } from '@/types/typeGuards';
 interface MenuItem {
     key: string;
     label: string;
-    icon: 'play' | 'stop' | 'globe' | 'dalive' | 'edit' | 'rename' | 'folder' | 'copy' | 'export' | 'delete' | 'reset' | 'republish';
+    icon: string;
+}
+
+/** Icon lookup — maps menu item icon keys to Spectrum icon components */
+const ICON_MAP: Record<string, React.ReactElement> = {
+    play: <Play size="S" />,
+    stop: <Stop size="S" />,
+    globe: <Globe size="S" />,
+    dalive: <Edit size="S" />,
+    edit: <Edit size="S" />,
+    rename: <Rename size="S" />,
+    folder: <FolderOpen size="S" />,
+    copy: <Copy size="S" />,
+    reset: <Revert size="S" />,
+    republish: <Globe size="S" />,
+    export: <Export size="S" />,
+    delete: <Delete size="S" />,
+};
+
+function renderMenuIcon(iconKey: string): React.ReactElement | null {
+    return ICON_MAP[iconKey] ?? null;
 }
 
 export interface ProjectActionsMenuProps {
@@ -218,18 +238,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 <Menu onAction={handleMenuAction} items={menuItems}>
                     {(item) => (
                         <Item key={item.key} textValue={item.label}>
-                            {item.icon === 'play' && <Play size="S" />}
-                            {item.icon === 'stop' && <Stop size="S" />}
-                            {item.icon === 'globe' && <Globe size="S" />}
-                            {item.icon === 'dalive' && <Edit size="S" />}
-                            {item.icon === 'edit' && <Edit size="S" />}
-                            {item.icon === 'rename' && <Rename size="S" />}
-                            {item.icon === 'folder' && <FolderOpen size="S" />}
-                            {item.icon === 'copy' && <Copy size="S" />}
-                            {item.icon === 'reset' && <Revert size="S" />}
-                            {item.icon === 'republish' && <Globe size="S" />}
-                            {item.icon === 'export' && <Export size="S" />}
-                            {item.icon === 'delete' && <Delete size="S" />}
+                            {renderMenuIcon(item.icon)}
                             <Text>{item.label}</Text>
                         </Item>
                     )}

@@ -9,6 +9,7 @@
  * - cancel-auth-polling: User cancels authentication
  */
 
+import * as vscode from 'vscode';
 import { toggleLogsPanel } from '../services/lifecycleService';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { openUrl } from '@/core/utils/browserUtils';
@@ -109,13 +110,13 @@ export async function handleCancelAuthPolling(context: HandlerContext): Promise<
  * Opens the project directory in VS Code, triggering an Extension Host restart.
  */
 export async function handleOpenProject(context: HandlerContext): Promise<SimpleResult> {
-    const vscode = await import('vscode');
     const project = await context.stateManager.getCurrentProject();
     if (!project?.path) {
         context.logger.error('[Project Creation] No project found or path missing');
         throw new Error('Project not found');
     }
 
+    validateProjectPath(project.path);
     context.logger.info(`[Project Creation] Opening project folder: ${project.path}`);
 
     // Open the project folder in the same window — extension host will restart
@@ -135,7 +136,7 @@ export async function handleBrowseFiles(
     context: HandlerContext,
     payload: { projectPath: string },
 ): Promise<SimpleResult> {
-    const vscode = await import('vscode');
+
 
     try {
         const projectPath = payload.projectPath;
@@ -202,7 +203,7 @@ export async function handleOpenAdobeConsole(
     context: HandlerContext,
     payload?: { orgId?: string; projectId?: string; workspaceId?: string },
 ): Promise<SimpleResult> {
-    const vscode = await import('vscode');
+
 
     try {
         let consoleUrl = 'https://developer.adobe.com/console';

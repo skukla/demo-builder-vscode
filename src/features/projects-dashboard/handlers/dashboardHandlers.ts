@@ -975,6 +975,7 @@ export const handleOpenProjectFolder: MessageHandler<{ projectPath: string }> = 
     }
 
     try {
+        validateProjectPath(payload.projectPath);
         const uri = vscode.Uri.file(payload.projectPath);
         await vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
         return { success: true };
@@ -996,6 +997,7 @@ export const handleCopyProjectPath: MessageHandler<{ projectPath: string }> = as
     }
 
     try {
+        validateProjectPath(payload.projectPath);
         await vscode.env.clipboard.writeText(payload.projectPath);
         vscode.window.showInformationMessage('Project path copied to clipboard');
         return { success: true };
