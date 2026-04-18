@@ -95,49 +95,27 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
 }) => {
     const isEds = isEdsProject(project);
 
+    // Action dispatch map — avoids a 13-case switch statement.
+    // Each key maps to the callback that handles it.
+    const actionMap = useMemo<Record<string, ((p: Project) => void) | undefined>>(() => ({
+        start: onStartDemo,
+        stop: onStopDemo,
+        open: onOpenBrowser,
+        openLive: onOpenLiveSite,
+        openDaLive: onOpenDaLive,
+        resetProject: onResetProject,
+        republishContent: onRepublishContent,
+        edit: onEdit,
+        rename: onRename,
+        openFolder: onOpenFolder,
+        copyPath: onCopyPath,
+        export: onExport,
+        delete: onDelete,
+    }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onOpenFolder, onCopyPath, onExport, onDelete]);
+
     const handleMenuAction = useCallback((key: React.Key) => {
-        switch (key) {
-            case 'start':
-                onStartDemo?.(project);
-                break;
-            case 'stop':
-                onStopDemo?.(project);
-                break;
-            case 'open':
-                onOpenBrowser?.(project);
-                break;
-            case 'openLive':
-                onOpenLiveSite?.(project);
-                break;
-            case 'openDaLive':
-                onOpenDaLive?.(project);
-                break;
-            case 'resetProject':
-                onResetProject?.(project);
-                break;
-            case 'republishContent':
-                onRepublishContent?.(project);
-                break;
-            case 'edit':
-                onEdit?.(project);
-                break;
-            case 'rename':
-                onRename?.(project);
-                break;
-            case 'openFolder':
-                onOpenFolder?.(project);
-                break;
-            case 'copyPath':
-                onCopyPath?.(project);
-                break;
-            case 'export':
-                onExport?.(project);
-                break;
-            case 'delete':
-                onDelete?.(project);
-                break;
-        }
-    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onOpenFolder, onCopyPath, onExport, onDelete]);
+        actionMap[String(key)]?.(project);
+    }, [project, actionMap]);
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
