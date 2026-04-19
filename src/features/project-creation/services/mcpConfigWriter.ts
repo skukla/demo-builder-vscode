@@ -197,10 +197,24 @@ export function generateClaudeSettings(project: Project): ClaudeSettings {
  */
 async function resolveNodePath(): Promise<string> {
     try {
-        // `which node` works on macOS/Linux; resolves fnm/nvm shims
-        const { stdout } = await execFile('which', ['node']);
-        const resolved = stdout.trim();
-        if (resolved && path.isAbsolute(resolved)) return resolved;
+        // `which node` finds the node binary (resolves fnm/nvm shims)
+        const { stdout: whichOut } = await execFile('which', ['node']);
+        const whichPath = whichOut.trim();
+        if (!whichPath || !path.isAbsolute(whichPath)) return process.execPath;
+
+        // Resolve symlinks to get the STABLE path. fnm creates ephemeral
+        // multishell paths (~/.local/state/fnm_multishells/PID_*/bin/node)
+        // that don't survive reboots. realpath follows the symlink chain to
+        // the installed version (~/.local/share/fnm/node-versions/vX/installation/bin/node).
+        try {
+            const { stdout: realOut } = await execFile('realpath', [whichPath]);
+            const realPath = realOut.trim();
+            if (realPath && path.isAbsolute(realPath)) return realPath;
+        } catch {
+            // realpath not available — use the which result as-is
+        }
+
+        return whichPath;
     } catch {
         // `which` not available or node not on PATH
     }
