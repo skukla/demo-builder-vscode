@@ -27,7 +27,6 @@ import {
     handleOpenHelp,
     handleOpenSettings,
     handleSetViewModeOverride,
-    handleOpenProjectFolder,
     handleCopyProjectPath,
 } from './dashboardHandlers';
 import { defineHandlers } from '@/types/handlers';
@@ -81,6 +80,5 @@ export const projectsListHandlers = defineHandlers({
     'setViewModeOverride': handleSetViewModeOverride,
 
     // Project folder actions
-    'open-project-folder': handleOpenProjectFolder,
     'copy-project-path': handleCopyProjectPath,
 });

@@ -23,7 +23,7 @@ describe('ProjectActionsMenu', () => {
         it('should render menu items from actions object', () => {
             const project = createMockProject({ name: 'Test' });
             const actions: ProjectActions = {
-                onOpenFolder: jest.fn(),
+                onCopyPath: jest.fn(),
                 onDelete: jest.fn(),
             };
             renderWithProvider(
@@ -36,7 +36,7 @@ describe('ProjectActionsMenu', () => {
             const menuButton = screen.getByLabelText('More actions');
             menuButton.click();
 
-            expect(screen.getByText('Open Project')).toBeInTheDocument();
+            expect(screen.getByText('Copy Path')).toBeInTheDocument();
             expect(screen.getByText('Delete')).toBeInTheDocument();
         });
 
@@ -83,7 +83,6 @@ describe('ProjectActionsMenu', () => {
             const actions: ProjectActions = {
                 onEdit: jest.fn(),
                 onRename: jest.fn(),
-                onOpenFolder: jest.fn(),
                 onCopyPath: jest.fn(),
                 onResetProject: jest.fn(),
                 onExport: jest.fn(),
@@ -103,12 +102,10 @@ describe('ProjectActionsMenu', () => {
             const labels = menuItems.map(item => item.textContent);
 
             const renameIdx = labels.findIndex(l => l?.includes('Rename'));
-            const openFolderIdx = labels.findIndex(l => l?.includes('Open Project'));
             const copyPathIdx = labels.findIndex(l => l?.includes('Copy Path'));
             const resetIdx = labels.findIndex(l => l?.includes('Reset'));
 
-            expect(renameIdx).toBeLessThan(openFolderIdx);
-            expect(openFolderIdx).toBeLessThan(copyPathIdx);
+            expect(renameIdx).toBeLessThan(copyPathIdx);
             expect(copyPathIdx).toBeLessThan(resetIdx);
         });
 

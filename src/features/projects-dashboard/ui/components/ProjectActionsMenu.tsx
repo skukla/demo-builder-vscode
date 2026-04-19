@@ -16,7 +16,6 @@ import Copy from '@spectrum-icons/workflow/Copy';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
-import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Globe from '@spectrum-icons/workflow/Globe';
 import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
 import Play from '@spectrum-icons/workflow/Play';
@@ -54,7 +53,6 @@ export interface ProjectActions {
     onRepublishContent?: (project: Project) => void;
     onEdit?: (project: Project) => void;
     onRename?: (project: Project) => void;
-    onOpenFolder?: (project: Project) => void;
     onCopyPath?: (project: Project) => void;
     onExport?: (project: Project) => void;
     onDelete?: (project: Project) => void;
@@ -68,7 +66,6 @@ const ICON_MAP: Record<string, React.ReactElement> = {
     dalive: <Edit size="S" />,
     edit: <Edit size="S" />,
     rename: <Rename size="S" />,
-    folder: <FolderOpen size="S" />,
     copy: <Copy size="S" />,
     reset: <Revert size="S" />,
     republish: <Globe size="S" />,
@@ -113,7 +110,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onRepublishContent,
         onEdit,
         onRename,
-        onOpenFolder,
         onCopyPath,
         onExport,
         onDelete,
@@ -133,11 +129,10 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         republishContent: onRepublishContent,
         edit: onEdit,
         rename: onRename,
-        openFolder: onOpenFolder,
         copyPath: onCopyPath,
         export: onExport,
         delete: onDelete,
-    }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onOpenFolder, onCopyPath, onExport, onDelete]);
+    }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename,  onCopyPath, onExport, onDelete]);
 
     const handleMenuAction = useCallback((key: React.Key) => {
         actionMap[String(key)]?.(project);
@@ -173,9 +168,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 items.push({ key: 'republishContent', label: 'Republish Content', icon: 'republish' });
             }
             // Open Project / Copy Path (available for all)
-            if (onOpenFolder) {
-                items.push({ key: 'openFolder', label: 'Open Project', icon: 'folder' });
-            }
             if (onCopyPath) {
                 items.push({ key: 'copyPath', label: 'Copy Path', icon: 'copy' });
             }
@@ -202,9 +194,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 items.push({ key: 'rename', label: 'Rename', icon: 'rename' });
             }
             // Open Project / Copy Path (available for all)
-            if (onOpenFolder) {
-                items.push({ key: 'openFolder', label: 'Open Project', icon: 'folder' });
-            }
             if (onCopyPath) {
                 items.push({ key: 'copyPath', label: 'Copy Path', icon: 'copy' });
             }
@@ -223,7 +212,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             items.push({ key: 'delete', label: 'Delete', icon: 'delete' });
         }
         return items;
-    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onOpenFolder, onCopyPath, onExport, onDelete]);
+    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename,  onCopyPath, onExport, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {

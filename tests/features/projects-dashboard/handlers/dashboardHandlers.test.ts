@@ -8,7 +8,6 @@ import {
     handleGetProjects,
     handleSelectProject,
     handleCreateProject,
-    handleOpenProjectFolder,
     handleCopyProjectPath,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import {
@@ -392,48 +391,6 @@ describe('dashboardHandlers', () => {
         });
     });
 
-    describe('handleOpenProjectFolder', () => {
-        it('should call vscode.openFolder with the project URI', async () => {
-            const context = createMockHandlerContext([]);
-            const vscode = require('vscode');
-
-            const result = await handleOpenProjectFolder(context as any, {
-                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
-            });
-
-            expect(vscode.Uri.file).toHaveBeenCalledWith(`${require('os').homedir()}/.demo-builder/projects/test-project`);
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-                'vscode.openFolder',
-                expect.objectContaining({ fsPath: `${require('os').homedir()}/.demo-builder/projects/test-project` }),
-                { forceNewWindow: false },
-            );
-            expect(result).toEqual({ success: true });
-        });
-
-        it('should return error when projectPath is missing', async () => {
-            const context = createMockHandlerContext([]);
-
-            const result = await handleOpenProjectFolder(context as any, undefined);
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBeDefined();
-        });
-
-        it('should handle command execution error', async () => {
-            const context = createMockHandlerContext([]);
-            const vscode = require('vscode');
-            vscode.commands.executeCommand.mockRejectedValue(
-                new Error('Command failed'),
-            );
-
-            const result = await handleOpenProjectFolder(context as any, {
-                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
-            });
-
-            expect(result.success).toBe(false);
-            expect(context.logger.error).toHaveBeenCalled();
-        });
-    });
 
     describe('handleCopyProjectPath', () => {
         it('should copy the project path to clipboard', async () => {

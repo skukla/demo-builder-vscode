@@ -337,17 +337,6 @@ const ProjectsDashboardApp: React.FC = () => {
         setProjectToRename(null);
     }, []);
 
-    // Handle open project folder
-    const handleOpenFolder = useCallback(async (project: Project) => {
-        try {
-            await webviewClient.postMessage('open-project-folder', {
-                projectPath: project.path,
-            });
-        } catch (error) {
-            console.error('Failed to open project folder:', error);
-        }
-    }, []);
-
     // Handle copy project path
     const handleCopyPath = useCallback(async (project: Project) => {
         try {
@@ -377,14 +366,13 @@ const ProjectsDashboardApp: React.FC = () => {
         onRepublishContent: handleRepublishContent,
         onEdit: handleEditProject,
         onRename: handleRenameProject,
-        onOpenFolder: handleOpenFolder,
         onCopyPath: handleCopyPath,
         onExport: handleExportProject,
         onDelete: handleDeleteProject,
     }), [
         handleStartDemo, handleStopDemo, handleOpenBrowser, handleOpenLiveSite,
         handleOpenDaLive, handleResetProject, handleRepublishContent, handleEditProject,
-        handleRenameProject, handleOpenFolder, handleCopyPath, handleExportProject,
+        handleRenameProject, handleCopyPath, handleExportProject,
         handleDeleteProject,
     ]);
 

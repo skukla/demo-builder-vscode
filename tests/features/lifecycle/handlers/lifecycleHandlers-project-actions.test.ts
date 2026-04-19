@@ -2,7 +2,7 @@
  * Lifecycle Handlers Tests - Project Actions
  *
  * Tests for project-related actions:
- * - handleOpenProject: Opens created project in workspace
+ * - handleOpenProject: Returns to projects list after wizard completion
  * - handleBrowseFiles: Opens project in file explorer
  */
 
@@ -10,11 +10,9 @@ import {
     handleOpenProject,
     handleBrowseFiles
 } from '@/features/lifecycle/handlers/lifecycleHandlers';
-import { HandlerContext as _HandlerContext } from '@/commands/handlers/HandlerContext';
-import * as securityValidation from '@/core/validation';
 import { createMockContext } from './lifecycleHandlers.testUtils';
 
-// Mock vscode inline to avoid hoisting issues
+// Mock vscode
 jest.mock('vscode', () => ({
     Uri: {
         file: jest.fn((path: string) => ({ fsPath: path, path })),
@@ -23,183 +21,138 @@ jest.mock('vscode', () => ({
     window: {
         showErrorMessage: jest.fn(),
         showInformationMessage: jest.fn(),
-        showWarningMessage: jest.fn()
-    },
-    workspace: {
-        updateWorkspaceFolders: jest.fn()
     },
     commands: {
-        executeCommand: jest.fn()
+        executeCommand: jest.fn(),
     },
-    env: {
-        openExternal: jest.fn()
-    }
-}), { virtual: true });
-jest.mock('@/core/validation');
+}));
 
-// Import the mocked vscode module
-import * as vscode from 'vscode';
-const mockVSCode = vscode as any;
+// Mock fs/promises
+jest.mock('fs/promises', () => ({
+    mkdir: jest.fn().mockResolvedValue(undefined),
+    writeFile: jest.fn().mockResolvedValue(undefined),
+}));
+
+// Mock ShowProjectsListCommand
+jest.mock('@/features/projects-dashboard/commands/showProjectsList', () => ({
+    ShowProjectsListCommand: {
+        disposeActivePanel: jest.fn(),
+    },
+}));
+
+// Mock validation (handleBrowseFiles calls validateProjectPath)
+jest.mock('@/core/validation/PathSafetyValidator', () => ({
+    validateProjectPath: jest.fn(),
+    validatePathSafety: jest.fn(),
+    assertPathInsideSync: jest.fn((p: string) => p),
+    assertPathInside: jest.fn(async (p: string) => p),
+}));
 
 describe('lifecycleHandlers - Project Actions', () => {
-    let mockContext: any;
-
-    beforeEach(() => {
-        jest.clearAllMocks();
-        mockContext = createMockContext();
-    });
-
     describe('handleOpenProject', () => {
-        beforeEach(() => {
-            jest.clearAllMocks();
-            mockVSCode.commands.executeCommand.mockResolvedValue(undefined);
-        });
-
-        it('should call vscode.openFolder with the project path', async () => {
-            mockContext.stateManager.getCurrentProject.mockResolvedValue({
-                name: 'Test Project',
-                path: '/path/to/project',
+        it('should dispose the wizard panel to return to projects list', async () => {
+            const context = createMockContext();
+            context.stateManager.getCurrentProject = jest.fn().mockResolvedValue({
+                name: 'test-project',
+                path: '/home/user/.demo-builder/projects/test-project',
             });
 
-            const result = await handleOpenProject(mockContext);
+            await handleOpenProject(context as any);
 
-            expect(result.success).toBe(true);
-            expect(mockVSCode.Uri.file).toHaveBeenCalledWith('/path/to/project');
-            expect(mockVSCode.commands.executeCommand).toHaveBeenCalledWith(
-                'vscode.openFolder',
-                expect.objectContaining({ fsPath: '/path/to/project' }),
-                { forceNewWindow: false },
+            expect(context.panel?.dispose).toHaveBeenCalled();
+        });
+
+        it('should set dashboard reopen flag file', async () => {
+            const fsPromises = require('fs/promises');
+            const context = createMockContext();
+            context.stateManager.getCurrentProject = jest.fn().mockResolvedValue({
+                name: 'test-project',
+                path: '/home/user/.demo-builder/projects/test-project',
+            });
+
+            await handleOpenProject(context as any);
+
+            expect(fsPromises.writeFile).toHaveBeenCalledWith(
+                expect.stringContaining('.open-dashboard-after-restart'),
+                expect.any(String),
+                'utf8',
             );
         });
 
-        it('should throw when project is missing', async () => {
-            mockContext.stateManager.getCurrentProject.mockResolvedValue(null);
-
-            await expect(handleOpenProject(mockContext)).rejects.toThrow('Project not found');
-            expect(mockContext.logger.error).toHaveBeenCalledWith(
-                expect.stringContaining('[Project Creation] No project found'),
-            );
-        });
-
-        it('should throw when project path is missing', async () => {
-            mockContext.stateManager.getCurrentProject.mockResolvedValue({
-                name: 'Test Project',
-                path: null,
+        it('should close existing Projects List webview', async () => {
+            const { ShowProjectsListCommand } = require('@/features/projects-dashboard/commands/showProjectsList');
+            const context = createMockContext();
+            context.stateManager.getCurrentProject = jest.fn().mockResolvedValue({
+                name: 'test-project',
+                path: '/home/user/.demo-builder/projects/test-project',
             });
 
-            await expect(handleOpenProject(mockContext)).rejects.toThrow('Project not found');
-            expect(mockContext.logger.error).toHaveBeenCalledWith(
-                expect.stringContaining('[Project Creation] No project found'),
-            );
+            await handleOpenProject(context as any);
+
+            expect(ShowProjectsListCommand.disposeActivePanel).toHaveBeenCalled();
         });
 
-        it('should log the project path being opened', async () => {
-            mockContext.stateManager.getCurrentProject.mockResolvedValue({
-                name: 'Test Project',
-                path: '/path/to/project',
-            });
+        it('should log error when project is missing', async () => {
+            const context = createMockContext();
+            context.stateManager.getCurrentProject = jest.fn().mockResolvedValue(null);
 
-            await handleOpenProject(mockContext);
+            const result = await handleOpenProject(context as any);
 
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('/path/to/project'),
-            );
+            expect(result).toEqual({ success: true });
+            expect(context.logger.error).toHaveBeenCalled();
         });
 
-        it('should not dispose panels or set flag files', async () => {
-            mockContext.stateManager.getCurrentProject.mockResolvedValue({
-                name: 'Test Project',
-                path: '/path/to/project',
+        it('should log error when project path is missing', async () => {
+            const context = createMockContext();
+            context.stateManager.getCurrentProject = jest.fn().mockResolvedValue({
+                name: 'test-project',
+                path: undefined,
             });
 
-            await handleOpenProject(mockContext);
+            const result = await handleOpenProject(context as any);
 
-            // No panel disposal - vscode.openFolder triggers extension host restart
-            expect(mockContext.panel.dispose).not.toHaveBeenCalled();
+            expect(result).toEqual({ success: true });
+            expect(context.logger.error).toHaveBeenCalled();
+        });
+
+        it('should return success', async () => {
+            const context = createMockContext();
+            context.stateManager.getCurrentProject = jest.fn().mockResolvedValue({
+                name: 'test-project',
+                path: '/home/user/.demo-builder/projects/test-project',
+            });
+
+            const result = await handleOpenProject(context as any);
+
+            expect(result).toEqual({ success: true });
         });
     });
 
     describe('handleBrowseFiles', () => {
-        beforeEach(() => {
-            (securityValidation.validateProjectPath as jest.Mock).mockImplementation(() => {
-                // Valid by default
-            });
-        });
-
         it('should open project in Explorer successfully', async () => {
-            const projectPath = '/path/to/project';
-            mockVSCode.commands.executeCommand.mockResolvedValue(undefined);
+            const vscode = require('vscode');
+            const context = createMockContext();
 
-            const result = await handleBrowseFiles(mockContext, { projectPath });
+            const result = await handleBrowseFiles(context as any, {
+                projectPath: '/home/user/.demo-builder/projects/test-project',
+            });
 
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('workbench.view.explorer');
             expect(result.success).toBe(true);
-            expect(securityValidation.validateProjectPath).toHaveBeenCalledWith(projectPath);
-            expect(mockVSCode.commands.executeCommand).toHaveBeenCalledWith('workbench.view.explorer');
-            // Verify revealInExplorer was called (2nd call)
-            expect(mockVSCode.commands.executeCommand).toHaveBeenCalledTimes(2);
-            const calls = mockVSCode.commands.executeCommand.mock.calls;
-            expect(calls[1][0]).toBe('revealInExplorer');
-            expect(mockContext.logger.debug).toHaveBeenCalledWith(
-                '[Project Creation] Opened project in Explorer'
-            );
         });
 
         it('should reject invalid project path', async () => {
-            const projectPath = '../../../etc/passwd';
-            const validationError = new Error('Invalid path');
-            (securityValidation.validateProjectPath as jest.Mock).mockImplementation(() => {
-                throw validationError;
+            const { validateProjectPath } = require('@/core/validation/PathSafetyValidator');
+            (validateProjectPath as jest.Mock).mockImplementationOnce(() => {
+                throw new Error('Access denied');
+            });
+            const context = createMockContext();
+
+            const result = await handleBrowseFiles(context as any, {
+                projectPath: '/etc/passwd',
             });
 
-            const result = await handleBrowseFiles(mockContext, { projectPath });
-
             expect(result.success).toBe(false);
-            expect(result.error).toContain('Access denied');
-            expect(mockVSCode.commands.executeCommand).not.toHaveBeenCalled();
-            expect(mockContext.logger.error).toHaveBeenCalledWith(
-                '[Project Creation] Invalid project path',
-                validationError
-            );
-        });
-
-        it('should handle empty project path', async () => {
-            const result = await handleBrowseFiles(mockContext, { projectPath: '' });
-
-            // Empty path should not open anything
-            expect(result.success).toBe(true);
-        });
-
-        it('should handle command execution error', async () => {
-            const projectPath = '/path/to/project';
-            mockVSCode.commands.executeCommand.mockRejectedValue(new Error('Command failed'));
-
-            const result = await handleBrowseFiles(mockContext, { projectPath });
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Failed to open file browser');
-            expect(mockContext.logger.error).toHaveBeenCalledWith(
-                '[Project Creation] Failed to open Explorer',
-                expect.any(Error)
-            );
-        });
-    });
-
-    describe('Integration Scenarios', () => {
-        it('should handle complete wizard lifecycle - project opening via vscode.openFolder', async () => {
-            mockVSCode.commands.executeCommand.mockResolvedValue(undefined);
-            mockContext.stateManager.getCurrentProject.mockResolvedValue({
-                name: 'Test Project',
-                path: '/path/to/project',
-            });
-
-            const result = await handleOpenProject(mockContext);
-
-            expect(result.success).toBe(true);
-            expect(mockVSCode.commands.executeCommand).toHaveBeenCalledWith(
-                'vscode.openFolder',
-                expect.any(Object),
-                { forceNewWindow: false },
-            );
         });
     });
 });

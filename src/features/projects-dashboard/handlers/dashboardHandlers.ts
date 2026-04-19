@@ -960,30 +960,8 @@ export const handleResetProject: MessageHandler<{ projectPath: string }> = async
 };
 
 // ============================================================================
-// Project Folder Actions (Open / Copy Path)
+// Project Folder Actions (Copy Path)
 // ============================================================================
-
-/**
- * Open a project folder in the current VS Code window
- */
-export const handleOpenProjectFolder: MessageHandler<{ projectPath: string }> = async (
-    context: HandlerContext,
-    payload?: { projectPath: string },
-): Promise<HandlerResponse> => {
-    if (!payload?.projectPath) {
-        return { success: false, error: 'Project path is required' };
-    }
-
-    try {
-        validateProjectPath(payload.projectPath);
-        const uri = vscode.Uri.file(payload.projectPath);
-        await vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
-        return { success: true };
-    } catch (error) {
-        context.logger.error('Failed to open project folder', error instanceof Error ? error : undefined);
-        return { success: false, error: 'Failed to open project folder' };
-    }
-};
 
 /**
  * Copy a project path to the clipboard

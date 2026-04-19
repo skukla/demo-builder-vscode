@@ -9,6 +9,9 @@
  * - cancel-auth-polling: User cancels authentication
  */
 
+import * as fsPromises from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { toggleLogsPanel } from '../services/lifecycleService';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
@@ -104,25 +107,46 @@ export async function handleCancelAuthPolling(context: HandlerContext): Promise<
 }
 
 /**
- * openProject - Opens the created project in VS Code workspace
+ * openProject - Returns to the projects list after wizard completion
  *
- * Called after project creation completes.
- * Opens the project directory in VS Code, triggering an Extension Host restart.
+ * Called after project creation/edit completes. Disposes the wizard panel
+ * and returns the user to the projects dashboard.
  */
 export async function handleOpenProject(context: HandlerContext): Promise<SimpleResult> {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project?.path) {
-        context.logger.error('[Project Creation] No project found or path missing');
-        throw new Error('Project not found');
+    context.logger.info('[Project Creation] openProject message received');
+
+    try {
+        const project = await context.stateManager.getCurrentProject();
+        if (!project?.path) {
+            context.logger.error('[Project Creation] No project found or path missing');
+            throw new Error('Project not found');
+        }
+
+        // Set flag to reopen dashboard after panel disposal
+        try {
+            const demoBuilderDir = path.join(os.homedir(), '.demo-builder');
+            await fsPromises.mkdir(demoBuilderDir, { recursive: true });
+
+            const flagFile = path.join(demoBuilderDir, '.open-dashboard-after-restart');
+            await fsPromises.writeFile(flagFile, JSON.stringify({
+                projectName: project.name,
+                projectPath: project.path,
+                timestamp: Date.now(),
+            }), 'utf8');
+        } catch (flagError) {
+            context.logger.warn('[Project Creation] Could not set reopen flag', toError(flagError).message);
+        }
+
+        // Close any existing Projects List webview before reopening
+        const { ShowProjectsListCommand } = await import('../../projects-dashboard/commands/showProjectsList');
+        ShowProjectsListCommand.disposeActivePanel();
+
+        // Dispose the wizard panel — triggers projects list to reopen
+        context.panel?.dispose();
+    } catch (error) {
+        context.logger.error('[Project Creation] Error returning to projects', error as Error);
+        vscode.window.showErrorMessage('Failed to return to projects list.');
     }
-
-    validateProjectPath(project.path);
-    context.logger.info(`[Project Creation] Opening project folder: ${project.path}`);
-
-    // Open the project folder in the same window — extension host will restart
-    // and Claude Code will discover .mcp.json at the new workspace root.
-    const uri = vscode.Uri.file(project.path);
-    await vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
 
     return { success: true };
 }
