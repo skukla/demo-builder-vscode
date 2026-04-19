@@ -513,7 +513,9 @@ describe('writeGlobalMcpConfig', () => {
 
         const parsed = JSON.parse(writtenContent as string);
         expect(parsed.mcpServers['demo-builder']).toBeDefined();
-        expect(parsed.mcpServers['demo-builder'].command).toBe(process.execPath);
+        // Command should be an absolute path to a node binary (resolved via `which node`)
+        expect(path.isAbsolute(parsed.mcpServers['demo-builder'].command)).toBe(true);
+        expect(path.basename(parsed.mcpServers['demo-builder'].command)).toBe('node');
         expect(parsed.mcpServers['demo-builder'].args).toEqual([`${EXTENSION_DIST}/mcp-server.js`]);
     });
 

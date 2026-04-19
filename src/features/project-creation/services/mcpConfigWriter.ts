@@ -14,11 +14,15 @@
  *   Not verified against OpenAI Codex CLI docs. If wrong, the generated .codex/mcp.json is ignored.
  */
 
+import * as childProcess from 'child_process';
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
+import { promisify } from 'util';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
+
+const execFile = promisify(childProcess.execFile);
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -88,7 +92,7 @@ export async function writeMcpConfigs(
     };
 
     // Build config once — all targets use the same server list
-    const mcpConfig = buildMcpConfig(project, extensionDistPath, settings, options?.helixToken);
+    const mcpConfig = await buildMcpConfig(project, extensionDistPath, settings, options?.helixToken);
 
     // Always write Claude Code configs
     await writeJson(path.join(projectPath, '.claude', 'mcp.json'), mcpConfig);
@@ -139,9 +143,10 @@ export async function writeGlobalMcpConfig(extensionDistPath: string): Promise<v
         settings.mcpServers = {};
     }
 
-    // Upsert demo-builder entry
+    // Upsert demo-builder entry with the real Node.js binary path
+    const nodePath = await resolveNodePath();
     (settings.mcpServers as Record<string, unknown>)['demo-builder'] = {
-        command: process.execPath,
+        command: nodePath,
         args: [`${extensionDistPath}/mcp-server.js`],
     };
 
@@ -180,17 +185,40 @@ export function generateClaudeSettings(project: Project): ClaudeSettings {
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
-function buildMcpConfig(
+/**
+ * Resolve the absolute path to the Node.js binary.
+ *
+ * `process.execPath` inside VS Code returns the Electron helper binary, not
+ * the system Node.js — so a standalone MCP server script can't use it.
+ * This function shells out to find the real `node` binary.
+ *
+ * Falls back to `process.execPath` if resolution fails (better than nothing —
+ * user can fix the path manually in ~/.claude/settings.json).
+ */
+async function resolveNodePath(): Promise<string> {
+    try {
+        // `which node` works on macOS/Linux; resolves fnm/nvm shims
+        const { stdout } = await execFile('which', ['node']);
+        const resolved = stdout.trim();
+        if (resolved && path.isAbsolute(resolved)) return resolved;
+    } catch {
+        // `which` not available or node not on PATH
+    }
+    return process.execPath;
+}
+
+async function buildMcpConfig(
     project: Project,
     extensionDistPath: string,
     settings: AiSettings,
     helixToken?: string,
-): McpConfig {
+): Promise<McpConfig> {
     const servers: Record<string, McpServerEntry> = {};
 
     // Demo Builder MCP (always included — multi-project mode, no env vars needed)
+    const nodePath = await resolveNodePath();
     servers['demo-builder'] = {
-        command: process.execPath,
+        command: nodePath,
         args: [`${extensionDistPath}/mcp-server.js`],
     };
 
