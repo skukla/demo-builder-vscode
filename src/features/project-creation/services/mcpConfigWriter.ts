@@ -127,31 +127,33 @@ export async function writeMcpConfigs(
  * Idempotent — safe to call on every extension activation.
  */
 export async function writeGlobalMcpConfig(extensionDistPath: string): Promise<void> {
-    const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+    // Claude Code reads global MCP servers from ~/.claude/.mcp.json (NOT settings.json).
+    // This is the user-level MCP config, separate from per-project .mcp.json files.
+    const mcpConfigPath = path.join(os.homedir(), '.claude', '.mcp.json');
 
-    // Read existing settings (gracefully handle missing/invalid)
-    let settings: Record<string, unknown> = {};
+    // Read existing config (preserve user's other MCP servers)
+    let config: Record<string, unknown> = {};
     try {
-        const raw = await fsPromises.readFile(settingsPath, 'utf-8');
-        settings = JSON.parse(raw) as Record<string, unknown>;
+        const raw = await fsPromises.readFile(mcpConfigPath, 'utf-8');
+        config = JSON.parse(raw) as Record<string, unknown>;
     } catch {
         // File missing or invalid JSON — start fresh
     }
 
     // Ensure mcpServers key exists
-    if (!settings.mcpServers || typeof settings.mcpServers !== 'object') {
-        settings.mcpServers = {};
+    if (!config.mcpServers || typeof config.mcpServers !== 'object') {
+        config.mcpServers = {};
     }
 
     // Upsert demo-builder entry with the real Node.js binary path
     const nodePath = await resolveNodePath();
-    (settings.mcpServers as Record<string, unknown>)['demo-builder'] = {
+    (config.mcpServers as Record<string, unknown>)['demo-builder'] = {
         command: nodePath,
         args: [`${extensionDistPath}/mcp-server.js`],
     };
 
-    await fsPromises.mkdir(path.dirname(settingsPath), { recursive: true });
-    await fsPromises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+    await fsPromises.mkdir(path.dirname(mcpConfigPath), { recursive: true });
+    await fsPromises.writeFile(mcpConfigPath, JSON.stringify(config, null, 2), 'utf-8');
 }
 
 /**

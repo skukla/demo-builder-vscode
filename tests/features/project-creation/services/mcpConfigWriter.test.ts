@@ -493,13 +493,13 @@ describe('writeMcpConfigs', () => {
 // ─── writeGlobalMcpConfig ───────────────────────────────────────────────────
 
 describe('writeGlobalMcpConfig', () => {
-    const globalSettingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+    const globalMcpConfigPath = path.join(os.homedir(), '.claude', '.mcp.json');
 
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    it('creates ~/.claude/settings.json with demo-builder MCP entry', async () => {
+    it('creates ~/.claude/.mcp.json with demo-builder MCP entry', async () => {
         // File does not exist (default mock rejects with ENOENT)
         await writeGlobalMcpConfig(EXTENSION_DIST);
 
@@ -507,9 +507,9 @@ describe('writeGlobalMcpConfig', () => {
         expect(writeFileMock).toHaveBeenCalled();
 
         const [writtenPath, writtenContent] = writeFileMock.mock.calls.find(
-            ([p]: [string]) => String(p) === globalSettingsPath,
+            ([p]: [string]) => String(p) === globalMcpConfigPath,
         ) ?? [];
-        expect(writtenPath).toBe(globalSettingsPath);
+        expect(writtenPath).toBe(globalMcpConfigPath);
 
         const parsed = JSON.parse(writtenContent as string);
         expect(parsed.mcpServers['demo-builder']).toBeDefined();
@@ -533,7 +533,7 @@ describe('writeGlobalMcpConfig', () => {
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const call = writeFileMock.mock.calls.find(
-            ([p]: [string]) => String(p) === globalSettingsPath,
+            ([p]: [string]) => String(p) === globalMcpConfigPath,
         );
         const parsed = JSON.parse(call[1] as string);
 
@@ -558,7 +558,7 @@ describe('writeGlobalMcpConfig', () => {
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const call = writeFileMock.mock.calls.find(
-            ([p]: [string]) => String(p) === globalSettingsPath,
+            ([p]: [string]) => String(p) === globalMcpConfigPath,
         );
         const parsed = JSON.parse(call[1] as string);
 
