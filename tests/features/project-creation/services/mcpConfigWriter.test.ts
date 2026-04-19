@@ -9,9 +9,11 @@
  */
 
 import * as fsPromises from 'fs/promises';
+import * as os from 'os';
 import * as path from 'path';
 import {
     generateClaudeSettings,
+    writeGlobalMcpConfig,
     writeMcpConfigs,
 } from '@/features/project-creation/services/mcpConfigWriter';
 import type { Project, ComponentInstance } from '@/types/base';
@@ -115,15 +117,13 @@ describe('MCP config content', () => {
         );
     });
 
-    it('includes DEMO_BUILDER_PROJECT_PATH env var pointing to project path', async () => {
+    it('does not include DEMO_BUILDER_PROJECT_PATH env var (multi-project mode)', async () => {
         const project = makeEdsProject();
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, ALL_SERVERS);
 
         const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
 
-        expect((config.mcpServers['demo-builder'].env as Record<string, string>)['DEMO_BUILDER_PROJECT_PATH']).toBe(
-            project.path,
-        );
+        expect(config.mcpServers['demo-builder'].env).toBeUndefined();
     });
 
     it('includes da-live with url key when selected', async () => {
@@ -487,5 +487,79 @@ describe('writeMcpConfigs', () => {
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, settings);
 
         expect(fsPromises.appendFile as jest.Mock).not.toHaveBeenCalled();
+    });
+});
+
+// ─── writeGlobalMcpConfig ───────────────────────────────────────────────────
+
+describe('writeGlobalMcpConfig', () => {
+    const globalSettingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('creates ~/.claude/settings.json with demo-builder MCP entry', async () => {
+        // File does not exist (default mock rejects with ENOENT)
+        await writeGlobalMcpConfig(EXTENSION_DIST);
+
+        const writeFileMock = fsPromises.writeFile as jest.Mock;
+        expect(writeFileMock).toHaveBeenCalled();
+
+        const [writtenPath, writtenContent] = writeFileMock.mock.calls.find(
+            ([p]: [string]) => String(p) === globalSettingsPath,
+        ) ?? [];
+        expect(writtenPath).toBe(globalSettingsPath);
+
+        const parsed = JSON.parse(writtenContent as string);
+        expect(parsed.mcpServers['demo-builder']).toBeDefined();
+        expect(parsed.mcpServers['demo-builder'].command).toBe(process.execPath);
+        expect(parsed.mcpServers['demo-builder'].args).toEqual([`${EXTENSION_DIST}/mcp-server.js`]);
+    });
+
+    it('preserves existing settings when upserting demo-builder entry', async () => {
+        const existing = {
+            permissions: { allow: ['Read', 'Write'] },
+            mcpServers: {
+                'other-server': { command: 'npx', args: ['other-mcp'] },
+            },
+            env: { FOO: 'bar' },
+        };
+        (fsPromises.readFile as jest.Mock).mockResolvedValueOnce(JSON.stringify(existing));
+
+        await writeGlobalMcpConfig(EXTENSION_DIST);
+
+        const writeFileMock = fsPromises.writeFile as jest.Mock;
+        const call = writeFileMock.mock.calls.find(
+            ([p]: [string]) => String(p) === globalSettingsPath,
+        );
+        const parsed = JSON.parse(call[1] as string);
+
+        // Preserved keys
+        expect(parsed.permissions).toEqual({ allow: ['Read', 'Write'] });
+        expect(parsed.env).toEqual({ FOO: 'bar' });
+        expect(parsed.mcpServers['other-server']).toEqual({ command: 'npx', args: ['other-mcp'] });
+        // Added key
+        expect(parsed.mcpServers['demo-builder']).toBeDefined();
+    });
+
+    it('handles missing file gracefully (creates new)', async () => {
+        // Default mock already rejects with ENOENT
+        await expect(writeGlobalMcpConfig(EXTENSION_DIST)).resolves.not.toThrow();
+
+        const writeFileMock = fsPromises.writeFile as jest.Mock;
+        expect(writeFileMock).toHaveBeenCalled();
+    });
+
+    it('does not include DEMO_BUILDER_PROJECTS_DIR env var in the entry', async () => {
+        await writeGlobalMcpConfig(EXTENSION_DIST);
+
+        const writeFileMock = fsPromises.writeFile as jest.Mock;
+        const call = writeFileMock.mock.calls.find(
+            ([p]: [string]) => String(p) === globalSettingsPath,
+        );
+        const parsed = JSON.parse(call[1] as string);
+
+        expect(parsed.mcpServers['demo-builder'].env).toBeUndefined();
     });
 });

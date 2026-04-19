@@ -15,6 +15,7 @@ import { ComponentTreeProvider } from '@/features/components/providers/component
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { writeGlobalMcpConfig } from '@/features/project-creation/services/mcpConfigWriter';
 import { SidebarProvider } from '@/features/sidebar';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
@@ -268,6 +269,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Note: Update checks are triggered when the sidebar is first activated
         // (see SidebarProvider.resolveWebviewView)
+
+        // Register global MCP server in Claude Code settings (idempotent, fire-and-forget)
+        const extensionDistPath = path.join(context.extensionPath, 'dist');
+        writeGlobalMcpConfig(extensionDistPath).catch(err => {
+            logger.warn(`Failed to register global MCP config: ${err instanceof Error ? err.message : String(err)}`);
+        });
 
         logger.info('[Extension] Ready');
 

@@ -15,9 +15,10 @@
  */
 
 import * as fsPromises from 'fs/promises';
+import * as os from 'os';
 import * as path from 'path';
-import type { Project } from '@/types/base';
 import { COMPONENT_IDS } from '@/core/constants';
+import type { Project } from '@/types/base';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -113,6 +114,42 @@ export async function writeMcpConfigs(
 
 
 /**
+ * Write the global MCP config entry for Claude Code (~/.claude/settings.json).
+ *
+ * Reads existing settings, preserves all keys, and upserts the demo-builder
+ * MCP server entry. No DEMO_BUILDER_PROJECTS_DIR env var — the server uses
+ * its built-in default (~/.demo-builder/projects).
+ *
+ * Idempotent — safe to call on every extension activation.
+ */
+export async function writeGlobalMcpConfig(extensionDistPath: string): Promise<void> {
+    const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+
+    // Read existing settings (gracefully handle missing/invalid)
+    let settings: Record<string, unknown> = {};
+    try {
+        const raw = await fsPromises.readFile(settingsPath, 'utf-8');
+        settings = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+        // File missing or invalid JSON — start fresh
+    }
+
+    // Ensure mcpServers key exists
+    if (!settings.mcpServers || typeof settings.mcpServers !== 'object') {
+        settings.mcpServers = {};
+    }
+
+    // Upsert demo-builder entry
+    (settings.mcpServers as Record<string, unknown>)['demo-builder'] = {
+        command: process.execPath,
+        args: [`${extensionDistPath}/mcp-server.js`],
+    };
+
+    await fsPromises.mkdir(path.dirname(settingsPath), { recursive: true });
+    await fsPromises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+}
+
+/**
  * Generate .claude/settings.json with PostToolUse git sync hook.
  * Hook is only added when the project has an EDS storefront with a local path
  * and that path contains no shell metacharacters.
@@ -151,11 +188,10 @@ function buildMcpConfig(
 ): McpConfig {
     const servers: Record<string, McpServerEntry> = {};
 
-    // Demo Builder MCP (always included)
+    // Demo Builder MCP (always included — multi-project mode, no env vars needed)
     servers['demo-builder'] = {
         command: process.execPath,
         args: [`${extensionDistPath}/mcp-server.js`],
-        env: { DEMO_BUILDER_PROJECT_PATH: project.path },
     };
 
     // External servers (included only when selected)

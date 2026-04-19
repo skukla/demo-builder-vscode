@@ -1,5 +1,5 @@
 /**
- * Demo Builder MCP Server
+ * Demo Builder MCP Server (Multi-Project Mode)
  *
  * Standalone Node.js process (not VS Code extension host) that exposes
  * Demo Builder project tools to AI agents via the MCP protocol.
@@ -7,18 +7,23 @@
  * IMPORTANT: This file MUST NOT import 'vscode' — it runs as a separate
  * process and the vscode API is unavailable.
  *
+ * One global server serves ALL projects. Claude Code discovers projects
+ * via `list_projects` tool; each tool takes `projectName` as first parameter.
+ *
  * Started by the MCP client (Claude Code, Cursor, Codex CLI) with:
- *   DEMO_BUILDER_PROJECT_PATH=/path/to/project node dist/mcp-server.js
+ *   node dist/mcp-server.js
+ *   (DEMO_BUILDER_PROJECTS_DIR env var optional — defaults to ~/.demo-builder/projects)
  */
 
 import * as childProcess from 'child_process';
 import * as fsPromises from 'fs/promises';
+import * as os from 'os';
 import * as path from 'path';
 import { promisify } from 'util';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { assertPathInside } from '@/core/validation';
+import { assertPathInside, assertPathInsideSync } from '@/core/validation';
 
 const execFile = promisify(childProcess.execFile);
 
@@ -29,6 +34,25 @@ const MAX_BLOCK_FILES = 50;
 const MAX_FILE_BYTES = 100_000; // 100 KB
 
 // ─── Security helpers ─────────────────────────────────────────────────────────
+
+/** Regex for safe project directory names — no path separators, traversal, or null bytes */
+const SAFE_PROJECT_NAME = /^[^/\\.\0][^/\\\0]*$/;
+
+/**
+ * Validate projectName is a safe directory name and resolve to an absolute path
+ * inside projectsDir. Prevents path traversal via crafted project names.
+ *
+ * @throws Error if projectName contains path separators, `..`, or null bytes
+ * @internal — exported for unit tests
+ */
+export function resolveProjectPath(projectsDir: string, projectName: string): string {
+    if (!projectName || !SAFE_PROJECT_NAME.test(projectName) || projectName === '..' || projectName.includes('..')) {
+        throw new Error(`Invalid project name: ${projectName}`);
+    }
+    const resolved = path.join(projectsDir, projectName);
+    assertPathInsideSync(resolved, projectsDir);
+    return resolved;
+}
 
 /**
  * Validate that `resolved` is inside `projectPath`, returning canonical paths
@@ -73,7 +97,7 @@ const DOUBLE_QUOTED_VALUE_NO_EXPANSION = /^"[^"$`\\]*"$/;
  *
  * Defense-in-depth rationale: the MCP server lets AI agents write `.env` content that
  * a user's startup scripts may then `source`. Denylist approaches (block `$(`, then
- * `<(`, then `>`, then whitespace, then globs…) leak — three prior review iterations
+ * `<(`, then `>`, then whitespace, then globs...) leak — three prior review iterations
  * found four distinct bypasses, culminating in a confirmed RCE via the bash
  * `VAR=value command args` assignment-prefix grammar. The allowlist closes that class
  * of bypasses in one rule.
@@ -147,11 +171,54 @@ function isAllowedConfigPath(realProjectPath: string, realResolved: string): boo
     return false;
 }
 
+/**
+ * Read the project manifest and extract the EDS storefront path.
+ * @throws Error if no EDS storefront is configured
+ */
+async function resolveStorefrontPath(projectPath: string): Promise<string> {
+    const raw = await fsPromises.readFile(path.join(projectPath, '.demo-builder.json'), 'utf-8');
+    const manifest = JSON.parse(raw);
+    const storefrontPath = manifest?.componentInstances?.['eds-storefront']?.path;
+    if (!storefrontPath) {
+        throw new Error('No EDS storefront configured for this project');
+    }
+    return storefrontPath;
+}
+
 // ─── Tool handlers (exported for unit tests) ─────────────────────────────────
 
 /** @internal — exported only for unit tests; not part of the public API */
 export const toolHandlers = {
-    async getProject(projectPath: string): Promise<string> {
+    async listProjects(projectsDir: string): Promise<string> {
+        let entries: Array<{ name: string; isDirectory: () => boolean }>;
+        try {
+            entries = await fsPromises.readdir(projectsDir, { withFileTypes: true });
+        } catch {
+            return JSON.stringify([]);
+        }
+        const projects: Array<{ name: string; path: string; status: string }> = [];
+        for (const entry of entries) {
+            if (!entry.isDirectory()) continue;
+            const dirPath = path.join(projectsDir, entry.name);
+            const manifestPath = path.join(dirPath, '.demo-builder.json');
+            try {
+                await fsPromises.stat(manifestPath);
+                const raw = await fsPromises.readFile(manifestPath, 'utf-8');
+                const manifest = JSON.parse(raw);
+                projects.push({
+                    name: manifest.name ?? entry.name,
+                    path: dirPath,
+                    status: manifest.status ?? 'unknown',
+                });
+            } catch {
+                // Skip directories without valid .demo-builder.json
+            }
+        }
+        return JSON.stringify(projects);
+    },
+
+    async getProject(projectsDir: string, projectName: string): Promise<string> {
+        const projectPath = resolveProjectPath(projectsDir, projectName);
         const jsonPath = path.join(projectPath, '.demo-builder.json');
         try {
             const raw = await fsPromises.readFile(jsonPath, 'utf-8');
@@ -161,10 +228,9 @@ export const toolHandlers = {
         }
     },
 
-    async getComponentConfig(projectPath: string, configRelPath: string): Promise<string> {
+    async getComponentConfig(projectsDir: string, projectName: string, configRelPath: string): Promise<string> {
+        const projectPath = resolveProjectPath(projectsDir, projectName);
         const resolved = path.resolve(projectPath, configRelPath);
-        // Allowlist check runs on canonical paths returned by assertInsideProject so a
-        // symlinked .demo-builder.json pointing at a sensitive file cannot bypass the guard.
         const { realProjectPath, realResolved } = await assertInsideProject(projectPath, resolved);
         if (!isAllowedConfigPath(realProjectPath, realResolved)) {
             throw new Error(`Reading ${configRelPath} is not permitted. Allowed: .demo-builder.json, .env files.`);
@@ -172,16 +238,18 @@ export const toolHandlers = {
         return fsPromises.readFile(resolved, 'utf-8');
     },
 
-    async updateProjectConfig(projectPath: string, configRelPath: string, content: string): Promise<string> {
+    async updateProjectConfig(
+        projectsDir: string,
+        projectName: string,
+        configRelPath: string,
+        content: string,
+    ): Promise<string> {
+        const projectPath = resolveProjectPath(projectsDir, projectName);
         const resolved = path.resolve(projectPath, configRelPath);
-        // Allowlist check runs on canonical paths returned by assertInsideProject so a
-        // symlinked .demo-builder.json pointing at a sensitive file cannot bypass the guard.
         const { realProjectPath, realResolved } = await assertInsideProject(projectPath, resolved);
         if (!isAllowedConfigPath(realProjectPath, realResolved)) {
             throw new Error(`Writing to ${configRelPath} is not permitted. Allowed: .demo-builder.json, .env files.`);
         }
-        // For .env files, validate content structure before writing to guard against
-        // subshell-executable content that shell-sourcing startup scripts may evaluate.
         if (path.basename(realResolved) === '.env') {
             validateEnvContent(content);
         }
@@ -190,25 +258,24 @@ export const toolHandlers = {
         return `Updated ${configRelPath}`;
     },
 
-    async syncStorefront(projectPath: string, storefrontPath: string, commitMessage: string): Promise<string> {
+    async syncStorefront(projectsDir: string, projectName: string, commitMessage: string): Promise<string> {
+        const projectPath = resolveProjectPath(projectsDir, projectName);
+        const storefrontPath = await resolveStorefrontPath(projectPath);
         if (!path.isAbsolute(storefrontPath)) {
             throw new Error(`storefrontPath must be an absolute path: ${storefrontPath}`);
         }
         await assertInsideProject(projectPath, storefrontPath);
-        // Guard against git -C traversing upward to a parent repo when storefrontPath is not a git root.
         try {
             await fsPromises.stat(path.join(storefrontPath, '.git'));
         } catch {
             throw new Error(`storefrontPath is not a git repository root: ${storefrontPath}`);
         }
-        // Strip newlines to prevent git argument injection via crafted commit messages
         const safeCommitMessage = commitMessage.replace(/[\n\r]/g, ' ').trim() || 'AI: sync files';
         const git = (args: string[]) => execFile('git', ['-C', storefrontPath, ...args]);
         await git(['add', '-A']);
         try {
             await git(['commit', '-m', safeCommitMessage]);
         } catch (err) {
-            // execFile rejects with { stderr } when git exits non-zero
             const stderr = (err as NodeJS.ErrnoException & { stderr?: string }).stderr ?? '';
             const msg = err instanceof Error ? err.message : String(err);
             if (stderr.includes('nothing to commit') || msg.includes('nothing to commit')) {
@@ -220,7 +287,9 @@ export const toolHandlers = {
         return 'Storefront synced successfully';
     },
 
-    async listBlocks(projectPath: string, storefrontPath: string): Promise<string> {
+    async listBlocks(projectsDir: string, projectName: string): Promise<string> {
+        const projectPath = resolveProjectPath(projectsDir, projectName);
+        const storefrontPath = await resolveStorefrontPath(projectPath);
         if (!path.isAbsolute(storefrontPath)) {
             throw new Error(`storefrontPath must be an absolute path: ${storefrontPath}`);
         }
@@ -234,7 +303,9 @@ export const toolHandlers = {
         }
     },
 
-    async getBlockSource(projectPath: string, storefrontPath: string, blockName: string): Promise<string> {
+    async getBlockSource(projectsDir: string, projectName: string, blockName: string): Promise<string> {
+        const projectPath = resolveProjectPath(projectsDir, projectName);
+        const storefrontPath = await resolveStorefrontPath(projectPath);
         if (!path.isAbsolute(storefrontPath)) {
             throw new Error(`storefrontPath must be an absolute path: ${storefrontPath}`);
         }
@@ -242,8 +313,6 @@ export const toolHandlers = {
         const resolved = path.resolve(path.join(storefrontPath, 'blocks'), blockName);
         await assertInsideProject(path.join(storefrontPath, 'blocks'), resolved);
         const entries = await fsPromises.readdir(resolved, { withFileTypes: true });
-        // isFile() returns false for symlinks in withFileTypes mode (Node.js ≥ 18) — this filter
-        // also guards against symlink traversal within the block directory without a separate realpath call.
         const files = entries.filter(e => e.isFile()).slice(0, MAX_BLOCK_FILES);
         const sources = await Promise.all(
             files.map(async f => {
@@ -264,11 +333,8 @@ export const toolHandlers = {
 
 // Only start the server when running as a standalone process (not in tests).
 if (process.env.NODE_ENV !== 'test') {
-    const PROJECT_PATH = process.env.DEMO_BUILDER_PROJECT_PATH ?? '';
-    if (!PROJECT_PATH || !path.isAbsolute(PROJECT_PATH)) {
-        process.stderr.write('DEMO_BUILDER_PROJECT_PATH must be set to an absolute path\n');
-        process.exit(1);
-    }
+    const PROJECTS_DIR = process.env.DEMO_BUILDER_PROJECTS_DIR
+        ?? path.join(os.homedir(), '.demo-builder', 'projects');
 
     // Typed as `any` to avoid TS2589 (deep type instantiation with inline Zod schema inference).
     // This is a confirmed SDK regression (issue #1180, v1.23.0+). The MCP SDK validates all
@@ -276,65 +342,79 @@ if (process.env.NODE_ENV !== 'test') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const server: any = new McpServer({ name: 'demo-builder', version: '1.0.0' });
 
+    const projectNameSchema = z.string().describe('Project name (directory name under ~/.demo-builder/projects/)');
+
     // Tool handlers return result strings directly. The SDK's built-in error handling
     // catches thrown errors and converts them to { isError: true } responses automatically
     // (via createToolError in the CallToolRequestSchema handler).
     /* eslint-disable @typescript-eslint/no-explicit-any */
-    server.registerTool('get_project', {
-        title: 'Get Project',
-        description: 'Read the Demo Builder project state (.demo-builder.json)',
+    server.registerTool('list_projects', {
+        title: 'List Projects',
+        description: 'List all Demo Builder projects',
         inputSchema: {},
     }, async () => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.getProject(PROJECT_PATH) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.listProjects(PROJECTS_DIR) }],
+    }));
+
+    server.registerTool('get_project', {
+        title: 'Get Project',
+        description: 'Read a Demo Builder project state (.demo-builder.json)',
+        inputSchema: { projectName: projectNameSchema },
+    }, async (args: any) => ({
+        content: [{ type: 'text' as const, text: await toolHandlers.getProject(PROJECTS_DIR, args.projectName) }],
     }));
 
     server.registerTool('get_component_config', {
         title: 'Get Component Config',
         description: 'Read .demo-builder.json or a .env file within the project directory (path must not escape the project root)',
-        inputSchema: { configRelPath: z.string().describe('Relative path to config file within project') },
+        inputSchema: {
+            projectName: projectNameSchema,
+            configRelPath: z.string().describe('Relative path to config file within project'),
+        },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.getComponentConfig(PROJECT_PATH, args.configRelPath as string) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.getComponentConfig(PROJECTS_DIR, args.projectName, args.configRelPath as string) }],
     }));
 
     server.registerTool('update_project_config', {
         title: 'Update Project Config',
         description: 'Write content to .demo-builder.json or a .env file inside the project directory (path must not escape the project root)',
         inputSchema: {
+            projectName: projectNameSchema,
             configRelPath: z.string().describe('Relative path (.demo-builder.json or path to .env file)'),
             content: z.string().max(1_000_000).describe('New file content'),
         },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.updateProjectConfig(PROJECT_PATH, args.configRelPath as string, args.content as string) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.updateProjectConfig(PROJECTS_DIR, args.projectName, args.configRelPath as string, args.content as string) }],
     }));
 
     server.registerTool('sync_storefront', {
         title: 'Sync Storefront',
         description: 'Git add, commit, and push changes in the storefront directory',
         inputSchema: {
-            storefrontPath: z.string().max(4096).describe('Absolute path to the storefront git repository'),
+            projectName: projectNameSchema,
             commitMessage: z.string().max(500).describe('Git commit message'),
         },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.syncStorefront(PROJECT_PATH, args.storefrontPath as string, args.commitMessage as string) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.syncStorefront(PROJECTS_DIR, args.projectName, args.commitMessage as string) }],
     }));
 
     server.registerTool('list_blocks', {
         title: 'List Blocks',
         description: 'List all block directories in the storefront blocks/ directory',
-        inputSchema: { storefrontPath: z.string().max(4096).describe('Absolute path to the storefront root') },
+        inputSchema: { projectName: projectNameSchema },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.listBlocks(PROJECT_PATH, args.storefrontPath as string) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.listBlocks(PROJECTS_DIR, args.projectName) }],
     }));
 
     server.registerTool('get_block_source', {
         title: 'Get Block Source',
         description: 'Read all source files for a named block in the storefront',
         inputSchema: {
-            storefrontPath: z.string().max(4096).describe('Absolute path to the storefront root'),
+            projectName: projectNameSchema,
             blockName: z.string().regex(/^[a-zA-Z0-9_-]+$/).describe('Name of the block directory inside blocks/'),
         },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.getBlockSource(PROJECT_PATH, args.storefrontPath as string, args.blockName as string) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.getBlockSource(PROJECTS_DIR, args.projectName, args.blockName as string) }],
     }));
     /* eslint-enable @typescript-eslint/no-explicit-any */
 
