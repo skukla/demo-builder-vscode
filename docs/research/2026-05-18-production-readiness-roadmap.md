@@ -84,7 +84,7 @@ The Adobe Repoless multisite pattern shares one Git repo across multiple aem.liv
 
 | ID | Item | Action |
 |---|---|---|
-| C1 | **Write an ADR for multisite architecture seam** | Add as `docs/architecture/adr/003-multisite-architecture-seam.md` (continues the existing sequence after 001-component-naming-standardization and 002-helix-bulk-api-fallback). Capture the three points above + decision criteria for when to break the single-env assumption. **Implementation deferred**; the ADR makes future scope concrete. |
+| C1 | ~~**Write an ADR for multisite architecture seam**~~ ✅ DONE (2026-05-18) | Landed as `docs/architecture/adr/003-multisite-architecture-seam.md`. Documents four single-env assumptions (project state shape, `buildSiteConfigParams`, mesh deployment, robots.txt branch template) and a 5-step deferred implementation path. Decision criteria for triggering implementation recorded. |
 | C2 | **Project state shape review** | While doing future work, prefer state shapes that *could* extend to a `{ environments: { [env]: {...} } }` keyed structure — without actually changing the schema today. Example: any new metadata field added now should default to "main" env, not be hardcoded as global. |
 | C3 | **No multisite implementation in this roadmap** | Repoless multisite is a heavy lift (per-env Config Service, per-env mesh, per-env preview URLs, per-env state). Don't take it on until a demo actually needs it. The ADR + the discipline of C2 keep the door open. |
 
@@ -131,7 +131,7 @@ Updated after the 2026-05-18 audit:
 
 1. ~~**Tier A audit**~~ — ✅ DONE (2026-05-18). A1 documented, A2 removed, A3 robots fixed, A4/A5 outcomes recorded above.
 2. ~~**B1 sitemap + robots.txt**~~ — ✅ DONE (2026-05-18). Pointed robots.txt at the EDS-auto-served `sitemap.xml` (one-line config fix; no codegen needed).
-3. **C1 multisite ADR** (`docs/architecture/adr/003-multisite-architecture-seam.md`) — write before D-tier work so multisite seams are documented.
+3. ~~**C1 multisite ADR**~~ — ✅ DONE (2026-05-18). `docs/architecture/adr/003-multisite-architecture-seam.md` documents 4 single-env assumptions and deferred 5-step implementation path.
 4. **B4 GitHub Actions workflows** — templated CI scaffolding.
 5. **D1 Prerender service** — biggest lift but makes Phase 2 actually useful. Per-project deployment.
 
