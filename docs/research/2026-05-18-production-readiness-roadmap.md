@@ -42,15 +42,15 @@ Detailed inventory of current provisioning (file:line references) and full web r
 
 Goal: ensure nothing the extension provisions today relies on deprecated approaches.
 
-| ID | Item | Investigation needed | Likely outcome |
+| ID | Item | Investigation needed | Outcome (2026-05-18) |
 |---|---|---|---|
-| A1 | **fstab.yaml necessity** | The Config Service `content.source` is the modern way to declare content sources. fstab.yaml is "legacy but still active" — the Helix Admin `DELETE /live` endpoint uses it as a guard. Audit whether we still need to write it. | Probably keep for now (Helix Admin guards), but document why and gate removal on Adobe's deprecation. |
-| A2 | **Dead folder-mapping code** | Phase 1 stopped *calling* `setFolderMapping`, but the method + `DEFAULT_FOLDER_MAPPING` constant + tests remain. | Remove if confirmed unused; keep as named utility only if non-Commerce use cases exist (no current evidence). |
-| A3 | **Static robots.txt referencing unimplemented sitemap-index.xml** | `config-template.json` ships robots.txt pointing at a sitemap that doesn't exist. | Fix by generating the sitemap (see B1) — until then, this is broken-by-default. |
-| A4 | **Mesh GraphQL introspection in user-selected workspaces** | When a user picks what looks like a prod workspace, introspection is left on. | Surface a "production hardening" toggle on mesh deploy; default off when workspace name matches prod-ish patterns. |
-| A5 | **Storefront Events config wiring scope check** | Investigate whether the CitiSignal template reads the Data Stream ID / Commerce endpoint from a Demo-Builder-written config (`config.json` / `.env`), or whether the template handles those internally. | If config-file driven → B2 stays in scope. If template-internal → drop B2 and mark Events init as template's responsibility in the scope principle. |
+| A1 | **fstab.yaml necessity** | The Config Service `content.source` is the modern way to declare content sources. fstab.yaml is "legacy but still active" — the Helix Admin `DELETE /live` endpoint uses it as a guard. Audit whether we still need to write it. | **KEEP — documented.** Confirmed via `helixService.ts:269-279`: the DA.live Bearer DELETE bypass only succeeds when fstab declares a content source. GitHub-token and API-key auth both return 403 "source exists" otherwise. Removal would break project cleanup. Added a WHY-keep block to `fstabGenerator.ts`; gated on Adobe's official deprecation. |
+| A2 | **Dead folder-mapping code** | Phase 1 stopped *calling* `setFolderMapping`, but the method + `DEFAULT_FOLDER_MAPPING` constant + tests remain. | **REMOVED.** Confirmed zero production callers via grep. Removed `setFolderMapping` method, `FolderMapping` type, `DEFAULT_FOLDER_MAPPING` constant from `configurationService.ts`; removed the re-export from `eds/index.ts`; cleaned dead mocks + a stale `describe('setFolderMapping', ...)` block across 8 test files. |
+| A3 | **Static robots.txt referencing unimplemented sitemap-index.xml** | `config-template.json` ships robots.txt pointing at a sitemap that doesn't exist. | **REMOVED LINE.** Stripped the `Sitemap:` line from `robots.txt` in `config-template.json`. B1 (sitemap generation) will restore it when sitemap generation lands. Demos no longer ship with a broken sitemap pointer. |
+| A4 | **Mesh GraphQL introspection in user-selected workspaces** | When a user picks what looks like a prod workspace, introspection is left on. | **NO-OP — no toggle available.** Audit found no introspection field in `mesh-config.json` schema and no introspection flag in the `aio api-mesh:create\|update` CLI surface. The roadmap entry assumed a knob that doesn't currently exist in Adobe's API Mesh tooling. Revisit if Adobe surfaces a per-mesh or workspace-level introspection toggle. |
+| A5 | **Storefront Events config wiring scope check** | Investigate whether the CitiSignal template reads the Data Stream ID / Commerce endpoint from a Demo-Builder-written config (`config.json` / `.env`), or whether the template handles those internally. | **TEMPLATE-OWNED — B2 DROPPED.** Audit confirmed Demo Builder writes no Data Stream ID, Events SDK config, or related field (`configGenerator.ts`, `config-template.json`, `projectConfigWriter.ts`, and `components.json` all clean). The CitiSignal template owns Events SDK init and its per-project configuration. B2 moves to the "Removed (template's job)" section. |
 
-**Effort**: 1-2 days of focused investigation + a small follow-up PR per item. None block the rest of the roadmap.
+**Audit complete (2026-05-18)**: 3 code changes shipped (A1 doc, A2 removal, A3 robots fix), 2 documented as no-op/scope-drop (A4, A5).
 
 ---
 
@@ -60,12 +60,12 @@ Filtered against the scope principle: only items that touch infrastructure or re
 
 | ID | Item | Why it fits the principle | Files |
 |---|---|---|---|
-| B1 | **Sitemap + robots.txt generation at setup** | Config files Demo Builder already writes during setup. EDS has built-in sitemap support via `query-index`. Closes A3 (broken-by-default robots.txt reference). | `src/features/eds/services/configGenerator.ts`, `config-template.json` |
-| B2 | **Per-project Storefront Events config wiring** *(scope confirmation needed)* | The Events SDK init code lives in the template (template's job). But the per-project config — Data Stream ID, Commerce environment endpoint — is Demo Builder's territory if there's a config file to write. **Open question**: does the template read this from `.env` / `config.json` (Demo Builder writes), or hardcode it (template's job)? Investigate before scoping. | `config-template.json` plus a per-project config writer if needed |
+| B1 | **Sitemap + robots.txt generation at setup** | Config files Demo Builder already writes during setup. EDS has built-in sitemap support via `query-index`. Closes A3 (broken-by-default robots.txt reference removed during audit). | `src/features/eds/services/configGenerator.ts`, `config-template.json` |
 | B4 | **GitHub Actions: lint + Lighthouse-CI on PR** | Templated workflow files committed at repo creation time. Repo-level scaffolding fits Demo Builder's scope cleanly — no storefront code touched. | `src/features/eds/services/githubRepoOperations.ts` — commit `.github/workflows/*.yml` files |
 
 **Removed (storefront-feature scope, template's responsibility):**
 
+- ~~B2 — Storefront Events config wiring~~ → audit A5 (2026-05-18) confirmed Demo Builder writes no Events config today; the CitiSignal template owns SDK init and per-project config. Template's job.
 - ~~B3 — AEM Experimentation plugin install~~ → plugin lives in the storefront repo's JS; template's job.
 
 **Effort per remaining item**: each is a focused `/rptc:feat` of 1-2 days.
@@ -127,14 +127,13 @@ These could surface as a future "Production Connect" UX — a separate flow cust
 
 ## Recommended Sequence
 
-After scope filtering, the remaining items are:
+Updated after the 2026-05-18 audit:
 
-1. **Tier A audit** (its own `/rptc:feat` cycle, all four items together) — anti-deprecated cleanup. Small.
-2. **B1 sitemap + robots.txt** — closes A3, quick win.
+1. ~~**Tier A audit**~~ — ✅ DONE (2026-05-18). A1 documented, A2 removed, A3 robots fixed, A4/A5 outcomes recorded above.
+2. **B1 sitemap + robots.txt** — closes A3 by restoring the sitemap reference once `query-index`-driven sitemap generation lands.
 3. **C1 multisite ADR** (`docs/architecture/adr/003-multisite-architecture-seam.md`) — write before D-tier work so multisite seams are documented.
-4. **B2 Storefront Events config wiring** — runs only if Tier A item A5 confirms there's a per-project config file to write. Otherwise drops from the roadmap.
-5. **B4 GitHub Actions workflows** — templated CI scaffolding.
-6. **D1 Prerender service** — biggest lift but makes Phase 2 actually useful. Per-project deployment.
+4. **B4 GitHub Actions workflows** — templated CI scaffolding.
+5. **D1 Prerender service** — biggest lift but makes Phase 2 actually useful. Per-project deployment.
 
 **Tier E items**: revisit only if customer-handoff UX becomes a priority. Not now.
 
@@ -149,4 +148,4 @@ After scope filtering, the remaining items are:
 
 ## Open Questions
 
-All earlier questions resolved. B2's scope decision is deferred to the Tier A audit cycle (item A5).
+All resolved. B2's scope decision was settled by the 2026-05-18 audit (item A5): Demo Builder writes no Storefront Events config, so B2 dropped to the template's responsibility.
