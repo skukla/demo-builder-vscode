@@ -19,7 +19,7 @@
     }
   },
   "robots": {
-    "txt": "User-agent: *\nAllow: /\nDisallow: /drafts/\nDisallow: /enrichment/\nDisallow: /tools/\nDisallow: /plugins/experimentation/\n"
+    "txt": "User-agent: *\nAllow: /\nDisallow: /drafts/\nDisallow: /enrichment/\nDisallow: /tools/\nDisallow: /plugins/experimentation/\n\nSitemap: https://main--{REPO}--{ORG}.aem.live/sitemap.xml"
   },
   "sidekick": {
     "project": "Demo Builder Project",

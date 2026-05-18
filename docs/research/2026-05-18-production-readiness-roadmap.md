@@ -60,7 +60,7 @@ Filtered against the scope principle: only items that touch infrastructure or re
 
 | ID | Item | Why it fits the principle | Files |
 |---|---|---|---|
-| B1 | **Sitemap + robots.txt generation at setup** | Config files Demo Builder already writes during setup. EDS has built-in sitemap support via `query-index`. Closes A3 (broken-by-default robots.txt reference removed during audit). | `src/features/eds/services/configGenerator.ts`, `config-template.json` |
+| B1 | ~~**Sitemap + robots.txt generation at setup**~~ ✅ DONE (2026-05-18) | EDS auto-serves `sitemap.xml` from `query-index.json` — no codegen needed. Restored the robots.txt Sitemap line pointing at the correct auto-served URL (`sitemap.xml`, not `sitemap-index.xml` which EDS does not serve by default). One-line config-template.json fix. Closes A3. | `src/features/eds/config/config-template.json` |
 | B4 | **GitHub Actions: lint + Lighthouse-CI on PR** | Templated workflow files committed at repo creation time. Repo-level scaffolding fits Demo Builder's scope cleanly — no storefront code touched. | `src/features/eds/services/githubRepoOperations.ts` — commit `.github/workflows/*.yml` files |
 
 **Removed (storefront-feature scope, template's responsibility):**
@@ -130,7 +130,7 @@ These could surface as a future "Production Connect" UX — a separate flow cust
 Updated after the 2026-05-18 audit:
 
 1. ~~**Tier A audit**~~ — ✅ DONE (2026-05-18). A1 documented, A2 removed, A3 robots fixed, A4/A5 outcomes recorded above.
-2. **B1 sitemap + robots.txt** — closes A3 by restoring the sitemap reference once `query-index`-driven sitemap generation lands.
+2. ~~**B1 sitemap + robots.txt**~~ — ✅ DONE (2026-05-18). Pointed robots.txt at the EDS-auto-served `sitemap.xml` (one-line config fix; no codegen needed).
 3. **C1 multisite ADR** (`docs/architecture/adr/003-multisite-architecture-seam.md`) — write before D-tier work so multisite seams are documented.
 4. **B4 GitHub Actions workflows** — templated CI scaffolding.
 5. **D1 Prerender service** — biggest lift but makes Phase 2 actually useful. Per-project deployment.
