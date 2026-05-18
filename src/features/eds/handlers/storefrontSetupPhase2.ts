@@ -207,7 +207,10 @@ async function installBlockCollectionsWithTracking(
             githubFileOps, repoInfo.repoOwner, repoInfo.repoName, allLibraries, logger, inspectorEntries,
         );
         if (result.success) {
-            logger.info(`[Storefront Setup] Installed ${result.blocksCount} unique blocks from ${allLibraries.length} libraries (+ inspector tagging)`);
+            const blockMsg = result.blocksCount > 0
+                ? `Installed ${result.blocksCount} unique blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'} (+ inspector tagging)`
+                : `All blocks already present in destination — skipped copy, applied inspector tagging`;
+            logger.info(`[Storefront Setup] ${blockMsg}`);
             if (result.libraryVersions && result.libraryVersions.length > 0) {
                 const currentProject = await context.stateManager.getCurrentProject();
                 if (currentProject) {

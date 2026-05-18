@@ -817,11 +817,11 @@ describe('installBlockCollections (single library)', () => {
                 mockLogger,
             );
 
-            // Then: Should fail with "No block files found"
+            // Then: Should fail — source had no blocks at all
             expect(result.success).toBe(false);
             expect(result.blocksCount).toBe(0);
             expect(result.blockIds).toEqual([]);
-            expect(result.error).toBe('No block files found');
+            expect(result.error).toBe('No blocks found in source libraries');
         });
 
         it('should handle completely empty source repo', async () => {
@@ -842,6 +842,38 @@ describe('installBlockCollections (single library)', () => {
             expect(result.success).toBe(false);
             expect(result.blocksCount).toBe(0);
             expect(result.blockIds).toEqual([]);
+        });
+
+        it('should succeed when all library blocks already exist in destination', async () => {
+            // Given: Destination (template) already has all the blocks the library provides.
+            // This is the normal case when the CitiSignal template ships with the demo-team blocks.
+            mockGithubFileOps.listRepoFiles
+                .mockResolvedValueOnce([
+                    // destination already has hero-cta and newsletter from template
+                    { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-d1' },
+                    { path: 'blocks/newsletter/newsletter.js', mode: '100644', type: 'blob' as const, sha: 'sha-d2' },
+                ])
+                .mockResolvedValueOnce([
+                    // source library has the same blocks — all duplicates
+                    { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-s1' },
+                    { path: 'blocks/hero-cta/hero-cta.css', mode: '100644', type: 'blob' as const, sha: 'sha-s2' },
+                    { path: 'blocks/newsletter/newsletter.js', mode: '100644', type: 'blob' as const, sha: 'sha-s3' },
+                ]);
+            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
+
+            // When
+            const result = await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'Demo Team Block Collection' }],
+                mockLogger,
+            );
+
+            // Then: success — nothing to copy, blocks were already there
+            expect(result.success).toBe(true);
+            expect(result.blocksCount).toBe(0);
+            expect(result.blockIds).toEqual([]);
+            // No GitHub commit should be created (nothing to write)
+            expect(mockGithubFileOps.createCommit).not.toHaveBeenCalled();
         });
 
         it('should deduplicate block IDs from multiple files in same directory', async () => {
