@@ -2,16 +2,20 @@
  * Configuration Service Client
  *
  * Wraps the AEM Configuration Service API (admin.hlx.page/config/) for
- * site registration, folder mapping, and site deletion.
+ * site registration, update, and deletion. Supports optional BYOM content
+ * overlay registration alongside the DA.live content source.
  *
  * The Configuration Service manages server-side site configuration in Helix 5.
- * Folder mapping (e.g., /products/ -> /products/default) MUST be set via this
- * API — the fstab.yaml folders section is not processed by the pipeline.
  *
  * Authentication: Uses Adobe IMS token via Authorization Bearer header.
  * The IMS token is obtained from the DA.live auth flow (same token used
  * for DA.live content operations). The user must have admin role on the
  * org, which is auto-assigned when they install the AEM Code Sync GitHub App.
+ *
+ * Note: folder mapping (`POST /folders.json`) is deprecated by Adobe
+ * (see aem.live/developer/byom) and removed from this client in audit A2
+ * (2026-05-18). CitiSignal storefronts route /products/{sku} via client-side
+ * routing; future SEO-sensitive PDPs should use the BYOM overlay pattern.
  *
  * @module features/eds/services/configurationService
  */
@@ -51,14 +55,6 @@ export interface SiteRegistrationParams {
      *  includes a `content.overlay` block alongside `content.source`. */
     contentOverlayUrl?: string;
 }
-
-/**
- * Folder mapping entry: maps a URL prefix to a template page
- */
-export type FolderMapping = Record<string, string>;
-
-/** Default folder mapping for EDS storefronts — routes /products/ to /products/default */
-export const DEFAULT_FOLDER_MAPPING: FolderMapping = { '/products/': '/products/default' };
 
 /** Build the DA.live content source URL for a given org and site */
 function buildContentSourceUrl(daLiveOrg: string, daLiveSite: string): string {
@@ -147,34 +143,6 @@ export class ConfigurationService {
         };
 
         return this.makeRequest('PUT', url, body);
-    }
-
-    // ==========================================================
-    // Folder Mapping
-    // ==========================================================
-
-    /**
-     * Set folder mapping for a site.
-     *
-     * Configures URL prefix routing (e.g., /products/ -> /products/default)
-     * via the Configuration Service. This replaces the fstab.yaml folders section.
-     *
-     * @param org - DA.live org name (Configuration Service lookup key)
-     * @param site - DA.live site name
-     * @param folders - Folder mapping (e.g., { "/products/": "/products/default" })
-     * @returns Result with success/error status
-     */
-    async setFolderMapping(
-        org: string,
-        site: string,
-        folders: FolderMapping,
-    ): Promise<ConfigServiceResult> {
-        const url = `${ADMIN_API_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}/folders.json`;
-
-        this.logger.info(`[ConfigService] Setting folder mapping for ${org}/${site}`);
-        this.logger.debug(`[ConfigService] Folders: ${JSON.stringify(folders)}`);
-
-        return this.makeRequest('POST', url, folders);
     }
 
     // ==========================================================

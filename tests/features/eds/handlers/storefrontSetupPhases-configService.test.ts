@@ -20,18 +20,15 @@ jest.setTimeout(5000);
 // =============================================================================
 
 const mockRegisterSite = jest.fn();
-const mockSetFolderMapping = jest.fn();
 const mockUpdateSiteConfig = jest.fn();
 const mockDeleteSiteConfig = jest.fn();
 
 jest.mock('@/features/eds/services/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         registerSite: mockRegisterSite,
-        setFolderMapping: mockSetFolderMapping,
         updateSiteConfig: mockUpdateSiteConfig,
         deleteSiteConfig: mockDeleteSiteConfig,
     })),
-    DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
     buildSiteConfigParams: (owner: string, repo: string, org: string, site: string, overlayUrl?: string) => ({
         org, site, codeOwner: owner, codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${org}/${site}/`,
@@ -198,40 +195,6 @@ function createEdsConfig() {
 // =============================================================================
 // Tests
 // =============================================================================
-
-describe('registerConfigurationService - folder mapping NOT called from setup flow', () => {
-    let context: HandlerContext;
-
-    beforeEach(() => {
-        jest.clearAllMocks();
-        context = createMockContext();
-        mockRegisterSite.mockResolvedValue({ success: true });
-        mockSetFolderMapping.mockResolvedValue({ success: true });
-    });
-
-    it('does NOT call setFolderMapping after successful site registration', async () => {
-        await executeStorefrontSetupPhases(
-            context, createEdsConfig(), new AbortController().signal,
-        );
-
-        // Folder mapping is deprecated by Adobe (aem.live/developer/byom).
-        // Setup flow must not configure it. CitiSignal handles /products/{sku}
-        // via client-side routing.
-        expect(mockSetFolderMapping).not.toHaveBeenCalled();
-    });
-
-    it('does NOT call setFolderMapping after 403 retry success', async () => {
-        mockRegisterSite
-            .mockResolvedValueOnce({ success: false, statusCode: 403, error: 'Forbidden' })
-            .mockResolvedValueOnce({ success: true });
-
-        await executeStorefrontSetupPhases(
-            context, createEdsConfig(), new AbortController().signal,
-        );
-
-        expect(mockSetFolderMapping).not.toHaveBeenCalled();
-    });
-});
 
 describe('registerConfigurationService - error handling', () => {
     let context: HandlerContext;
