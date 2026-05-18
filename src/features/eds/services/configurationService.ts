@@ -47,6 +47,9 @@ export interface SiteRegistrationParams {
     contentSourceUrl: string;
     /** Content source type (default: 'markup') */
     contentSourceType?: string;
+    /** Optional BYOM content overlay URL. When set, the registration body
+     *  includes a `content.overlay` block alongside `content.source`. */
+    contentOverlayUrl?: string;
 }
 
 /**
@@ -65,6 +68,7 @@ function buildContentSourceUrl(daLiveOrg: string, daLiveSite: string): string {
 /** Build site config params from repo and DA.live identifiers */
 export function buildSiteConfigParams(
     repoOwner: string, repoName: string, daLiveOrg: string, daLiveSite: string,
+    overlayUrl?: string,
 ): SiteRegistrationParams {
     // The Config Service lookup key must use the DA.live org/site, not the GitHub repo name.
     // The da.live editor constructs its preview URL from the DA.live site path
@@ -74,6 +78,7 @@ export function buildSiteConfigParams(
         org: daLiveOrg, site: daLiveSite,
         codeOwner: repoOwner, codeRepo: repoName,
         contentSourceUrl: buildContentSourceUrl(daLiveOrg, daLiveSite),
+        ...(overlayUrl && { contentOverlayUrl: overlayUrl }),
     };
 }
 
@@ -123,24 +128,22 @@ export class ConfigurationService {
      * @returns Result with success/error status
      */
     async registerSite(params: SiteRegistrationParams): Promise<ConfigServiceResult> {
-        const { org, site, codeOwner, codeRepo, contentSourceUrl, contentSourceType } = params;
+        const { org, site, codeOwner, codeRepo, contentSourceUrl, contentSourceType, contentOverlayUrl } = params;
         const url = `${ADMIN_API_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
 
         this.logger.info(`[ConfigService] Registering site: ${org}/${site}`);
         this.logger.debug(`[ConfigService] Code: ${codeOwner}/${codeRepo}, Content: ${contentSourceUrl}`);
+        if (contentOverlayUrl) {
+            this.logger.debug(`[ConfigService] Content overlay: ${contentOverlayUrl}`);
+        }
 
+        const source = { url: contentSourceUrl, type: contentSourceType || 'markup' };
         const body = {
             version: 1,
-            code: {
-                owner: codeOwner,
-                repo: codeRepo,
-            },
-            content: {
-                source: {
-                    url: contentSourceUrl,
-                    type: contentSourceType || 'markup',
-                },
-            },
+            code: { owner: codeOwner, repo: codeRepo },
+            content: contentOverlayUrl
+                ? { source, overlay: { url: contentOverlayUrl, type: 'markup' } }
+                : { source },
         };
 
         return this.makeRequest('PUT', url, body);

@@ -415,6 +415,8 @@ export interface EDSConfig {
         site: string;
         indexPath?: string;
     };
+    /** Optional BYOM content overlay URL (from demo-packages.json storefronts) */
+    byomOverlayUrl?: string;
     /** Patch IDs to apply during reset (from demo-packages.json storefronts) */
     patches?: string[];
     /** Content patch IDs to apply during DA.live content copy */

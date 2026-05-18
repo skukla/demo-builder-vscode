@@ -1,13 +1,13 @@
 /**
  * Storefront Setup Phases - Configuration Service Registration Tests
  *
- * Tests that folder mapping failures are surfaced clearly to the user,
- * not silently swallowed. Without folder mapping, all product detail
- * page URLs (/products/{urlKey}/{sku}) return 404.
- *
- * Bug: registerConfigurationService() logged folder mapping failures
- * as logger.warn and never notified the user. This caused silent PDP
- * breakage on newly created sites.
+ * Tests Configuration Service site registration, focusing on:
+ * - 403 propagation retry (admin role propagation after GitHub App install)
+ * - 401 re-authentication recovery
+ * - 409 conflict handling (update path)
+ * - Folder mapping is NOT called from setup flow (deprecated by Adobe;
+ *   see aem.live/developer/byom — CitiSignal handles /products/{sku}
+ *   via client-side routing)
  */
 
 import type { HandlerContext } from '@/types/handlers';
@@ -32,9 +32,10 @@ jest.mock('@/features/eds/services/configurationService', () => ({
         deleteSiteConfig: mockDeleteSiteConfig,
     })),
     DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
-    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
+    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string, overlayUrl?: string) => ({
         org, site, codeOwner: owner, codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${org}/${site}/`,
+        ...(overlayUrl && { contentOverlayUrl: overlayUrl }),
     }),
 }));
 
@@ -198,55 +199,50 @@ function createEdsConfig() {
 // Tests
 // =============================================================================
 
-describe('registerConfigurationService - folder mapping failure visibility', () => {
+describe('registerConfigurationService - folder mapping NOT called from setup flow', () => {
     let context: HandlerContext;
 
     beforeEach(() => {
         jest.clearAllMocks();
         context = createMockContext();
-        // Default: site registration succeeds
         mockRegisterSite.mockResolvedValue({ success: true });
-        // Default: folder mapping succeeds
         mockSetFolderMapping.mockResolvedValue({ success: true });
     });
 
-    it('should log error when setFolderMapping fails', async () => {
-        mockSetFolderMapping.mockResolvedValue({
-            success: false, error: 'Folder mapping not supported',
-        });
+    it('does NOT call setFolderMapping after successful site registration', async () => {
+        await executeStorefrontSetupPhases(
+            context, createEdsConfig(), new AbortController().signal,
+        );
+
+        // Folder mapping is deprecated by Adobe (aem.live/developer/byom).
+        // Setup flow must not configure it. CitiSignal handles /products/{sku}
+        // via client-side routing.
+        expect(mockSetFolderMapping).not.toHaveBeenCalled();
+    });
+
+    it('does NOT call setFolderMapping after 403 retry success', async () => {
+        mockRegisterSite
+            .mockResolvedValueOnce({ success: false, statusCode: 403, error: 'Forbidden' })
+            .mockResolvedValueOnce({ success: true });
 
         await executeStorefrontSetupPhases(
             context, createEdsConfig(), new AbortController().signal,
         );
 
-        // Should log at ERROR level, not WARN
-        const errorCalls = (context.logger.error as jest.Mock).mock.calls;
-        const hasFolderMappingError = errorCalls.some(
-            (call: string[]) => call[0].includes('Folder mapping failed'),
-        );
-        expect(hasFolderMappingError).toBe(true);
+        expect(mockSetFolderMapping).not.toHaveBeenCalled();
+    });
+});
+
+describe('registerConfigurationService - error handling', () => {
+    let context: HandlerContext;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        context = createMockContext();
+        mockRegisterSite.mockResolvedValue({ success: true });
     });
 
-    it('should send warning progress message when setFolderMapping fails', async () => {
-        mockSetFolderMapping.mockResolvedValue({
-            success: false, error: 'API rejected',
-        });
-
-        await executeStorefrontSetupPhases(
-            context, createEdsConfig(), new AbortController().signal,
-        );
-
-        // Should send a progress message with warning about PDP routing
-        const sendCalls = (context.sendMessage as jest.Mock).mock.calls;
-        const hasWarningMessage = sendCalls.some(
-            ([type, payload]: [string, { message?: string }]) =>
-                type === 'storefront-setup-progress'
-                && payload.message?.includes('product detail pages'),
-        );
-        expect(hasWarningMessage).toBe(true);
-    });
-
-    it('should trigger re-auth when registerSite returns 401', async () => {
+    it('triggers re-auth when registerSite returns 401', async () => {
         // First call: 401 (token expired), second call after re-auth: success
         mockRegisterSite
             .mockResolvedValueOnce({ success: false, statusCode: 401, error: 'Unauthorized' })
@@ -257,66 +253,26 @@ describe('registerConfigurationService - folder mapping failure visibility', () 
             context, createEdsConfig(), new AbortController().signal,
         );
 
-        // Should have prompted re-auth
         expect(mockEnsureDaLiveAuth).toHaveBeenCalled();
-        // Should have retried and succeeded
         expect(mockRegisterSite).toHaveBeenCalledTimes(2);
-        expect(mockSetFolderMapping).toHaveBeenCalled();
     });
 
-    it('should trigger re-auth when setFolderMapping returns 401', async () => {
-        mockRegisterSite.mockResolvedValue({ success: true });
-        // First call: 401 (token expired), second call after re-auth: success
-        mockSetFolderMapping
-            .mockResolvedValueOnce({ success: false, statusCode: 401, error: 'Token expired' })
-            .mockResolvedValueOnce({ success: true });
-        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
-
-        await executeStorefrontSetupPhases(
-            context, createEdsConfig(), new AbortController().signal,
-        );
-
-        // Should have prompted re-auth
-        expect(mockEnsureDaLiveAuth).toHaveBeenCalled();
-        // Should have retried folder mapping
-        expect(mockSetFolderMapping).toHaveBeenCalledTimes(2);
-    });
-
-    it('should log error when registerConfigurationService throws', async () => {
+    it('logs error when registerConfigurationService throws', async () => {
         mockRegisterSite.mockRejectedValue(new Error('Network timeout'));
 
         await executeStorefrontSetupPhases(
             context, createEdsConfig(), new AbortController().signal,
         );
 
-        // Should log at ERROR level, not WARN
         const errorCalls = (context.logger.error as jest.Mock).mock.calls;
         const hasConfigServiceError = errorCalls.some(
-            (call: string[]) => call[0].includes('Configuration Service')
-                || call[0].includes('Folder mapping'),
+            (call: string[]) => call[0].includes('Configuration Service'),
         );
         expect(hasConfigServiceError).toBe(true);
     });
-
-    it('should NOT log error when folder mapping succeeds', async () => {
-        mockRegisterSite.mockResolvedValue({ success: true });
-        mockSetFolderMapping.mockResolvedValue({ success: true });
-
-        await executeStorefrontSetupPhases(
-            context, createEdsConfig(), new AbortController().signal,
-        );
-
-        // Should NOT have any error logs about folder mapping
-        const errorCalls = (context.logger.error as jest.Mock).mock.calls;
-        const hasFolderMappingError = errorCalls.some(
-            (call: string[]) => call[0].includes('Folder mapping'),
-        );
-        expect(hasFolderMappingError).toBe(false);
-    });
-
 });
 
-describe('registerConfigurationService - registerSite non-auth failure visibility', () => {
+describe('registerConfigurationService - existing repo 403', () => {
     let context: HandlerContext;
 
     function createExistingRepoEdsConfig() {
@@ -330,10 +286,9 @@ describe('registerConfigurationService - registerSite non-auth failure visibilit
     beforeEach(() => {
         jest.clearAllMocks();
         context = createMockContext();
-        mockSetFolderMapping.mockResolvedValue({ success: true });
     });
 
-    it('should send warning and skip folder mapping for existing repo 403 (no retry)', async () => {
+    it('sends warning and does not retry for existing repo 403', async () => {
         mockRegisterSite.mockResolvedValue({
             success: false, statusCode: 403, error: 'Forbidden — no admin access',
         });
@@ -342,7 +297,6 @@ describe('registerConfigurationService - registerSite non-auth failure visibilit
             context, createExistingRepoEdsConfig(), new AbortController().signal,
         );
 
-        // Should notify user — existing repo 403 is a genuine permission problem
         const sendCalls = (context.sendMessage as jest.Mock).mock.calls;
         const warningCall = sendCalls.find(
             ([type, payload]: [string, { phase?: string; message?: string }]) =>
@@ -351,14 +305,12 @@ describe('registerConfigurationService - registerSite non-auth failure visibilit
                 && payload.message?.includes('da.live preview'),
         );
         expect(warningCall).toBeDefined();
-        // Should not retry — existing repo means the App was already installed
+        // Existing repo means the App was already installed — no propagation retry.
         expect(mockRegisterSite).toHaveBeenCalledTimes(1);
-        // Should skip folder mapping — no site record
-        expect(mockSetFolderMapping).not.toHaveBeenCalled();
     });
 });
 
-describe('registerConfigurationService - new repo 403 retry on propagation delay', () => {
+describe('registerConfigurationService - new repo 403 multi-retry on propagation delay', () => {
     let context: HandlerContext;
 
     function createNewRepoEdsConfig() {
@@ -368,10 +320,9 @@ describe('registerConfigurationService - new repo 403 retry on propagation delay
     beforeEach(() => {
         jest.clearAllMocks();
         context = createMockContext();
-        mockSetFolderMapping.mockResolvedValue({ success: true });
     });
 
-    it('retries once and succeeds when first 403 was a propagation race', async () => {
+    it('retries with backoff and succeeds on first retry', async () => {
         mockRegisterSite
             .mockResolvedValueOnce({ success: false, statusCode: 403, error: 'Forbidden' })
             .mockResolvedValueOnce({ success: true });
@@ -380,16 +331,14 @@ describe('registerConfigurationService - new repo 403 retry on propagation delay
             context, createNewRepoEdsConfig(), new AbortController().signal,
         );
 
+        // Initial call + 1 retry that succeeds
         expect(mockRegisterSite).toHaveBeenCalledTimes(2);
-        // No warning message — retry succeeded
         const sendCalls = (context.sendMessage as jest.Mock).mock.calls;
         const hasWarning = sendCalls.some(
             ([type, payload]: [string, { message?: string }]) =>
                 type === 'storefront-setup-progress' && payload.message?.includes('da.live preview'),
         );
         expect(hasWarning).toBe(false);
-        // Folder mapping should run after successful retry
-        expect(mockSetFolderMapping).toHaveBeenCalledTimes(1);
     });
 
     it('handles 409 on retry by updating site config', async () => {
@@ -404,10 +353,9 @@ describe('registerConfigurationService - new repo 403 retry on propagation delay
 
         expect(mockRegisterSite).toHaveBeenCalledTimes(2);
         expect(mockUpdateSiteConfig).toHaveBeenCalledTimes(1);
-        expect(mockSetFolderMapping).toHaveBeenCalledTimes(1);
     });
 
-    it('shows warning and skips folder mapping when retry also fails', async () => {
+    it('retries 3 times before giving up on continued 403', async () => {
         mockRegisterSite.mockResolvedValue({
             success: false, statusCode: 403, error: 'Forbidden',
         });
@@ -416,7 +364,8 @@ describe('registerConfigurationService - new repo 403 retry on propagation delay
             context, createNewRepoEdsConfig(), new AbortController().signal,
         );
 
-        expect(mockRegisterSite).toHaveBeenCalledTimes(2);
+        // Initial call + 3 retries (30s/45s/60s backoff) = 4 total
+        expect(mockRegisterSite).toHaveBeenCalledTimes(4);
         const sendCalls = (context.sendMessage as jest.Mock).mock.calls;
         const warningCall = sendCalls.find(
             ([type, payload]: [string, { phase?: string; message?: string }]) =>
@@ -425,10 +374,23 @@ describe('registerConfigurationService - new repo 403 retry on propagation delay
                 && payload.message?.includes('da.live preview'),
         );
         expect(warningCall).toBeDefined();
-        expect(mockSetFolderMapping).not.toHaveBeenCalled();
     });
 
-    it('triggers re-auth when retry returns 401 then succeeds', async () => {
+    it('stops retrying when a non-403 error appears mid-retry', async () => {
+        // 403 → retry 1 returns 500 (non-403, non-401, non-409) → stop retrying
+        mockRegisterSite
+            .mockResolvedValueOnce({ success: false, statusCode: 403, error: 'Forbidden' })
+            .mockResolvedValueOnce({ success: false, statusCode: 500, error: 'Server error' });
+
+        await executeStorefrontSetupPhases(
+            context, createNewRepoEdsConfig(), new AbortController().signal,
+        );
+
+        // Initial + 1 retry that returned 500 — should not continue retrying
+        expect(mockRegisterSite).toHaveBeenCalledTimes(2);
+    });
+
+    it('triggers re-auth when retry returns 401', async () => {
         // 403 → retry → 401 → recovery loop re-auths → 200
         mockRegisterSite
             .mockResolvedValueOnce({ success: false, statusCode: 403, error: 'Forbidden' })
@@ -440,10 +402,37 @@ describe('registerConfigurationService - new repo 403 retry on propagation delay
             context, createNewRepoEdsConfig(), new AbortController().signal,
         );
 
-        // Should have prompted re-auth
         expect(mockEnsureDaLiveAuth).toHaveBeenCalled();
-        // 403 attempt + 401 attempt + post-re-auth attempt
+        // 403 → retry sees 401 (throws) → recovery loop re-runs → success
         expect(mockRegisterSite).toHaveBeenCalledTimes(3);
-        expect(mockSetFolderMapping).toHaveBeenCalled();
+    });
+});
+
+describe('registerConfigurationService - BYOM overlay threading', () => {
+    let context: HandlerContext;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        context = createMockContext();
+        mockRegisterSite.mockResolvedValue({ success: true });
+    });
+
+    it('passes byomOverlayUrl from edsConfig into registerSite params', async () => {
+        const config = { ...createEdsConfig(), byomOverlayUrl: 'https://byom.example.com' };
+
+        await executeStorefrontSetupPhases(context, config, new AbortController().signal);
+
+        expect(mockRegisterSite).toHaveBeenCalledWith(
+            expect.objectContaining({ contentOverlayUrl: 'https://byom.example.com' }),
+        );
+    });
+
+    it('omits contentOverlayUrl when byomOverlayUrl is not in edsConfig', async () => {
+        await executeStorefrontSetupPhases(
+            context, createEdsConfig(), new AbortController().signal,
+        );
+
+        const callArgs = mockRegisterSite.mock.calls[0][0];
+        expect(callArgs.contentOverlayUrl).toBeUndefined();
     });
 });

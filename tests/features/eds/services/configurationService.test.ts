@@ -12,7 +12,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     },
 }));
 
-import { ConfigurationService } from '@/features/eds/services/configurationService';
+import { ConfigurationService, buildSiteConfigParams } from '@/features/eds/services/configurationService';
 import type { SiteRegistrationParams } from '@/features/eds/services/configurationService';
 
 // Test fixtures
@@ -162,6 +162,58 @@ describe('ConfigurationService', () => {
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('DA.live authentication required');
+        });
+
+        it('should include content.overlay block when contentOverlayUrl is provided', async () => {
+            await service.registerSite({
+                ...params,
+                contentOverlayUrl: 'https://byom.example.com',
+            });
+
+            const call = fetchSpy.mock.calls[0];
+            const body = JSON.parse(call[1].body);
+            expect(body.content).toEqual({
+                source: {
+                    url: 'https://content.da.live/test-user/my-site/',
+                    type: 'markup',
+                },
+                overlay: {
+                    url: 'https://byom.example.com',
+                    type: 'markup',
+                },
+            });
+        });
+
+        it('should omit content.overlay when contentOverlayUrl is undefined', async () => {
+            await service.registerSite(params);
+
+            const call = fetchSpy.mock.calls[0];
+            const body = JSON.parse(call[1].body);
+            expect(body.content).not.toHaveProperty('overlay');
+            expect(body.content).toEqual({
+                source: {
+                    url: 'https://content.da.live/test-user/my-site/',
+                    type: 'markup',
+                },
+            });
+        });
+    });
+
+    // ==========================================================
+    // buildSiteConfigParams (BYOM overlay)
+    // ==========================================================
+
+    describe('buildSiteConfigParams', () => {
+        it('omits contentOverlayUrl when no overlay URL is provided', () => {
+            const params = buildSiteConfigParams('owner', 'repo', 'org', 'site');
+            expect(params.contentOverlayUrl).toBeUndefined();
+        });
+
+        it('includes contentOverlayUrl when an overlay URL is provided', () => {
+            const params = buildSiteConfigParams(
+                'owner', 'repo', 'org', 'site', 'https://byom.example.com',
+            );
+            expect(params.contentOverlayUrl).toBe('https://byom.example.com');
         });
     });
 
