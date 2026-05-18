@@ -94,7 +94,8 @@ export async function handleVerifyAiSetup(
     }
     // extensionDistPath is always server-side (prevent webview-supplied path traversal)
     const extensionDistPath = path.join(context.context.extensionPath, 'dist');
-    return verifyAiSetup(project.path, extensionDistPath) as Promise<HandlerResponse>;
+    const result = await verifyAiSetup(project.path, extensionDistPath);
+    return { success: true, ...result };
 }
 
 /**

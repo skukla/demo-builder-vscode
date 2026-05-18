@@ -227,7 +227,8 @@ describe('configureHandlers', () => {
                 '/projects/test', // from stateManager.getCurrentProject().path
                 expect.stringContaining('mock/extension/path'), // derived from context.extensionPath
             );
-            expect(result).toEqual(mockResult);
+            // Handler wraps verifier output in HandlerResponse shape (adds success: true)
+            expect(result).toEqual({ success: true, ...mockResult });
         });
 
         it('returns error when stateManager has no current project', async () => {

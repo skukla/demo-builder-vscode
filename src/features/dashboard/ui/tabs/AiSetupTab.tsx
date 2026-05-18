@@ -24,7 +24,7 @@ export interface AiSetupTabProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function AiSetupTab({ projectPath }: AiSetupTabProps): JSX.Element {
+export function AiSetupTab({ projectPath }: AiSetupTabProps): React.ReactElement {
     const [result, setResult] = useState<AiVerificationResult | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -95,7 +95,7 @@ export function AiSetupTab({ projectPath }: AiSetupTabProps): JSX.Element {
 
 // ─── CheckList ────────────────────────────────────────────────────────────────
 
-function CheckList({ checks }: { checks: AiCheckResult[] }): JSX.Element {
+function CheckList({ checks }: { checks: AiCheckResult[] }): React.ReactElement {
     return (
         <Flex direction="column" gap="size-100">
             {checks.map(check => (
@@ -105,7 +105,7 @@ function CheckList({ checks }: { checks: AiCheckResult[] }): JSX.Element {
     );
 }
 
-function CheckRow({ check }: { check: AiCheckResult }): JSX.Element {
+function CheckRow({ check }: { check: AiCheckResult }): React.ReactElement {
     const icon = statusIcon(check.status);
     return (
         <Flex direction="column" gap="size-50">
