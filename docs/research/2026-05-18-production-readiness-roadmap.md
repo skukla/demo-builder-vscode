@@ -61,12 +61,13 @@ Filtered against the scope principle: only items that touch infrastructure or re
 | ID | Item | Why it fits the principle | Files |
 |---|---|---|---|
 | B1 | ~~**Sitemap + robots.txt generation at setup**~~ ✅ DONE (2026-05-18) | EDS auto-serves `sitemap.xml` from `query-index.json` — no codegen needed. Restored the robots.txt Sitemap line pointing at the correct auto-served URL (`sitemap.xml`, not `sitemap-index.xml` which EDS does not serve by default). One-line config-template.json fix. Closes A3. | `src/features/eds/config/config-template.json` |
-| B4 | **GitHub Actions: lint + Lighthouse-CI on PR** | Templated workflow files committed at repo creation time. Repo-level scaffolding fits Demo Builder's scope cleanly — no storefront code touched. | `src/features/eds/services/githubRepoOperations.ts` — commit `.github/workflows/*.yml` files |
+| ~~B4~~ | ~~**GitHub Actions: lint + Lighthouse-CI on PR**~~ DROPPED (2026-05-18) | Audit found that storefront templates already ship a comprehensive workflow suite (`check-block-readme`, `cleanup-on-create`, `main`, `protect-aem-js`, `run-e2e-tests`, `run-e2e-tests-saas`, `run-percy-visual-tests`). These copy automatically via `POST /repos/{template_owner}/{template_repo}/generate` when Demo Builder creates a new repo. CI/CD coupled to storefront code (lint configs, npm scripts, perf budgets) belongs to the template, not Demo Builder. Same treatment as B3/D2/D3. | None (template-owned) |
 
 **Removed (storefront-feature scope, template's responsibility):**
 
 - ~~B2 — Storefront Events config wiring~~ → audit A5 (2026-05-18) confirmed Demo Builder writes no Events config today; the CitiSignal template owns SDK init and per-project config. Template's job.
 - ~~B3 — AEM Experimentation plugin install~~ → plugin lives in the storefront repo's JS; template's job.
+- ~~B4 — GitHub Actions workflows~~ → 2026-05-18 audit confirmed templates already ship a comprehensive workflow suite via `.github/workflows/`. Template's job.
 
 **Effort per remaining item**: each is a focused `/rptc:feat` of 1-2 days.
 
@@ -132,7 +133,7 @@ Updated after the 2026-05-18 audit:
 1. ~~**Tier A audit**~~ — ✅ DONE (2026-05-18). A1 documented, A2 removed, A3 robots fixed, A4/A5 outcomes recorded above.
 2. ~~**B1 sitemap + robots.txt**~~ — ✅ DONE (2026-05-18). Pointed robots.txt at the EDS-auto-served `sitemap.xml` (one-line config fix; no codegen needed).
 3. ~~**C1 multisite ADR**~~ — ✅ DONE (2026-05-18). `docs/architecture/adr/003-multisite-architecture-seam.md` documents 4 single-env assumptions and deferred 5-step implementation path.
-4. **B4 GitHub Actions workflows** — templated CI scaffolding.
+4. ~~**B4 GitHub Actions workflows**~~ — DROPPED (2026-05-18). Templates ship workflows via `.github/workflows/`; nothing for Demo Builder to add.
 5. **D1 Prerender service** — biggest lift but makes Phase 2 actually useful. Per-project deployment.
 
 **Tier E items**: revisit only if customer-handoff UX becomes a priority. Not now.
