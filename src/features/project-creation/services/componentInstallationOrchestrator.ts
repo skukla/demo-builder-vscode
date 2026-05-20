@@ -9,6 +9,8 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { ProgressTracker } from '../handlers/shared';
+import { applyAiDefaultsToStorefrontPackageJson } from './aiDefaultsInstaller';
+import { COMPONENT_IDS } from '@/core/constants';
 import { ComponentManager } from '@/features/components/services/componentManager';
 import type { Project, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
@@ -114,6 +116,14 @@ export async function installAllComponents(
         async ([compId, { definition }]) => {
             const componentPath = project.componentInstances?.[compId]?.path;
             if (!componentPath) return { compId, success: true };
+
+            // Before installing the EDS storefront, inject ai-defaults.json packages
+            // (currently the Adobe App Builder MCP) as devDeps so `npm install` resolves
+            // them into the storefront's node_modules.
+            if (compId === COMPONENT_IDS.EDS_STOREFRONT) {
+                logger.debug('[Project Creation] Applying AI defaults to storefront package.json');
+                await applyAiDefaultsToStorefrontPackageJson(componentPath);
+            }
 
             logger.debug(`[Project Creation] npm install: ${definition.name}`);
 

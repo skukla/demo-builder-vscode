@@ -119,12 +119,38 @@ describe('MCP config content', () => {
         expect(config.mcpServers['demo-builder'].env).toBeUndefined();
     });
 
-    it('emits exactly one server entry (demo-builder only)', async () => {
+    it('emits demo-builder plus every server declared in ai-defaults.json', async () => {
         const project = makeEdsProject();
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
-        expect(Object.keys(config.mcpServers)).toEqual(['demo-builder']);
+        // ai-defaults.json ships with the Adobe App Builder MCP as `commerce-extensibility`.
+        // If/when more defaults are added, this test should reflect them.
+        expect(Object.keys(config.mcpServers).sort()).toEqual(['commerce-extensibility', 'demo-builder']);
+    });
+
+    it('includes the Adobe App Builder MCP from ai-defaults.json with its declared command and args', async () => {
+        const project = makeEdsProject();
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
+
+        const config = captureWrittenConfig('.claude/mcp.json') as {
+            mcpServers: Record<string, { command: string; args: string[] }>;
+        };
+        const entry = config.mcpServers['commerce-extensibility'];
+
+        expect(entry).toBeDefined();
+        expect(entry.command).toBe('node');
+        expect(entry.args).toEqual(['node_modules/@adobe-commerce/commerce-extensibility-tools/index.js']);
+    });
+
+    it('writes the same ai-defaults entries to both .claude/mcp.json and .mcp.json', async () => {
+        const project = makeEdsProject();
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
+
+        const claudeConfig = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
+        const rootConfig = captureWrittenConfig('.mcp.json') as { mcpServers: Record<string, unknown> };
+
+        expect(rootConfig.mcpServers['commerce-extensibility']).toEqual(claudeConfig.mcpServers['commerce-extensibility']);
     });
 
     it('does not write external MCP entries (da-live, adobe-commerce-dev, aem-content, aem-eds)', async () => {

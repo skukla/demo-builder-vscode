@@ -23,10 +23,14 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { promisify } from 'util';
+import aiDefaultsConfig from '../config/ai-defaults.json';
 import { COMPONENT_IDS } from '@/core/constants';
+import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 
 const execFile = promisify(childProcess.execFile);
+
+const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
 
 // ─── MCP entry shape ──────────────────────────────────────────────────────────
 
@@ -195,14 +199,25 @@ async function resolveNodePath(): Promise<string> {
 
 async function buildMcpConfig(extensionDistPath: string): Promise<McpConfig> {
     const nodePath = await resolveNodePath();
-    return {
-        mcpServers: {
-            'demo-builder': {
-                command: nodePath,
-                args: [`${extensionDistPath}/mcp-server.js`],
-            },
+    const mcpServers: Record<string, McpServerEntry> = {
+        'demo-builder': {
+            command: nodePath,
+            args: [`${extensionDistPath}/mcp-server.js`],
         },
     };
+
+    // Always-installed MCP servers declared in ai-defaults.json. Each entry's
+    // package is added to the storefront's devDeps before `npm install`, so the
+    // declared args path (e.g., node_modules/@adobe-commerce/...) resolves at
+    // the cwd Claude Code launches from.
+    for (const entry of aiDefaults.mcpServers) {
+        mcpServers[entry.id] = {
+            command: entry.command,
+            args: entry.args,
+        };
+    }
+
+    return { mcpServers };
 }
 
 function resolveStorefrontPath(project: Project): string | undefined {

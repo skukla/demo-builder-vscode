@@ -41,7 +41,7 @@ The Configure screen's AI Setup tab also needs upgrading. Today it only verifies
 
 ### 1. MCP Config Writer — Slimmed to `demo-builder` Only
 
-`mcpConfigWriter.ts` stops writing external MCP entries. Generated `.claude/mcp.json` and root `.mcp.json` contain a single `mcpServers` entry: `demo-builder`. The `demoBuilder.ai.externalMcpServers` setting is deprecated (still accepted, ignored). The `.claude/settings.json` PostToolUse git-sync hook stays as-is — that's a Claude Code project-config concern, not an MCP entry.
+`mcpConfigWriter.ts` stops writing external MCP entries. Generated `.claude/mcp.json` and root `.mcp.json` contain a single `mcpServers` entry: `demo-builder`. The `demoBuilder.ai.externalMcpServers` setting is removed from `package.json` (Cycle B). The `.claude/settings.json` PostToolUse git-sync hook stays as-is — that's a Claude Code project-config concern, not an MCP entry.
 
 **Why**: Users get better Adobe MCPs at session level through Claude Code's official catalog. Our project-level entries duplicate or conflict.
 
@@ -147,7 +147,7 @@ see @AGENTS.md
 
 The comment doesn't affect Claude's behavior (Markdown comments are ignored during context loading); it's purely human-readable documentation.
 
-The `demoBuilder.ai.mcpConfigTargets` setting is deprecated. Cursor and Codex pick up `AGENTS.md` and `.mcp.json` natively — no per-tool config writes needed.
+The `demoBuilder.ai.mcpConfigTargets` setting is removed from `package.json` (Cycle B). Cursor and Codex pick up `AGENTS.md` and `.mcp.json` natively — no per-tool config writes needed.
 
 ### 4. AI Configuration Tab (Repurposed + Expanded)
 
@@ -806,7 +806,7 @@ Every surface touched by the pivot.
 
 | Step | What | Effort | Cycle |
 |---|---|---|---|
-| 1 | Slim `mcpConfigWriter.ts` to write only `demo-builder` to project MCP configs; deprecate `externalMcpServers` and `mcpConfigTargets` settings | Small | A |
+| 1 | Slim `mcpConfigWriter.ts` to write only `demo-builder` to project MCP configs (Cycle A). Cycle B Step 7 hard-deletes the `externalMcpServers` and `mcpConfigTargets` settings from `package.json` (no soft deprecation) | Small | A |
 | 2 | Switch `aiContextWriter.ts` to emit `AGENTS.md` plus one-line `CLAUDE.md` pointer | Small | A |
 | 3 | Trim `skillsWriter.ts` to three Demo-Builder-specific templates; remove conditional/interpolation paths | Small | A |
 | 4 | Delete `vscodeChatParticipant.ts`; update `src/features/ai/index.ts` and README | Tiny | A |

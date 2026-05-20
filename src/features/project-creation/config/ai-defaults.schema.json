@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI Defaults",
+  "description": "Always-installed AI infrastructure for Demo Builder projects — MCP servers added to every generated project alongside the demo-builder entry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mcpServers"],
+  "properties": {
+    "mcpServers": {
+      "type": "array",
+      "description": "MCP servers installed via npm devDependency. Each entry is added to .claude/mcp.json and .mcp.json next to demo-builder, and its package is added as a devDependency on the storefront's package.json before npm install runs.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "package", "version", "command", "args", "description"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable identifier used as the key in the generated .mcp.json mcpServers map."
+          },
+          "package": {
+            "type": "string",
+            "description": "npm package name installed as a devDependency on the storefront."
+          },
+          "version": {
+            "type": "string",
+            "description": "npm semver range (caret-pin matches Demo Builder's overall posture)."
+          },
+          "command": {
+            "type": "string",
+            "description": "Command Claude Code runs to start the MCP server."
+          },
+          "args": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Arguments passed to command. Paths are relative to the cwd Claude Code launches from (the storefront root)."
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description shown in the AI Configuration tab."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "./ai-defaults.schema.json",
+  "mcpServers": [
+    {
+      "id": "commerce-extensibility",
+      "package": "@adobe-commerce/commerce-extensibility-tools",
+      "version": "^3.4.0",
+      "command": "node",
+      "args": ["node_modules/@adobe-commerce/commerce-extensibility-tools/index.js"],
+      "description": "Adobe App Builder MCP — aio-app-deploy, commerce-event-subscribe, search-commerce-docs, aio-app-dev, aio-app-use, aio-configure-global, aio-dev-invoke, aio-login, aio-where, onboard, upload-chat-history"
+    }
+  ]
+}

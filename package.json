@@ -179,6 +179,21 @@
             },
             "default": [],
             "description": "Custom block libraries to include for new EDS projects. Each entry is a public GitHub repository URL containing a blocks/ directory."
+          },
+          "demoBuilder.blockLibraries.syncBehavior": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "enabled",
+              "disabled"
+            ],
+            "enumDescriptions": [
+              "Prompt before applying upstream library updates or promoting local changes to a library",
+              "Apply library updates automatically when newer commits are detected; allow promotion actions without an extra confirmation",
+              "Never touch block library remotes — promotion actions are hidden and library updates are skipped (the storefront stays on the install-time block files)"
+            ],
+            "default": "ask",
+            "description": "How to handle two-way block library sync: applying upstream library updates to your storefront and promoting your local block changes back to the library repo."
           }
         }
       },
@@ -244,23 +259,20 @@
       {
         "title": "AI",
         "properties": {
-          "demoBuilder.ai.externalMcpServers": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": ["da-live", "aem-content", "adobe-commerce-dev"]
-            },
-            "default": [],
-            "description": "(Deprecated) Adobe-hosted MCPs are now available at Claude Code's session level via its catalog — Demo Builder no longer writes per-project entries. Value is accepted but ignored."
-          },
-          "demoBuilder.ai.mcpConfigTargets": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": ["claude", "cursor", "codex"]
-            },
-            "default": [],
-            "description": "(Deprecated) Cursor and Codex now read .mcp.json natively, so no per-tool config files are written. Value is accepted but ignored."
+          "demoBuilder.ai.harness": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "extension",
+              "terminal"
+            ],
+            "enumDescriptions": [
+              "Use the Claude Code VS Code extension when installed; fall back to a terminal launch otherwise",
+              "Always launch via the Claude Code VS Code extension (errors if not installed)",
+              "Always launch claude in a VS Code integrated terminal"
+            ],
+            "default": "auto",
+            "description": "How Open in Claude Code launches Claude: auto-detects the Claude Code VS Code extension by default, or forces extension/terminal."
           }
         }
       }

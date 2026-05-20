@@ -49,6 +49,10 @@
             "dependencies": {
                 "required": [],
                 "optional": []
+            },
+            "aiSkillBundle": {
+                "path": "aem-boilerplate-commerce/skills",
+                "prefix": "aem"
             }
         },
         "headless": {

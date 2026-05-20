@@ -151,6 +151,18 @@ export interface RawComponentDefinition {
     requiresDeployment?: boolean;
     /** Runtime metadata populated during project creation (e.g., EDS URLs) */
     metadata?: Record<string, unknown>;
+    /**
+     * Adobe skill bundle this component installs into the project's `.claude/skills/`.
+     *
+     * - `path` is the bundle subdirectory inside `node_modules/@adobe-commerce/commerce-extensibility-tools/dist/`
+     *   (e.g., `aem-boilerplate-commerce/skills`)
+     * - `prefix` is prepended to each skill's folder name to disambiguate collisions
+     *   across bundles (e.g., `aem` → `aem-tester` vs ISK/CSK's own `tester`).
+     */
+    aiSkillBundle?: {
+        path: string;
+        prefix: string;
+    };
 }
 
 /**
