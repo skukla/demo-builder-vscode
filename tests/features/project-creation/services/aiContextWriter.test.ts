@@ -1,14 +1,23 @@
 /**
  * AI Context Writer Tests
  *
- * Tests for CLAUDE.md generation from project data.
+ * Tests for AGENTS.md generation from project data and the writer that lands
+ * AGENTS.md plus CLAUDE.md pointer files in the project.
+ *
  * Covers EDS projects, headless projects, block libraries, and conditional sections.
  */
 
-import { generateClaudeMd } from '@/features/project-creation/services/aiContextWriter';
+import * as fsPromises from 'fs/promises';
+import * as path from 'path';
+import { generateAgentsMd, writeAgentsMd } from '@/features/project-creation/services/aiContextWriter';
 import type { Project, ComponentInstance } from '@/types/base';
 import type { Stack } from '@/types/stacks';
 import type { InstalledBlockLibrary, CustomBlockLibrary } from '@/types/blockLibraries';
+
+jest.mock('fs/promises', () => ({
+    mkdir: jest.fn().mockResolvedValue(undefined),
+    writeFile: jest.fn().mockResolvedValue(undefined),
+}));
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -89,32 +98,32 @@ const STACKS: Stack[] = [
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe('aiContextWriter', () => {
-    describe('generateClaudeMd', () => {
+    describe('generateAgentsMd', () => {
         describe('EDS projects', () => {
             it('includes the GitHub repo URL', () => {
                 const project = makeEdsProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('https://github.com/owner/my-repo');
             });
 
             it('includes the AEM live URL', () => {
                 const project = makeEdsProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('https://main--my-repo--owner.aem.live');
             });
 
             it('includes the AEM preview URL', () => {
                 const project = makeEdsProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('https://main--my-repo--owner.aem.page');
             });
 
             it('includes the DA.live authoring URL', () => {
                 const project = makeEdsProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 // # is escaped by escapeMarkdown at the output boundary
                 expect(result).toContain('https://da.live/\\#/my-org/my-site');
@@ -122,7 +131,7 @@ describe('aiContextWriter', () => {
 
             it('includes the local storefront path', () => {
                 const project = makeEdsProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('/projects/test-project/components/eds-storefront');
             });
@@ -131,28 +140,28 @@ describe('aiContextWriter', () => {
         describe('headless projects', () => {
             it('includes the Commerce endpoint URL', () => {
                 const project = makeHeadlessProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('https://commerce.example.com');
             });
 
             it('does not include DA.live URL', () => {
                 const project = makeHeadlessProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).not.toContain('da.live');
             });
 
             it('does not include GitHub repo URL', () => {
                 const project = makeHeadlessProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).not.toContain('github.com/owner/my-repo');
             });
 
             it('does not include AEM URLs', () => {
                 const project = makeHeadlessProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).not.toContain('.aem.live');
                 expect(result).not.toContain('.aem.page');
@@ -169,14 +178,14 @@ describe('aiContextWriter', () => {
                         lastDeployed: new Date().toISOString(),
                     },
                 });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('https://graph.adobe.io/api/mesh/abc123');
             });
 
             it('omits the mesh section when no mesh endpoint', () => {
                 const project = makeHeadlessProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).not.toContain('graph.adobe.io');
             });
@@ -185,14 +194,14 @@ describe('aiContextWriter', () => {
         describe('package name', () => {
             it('includes the package display name for isle5', () => {
                 const project = makeEdsProject({ selectedPackage: 'isle5' });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('Isle5');
             });
 
             it('includes the package display name for citisignal', () => {
                 const project = makeHeadlessProject({ selectedPackage: 'citisignal' });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('CitiSignal');
             });
@@ -210,7 +219,7 @@ describe('aiContextWriter', () => {
                     },
                 ];
                 const project = makeEdsProject({ installedBlockLibraries: installedLibraries });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('Isle5 Block Collection');
                 expect(result).toContain('https://github.com/stephen-garner-adobe/isle5');
@@ -238,7 +247,7 @@ describe('aiContextWriter', () => {
                     customBlockLibraries: customLibs,
                     installedBlockLibraries: installedLibraries,
                 });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('custom');
                 expect(result).toContain('My Custom Blocks');
@@ -246,14 +255,14 @@ describe('aiContextWriter', () => {
 
             it('does not include Block Libraries section for headless projects', () => {
                 const project = makeHeadlessProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).not.toContain('Block Libraries');
             });
 
             it('does not include Block Libraries section when no libraries installed', () => {
                 const project = makeEdsProject({ installedBlockLibraries: [] });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).not.toContain('Block Libraries');
             });
@@ -262,7 +271,7 @@ describe('aiContextWriter', () => {
         describe('sanitization', () => {
             it('strips newlines and # from project name to prevent heading injection', () => {
                 const project = makeEdsProject({ name: 'my-project\n## Injected heading' });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).not.toContain('## Injected heading');
                 expect(result).toContain('my-project');
@@ -281,7 +290,7 @@ describe('aiContextWriter', () => {
                         },
                     },
                 });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 // Newline is removed, so ## cannot start a new Markdown heading line
                 expect(result).not.toContain('\n## Injected Heading');
@@ -301,7 +310,7 @@ describe('aiContextWriter', () => {
                         },
                     },
                 });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).not.toContain('javascript:');
                 // Brackets escaped by escapeMarkdown
@@ -310,7 +319,7 @@ describe('aiContextWriter', () => {
 
             it('preserves # in DA.live URL (fragment separator, escaped at output boundary)', () => {
                 const project = makeEdsProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 // sanitizeUrl preserves # (valid fragment separator), escapeMarkdown then escapes it
                 expect(result).toContain('https://da.live/\\#/my-org/my-site');
@@ -323,7 +332,7 @@ describe('aiContextWriter', () => {
                         projectTitle: 'My Project',
                     },
                 });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).not.toContain('## Injected');
                 expect(result).toContain('My Org');
@@ -331,14 +340,14 @@ describe('aiContextWriter', () => {
 
             it('falls back to raw packageId when package not found and sanitizes it', () => {
                 const project = makeEdsProject({ selectedPackage: 'unknown\n## pkg-inject' });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).not.toContain('## pkg-inject');
             });
 
             it('falls back to raw stackId when stack not found and sanitizes it', () => {
                 const project = makeEdsProject({ selectedStack: 'unknown\n## stack-inject' });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).not.toContain('## stack-inject');
             });
@@ -356,7 +365,7 @@ describe('aiContextWriter', () => {
                         },
                     },
                 });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 // The ]( sequence that would break Markdown link syntax is stripped
                 expect(result).not.toContain('](https://attacker.com');
@@ -379,7 +388,7 @@ describe('aiContextWriter', () => {
                     },
                 ];
                 const project = makeEdsProject({ installedBlockLibraries: installedLibraries });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 // The ]( sequence enabling Markdown link injection is stripped; domain text may remain as plain text
                 expect(result).not.toContain('](https://');
@@ -389,14 +398,14 @@ describe('aiContextWriter', () => {
         describe('structure', () => {
             it('includes project name as heading', () => {
                 const project = makeEdsProject({ name: 'my-demo' });
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('my-demo');
             });
 
             it('includes the stack name', () => {
                 const project = makeEdsProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 // + is escaped by escapeMarkdown at the output boundary
                 expect(result).toContain('Edge Delivery \\+ PaaS');
@@ -404,17 +413,81 @@ describe('aiContextWriter', () => {
 
             it('includes Try asking Claude section for EDS projects', () => {
                 const project = makeEdsProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('Try asking Claude');
             });
 
             it('includes Try asking Claude section for headless projects', () => {
                 const project = makeHeadlessProject();
-                const result = generateClaudeMd(project, STACKS);
+                const result = generateAgentsMd(project, STACKS);
 
                 expect(result).toContain('Try asking Claude');
             });
+        });
+    });
+
+    describe('writeAgentsMd', () => {
+        beforeEach(() => {
+            jest.clearAllMocks();
+        });
+
+        function captureWritten(filePath: string): string {
+            const writeFileMock = fsPromises.writeFile as jest.Mock;
+            const call = writeFileMock.mock.calls.find(
+                ([p]: [string]) => p === filePath,
+            );
+            if (!call) {
+                throw new Error(`No writeFile call found for path: ${filePath}`);
+            }
+            return call[1] as string;
+        }
+
+        it('writes AGENTS.md at the project root with the generated content', async () => {
+            const project = makeEdsProject();
+            await writeAgentsMd('/projects/test-project', project, STACKS);
+
+            const content = captureWritten(path.join('/projects/test-project', 'AGENTS.md'));
+            expect(content).toContain('Demo Builder Project: test-project');
+            expect(content).toContain('Project Overview');
+        });
+
+        it('writes a CLAUDE.md pointer at the project root', async () => {
+            const project = makeEdsProject();
+            await writeAgentsMd('/projects/test-project', project, STACKS);
+
+            const content = captureWritten(path.join('/projects/test-project', 'CLAUDE.md'));
+            expect(content.trim()).toBe('see @AGENTS.md');
+        });
+
+        it('writes a .claude/CLAUDE.md pointer', async () => {
+            const project = makeEdsProject();
+            await writeAgentsMd('/projects/test-project', project, STACKS);
+
+            const content = captureWritten(path.join('/projects/test-project', '.claude', 'CLAUDE.md'));
+            expect(content.trim()).toBe('see @AGENTS.md');
+        });
+
+        it('creates the .claude directory before writing the pointer', async () => {
+            const project = makeEdsProject();
+            await writeAgentsMd('/projects/test-project', project, STACKS);
+
+            const mkdirMock = fsPromises.mkdir as jest.Mock;
+            const claudeDir = path.join('/projects/test-project', '.claude');
+            const mkdirCall = mkdirMock.mock.calls.find(
+                ([dir]: [string]) => dir === claudeDir,
+            );
+            expect(mkdirCall).toBeDefined();
+        });
+
+        it('writes AGENTS.md content identical to generateAgentsMd output', async () => {
+            const project = makeEdsProject();
+            const generated = generateAgentsMd(project, STACKS);
+
+            await writeAgentsMd('/projects/test-project', project, STACKS);
+
+            const content = captureWritten(path.join('/projects/test-project', 'AGENTS.md'));
+            expect(content).toBe(generated);
         });
     });
 });

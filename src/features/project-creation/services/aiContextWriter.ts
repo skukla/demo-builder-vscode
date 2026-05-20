@@ -1,13 +1,17 @@
 /**
  * AI Context Writer
  *
- * Generates CLAUDE.md project context files for AI agents (Claude Code, Cursor, Codex).
- * Written into each project directory at creation time to give AI agents full project context.
+ * Generates the AGENTS.md project context file for AI agents (Claude Code, Cursor,
+ * Codex, Copilot). Written into each project directory at creation time to give AI
+ * agents full project context. Two CLAUDE.md pointer files (root + .claude/) defer
+ * to AGENTS.md via Claude Code's `@AGENTS.md` import syntax.
  *
- * Covers: remote endpoints, storefront paths, block libraries, sync operations, and example prompts.
+ * Covers: remote endpoints, storefront paths, block libraries, sync operations,
+ * and example prompts.
  *
- * Security: all user-supplied values are sanitized before interpolation — see sanitization.ts
- * for details on each helper (heading injection, URL scheme injection, Markdown link injection).
+ * Security: all user-supplied values are sanitized before interpolation — see
+ * sanitization.ts for details on each helper (heading injection, URL scheme
+ * injection, Markdown link injection).
  */
 
 import * as fsPromises from 'fs/promises';
@@ -31,13 +35,13 @@ const demoPackages = demoPackagesJson as unknown as DemoPackagesConfig;
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
- * Generate CLAUDE.md content for a project.
+ * Generate AGENTS.md content for a project.
  *
  * @param project - The project manifest
  * @param stacksConfig - Available stacks (used for display name lookup)
- * @returns CLAUDE.md content as a string
+ * @returns AGENTS.md content as a string
  */
-export function generateClaudeMd(project: Project, stacksConfig: Stack[]): string {
+export function generateAgentsMd(project: Project, stacksConfig: Stack[]): string {
     const sections: string[] = [];
 
     sections.push(buildHeader(project, stacksConfig));
@@ -53,21 +57,33 @@ export function generateClaudeMd(project: Project, stacksConfig: Stack[]): strin
 }
 
 /**
- * Write CLAUDE.md to the project directory.
+ * One-line content of the CLAUDE.md pointer files. Claude Code resolves
+ * `@AGENTS.md` against the file's parent directory and inlines the target's
+ * content into context.
+ */
+const CLAUDE_MD_POINTER = 'see @AGENTS.md\n';
+
+/**
+ * Write AGENTS.md to the project root, plus CLAUDE.md pointer files at the
+ * project root and in `.claude/`. The pointers defer to AGENTS.md so AI tools
+ * that look for CLAUDE.md find the same content via a single import.
  *
  * @param projectPath - Path to the project root directory
  * @param project - The project manifest
  * @param stacksConfig - Available stacks (used for display name lookup)
  */
-export async function writeClaudeMd(
+export async function writeAgentsMd(
     projectPath: string,
     project: Project,
     stacksConfig: Stack[],
 ): Promise<void> {
-    const content = generateClaudeMd(project, stacksConfig);
+    const content = generateAgentsMd(project, stacksConfig);
     const claudeDir = path.join(projectPath, '.claude');
+
+    await fsPromises.writeFile(path.join(projectPath, 'AGENTS.md'), content, 'utf-8');
+    await fsPromises.writeFile(path.join(projectPath, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8');
     await fsPromises.mkdir(claudeDir, { recursive: true });
-    await fsPromises.writeFile(path.join(claudeDir, 'CLAUDE.md'), content, 'utf-8');
+    await fsPromises.writeFile(path.join(claudeDir, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8');
 }
 
 // ─── Section builders ────────────────────────────────────────────────────────

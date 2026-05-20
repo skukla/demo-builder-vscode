@@ -3,19 +3,19 @@
  *
  * Tests the AI context file generation orchestration:
  * - Reads AI settings from VS Code configuration
- * - Delegates to writeClaudeMd, writeMcpConfigs, writeSkillFiles
+ * - Delegates to writeAgentsMd, writeMcpConfigs, writeSkillFiles
  * - Passes correct settings derived from VS Code config to each writer
  */
 
 import * as vscode from 'vscode';
 import { generateAIContextFiles } from '@/features/project-creation/services/projectFinalizationService';
-import { writeClaudeMd } from '@/features/project-creation/services/aiContextWriter';
+import { writeAgentsMd } from '@/features/project-creation/services/aiContextWriter';
 import { writeMcpConfigs } from '@/features/project-creation/services/mcpConfigWriter';
 import { writeSkillFiles } from '@/features/project-creation/services/skillsWriter';
 import type { Project } from '@/types/base';
 
 jest.mock('@/features/project-creation/services/aiContextWriter', () => ({
-    writeClaudeMd: jest.fn().mockResolvedValue(undefined),
+    writeAgentsMd: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/features/project-creation/services/mcpConfigWriter', () => ({
@@ -61,13 +61,13 @@ describe('generateAIContextFiles', () => {
         setupVscodeConfig();
     });
 
-    it('calls writeClaudeMd with projectPath and project', async () => {
+    it('calls writeAgentsMd with projectPath and project', async () => {
         const project = makeProject();
         await expect(generateAIContextFiles('/projects/test', project, '/ext/path')).resolves.toBeUndefined();
 
         // Third argument is stacksConfig.stacks loaded from stacks.json — verify it contains
         // real stack data (not an empty array), and that each element has the expected shape.
-        expect(writeClaudeMd).toHaveBeenCalledWith(
+        expect(writeAgentsMd).toHaveBeenCalledWith(
             '/projects/test',
             project,
             expect.arrayContaining([expect.objectContaining({ id: expect.any(String) })]),
@@ -130,21 +130,21 @@ describe('generateAIContextFiles', () => {
     });
 
     it('still calls all three writers when one fails', async () => {
-        (writeClaudeMd as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
+        (writeAgentsMd as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
         // writeMcpConfigs and writeSkillFiles still resolve
 
         await expect(
             generateAIContextFiles('/projects/test', makeProject(), '/ext'),
         ).rejects.toThrow('AI context file generation failed');
 
-        // All three were still called despite writeClaudeMd failing
-        expect(writeClaudeMd).toHaveBeenCalledTimes(1);
+        // All three were still called despite writeAgentsMd failing
+        expect(writeAgentsMd).toHaveBeenCalledTimes(1);
         expect(writeMcpConfigs).toHaveBeenCalledTimes(1);
         expect(writeSkillFiles).toHaveBeenCalledTimes(1);
     });
 
     it('aggregates multiple writer errors into a single thrown error', async () => {
-        (writeClaudeMd as jest.Mock).mockRejectedValueOnce(new Error('error A'));
+        (writeAgentsMd as jest.Mock).mockRejectedValueOnce(new Error('error A'));
         (writeMcpConfigs as jest.Mock).mockRejectedValueOnce(new Error('error B'));
 
         await expect(

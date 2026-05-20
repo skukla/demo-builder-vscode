@@ -12,7 +12,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import stacksConfig from '../config/stacks.json';
 import { ProgressTracker } from '../handlers/shared';
-import { writeClaudeMd } from './aiContextWriter';
+import { writeAgentsMd } from './aiContextWriter';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
 import { writeMcpConfigs } from './mcpConfigWriter';
 import { writeSkillFiles } from './skillsWriter';
@@ -179,7 +179,7 @@ export async function generateAIContextFiles(
     const includeBoilerplateSkills: boolean = config.get('includeBoilerplateSkills') ?? true;
 
     const results = await Promise.allSettled([
-        writeClaudeMd(projectPath, project, stacksConfig.stacks as Stack[]),
+        writeAgentsMd(projectPath, project, stacksConfig.stacks as Stack[]),
         writeMcpConfigs(projectPath, project, path.join(extensionPath, 'dist')),
         writeSkillFiles(projectPath, project, { externalMcpServers, includeBoilerplateSkills }),
     ]);
