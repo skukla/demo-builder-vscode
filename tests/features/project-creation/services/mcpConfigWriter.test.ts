@@ -2,10 +2,14 @@
  * MCP Config Writer Tests
  *
  * Tests for MCP config file generation:
- * - .claude/mcp.json (Claude Code)
- * - .cursor/mcp.json (Cursor)
- * - .codex/mcp.json (Codex CLI)
+ * - .claude/mcp.json (Claude Code project config)
+ * - .mcp.json (Claude Code project-scope config at project root)
  * - .claude/settings.json (PostToolUse hooks)
+ *
+ * After the AI layer pivot (Cycle A), the writer emits only the demo-builder
+ * MCP entry. External MCPs (da-live, adobe-commerce-dev, etc.) come from
+ * Claude Code's session-level catalog — not project config. Cursor and Codex
+ * pick up `.mcp.json` natively and need no per-tool file.
  */
 
 import * as fsPromises from 'fs/promises';
@@ -17,7 +21,6 @@ import {
     writeMcpConfigs,
 } from '@/features/project-creation/services/mcpConfigWriter';
 import type { Project, ComponentInstance } from '@/types/base';
-import type { AiSettings } from '@/features/project-creation/services/mcpConfigWriter';
 
 jest.mock('fs/promises', () => ({
     mkdir: jest.fn().mockResolvedValue(undefined),
@@ -70,16 +73,6 @@ function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
     };
 }
 
-const ALL_SERVERS: AiSettings = {
-    externalMcpServers: ['da-live', 'aem-content', 'aem-eds', 'adobe-commerce-dev'],
-    mcpConfigTargets: ['claude', 'cursor', 'codex'],
-};
-
-const DEFAULT_SERVERS: AiSettings = {
-    externalMcpServers: ['da-live', 'adobe-commerce-dev'],
-    mcpConfigTargets: ['claude'],
-};
-
 const EXTENSION_DIST = '/path/to/extension/dist';
 
 /**
@@ -104,7 +97,7 @@ describe('MCP config content', () => {
 
     it('always includes the demo-builder server pointing to dist/mcp-server.js', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, ALL_SERVERS);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
         const command = config.mcpServers['demo-builder'].command as string;
@@ -119,147 +112,31 @@ describe('MCP config content', () => {
 
     it('does not include DEMO_BUILDER_PROJECT_PATH env var (multi-project mode)', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, ALL_SERVERS);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
 
         expect(config.mcpServers['demo-builder'].env).toBeUndefined();
     });
 
-    it('includes da-live with url key when selected', async () => {
+    it('emits exactly one server entry (demo-builder only)', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, ALL_SERVERS);
-
-        const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
-        const daLive = config.mcpServers['da-live'];
-
-        expect(daLive).toBeDefined();
-        expect(daLive.url as string).toContain('mcp.adobeaemcloud.com/adobe/mcp/da');
-        expect(daLive.command).toBeUndefined();
-    });
-
-    it('includes aem-content with url key when selected', async () => {
-        const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, ALL_SERVERS);
-
-        const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
-        const aemContent = config.mcpServers['aem-content'];
-
-        expect(aemContent).toBeDefined();
-        expect(aemContent.url as string).toContain('mcp.adobeaemcloud.com/adobe/mcp/content');
-        expect(aemContent.command).toBeUndefined();
-    });
-
-    it('includes aem-eds with correct npm package and HELIX_ADMIN_API_TOKEN env var', async () => {
-        const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, ALL_SERVERS);
-
-        const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
-        const aemEds = config.mcpServers['aem-eds'];
-
-        expect(aemEds).toBeDefined();
-        expect(aemEds.command).toBe('npx');
-        expect(aemEds.args as string[]).toContain('@neerajgrg93/aem-eds-mcp-server@1.0.0');
-        expect((aemEds.env as Record<string, string>)['HELIX_ADMIN_API_TOKEN']).toBeDefined();
-    });
-
-    it('uses helixToken option as HELIX_ADMIN_API_TOKEN when provided', async () => {
-        const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, ALL_SERVERS, { helixToken: 'test-da-live-token' });
-
-        const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
-        const aemEds = config.mcpServers['aem-eds'];
-
-        expect((aemEds.env as Record<string, string>)['HELIX_ADMIN_API_TOKEN']).toBe('test-da-live-token');
-    });
-
-    it('project metadata token takes priority over helixToken option', async () => {
-        const project = makeEdsProject({
-            componentInstances: {
-                'eds-storefront': {
-                    ...makeEdsInstance(),
-                    metadata: { githubRepo: 'owner/repo', HELIX_ADMIN_API_TOKEN: 'stored-token' },
-                },
-            },
-        });
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, ALL_SERVERS, { helixToken: 'session-token' });
-
-        const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
-        const aemEds = config.mcpServers['aem-eds'];
-
-        expect((aemEds.env as Record<string, string>)['HELIX_ADMIN_API_TOKEN']).toBe('stored-token');
-    });
-
-    it('includes adobe-commerce-dev with correct npm package and no env block', async () => {
-        const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, ALL_SERVERS);
-
-        const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
-        const commerceDev = config.mcpServers['adobe-commerce-dev'];
-
-        expect(commerceDev).toBeDefined();
-        expect(commerceDev.command).toBe('npx');
-        expect(commerceDev.args as string[]).toContain('@rafaelcg/adobe-commerce-dev-mcp@1.0.3');
-        expect(commerceDev.env).toBeUndefined();
-    });
-
-    it('excludes aem-eds when not in externalMcpServers', async () => {
-        const project = makeEdsProject();
-        const settings: AiSettings = {
-            externalMcpServers: ['da-live', 'adobe-commerce-dev'],
-            mcpConfigTargets: ['claude'],
-        };
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, settings);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
-        expect(config.mcpServers['aem-eds']).toBeUndefined();
+        expect(Object.keys(config.mcpServers)).toEqual(['demo-builder']);
     });
 
-    it('excludes da-live when not in externalMcpServers', async () => {
+    it('does not write external MCP entries (da-live, adobe-commerce-dev, aem-content, aem-eds)', async () => {
         const project = makeEdsProject();
-        const settings: AiSettings = {
-            externalMcpServers: ['adobe-commerce-dev'],
-            mcpConfigTargets: ['claude'],
-        };
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, settings);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
+
         expect(config.mcpServers['da-live']).toBeUndefined();
-    });
-
-    it('cursor config contains the same server entries as claude config', async () => {
-        const project = makeEdsProject();
-        const settings: AiSettings = { ...DEFAULT_SERVERS, mcpConfigTargets: ['claude', 'cursor'] };
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, settings);
-
-        const claudeConfig = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
-        const cursorConfig = captureWrittenConfig('.cursor/mcp.json') as { mcpServers: Record<string, unknown> };
-
-        expect(Object.keys(cursorConfig.mcpServers)).toEqual(Object.keys(claudeConfig.mcpServers));
-    });
-
-    it('cursor config omits servers not in externalMcpServers', async () => {
-        const project = makeEdsProject();
-        const settings: AiSettings = {
-            externalMcpServers: ['da-live'],
-            mcpConfigTargets: ['claude', 'cursor'],
-        };
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, settings);
-
-        const config = captureWrittenConfig('.cursor/mcp.json') as { mcpServers: Record<string, unknown> };
+        expect(config.mcpServers['adobe-commerce-dev']).toBeUndefined();
+        expect(config.mcpServers['aem-content']).toBeUndefined();
         expect(config.mcpServers['aem-eds']).toBeUndefined();
-        expect(config.mcpServers['da-live']).toBeDefined();
-    });
-
-    it('codex config contains the same server entries as claude config', async () => {
-        const project = makeEdsProject();
-        const settings: AiSettings = { ...DEFAULT_SERVERS, mcpConfigTargets: ['claude', 'codex'] };
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, settings);
-
-        const claudeConfig = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
-        const codexConfig = captureWrittenConfig('.codex/mcp.json') as { mcpServers: Record<string, unknown> };
-
-        expect(Object.keys(codexConfig.mcpServers)).toEqual(Object.keys(claudeConfig.mcpServers));
     });
 });
 
@@ -352,9 +229,9 @@ describe('writeMcpConfigs', () => {
         jest.clearAllMocks();
     });
 
-    it('writes .claude/mcp.json always', async () => {
+    it('writes .claude/mcp.json', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, DEFAULT_SERVERS);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p);
@@ -362,9 +239,9 @@ describe('writeMcpConfigs', () => {
         expect(writtenPaths.some((p: string) => p.includes('.claude/mcp.json'))).toBe(true);
     });
 
-    it('writes .claude/settings.json always', async () => {
+    it('writes .claude/settings.json', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, DEFAULT_SERVERS);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p);
@@ -372,27 +249,19 @@ describe('writeMcpConfigs', () => {
         expect(writtenPaths.some((p: string) => p.includes('.claude/settings.json'))).toBe(true);
     });
 
-    it('writes .cursor/mcp.json when cursor is in mcpConfigTargets', async () => {
+    it('writes .mcp.json at project root', async () => {
         const project = makeEdsProject();
-        const settings: AiSettings = {
-            externalMcpServers: ['da-live'],
-            mcpConfigTargets: ['claude', 'cursor'],
-        };
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, settings);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
-        const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p);
+        const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p as string);
 
-        expect(writtenPaths.some((p: string) => p.includes('.cursor/mcp.json'))).toBe(true);
+        expect(writtenPaths.some((p: string) => p.endsWith('/.mcp.json'))).toBe(true);
     });
 
-    it('does not write .cursor/mcp.json when cursor is not in mcpConfigTargets', async () => {
+    it('never writes .cursor/mcp.json (Cursor reads .mcp.json natively)', async () => {
         const project = makeEdsProject();
-        const settings: AiSettings = {
-            externalMcpServers: ['da-live'],
-            mcpConfigTargets: ['claude'],
-        };
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, settings);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p);
@@ -400,13 +269,9 @@ describe('writeMcpConfigs', () => {
         expect(writtenPaths.some((p: string) => p.includes('.cursor/mcp.json'))).toBe(false);
     });
 
-    it('does not write .codex/mcp.json when codex is not in mcpConfigTargets', async () => {
+    it('never writes .codex/mcp.json (Codex reads .mcp.json natively)', async () => {
         const project = makeEdsProject();
-        const settings: AiSettings = {
-            externalMcpServers: ['da-live'],
-            mcpConfigTargets: ['claude'],
-        };
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, settings);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p);
@@ -416,7 +281,7 @@ describe('writeMcpConfigs', () => {
 
     it('writes JSON with 2-space indentation', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, DEFAULT_SERVERS);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const claudeMcpCall = writeFileMock.mock.calls.find(([p]: [string]) =>
@@ -428,40 +293,9 @@ describe('writeMcpConfigs', () => {
         expect(() => JSON.parse(content)).not.toThrow();
     });
 
-    it('appends generated MCP files to .gitignore', async () => {
+    it('.mcp.json at project root has same content as .claude/mcp.json', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, DEFAULT_SERVERS);
-
-        const appendFileMock = fsPromises.appendFile as jest.Mock;
-        expect(appendFileMock).toHaveBeenCalled();
-        const appendedContent = appendFileMock.mock.calls[0][1] as string;
-        expect(appendedContent).toContain('.claude/mcp.json');
-        expect(appendedContent).toContain('.claude/settings.json');
-    });
-
-    it('does not add .cursor/mcp.json to .gitignore when cursor not selected', async () => {
-        const project = makeEdsProject();
-        const settings: AiSettings = { externalMcpServers: ['da-live'], mcpConfigTargets: ['claude'] };
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, settings);
-
-        const appendFileMock = fsPromises.appendFile as jest.Mock;
-        const appended = appendFileMock.mock.calls.map(([, content]: [string, string]) => content).join('');
-        expect(appended).not.toContain('.cursor/mcp.json');
-    });
-
-    it('writes .mcp.json at project root', async () => {
-        const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, DEFAULT_SERVERS);
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p as string);
-
-        expect(writtenPaths.some((p: string) => p.endsWith('/.mcp.json'))).toBe(true);
-    });
-
-    it('.mcp.json at project root has same mcpServers keys as .claude/mcp.json', async () => {
-        const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, ALL_SERVERS);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const claudeConfig = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
         const rootConfig = captureWrittenConfig('.mcp.json') as { mcpServers: Record<string, unknown> };
@@ -469,13 +303,34 @@ describe('writeMcpConfigs', () => {
         expect(Object.keys(rootConfig.mcpServers)).toEqual(Object.keys(claudeConfig.mcpServers));
     });
 
-    it('appends .mcp.json to .gitignore', async () => {
+    it('appends .mcp.json, .claude/mcp.json, .claude/settings.json to .gitignore', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, DEFAULT_SERVERS);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
+
+        const appendFileMock = fsPromises.appendFile as jest.Mock;
+        expect(appendFileMock).toHaveBeenCalled();
+        const appendedContent = appendFileMock.mock.calls[0][1] as string;
+        expect(appendedContent).toContain('.mcp.json');
+        expect(appendedContent).toContain('.claude/mcp.json');
+        expect(appendedContent).toContain('.claude/settings.json');
+    });
+
+    it('never adds .cursor/mcp.json to .gitignore', async () => {
+        const project = makeEdsProject();
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const appendFileMock = fsPromises.appendFile as jest.Mock;
         const appended = appendFileMock.mock.calls.map(([, content]: [string, string]) => content).join('');
-        expect(appended).toContain('.mcp.json');
+        expect(appended).not.toContain('.cursor/mcp.json');
+    });
+
+    it('never adds .codex/mcp.json to .gitignore', async () => {
+        const project = makeEdsProject();
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
+
+        const appendFileMock = fsPromises.appendFile as jest.Mock;
+        const appended = appendFileMock.mock.calls.map(([, content]: [string, string]) => content).join('');
+        expect(appended).not.toContain('.codex/mcp.json');
     });
 
     it('does not append gitignore entries that are already present (idempotent)', async () => {
@@ -483,8 +338,7 @@ describe('writeMcpConfigs', () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValueOnce(existingGitignore);
 
         const project = makeEdsProject();
-        const settings: AiSettings = { externalMcpServers: [], mcpConfigTargets: [] };
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, settings);
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         expect(fsPromises.appendFile as jest.Mock).not.toHaveBeenCalled();
     });

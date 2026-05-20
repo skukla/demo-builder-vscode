@@ -78,13 +78,9 @@ describe('generateAIContextFiles', () => {
         const project = makeProject();
         await expect(generateAIContextFiles('/projects/test', project, '/ext/path')).resolves.toBeUndefined();
 
-        expect(writeMcpConfigs).toHaveBeenCalledWith(
-            '/projects/test',
-            project,
-            '/ext/path/dist',
-            expect.objectContaining({ externalMcpServers: expect.any(Array) }),
-            expect.objectContaining({ helixToken: undefined }),
-        );
+        // No settings argument — writeMcpConfigs takes only the three positional args
+        // after Cycle A. External MCPs come from Claude Code's session-level catalog.
+        expect(writeMcpConfigs).toHaveBeenCalledWith('/projects/test', project, '/ext/path/dist');
     });
 
     it('calls writeSkillFiles with projectPath and project', async () => {
@@ -95,19 +91,6 @@ describe('generateAIContextFiles', () => {
             '/projects/test',
             project,
             expect.objectContaining({ externalMcpServers: expect.any(Array) }),
-        );
-    });
-
-    it('passes externalMcpServers from demoBuilder.ai config to writeMcpConfigs', async () => {
-        setupVscodeConfig({ externalMcpServers: ['da-live', 'storefront-rag'] });
-        await expect(generateAIContextFiles('/projects/test', makeProject(), '/ext')).resolves.toBeUndefined();
-
-        expect(writeMcpConfigs).toHaveBeenCalledWith(
-            expect.any(String),
-            expect.any(Object),
-            expect.any(String),
-            expect.objectContaining({ externalMcpServers: ['da-live', 'storefront-rag'] }),
-            expect.any(Object),
         );
     });
 
@@ -122,19 +105,6 @@ describe('generateAIContextFiles', () => {
         );
     });
 
-    it('passes mcpConfigTargets from demoBuilder.ai config to writeMcpConfigs', async () => {
-        setupVscodeConfig({ mcpConfigTargets: ['claude'] });
-        await expect(generateAIContextFiles('/projects/test', makeProject(), '/ext')).resolves.toBeUndefined();
-
-        expect(writeMcpConfigs).toHaveBeenCalledWith(
-            expect.any(String),
-            expect.any(Object),
-            expect.any(String),
-            expect.objectContaining({ mcpConfigTargets: ['claude'] }),
-            expect.any(Object),
-        );
-    });
-
     it('passes includeBoilerplateSkills from demoBuilder.ai config to writeSkillFiles', async () => {
         setupVscodeConfig({ includeBoilerplateSkills: false });
         await expect(generateAIContextFiles('/projects/test', makeProject(), '/ext')).resolves.toBeUndefined();
@@ -143,21 +113,6 @@ describe('generateAIContextFiles', () => {
             expect.any(String),
             expect.any(Object),
             expect.objectContaining({ includeBoilerplateSkills: false }),
-        );
-    });
-
-    it('uses default externalMcpServers when config returns undefined', async () => {
-        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-            get: () => undefined,
-        });
-        await expect(generateAIContextFiles('/projects/test', makeProject(), '/ext')).resolves.toBeUndefined();
-
-        expect(writeMcpConfigs).toHaveBeenCalledWith(
-            expect.any(String),
-            expect.any(Object),
-            expect.any(String),
-            expect.objectContaining({ externalMcpServers: ['da-live', 'adobe-commerce-dev'] }),
-            expect.any(Object),
         );
     });
 

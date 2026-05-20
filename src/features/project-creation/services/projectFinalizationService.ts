@@ -158,12 +158,11 @@ export async function sendCompletionAndCleanup(
 /**
  * Phase 6: Generate AI context files (.claude/CLAUDE.md, .claude/mcp.json, .claude/skills/)
  *
- * Reads AI settings from VS Code configuration and delegates to the three writers.
- * Non-blocking by design — callers should wrap in try/catch and log warnings on failure.
+ * Delegates to the three writers. Non-blocking by design — callers should wrap in
+ * try/catch and log warnings on failure.
  *
- * @param helixToken - Optional DA.live session token to auto-populate HELIX_ADMIN_API_TOKEN
- *        in the AEM EDS MCP server config. Pass the stored DA.live token so users do not
- *        have to manually retrieve it from admin.hlx.page/login.
+ * @param helixToken - Optional DA.live session token (currently unused — retained for
+ *        backward compatibility with callers that pass the stored DA.live token).
  */
 export async function generateAIContextFiles(
     projectPath: string,
@@ -171,14 +170,17 @@ export async function generateAIContextFiles(
     extensionPath: string,
     helixToken?: string,
 ): Promise<void> {
+    // helixToken is currently unused — kept on the signature for caller compatibility.
+    // Cycle B will revisit when Adobe Commerce Extensibility Tools installs require it.
+    void helixToken;
+
     const config = vscode.workspace.getConfiguration('demoBuilder.ai');
-    const externalMcpServers: string[] = config.get('externalMcpServers') ?? ['da-live', 'adobe-commerce-dev'];
-    const mcpConfigTargets: string[] = config.get('mcpConfigTargets') ?? ['claude', 'cursor', 'codex'];
+    const externalMcpServers: string[] = config.get('externalMcpServers') ?? [];
     const includeBoilerplateSkills: boolean = config.get('includeBoilerplateSkills') ?? true;
 
     const results = await Promise.allSettled([
         writeClaudeMd(projectPath, project, stacksConfig.stacks as Stack[]),
-        writeMcpConfigs(projectPath, project, path.join(extensionPath, 'dist'), { externalMcpServers, mcpConfigTargets }, { helixToken }),
+        writeMcpConfigs(projectPath, project, path.join(extensionPath, 'dist')),
         writeSkillFiles(projectPath, project, { externalMcpServers, includeBoilerplateSkills }),
     ]);
     const errors = results
