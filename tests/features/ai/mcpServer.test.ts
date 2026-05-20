@@ -83,6 +83,31 @@ function mockManifestWithoutStorefront(): void {
     });
 }
 
+/** Helper: mock manifest with EDS storefront AND installed block libraries */
+function mockManifestWithBlockLibraries(
+    libraries: Array<{ name: string; source: { owner: string; repo: string; branch?: string }; blockIds: string[] }>,
+    storefrontPath: string = STOREFRONT_PATH,
+): void {
+    const manifest = {
+        name: 'my-project',
+        status: 'ready',
+        componentInstances: {
+            'eds-storefront': { path: storefrontPath },
+        },
+        installedBlockLibraries: libraries.map(lib => ({
+            ...lib,
+            commitSha: 'abc123',
+            installedAt: '2026-01-01T00:00:00Z',
+        })),
+    };
+    (fsProm.readFile as jest.Mock).mockImplementation((p: string) => {
+        if (String(p).endsWith('.demo-builder.json')) {
+            return Promise.resolve(JSON.stringify(manifest));
+        }
+        return Promise.reject(new Error(`Unexpected readFile: ${p}`));
+    });
+}
+
 // ─── resolveProjectPath ─────────────────────────────────────────────────────
 
 describe('resolveProjectPath', () => {
@@ -766,7 +791,7 @@ describe('toolHandlers.listBlocks', () => {
         jest.clearAllMocks();
     });
 
-    it('returns JSON array of directory names from blocks/ directory', async () => {
+    it('returns JSON array of objects with `name` for each block directory', async () => {
         mockManifestWithStorefront();
         (fsProm.readdir as jest.Mock)
             // First readdir call is NOT for listBlocks (manifest read uses readFile).
@@ -778,7 +803,7 @@ describe('toolHandlers.listBlocks', () => {
 
         const result = await toolHandlers.listBlocks(PROJECTS_DIR, PROJECT_NAME);
 
-        expect(JSON.parse(result)).toEqual(['hero', 'banner']);
+        expect(JSON.parse(result)).toEqual([{ name: 'hero' }, { name: 'banner' }]);
     });
 
     it('returns empty JSON array when blocks/ directory does not exist (ENOENT)', async () => {
@@ -792,7 +817,7 @@ describe('toolHandlers.listBlocks', () => {
         expect(JSON.parse(result)).toEqual([]);
     });
 
-    it('filters out files — only returns directory names', async () => {
+    it('filters out files — only returns directory entries', async () => {
         mockManifestWithStorefront();
         (fsProm.readdir as jest.Mock).mockResolvedValue([
             { name: 'hero', isDirectory: () => true, isFile: () => false },
@@ -801,7 +826,80 @@ describe('toolHandlers.listBlocks', () => {
 
         const result = await toolHandlers.listBlocks(PROJECTS_DIR, PROJECT_NAME);
 
-        expect(JSON.parse(result)).toEqual(['hero']);
+        expect(JSON.parse(result)).toEqual([{ name: 'hero' }]);
+    });
+
+    describe('originLibrary cross-reference (Cycle B Step 6j)', () => {
+        it('attaches originLibrary metadata when the block came from an installed library', async () => {
+            mockManifestWithBlockLibraries([
+                {
+                    name: 'Isle5 Block Collection',
+                    source: { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' },
+                    blockIds: ['hero', 'carousel'],
+                },
+            ]);
+            (fsProm.readdir as jest.Mock).mockResolvedValue([
+                { name: 'hero', isDirectory: () => true, isFile: () => false },
+                { name: 'carousel', isDirectory: () => true, isFile: () => false },
+            ]);
+
+            const result = JSON.parse(await toolHandlers.listBlocks(PROJECTS_DIR, PROJECT_NAME));
+            expect(result).toEqual([
+                { name: 'hero', originLibrary: { name: 'Isle5 Block Collection', owner: 'stephen-garner-adobe', repo: 'isle5' } },
+                { name: 'carousel', originLibrary: { name: 'Isle5 Block Collection', owner: 'stephen-garner-adobe', repo: 'isle5' } },
+            ]);
+        });
+
+        it('omits originLibrary for blocks not declared in any installed library', async () => {
+            mockManifestWithBlockLibraries([
+                {
+                    name: 'Isle5 Block Collection',
+                    source: { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' },
+                    blockIds: ['hero'],
+                },
+            ]);
+            (fsProm.readdir as jest.Mock).mockResolvedValue([
+                { name: 'hero', isDirectory: () => true, isFile: () => false },
+                { name: 'custom-banner', isDirectory: () => true, isFile: () => false },
+            ]);
+
+            const result = JSON.parse(await toolHandlers.listBlocks(PROJECTS_DIR, PROJECT_NAME));
+            expect(result).toEqual([
+                { name: 'hero', originLibrary: { name: 'Isle5 Block Collection', owner: 'stephen-garner-adobe', repo: 'isle5' } },
+                { name: 'custom-banner' },
+            ]);
+        });
+
+        it('handles projects with no installedBlockLibraries (returns plain entries)', async () => {
+            mockManifestWithStorefront();
+            (fsProm.readdir as jest.Mock).mockResolvedValue([
+                { name: 'hero', isDirectory: () => true, isFile: () => false },
+            ]);
+
+            const result = JSON.parse(await toolHandlers.listBlocks(PROJECTS_DIR, PROJECT_NAME));
+            expect(result).toEqual([{ name: 'hero' }]);
+        });
+
+        it('attributes a block to the first matching library when multiple libraries declare the same blockId', async () => {
+            mockManifestWithBlockLibraries([
+                {
+                    name: 'Library A',
+                    source: { owner: 'org-a', repo: 'repo-a', branch: 'main' },
+                    blockIds: ['hero'],
+                },
+                {
+                    name: 'Library B',
+                    source: { owner: 'org-b', repo: 'repo-b', branch: 'main' },
+                    blockIds: ['hero'],
+                },
+            ]);
+            (fsProm.readdir as jest.Mock).mockResolvedValue([
+                { name: 'hero', isDirectory: () => true, isFile: () => false },
+            ]);
+
+            const result = JSON.parse(await toolHandlers.listBlocks(PROJECTS_DIR, PROJECT_NAME));
+            expect(result[0].originLibrary.owner).toBe('org-a');
+        });
     });
 
     it('throws when project has no EDS storefront configured (listBlocks)', async () => {

@@ -185,6 +185,23 @@ async function resolveStorefrontPath(projectPath: string): Promise<string> {
     return storefrontPath;
 }
 
+interface InstalledBlockLibraryEntry {
+    name: string;
+    source: { owner: string; repo: string; branch?: string };
+    blockIds: string[];
+}
+
+/**
+ * Read the project manifest and return the installed block libraries (or an
+ * empty list if none).
+ */
+async function readInstalledBlockLibraries(projectPath: string): Promise<InstalledBlockLibraryEntry[]> {
+    const raw = await fsPromises.readFile(path.join(projectPath, '.demo-builder.json'), 'utf-8');
+    const manifest = JSON.parse(raw);
+    const libs = manifest?.installedBlockLibraries;
+    return Array.isArray(libs) ? (libs as InstalledBlockLibraryEntry[]) : [];
+}
+
 // ─── Tool handlers (exported for unit tests) ─────────────────────────────────
 
 /** @internal — exported only for unit tests; not part of the public API */
@@ -295,12 +312,28 @@ export const toolHandlers = {
         }
         await assertInsideProject(projectPath, storefrontPath);
         const blocksDir = path.join(storefrontPath, 'blocks');
+        let dirNames: string[];
         try {
             const entries = await fsPromises.readdir(blocksDir, { withFileTypes: true });
-            return JSON.stringify(entries.filter(e => e.isDirectory()).map(e => e.name));
+            dirNames = entries.filter(e => e.isDirectory()).map(e => e.name);
         } catch {
             return JSON.stringify([]);
         }
+
+        // Cross-reference each block against installedBlockLibraries so AI agents
+        // know which library a block came from (informs promotion target choice).
+        // First matching library wins on collisions — install order is the
+        // canonical source-of-truth for which library a block currently mirrors.
+        const libs = await readInstalledBlockLibraries(projectPath);
+        const result = dirNames.map(name => {
+            const lib = libs.find(l => Array.isArray(l.blockIds) && l.blockIds.includes(name));
+            if (!lib) return { name };
+            return {
+                name,
+                originLibrary: { name: lib.name, owner: lib.source.owner, repo: lib.source.repo },
+            };
+        });
+        return JSON.stringify(result);
     },
 
     async getBlockSource(projectsDir: string, projectName: string, blockName: string): Promise<string> {

@@ -266,6 +266,98 @@ describe('aiContextWriter', () => {
 
                 expect(result).not.toContain('Block Libraries');
             });
+
+            it('marks block libraries as read-only sources (Cycle B Step 6k)', () => {
+                const installedLibraries: InstalledBlockLibrary[] = [
+                    {
+                        name: 'Isle5 Block Collection',
+                        source: { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' },
+                        commitSha: 'abc123',
+                        blockIds: ['hero'],
+                        installedAt: '2026-01-01T00:00:00Z',
+                    },
+                ];
+                const project = makeEdsProject({ installedBlockLibraries: installedLibraries });
+                const result = generateAgentsMd(project, STACKS);
+
+                expect(result).toMatch(/read-only sources/i);
+                expect(result).toMatch(/library promotion is a planned future/i);
+            });
+        });
+
+        describe('component repositories (Cycle B Step 6i)', () => {
+            it('lists every component instance that has a githubRepo', () => {
+                const project = makeEdsProject({
+                    componentInstances: {
+                        'eds-storefront': makeEdsStorefrontInstance(),
+                        'commerce-mesh': {
+                            id: 'commerce-mesh',
+                            name: 'Commerce Mesh',
+                            status: 'ready',
+                            path: '/projects/test-project/components/commerce-mesh',
+                            metadata: { githubRepo: 'owner/mesh-repo' },
+                        },
+                    },
+                });
+                const result = generateAgentsMd(project, STACKS);
+
+                expect(result).toContain('## Component Repositories');
+                expect(result).toContain('eds-storefront');
+                expect(result).toContain('https://github.com/owner/my-repo');
+                expect(result).toContain('commerce-mesh');
+                expect(result).toContain('https://github.com/owner/mesh-repo');
+            });
+
+            it('skips components without a githubRepo (e.g., local-only deps)', () => {
+                const project = makeEdsProject({
+                    componentInstances: {
+                        'eds-storefront': makeEdsStorefrontInstance(),
+                        'local-tool': {
+                            id: 'local-tool',
+                            name: 'Local Tool',
+                            status: 'ready',
+                            path: '/projects/test-project/components/local-tool',
+                            metadata: {},
+                        },
+                    },
+                });
+                const result = generateAgentsMd(project, STACKS);
+
+                expect(result).toContain('## Component Repositories');
+                // Component with no githubRepo should not appear in the listing
+                expect(result).not.toMatch(/^- `local-tool`:/m);
+            });
+
+            it('omits the Component Repositories section when no component has a githubRepo', () => {
+                const project = makeEdsProject({
+                    componentInstances: {
+                        'local-only': {
+                            id: 'local-only',
+                            name: 'Local Only',
+                            status: 'ready',
+                            path: '/projects/test-project/components/local-only',
+                            metadata: {},
+                        },
+                    },
+                });
+                const result = generateAgentsMd(project, STACKS);
+
+                expect(result).not.toContain('## Component Repositories');
+            });
+
+            it('sanitizes the githubRepo slug to prevent Markdown injection', () => {
+                const project = makeEdsProject({
+                    componentInstances: {
+                        'eds-storefront': makeEdsStorefrontInstance({
+                            githubRepo: 'evil\nhttps://attacker.example.com](evil owner/evil-repo',
+                        }),
+                    },
+                });
+                const result = generateAgentsMd(project, STACKS);
+
+                expect(result).not.toContain('## attacker');
+                expect(result).not.toContain('](evil');
+            });
         });
 
         describe('sanitization', () => {

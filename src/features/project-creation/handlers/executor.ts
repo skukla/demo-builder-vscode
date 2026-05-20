@@ -25,6 +25,7 @@ import {
     sendCompletionAndCleanup,
     generateAIContextFiles,
     ensureEdsContent,
+    ensureGlobalMcpRegistration,
     type ComponentDefinitionEntry,
     type MeshApiConfig,
 } from '../services';
@@ -435,6 +436,19 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         await generateAIContextFiles(projectPath, project, context.context.extensionPath);
     } catch (err) {
         context.logger.warn('[Project Creation] Failed to generate AI context files', err instanceof Error ? err : undefined);
+    }
+
+    // Phase 6b: Consent-gated global MCP registration. First time: prompt the
+    // user. Subsequent project completions: no-op (state persists). The user's
+    // choice ('registered' | 'declined') survives across activations.
+    try {
+        const extensionDistPath = path.join(context.context.extensionPath, 'dist');
+        await ensureGlobalMcpRegistration(extensionDistPath, context.context);
+    } catch (err) {
+        context.logger.warn(
+            '[Project Creation] Global MCP registration failed',
+            err instanceof Error ? err : undefined,
+        );
     }
 }
 

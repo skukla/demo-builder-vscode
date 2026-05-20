@@ -29,3 +29,10 @@ export {
 } from './projectFinalizationService';
 
 export { ensureEdsContent } from './edsContentSetup';
+
+export {
+    ensureGlobalMcpRegistration,
+    registerGlobalMcp,
+    GLOBAL_MCP_REG_STATE_KEY,
+    type GlobalMcpRegistrationState,
+} from './mcpConfigWriter';

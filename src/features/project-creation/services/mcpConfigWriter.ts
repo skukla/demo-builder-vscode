@@ -23,6 +23,7 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { promisify } from 'util';
+import * as vscode from 'vscode';
 import aiDefaultsConfig from '../config/ai-defaults.json';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { AiDefaults } from '@/types/aiDefaults';
@@ -31,6 +32,19 @@ import type { Project } from '@/types/base';
 const execFile = promisify(childProcess.execFile);
 
 const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
+
+/**
+ * globalState key tracking user consent for registering demo-builder in the
+ * canonical Claude Code user config (~/.claude.json).
+ *
+ * Three states:
+ *   - undefined: user has not been asked yet
+ *   - 'registered': user accepted, demo-builder entry is in ~/.claude.json
+ *   - 'declined': user opted out of the prompt; do not ask again
+ */
+export const GLOBAL_MCP_REG_STATE_KEY = 'demoBuilder.ai.globalMcpRegistration';
+
+export type GlobalMcpRegistrationState = 'registered' | 'declined';
 
 // ─── MCP entry shape ──────────────────────────────────────────────────────────
 
@@ -94,26 +108,35 @@ export async function writeMcpConfigs(
 
 
 /**
- * Write the global MCP config entry for Claude Code (~/.claude/.mcp.json).
+ * Upsert the demo-builder MCP server entry into Claude Code's canonical
+ * user-scope config file: `~/.claude.json` top-level `mcpServers` field
+ * (verified against Claude Code v2.1.x on 2026-05-20).
  *
- * Reads existing settings, preserves all keys, and upserts the demo-builder
- * MCP server entry. No DEMO_BUILDER_PROJECTS_DIR env var — the server uses
- * its built-in default (~/.demo-builder/projects).
+ * Preserves every other field in the file. Idempotent. Does NOT prompt the
+ * user — callers must obtain consent first (see `ensureGlobalMcpRegistration`).
  *
- * Idempotent — safe to call on every extension activation.
+ * Throws if `~/.claude.json` exists but is malformed, so we never overwrite a
+ * valid-but-unreadable user-curated config.
  */
-export async function writeGlobalMcpConfig(extensionDistPath: string): Promise<void> {
-    // Claude Code reads global MCP servers from ~/.claude/.mcp.json (NOT settings.json).
-    // This is the user-level MCP config, separate from per-project .mcp.json files.
-    const mcpConfigPath = path.join(os.homedir(), '.claude', '.mcp.json');
+export async function registerGlobalMcp(extensionDistPath: string): Promise<void> {
+    const configPath = path.join(os.homedir(), '.claude.json');
 
-    // Read existing config (preserve user's other MCP servers)
     let config: Record<string, unknown> = {};
     try {
-        const raw = await fsPromises.readFile(mcpConfigPath, 'utf-8');
-        config = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-        // File missing or invalid JSON — start fresh
+        const raw = await fsPromises.readFile(configPath, 'utf-8');
+        try {
+            config = JSON.parse(raw) as Record<string, unknown>;
+        } catch (err) {
+            throw new Error(
+                `~/.claude.json is malformed — refusing to overwrite valid-but-unreadable ` +
+                `user config: ${err instanceof Error ? err.message : String(err)}`,
+            );
+        }
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+            throw err;
+        }
+        // Missing file — start with an empty object
     }
 
     if (!config.mcpServers || typeof config.mcpServers !== 'object') {
@@ -126,8 +149,43 @@ export async function writeGlobalMcpConfig(extensionDistPath: string): Promise<v
         args: [`${extensionDistPath}/mcp-server.js`],
     };
 
-    await fsPromises.mkdir(path.dirname(mcpConfigPath), { recursive: true });
-    await fsPromises.writeFile(mcpConfigPath, JSON.stringify(config, null, 2), 'utf-8');
+    await fsPromises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+}
+
+/**
+ * Consent-gated global MCP registration.
+ *
+ * Called after a project creation completes. Prompts the user the first time;
+ * remembers the choice via `globalState`. Subsequent calls no-op once the
+ * state is set, so this is safe to call after every project completion.
+ *
+ * The AI Configuration tab (Cycle D) exposes a `[Register]` button that calls
+ * `registerGlobalMcp` directly, bypassing the consent prompt for users who
+ * opted out earlier.
+ */
+export async function ensureGlobalMcpRegistration(
+    extensionDistPath: string,
+    context: vscode.ExtensionContext,
+): Promise<void> {
+    const state = context.globalState.get<GlobalMcpRegistrationState>(GLOBAL_MCP_REG_STATE_KEY);
+    if (state === 'registered' || state === 'declined') return;
+
+    const choice = await vscode.window.showInformationMessage(
+        'Demo Builder can register its MCP server with Claude Code so AI agents can ' +
+        'discover your projects from any directory. This adds a `demo-builder` entry ' +
+        'to your Claude Code user config (~/.claude.json). Register now?',
+        'Register',
+        'Not Now',
+        "Don't Ask Again",
+    );
+
+    if (choice === 'Register') {
+        await registerGlobalMcp(extensionDistPath);
+        await context.globalState.update(GLOBAL_MCP_REG_STATE_KEY, 'registered');
+    } else if (choice === "Don't Ask Again") {
+        await context.globalState.update(GLOBAL_MCP_REG_STATE_KEY, 'declined');
+    }
+    // 'Not Now' or dialog dismissal: leave state undefined, re-prompt next time.
 }
 
 /**
@@ -228,8 +286,11 @@ function resolveStorefrontPath(project: Project): string | undefined {
  * Shell metacharacters that could enable injection in the hook command.
  * Includes: quotes/backtick (`"'\`), variable expansion ($), command separators (;|&),
  * redirects (<>), escapes (\\), globs (*?[]), process substitution ((){}), and newlines.
+ *
+ * Whitespace is allowed — macOS users often have paths containing spaces
+ * (e.g., `/Users/Some User/...`), and the command quotes the path properly.
  */
-const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){} \t]/;
+const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){}]/;
 
 /**
  * Build the PostToolUse git sync shell command for the storefront path.
@@ -237,6 +298,17 @@ const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){} \t]/;
  * Returns an empty string (no hook installed) if `storefrontPath` contains
  * shell metacharacters — an attacker-controlled path must not become part of
  * an executed shell command.
+ *
+ * JSON-parsing strategy is a tolerant fallback chain so the hook works in
+ * environments missing one of the tools:
+ *   1. `jq` — primary, robust JSON parser (widely available)
+ *   2. `python3` — secondary, present on every modern macOS/Linux install
+ *   3. `grep`/`sed` — last-resort regex (matches the legacy behavior)
+ *
+ * The chain uses `||` so each tool only runs if the previous one produced
+ * empty output (or failed). The query is `.. | objects | .file_path? // empty`
+ * for jq and equivalent recursive logic for python3 — matches any `file_path`
+ * field at any nesting depth, just like the legacy grep pattern did.
  */
 function buildGitSyncCommand(storefrontPath: string): string {
     if (SHELL_METACHAR_RE.test(storefrontPath)) {
@@ -244,26 +316,34 @@ function buildGitSyncCommand(storefrontPath: string): string {
         return '';
     }
 
-    // PostToolUse hook: after Write or Edit, if the modified file is inside the
-    // storefront directory, auto-commit and push.
-    //
-    // ASSUMPTION: Claude Code hook env var for the modified file is available via
-    // CLAUDE_TOOL_INPUT (JSON string). Using bash to parse the file_path field.
-    // Verify the exact variable name against Claude Code hooks documentation.
-    //
-    // TODO(phase-2): Replace grep-o/sed parser with jq for robustness. The current approach
-    // is fragile — it will fail if the JSON format changes or if the file_path value contains
-    // characters that break the regex. The SHELL_METACHAR_RE guard above prevents the
-    // worst-case injection vectors, making this acceptable for Phase 1.
-    const escapedPath = storefrontPath.replace(/"/g, '\\"');
-    return (
-        `TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ` +
+    // SHELL_METACHAR_RE already rejects any quote characters, so no further
+    // escaping of storefrontPath is needed before interpolating into double-quoted
+    // shell arguments. The double quotes preserve any spaces.
+    const quoted = `"${storefrontPath}"`;
+
+    const jqExtract = `jq -r '.. | objects | .file_path? // empty' 2>/dev/null`;
+    const pythonExtract =
+        `python3 -c 'import json,sys\n` +
+        `def find(o):\n` +
+        `    if isinstance(o,dict):\n` +
+        `        if "file_path" in o: print(o["file_path"]); return True\n` +
+        `        return any(find(v) for v in o.values())\n` +
+        `    if isinstance(o,list):\n` +
+        `        return any(find(v) for v in o)\n` +
+        `    return False\n` +
+        `find(json.load(sys.stdin))' 2>/dev/null`;
+    const grepSedExtract =
         `grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | ` +
-        `sed 's/"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//'); ` +
-        `if [[ "$TOOL_FILE" == "${escapedPath}"* ]]; then ` +
-        `git -C "${escapedPath}" add -A && ` +
-        `git -C "${escapedPath}" commit -m "AI: sync files" && ` +
-        `git -C "${escapedPath}" push; fi`
+        `sed 's/"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//'`;
+
+    return (
+        `TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${jqExtract}); ` +
+        `[ -z "$TOOL_FILE" ] && TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${pythonExtract}); ` +
+        `[ -z "$TOOL_FILE" ] && TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${grepSedExtract}); ` +
+        `if [[ "$TOOL_FILE" == ${quoted}* ]]; then ` +
+        `git -C ${quoted} add -A && ` +
+        `git -C ${quoted} commit -m "AI: sync files" && ` +
+        `git -C ${quoted} push; fi`
     );
 }
 

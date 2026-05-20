@@ -48,6 +48,7 @@ export function generateAgentsMd(project: Project, stacksConfig: Stack[]): strin
     sections.push(buildHowToChangeThings());
     sections.push(buildEndpoints(project));
     sections.push(buildStorefront(project));
+    sections.push(buildComponentRepositories(project));
     sections.push(buildBlockLibraries(project));
     sections.push(buildAdobeIo(project));
     sections.push(buildTryAskingClaude(project));
@@ -184,6 +185,35 @@ function buildStorefront(project: Project): string {
     return lines.join('\n');
 }
 
+/**
+ * List every component instance with a `metadata.githubRepo` value.
+ *
+ * Gives AI agents a single place to look up the GitHub repo for any component
+ * in the project — not just the storefront. Skipped entirely when no component
+ * has a githubRepo.
+ *
+ * Component IDs are sanitized with `sanitizeBlockId` (kebab-case-only). Repo
+ * slugs are double-sanitized — same defense-in-depth pattern as buildStorefront.
+ */
+function buildComponentRepositories(project: Project): string {
+    const componentInstances = project.componentInstances ?? {};
+    const rows: string[] = [];
+
+    for (const [compId, instance] of Object.entries(componentInstances)) {
+        const rawRepo = (instance.metadata?.githubRepo as string | undefined) ?? '';
+        if (!rawRepo) continue;
+
+        const repoSlug = sanitizeGithubSlug(sanitizeTemplateValue(rawRepo));
+        if (!repoSlug) continue;
+
+        const safeId = escapeMarkdown(sanitizeBlockId(compId));
+        rows.push(`- \`${safeId}\`: https://github.com/${repoSlug}`);
+    }
+
+    if (rows.length === 0) return '';
+    return ['## Component Repositories', ...rows].join('\n');
+}
+
 // All values are sanitized before interpolation — see ./sanitization for the threat model.
 // GitHub owner/repo values are double-sanitized: sanitizeTemplateValue first (strips Markdown
 // control characters), then sanitizeGithubSlug (enforces the slug allowlist). Both layers
@@ -221,6 +251,10 @@ function buildBlockLibraries(project: Project): string {
     lines.push('> Blocks are copied into the storefront repo during setup — they are NOT separate local');
     lines.push('> repositories. To edit a block, modify it in `blocks/` and call `sync_storefront` to push');
     lines.push('> to the storefront.');
+    lines.push('>');
+    lines.push('> Block libraries are read-only sources — edits to copied block files live in this');
+    lines.push('> storefront\'s repo, not the library repo. Library promotion is a planned future Demo');
+    lines.push('> Builder feature.');
 
     return lines.join('\n');
 }
@@ -251,7 +285,6 @@ function buildTryAskingClaude(project: Project): string {
         lines.push('- "Update the hero block background to white and push the changes"');
         lines.push('- "Add a newsletter block to the homepage and publish it"');
         lines.push('- "Show me what block libraries are installed and where they came from"');
-        lines.push('- "Promote my hero-cta changes back to the Isle5 library"');
     } else {
         lines.push('- "Update the Commerce storefront URL in the component config"');
         lines.push('- "Show me the current mesh endpoint and whether the config is stale"');

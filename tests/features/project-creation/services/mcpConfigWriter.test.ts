@@ -15,9 +15,11 @@
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import {
+    ensureGlobalMcpRegistration,
     generateClaudeSettings,
-    writeGlobalMcpConfig,
+    registerGlobalMcp,
     writeMcpConfigs,
 } from '@/features/project-creation/services/mcpConfigWriter';
 import type { Project, ComponentInstance } from '@/types/base';
@@ -28,6 +30,12 @@ jest.mock('fs/promises', () => ({
     readFile: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
     appendFile: jest.fn().mockResolvedValue(undefined),
 }));
+
+jest.mock('vscode', () => ({
+    window: {
+        showInformationMessage: jest.fn(),
+    },
+}), { virtual: true });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -246,6 +254,63 @@ describe('generateClaudeSettings', () => {
         expect(command).not.toContain('-m "AI: update $(');
         expect(command).toContain('"AI: sync files"');
     });
+
+    describe('PostToolUse hook hardening (Cycle B Step 6g)', () => {
+        it('uses jq as the primary JSON parser', () => {
+            const project = makeEdsProject();
+            const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
+            expect(command).toContain('jq');
+        });
+
+        it('falls back to python3 when jq is not available', () => {
+            const project = makeEdsProject();
+            const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
+            expect(command).toContain('python3');
+        });
+
+        it('falls back to grep/sed when jq and python3 are not available', () => {
+            const project = makeEdsProject();
+            const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
+            expect(command).toContain('grep');
+            expect(command).toContain('sed');
+        });
+
+        it('produces a hook for storefront paths containing spaces', () => {
+            const pathWithSpaces = '/Users/Some User/projects/test/components/eds-storefront';
+            const project = makeEdsProject({
+                componentInstances: {
+                    'eds-storefront': { ...makeEdsInstance(), path: pathWithSpaces },
+                },
+            });
+
+            const settings = generateClaudeSettings(project);
+            expect(settings.hooks?.['PostToolUse']).toBeDefined();
+            const command = settings.hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
+            expect(command).toContain(pathWithSpaces);
+        });
+
+        it('quotes the storefront path so spaces do not break the shell command', () => {
+            const pathWithSpaces = '/Users/Some User/projects/test/components/eds-storefront';
+            const project = makeEdsProject({
+                componentInstances: {
+                    'eds-storefront': { ...makeEdsInstance(), path: pathWithSpaces },
+                },
+            });
+
+            const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
+            expect(command).toContain(`"${pathWithSpaces}"`);
+        });
+
+        it('still rejects paths with shell metacharacters other than whitespace', () => {
+            const project = makeEdsProject({
+                componentInstances: {
+                    'eds-storefront': { ...makeEdsInstance(), path: '/projects/test;rm -rf /' },
+                },
+            });
+            const settings = generateClaudeSettings(project);
+            expect(settings.hooks?.['PostToolUse']).toBeUndefined();
+        });
+    });
 });
 
 // ─── writeMcpConfigs ──────────────────────────────────────────────────────────
@@ -370,78 +435,161 @@ describe('writeMcpConfigs', () => {
     });
 });
 
-// ─── writeGlobalMcpConfig ───────────────────────────────────────────────────
+// ─── Global MCP registration (Cycle B Step 6d) ──────────────────────────────
 
-describe('writeGlobalMcpConfig', () => {
-    const globalMcpConfigPath = path.join(os.homedir(), '.claude', '.mcp.json');
+const GLOBAL_CLAUDE_CONFIG_PATH = path.join(os.homedir(), '.claude.json');
+const GLOBAL_MCP_REG_STATE_KEY = 'demoBuilder.ai.globalMcpRegistration';
 
+function makeMockExtensionContext(initialState?: 'registered' | 'declined'): {
+    globalState: { get: jest.Mock; update: jest.Mock };
+} {
+    const store: Record<string, unknown> = {};
+    if (initialState !== undefined) store[GLOBAL_MCP_REG_STATE_KEY] = initialState;
+    return {
+        globalState: {
+            get: jest.fn((key: string) => store[key]),
+            update: jest.fn(async (key: string, value: unknown) => {
+                store[key] = value;
+            }),
+        },
+    };
+}
+
+describe('registerGlobalMcp', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    it('creates ~/.claude/.mcp.json with demo-builder MCP entry', async () => {
-        // File does not exist (default mock rejects with ENOENT)
-        await writeGlobalMcpConfig(EXTENSION_DIST);
+    it('writes the demo-builder entry to ~/.claude.json (not ~/.claude/.mcp.json)', async () => {
+        await registerGlobalMcp(EXTENSION_DIST);
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
-        expect(writeFileMock).toHaveBeenCalled();
-
-        const [writtenPath, writtenContent] = writeFileMock.mock.calls.find(
-            ([p]: [string]) => String(p) === globalMcpConfigPath,
-        ) ?? [];
-        expect(writtenPath).toBe(globalMcpConfigPath);
-
-        const parsed = JSON.parse(writtenContent as string);
+        const call = writeFileMock.mock.calls.find(
+            ([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH,
+        );
+        expect(call).toBeDefined();
+        const written = call ? (call[1] as string) : '';
+        const parsed = JSON.parse(written);
         expect(parsed.mcpServers['demo-builder']).toBeDefined();
-        // Command should be an absolute path to a node binary (resolved via `which node`)
         expect(path.isAbsolute(parsed.mcpServers['demo-builder'].command)).toBe(true);
-        expect(path.basename(parsed.mcpServers['demo-builder'].command)).toBe('node');
         expect(parsed.mcpServers['demo-builder'].args).toEqual([`${EXTENSION_DIST}/mcp-server.js`]);
     });
 
-    it('preserves existing settings when upserting demo-builder entry', async () => {
+    it('never writes the legacy ~/.claude/.mcp.json path', async () => {
+        await registerGlobalMcp(EXTENSION_DIST);
+
+        const writeFileMock = fsPromises.writeFile as jest.Mock;
+        const wrote = writeFileMock.mock.calls.some(([p]: [string]) =>
+            String(p) === path.join(os.homedir(), '.claude', '.mcp.json'),
+        );
+        expect(wrote).toBe(false);
+    });
+
+    it('preserves every existing field in ~/.claude.json when upserting', async () => {
         const existing = {
-            permissions: { allow: ['Read', 'Write'] },
+            theme: 'dark',
             mcpServers: {
                 'other-server': { command: 'npx', args: ['other-mcp'] },
             },
-            env: { FOO: 'bar' },
+            customSettings: { foo: 'bar' },
         };
         (fsPromises.readFile as jest.Mock).mockResolvedValueOnce(JSON.stringify(existing));
 
-        await writeGlobalMcpConfig(EXTENSION_DIST);
+        await registerGlobalMcp(EXTENSION_DIST);
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
-        const call = writeFileMock.mock.calls.find(
-            ([p]: [string]) => String(p) === globalMcpConfigPath,
-        );
-        const parsed = JSON.parse(call[1] as string);
+        const call = writeFileMock.mock.calls.find(([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH);
+        const parsed = JSON.parse(call?.[1] as string);
 
-        // Preserved keys
-        expect(parsed.permissions).toEqual({ allow: ['Read', 'Write'] });
-        expect(parsed.env).toEqual({ FOO: 'bar' });
+        expect(parsed.theme).toBe('dark');
+        expect(parsed.customSettings).toEqual({ foo: 'bar' });
         expect(parsed.mcpServers['other-server']).toEqual({ command: 'npx', args: ['other-mcp'] });
-        // Added key
         expect(parsed.mcpServers['demo-builder']).toBeDefined();
     });
 
-    it('handles missing file gracefully (creates new)', async () => {
-        // Default mock already rejects with ENOENT
-        await expect(writeGlobalMcpConfig(EXTENSION_DIST)).resolves.not.toThrow();
+    it('creates ~/.claude.json when missing', async () => {
+        await expect(registerGlobalMcp(EXTENSION_DIST)).resolves.not.toThrow();
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         expect(writeFileMock).toHaveBeenCalled();
     });
 
-    it('does not include DEMO_BUILDER_PROJECTS_DIR env var in the entry', async () => {
-        await writeGlobalMcpConfig(EXTENSION_DIST);
+    it('throws when ~/.claude.json is malformed (does not overwrite valid-but-unreadable user state)', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValueOnce('{ not valid json');
+
+        await expect(registerGlobalMcp(EXTENSION_DIST)).rejects.toThrow(/malformed|JSON/i);
+        expect(fsPromises.writeFile).not.toHaveBeenCalled();
+    });
+});
+
+describe('ensureGlobalMcpRegistration', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('prompts the user with three buttons when state is undefined', async () => {
+        const ctx = makeMockExtensionContext(undefined);
+        const showInfo = vscode.window.showInformationMessage as jest.Mock;
+        showInfo.mockResolvedValueOnce(undefined); // user dismisses
+
+        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
+
+        expect(showInfo).toHaveBeenCalledTimes(1);
+        const [, ...buttons] = showInfo.mock.calls[0];
+        expect(buttons).toEqual(['Register', 'Not Now', "Don't Ask Again"]);
+    });
+
+    it('registers and persists "registered" state when user clicks Register', async () => {
+        const ctx = makeMockExtensionContext(undefined);
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce('Register');
+
+        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
+
+        // Wrote to ~/.claude.json
+        const writeFileMock = fsPromises.writeFile as jest.Mock;
+        expect(writeFileMock.mock.calls.some(([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH)).toBe(true);
+        expect(ctx.globalState.update).toHaveBeenCalledWith(GLOBAL_MCP_REG_STATE_KEY, 'registered');
+    });
+
+    it('persists "declined" state when user clicks Don\'t Ask Again, without writing config', async () => {
+        const ctx = makeMockExtensionContext(undefined);
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce("Don't Ask Again");
+
+        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
-        const call = writeFileMock.mock.calls.find(
-            ([p]: [string]) => String(p) === globalMcpConfigPath,
-        );
-        const parsed = JSON.parse(call[1] as string);
+        expect(writeFileMock.mock.calls.some(([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH)).toBe(false);
+        expect(ctx.globalState.update).toHaveBeenCalledWith(GLOBAL_MCP_REG_STATE_KEY, 'declined');
+    });
 
-        expect(parsed.mcpServers['demo-builder'].env).toBeUndefined();
+    it('leaves state undefined and does not register when user clicks Not Now', async () => {
+        const ctx = makeMockExtensionContext(undefined);
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce('Not Now');
+
+        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
+
+        const writeFileMock = fsPromises.writeFile as jest.Mock;
+        expect(writeFileMock.mock.calls.some(([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH)).toBe(false);
+        expect(ctx.globalState.update).not.toHaveBeenCalled();
+    });
+
+    it('does nothing and does not prompt when state is "registered"', async () => {
+        const ctx = makeMockExtensionContext('registered');
+        const showInfo = vscode.window.showInformationMessage as jest.Mock;
+
+        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
+
+        expect(showInfo).not.toHaveBeenCalled();
+        expect(fsPromises.writeFile).not.toHaveBeenCalled();
+    });
+
+    it('does nothing and does not prompt when state is "declined"', async () => {
+        const ctx = makeMockExtensionContext('declined');
+        const showInfo = vscode.window.showInformationMessage as jest.Mock;
+
+        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
+
+        expect(showInfo).not.toHaveBeenCalled();
+        expect(fsPromises.writeFile).not.toHaveBeenCalled();
     });
 });
