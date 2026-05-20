@@ -24,6 +24,10 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { assertPathInside, assertPathInsideSync } from '@/core/validation';
+import {
+    PushRejectedError,
+    syncAndPublish,
+} from '@/features/eds/services/storefrontSyncService';
 
 const execFile = promisify(childProcess.execFile);
 
@@ -202,6 +206,24 @@ async function readInstalledBlockLibraries(projectPath: string): Promise<Install
     return Array.isArray(libs) ? (libs as InstalledBlockLibraryEntry[]) : [];
 }
 
+/**
+ * Read the project manifest and extract the storefront's GitHub repo (owner, repo, branch).
+ * Returns undefined if the storefront has no `githubRepo` recorded.
+ */
+async function readStorefrontGithubRepo(projectPath: string): Promise<{ owner: string; site: string; branch?: string } | undefined> {
+    try {
+        const raw = await fsPromises.readFile(path.join(projectPath, '.demo-builder.json'), 'utf-8');
+        const manifest = JSON.parse(raw);
+        const repo = manifest?.componentInstances?.['eds-storefront']?.metadata?.githubRepo;
+        const branch = manifest?.componentInstances?.['eds-storefront']?.metadata?.edsBranch;
+        if (typeof repo !== 'string' || !repo.includes('/')) return undefined;
+        const [owner, site] = repo.split('/');
+        return { owner, site, branch: typeof branch === 'string' ? branch : undefined };
+    } catch {
+        return undefined;
+    }
+}
+
 // ─── Tool handlers (exported for unit tests) ─────────────────────────────────
 
 /** @internal — exported only for unit tests; not part of the public API */
@@ -287,21 +309,37 @@ export const toolHandlers = {
         } catch {
             throw new Error(`storefrontPath is not a git repository root: ${storefrontPath}`);
         }
-        const safeCommitMessage = commitMessage.replace(/[\n\r]/g, ' ').trim() || 'AI: sync files';
-        const git = (args: string[]) => execFile('git', ['-C', storefrontPath, ...args]);
-        await git(['add', '-A']);
+
+        // Tokens come from environment when running standalone (Claude Code launches
+        // the MCP server). The extension can write them into the spawn env via
+        // Cycle D's launch wiring. Absence is fine: git falls back to ambient auth
+        // and the Helix step is skipped.
+        const githubToken = process.env.GITHUB_TOKEN || process.env.DEMO_BUILDER_GITHUB_TOKEN || undefined;
+        const daLiveToken = process.env.DA_LIVE_IMS_TOKEN || process.env.DEMO_BUILDER_DA_LIVE_TOKEN || undefined;
+
+        const githubRepo = await readStorefrontGithubRepo(projectPath);
+
         try {
-            await git(['commit', '-m', safeCommitMessage]);
+            const result = await syncAndPublish({
+                storefrontPath,
+                commitMessage,
+                githubRepo,
+                githubToken,
+                daLiveToken,
+            });
+
+            if (!result.committed && !result.helixPublished) return 'Nothing to commit';
+            if (result.helixPublished) return 'Storefront synced and published successfully';
+            return 'Storefront synced successfully';
         } catch (err) {
-            const stderr = (err as NodeJS.ErrnoException & { stderr?: string }).stderr ?? '';
-            const msg = err instanceof Error ? err.message : String(err);
-            if (stderr.includes('nothing to commit') || msg.includes('nothing to commit')) {
-                return 'Nothing to commit';
+            if (err instanceof PushRejectedError) {
+                throw new Error(
+                    `${err.message} Resolve from VS Code (Demo Builder dashboard → Sync Storefront) — ` +
+                    `rebase/merge editor is not available in the AI tool surface.`,
+                );
             }
             throw err;
         }
-        await git(['push']);
-        return 'Storefront synced successfully';
     },
 
     async listBlocks(projectsDir: string, projectName: string): Promise<string> {
