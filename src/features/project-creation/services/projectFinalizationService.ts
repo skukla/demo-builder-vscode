@@ -160,20 +160,12 @@ export async function sendCompletionAndCleanup(
  *
  * Delegates to the three writers. Non-blocking by design — callers should wrap in
  * try/catch and log warnings on failure.
- *
- * @param helixToken - Optional DA.live session token (currently unused — retained for
- *        backward compatibility with callers that pass the stored DA.live token).
  */
 export async function generateAIContextFiles(
     projectPath: string,
     project: Project,
     extensionPath: string,
-    helixToken?: string,
 ): Promise<void> {
-    // helixToken is currently unused — kept on the signature for caller compatibility.
-    // Cycle B will revisit when Adobe Commerce Extensibility Tools installs require it.
-    void helixToken;
-
     const results = await Promise.allSettled([
         writeAgentsMd(projectPath, project, stacksConfig.stacks as Stack[]),
         writeMcpConfigs(projectPath, project, path.join(extensionPath, 'dist')),

@@ -39,9 +39,9 @@ export async function writeSkillFiles(
     projectPath: string,
     project: Project,
 ): Promise<void> {
-    // project is accepted for API symmetry with the other writers and to
-    // leave room for future per-project skill customization. Currently unused
-    // because all three skills are static.
+    // project is accepted but unused — reserved for per-stack skill variants
+    // when Cycle B adds Adobe Commerce Extensibility Tools skills (different
+    // bundles for EDS vs headless projects).
     void project;
 
     const skillsDir = path.join(projectPath, '.claude', 'skills');

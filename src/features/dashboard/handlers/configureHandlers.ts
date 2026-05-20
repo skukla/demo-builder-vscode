@@ -20,7 +20,6 @@ import { verifyAiSetup } from '@/features/ai';
 import { handleCreateWorkspaceCredential } from '@/features/authentication';
 import { handleSyncComponentConfigs } from '@/features/components/handlers/componentHandlers';
 import { handleDiscoverStoreStructure } from '@/features/eds';
-import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { generateAIContextFiles } from '@/features/project-creation/services';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
@@ -109,11 +108,7 @@ export async function handleRegenerateAiFiles(
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
     // Use server-side project.path — do not accept a webview-supplied path override.
-    // Pass the stored DA.live token so HELIX_ADMIN_API_TOKEN in mcp.json is auto-populated
-    // without requiring the user to retrieve it manually from admin.hlx.page/login.
-    const daLiveAuth = new DaLiveAuthService(context.context);
-    const helixToken = await daLiveAuth.getAccessToken() ?? undefined;
-    await generateAIContextFiles(project.path, project, context.context.extensionPath, helixToken);
+    await generateAIContextFiles(project.path, project, context.context.extensionPath);
     return { success: true };
 }
 

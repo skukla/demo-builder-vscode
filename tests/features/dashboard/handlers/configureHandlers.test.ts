@@ -37,13 +37,6 @@ jest.mock('@/features/project-creation/services', () => ({
     generateAIContextFiles: jest.fn(),
 }));
 
-// Mock DA.live auth service (used by handleRegenerateAiFiles to get the helix token)
-jest.mock('@/features/eds/services/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        getAccessToken: jest.fn().mockResolvedValue('mock-da-live-token'),
-    })),
-}));
-
 // Mock vscode
 jest.mock('vscode', () => ({
     env: {
@@ -271,7 +264,6 @@ describe('configureHandlers', () => {
                 '/projects/test', // project.path from state, not payload
                 mockProject,
                 '/mock/extension/path',
-                'mock-da-live-token', // DA.live token passed automatically (no manual entry)
             );
             expect(result).toEqual({ success: true });
         });

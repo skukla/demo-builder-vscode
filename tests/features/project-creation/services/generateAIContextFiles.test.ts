@@ -2,9 +2,9 @@
  * generateAIContextFiles Tests
  *
  * Tests the AI context file generation orchestration:
- * - Reads AI settings from VS Code configuration
  * - Delegates to writeAgentsMd, writeMcpConfigs, writeSkillFiles
- * - Passes correct settings derived from VS Code config to each writer
+ * - Passes the right positional arguments to each writer
+ * - Aggregates errors when one or more writers fail
  */
 
 import { generateAIContextFiles } from '@/features/project-creation/services/projectFinalizationService';
