@@ -18,7 +18,7 @@ The `features/` directory contains self-contained feature modules organized by b
 
 ```
 features/
-├── ai/                  # AI context verification and VS Code chat participant
+├── ai/                  # AI context verification + standalone MCP server
 ├── authentication/       # Adobe authentication & SDK
 │   ├── index.ts         # Public API exports
 │   ├── services/        # Authentication services
@@ -74,18 +74,16 @@ features/my-feature/
 
 ### ai
 
-**Purpose**: AI context file verification and VS Code chat participant registration
+**Purpose**: AI context file verification — the harness is Claude Code (CLI), not VS Code Chat
 
 **Key Services:**
 - `verifyAiSetup(projectPath, extensionDistPath)` - Checks that `.claude/CLAUDE.md`, `.claude/mcp.json`, the MCP binary (`{extensionDistPath}/mcp-server.js`), and `.claude/skills/*.md` files are present and valid; returns `AiVerificationResult`
-- `registerChatParticipant()` - Registers the `@demo-builder` VS Code chat participant (NOT wired up — Phase 2 activation only)
-- `dist/mcp-server.js` (compiled from `src/mcp-server.ts`) - Standalone stdio MCP server exposing 6 project tools to AI agents (get_project, get_component_config, update_project_config, sync_storefront, list_blocks, get_block_source)
+- `dist/mcp-server.js` (compiled from `src/mcp-server.ts`) - Standalone stdio MCP server exposing 7 project tools to AI agents (list_projects, get_project, get_component_config, update_project_config, sync_storefront, list_blocks, get_block_source)
 
 **Responsibilities:**
-- Health-checking project AI context files (used by Configure → AI Setup tab via `AiSetupTab` component)
+- Verifying project AI context files (used by Configure → AI Setup tab via `AiSetupTab` component)
 - Reporting which AI context files are missing or malformed
-- VS Code chat participant for conversational project queries (Phase 2)
-- Standalone MCP server process for AI agent tool access
+- Standalone MCP server process for AI agent tool access via Claude Code (CLI), discoverable through both `~/.claude/.mcp.json` (global) and project `.mcp.json`
 
 **Path Alias**: `@/features/ai`
 
@@ -241,9 +239,9 @@ features/my-feature/
 **Key Services:**
 - Demo package loading, storefront resolution, and mesh requirement resolution (`services/demoPackageLoader.ts`)
 - Custom block library URL parsing and validation (`services/customBlockLibraryUtils.ts`)
-- `aiContextWriter.ts` - Generates `.claude/CLAUDE.md` with project-specific AI agent context
-- `mcpConfigWriter.ts` - Generates `.claude/mcp.json`, `.mcp.json`, `.claude/settings.json`, and optionally `.cursor/mcp.json` and `.codex/mcp.json`
-- `skillsWriter.ts` - Writes `.claude/skills/*.md` procedural guides for AI agents
+- `aiContextWriter.ts` - Generates `AGENTS.md` at the project root with project-specific AI agent context; writes `CLAUDE.md` (root) and `.claude/CLAUDE.md` as one-line `see @AGENTS.md` pointers
+- `mcpConfigWriter.ts` - Generates `.claude/mcp.json`, `.mcp.json`, and `.claude/settings.json` (Cursor and Codex read `.mcp.json` natively — no per-tool config files)
+- `skillsWriter.ts` - Writes three lifecycle skills to `.claude/skills/` (add-component, sync-changes, update-credentials); EDS storefront skills come from Adobe's `@adobe-commerce/commerce-extensibility-tools` package
 - `generateAIContextFiles` (in `projectFinalizationService.ts`) - Orchestrates all three AI writers as project finalization phase 6
 - Project template application
 - Environment file generation

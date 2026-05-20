@@ -40,14 +40,14 @@ The Adobe Demo Builder is a VS Code extension that streamlines the creation and 
 │  ├── Project Dashboard                                     │
 │  └── Configuration Editor (incl. AI Setup tab)            │
 ├─────────────────────────────────────────────────────────────┤
-│  AI Context Layer (Phase 1 — standalone process)           │
-│  ├── aiContextWriter — Generates .claude/CLAUDE.md         │
-│  ├── skillsWriter — Writes .claude/skills/*.md guides      │
+│  AI Context Layer (harness: Claude Code CLI)               │
+│  ├── aiContextWriter — Generates AGENTS.md + CLAUDE.md ptr │
+│  ├── skillsWriter — Writes 3 lifecycle skills              │
 │  ├── mcpConfigWriter — Generates .mcp.json + tool settings │
-│  └── MCP Server (dist/mcp-server.js) — 6 project tools    │
-│      get_project · get_component_config · update_project_  │
-│      config · sync_storefront · list_blocks · get_block_   │
-│      source                                                 │
+│  └── MCP Server (dist/mcp-server.js) — 7 project tools    │
+│      list_projects · get_project · get_component_config ·  │
+│      update_project_config · sync_storefront · list_blocks │
+│      · get_block_source                                     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -241,15 +241,15 @@ getCurrentOrganization() // SDK-powered, 1-minute cache
 
 **Components**:
 - **`sanitization`** (`src/features/project-creation/services/sanitization.ts`): Shared sanitization helpers used by both `aiContextWriter` and `skillsWriter`. `sanitizeTemplateValue` strips `\n`, `\r`, and `#` from text fields. `sanitizeUrl` validates the `https://` protocol (non-https values become `[invalid URL]`) and strips `\n`, `\r`, and `]()` characters to prevent Markdown link injection. `sanitizeGithubSlug` restricts owner/repo slugs to alphanumeric, dot, dash, and slash.
-- **`aiContextWriter`** (`src/features/project-creation/services/aiContextWriter.ts`): Generates `.claude/CLAUDE.md` with project-specific context (GitHub repo, live/preview URLs, Commerce endpoint, block libraries). All user-supplied values pass through the shared sanitization helpers before interpolation.
-- **`skillsWriter`** (`src/features/project-creation/services/skillsWriter.ts`): Writes `.claude/skills/*.md` procedural guides for AI agents (sync content, edit blocks, update credentials, use external MCPs).
-- **`mcpConfigWriter`** (`src/features/project-creation/services/mcpConfigWriter.ts`): Generates `.mcp.json` (project root), `.claude/mcp.json`, and `.claude/settings.json` with the Demo Builder MCP server entry and a PostToolUse hook for auto-sync. Optionally generates `.cursor/mcp.json` and `.codex/mcp.json`.
-- **`aiSetupVerifier`** (`src/features/ai/aiSetupVerifier.ts`): Health-checks the four generated file types; used by the Configure → AI Setup tab.
-- **MCP Server** (`src/mcp-server.ts` → `dist/mcp-server.js`): Standalone stdio process (no VS Code dependency) exposing 6 project tools: `get_project`, `get_component_config`, `update_project_config`, `sync_storefront`, `list_blocks`, `get_block_source`.
+- **`aiContextWriter`** (`src/features/project-creation/services/aiContextWriter.ts`): Generates `AGENTS.md` at the project root with project-specific context (GitHub repo, live/preview URLs, Commerce endpoint, block libraries). Writes `CLAUDE.md` (root) and `.claude/CLAUDE.md` as one-line `see @AGENTS.md` pointers. All user-supplied values pass through the shared sanitization helpers before interpolation.
+- **`skillsWriter`** (`src/features/project-creation/services/skillsWriter.ts`): Writes three Demo-Builder-specific lifecycle skills to `.claude/skills/` (`add-component.md`, `sync-changes.md`, `update-credentials.md`). EDS storefront skills come from Adobe's `@adobe-commerce/commerce-extensibility-tools` package (installed in Cycle B).
+- **`mcpConfigWriter`** (`src/features/project-creation/services/mcpConfigWriter.ts`): Generates `.mcp.json` (project root), `.claude/mcp.json`, and `.claude/settings.json` with the Demo Builder MCP server entry and a PostToolUse hook for auto-sync. Cursor and Codex read `.mcp.json` natively — no per-tool config files.
+- **`aiSetupVerifier`** (`src/features/ai/aiSetupVerifier.ts`): Verifies the four generated file types; used by the Configure → AI Setup tab.
+- **MCP Server** (`src/mcp-server.ts` → `dist/mcp-server.js`): Standalone stdio process (no VS Code dependency) exposing 7 project tools: `list_projects`, `get_project`, `get_component_config`, `update_project_config`, `sync_storefront`, `list_blocks`, `get_block_source`.
 
-**Integration Point**: `projectFinalizationService.generateAIContextFiles()` orchestrates all three writers as Phase 6 of project creation. The Configure → AI Setup tab calls `verifyAiSetup()` to check health and offers regeneration.
+**Integration Point**: `projectFinalizationService.generateAIContextFiles()` orchestrates all three writers as Phase 6 of project creation. The Configure → AI Setup tab calls `verifyAiSetup()` to check the setup and offers regeneration.
 
-**Phase 2 (not yet active)**: VS Code `@demo-builder` chat participant (`vscodeChatParticipant.ts`) — exported but not yet wired into `extension.ts`.
+**Harness**: Claude Code (CLI). Users open a generated project with `claude` from the project directory; the Demo Builder MCP server is discoverable via the global `~/.claude/.mcp.json` entry written on extension activation, and via the project-local `.mcp.json` written during project creation. Adobe-hosted MCPs (DA.live, Commerce, AEM Content) are available at Claude Code's session level via its catalog.
 
 **Comparison Strategy**:
 ```typescript
@@ -470,12 +470,14 @@ try {
 ## Future Enhancements
 
 ### Shipped in Phase 1 (AI layer)
-- AI context file generation at project creation (CLAUDE.md, skill guides, MCP config)
-- Standalone Demo Builder MCP server (6 project tools for AI agents)
-- AI Setup tab in Configure screen for health-checking and regenerating AI files
+- AI context file generation at project creation (AGENTS.md, 3 lifecycle skills, MCP config)
+- Standalone Demo Builder MCP server (7 project tools for AI agents)
+- AI Setup tab in Configure screen for verifying and regenerating AI files
+- Claude Code (CLI) as the primary AI harness — Demo Builder MCP discoverable via global `~/.claude/.mcp.json`
 
 ### Near-term (3-6 months)
-- AI Phase 2: VS Code `@demo-builder` chat participant (vscodeChatParticipant.ts — already built, not yet activated)
+- AI layer Cycle B: install Adobe's `@adobe-commerce/commerce-extensibility-tools` per EDS project to bring in 6 storefront-development skill agents
+- AI layer Cycle D: "Open in Claude Code" dashboard action + AI Configuration tab inventory
 - Automated testing framework
 - Performance monitoring and analytics
 - Enhanced error reporting (telemetry)

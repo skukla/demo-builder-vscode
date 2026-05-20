@@ -8,29 +8,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **AI context file generation at project creation**: At finalization (Phase 6), three writers generate AI agent context files into each project's `.claude/` directory:
-  - `CLAUDE.md` — project overview with endpoints, storefront paths, block libraries, and example Claude prompts
-  - `mcp.json` / `.mcp.json` (project root) / `settings.json` — MCP server config and PostToolUse git-sync hook
-  - `skills/*.md` — step-by-step procedural guides for common operations (sync, EDS configuration, block library editing, MCP tool usage)
-- **Standalone MCP server** (`dist/mcp-server.js`): Separate Node.js stdio process (no VS Code dependency) exposing 6 tools to AI agents: `get_project`, `get_component_config`, `update_project_config`, `sync_storefront`, `list_blocks`, `get_block_source`. Started automatically via the generated MCP config.
-- **AI Setup tab** in the Configure screen: Health-checks the four AI context file categories and provides a "Regenerate AI Files" action.
-- **VS Code `@demo-builder` chat participant** (Phase 2 — not yet activated): Reads the active project's CLAUDE.md and injects it into the chat context for project-aware queries.
+- **AI context file generation at project creation**: At finalization (Phase 6), three writers generate AI agent context files for each project:
+  - `AGENTS.md` (project root) — universal AI context (Claude/Copilot/Cursor/Gemini); 8 sections covering endpoints, storefront paths, block libraries, and example prompts
+  - `CLAUDE.md` (root + `.claude/`) — one-line `see @AGENTS.md` pointer files
+  - `.claude/mcp.json` and `.mcp.json` — Demo Builder MCP server entry
+  - `.claude/settings.json` — PostToolUse git-sync hook for EDS storefronts
+  - `.claude/skills/` — three Demo-Builder-specific lifecycle skills (`add-component.md`, `sync-changes.md`, `update-credentials.md`)
+- **Standalone MCP server** (`dist/mcp-server.js`): Separate Node.js stdio process (no VS Code dependency) exposing 7 tools to AI agents: `list_projects`, `get_project`, `get_component_config`, `update_project_config`, `sync_storefront`, `list_blocks`, `get_block_source`. Discoverable via the global `~/.claude/.mcp.json` entry written on extension activation, and via the project-local `.mcp.json` written during project creation.
+- **AI Setup tab** in the Configure screen: Verifies the four AI context file categories and provides a "Regenerate AI Files" action.
 
 ### Security
-- **`sanitizeUrl` protocol + bracket validation**: `aiContextWriter.ts` and `skillsWriter.ts` validate Commerce and MCP endpoint URLs against an `https://` allowlist before interpolating them into Markdown output. Non-https values (e.g. `javascript:`) are replaced with `[invalid URL]`. URL values that pass the `https://` check are additionally stripped of `]()` characters to prevent Markdown link injection via crafted URLs such as `https://example.com](https://attacker.com`.
+- **`sanitizeUrl` protocol + bracket validation**: `aiContextWriter.ts` validates Commerce and MCP endpoint URLs against an `https://` allowlist before interpolating them into Markdown output. Non-https values (e.g. `javascript:`) are replaced with `[invalid URL]`. URL values that pass the `https://` check are additionally stripped of `]()` characters to prevent Markdown link injection via crafted URLs such as `https://example.com](https://attacker.com`.
 - **Full symlink-resistant path traversal protection in MCP server**: `assertInsideProject` now canonicalizes both the `projectPath` and the `resolved` path via `fs.realpath` before the prefix check. This prevents symlink-based escapes from the project directory and fixes legitimate access failures on macOS where `DEMO_BUILDER_PROJECT_PATH=/tmp/proj` resolves to `/private/tmp/proj` after canonicalization. Falls back to lexical value if `realpath` throws (project path not yet created, or new file being written).
-- **Pinned MCP dependency versions**: `@neerajgrg93/aem-eds-mcp-server` and `@rafaelcg/adobe-commerce-dev-mcp` pinned to `1.0.0` and `1.0.3` in generated MCP configs, preventing silent supply-chain updates.
 
 ### Changed
-- **AI writer concurrency**: `generateAIContextFiles` now runs `writeClaudeMd`, `writeMcpConfigs`, and `writeSkillFiles` concurrently via `Promise.allSettled`. All three writers run regardless of individual failures; errors are collected and thrown as a single combined message.
+- **AI writer concurrency**: `generateAIContextFiles` runs `writeAgentsMd`, `writeMcpConfigs`, and `writeSkillFiles` concurrently via `Promise.allSettled`. All three writers run regardless of individual failures; errors are collected and thrown as a single combined message.
+- **AI layer pivot to Claude Code (CLI) harness** (Cycle A, 2026-05-19): Reorganized the AI layer around Claude Code as the primary harness, dropping unused plumbing:
+  - **AGENTS.md replaces `.claude/CLAUDE.md` as the primary context file** — universal across Claude/Copilot/Cursor/Gemini. `CLAUDE.md` at the project root and `.claude/CLAUDE.md` become one-line `see @AGENTS.md` pointers.
+  - **Trimmed external MCP entries from generated configs** — Adobe-hosted MCPs (DA.live, Commerce, AEM Content) live at Claude Code's session level via its catalog. Demo Builder's per-project entries duplicated those (with worse, unauthenticated versions) and were not loading. Generated `.claude/mcp.json` and `.mcp.json` now contain only the `demo-builder` server entry.
+  - **Stopped writing `.cursor/mcp.json` and `.codex/mcp.json`** — Cursor and Codex read `.mcp.json` natively.
+  - **Trimmed skill templates from 13 to 3** — removed `add-block`, `add-custom-block`, `configure-eds`, `create-block`, `edit-block-library`, `modify-content`, `update-styles`, `use-aem-content-mcp`, `use-commerce-dev-mcp`, `use-da-live-mcp`. EDS storefront skills will come from Adobe's `@adobe-commerce/commerce-extensibility-tools` package (Cycle B).
+  - **Removed dormant VS Code chat participant** — `vscodeChatParticipant.ts` and its tests deleted. Phase 2 cancelled; Claude Code (CLI) is the right harness.
+  - **Removed unused `helixToken` plumbing** — Cycle A removed the only consumer (the aem-eds MCP entry), so the token fetch at both call sites (project finalization, Regenerate AI Files) was wasted work.
+  - **Settings deprecated**: `demoBuilder.ai.externalMcpServers` and `demoBuilder.ai.mcpConfigTargets` are now accepted-but-ignored (kept in `package.json` for backward compatibility — they will not produce warnings for existing users but have no effect). `demoBuilder.ai.includeBoilerplateSkills` was never released and is now removed.
 
 ### Refactored
 - **Shared sanitization module**: `sanitizeTemplateValue`, `sanitizeGithubSlug`, and `sanitizeUrl` extracted from `aiContextWriter.ts` and `skillsWriter.ts` into `src/features/project-creation/services/sanitization.ts`. Both files now import from the shared module.
 
+### Migration Notes (Cycle A)
+- **Existing projects**: open the Configure → AI Setup tab and click "Regenerate AI Files" to migrate to the new shape (AGENTS.md + pointer files + slim MCP config + 3 skills). The Regenerate action does NOT remove old files yet — `.claude/CLAUDE.md` (full content), old skill templates, and `.cursor/mcp.json` / `.codex/mcp.json` will linger until Cycle B's cleanup pass lands.
+- **Custom `.cursor/mcp.json` or `.codex/mcp.json`**: Demo Builder no longer writes these. If you maintain them manually, they continue to work — they're just not generated for you.
+
 ### Known Limitations
-- **MCP config files contain session tokens in plaintext**: `.claude/mcp.json`, `.mcp.json`, and `.cursor/mcp.json` hold the Helix Admin API Bearer token and local filesystem paths. These files are automatically added to `.gitignore`, but any local process with filesystem read access can read them. VS Code Secret Storage integration is deferred to a future release.
+- **MCP config files contain machine-specific paths**: `.claude/mcp.json` and `.mcp.json` hold absolute paths to the Demo Builder MCP server binary. These files are automatically added to `.gitignore`. After Cycle A, no credentials are written to these files — only machine paths.
 - **PostToolUse hook env var unverified**: The generated git-sync hook reads `$CLAUDE_TOOL_INPUT` to get the modified file path. This variable name is assumed based on Claude Code hooks documentation review but has not been confirmed end-to-end. If the variable name is wrong, the hook silently does nothing (no error).
-- **Codex CLI MCP format unverified**: `.codex/mcp.json` uses the same `{ mcpServers: {...} }` format as Claude Code. This format is assumed based on available documentation but needs confirmation against the OpenAI Codex CLI release.
 
 ## [1.0.0-beta.110] - 2026-04-14
 

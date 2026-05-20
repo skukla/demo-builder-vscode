@@ -314,7 +314,7 @@ Every surface touched by the pivot.
 | 3 | Trim `skillsWriter.ts` to three Demo-Builder-specific templates; remove conditional/interpolation paths | Small | A |
 | 4 | Delete `vscodeChatParticipant.ts`; update `src/features/ai/index.ts` and README | Tiny | A |
 | 5 | ~~Research spike: confirm Adobe's onboarding CLI command~~ ✅ DONE (2026-05-19) — no CLI exists; installation is a `cp -r` from `node_modules/.../dist/aem-boilerplate-commerce/skills/`. See Open Questions #1 for the full install flow. | Small | A |
-| 6 | Add `@adobe-commerce/commerce-extensibility-tools` to EDS storefront `package.json` devDeps during project finalization; recursively copy `node_modules/.../dist/aem-boilerplate-commerce/skills/` to `<projectPath>/.claude/skills/` after `npm install` | Medium | B |
+| 6 | Add `@adobe-commerce/commerce-extensibility-tools` to EDS storefront `package.json` devDeps during project finalization; recursively copy `node_modules/.../dist/aem-boilerplate-commerce/skills/` to `<projectPath>/.claude/skills/` after `npm install` (see Open Questions #1 for the resolved install flow, risks, and per-stack bundle decision) | Medium | B |
 | 7 | Add `commerce-extensibility` MCP entry to `.claude/mcp.json` for EDS projects | Small | B |
 | 8 | `regenerate-ai-files` cleanup pass: remove obsolete files from existing projects on regeneration | Small | B |
 | 9 | New `skillInspector` service: parse frontmatter from `.claude/skills/**/*.md` using existing `yaml` package, classify Adobe vs Demo Builder by path, return name/description/path | Small | C |
