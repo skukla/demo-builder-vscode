@@ -313,8 +313,8 @@ Every surface touched by the pivot.
 | 2 | Switch `aiContextWriter.ts` to emit `AGENTS.md` plus one-line `CLAUDE.md` pointer | Small | A |
 | 3 | Trim `skillsWriter.ts` to three Demo-Builder-specific templates; remove conditional/interpolation paths | Small | A |
 | 4 | Delete `vscodeChatParticipant.ts`; update `src/features/ai/index.ts` and README | Tiny | A |
-| 5 | Research spike: confirm Adobe's onboarding CLI command and verify it's idempotent + non-interactive | Small | A |
-| 6 | Add `@adobe-commerce/commerce-extensibility-tools` to EDS storefront `package.json` devDeps during project finalization; run Adobe's onboarding command after `npm install` | Medium | B |
+| 5 | ~~Research spike: confirm Adobe's onboarding CLI command~~ ✅ DONE (2026-05-19) — no CLI exists; installation is a `cp -r` from `node_modules/.../dist/aem-boilerplate-commerce/skills/`. See Open Questions #1 for the full install flow. | Small | A |
+| 6 | Add `@adobe-commerce/commerce-extensibility-tools` to EDS storefront `package.json` devDeps during project finalization; recursively copy `node_modules/.../dist/aem-boilerplate-commerce/skills/` to `<projectPath>/.claude/skills/` after `npm install` | Medium | B |
 | 7 | Add `commerce-extensibility` MCP entry to `.claude/mcp.json` for EDS projects | Small | B |
 | 8 | `regenerate-ai-files` cleanup pass: remove obsolete files from existing projects on regeneration | Small | B |
 | 9 | New `skillInspector` service: parse frontmatter from `.claude/skills/**/*.md` using existing `yaml` package, classify Adobe vs Demo Builder by path, return name/description/path | Small | C |
@@ -337,7 +337,33 @@ Every surface touched by the pivot.
 
 ## Open Questions
 
-1. **Adobe onboarding command — exact CLI invocation.** Cycle A research spike needs to confirm: command name, flags for non-interactive use, whether it can be run from a parent process (not a TTY). If the CLI requires interaction, fallback is to manually copy the skill files from `node_modules/@adobe-commerce/commerce-extensibility-tools/...` into `.claude/skills/`.
+1. ~~**Adobe onboarding command — exact CLI invocation.**~~ ✅ RESOLVED (Cycle A.5, 2026-05-19).
+
+   **Finding**: There is no onboarding CLI for installing skills into `.claude/skills/`. The package ships skills as static files inside `node_modules/@adobe-commerce/commerce-extensibility-tools/dist/`, grouped by project type. The README's only install guidance is a manual `cp -r` step.
+
+   **Recommended Cycle B install flow** (file copy, no CLI):
+   1. Add `"@adobe-commerce/commerce-extensibility-tools": "^3.4.0"` to the storefront repo's `package.json` devDependencies
+   2. Run `npm install` (already part of project creation)
+   3. Recursively copy `node_modules/@adobe-commerce/commerce-extensibility-tools/dist/aem-boilerplate-commerce/skills/` → `<projectPath>/.claude/skills/` (for EDS storefront projects)
+   4. Add the MCP server entry alongside `demo-builder` in `.claude/mcp.json` and root `.mcp.json`:
+      ```json
+      "commerce-extensibility": {
+        "command": "node",
+        "args": ["node_modules/@adobe-commerce/commerce-extensibility-tools/index.js"]
+      }
+      ```
+
+   **Skill bundles available** (per project type, in `dist/`):
+   - `aem-boilerplate-commerce/skills/` — 6 skills: block-developer, content-modeler, dropin-developer, project-manager, researcher, tester (EDS storefront projects)
+   - `integration-starter-kit/skills/` — 7 skills for App Builder backend integrations (architect, developer, devops-engineer, product-manager, tester, technical-writer, tutor)
+   - `checkout-starter-kit/skills/` — skills for Checkout Starter Kit (not yet enumerated)
+
+   **Risks**:
+   - The README is out of date — recommends `git clone` instead of `npm install`. Both work; npm install is the cleaner path.
+   - Pinning `^3.4.0` allows minor + patch updates. Adobe may change skills between versions — if behavioral drift becomes a concern, pin to exact (`3.4.0`) and bump deliberately.
+   - The `aem-boilerplate-commerce` skill bundle assumes the project uses AEM Boilerplate Commerce. For non-EDS Demo Builder projects (headless), the integration-starter-kit bundle may be relevant but addresses a different scope (backend webhooks rather than storefront features).
+
+   **Decision needed at Cycle B Step 6**: which skill bundle ships per stack type. Likely: EDS storefront projects get `aem-boilerplate-commerce/skills/`, headless projects get nothing additional (Demo Builder's three lifecycle skills only).
 
 2. **Adobe Commerce package — pinning strategy.** Pin to a specific minor version (`^3.4.0`)? Track latest? The skill agents may change between versions — pinning protects users from surprise behavior changes but introduces a Demo Builder version bump for every Adobe release.
 
