@@ -1,54 +1,49 @@
 /**
  * Skills Writer
  *
- * Writes AI skill files to {projectPath}/.claude/skills/.
- * Skills are procedural guides that tell AI agents how to perform common operations
- * on Demo Builder projects (sync content, edit blocks, update credentials, etc.).
+ * Writes Demo-Builder-specific skill files to `{projectPath}/.claude/skills/`.
+ * Skills are procedural guides that tell AI agents how to perform project-
+ * lifecycle operations using the Demo Builder MCP server.
+ *
+ * Three skills ship today:
+ * - `add-component.md` — add or enable a component via update_project_config
+ * - `sync-changes.md` — push code changes via sync_storefront
+ * - `update-credentials.md` — edit .env credentials via update_project_config
+ *
+ * EDS storefront skills (block development, drop-in customization, content
+ * modeling) come from Adobe's official `@adobe-commerce/commerce-extensibility-tools`
+ * package, installed per-project in Cycle B. MCP-usage skills (DA.live, AEM
+ * Content, Commerce) are unnecessary because those MCPs live in Claude Code's
+ * session-level catalog and document themselves.
  *
  * Content sourcing: static .md files imported at build time (esbuild text loader).
- * Template .md.template files have {placeholder} tokens interpolated per-project.
  */
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import addBlockContent from '../templates/skills/add-block.md';
 import addComponentContent from '../templates/skills/add-component.md';
-import addCustomBlockContent from '../templates/skills/add-custom-block.md';
-import configureEdsContent from '../templates/skills/configure-eds.md';
-import createBlockContent from '../templates/skills/create-block.md';
-import editBlockLibTemplate from '../templates/skills/edit-block-library.md.template';
-import modifyContentContent from '../templates/skills/modify-content.md';
 import syncChangesContent from '../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../templates/skills/update-credentials.md';
-import updateStylesContent from '../templates/skills/update-styles.md';
-import useAemContentMcpContent from '../templates/skills/use-aem-content-mcp.md';
-import useCommerceMcpTemplate from '../templates/skills/use-commerce-dev-mcp.md.template';
-import useDaLiveMcpTemplate from '../templates/skills/use-da-live-mcp.md.template';
-import { sanitizeTemplateValue, sanitizeGithubSlug, sanitizeUrl, sanitizeBlockId, escapeMarkdown, interpolateTemplate } from './sanitization';
-import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
-import type { InstalledBlockLibrary } from '@/types/blockLibraries';
-import { isEdsProject } from '@/types/typeGuards';
-
-// ─── Public types ─────────────────────────────────────────────────────────────
-
-export interface SkillsSettings {
-    /** Which external MCP servers are enabled (determines which MCP usage skills to write) */
-    externalMcpServers: string[];
-    /** Whether to include boilerplate EDS skills (add-block, create-block, etc.) */
-    includeBoilerplateSkills: boolean;
-}
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Write skill files to {projectPath}/.claude/skills/.
+ * Write skill files to `{projectPath}/.claude/skills/`.
+ *
+ * Writes the same three Demo-Builder-specific skills for every project,
+ * regardless of stack — they target the seven Demo Builder MCP tools, which
+ * apply equally to EDS and headless projects.
  */
 export async function writeSkillFiles(
     projectPath: string,
     project: Project,
-    settings: SkillsSettings,
 ): Promise<void> {
+    // project is accepted for API symmetry with the other writers and to
+    // leave room for future per-project skill customization. Currently unused
+    // because all three skills are static.
+    void project;
+
     const skillsDir = path.join(projectPath, '.claude', 'skills');
     await fsPromises.mkdir(skillsDir, { recursive: true });
 
@@ -59,129 +54,9 @@ export async function writeSkillFiles(
         await fsPromises.writeFile(path.join(skillsDir, filename), content, 'utf-8');
     };
 
-    const eds = isEdsProject(project);
-    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const storefrontPath = sanitizeTemplateValue(edsInstance?.path ?? '');
-
-    const writes: Promise<void>[] = [];
-
-    // ── Core skills (all projects) ───────────────────────────────────────────
-    writes.push(write('add-component.md', addComponentContent));
-    writes.push(write('update-credentials.md', updateCredentialsContent));
-    writes.push(write('sync-changes.md', syncChangesContent));
-
-    // ── EDS-specific skills ──────────────────────────────────────────────────
-    if (eds) {
-        writes.push(write('add-custom-block.md', addCustomBlockContent));
-        writes.push(write('configure-eds.md', configureEdsContent));
-
-        // edit-block-library.md is per-project (contains library list)
-        const installedLibs = project.installedBlockLibraries ?? [];
-        if (installedLibs.length > 0) {
-            const libraryList = buildLibraryList(installedLibs, storefrontPath);
-            // libraryList is pre-formatted Markdown with per-value escaping already applied
-            // in buildLibraryList — raw replacement avoids double-escaping the structure.
-            // storefrontLocalPath is escaped at the output boundary here.
-            const editBlockLibContent = editBlockLibTemplate
-                .replace(/\{libraryList\}/g, libraryList)
-                .replace(/\{storefrontLocalPath\}/g, escapeMarkdown(storefrontPath));
-            writes.push(write('edit-block-library.md', editBlockLibContent));
-        }
-    }
-
-    // ── Boilerplate EDS skills ───────────────────────────────────────────────
-    if (eds && settings.includeBoilerplateSkills) {
-        writes.push(write('add-block.md', addBlockContent));
-        writes.push(write('create-block.md', createBlockContent));
-        writes.push(write('update-styles.md', updateStylesContent));
-        writes.push(write('modify-content.md', modifyContentContent));
-    }
-
-    // ── MCP usage skills (per enabled MCP) ──────────────────────────────────
-    for (const serverId of settings.externalMcpServers) {
-        const skill = buildMcpSkill(serverId, project);
-        if (skill) {
-            writes.push(write(skill.filename, skill.content));
-        }
-    }
-
-    await Promise.all(writes);
-}
-
-// ─── Private types ────────────────────────────────────────────────────────────
-
-interface McpSkill {
-    filename: string;
-    content: string;
-}
-
-// ─── Private helpers ──────────────────────────────────────────────────────────
-
-// All values are sanitized before interpolation — see ./sanitization for the threat model.
-// GitHub owner/repo values are double-sanitized: sanitizeTemplateValue first (strips Markdown
-// control characters), then sanitizeGithubSlug (enforces the slug allowlist). Both layers
-// are intentional — sanitizeGithubSlug's allowlist alone is sufficient, but the layering
-// provides defense-in-depth and makes the sanitization intent explicit at each call site.
-
-/**
- * Build pre-formatted Markdown describing installed block libraries.
- *
- * Returns Markdown that is ready to interpolate into a template verbatim.
- * Values are sanitized (input layer) AND escaped (output layer) inside this
- * function — callers must NOT re-escape the result (double-escaping would
- * produce visible backslashes in the output).
- */
-function buildLibraryList(libs: InstalledBlockLibrary[], storefrontPath: string): string {
-    if (libs.length === 0) return '(none installed)';
-    return libs
-        .map(lib => {
-            // Owner/repo are NOT escaped — they're inside URL paths where backslash breaks things
-            const owner = sanitizeGithubSlug(sanitizeTemplateValue(lib.source.owner));
-            const repo = sanitizeGithubSlug(sanitizeTemplateValue(lib.source.repo));
-            const githubUrl = `https://github.com/${owner}/${repo}`;
-            const blockList = lib.blockIds.map(id => escapeMarkdown(sanitizeBlockId(id))).join(', ');
-            const name = escapeMarkdown(sanitizeTemplateValue(lib.name));
-            const commitSha = escapeMarkdown(sanitizeTemplateValue(lib.commitSha));
-            return (
-                `### ${name}\n` +
-                `- **Source:** ${githubUrl}\n` +
-                `- **Blocks:** ${blockList}\n` +
-                `- **Installed from commit:** ${commitSha}\n` +
-                `- **Local blocks directory:** ${storefrontPath}/blocks/`
-            );
-        })
-        .join('\n\n');
-}
-
-function buildMcpSkill(serverId: string, project: Project): McpSkill | null {
-    // Extract all substitution values up-front so each switch branch stays readable.
-    // Only a subset is used per branch, but the extraction cost is negligible.
-    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const daLiveOrg = sanitizeTemplateValue((edsInstance?.metadata?.daLiveOrg as string | undefined) ?? '');
-    const daLiveSite = sanitizeTemplateValue((edsInstance?.metadata?.daLiveSite as string | undefined) ?? '');
-    const commerceUrl = sanitizeUrl(project.commerce?.instance?.url ?? '');
-    const storeViewCode = sanitizeTemplateValue(project.commerce?.instance?.storeView ?? '');
-
-    switch (serverId) {
-        case 'da-live':
-            return {
-                filename: 'use-da-live-mcp.md',
-                content: interpolateTemplate(useDaLiveMcpTemplate, { daLiveOrg, daLiveSite }),
-            };
-        case 'aem-content':
-            return {
-                filename: 'use-aem-content-mcp.md',
-                content: useAemContentMcpContent,
-            };
-        case 'adobe-commerce-dev':
-            return {
-                filename: 'use-commerce-dev-mcp.md',
-                content: interpolateTemplate(useCommerceMcpTemplate, {
-                    commerceEndpoint: commerceUrl,
-                    storeViewCode,
-                }),
-            };
-        default:
-            return null;
-    }
+    await Promise.all([
+        write('add-component.md', addComponentContent),
+        write('sync-changes.md', syncChangesContent),
+        write('update-credentials.md', updateCredentialsContent),
+    ]);
 }

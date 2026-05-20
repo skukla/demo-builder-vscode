@@ -156,7 +156,7 @@ export async function sendCompletionAndCleanup(
 }
 
 /**
- * Phase 6: Generate AI context files (.claude/CLAUDE.md, .claude/mcp.json, .claude/skills/)
+ * Phase 6: Generate AI context files (AGENTS.md, .mcp.json, .claude/skills/)
  *
  * Delegates to the three writers. Non-blocking by design — callers should wrap in
  * try/catch and log warnings on failure.
@@ -174,14 +174,10 @@ export async function generateAIContextFiles(
     // Cycle B will revisit when Adobe Commerce Extensibility Tools installs require it.
     void helixToken;
 
-    const config = vscode.workspace.getConfiguration('demoBuilder.ai');
-    const externalMcpServers: string[] = config.get('externalMcpServers') ?? [];
-    const includeBoilerplateSkills: boolean = config.get('includeBoilerplateSkills') ?? true;
-
     const results = await Promise.allSettled([
         writeAgentsMd(projectPath, project, stacksConfig.stacks as Stack[]),
         writeMcpConfigs(projectPath, project, path.join(extensionPath, 'dist')),
-        writeSkillFiles(projectPath, project, { externalMcpServers, includeBoilerplateSkills }),
+        writeSkillFiles(projectPath, project),
     ]);
     const errors = results
         .filter((r): r is PromiseRejectedResult => r.status === 'rejected')

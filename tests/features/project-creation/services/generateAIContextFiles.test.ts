@@ -7,7 +7,6 @@
  * - Passes correct settings derived from VS Code config to each writer
  */
 
-import * as vscode from 'vscode';
 import { generateAIContextFiles } from '@/features/project-creation/services/projectFinalizationService';
 import { writeAgentsMd } from '@/features/project-creation/services/aiContextWriter';
 import { writeMcpConfigs } from '@/features/project-creation/services/mcpConfigWriter';
@@ -28,18 +27,6 @@ jest.mock('@/features/project-creation/services/skillsWriter', () => ({
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function setupVscodeConfig(overrides: Record<string, unknown> = {}): void {
-    const values: Record<string, unknown> = {
-        externalMcpServers: ['da-live', 'adobe-commerce-dev'],
-        mcpConfigTargets: ['claude', 'cursor', 'codex'],
-        includeBoilerplateSkills: true,
-        ...overrides,
-    };
-    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-        get: (key: string) => values[key],
-    });
-}
-
 function makeProject(overrides: Partial<Project> = {}): Project {
     return {
         name: 'test-project',
@@ -58,7 +45,6 @@ function makeProject(overrides: Partial<Project> = {}): Project {
 describe('generateAIContextFiles', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        setupVscodeConfig();
     });
 
     it('calls writeAgentsMd with projectPath and project', async () => {
@@ -83,50 +69,13 @@ describe('generateAIContextFiles', () => {
         expect(writeMcpConfigs).toHaveBeenCalledWith('/projects/test', project, '/ext/path/dist');
     });
 
-    it('calls writeSkillFiles with projectPath and project', async () => {
+    it('calls writeSkillFiles with projectPath and project (no settings)', async () => {
         const project = makeProject();
         await expect(generateAIContextFiles('/projects/test', project, '/ext/path')).resolves.toBeUndefined();
 
-        expect(writeSkillFiles).toHaveBeenCalledWith(
-            '/projects/test',
-            project,
-            expect.objectContaining({ externalMcpServers: expect.any(Array) }),
-        );
-    });
-
-    it('passes externalMcpServers from demoBuilder.ai config to writeSkillFiles', async () => {
-        setupVscodeConfig({ externalMcpServers: ['aem-content'] });
-        await expect(generateAIContextFiles('/projects/test', makeProject(), '/ext')).resolves.toBeUndefined();
-
-        expect(writeSkillFiles).toHaveBeenCalledWith(
-            expect.any(String),
-            expect.any(Object),
-            expect.objectContaining({ externalMcpServers: ['aem-content'] }),
-        );
-    });
-
-    it('passes includeBoilerplateSkills from demoBuilder.ai config to writeSkillFiles', async () => {
-        setupVscodeConfig({ includeBoilerplateSkills: false });
-        await expect(generateAIContextFiles('/projects/test', makeProject(), '/ext')).resolves.toBeUndefined();
-
-        expect(writeSkillFiles).toHaveBeenCalledWith(
-            expect.any(String),
-            expect.any(Object),
-            expect.objectContaining({ includeBoilerplateSkills: false }),
-        );
-    });
-
-    it('uses default includeBoilerplateSkills (true) when config returns undefined', async () => {
-        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-            get: () => undefined,
-        });
-        await expect(generateAIContextFiles('/projects/test', makeProject(), '/ext')).resolves.toBeUndefined();
-
-        expect(writeSkillFiles).toHaveBeenCalledWith(
-            expect.any(String),
-            expect.any(Object),
-            expect.objectContaining({ includeBoilerplateSkills: true }),
-        );
+        // After Cycle A, writeSkillFiles takes only projectPath and project.
+        // SkillsSettings is gone — the writer always emits the same three skills.
+        expect(writeSkillFiles).toHaveBeenCalledWith('/projects/test', project);
     });
 
     it('still calls all three writers when one fails', async () => {

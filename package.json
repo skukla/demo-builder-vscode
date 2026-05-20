@@ -261,11 +261,6 @@
             },
             "default": [],
             "description": "(Deprecated) Cursor and Codex now read .mcp.json natively, so no per-tool config files are written. Value is accepted but ignored."
-          },
-          "demoBuilder.ai.includeBoilerplateSkills": {
-            "type": "boolean",
-            "default": true,
-            "description": "Include boilerplate EDS skill files (add-block, create-block, update-styles, modify-content) in generated .claude/skills/."
           }
         }
       }
