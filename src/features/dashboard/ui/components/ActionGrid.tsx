@@ -23,6 +23,7 @@ import Edit from '@spectrum-icons/workflow/Edit';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Globe from '@spectrum-icons/workflow/Globe';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
+import PublishCheck from '@spectrum-icons/workflow/PublishCheck';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
@@ -64,6 +65,8 @@ export interface ActionGridProps {
     handleViewLogs: () => void;
     /** Handler for Deploy Mesh button */
     handleDeployMesh: () => void;
+    /** Handler for Sync Storefront button (EDS projects only) */
+    handleSyncStorefront?: () => void;
     /** Handler for Configure button */
     handleConfigure: () => void;
     /** Handler for Components button */
@@ -98,6 +101,7 @@ export function ActionGrid({
     handleOpenDaLive,
     handleViewLogs,
     handleDeployMesh,
+    handleSyncStorefront,
     handleConfigure,
     handleViewComponents,
     handleOpenDevConsole,
@@ -189,6 +193,19 @@ export function ActionGrid({
                 >
                     <Refresh size="L" />
                     <Text UNSAFE_className="icon-label">Deploy Mesh</Text>
+                </ActionButton>
+            )}
+
+            {/* Sync Storefront - EDS projects only (commits + pushes + Helix preview/publish) */}
+            {isEds && handleSyncStorefront && (
+                <ActionButton
+                    onPress={handleSyncStorefront}
+                    isQuiet
+                    UNSAFE_className="dashboard-action-button"
+                    data-action="sync-storefront"
+                >
+                    <PublishCheck size="L" />
+                    <Text UNSAFE_className="icon-label">Sync Storefront</Text>
                 </ActionButton>
             )}
 

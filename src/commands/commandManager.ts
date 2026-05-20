@@ -15,6 +15,7 @@ import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
+import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
 import { ViewStatusCommand } from '@/features/lifecycle/commands/viewStatus';
 import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
@@ -192,6 +193,15 @@ export class CommandManager {
             this.logger,
         );
         this.registerCommand('demoBuilder.deployMesh', () => deployMesh.execute());
+
+        // Sync Storefront (EDS projects only — runs the same flow as the MCP
+        // sync_storefront tool, with VS Code-native conflict resolution UX)
+        const syncStorefront = new SyncStorefrontCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.syncStorefront', () => syncStorefront.execute());
 
         // Check Updates
         const checkUpdates = new CheckUpdatesCommand(

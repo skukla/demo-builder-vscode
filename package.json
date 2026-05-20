@@ -53,6 +53,11 @@
         "category": "Demo Builder"
       },
       {
+        "command": "demoBuilder.syncStorefront",
+        "title": "Sync Storefront",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.resetAll",
         "title": "Reset All (Dev Only)",
         "category": "Demo Builder"

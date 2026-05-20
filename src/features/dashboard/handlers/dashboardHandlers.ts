@@ -277,6 +277,14 @@ export const handleDeployMesh: MessageHandler = async () => {
 };
 
 /**
+ * Handle 'syncStorefront' message - Push storefront changes and refresh Helix preview/live
+ */
+export const handleSyncStorefront: MessageHandler = async () => {
+    await vscode.commands.executeCommand('demoBuilder.syncStorefront');
+    return { success: true };
+};
+
+/**
  * Handle 'openDevConsole' message - Open Adobe Developer Console
  */
 export const handleOpenDevConsole: MessageHandler = async (context) => {
@@ -517,6 +525,9 @@ export const dashboardHandlers = defineHandlers({
 
     // Mesh handlers
     'deployMesh': handleDeployMesh,
+
+    // EDS storefront sync
+    'syncStorefront': handleSyncStorefront,
 
     // Authentication handlers
     'reAuthenticate': handleReAuthenticate,

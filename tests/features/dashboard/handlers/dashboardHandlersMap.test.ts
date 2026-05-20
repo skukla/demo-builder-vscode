@@ -81,14 +81,14 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(true);
         });
 
-        it('should have exactly 17 handlers', () => {
+        it('should have exactly 18 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 17 handlers
-            // 2 init + 2 lifecycle + 9 navigation + 1 mesh + 1 auth + 1 project + 1 reset = 17
-            expect(types).toHaveLength(17);
+            // Then: Exactly 18 handlers
+            // 2 init + 2 lifecycle + 9 navigation + 1 mesh + 1 syncStorefront + 1 auth + 1 project + 1 reset = 18
+            expect(types).toHaveLength(18);
         });
 
         it('should have handlers as functions', () => {

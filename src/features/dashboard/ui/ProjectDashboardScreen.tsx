@@ -102,6 +102,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         handleStopDemo,
         handleViewLogs,
         handleDeployMesh,
+        handleSyncStorefront,
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
@@ -229,6 +230,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                             handleOpenDaLive={handleOpenDaLive}
                             handleViewLogs={handleViewLogs}
                             handleDeployMesh={handleDeployMesh}
+                            handleSyncStorefront={handleSyncStorefront}
                             handleConfigure={handleConfigure}
                             handleViewComponents={handleViewComponents}
                             handleOpenDevConsole={handleOpenDevConsole}
