@@ -532,12 +532,11 @@ export function ConfigureScreen({
                                 <TabPanels UNSAFE_className="flex-1 min-h-0 overflow-hidden">
                                     <Item key="configuration">
                                         <div className="flex-column h-full">
-                                            <Heading level={2} marginBottom="size-300" marginTop="size-300">Configuration Settings</Heading>
-                                            <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
-                                                Update the settings for your project components. Required fields are marked with an asterisk.
-                                            </Text>
-
                                             <Form UNSAFE_className="container-form">
+                                                <Heading level={3} marginBottom="size-200" marginTop="size-300">Configuration Settings</Heading>
+                                                <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
+                                                    Update the settings for your project components. Required fields are marked with an asterisk.
+                                                </Text>
                                                 {/* Project Name Field */}
                                                 <ConfigSection
                                                     id="project-info"
