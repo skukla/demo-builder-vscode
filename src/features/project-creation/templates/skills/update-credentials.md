@@ -1,3 +1,8 @@
+---
+name: update-credentials
+description: Updates Commerce, ACCS, API Mesh, or store-view credentials in a Demo Builder project by editing component `.env` files. Use when rotating API keys, switching backends, fixing authentication failures, or onboarding to a different Commerce instance.
+---
+
 # Update Credentials
 
 Use this skill to update Commerce or service credentials for a Demo Builder project.

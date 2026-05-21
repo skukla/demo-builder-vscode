@@ -1,3 +1,8 @@
+---
+name: add-component
+description: Adds or enables a component in a Demo Builder project by writing component `.env` values via the MCP tools. Use when adding a new component instance, toggling an optional component on or off, or wiring credentials for a fresh component installation.
+---
+
 # Add Component
 
 Use this skill to add or enable a component in your Demo Builder project.

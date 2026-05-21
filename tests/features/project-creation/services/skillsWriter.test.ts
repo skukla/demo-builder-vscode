@@ -185,7 +185,7 @@ describe('skillsWriter', () => {
             expect(writtenFiles()).toHaveLength(3);
         });
 
-        it('each written skill file is non-empty and starts with an H1', async () => {
+        it('each written skill file is non-empty and starts with YAML frontmatter or an H1', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
             const writeFileMock = fsPromises.writeFile as jest.Mock;
@@ -195,7 +195,24 @@ describe('skillsWriter', () => {
             for (const [, content] of calls) {
                 expect(typeof content).toBe('string');
                 expect((content as string).length).toBeGreaterThan(0);
-                expect((content as string).trim()).toMatch(/^#\s/);
+                // Demo Builder skills now ship with YAML frontmatter providing
+                // name + description for the AI Configuration tab. Accept either
+                // the frontmatter or a bare H1 (the historical shape).
+                expect((content as string).trim()).toMatch(/^(---|#\s)/);
+            }
+        });
+
+        it('each written skill has YAML frontmatter with name and description', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            const writeFileMock = fsPromises.writeFile as jest.Mock;
+            const calls = writeFileMock.mock.calls;
+
+            for (const [, content] of calls) {
+                const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(content as string);
+                expect(match).not.toBeNull();
+                expect(match![1]).toMatch(/^name:\s+/m);
+                expect(match![1]).toMatch(/^description:\s+/m);
             }
         });
     });

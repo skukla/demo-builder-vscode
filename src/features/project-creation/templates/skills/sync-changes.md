@@ -1,3 +1,8 @@
+---
+name: sync-changes
+description: Chooses the correct sync operation after editing a Demo Builder project. Use when files have changed and you need to pick between `sync_content` (DA.live pages), `sync_storefront` (block code), `deploy_mesh` (mesh config), `update_project_config` (credentials), or `promote_block_to_library` (block source).
+---
+
 # Sync Changes
 
 Use this skill to decide which sync operation to run after making changes.
