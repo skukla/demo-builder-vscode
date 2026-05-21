@@ -527,7 +527,7 @@ describe('ensureGlobalMcpRegistration', () => {
         jest.clearAllMocks();
     });
 
-    it('prompts the user with three buttons when state is undefined', async () => {
+    it('prompts the user with a modal dialog and three buttons when state is undefined', async () => {
         const ctx = makeMockExtensionContext(undefined);
         const showInfo = vscode.window.showInformationMessage as jest.Mock;
         showInfo.mockResolvedValueOnce(undefined); // user dismisses
@@ -535,7 +535,8 @@ describe('ensureGlobalMcpRegistration', () => {
         await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
 
         expect(showInfo).toHaveBeenCalledTimes(1);
-        const [, ...buttons] = showInfo.mock.calls[0];
+        const [, options, ...buttons] = showInfo.mock.calls[0];
+        expect(options).toEqual({ modal: true });
         expect(buttons).toEqual(['Register', 'Not Now', "Don't Ask Again"]);
     });
 

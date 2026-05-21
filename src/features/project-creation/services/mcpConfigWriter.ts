@@ -170,10 +170,14 @@ export async function ensureGlobalMcpRegistration(
     const state = context.globalState.get<GlobalMcpRegistrationState>(GLOBAL_MCP_REG_STATE_KEY);
     if (state === 'registered' || state === 'declined') return;
 
+    // Modal so the prompt persists until the user responds. Non-modal info
+    // notifications auto-dismiss after a few seconds, and users were missing
+    // the prompt entirely when it appeared during a long project creation.
     const choice = await vscode.window.showInformationMessage(
         'Demo Builder can register its MCP server with Claude Code so AI agents can ' +
         'discover your projects from any directory. This adds a `demo-builder` entry ' +
         'to your Claude Code user config (~/.claude.json). Register now?',
+        { modal: true },
         'Register',
         'Not Now',
         "Don't Ask Again",
