@@ -9,6 +9,7 @@
 import * as vscode from 'vscode';
 import {
     shouldSkipBlockLibrary,
+    type AdobeMcpUpdateItem,
     type BlockLibraryUpdateItem,
     type ForkSyncItem,
     type InspectorUpdateItem,
@@ -22,11 +23,13 @@ import { sanitizeErrorForLogging } from '@/core/validation';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
 import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import { generateAIContextFiles } from '@/features/project-creation/services';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
+import { DEFAULT_SHELL } from '@/types/shell';
 
 /**
  * User preference for two-way block library sync. Mirrors the
@@ -292,6 +295,101 @@ export async function performComponentUpdates(
     if (failCount > 0) {
         vscode.window.showWarningMessage(
             `Updated ${successCount} component(s), ${failCount} failed. Restart affected demos to apply changes.`,
+            'OK',
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Adobe MCP package updates
+// ---------------------------------------------------------------------------
+
+/**
+ * Apply `npm update @adobe-commerce/commerce-extensibility-tools` in each
+ * selected project's storefront, then regenerate AI context files so the
+ * skill bundles re-namespace against the new version.
+ *
+ * Mirrors `performComponentUpdates` shape — running-demo guard per project,
+ * `vscode.window.withProgress`, per-project error isolation.
+ */
+export async function performAdobeMcpUpdates(
+    selections: AdobeMcpUpdateItem[],
+    ctx: UpdateContext,
+): Promise<void> {
+    // Dedupe by project path (a project should only appear once anyway).
+    const byProject = new Map<string, AdobeMcpUpdateItem>();
+    for (const sel of selections) {
+        byProject.set(sel.project.path, sel);
+    }
+
+    // Running-demo guard per project.
+    for (const [, item] of byProject.entries()) {
+        const canProceed = await ensureProjectStopped(item.project, 'Update', ctx);
+        if (!canProceed) byProject.delete(item.project.path);
+    }
+
+    if (byProject.size === 0) return;
+
+    const total = byProject.size;
+    const { successCount, failCount } = await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Updating Adobe MCP',
+            cancellable: false,
+        },
+        async (progress) => {
+            const { ServiceLocator } = await import('@/core/di');
+            const commandManager = ServiceLocator.getCommandExecutor();
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const [, item] of byProject.entries()) {
+                const { project, packageName, latestVersion } = item;
+                const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
+                if (!storefrontPath) {
+                    ctx.logger.warn(`[Updates] No storefront path for ${project.name}; skipping Adobe MCP update`);
+                    failCount++;
+                    continue;
+                }
+
+                progress.report({
+                    message: `${packageName} → ${latestVersion} in ${project.name}...`,
+                    increment: 100 / total,
+                });
+
+                try {
+                    const result = await commandManager.execute(
+                        `npm update ${packageName} --no-fund`,
+                        {
+                            cwd: storefrontPath,
+                            timeout: TIMEOUTS.VERY_LONG,
+                            shell: DEFAULT_SHELL,
+                            enhancePath: true,
+                        },
+                    );
+                    if (result.code !== 0) {
+                        throw new Error(`npm update failed: ${result.stderr || result.stdout}`);
+                    }
+                    await generateAIContextFiles(project.path, project, ctx.extensionPath);
+                    successCount++;
+                    ctx.logger.info(`[Updates] Updated ${packageName} in ${project.name} → ${latestVersion}`);
+                } catch (error) {
+                    failCount++;
+                    const sanitizedError = sanitizeErrorForLogging(error as Error);
+                    ctx.logger.error(`[Updates] Failed to update ${packageName} in ${project.name}`, error as Error);
+                    vscode.window.showErrorMessage(
+                        `Failed to update Adobe MCP in ${project.name}: ${sanitizedError}`,
+                    );
+                }
+            }
+
+            return { successCount, failCount };
+        },
+    );
+
+    if (failCount > 0) {
+        vscode.window.showWarningMessage(
+            `Updated ${successCount} Adobe MCP package(s), ${failCount} failed.`,
             'OK',
         );
     }

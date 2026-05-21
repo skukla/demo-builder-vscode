@@ -10,6 +10,7 @@
  * this module only removes the mechanical duplication.
  */
 
+import semver from 'semver';
 import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
@@ -25,6 +26,13 @@ export const GITHUB_API_BASE = 'https://api.github.com';
 
 export interface GitHubCompareResponse {
     ahead_by: number;
+}
+
+export interface GitHubReleaseInfo {
+    /** Raw tag name as returned by GitHub (may include a `v` prefix). */
+    tag: string;
+    /** Clean semver version stripped of any leading `v`. */
+    version: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -102,6 +110,39 @@ export async function getLatestBranchCommit(
 
         const data = await response.json();
         return data.commit?.sha ?? null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Fetch the latest release for a repo and return its tag + cleaned semver version.
+ * Returns null on any error (graceful degradation): network failure, non-OK
+ * response (e.g., 404 for repos with no releases, 403 rate-limit), missing
+ * `tag_name`, or a tag that does not parse as semver.
+ */
+export async function getLatestRelease(
+    secrets: vscode.SecretStorage,
+    owner: string,
+    repo: string,
+): Promise<GitHubReleaseInfo | null> {
+    try {
+        const headers = await buildGitHubHeaders(secrets);
+        const response = await fetchWithTimeout(
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/releases/latest`,
+            { headers },
+        );
+
+        if (!response.ok) return null;
+
+        const data = await response.json() as { tag_name?: string };
+        const tag = data.tag_name;
+        if (typeof tag !== 'string' || tag.length === 0) return null;
+
+        const version = semver.valid(semver.coerce(tag));
+        if (!version) return null;
+
+        return { tag, version };
     } catch {
         return null;
     }

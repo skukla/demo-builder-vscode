@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
+import type { AdobeMcpUpdateResult } from '@/features/updates/services/adobeMcpUpdateChecker';
 import type { TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
 import type { MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
 import type { Project } from '@/types';
@@ -55,13 +56,22 @@ export interface InspectorUpdateItem extends vscode.QuickPickItem {
     isInspectorUpdate: true;
 }
 
+export interface AdobeMcpUpdateItem extends vscode.QuickPickItem {
+    project: Project;
+    currentVersion: string;
+    latestVersion: string;
+    packageName: string;
+    isAdobeMcpUpdate: true;
+}
+
 /** Union of all QuickPick item types */
 export type UpdateItem =
     | ProjectUpdateItem
     | TemplateUpdateItem
     | ForkSyncItem
     | BlockLibraryUpdateItem
-    | InspectorUpdateItem;
+    | InspectorUpdateItem
+    | AdobeMcpUpdateItem;
 
 // ---------------------------------------------------------------------------
 // Pure helpers
@@ -115,6 +125,7 @@ export function buildUpdatePickerItems(
     forkSyncItems: ForkSyncItem[],
     blockLibraryItems: BlockLibraryUpdateItem[],
     inspectorItems: InspectorUpdateItem[],
+    adobeMcpItems: AdobeMcpUpdateItem[],
     currentProject: Project | null,
 ): { items: UpdateItem[]; title: string } {
     // Single map: group components and templates by project
@@ -197,6 +208,7 @@ export function buildUpdatePickerItems(
 
     items.push(...blockLibraryItems);
     items.push(...inspectorItems);
+    items.push(...adobeMcpItems);
 
     // Build summary title
     // Forks are repo-level, not project-level, so excluded from project count
@@ -204,6 +216,7 @@ export function buildUpdatePickerItems(
         ...projectMap.keys(),
         ...blockLibraryItems.map(b => b.project.path),
         ...inspectorItems.map(i => i.project.path),
+        ...adobeMcpItems.map(a => a.project.path),
     ]);
 
     const totalComponents = Array.from(projectMap.values())
@@ -213,10 +226,34 @@ export function buildUpdatePickerItems(
     if (forkSyncItems.length > 0) parts.push(`${forkSyncItems.length} fork${forkSyncItems.length !== 1 ? 's' : ''}`);
     if (totalComponents > 0) parts.push(`${totalComponents} component${totalComponents !== 1 ? 's' : ''}`);
     if (templateUpdates.length > 0) parts.push(`${templateUpdates.length} template${templateUpdates.length !== 1 ? 's' : ''}`);
-    const totalAddons = blockLibraryItems.length + inspectorItems.length;
+    const totalAddons = blockLibraryItems.length + inspectorItems.length + adobeMcpItems.length;
     if (totalAddons > 0) parts.push(`${totalAddons} add-on${totalAddons !== 1 ? 's' : ''}`);
 
     const title = `Updates Available (${allProjectPaths.size} project${allProjectPaths.size !== 1 ? 's' : ''}, ${parts.join(', ')})`;
 
     return { items, title };
+}
+
+/**
+ * Format an `AdobeMcpUpdateResult` from `AdobeMcpUpdateChecker` into an
+ * `AdobeMcpUpdateItem` ready for `buildUpdatePickerItems`. Pure helper.
+ */
+export function toAdobeMcpUpdateItem(
+    project: Project,
+    update: AdobeMcpUpdateResult,
+    currentProject: Project | null,
+): AdobeMcpUpdateItem {
+    const isCurrent = project.path === currentProject?.path;
+    const projectLabel = isCurrent ? `${project.name} (current)` : project.name;
+    return {
+        label: projectLabel,
+        detail: `    Adobe MCP  ${update.currentVersion} → ${update.latestVersion}`,
+        description: update.packageName,
+        picked: isCurrent,
+        project,
+        currentVersion: update.currentVersion,
+        latestVersion: update.latestVersion,
+        packageName: update.packageName,
+        isAdobeMcpUpdate: true,
+    };
 }
