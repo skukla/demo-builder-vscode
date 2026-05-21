@@ -187,3 +187,36 @@ The `vscode://anthropic.claude-code/open` URI handler was added in extension v2.
 15. [VS Code Sidebars UX Guidelines](https://code.visualstudio.com/api/ux-guidelines/sidebars)
 16. [microsoft/vscode #264346 — secondary side bar contribution API](https://github.com/microsoft/vscode/issues/264346)
 17. [microsoft/vscode-discussions #840 — querying sidebar state](https://github.com/microsoft/vscode-discussions/discussions/840)
+
+---
+
+## Cycle D Verification (2026-05-21)
+
+Phase 1 research at the start of Cycle D revisited the open items in this document. Findings, captured for future maintainers:
+
+### URI handler accepts only `prompt` + `session`
+
+The table in Question 3 is correct. `folder` / `workspace` / `path` / `cwd` are NOT accepted. The URI handler opens in the currently-focused VS Code window. Because Demo Builder runs *inside* the user's VS Code, the focused window IS the Demo Builder window — workspace targeting is implicit. `OpenInClaudeCommand` therefore parses the bare URI without any query string. No mitigation needed.
+
+### `@anthropic-ai/claude-code` npm package status
+
+A stray note suggested the npm package was deprecated. **It is not.** The package is actively maintained and installs the same native binary as the standalone installer. Detection via `claude --version` exit code remains the canonical "is the CLI on PATH" check. No code change required; the original note (if it lived elsewhere) is the deprecated piece.
+
+### Current extension version
+
+As of 2026-05-21, the marketplace ships v2.1.145 (per the marketplace listing in source 1). The URI handler added in v2.1.72 is therefore broadly available. No runtime version gate is enforced — older installations no-op silently, which is acceptable.
+
+### Impacts A–D resolution (cross-reference to Cycle B/D commits)
+
+| Impact | Resolved In | How |
+|---|---|---|
+| A — Two launch pathways | Cycle D `OpenInClaudeCommand` | `demoBuilder.ai.harness` setting drives URI vs. terminal selection; extension detection via `vscode.extensions.getExtension('anthropic.claude-code')` |
+| B — Possible global MCP path bug | Cycle B `ensureGlobalMcpRegistration` | Writes to `~/.claude.json` (the documented canonical path); the legacy `~/.claude/.mcp.json` write was dropped per the "no soft deprecation" rule |
+| C — `.claude/mcp.json` redundancy | Deferred (low priority) | `mcpConfigWriter` continues to write both `.mcp.json` and `.claude/mcp.json` as a defensive mirror. Cost of two writes ≪ cost of a regression if Anthropic resumes reading the inner path. Empirical removal would happen during the structural baseline pass — see `docs/deferred/2026-05-21-legacy-soft-deprecation.md` |
+| D — URI handler version dependency | Accepted | No runtime gate; older versions no-op silently. Update channel keeps users fresh |
+
+### Other Cycle D Phase 1 findings (for future readers of the plan)
+
+- `useAsyncOperation` had zero production callers before Cycle D. `AiConfigurationTab` is the first integration; the hook works as designed.
+- No `MagicWand` icon exists in the Spectrum workflow icons used by this repo. Cycle D adopted `Wrench` for the "Open in Claude Code" action.
+- The AI Configuration tab swaps in via single-line edits at `ConfigureScreen.tsx:16,615` — no tab registry, no plumbing changes.

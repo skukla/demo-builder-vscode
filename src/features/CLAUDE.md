@@ -85,7 +85,7 @@ features/my-feature/
 - `dist/mcp-server.js` (compiled from `src/mcp-server.ts`) - Standalone stdio MCP server exposing 7 project tools to AI agents
 
 **Responsibilities:**
-- Verifying project AI context files (used by Configure → AI Setup tab via `AiSetupTab` component)
+- Verifying project AI context files (used by Configure → AI Configuration tab via `AiConfigurationTab` component)
 - Providing the skills + project-MCPs + session-MCPs inventory that the Cycle D AI Configuration tab will render
 - Standalone MCP server process for AI agent tool access via Claude Code (CLI), discoverable through `~/.claude.json` (user-scope, consent-gated) and project `.mcp.json`
 
@@ -147,7 +147,7 @@ features/my-feature/
 - Component file browser (with .env hiding)
 - Mesh deployment status
 - Project configuration editing (Configure screen)
-- AI Setup tab: verify and regenerate AI context files
+- AI Configuration tab: verify AI files, inspect skills + MCP servers + session MCPs, manage global MCP registration, regenerate AI context files
 
 **Path Alias**: `@/features/dashboard`
 

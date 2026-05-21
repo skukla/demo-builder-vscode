@@ -1,5 +1,5 @@
 /**
- * AI Setup Verifier
+ * AI Setup Verifier — backs the Configure screen's AI Configuration tab.
  *
  * Verifies that a project's AI context files are present and valid:
  * - AGENTS.md: exists and non-empty (the real AI context file since Cycle A.2;

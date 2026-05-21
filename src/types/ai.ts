@@ -2,7 +2,7 @@
  * AI Inventory Types (Cycle C)
  *
  * Shared types for the AI inventory inspectors that back the Configure
- * screen's AI Setup tab (and the upcoming AI Configuration tab in Cycle D).
+ * screen's AI Configuration tab (Cycle D).
  *
  * The three inspectors live in `src/features/ai/`:
  *   - `skillInspector.ts`     → SkillInventoryEntry[]

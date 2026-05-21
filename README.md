@@ -11,6 +11,7 @@ Create and manage Adobe Commerce demos with ease directly from Visual Studio Cod
 - 🎯 **Guided Setup** - Step-by-step wizard for configuration
 - 🔧 **Prerequisites Management** - Automatic detection and installation guidance
 - ☁️ **API Mesh Integration** - Deploy and manage Adobe API Mesh
+- 🤖 **Claude Code (CLI) Harness** - Open any project in Claude Code with one click; AI Configuration tab introspects skills, project MCP servers, and session MCPs
 
 ## Requirements
 
@@ -61,6 +62,43 @@ See [build documentation](docs/build.md) for detailed build instructions.
 - `Demo Builder: View Status` - Display detailed project status
 - `Demo Builder: Check for Updates` - Manually check for extension updates
 - `Demo Builder: Diagnostics` - Run comprehensive system diagnostics
+- `Demo Builder: Open in Claude Code` - Launch Claude Code on the current project (URI handler if the extension is installed, terminal otherwise)
+
+## AI Configuration & Claude Code Integration
+
+Demo Builder generates AI context files for every project (`AGENTS.md`, `.claude/skills/`, `.mcp.json`, `~/.claude.json` registration) so AI agents can reason about the project and use the Demo Builder MCP server. The intended harness is **Claude Code (CLI)** — either the standalone `claude` binary or Anthropic's official VS Code extension (`anthropic.claude-code`), which bundles the same binary.
+
+### Opening a project in Claude Code
+
+Each project has an **Open in Claude Code** action in two places:
+
+- The project dashboard (under the action grid)
+- The project card kebab menu on the home screen
+
+Clicking it launches Claude Code based on the `demoBuilder.ai.harness` setting:
+
+| Setting | Behavior |
+|---|---|
+| `auto` (default) | URI handler if `anthropic.claude-code` is installed, terminal fallback otherwise |
+| `extension` | URI handler only; clear error if the extension is missing |
+| `terminal` | Force terminal launch with `claude` in the project directory |
+
+### AI Configuration tab
+
+The **AI Configuration** tab in `Demo Builder: Configure` shows live inventory for the open project:
+
+- **Skills** — every file in `.claude/skills/`, classified as `demo-builder` (lifecycle), `adobe` (from `@adobe-commerce/commerce-extensibility-tools`), or `unknown`
+- **Project MCP Servers** — each server declared in `.mcp.json`, expanded to show the tools it exposes
+- **Session MCP Servers** — Adobe MCPs the user has connected via Claude Code's catalog (read from `~/.claude.json::claudeAiMcpEverConnected`)
+- **Global MCP Registration** — whether the Demo Builder MCP is registered in `~/.claude.json` so Claude Code can find it from any project
+
+The tab includes actions to **Refresh** the inventory (re-runs `inspect-mcp`), **Regenerate AI Files** (re-runs `aiContextWriter`, `mcpConfigWriter`, and `skillsWriter`), and **Register** the global MCP if it isn't already.
+
+### Adobe MCP updates
+
+`Demo Builder: Check for Updates` includes the `@adobe-commerce/commerce-extensibility-tools` package alongside the existing fork, template, component, and add-on update sources. Applying the update runs `npm update` in the storefront and regenerates AI files so the skills bundle stays in sync.
+
+For architecture and rationale, see [ADR-004: Claude Code (CLI) as the AI Harness](docs/architecture/adr/004-claude-code-harness.md).
 
 ## Configuration
 

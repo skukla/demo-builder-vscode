@@ -147,7 +147,7 @@ comm.on('continue-step', async (payload) => {
 |--------|-----------|
 | `overview` | `projectDashboard.execute()` |
 | `configure` | `configureProject.execute()` |
-| `ai-setup` | `configureProject.execute()` (AI Setup tab renders in Configure screen) |
+| `ai-setup` | `configureProject.execute()` (AI Configuration tab renders in Configure screen; the `ai-setup` identifier is the stable wire-level route) |
 | `updates` | `checkUpdates.execute()` |
 
 **Note**: This command is intentionally omitted from `package.json` contributions. It is an internal sidebar-routing command, not a user-facing command palette entry. The sidebar sends `demoBuilder.navigate` messages; the command dispatches to the appropriate webview.
@@ -160,6 +160,28 @@ comm.on('continue-step', async (payload) => {
 - Simplified flow for experienced users
 - Command-line style interaction
 - Minimal UI involvement
+
+### openInClaude
+
+**Purpose**: Launch Claude Code (CLI) on the current project (Cycle D Step 14)
+
+**Command ID**: `demoBuilder.openInClaude`
+
+**Behavior** — driven by the `demoBuilder.ai.harness` setting:
+
+| Setting | Behavior |
+|---------|----------|
+| `auto` (default) | URI handler (`vscode://anthropic.claude-code/open`) if the `anthropic.claude-code` extension is installed; terminal launch otherwise |
+| `extension` | URI handler only; user-visible error if the extension is missing |
+| `terminal` | Force terminal launch — opens a VS Code terminal in `project.path` and sends `claude` |
+
+**First-tip behavior**: On the first successful URI launch, sets `globalState.demoBuilder.ai.firstClaudeOpenTipShown = true` BEFORE showing a one-time tip about dragging the Claude Code panel to the secondary side bar. Subsequent launches do not re-show the tip.
+
+**Dispatched from**:
+- The dashboard tile in `ActionGrid.tsx` (calls `webviewClient.postMessage('openInClaude')` via `useDashboardActions`)
+- The project-card kebab menu in `ProjectActionsMenu.tsx` (calls `webviewClient.postMessage('openInClaude', { projectPath })`)
+
+**File**: `src/commands/openInClaude.ts`. See `docs/architecture/adr/004-claude-code-harness.md` for the harness decision rationale.
 
 ### diagnostics
 
