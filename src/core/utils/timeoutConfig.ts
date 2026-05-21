@@ -128,6 +128,9 @@ export const TIMEOUTS = {
     /** Prerequisites check timeout - reduced for faster failure (10 seconds) */
     PREREQUISITE_CHECK: 10000,
 
+    /** Per-server MCP introspection budget — connect + paginate tools/list (15 seconds) */
+    MCP_INSPECT: 15000,
+
     /** Extract archives timeout (30 seconds) */
     UPDATE_EXTRACT: 30000,
 

@@ -55,6 +55,14 @@ export interface SyncAndPublishInput {
     daLiveToken?: string;
     /** Skip the Helix preview/publish chain even if all tokens are present. */
     skipHelix?: boolean;
+    /**
+     * Skip the stage + commit steps. Useful for the rebase-recovery path: the
+     * extension wrapper has already resolved conflicts and run
+     * `git rebase --continue`, so a fresh `git add -A` would mis-stage things
+     * and `git commit` would create an empty commit on top of the rebased
+     * head. With this flag, the service starts directly at `push`.
+     */
+    skipCommit?: boolean;
 }
 
 export interface SyncAndPublishResult {
@@ -77,18 +85,19 @@ export async function syncAndPublish(input: SyncAndPublishInput): Promise<SyncAn
     const safeMessage = input.commitMessage.replace(/[\n\r]/g, ' ').trim() || 'AI: sync files';
     const result: SyncAndPublishResult = { committed: false, pushed: false, helixPublished: false, summary: '' };
 
-    await stageAll(input.storefrontPath);
+    if (!input.skipCommit) {
+        await stageAll(input.storefrontPath);
 
-    const commitOutcome = await commit(input.storefrontPath, safeMessage);
-    result.committed = commitOutcome === 'committed';
+        const commitOutcome = await commit(input.storefrontPath, safeMessage);
+        result.committed = commitOutcome === 'committed';
 
-    // Skip push and Helix when there is genuinely nothing to commit — matches
-    // the legacy `sync_storefront` semantics and keeps tests deterministic.
-    // (Edge case: unpushed local commits without working-tree changes are not
-    // pushed by this path. Users with unpushed commits should `git push` directly.)
-    if (!result.committed) {
-        result.summary = buildSummary(result);
-        return result;
+        // Skip push and Helix when there is nothing to commit. Edge case:
+        // unpushed local commits without working-tree changes are not pushed
+        // by this path — users with unpushed commits should `git push` directly.
+        if (!result.committed) {
+            result.summary = buildSummary(result);
+            return result;
+        }
     }
 
     await push(input.storefrontPath, input.githubToken);

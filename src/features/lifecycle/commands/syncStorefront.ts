@@ -29,7 +29,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { PollingService } from '@/core/shell/pollingService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
-import { previewAndPublishPage } from '@/features/eds/services/helixApiClient';
+import { HelixApiError } from '@/features/eds/services/helixApiClient';
 import {
     PushRejectedError,
     syncAndPublish,
@@ -201,17 +201,33 @@ export class SyncStorefrontCommand extends BaseCommand {
     }): Promise<void> {
         const { storefrontPath, progress, githubToken, daLiveToken, githubRepo } = args;
 
+        // Re-enter syncAndPublish with skipCommit:true so the rebase-resolved
+        // commits push through the same code path as a fresh sync — token
+        // injection, push semantics, and Helix preview+publish all stay in
+        // one place. The rebase has already produced the commits we want to
+        // push, so we skip the stage + commit phase.
         progress.report({ message: 'Pushing to GitHub…' });
+        let result: SyncAndPublishResult;
         try {
-            if (githubToken) {
-                const { stdout } = await execFile('git', ['-C', storefrontPath, 'remote', 'get-url', 'origin']);
-                const remoteUrl = stdout.trim();
-                const tokenized = remoteUrl.replace(/^https:\/\//, `https://${githubToken}@`);
-                await execFile('git', ['-C', storefrontPath, 'push', tokenized, 'HEAD']);
-            } else {
-                await execFile('git', ['-C', storefrontPath, 'push']);
-            }
+            result = await syncAndPublish({
+                storefrontPath,
+                commitMessage: '',           // unused when skipCommit:true
+                githubToken,
+                daLiveToken,
+                githubRepo,
+                skipCommit: true,
+            });
         } catch (err) {
+            if (err instanceof HelixApiError) {
+                // Push succeeded; Helix preview/publish failed. The repo is in
+                // a consistent state — surface the partial success as a warning.
+                await this.showWarning(
+                    'Pushed to GitHub but the Helix preview/publish step failed. Run Sync Storefront again or republish from the dashboard.',
+                );
+                this.logger.warn('[SyncStorefront] Helix step failed after successful push', err);
+                return;
+            }
+            // PushRejectedError or GitOperationError — push itself failed.
             await this.showError(
                 'Push failed after resolving conflicts. Your local changes are intact.',
                 err instanceof Error ? err : undefined,
@@ -219,26 +235,11 @@ export class SyncStorefrontCommand extends BaseCommand {
             return;
         }
 
-        if (githubRepo && githubToken && daLiveToken) {
-            progress.report({ message: 'Publishing to Helix preview + live…' });
-            try {
-                await previewAndPublishPage(
-                    githubRepo.owner,
-                    githubRepo.site,
-                    '/',
-                    githubRepo.branch ?? 'main',
-                    { githubToken, daLiveToken },
-                );
-            } catch (err) {
-                await this.showWarning(
-                    'Pushed to GitHub but the Helix preview/publish step failed. Run Sync Storefront again or republish from the dashboard.',
-                );
-                this.logger.warn('[SyncStorefront] Helix step failed after successful push', err instanceof Error ? err : undefined);
-                return;
-            }
+        if (result.helixPublished) {
             await this.showSuccessMessage('Storefront synced. Preview + live updated.');
             return;
         }
+        // Pushed; Helix step was deliberately skipped (tokens or repo coordinates absent).
         await this.showSuccessMessage('Storefront synced.');
     }
 

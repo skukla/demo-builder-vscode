@@ -2,7 +2,8 @@
  * AI Setup Verifier
  *
  * Verifies that a project's AI context files are present and valid:
- * - CLAUDE.md: exists and non-empty
+ * - AGENTS.md: exists and non-empty (the real AI context file since Cycle A.2;
+ *   `CLAUDE.md` and `.claude/CLAUDE.md` are one-line pointers to it)
  * - .claude/mcp.json: exists, valid JSON, has mcpServers key
  * - mcp-binary: dist/mcp-server.js present at extension dist path
  * - skill-files: at least one .md in .claude/skills/
@@ -19,6 +20,7 @@ import { inspectAllServers } from './mcpInspector';
 import { detectSessionMcps } from './sessionMcpDetector';
 import { inspectSkills } from './skillInspector';
 import type { AiInventory } from '@/types/ai';
+import { parseJSON } from '@/types/typeGuards';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -48,7 +50,7 @@ export async function verifyAiSetup(
 ): Promise<AiVerificationResult> {
     const [checks, inventory] = await Promise.all([
         Promise.all([
-            checkClaudeMd(projectPath),
+            checkAgentsMd(projectPath),
             checkMcpConfig(projectPath),
             checkMcpBinary(extensionDistPath),
             checkSkillFiles(projectPath),
@@ -94,16 +96,20 @@ function errorMessage(reason: unknown): string {
 
 // ─── Individual checks ────────────────────────────────────────────────────────
 
-async function checkClaudeMd(projectPath: string): Promise<AiCheckResult> {
-    const filePath = path.join(projectPath, '.claude', 'CLAUDE.md');
+async function checkAgentsMd(projectPath: string): Promise<AiCheckResult> {
+    // AGENTS.md is the real AI-context file since Cycle A.2 — CLAUDE.md
+    // (root and .claude/) are one-line pointers to it. Checking the pointer
+    // would report 'ok' on a healthy project even if AGENTS.md were missing,
+    // and warn 'empty' on every project (the pointer is one line by design).
+    const filePath = path.join(projectPath, 'AGENTS.md');
     try {
         const content = await fsPromises.readFile(filePath, 'utf-8');
         if (!content.trim()) {
-            return { name: 'CLAUDE.md', status: 'warning', message: 'File is empty — run Regenerate to fix' };
+            return { name: 'AGENTS.md', status: 'warning', message: 'File is empty — run Regenerate to fix' };
         }
-        return { name: 'CLAUDE.md', status: 'ok' };
+        return { name: 'AGENTS.md', status: 'ok' };
     } catch {
-        return { name: 'CLAUDE.md', status: 'warning', message: 'Missing — run Regenerate to fix' };
+        return { name: 'AGENTS.md', status: 'warning', message: 'Missing — run Regenerate to fix' };
     }
 }
 
@@ -116,15 +122,14 @@ async function checkMcpConfig(projectPath: string): Promise<AiCheckResult> {
         return { name: '.claude/mcp.json', status: 'warning', message: 'Missing — run Regenerate to fix' };
     }
 
-    try {
-        const parsed = JSON.parse(raw);
-        if (!parsed.mcpServers) {
-            return { name: '.claude/mcp.json', status: 'warning', message: 'Missing mcpServers key — run Regenerate to fix' };
-        }
-        return { name: '.claude/mcp.json', status: 'ok' };
-    } catch {
+    const parsed = parseJSON<{ mcpServers?: unknown }>(raw);
+    if (parsed === null) {
         return { name: '.claude/mcp.json', status: 'error', message: 'Invalid JSON — run Regenerate to fix' };
     }
+    if (!parsed.mcpServers) {
+        return { name: '.claude/mcp.json', status: 'warning', message: 'Missing mcpServers key — run Regenerate to fix' };
+    }
+    return { name: '.claude/mcp.json', status: 'ok' };
 }
 
 async function checkMcpBinary(extensionDistPath: string): Promise<AiCheckResult> {

@@ -28,12 +28,14 @@ import {
     isExpired,
     type CacheEntry,
 } from '@/core/cache/cacheUtils';
-import { CACHE_TTL } from '@/core/utils/timeoutConfig';
+import { withTimeout } from '@/core/utils/promiseUtils';
+import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { McpInventoryEntry, McpToolEntry } from '@/types/ai';
+import { isTimeout } from '@/types/errors';
 import { parseJSON } from '@/types/typeGuards';
 
-/** Per-server inspection budget. Exported for tests + future tuning. */
-export const MCP_INSPECT_TIMEOUT_MS = 15_000;
+/** Per-server inspection budget. Re-exported for tests; pulls from TIMEOUTS.MCP_INSPECT. */
+export const MCP_INSPECT_TIMEOUT_MS = TIMEOUTS.MCP_INSPECT;
 
 interface McpServerConfig {
     command: string;
@@ -132,13 +134,13 @@ async function inspectOneServer(
     });
 
     try {
-        const tools = await raceWithTimeout(
-            collectTools(client, transport),
-            MCP_INSPECT_TIMEOUT_MS,
-        );
+        const tools = await withTimeout(collectTools(client, transport), {
+            timeoutMs: MCP_INSPECT_TIMEOUT_MS,
+            timeoutMessage: `MCP server "${id}" introspection`,
+        });
         return { id, status: 'ok', tools };
     } catch (err) {
-        if (err instanceof TimeoutError) {
+        if (isTimeout(err)) {
             return { id, status: 'timeout', error: `Exceeded ${MCP_INSPECT_TIMEOUT_MS}ms budget` };
         }
         return {
@@ -174,19 +176,3 @@ async function collectTools(client: Client, transport: StdioClientTransport): Pr
     return tools;
 }
 
-class TimeoutError extends Error {
-    constructor() {
-        super('timeout');
-        this.name = 'TimeoutError';
-    }
-}
-
-function raceWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-        const handle = setTimeout(() => reject(new TimeoutError()), timeoutMs);
-        promise.then(
-            (value) => { clearTimeout(handle); resolve(value); },
-            (err) => { clearTimeout(handle); reject(err); },
-        );
-    });
-}

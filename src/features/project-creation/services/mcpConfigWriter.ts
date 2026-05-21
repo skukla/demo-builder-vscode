@@ -146,7 +146,7 @@ export async function registerGlobalMcp(extensionDistPath: string): Promise<void
     const nodePath = await resolveNodePath();
     (config.mcpServers as Record<string, unknown>)['demo-builder'] = {
         command: nodePath,
-        args: [`${extensionDistPath}/mcp-server.js`],
+        args: [path.join(extensionDistPath, 'mcp-server.js')],
     };
 
     await fsPromises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
@@ -260,7 +260,7 @@ async function buildMcpConfig(extensionDistPath: string): Promise<McpConfig> {
     const mcpServers: Record<string, McpServerEntry> = {
         'demo-builder': {
             command: nodePath,
-            args: [`${extensionDistPath}/mcp-server.js`],
+            args: [path.join(extensionDistPath, 'mcp-server.js')],
         },
     };
 
@@ -303,12 +303,12 @@ const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){}]/;
  * environments missing one of the tools:
  *   1. `jq` — primary, robust JSON parser (widely available)
  *   2. `python3` — secondary, present on every modern macOS/Linux install
- *   3. `grep`/`sed` — last-resort regex (matches the legacy behavior)
+ *   3. `grep`/`sed` — last-resort regex
  *
  * The chain uses `||` so each tool only runs if the previous one produced
  * empty output (or failed). The query is `.. | objects | .file_path? // empty`
- * for jq and equivalent recursive logic for python3 — matches any `file_path`
- * field at any nesting depth, just like the legacy grep pattern did.
+ * for jq, equivalent recursive logic for python3, and a `grep -o` pattern for
+ * the last-resort path — all three extract `file_path` at any nesting depth.
  */
 function buildGitSyncCommand(storefrontPath: string): string {
     if (SHELL_METACHAR_RE.test(storefrontPath)) {

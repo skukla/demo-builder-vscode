@@ -2,7 +2,7 @@
  * aiSetupVerifier Tests
  *
  * Tests for the AI setup verification service:
- * - CLAUDE.md check: exists and non-empty vs missing
+ * - AGENTS.md check: exists and non-empty vs missing
  * - .claude/mcp.json check: valid JSON with mcpServers vs missing vs malformed
  * - mcp-binary check: dist/mcp-server.js exists vs absent (warning, not error)
  * - skill-files check: at least one .md in .claude/skills/
@@ -42,7 +42,7 @@ const EXT_DIST_PATH = '/ext/dist';
 
 function setupAllOk(): void {
     (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-        if ((filePath as string).endsWith('CLAUDE.md')) return Promise.resolve('# Demo Builder Project\n\nContent');
+        if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# Demo Builder Project\n\nContent');
         if ((filePath as string).endsWith('mcp.json')) return Promise.resolve(JSON.stringify({ mcpServers: { 'demo-builder': {} } }));
         return Promise.reject(new Error('unexpected readFile call'));
     });
@@ -61,41 +61,41 @@ describe('verifyAiSetup', () => {
         jest.clearAllMocks();
     });
 
-    describe('CLAUDE.md check', () => {
-        it('returns ok when CLAUDE.md exists and is non-empty', async () => {
+    describe('AGENTS.md check', () => {
+        it('returns ok when AGENTS.md exists and is non-empty', async () => {
             setupAllOk();
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
-            const check = findCheck(result.checks, 'CLAUDE.md');
+            const check = findCheck(result.checks, 'AGENTS.md');
             expect(check?.status).toBe('ok');
         });
 
-        it('returns warning when CLAUDE.md does not exist', async () => {
+        it('returns warning when AGENTS.md does not exist', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('CLAUDE.md')) return Promise.reject(new Error('ENOENT'));
+                if ((filePath as string).endsWith('AGENTS.md')) return Promise.reject(new Error('ENOENT'));
                 if ((filePath as string).endsWith('mcp.json')) return Promise.resolve(JSON.stringify({ mcpServers: {} }));
                 return Promise.reject(new Error('unexpected'));
             });
 
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
-            const check = findCheck(result.checks, 'CLAUDE.md');
+            const check = findCheck(result.checks, 'AGENTS.md');
             expect(check?.status).toBe('warning');
             expect(check?.message).toMatch(/missing|regenerate/i);
         });
 
-        it('returns warning when CLAUDE.md is empty', async () => {
+        it('returns warning when AGENTS.md is empty', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('CLAUDE.md')) return Promise.resolve('');
+                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('');
                 if ((filePath as string).endsWith('mcp.json')) return Promise.resolve(JSON.stringify({ mcpServers: {} }));
                 return Promise.reject(new Error('unexpected'));
             });
 
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
-            const check = findCheck(result.checks, 'CLAUDE.md');
+            const check = findCheck(result.checks, 'AGENTS.md');
             expect(check?.status).toBe('warning');
         });
     });
@@ -113,7 +113,7 @@ describe('verifyAiSetup', () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
                 if ((filePath as string).endsWith('mcp.json')) return Promise.reject(new Error('ENOENT'));
-                if ((filePath as string).endsWith('CLAUDE.md')) return Promise.resolve('# Demo Builder Project');
+                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# Demo Builder Project');
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -127,7 +127,7 @@ describe('verifyAiSetup', () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
                 if ((filePath as string).endsWith('mcp.json')) return Promise.resolve('{ invalid json }');
-                if ((filePath as string).endsWith('CLAUDE.md')) return Promise.resolve('# Demo Builder Project');
+                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# Demo Builder Project');
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -142,7 +142,7 @@ describe('verifyAiSetup', () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
                 if ((filePath as string).endsWith('mcp.json')) return Promise.resolve(JSON.stringify({ other: {} }));
-                if ((filePath as string).endsWith('CLAUDE.md')) return Promise.resolve('# Demo Builder Project');
+                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# Demo Builder Project');
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -235,7 +235,7 @@ describe('verifyAiSetup', () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
                 if ((filePath as string).endsWith('mcp.json')) return Promise.resolve('{ bad json');
-                if ((filePath as string).endsWith('CLAUDE.md')) return Promise.resolve('# content');
+                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# content');
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -249,7 +249,7 @@ describe('verifyAiSetup', () => {
             // Both an error (bad JSON) and a warning (no mcp-binary)
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
                 if ((filePath as string).endsWith('mcp.json')) return Promise.resolve('{ bad json');
-                if ((filePath as string).endsWith('CLAUDE.md')) return Promise.resolve('# content');
+                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# content');
                 return Promise.reject(new Error('unexpected'));
             });
             (fsPromises.access as jest.Mock).mockRejectedValue(new Error('ENOENT'));
@@ -264,7 +264,7 @@ describe('verifyAiSetup', () => {
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
             const names = result.checks.map(c => c.name);
-            expect(names).toContain('CLAUDE.md');
+            expect(names).toContain('AGENTS.md');
             expect(names).toContain('.claude/mcp.json');
             expect(names).toContain('mcp-binary');
             expect(names).toContain('skill-files');
