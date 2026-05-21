@@ -30,14 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Trimmed skill templates from 13 to 3** — removed `add-block`, `add-custom-block`, `configure-eds`, `create-block`, `edit-block-library`, `modify-content`, `update-styles`, `use-aem-content-mcp`, `use-commerce-dev-mcp`, `use-da-live-mcp`. EDS storefront skills will come from Adobe's `@adobe-commerce/commerce-extensibility-tools` package (Cycle B).
   - **Removed dormant VS Code chat participant** — `vscodeChatParticipant.ts` and its tests deleted. Phase 2 cancelled; Claude Code (CLI) is the right harness.
   - **Removed unused `helixToken` plumbing** — Cycle A removed the only consumer (the aem-eds MCP entry), so the token fetch at both call sites (project finalization, Regenerate AI Files) was wasted work.
-  - **Settings deprecated**: `demoBuilder.ai.externalMcpServers` and `demoBuilder.ai.mcpConfigTargets` are now accepted-but-ignored (kept in `package.json` for backward compatibility — they will not produce warnings for existing users but have no effect). `demoBuilder.ai.includeBoilerplateSkills` was never released and is now removed.
+  - **Settings removed**: `demoBuilder.ai.externalMcpServers`, `demoBuilder.ai.mcpConfigTargets`, and `demoBuilder.ai.includeBoilerplateSkills` are hard-deleted from `package.json` (no soft deprecation).
 
 ### Refactored
 - **Shared sanitization module**: `sanitizeTemplateValue`, `sanitizeGithubSlug`, and `sanitizeUrl` extracted from `aiContextWriter.ts` and `skillsWriter.ts` into `src/features/project-creation/services/sanitization.ts`. Both files now import from the shared module.
 
 ### Migration Notes (Cycle A)
-- **Existing projects**: open the Configure → AI Setup tab and click "Regenerate AI Files" to migrate to the new shape (AGENTS.md + pointer files + slim MCP config + 3 skills). The Regenerate action does NOT remove old files yet — `.claude/CLAUDE.md` (full content), old skill templates, and `.cursor/mcp.json` / `.codex/mcp.json` will linger until Cycle B's cleanup pass lands.
-- **Custom `.cursor/mcp.json` or `.codex/mcp.json`**: Demo Builder no longer writes these. If you maintain them manually, they continue to work — they're just not generated for you.
+- **Existing projects**: open the Configure → AI Setup tab and click "Regenerate AI Files" to migrate to the new shape (AGENTS.md + pointer files + slim MCP config + 3 skills). Demo Builder does not delete legacy AI files from existing projects — remove `.cursor/mcp.json`, `.codex/mcp.json`, and any dropped skill files from `.claude/skills/` manually if you want a clean workspace.
 
 ### Known Limitations
 - **MCP config files contain machine-specific paths**: `.claude/mcp.json` and `.mcp.json` hold absolute paths to the Demo Builder MCP server binary. These files are automatically added to `.gitignore`. After Cycle A, no credentials are written to these files — only machine paths.
