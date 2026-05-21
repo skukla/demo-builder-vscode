@@ -74,9 +74,22 @@ export async function gatherInventory(projectPath: string): Promise<AiInventory>
 
     return {
         skills: skillsResult.status === 'fulfilled' ? skillsResult.value : [],
+        ...(skillsResult.status === 'rejected'
+            ? { skillsError: errorMessage(skillsResult.reason) }
+            : {}),
         mcps: mcpsResult.status === 'fulfilled' ? mcpsResult.value : [],
+        ...(mcpsResult.status === 'rejected'
+            ? { mcpsError: errorMessage(mcpsResult.reason) }
+            : {}),
         sessionMcps: sessionMcpsResult.status === 'fulfilled' ? sessionMcpsResult.value : [],
+        ...(sessionMcpsResult.status === 'rejected'
+            ? { sessionMcpsError: errorMessage(sessionMcpsResult.reason) }
+            : {}),
     };
+}
+
+function errorMessage(reason: unknown): string {
+    return reason instanceof Error ? reason.message : String(reason);
 }
 
 // ─── Individual checks ────────────────────────────────────────────────────────

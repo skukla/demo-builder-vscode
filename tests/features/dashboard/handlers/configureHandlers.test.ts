@@ -277,6 +277,21 @@ describe('configureHandlers', () => {
             });
         });
 
+        it('treats an empty-string serverId as "clear all"', async () => {
+            const mockProject = { name: 'p', path: '/projects/p', stack: 'paas' };
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            await handleInspectMcp(context, { serverId: '' });
+
+            // Empty string normalizes to undefined so the cache is fully cleared,
+            // not a no-op delete of the empty-key entry.
+            expect(clearMcpCache).toHaveBeenCalledWith(undefined);
+        });
+
         it('clears a single serverId when provided in the payload', async () => {
             const mockProject = { name: 'p', path: '/projects/p', stack: 'paas' };
             const context = createMockContext({

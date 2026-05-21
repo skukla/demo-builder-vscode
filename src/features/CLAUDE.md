@@ -74,16 +74,20 @@ features/my-feature/
 
 ### ai
 
-**Purpose**: AI context file verification — the harness is Claude Code (CLI), not VS Code Chat
+**Purpose**: AI context file verification + AI inventory backend — the harness is Claude Code (CLI), not VS Code Chat
 
 **Key Services:**
-- `verifyAiSetup(projectPath, extensionDistPath)` - Checks that `.claude/CLAUDE.md`, `.claude/mcp.json`, the MCP binary (`{extensionDistPath}/mcp-server.js`), and `.claude/skills/*.md` files are present and valid; returns `AiVerificationResult`
-- `dist/mcp-server.js` (compiled from `src/mcp-server.ts`) - Standalone stdio MCP server exposing 7 project tools to AI agents (list_projects, get_project, get_component_config, update_project_config, sync_storefront, list_blocks, get_block_source)
+- `verifyAiSetup(projectPath, extensionDistPath)` - Checks that `.claude/CLAUDE.md`, `.claude/mcp.json`, the MCP binary, and `.claude/skills/` are present and valid; returns `AiVerificationResult` with `{ status, checks, inventory }`
+- `gatherInventory(projectPath)` - Orchestrator that runs the three inspectors below via `Promise.allSettled`; failures degrade to empty lists with `*Error` diagnostic fields
+- `inspectSkills(projectPath)` - Walks `.claude/skills/`, parses YAML frontmatter, classifies as `demo-builder` / `adobe` / `unknown`
+- `inspectAllServers(projectPath)` + `clearMcpCache(serverId?)` - Spawns each `.claude/mcp.json` server via `@modelcontextprotocol/sdk` stdio client, returns tool list per server; 15s per-server timeout, 5-min TTL cache (success-only), SDK env allowlist (no host secret leakage)
+- `detectSessionMcps()` - Reads `~/.claude.json::claudeAiMcpEverConnected` + `~/.claude/mcp-needs-auth-cache.json` for Adobe MCPs the user connected via Claude Code's catalog (best-effort; undocumented Claude Code internal state)
+- `dist/mcp-server.js` (compiled from `src/mcp-server.ts`) - Standalone stdio MCP server exposing 7 project tools to AI agents
 
 **Responsibilities:**
 - Verifying project AI context files (used by Configure → AI Setup tab via `AiSetupTab` component)
-- Reporting which AI context files are missing or malformed
-- Standalone MCP server process for AI agent tool access via Claude Code (CLI), discoverable through both `~/.claude/.mcp.json` (global) and project `.mcp.json`
+- Providing the skills + project-MCPs + session-MCPs inventory that the Cycle D AI Configuration tab will render
+- Standalone MCP server process for AI agent tool access via Claude Code (CLI), discoverable through `~/.claude.json` (user-scope, consent-gated) and project `.mcp.json`
 
 **Path Alias**: `@/features/ai`
 
@@ -130,7 +134,7 @@ features/my-feature/
 
 **Key Services:**
 - `dashboardHandlers` - Handler map for project dashboard messages
-- `configureHandlers` - Handler map for Configure screen messages (cancel, components data, store discovery, verify-ai-setup, regenerate-ai-files)
+- `configureHandlers` - Handler map for Configure screen messages (cancel, components data, store discovery, verify-ai-setup, inspect-mcp, regenerate-ai-files)
 - `AiSetupTab` - React tab component for the Configure screen that runs AI context file health checks and regeneration
 - Dashboard state management
 - Component browser integration

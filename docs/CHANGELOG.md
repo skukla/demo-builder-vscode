@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **AI inventory backend** (Cycle C, Steps 9–12): Three new `vscode-free` inspector services in `src/features/ai/` populate an `inventory` payload on `AiVerificationResult`:
+  - `skillInspector` walks `.claude/skills/`, parses YAML frontmatter, classifies skills as `demo-builder`, `adobe`, or `unknown`.
+  - `mcpInspector` spawns each `.claude/mcp.json` server via `@modelcontextprotocol/sdk` (stdio client) and returns its tool list. 5-minute TTL cache (success-only). 15s per-server timeout. SDK env allowlist (`PATH`, `HOME`, `USER`, `SHELL`, `TERM`, `LANG`, `TMPDIR`) — extension host secrets do NOT leak to spawned children.
+  - `sessionMcpDetector` reads `~/.claude.json::claudeAiMcpEverConnected` cross-referenced with `~/.claude/mcp-needs-auth-cache.json` (best-effort; undocumented Claude Code internal state).
+  - `gatherInventory(projectPath)` orchestrates the three via `Promise.allSettled` so one inspector failing degrades to an empty list with a matching `*Error` field for the UI.
+  - New `inspect-mcp` message handler on the Configure screen forces a cache-clearing refresh (per-server or all).
+  - `src/types/ai.ts` introduces `AiInventory`, `SkillInventoryEntry`, `McpInventoryEntry`, `SessionMcpEntry`.
+  - User-visible surface ships in Cycle D Step 13 (AI Configuration tab).
 - **AI context file generation at project creation**: At finalization (Phase 6), three writers generate AI agent context files for each project:
   - `AGENTS.md` (project root) — universal AI context (Claude/Copilot/Cursor/Gemini); 8 sections covering endpoints, storefront paths, block libraries, and example prompts
   - `CLAUDE.md` (root + `.claude/`) — one-line `see @AGENTS.md` pointer files

@@ -118,7 +118,10 @@ export async function handleInspectMcp(
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
-    clearMcpCache(payload?.serverId);
+    // Treat empty-string serverId as "clear all" — a webview form field that
+    // submits an empty value should not silently degrade to a no-op cache delete.
+    const serverId = payload?.serverId ? payload.serverId : undefined;
+    clearMcpCache(serverId);
     const mcps = await inspectAllServers(project.path);
     return { success: true, mcps };
 }

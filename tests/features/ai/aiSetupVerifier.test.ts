@@ -363,5 +363,25 @@ describe('verifyAiSetup', () => {
             expect(inventory.mcps).toHaveLength(1);
             expect(inventory.sessionMcps).toEqual([]);
         });
+
+        it('surfaces a *Error field for each rejected inspector', async () => {
+            (inspectSkills as jest.Mock).mockRejectedValueOnce(new Error('skills broke'));
+            (inspectAllServers as jest.Mock).mockResolvedValueOnce([]);
+            (detectSessionMcps as jest.Mock).mockRejectedValueOnce(new Error('session broke'));
+
+            const inventory = await gatherInventory(PROJECT_PATH);
+
+            expect(inventory.skillsError).toBe('skills broke');
+            expect(inventory.mcpsError).toBeUndefined();
+            expect(inventory.sessionMcpsError).toBe('session broke');
+        });
+
+        it('omits *Error fields when every inspector succeeds', async () => {
+            const inventory = await gatherInventory(PROJECT_PATH);
+
+            expect(inventory.skillsError).toBeUndefined();
+            expect(inventory.mcpsError).toBeUndefined();
+            expect(inventory.sessionMcpsError).toBeUndefined();
+        });
     });
 });

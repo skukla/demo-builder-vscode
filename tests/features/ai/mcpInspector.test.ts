@@ -42,6 +42,9 @@ jest.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
         transportInstances.push(opts);
         return { stderr: opts.stderr === 'pipe' ? { on: jest.fn() } : undefined };
     }),
+    // Mirror the SDK's safe-to-inherit env allowlist. Tests assert this set,
+    // not process.env's full contents.
+    getDefaultEnvironment: jest.fn(() => ({ PATH: '/usr/bin:/bin', HOME: '/home/test' })),
 }));
 
 import { inspectAllServers, clearMcpCache, MCP_INSPECT_TIMEOUT_MS } from '@/features/ai/mcpInspector';
@@ -122,6 +125,35 @@ describe('inspectAllServers', () => {
                 status: 'ok',
                 tools: [],
             });
+        });
+
+        it('falls back to empty description when a tool omits or returns a non-string description', async () => {
+            setMcpJson({
+                mcpServers: { 'srv': { command: 'node', args: [] } },
+            });
+
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            ClientModule.Client.mockImplementationOnce(() => {
+                const instance = {
+                    connect: jest.fn().mockResolvedValue(undefined),
+                    listTools: jest.fn().mockResolvedValue({
+                        tools: [
+                            { name: 'missing-desc' },                    // no description field
+                            { name: 'non-string-desc', description: 42 }, // protocol violation
+                        ],
+                    }),
+                    close: jest.fn().mockResolvedValue(undefined),
+                };
+                clientInstances.push(instance);
+                return instance;
+            });
+
+            const result = await inspectAllServers(PROJECT_PATH);
+
+            expect(result[0].tools).toEqual([
+                { name: 'missing-desc', description: '' },
+                { name: 'non-string-desc', description: '' },
+            ]);
         });
 
         it('returns tool name + description per advertised tool', async () => {
@@ -221,8 +253,41 @@ describe('inspectAllServers', () => {
                 cwd: PROJECT_PATH,
                 stderr: 'pipe',
             });
-            // env may merge process.env in — assert FOO is present without insisting on shape
+            // server-declared env is forwarded
             expect(transportInstances[0].env?.FOO).toBe('bar');
+            // SDK allowlist is honored
+            expect(transportInstances[0].env?.PATH).toBe('/usr/bin:/bin');
+            expect(transportInstances[0].env?.HOME).toBe('/home/test');
+        });
+
+        it('does NOT spread the extension host process.env into the child env', async () => {
+            // Sentinel that should never appear if the SDK allowlist is honored.
+            const ORIGINAL = process.env.SECRET_THAT_MUST_NOT_LEAK;
+            process.env.SECRET_THAT_MUST_NOT_LEAK = 'leaked';
+            try {
+                setMcpJson({
+                    mcpServers: { 'srv': { command: 'node', args: [] } },
+                });
+
+                await inspectAllServers(PROJECT_PATH);
+
+                expect(transportInstances[0].env?.SECRET_THAT_MUST_NOT_LEAK).toBeUndefined();
+            } finally {
+                if (ORIGINAL === undefined) delete process.env.SECRET_THAT_MUST_NOT_LEAK;
+                else process.env.SECRET_THAT_MUST_NOT_LEAK = ORIGINAL;
+            }
+        });
+
+        it('allows serverConfig.env to override allowlisted keys', async () => {
+            setMcpJson({
+                mcpServers: {
+                    'srv': { command: 'node', args: [], env: { PATH: '/custom' } },
+                },
+            });
+
+            await inspectAllServers(PROJECT_PATH);
+
+            expect(transportInstances[0].env?.PATH).toBe('/custom');
         });
     });
 

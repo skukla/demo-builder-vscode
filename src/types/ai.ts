@@ -80,9 +80,22 @@ export interface SessionMcpEntry {
     lastSeen?: number;
 }
 
-/** Combined inventory payload added to `AiVerificationResult.inventory`. */
+/**
+ * Combined inventory payload added to `AiVerificationResult.inventory`.
+ *
+ * Each inspector runs in its own `Promise.allSettled` slot in
+ * `gatherInventory`. When an inspector throws, its list field comes back
+ * empty and the matching `*Error` field carries a short diagnostic so the
+ * UI can distinguish "no items" from "introspection failed."
+ */
 export interface AiInventory {
     skills: SkillInventoryEntry[];
+    /** Set when `skillInspector` rejected; the corresponding `skills` list is empty. */
+    skillsError?: string;
     mcps: McpInventoryEntry[];
+    /** Set when `mcpInspector` rejected; the corresponding `mcps` list is empty. */
+    mcpsError?: string;
     sessionMcps: SessionMcpEntry[];
+    /** Set when `sessionMcpDetector` rejected; the corresponding `sessionMcps` list is empty. */
+    sessionMcpsError?: string;
 }

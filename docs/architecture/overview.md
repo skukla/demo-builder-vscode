@@ -235,16 +235,17 @@ getCurrentOrganization() // SDK-powered, 1-minute cache
 
 **Purpose**: Detect when local mesh configuration differs from deployed mesh
 
-### 9. AI Context Layer (Phase 1)
+### 9. AI Context Layer
 
-**Purpose**: Generate AI agent context files at project creation and on demand via the Configure → AI Setup tab.
+**Purpose**: Generate AI agent context files at project creation and on demand, then introspect the resulting skills and MCPs for the Configure → AI Setup tab (with the AI Configuration tab landing in Cycle D).
 
 **Components**:
 - **`sanitization`** (`src/features/project-creation/services/sanitization.ts`): Shared sanitization helpers used by both `aiContextWriter` and `skillsWriter`. `sanitizeTemplateValue` strips `\n`, `\r`, and `#` from text fields. `sanitizeUrl` validates the `https://` protocol (non-https values become `[invalid URL]`) and strips `\n`, `\r`, and `]()` characters to prevent Markdown link injection. `sanitizeGithubSlug` restricts owner/repo slugs to alphanumeric, dot, dash, and slash.
 - **`aiContextWriter`** (`src/features/project-creation/services/aiContextWriter.ts`): Generates `AGENTS.md` at the project root with project-specific context (GitHub repo, live/preview URLs, Commerce endpoint, block libraries). Writes `CLAUDE.md` (root) and `.claude/CLAUDE.md` as one-line `see @AGENTS.md` pointers. All user-supplied values pass through the shared sanitization helpers before interpolation.
 - **`skillsWriter`** (`src/features/project-creation/services/skillsWriter.ts`): Writes three Demo-Builder-specific lifecycle skills to `.claude/skills/` (`add-component.md`, `sync-changes.md`, `update-credentials.md`). EDS storefront skills come from Adobe's `@adobe-commerce/commerce-extensibility-tools` package (installed in Cycle B).
 - **`mcpConfigWriter`** (`src/features/project-creation/services/mcpConfigWriter.ts`): Generates `.mcp.json` (project root), `.claude/mcp.json`, and `.claude/settings.json` with the Demo Builder MCP server entry and a PostToolUse hook for auto-sync. Cursor and Codex read `.mcp.json` natively — no per-tool config files.
-- **`aiSetupVerifier`** (`src/features/ai/aiSetupVerifier.ts`): Verifies the four generated file types; used by the Configure → AI Setup tab.
+- **`aiSetupVerifier`** (`src/features/ai/aiSetupVerifier.ts`): Runs four file-presence checks in parallel with `gatherInventory()`; returns `AiVerificationResult` with `{ status, checks, inventory }`.
+- **`skillInspector`, `mcpInspector`, `sessionMcpDetector`** (`src/features/ai/`, Cycle C): Three `vscode-free` services that populate the `inventory` payload. `mcpInspector` uses `@modelcontextprotocol/sdk` (stdio client) with a 5-min TTL cache and the SDK's safe env allowlist (no host-secret leakage). `sessionMcpDetector` reads `~/.claude.json::claudeAiMcpEverConnected` cross-referenced with `~/.claude/mcp-needs-auth-cache.json` (best-effort; undocumented Claude Code internal state).
 - **MCP Server** (`src/mcp-server.ts` → `dist/mcp-server.js`): Standalone stdio process (no VS Code dependency) exposing 7 project tools: `list_projects`, `get_project`, `get_component_config`, `update_project_config`, `sync_storefront`, `list_blocks`, `get_block_source`.
 
 **Integration Point**: `projectFinalizationService.generateAIContextFiles()` orchestrates all three writers as Phase 6 of project creation. The Configure → AI Setup tab calls `verifyAiSetup()` to check the setup and offers regeneration.

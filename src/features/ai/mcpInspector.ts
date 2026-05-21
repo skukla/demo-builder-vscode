@@ -21,7 +21,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js';
 import {
     createCacheEntry,
     getCacheTTLWithJitter,
@@ -113,10 +113,15 @@ async function inspectOneServer(
     serverConfig: McpServerConfig,
     projectPath: string,
 ): Promise<McpInventoryEntry> {
+    // Use the SDK's safe-to-inherit env allowlist (PATH, HOME, USER, SHELL,
+    // TERM, LANG, TMPDIR, plus Windows equivalents) rather than spreading the
+    // extension host's full `process.env` — that would forward GITHUB_TOKEN,
+    // DA_LIVE_IMS_TOKEN, AIO_* refresh tokens, and any other host secrets to
+    // every spawned MCP child, including third-party servers.
     const transport = new StdioClientTransport({
         command: serverConfig.command,
         args: serverConfig.args ?? [],
-        env: { ...process.env as Record<string, string>, ...(serverConfig.env ?? {}) },
+        env: { ...getDefaultEnvironment(), ...(serverConfig.env ?? {}) },
         cwd: projectPath,
         stderr: 'pipe',
     });
