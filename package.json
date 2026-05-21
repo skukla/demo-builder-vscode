@@ -58,6 +58,11 @@
         "category": "Demo Builder"
       },
       {
+        "command": "demoBuilder.openInClaude",
+        "title": "Open in Claude Code",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.resetAll",
         "title": "Reset All (Dev Only)",
         "category": "Demo Builder"

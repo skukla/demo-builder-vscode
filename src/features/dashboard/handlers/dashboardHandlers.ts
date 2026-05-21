@@ -285,6 +285,19 @@ export const handleSyncStorefront: MessageHandler = async () => {
 };
 
 /**
+ * Handle 'openInClaude' message - Open Claude Code (CLI) harness for the current project
+ *
+ * Delegates to the `demoBuilder.openInClaude` command, which consults the
+ * `demoBuilder.ai.harness` setting to decide between URI launch (extension)
+ * and terminal launch.
+ */
+export const handleOpenInClaude: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    await vscode.commands.executeCommand('demoBuilder.openInClaude', project);
+    return { success: true };
+};
+
+/**
  * Handle 'openDevConsole' message - Open Adobe Developer Console
  */
 export const handleOpenDevConsole: MessageHandler = async (context) => {
@@ -520,6 +533,7 @@ export const dashboardHandlers = defineHandlers({
     'viewDebugLogs': handleViewDebugLogs,
     'configure': handleConfigure,
     'openDevConsole': handleOpenDevConsole,
+    'openInClaude': handleOpenInClaude,
     'navigateBack': handleNavigateBack,
     'viewComponents': handleViewComponents,
 

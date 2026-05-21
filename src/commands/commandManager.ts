@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
+import { OpenInClaudeCommand } from './openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -210,6 +211,18 @@ export class CommandManager {
             this.logger,
         );
         this.registerCommand('demoBuilder.checkForUpdates', () => checkUpdates.execute());
+
+        // Open in Claude Code (CLI) — URI launch when the Claude Code extension is
+        // installed; terminal launch otherwise. Pathway driven by `demoBuilder.ai.harness`.
+        const openInClaude = new OpenInClaudeCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.openInClaude', async (...args: unknown[]) => {
+            const project = args[0] as Project | undefined;
+            await openInClaude.execute(project);
+        });
 
         // Navigate — internal routing command for sidebar nav clicks.
         // Intentionally omitted from package.json contributions (not user-facing).
