@@ -2545,6 +2545,16 @@ button[class*="spectrum-Button"][disabled],
     border-top: 1px solid var(--spectrum-global-color-gray-200);
 }
 
+/* Two-column row used by skills + tool entries — name + badge on
+   the left, description on the right, with the left column
+   vertically centered against the (often taller) description. */
+.ai-config-two-col {
+    display: grid !important;
+    grid-template-columns: minmax(160px, 220px) 1fr;
+    column-gap: 24px;
+    align-items: center;
+}
+
 /* ===========================================
    Width/Height Additions
    =========================================== */

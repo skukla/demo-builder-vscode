@@ -366,11 +366,9 @@ function SkillsDetail({
     return (
         <Flex direction="column">
             {skills.map(skill => (
-                <Flex
+                <div
                     key={skill.path}
-                    direction="column"
-                    gap="size-75"
-                    UNSAFE_className="ai-config-row"
+                    className="ai-config-row ai-config-two-col"
                 >
                     <Flex gap="size-100" alignItems="center">
                         <Text UNSAFE_className="ai-config-name">{skill.name}</Text>
@@ -384,7 +382,7 @@ function SkillsDetail({
                     {skill.description && (
                         <Text UNSAFE_className="ai-config-description">{skill.description}</Text>
                     )}
-                </Flex>
+                </div>
             ))}
         </Flex>
     );
@@ -413,10 +411,10 @@ function ProjectMcpsDetail({
                     {server.status === 'ok' && server.tools && server.tools.length > 0 && (
                         <Flex direction="column" gap="size-100" UNSAFE_style={STYLE_INDENT}>
                             {server.tools.map(tool => (
-                                <Flex key={tool.name} direction="column" gap="size-25">
+                                <div key={tool.name} className="ai-config-two-col">
                                     <Text UNSAFE_style={STYLE_MONO}>{tool.name}</Text>
                                     <Text UNSAFE_className="ai-config-description">{tool.description}</Text>
-                                </Flex>
+                                </div>
                             ))}
                         </Flex>
                     )}
