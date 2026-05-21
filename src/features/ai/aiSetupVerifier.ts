@@ -7,11 +7,18 @@
  * - mcp-binary: dist/mcp-server.js present at extension dist path
  * - skill-files: at least one .md in .claude/skills/
  *
+ * Cycle C adds an `inventory` payload populated in parallel with the checks:
+ * skills, project-level MCPs (with their tools), and session-level MCPs.
+ *
  * Pure fs/promises — no VS Code imports, easily unit-tested.
  */
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import { inspectAllServers } from './mcpInspector';
+import { detectSessionMcps } from './sessionMcpDetector';
+import { inspectSkills } from './skillInspector';
+import type { AiInventory } from '@/types/ai';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -24,6 +31,13 @@ export interface AiCheckResult {
 export interface AiVerificationResult {
     status: 'ok' | 'warning' | 'error';
     checks: AiCheckResult[];
+    /**
+     * Cycle C inventory payload — populated alongside the existing checks.
+     * Each inspector failing produces an empty slot rather than failing the
+     * whole call; the surrounding `status` still reflects the file-presence
+     * checks above.
+     */
+    inventory: AiInventory;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -32,14 +46,37 @@ export async function verifyAiSetup(
     projectPath: string,
     extensionDistPath: string,
 ): Promise<AiVerificationResult> {
-    const checks = await Promise.all([
-        checkClaudeMd(projectPath),
-        checkMcpConfig(projectPath),
-        checkMcpBinary(extensionDistPath),
-        checkSkillFiles(projectPath),
+    const [checks, inventory] = await Promise.all([
+        Promise.all([
+            checkClaudeMd(projectPath),
+            checkMcpConfig(projectPath),
+            checkMcpBinary(extensionDistPath),
+            checkSkillFiles(projectPath),
+        ]),
+        gatherInventory(projectPath),
     ]);
 
-    return { status: aggregateStatus(checks), checks };
+    return { status: aggregateStatus(checks), checks, inventory };
+}
+
+/**
+ * Gather the AI inventory (skills + project MCPs + session MCPs) for a
+ * project. Each inspector runs independently via `Promise.allSettled` so a
+ * single inspector failing does not break the others — failures degrade to
+ * an empty list with no exception surface.
+ */
+export async function gatherInventory(projectPath: string): Promise<AiInventory> {
+    const [skillsResult, mcpsResult, sessionMcpsResult] = await Promise.allSettled([
+        inspectSkills(projectPath),
+        inspectAllServers(projectPath),
+        detectSessionMcps(),
+    ]);
+
+    return {
+        skills: skillsResult.status === 'fulfilled' ? skillsResult.value : [],
+        mcps: mcpsResult.status === 'fulfilled' ? mcpsResult.value : [],
+        sessionMcps: sessionMcpsResult.status === 'fulfilled' ? sessionMcpsResult.value : [],
+    };
 }
 
 // ─── Individual checks ────────────────────────────────────────────────────────

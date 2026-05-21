@@ -10,14 +10,30 @@
  */
 
 import * as fsPromises from 'fs/promises';
-import { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
-import type { AiCheckResult } from '@/features/ai/aiSetupVerifier';
 
 jest.mock('fs/promises', () => ({
     readFile: jest.fn(),
     access: jest.fn(),
     readdir: jest.fn(),
 }));
+
+// Cycle C inspectors — mocked so the file-presence checks remain the focus
+// of this suite. Per-inspector behavior has dedicated test files.
+jest.mock('@/features/ai/skillInspector', () => ({
+    inspectSkills: jest.fn().mockResolvedValue([]),
+}));
+jest.mock('@/features/ai/mcpInspector', () => ({
+    inspectAllServers: jest.fn().mockResolvedValue([]),
+}));
+jest.mock('@/features/ai/sessionMcpDetector', () => ({
+    detectSessionMcps: jest.fn().mockResolvedValue([]),
+}));
+
+import { verifyAiSetup, gatherInventory } from '@/features/ai/aiSetupVerifier';
+import type { AiCheckResult } from '@/features/ai/aiSetupVerifier';
+import { inspectSkills } from '@/features/ai/skillInspector';
+import { inspectAllServers } from '@/features/ai/mcpInspector';
+import { detectSessionMcps } from '@/features/ai/sessionMcpDetector';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -252,6 +268,100 @@ describe('verifyAiSetup', () => {
             expect(names).toContain('.claude/mcp.json');
             expect(names).toContain('mcp-binary');
             expect(names).toContain('skill-files');
+        });
+    });
+
+    describe('inventory payload (Cycle C)', () => {
+        it('includes an inventory object on every successful response', async () => {
+            setupAllOk();
+
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            expect(result.inventory).toBeDefined();
+            expect(result.inventory.skills).toEqual([]);
+            expect(result.inventory.mcps).toEqual([]);
+            expect(result.inventory.sessionMcps).toEqual([]);
+        });
+
+        it('populates inventory with each inspector output', async () => {
+            setupAllOk();
+            (inspectSkills as jest.Mock).mockResolvedValueOnce([
+                { name: 'add-component', description: 'Add a component', path: '/p/.claude/skills/add-component.md', source: 'demo-builder' },
+            ]);
+            (inspectAllServers as jest.Mock).mockResolvedValueOnce([
+                { id: 'demo-builder', status: 'ok', tools: [{ name: 'list_projects', description: 'List' }] },
+            ]);
+            (detectSessionMcps as jest.Mock).mockResolvedValueOnce([
+                { displayName: 'claude.ai AEM Content - Prod', needsAuth: false },
+            ]);
+
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            expect(result.inventory.skills).toHaveLength(1);
+            expect(result.inventory.mcps[0].id).toBe('demo-builder');
+            expect(result.inventory.sessionMcps[0].displayName).toBe('claude.ai AEM Content - Prod');
+        });
+
+        it('runs checks and inventory in parallel (one slow inspector does not block checks)', async () => {
+            setupAllOk();
+            let resolveMcps: (v: unknown[]) => void = () => undefined;
+            (inspectAllServers as jest.Mock).mockReturnValueOnce(
+                new Promise(resolve => { resolveMcps = resolve; }),
+            );
+
+            const promise = verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+            // Allow microtasks to run — the checks should already be flying.
+            await new Promise(setImmediate);
+            resolveMcps([]);
+            const result = await promise;
+
+            expect(result.checks).toHaveLength(4);
+            expect(result.inventory.mcps).toEqual([]);
+        });
+
+        it('does not surface inspector exceptions through verifyAiSetup', async () => {
+            setupAllOk();
+            (inspectSkills as jest.Mock).mockRejectedValueOnce(new Error('skill walk failed'));
+
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            // The check status is unaffected; the failed inspector degrades to []
+            expect(result.status).toBe('ok');
+            expect(result.inventory.skills).toEqual([]);
+        });
+    });
+
+    describe('gatherInventory', () => {
+        it('returns the union of all three inspector outputs', async () => {
+            (inspectSkills as jest.Mock).mockResolvedValueOnce([
+                { name: 's', description: null, path: '/p/.claude/skills/s.md', source: 'demo-builder' },
+            ]);
+            (inspectAllServers as jest.Mock).mockResolvedValueOnce([
+                { id: 'srv', status: 'ok', tools: [] },
+            ]);
+            (detectSessionMcps as jest.Mock).mockResolvedValueOnce([
+                { displayName: 'claude.ai foo', needsAuth: true },
+            ]);
+
+            const inventory = await gatherInventory(PROJECT_PATH);
+
+            expect(inventory.skills).toHaveLength(1);
+            expect(inventory.mcps).toHaveLength(1);
+            expect(inventory.sessionMcps).toHaveLength(1);
+        });
+
+        it('isolates inspector failures (one failing returns empty, others succeed)', async () => {
+            (inspectSkills as jest.Mock).mockRejectedValueOnce(new Error('skills broke'));
+            (inspectAllServers as jest.Mock).mockResolvedValueOnce([
+                { id: 'srv', status: 'ok', tools: [] },
+            ]);
+            (detectSessionMcps as jest.Mock).mockRejectedValueOnce(new Error('session broke'));
+
+            const inventory = await gatherInventory(PROJECT_PATH);
+
+            expect(inventory.skills).toEqual([]);
+            expect(inventory.mcps).toHaveLength(1);
+            expect(inventory.sessionMcps).toEqual([]);
         });
     });
 });

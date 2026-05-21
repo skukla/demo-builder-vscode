@@ -16,7 +16,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { validateURL } from '@/core/validation';
-import { verifyAiSetup } from '@/features/ai';
+import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
 import { handleCreateWorkspaceCredential } from '@/features/authentication';
 import { handleSyncComponentConfigs } from '@/features/components/handlers/componentHandlers';
 import { handleDiscoverStoreStructure } from '@/features/eds';
@@ -98,6 +98,32 @@ export async function handleVerifyAiSetup(
 }
 
 /**
+ * Handle inspect-mcp — force refresh of MCP inventory by clearing the
+ * mcpInspector cache then re-running `inspectAllServers`.
+ *
+ * Payload `{ serverId? }`:
+ *   - When `serverId` is provided, only that entry is cleared and re-fetched.
+ *     Other cached entries return immediately (saves spawning every server).
+ *   - When omitted, every cached entry is cleared and all servers are
+ *     re-inspected.
+ *
+ * Reads `projectPath` from `stateManager` (server-side) and ignores any
+ * webview-supplied paths to prevent path-injection.
+ */
+export async function handleInspectMcp(
+    context: HandlerContext,
+    payload?: { serverId?: string },
+): Promise<HandlerResponse> {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+    clearMcpCache(payload?.serverId);
+    const mcps = await inspectAllServers(project.path);
+    return { success: true, mcps };
+}
+
+/**
  * Handle regenerate-ai-files — re-generate AI context files for the project
  */
 export async function handleRegenerateAiFiles(
@@ -131,5 +157,6 @@ export const configureHandlers = defineHandlers({
     'sync-component-configs': handleSyncComponentConfigs,
     'create-workspace-credential': handleCreateWorkspaceCredential,
     'verify-ai-setup': handleVerifyAiSetup,
+    'inspect-mcp': handleInspectMcp,
     'regenerate-ai-files': handleRegenerateAiFiles,
 });
