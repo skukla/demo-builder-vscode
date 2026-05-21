@@ -142,15 +142,20 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'verify-ai-setup')).toBe(true);
             expect(hasHandler(configureHandlers, 'inspect-mcp')).toBe(true);
             expect(hasHandler(configureHandlers, 'regenerate-ai-files')).toBe(true);
+            expect(hasHandler(configureHandlers, 'openInClaude')).toBe(true);
         });
 
-        it('should have exactly 11 handlers', () => {
+        it('should have exactly 12 handlers', () => {
             const types = getRegisteredTypes(configureHandlers);
-            expect(types).toHaveLength(11);
+            expect(types).toHaveLength(12);
         });
 
         it('should include register-global-mcp (Cycle D)', () => {
             expect(hasHandler(configureHandlers, 'register-global-mcp')).toBe(true);
+        });
+
+        it('should include openInClaude for the AI Configuration sidebar CTA', () => {
+            expect(hasHandler(configureHandlers, 'openInClaude')).toBe(true);
         });
 
         it('should have all handlers as functions', () => {

@@ -157,6 +157,17 @@ export async function handleInspectMcp(
 }
 
 /**
+ * Handle openInClaude — dispatch the demoBuilder.openInClaude command so the
+ * AI Configuration tab's right-column CTA can launch Claude Code. Mirrors
+ * the dashboard tile dispatch (no payload — command falls back to current
+ * project via StateManager).
+ */
+export async function handleOpenInClaude(): Promise<HandlerResponse> {
+    await vscode.commands.executeCommand('demoBuilder.openInClaude');
+    return { success: true };
+}
+
+/**
  * Handle regenerate-ai-files — re-generate AI context files for the project
  */
 export async function handleRegenerateAiFiles(
@@ -193,4 +204,5 @@ export const configureHandlers = defineHandlers({
     'inspect-mcp': handleInspectMcp,
     'regenerate-ai-files': handleRegenerateAiFiles,
     'register-global-mcp': handleRegisterGlobalMcp,
+    'openInClaude': handleOpenInClaude,
 });

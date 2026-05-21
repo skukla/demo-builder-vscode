@@ -335,6 +335,31 @@ describe('ConfigureScreen - Rendering', () => {
             // AI Configuration is now a tab, not gated on extensionDistPath
             expect(screen.getByTestId('ai-setup-tab')).toBeInTheDocument();
         });
+
+        it('renders the AI Configuration sidebar (right column) when on the ai-setup view', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                    activeView="ai-setup"
+                />
+            );
+
+            expect(screen.getByTestId('ai-config-sidebar')).toBeInTheDocument();
+            expect(screen.getByText('Use in Claude Code')).toBeInTheDocument();
+            expect(screen.getByText('Open in Claude Code')).toBeInTheDocument();
+        });
+
+        it('does NOT render the AI Configuration sidebar on the Configuration view', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                />
+            );
+
+            expect(screen.queryByTestId('ai-config-sidebar')).not.toBeInTheDocument();
+        });
     });
 
     describe('Edge Cases', () => {
