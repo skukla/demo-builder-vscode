@@ -54,6 +54,8 @@ export interface UseDashboardActionsReturn {
     handleConfigure: () => void;
     /** Open Adobe Developer Console */
     handleOpenDevConsole: () => void;
+    /** Open the project in the Claude Code (CLI) harness */
+    handleOpenInClaude: () => void;
     /** Delete the project */
     handleDeleteProject: () => void;
     /** Navigate back to projects list */
@@ -141,6 +143,10 @@ export function useDashboardActions({
         webviewClient.postMessage('openDevConsole');
     }, []);
 
+    const handleOpenInClaude = useCallback(() => {
+        webviewClient.postMessage('openInClaude');
+    }, []);
+
     const handleDeleteProject = useCallback(() => {
         webviewClient.postMessage('deleteProject');
     }, []);
@@ -168,6 +174,7 @@ export function useDashboardActions({
         handleOpenDaLive,
         handleConfigure,
         handleOpenDevConsole,
+        handleOpenInClaude,
         handleDeleteProject,
         handleNavigateBack,
         handleViewComponents,

@@ -233,4 +233,62 @@ describe('ProjectCard', () => {
             expect(card).toHaveAttribute('tabIndex', '0');
         });
     });
+
+    describe('Open in Claude Code wiring', () => {
+        it('should expose Open in Claude Code menu item when actions.onOpenInClaudeCode is provided', () => {
+            const project = createMockProject({ name: 'Wired Project' });
+            const onOpenInClaudeCode = jest.fn();
+            renderWithProvider(
+                <ProjectCard
+                    project={project}
+                    onSelect={jest.fn()}
+                    actions={{ onOpenInClaudeCode }}
+                />
+            );
+
+            // Open the kebab menu
+            const menuButton = screen.getByLabelText('More actions');
+            fireEvent.click(menuButton);
+
+            expect(screen.getByText('Open in Claude Code')).toBeInTheDocument();
+        });
+
+        it('should invoke onOpenInClaudeCode with the row project when item is selected', () => {
+            const project = createMockProject({ name: 'Dispatch Project' });
+            const onOpenInClaudeCode = jest.fn();
+            renderWithProvider(
+                <ProjectCard
+                    project={project}
+                    onSelect={jest.fn()}
+                    actions={{ onOpenInClaudeCode }}
+                />
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            fireEvent.click(menuButton);
+
+            const claudeItem = screen.getByText('Open in Claude Code');
+            fireEvent.click(claudeItem);
+
+            expect(onOpenInClaudeCode).toHaveBeenCalledWith(project);
+            expect(onOpenInClaudeCode).toHaveBeenCalledTimes(1);
+        });
+
+        it('should NOT render Open in Claude Code when actions.onOpenInClaudeCode is omitted', () => {
+            const project = createMockProject({ name: 'No Wire Project' });
+            renderWithProvider(
+                <ProjectCard
+                    project={project}
+                    onSelect={jest.fn()}
+                    actions={{ onCopyPath: jest.fn() }}
+                />
+            );
+
+            const menuButton = screen.queryByLabelText('More actions');
+            if (menuButton) {
+                fireEvent.click(menuButton);
+            }
+            expect(screen.queryByText('Open in Claude Code')).not.toBeInTheDocument();
+        });
+    });
 });

@@ -28,6 +28,7 @@ import Refresh from '@spectrum-icons/workflow/Refresh';
 import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import ViewList from '@spectrum-icons/workflow/ViewList';
+import Wrench from '@spectrum-icons/workflow/Wrench';
 import React from 'react';
 import { GridLayout } from '@/core/ui/components/layout';
 
@@ -73,6 +74,8 @@ export interface ActionGridProps {
     handleViewComponents: () => void;
     /** Handler for Dev Console button */
     handleOpenDevConsole: () => void;
+    /** Handler for Open in Claude Code button */
+    handleOpenInClaude: () => void;
     /** Handler for Delete button */
     handleDeleteProject: () => void;
 }
@@ -105,6 +108,7 @@ export function ActionGrid({
     handleConfigure,
     handleViewComponents,
     handleOpenDevConsole,
+    handleOpenInClaude,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
     return (
@@ -238,6 +242,17 @@ export function ActionGrid({
             >
                 <Code size="L" />
                 <Text UNSAFE_className="icon-label">Dev Console</Text>
+            </ActionButton>
+
+            {/* Open in Claude Code (CLI harness) */}
+            <ActionButton
+                onPress={handleOpenInClaude}
+                isQuiet
+                UNSAFE_className="dashboard-action-button"
+                aria-label="Open in Claude Code"
+            >
+                <Wrench size="L" />
+                <Text UNSAFE_className="icon-label">Open in Claude Code</Text>
             </ActionButton>
 
             {/* Delete Project */}

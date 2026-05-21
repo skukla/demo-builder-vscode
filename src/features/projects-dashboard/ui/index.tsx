@@ -348,6 +348,18 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
+    // Handle Open in Claude Code (CLI harness) - dispatches to the
+    // `demoBuilder.openInClaude` command via the dashboard handler bridge.
+    const handleOpenInClaudeCode = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('openInClaude', {
+                projectPath: project.path,
+            });
+        } catch (error) {
+            console.error('Failed to open project in Claude Code:', error);
+        }
+    }, []);
+
     // Handle view mode override - saves to backend for session persistence
     const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
         setInitialViewMode(mode);
@@ -368,12 +380,13 @@ const ProjectsDashboardApp: React.FC = () => {
         onRename: handleRenameProject,
         onCopyPath: handleCopyPath,
         onExport: handleExportProject,
+        onOpenInClaudeCode: handleOpenInClaudeCode,
         onDelete: handleDeleteProject,
     }), [
         handleStartDemo, handleStopDemo, handleOpenBrowser, handleOpenLiveSite,
         handleOpenDaLive, handleResetProject, handleRepublishContent, handleEditProject,
         handleRenameProject, handleCopyPath, handleExportProject,
-        handleDeleteProject,
+        handleOpenInClaudeCode, handleDeleteProject,
     ]);
 
     return (

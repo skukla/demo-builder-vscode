@@ -130,4 +130,113 @@ describe('ProjectActionsMenu', () => {
             expect(actions.onDelete).toHaveBeenCalledWith(project);
         });
     });
+
+    describe('Open in Claude Code action', () => {
+        it('should render Open in Claude Code menu item when onOpenInClaudeCode is provided', () => {
+            const project = createMockProject({ name: 'Test' });
+            const actions: ProjectActions = {
+                onOpenInClaudeCode: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={project}
+                    actions={actions}
+                />,
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            menuButton.click();
+
+            expect(screen.getByText('Open in Claude Code')).toBeInTheDocument();
+        });
+
+        it('should NOT render Open in Claude Code menu item when callback is omitted', () => {
+            const project = createMockProject({ name: 'Test' });
+            const actions: ProjectActions = {
+                onDelete: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={project}
+                    actions={actions}
+                />,
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            menuButton.click();
+
+            expect(screen.queryByText('Open in Claude Code')).not.toBeInTheDocument();
+        });
+
+        it('should invoke onOpenInClaudeCode with the project when item is selected', () => {
+            const project = createMockProject({ name: 'Test' });
+            const actions: ProjectActions = {
+                onOpenInClaudeCode: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={project}
+                    actions={actions}
+                />,
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            menuButton.click();
+
+            const claudeItem = screen.getByText('Open in Claude Code');
+            claudeItem.click();
+
+            expect(actions.onOpenInClaudeCode).toHaveBeenCalledWith(project);
+            expect(actions.onOpenInClaudeCode).toHaveBeenCalledTimes(1);
+        });
+
+        it('should render Open in Claude Code for EDS projects as well', () => {
+            // EDS project: storefrontPath set marks it as EDS via isEdsProject typeGuard
+            const project = createMockProject({
+                name: 'EDS Project',
+                storefrontPath: 'eds-storefront',
+            } as any);
+            const actions: ProjectActions = {
+                onOpenInClaudeCode: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={project}
+                    actions={actions}
+                />,
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            menuButton.click();
+
+            expect(screen.getByText('Open in Claude Code')).toBeInTheDocument();
+        });
+
+        it('should place Open in Claude Code before Delete in the menu', () => {
+            const project = createMockProject({ name: 'Test' });
+            const actions: ProjectActions = {
+                onOpenInClaudeCode: jest.fn(),
+                onDelete: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={project}
+                    actions={actions}
+                />,
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            menuButton.click();
+
+            const menuItems = screen.getAllByRole('menuitem');
+            const labels = menuItems.map((item) => item.textContent ?? '');
+
+            const claudeIdx = labels.findIndex((l) => l.includes('Open in Claude Code'));
+            const deleteIdx = labels.findIndex((l) => l.includes('Delete'));
+
+            expect(claudeIdx).toBeGreaterThanOrEqual(0);
+            expect(deleteIdx).toBeGreaterThanOrEqual(0);
+            expect(claudeIdx).toBeLessThan(deleteIdx);
+        });
+    });
 });

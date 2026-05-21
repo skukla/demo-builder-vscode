@@ -101,13 +101,17 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'copy-project-path')).toBe(true);
         });
 
+        it('should include openInClaude handler (D4)', () => {
+            expect(hasHandler(projectsListHandlers, 'openInClaude')).toBe(true);
+        });
+
         it('should have exactly 21 handlers', () => {
             // Given: projectsListHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(projectsListHandlers);
 
-            // Then: Exactly 20 handlers (19 original + copy-project-path)
-            expect(types).toHaveLength(20);
+            // Then: Exactly 21 handlers (20 prior + openInClaude from D4)
+            expect(types).toHaveLength(21);
         });
 
         it('should have handlers as functions', () => {

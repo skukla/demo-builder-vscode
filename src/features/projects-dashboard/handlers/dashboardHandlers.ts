@@ -633,6 +633,34 @@ export const handleOpenBrowser: MessageHandler<{ projectPath: string }> = async 
 };
 
 /**
+ * Open a specific project in the Claude Code (CLI) harness — D4 home-grid menu wiring.
+ *
+ * Loads the project for the given path and dispatches `demoBuilder.openInClaude`
+ * with the project as the first argument. The command itself decides the harness
+ * pathway (URI vs terminal) based on the `demoBuilder.ai.harness` setting.
+ */
+export const handleOpenInClaudeForProject: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    if (!payload?.projectPath) {
+        return { success: false, error: 'Project path is required' };
+    }
+
+    const project = await context.stateManager.loadProjectFromPath(
+        payload.projectPath,
+        undefined,
+        { persistAfterLoad: false },
+    );
+    if (!project) {
+        return { success: false, error: 'Project not found' };
+    }
+
+    await vscode.commands.executeCommand('demoBuilder.openInClaude', project);
+    return { success: true };
+};
+
+/**
  * Open EDS live site in browser
  *
  * Opens in incognito/private browsing mode to ensure a clean session

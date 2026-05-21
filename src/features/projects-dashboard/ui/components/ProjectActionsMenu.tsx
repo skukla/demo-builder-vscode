@@ -22,6 +22,7 @@ import Play from '@spectrum-icons/workflow/Play';
 import Rename from '@spectrum-icons/workflow/Rename';
 import Revert from '@spectrum-icons/workflow/Revert';
 import Stop from '@spectrum-icons/workflow/Stop';
+import Wrench from '@spectrum-icons/workflow/Wrench';
 import React, { useCallback, useMemo } from 'react';
 import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
@@ -55,6 +56,7 @@ export interface ProjectActions {
     onRename?: (project: Project) => void;
     onCopyPath?: (project: Project) => void;
     onExport?: (project: Project) => void;
+    onOpenInClaudeCode?: (project: Project) => void;
     onDelete?: (project: Project) => void;
 }
 
@@ -70,6 +72,7 @@ const ICON_MAP: Record<string, React.ReactElement> = {
     reset: <Revert size="S" />,
     republish: <Globe size="S" />,
     export: <Export size="S" />,
+    claudeCode: <Wrench size="S" />,
     delete: <Delete size="S" />,
 };
 
@@ -112,6 +115,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onRename,
         onCopyPath,
         onExport,
+        onOpenInClaudeCode,
         onDelete,
     } = actions;
 
@@ -131,8 +135,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         rename: onRename,
         copyPath: onCopyPath,
         export: onExport,
+        openInClaudeCode: onOpenInClaudeCode,
         delete: onDelete,
-    }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename,  onCopyPath, onExport, onDelete]);
+    }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename,  onCopyPath, onExport, onOpenInClaudeCode, onDelete]);
 
     const handleMenuAction = useCallback((key: React.Key) => {
         actionMap[String(key)]?.(project);
@@ -208,11 +213,15 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         if (onExport) {
             items.push({ key: 'export', label: 'Export', icon: 'export' });
         }
+        // Open in Claude Code (CLI harness) - available for all project types when wired
+        if (onOpenInClaudeCode) {
+            items.push({ key: 'openInClaudeCode', label: 'Open in Claude Code', icon: 'claudeCode' });
+        }
         if (onDelete) {
             items.push({ key: 'delete', label: 'Delete', icon: 'delete' });
         }
         return items;
-    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename,  onCopyPath, onExport, onDelete]);
+    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename,  onCopyPath, onExport, onOpenInClaudeCode, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {
