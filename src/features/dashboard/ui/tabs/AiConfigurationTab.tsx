@@ -23,7 +23,7 @@
  *   - `inspect-mcp` is the refresh surface — do not bypass.
  */
 
-import { Button, Flex, Heading, Text, View } from '@adobe/react-spectrum';
+import { Button, Flex, Text, View } from '@adobe/react-spectrum';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -164,33 +164,30 @@ export function AiConfigurationTab({ projectPath }: AiConfigurationTabProps): Re
     return (
         <View padding="size-300" UNSAFE_className="container-form">
             <Flex direction="column" gap="size-200">
-                <Flex justifyContent="space-between" alignItems="center">
-                    <Heading level={3}>AI Configuration</Heading>
-                    <Flex gap="size-100">
+                <Flex justifyContent="end" gap="size-100">
+                    <Button
+                        variant="secondary"
+                        isDisabled={isBusy}
+                        onPress={handleRefresh}
+                    >
+                        Refresh
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        isDisabled={isBusy}
+                        onPress={handleRegenerate}
+                    >
+                        Regenerate AI Files
+                    </Button>
+                    {globalState !== 'registered' && (
                         <Button
-                            variant="secondary"
+                            variant="cta"
                             isDisabled={isBusy}
-                            onPress={handleRefresh}
+                            onPress={handleRegister}
                         >
-                            Refresh
+                            Register
                         </Button>
-                        <Button
-                            variant="secondary"
-                            isDisabled={isBusy}
-                            onPress={handleRegenerate}
-                        >
-                            Regenerate AI Files
-                        </Button>
-                        {globalState !== 'registered' && (
-                            <Button
-                                variant="cta"
-                                isDisabled={isBusy}
-                                onPress={handleRegister}
-                            >
-                                Register
-                            </Button>
-                        )}
-                    </Flex>
+                    )}
                 </Flex>
 
                 {initialError && (
