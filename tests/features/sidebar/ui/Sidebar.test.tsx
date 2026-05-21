@@ -199,7 +199,7 @@ describe('Sidebar', () => {
             expect(backButton).toBeInTheDocument();
         });
 
-        it('should render AI Setup nav item in configure context', () => {
+        it('should render AI Configuration nav item in configure context', () => {
             renderWithProvider(
                 <Sidebar
                     context={createConfigureContext()}
@@ -208,7 +208,7 @@ describe('Sidebar', () => {
                 />
             );
 
-            expect(screen.getByText('AI Setup')).toBeInTheDocument();
+            expect(screen.getByText('AI Configuration')).toBeInTheDocument();
         });
     });
 

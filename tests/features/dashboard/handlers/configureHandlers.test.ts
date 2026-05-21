@@ -34,9 +34,11 @@ jest.mock('@/features/ai', () => ({
     clearMcpCache: jest.fn(),
 }));
 
-// Mock AI context file generator
+// Mock AI context file generator + global MCP registration helpers
 jest.mock('@/features/project-creation/services', () => ({
     generateAIContextFiles: jest.fn(),
+    registerGlobalMcp: jest.fn().mockResolvedValue(undefined),
+    GLOBAL_MCP_REG_STATE_KEY: 'demoBuilder.ai.globalMcpRegistration',
 }));
 
 // Mock vscode
@@ -70,8 +72,8 @@ import {
 } from '@/features/dashboard/handlers/configureHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
-import { handleInspectMcp } from '@/features/dashboard/handlers/configureHandlers';
-import { generateAIContextFiles } from '@/features/project-creation/services';
+import { handleInspectMcp, handleRegisterGlobalMcp } from '@/features/dashboard/handlers/configureHandlers';
+import { generateAIContextFiles, registerGlobalMcp } from '@/features/project-creation/services';
 import type { HandlerContext } from '@/types/handlers';
 
 // ==========================================================
@@ -142,9 +144,13 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'regenerate-ai-files')).toBe(true);
         });
 
-        it('should have exactly 10 handlers', () => {
+        it('should have exactly 11 handlers', () => {
             const types = getRegisteredTypes(configureHandlers);
-            expect(types).toHaveLength(10);
+            expect(types).toHaveLength(11);
+        });
+
+        it('should include register-global-mcp (Cycle D)', () => {
+            expect(hasHandler(configureHandlers, 'register-global-mcp')).toBe(true);
         });
 
         it('should have all handlers as functions', () => {
@@ -225,7 +231,34 @@ describe('configureHandlers', () => {
                 expect.stringContaining('mock/extension/path'), // derived from context.extensionPath
             );
             // Handler wraps verifier output in HandlerResponse shape (adds success: true)
-            expect(result).toEqual({ success: true, ...mockResult });
+            // and the Cycle D addition: globalMcpRegistration from persisted globalState
+            // (here `undefined` → 'unregistered').
+            expect(result).toEqual({ success: true, ...mockResult, globalMcpRegistration: 'unregistered' });
+        });
+
+        it('exposes persisted globalMcpRegistration state from globalState', async () => {
+            const mockResult = { status: 'ok', checks: [] };
+            (verifyAiSetup as jest.Mock).mockResolvedValue(mockResult);
+
+            const context = createMockContext({
+                context: {
+                    extensionPath: '/mock/extension/path',
+                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
+                    globalState: {
+                        get: jest.fn().mockReturnValue('registered'),
+                        update: jest.fn(),
+                        keys: jest.fn().mockReturnValue([]),
+                    },
+                    subscriptions: [],
+                } as unknown as HandlerContext['context'],
+            });
+            const result = await handleVerifyAiSetup(context);
+
+            expect(result).toEqual({
+                success: true,
+                ...mockResult,
+                globalMcpRegistration: 'registered',
+            });
         });
 
         it('returns error when stateManager has no current project', async () => {
@@ -366,6 +399,35 @@ describe('configureHandlers', () => {
 
             expect(generateAIContextFiles).not.toHaveBeenCalled();
             expect(result).toMatchObject({ success: false });
+        });
+    });
+
+    describe('handleRegisterGlobalMcp', () => {
+        it('calls registerGlobalMcp with the extension dist path and sets globalState to "registered"', async () => {
+            const update = jest.fn().mockResolvedValue(undefined);
+            const context = createMockContext({
+                context: {
+                    extensionPath: '/mock/extension/path',
+                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
+                    globalState: {
+                        get: jest.fn(),
+                        update,
+                        keys: jest.fn().mockReturnValue([]),
+                    },
+                    subscriptions: [],
+                } as unknown as HandlerContext['context'],
+            });
+
+            const result = await handleRegisterGlobalMcp(context);
+
+            expect(registerGlobalMcp).toHaveBeenCalledWith(
+                expect.stringContaining('mock/extension/path'),
+            );
+            expect(update).toHaveBeenCalledWith(
+                'demoBuilder.ai.globalMcpRegistration',
+                'registered',
+            );
+            expect(result).toEqual({ success: true });
         });
     });
 });

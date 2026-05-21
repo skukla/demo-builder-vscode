@@ -51,8 +51,8 @@ describe('SOP: Inline Styles', () => {
 
         // Store structure listbox container
 
-        // AI setup tab
-        'AiSetupTab.tsx': 'Spectrum UNSAFE_style for check message text styling',
+        // AI configuration tab (Cycle D — supersedes AiSetupTab)
+        'AiConfigurationTab.tsx': 'Spectrum UNSAFE_style for inline section/row styling',
     };
 
     /**

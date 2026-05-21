@@ -56,11 +56,11 @@ jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
     ),
 }));
 
-// Mock AiSetupTab (tested separately; keep configure screen tests focused)
-jest.mock('@/features/dashboard/ui/tabs/AiSetupTab', () => ({
-    AiSetupTab: ({ projectPath }: any) => (
+// Mock AiConfigurationTab (tested separately; keep configure screen tests focused)
+jest.mock('@/features/dashboard/ui/tabs/AiConfigurationTab', () => ({
+    AiConfigurationTab: ({ projectPath }: any) => (
         <div data-testid="ai-setup-tab">
-            <h3>AI Setup</h3>
+            <h3>AI Configuration</h3>
             <span>{projectPath}</span>
         </div>
     ),
@@ -290,12 +290,12 @@ describe('ConfigureScreen - Rendering', () => {
         });
     });
 
-    describe('AI Setup View', () => {
-        // AI Setup is a standalone view accessed via the sidebar nav item (activeView='ai-setup').
+    describe('AI Configuration View', () => {
+        // AI Configuration is a standalone view accessed via the sidebar nav item (activeView='ai-setup').
         // It must NOT appear inside the default 'configure' view — rendering it there breaks the
         // two-column flex layout by squeezing TwoColumnLayout's vertical space.
 
-        it('does not render AiSetupTab in the default configure view even when extensionDistPath is provided', () => {
+        it('does not render AiConfigurationTab in the default configure view even when extensionDistPath is provided', () => {
             renderWithProvider(
                 <ConfigureScreen
                     project={mockProject as any}
@@ -307,7 +307,7 @@ describe('ConfigureScreen - Rendering', () => {
             expect(screen.queryByTestId('ai-setup-tab')).not.toBeInTheDocument();
         });
 
-        it('renders AiSetupTab when activeView is "ai-setup" and extensionDistPath is provided', () => {
+        it('renders AiConfigurationTab when activeView is "ai-setup" and extensionDistPath is provided', () => {
             renderWithProvider(
                 <ConfigureScreen
                     project={mockProject as any}
@@ -320,7 +320,7 @@ describe('ConfigureScreen - Rendering', () => {
             expect(screen.getByTestId('ai-setup-tab')).toBeInTheDocument();
         });
 
-        it('passes projectPath to AiSetupTab in the ai-setup view', () => {
+        it('passes projectPath to AiConfigurationTab in the ai-setup view', () => {
             renderWithProvider(
                 <ConfigureScreen
                     project={mockProject as any}
@@ -333,7 +333,7 @@ describe('ConfigureScreen - Rendering', () => {
             expect(screen.getByText('/test/path')).toBeInTheDocument();
         });
 
-        it('renders AiSetupTab even without extensionDistPath (tab is always available)', () => {
+        it('renders AiConfigurationTab even without extensionDistPath (tab is always available)', () => {
             renderWithProvider(
                 <ConfigureScreen
                     project={mockProject as any}
@@ -342,7 +342,7 @@ describe('ConfigureScreen - Rendering', () => {
                 />
             );
 
-            // AI Setup is now a tab, not gated on extensionDistPath
+            // AI Configuration is now a tab, not gated on extensionDistPath
             expect(screen.getByTestId('ai-setup-tab')).toBeInTheDocument();
         });
     });

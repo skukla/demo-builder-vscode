@@ -184,6 +184,6 @@ function getProjectDetailNavItems(activeId: string): NavItem[] {
         { id: 'overview', label: 'Overview', active: activeId === 'overview' },
         { id: 'configure', label: 'Configure', active: activeId === 'configure' },
         { id: 'updates', label: 'Updates', active: activeId === 'updates' },
-        { id: 'ai-setup', label: 'AI Setup', active: activeId === 'ai-setup' },
+        { id: 'ai-setup', label: 'AI Configuration', active: activeId === 'ai-setup' },
     ];
 }

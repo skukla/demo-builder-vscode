@@ -107,9 +107,9 @@ jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
     }),
 }));
 
-// Mock AiSetupTab
-jest.mock('@/features/dashboard/ui/tabs/AiSetupTab', () => ({
-    AiSetupTab: () => <div data-testid="ai-setup-tab" />,
+// Mock AiConfigurationTab
+jest.mock('@/features/dashboard/ui/tabs/AiConfigurationTab', () => ({
+    AiConfigurationTab: () => <div data-testid="ai-setup-tab" />,
 }));
 
 const renderWithProvider = (ui: React.ReactElement) => {

@@ -13,7 +13,7 @@ import {
     Item,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { AiSetupTab } from '../tabs/AiSetupTab';
+import { AiConfigurationTab } from '../tabs/AiConfigurationTab';
 import { useFieldFocusTracking } from './hooks/useFieldFocusTracking';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
@@ -57,7 +57,7 @@ interface ConfigureScreenProps {
     /**
      * Which tab to show initially.
      * - `'configure'` (default): configuration form
-     * - `'ai-setup'`: AI Setup health checks
+     * - `'ai-setup'`: AI Configuration tab (legacy identifier kept for routing)
      */
     activeView?: 'configure' | 'ai-setup';
 }
@@ -216,7 +216,7 @@ export function ConfigureScreen({
         isStoreGroup,
     } = useStoreDiscovery();
 
-    // The AI Setup view (activeView === 'ai-setup') short-circuits rendering below.
+    // The AI Configuration view (activeView === 'ai-setup') short-circuits rendering below.
     // Feed the store hooks empty inputs so they stay inert — no autoDetectKey, no
     // background fetch, no sync message — while still honoring the rules of hooks.
     const isConfigureView = activeView !== 'ai-setup';
@@ -493,7 +493,7 @@ export function ConfigureScreen({
     const canSave = !hasEntries(validationErrors) && !projectNameError;
 
     // Tab state — "configuration" or "ai-setup". Default from activeView prop
-    // (sidebar can deep-link to AI Setup via activeView='ai-setup').
+    // (sidebar can deep-link to AI Configuration via activeView='ai-setup').
     const [selectedTab, setSelectedTab] = useState<string>(
         activeView === 'ai-setup' ? 'ai-setup' : 'configuration',
     );
@@ -512,7 +512,7 @@ export function ConfigureScreen({
                     subtitle={projectName}
                 />
 
-                {/* Content — tabbed: Configuration | AI Setup */}
+                {/* Content — tabbed: Configuration | AI Configuration */}
                 <TwoColumnLayout
                     leftMaxWidth="800px"
                     leftPadding="size-300"
@@ -527,7 +527,7 @@ export function ConfigureScreen({
                             >
                                 <TabList>
                                     <Item key="configuration">Configuration</Item>
-                                    <Item key="ai-setup">AI Setup</Item>
+                                    <Item key="ai-setup">AI Configuration</Item>
                                 </TabList>
                                 <TabPanels UNSAFE_className="flex-1 min-h-0 overflow-hidden">
                                     <Item key="configuration">
@@ -612,7 +612,7 @@ export function ConfigureScreen({
                                         </div>
                                     </Item>
                                     <Item key="ai-setup">
-                                        <AiSetupTab projectPath={project.path} />
+                                        <AiConfigurationTab projectPath={project.path} />
                                     </Item>
                                 </TabPanels>
                             </Tabs>

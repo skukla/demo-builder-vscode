@@ -94,8 +94,8 @@ jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
     ),
 }));
 
-jest.mock('@/features/dashboard/ui/tabs/AiSetupTab', () => ({
-    AiSetupTab: () => <div data-testid="ai-setup-tab" />,
+jest.mock('@/features/dashboard/ui/tabs/AiConfigurationTab', () => ({
+    AiConfigurationTab: () => <div data-testid="ai-setup-tab" />,
 }));
 
 jest.mock('@/core/ui/components/navigation', () => ({
