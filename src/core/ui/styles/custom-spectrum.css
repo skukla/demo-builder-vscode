@@ -2480,11 +2480,28 @@ button[class*="spectrum-Button"][disabled],
     overflow-x: hidden !important;
 }
 
-/* Configure screen tabs — propagate the panel container's flex height
-   down to each rendered tabpanel so children using `h-full` resolve
-   against a finite height. Without this, `.container-form` and
-   AiConfigurationTab cannot scroll. Descendant selector because
-   Spectrum nests the tabpanel inside its TabPanels container. */
+/* Configure screen tabs — propagate flex height through Spectrum's
+   Tabs wrapper so children using `h-full` resolve against a finite
+   height. Without this, `.container-form` and AiConfigurationTab
+   cannot scroll. The DOM Spectrum renders (per @react-spectrum/tabs
+   source) is:
+     <div class="spectrum-TabsPanel configure-tabs">     ← Tabs root
+       <TabList>...</TabList>
+       <div class="spectrum-TabsPanel-tabpanel flex-1 min-h-0 overflow-hidden" role="tabpanel">
+         {Item content}
+       </div>
+     </div>
+   We need to make the Tabs root a flex column that fills its parent,
+   AND make the tabpanel itself a flex column with a finite height
+   so its children inherit a constrained height. */
+.configure-tabs {
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
 .configure-tabs [role="tabpanel"] {
     flex: 1 !important;
     min-height: 0 !important;
