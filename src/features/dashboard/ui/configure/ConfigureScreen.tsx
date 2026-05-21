@@ -1,5 +1,4 @@
 import {
-    Heading,
     Text,
     Form,
     Button,
@@ -533,10 +532,6 @@ export function ConfigureScreen({
                                     <Item key="configuration">
                                         <div className="flex-column h-full">
                                             <Form UNSAFE_className="container-form">
-                                                <Heading level={3} marginBottom="size-200" marginTop="size-300">Configuration Settings</Heading>
-                                                <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
-                                                    Update the settings for your project components. Required fields are marked with an asterisk.
-                                                </Text>
                                                 {/* Project Name Field */}
                                                 <ConfigSection
                                                     id="project-info"

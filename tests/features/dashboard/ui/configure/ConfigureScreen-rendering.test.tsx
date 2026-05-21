@@ -149,16 +149,6 @@ describe('ConfigureScreen - Rendering', () => {
             expect(screen.getByText('Configure Project')).toBeInTheDocument();
         });
 
-        it('should render configuration settings heading', () => {
-            renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
-            );
-            expect(screen.getByText('Configuration Settings')).toBeInTheDocument();
-        });
-
         it('should render Save button', () => {
             renderWithProvider(
                 <ConfigureScreen
