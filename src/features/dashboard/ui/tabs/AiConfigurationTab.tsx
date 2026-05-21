@@ -371,7 +371,7 @@ function SkillsDetail({
                     className="ai-config-row ai-config-two-col"
                 >
                     <Flex gap="size-100" alignItems="center">
-                        <Text UNSAFE_className="ai-config-name">{skill.name}</Text>
+                        <Text UNSAFE_className="text-sm font-semibold">{skill.name}</Text>
                         <Text
                             UNSAFE_className="ai-config-source-badge"
                             data-testid={`skill-source-${skill.source}`}
@@ -380,7 +380,7 @@ function SkillsDetail({
                         </Text>
                     </Flex>
                     {skill.description && (
-                        <Text UNSAFE_className="ai-config-description">{skill.description}</Text>
+                        <Text UNSAFE_className="text-sm text-gray-700">{skill.description}</Text>
                     )}
                 </div>
             ))}
@@ -407,19 +407,19 @@ function ProjectMcpsDetail({
                     gap="size-100"
                     UNSAFE_className="ai-config-row"
                 >
-                    <Text UNSAFE_className="ai-config-name">{server.id}</Text>
+                    <Text UNSAFE_className="text-sm font-semibold">{server.id}</Text>
                     {server.status === 'ok' && server.tools && server.tools.length > 0 && (
                         <Flex direction="column" gap="size-100" UNSAFE_style={STYLE_INDENT}>
                             {server.tools.map(tool => (
                                 <div key={tool.name} className="ai-config-two-col">
                                     <Text UNSAFE_style={STYLE_MONO}>{tool.name}</Text>
-                                    <Text UNSAFE_className="ai-config-description">{tool.description}</Text>
+                                    <Text UNSAFE_className="text-sm text-gray-700">{tool.description}</Text>
                                 </div>
                             ))}
                         </Flex>
                     )}
                     {server.status !== 'ok' && (
-                        <Text UNSAFE_className="ai-config-description">
+                        <Text UNSAFE_className="text-sm text-gray-700">
                             {server.status === 'timeout' ? 'Inspector timed out' : (server.error ?? 'Inspector failed')}
                         </Text>
                     )}
@@ -448,7 +448,7 @@ function SessionMcpsDetail({
                     alignItems="center"
                     UNSAFE_className="ai-config-row"
                 >
-                    <Text UNSAFE_className="ai-config-name">{session.displayName}</Text>
+                    <Text UNSAFE_className="text-sm font-semibold">{session.displayName}</Text>
                     {session.needsAuth && (
                         <Text
                             data-testid="session-mcp-needs-auth"

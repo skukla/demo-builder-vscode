@@ -2511,21 +2511,11 @@ button[class*="spectrum-Button"][disabled],
     overflow: hidden !important;
 }
 
-/* AI Configuration tab — typography for inventory drill-down rows.
-   Establishes hierarchy: name (primary) > badge (classification) >
-   description (secondary). Each "row" is one skill / one MCP server /
-   one session. Separators give breathing room between items. */
-.ai-config-name {
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-}
-
-.ai-config-description {
-    font-size: 12px !important;
-    line-height: 1.5 !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-}
+/* AI Configuration tab — drill-down row typography reuses the
+   wizard's existing utility classes (.text-sm, .font-semibold,
+   .text-gray-700) for name/description. Only the unique pieces
+   live here: the source-classification badge pill and the
+   row separator. */
 
 .ai-config-source-badge {
     display: inline-block;
