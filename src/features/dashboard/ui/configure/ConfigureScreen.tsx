@@ -624,30 +624,35 @@ export function ConfigureScreen({
                                 onNavigateToField={navigateToField}
                             />
                         ) : (
-                            <Flex direction="column" gap="size-200" data-testid="ai-config-sidebar">
-                                <Heading level={3} marginBottom="size-100" marginTop={0}>
-                                    Use in Claude Code
-                                </Heading>
-                                <Text>
-                                    Skills and MCP servers above load automatically when you open this project in Claude Code.
-                                </Text>
-                                <Button
-                                    variant="cta"
-                                    onPress={() => webviewClient.postMessage('openInClaude')}
-                                >
-                                    Open in Claude Code
-                                </Button>
-                                <Link
-                                    onPress={() =>
-                                        webviewClient.postMessage('openExternal', {
-                                            url: 'https://github.com/skukla/demo-builder-vscode/blob/master/docs/architecture/adr/004-claude-code-harness.md',
-                                        })
-                                    }
-                                    UNSAFE_className="cursor-pointer"
-                                >
-                                    Learn more about AI integration
-                                </Link>
-                            </Flex>
+                            <View
+                                data-testid="ai-config-sidebar"
+                                UNSAFE_className="ai-config-sidebar"
+                            >
+                                <Flex direction="column" gap="size-200" alignItems="start">
+                                    <Heading level={4} marginBottom={0} marginTop={0}>
+                                        Use in Claude Code
+                                    </Heading>
+                                    <Text UNSAFE_className="text-sm text-gray-700">
+                                        Skills and MCP servers above load automatically when you open this project in Claude Code.
+                                    </Text>
+                                    <Button
+                                        variant="accent"
+                                        onPress={() => webviewClient.postMessage('openInClaude')}
+                                    >
+                                        Open in Claude Code
+                                    </Button>
+                                    <Link
+                                        onPress={() =>
+                                            webviewClient.postMessage('openExternal', {
+                                                url: 'https://github.com/skukla/demo-builder-vscode/blob/master/docs/architecture/adr/004-claude-code-harness.md',
+                                            })
+                                        }
+                                        UNSAFE_className="cursor-pointer text-sm"
+                                    >
+                                        Learn more about AI integration
+                                    </Link>
+                                </Flex>
+                            </View>
                         )
                     }
                 />

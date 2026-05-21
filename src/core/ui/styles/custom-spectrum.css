@@ -2555,6 +2555,13 @@ button[class*="spectrum-Button"][disabled],
     align-items: center;
 }
 
+/* AI Configuration sidebar (Configure right-column when on AI tab) —
+   constrained sidebar width so the CTA + text reads as a sidebar,
+   not a full-page banner. */
+.ai-config-sidebar {
+    max-width: 280px !important;
+}
+
 /* ===========================================
    Width/Height Additions
    =========================================== */
