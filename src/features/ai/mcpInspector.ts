@@ -1,0 +1,187 @@
+/**
+ * MCP Inspector (Cycle C Step 10)
+ *
+ * Reads `<project>/.claude/mcp.json`, spawns each declared server as a stdio
+ * subprocess via the @modelcontextprotocol/sdk client, calls `tools/list`
+ * with pagination, and returns one `McpInventoryEntry` per server.
+ *
+ * Per-server timeout (15s overall budget). Module-level TTL cache so the
+ * Configure tab can refresh inventory cheaply on tab re-open without
+ * re-spawning every MCP every time. Cache only stores successful results;
+ * timeouts and errors are retried on the next call.
+ *
+ * The cache key is the server id (the key in `mcpServers`). Config changes
+ * (command, args, env) require an explicit `clearMcpCache(id)` from the
+ * `inspect-mcp` handler — Cycle C does not introduce config-change
+ * invalidation since the 5-minute TTL keeps the staleness window short.
+ *
+ * Pure stdlib + SDK + cache utils — no VS Code coupling.
+ */
+
+import * as fsPromises from 'fs/promises';
+import * as path from 'path';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import {
+    createCacheEntry,
+    getCacheTTLWithJitter,
+    isExpired,
+    type CacheEntry,
+} from '@/core/cache/cacheUtils';
+import { CACHE_TTL } from '@/core/utils/timeoutConfig';
+import type { McpInventoryEntry, McpToolEntry } from '@/types/ai';
+import { parseJSON } from '@/types/typeGuards';
+
+/** Per-server inspection budget. Exported for tests + future tuning. */
+export const MCP_INSPECT_TIMEOUT_MS = 15_000;
+
+interface McpServerConfig {
+    command: string;
+    args?: string[];
+    env?: Record<string, string>;
+}
+
+interface McpJsonShape {
+    mcpServers?: Record<string, McpServerConfig>;
+}
+
+// ─── Module-level cache ───────────────────────────────────────────────────────
+
+const cache: Map<string, CacheEntry<McpInventoryEntry>> = new Map();
+
+/**
+ * Clear cached inspection results. With no argument, clears every entry.
+ * With a `serverId`, clears that single entry — useful when the `inspect-mcp`
+ * handler wants to force a refresh for one server without disturbing others.
+ */
+export function clearMcpCache(serverId?: string): void {
+    if (serverId === undefined) {
+        cache.clear();
+        return;
+    }
+    cache.delete(serverId);
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Inspect every server declared in `<projectPath>/.claude/mcp.json`. Returns
+ * an empty array when the file is missing, malformed, or has no servers.
+ *
+ * Each server is inspected in parallel. A server failing (timeout, crash,
+ * missing `tools` capability) does not block others — its entry comes back
+ * with `status: 'error'` or `'timeout'` and a short diagnostic.
+ */
+export async function inspectAllServers(projectPath: string): Promise<McpInventoryEntry[]> {
+    const config = await readMcpJson(projectPath);
+    if (!config?.mcpServers) return [];
+
+    const servers = Object.entries(config.mcpServers);
+    const inspections = servers.map(async ([id, serverConfig]): Promise<McpInventoryEntry> => {
+        const cached = cache.get(id);
+        if (cached && !isExpired(cached)) return cached.value;
+
+        const result = await inspectOneServer(id, serverConfig, projectPath);
+
+        // Only cache successful results — errors/timeouts retry next call.
+        if (result.status === 'ok') {
+            cache.set(id, createCacheEntry(result, getCacheTTLWithJitter(CACHE_TTL.MEDIUM)));
+        }
+
+        return result;
+    });
+
+    return Promise.all(inspections);
+}
+
+// ─── Private helpers ──────────────────────────────────────────────────────────
+
+async function readMcpJson(projectPath: string): Promise<McpJsonShape | null> {
+    const filePath = path.join(projectPath, '.claude', 'mcp.json');
+    let raw: string;
+    try {
+        raw = await fsPromises.readFile(filePath, 'utf-8');
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+        throw err;
+    }
+    return parseJSON<McpJsonShape>(raw);
+}
+
+async function inspectOneServer(
+    id: string,
+    serverConfig: McpServerConfig,
+    projectPath: string,
+): Promise<McpInventoryEntry> {
+    const transport = new StdioClientTransport({
+        command: serverConfig.command,
+        args: serverConfig.args ?? [],
+        env: { ...process.env as Record<string, string>, ...(serverConfig.env ?? {}) },
+        cwd: projectPath,
+        stderr: 'pipe',
+    });
+
+    const client = new Client({
+        name: 'demo-builder-inspector',
+        version: '1.0.0',
+    });
+
+    try {
+        const tools = await raceWithTimeout(
+            collectTools(client, transport),
+            MCP_INSPECT_TIMEOUT_MS,
+        );
+        return { id, status: 'ok', tools };
+    } catch (err) {
+        if (err instanceof TimeoutError) {
+            return { id, status: 'timeout', error: `Exceeded ${MCP_INSPECT_TIMEOUT_MS}ms budget` };
+        }
+        return {
+            id,
+            status: 'error',
+            error: err instanceof Error ? err.message : String(err),
+        };
+    } finally {
+        try {
+            await client.close();
+        } catch {
+            // best-effort cleanup
+        }
+    }
+}
+
+async function collectTools(client: Client, transport: StdioClientTransport): Promise<McpToolEntry[]> {
+    await client.connect(transport);
+
+    const tools: McpToolEntry[] = [];
+    let cursor: string | undefined;
+    do {
+        const page = await client.listTools(cursor ? { cursor } : {});
+        for (const tool of page.tools) {
+            tools.push({
+                name: tool.name,
+                description: typeof tool.description === 'string' ? tool.description : '',
+            });
+        }
+        cursor = page.nextCursor;
+    } while (cursor);
+
+    return tools;
+}
+
+class TimeoutError extends Error {
+    constructor() {
+        super('timeout');
+        this.name = 'TimeoutError';
+    }
+}
+
+function raceWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+        const handle = setTimeout(() => reject(new TimeoutError()), timeoutMs);
+        promise.then(
+            (value) => { clearTimeout(handle); resolve(value); },
+            (err) => { clearTimeout(handle); reject(err); },
+        );
+    });
+}
