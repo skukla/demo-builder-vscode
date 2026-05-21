@@ -2480,6 +2480,20 @@ button[class*="spectrum-Button"][disabled],
     overflow-x: hidden !important;
 }
 
+/* Configure screen tabs — propagate the panel container's flex height
+   down to each rendered tabpanel so children using `h-full` resolve
+   against a finite height. Without this, `.container-form` and
+   AiConfigurationTab cannot scroll. Descendant selector because
+   Spectrum nests the tabpanel inside its TabPanels container. */
+.configure-tabs [role="tabpanel"] {
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
 /* ===========================================
    Width/Height Additions
    =========================================== */

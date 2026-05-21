@@ -162,7 +162,7 @@ export function AiConfigurationTab({ projectPath }: AiConfigurationTabProps): Re
         registerOp.isExecuting;
 
     return (
-        <View padding="size-300">
+        <View padding="size-300" UNSAFE_className="container-form">
             <Flex direction="column" gap="size-200">
                 <Flex justifyContent="space-between" alignItems="center">
                     <Heading level={3}>AI Configuration</Heading>
