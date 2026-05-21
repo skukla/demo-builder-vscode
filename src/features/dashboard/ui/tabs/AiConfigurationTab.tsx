@@ -44,9 +44,6 @@ const STYLE_ROW_ERROR = {
     color: 'var(--spectrum-global-color-gray-600)',
     marginLeft: '24px',
 } as const;
-const STYLE_SMALL_TEXT = { fontSize: '12px' } as const;
-const STYLE_TAG_TEXT = { fontSize: '11px', textTransform: 'uppercase' as const };
-const STYLE_BOLD = { fontWeight: 600 } as const;
 const STYLE_MONO = { fontFamily: 'monospace' } as const;
 const STYLE_INDENT = { marginLeft: '16px' } as const;
 const STYLE_NEEDS_AUTH = { fontSize: '11px', color: 'var(--spectrum-global-color-yellow-700)' } as const;
@@ -367,20 +364,25 @@ function SkillsDetail({
         return <Text>No skills detected.</Text>;
     }
     return (
-        <Flex direction="column" gap="size-100">
+        <Flex direction="column">
             {skills.map(skill => (
-                <Flex key={skill.path} direction="column" gap="size-50">
+                <Flex
+                    key={skill.path}
+                    direction="column"
+                    gap="size-75"
+                    UNSAFE_className="ai-config-row"
+                >
                     <Flex gap="size-100" alignItems="center">
-                        <Text UNSAFE_style={STYLE_BOLD}>{skill.name}</Text>
+                        <Text UNSAFE_className="ai-config-name">{skill.name}</Text>
                         <Text
-                            UNSAFE_style={STYLE_TAG_TEXT}
+                            UNSAFE_className="ai-config-source-badge"
                             data-testid={`skill-source-${skill.source}`}
                         >
                             {skill.source}
                         </Text>
                     </Flex>
                     {skill.description && (
-                        <Text UNSAFE_style={STYLE_SMALL_TEXT}>{skill.description}</Text>
+                        <Text UNSAFE_className="ai-config-description">{skill.description}</Text>
                     )}
                 </Flex>
             ))}
@@ -399,22 +401,27 @@ function ProjectMcpsDetail({
         return <Text>No project MCP servers detected.</Text>;
     }
     return (
-        <Flex direction="column" gap="size-150">
+        <Flex direction="column">
             {mcps.map(server => (
-                <Flex key={server.id} direction="column" gap="size-50">
-                    <Text UNSAFE_style={STYLE_BOLD}>{server.id}</Text>
+                <Flex
+                    key={server.id}
+                    direction="column"
+                    gap="size-100"
+                    UNSAFE_className="ai-config-row"
+                >
+                    <Text UNSAFE_className="ai-config-name">{server.id}</Text>
                     {server.status === 'ok' && server.tools && server.tools.length > 0 && (
-                        <Flex direction="column" gap="size-25" UNSAFE_style={STYLE_INDENT}>
+                        <Flex direction="column" gap="size-100" UNSAFE_style={STYLE_INDENT}>
                             {server.tools.map(tool => (
                                 <Flex key={tool.name} direction="column" gap="size-25">
                                     <Text UNSAFE_style={STYLE_MONO}>{tool.name}</Text>
-                                    <Text UNSAFE_style={STYLE_SMALL_TEXT}>{tool.description}</Text>
+                                    <Text UNSAFE_className="ai-config-description">{tool.description}</Text>
                                 </Flex>
                             ))}
                         </Flex>
                     )}
                     {server.status !== 'ok' && (
-                        <Text UNSAFE_style={STYLE_SMALL_TEXT}>
+                        <Text UNSAFE_className="ai-config-description">
                             {server.status === 'timeout' ? 'Inspector timed out' : (server.error ?? 'Inspector failed')}
                         </Text>
                     )}
@@ -435,10 +442,15 @@ function SessionMcpsDetail({
         return <Text>No session MCP activity detected.</Text>;
     }
     return (
-        <Flex direction="column" gap="size-100">
+        <Flex direction="column">
             {sessions.map(session => (
-                <Flex key={session.displayName} gap="size-100" alignItems="center">
-                    <Text>{session.displayName}</Text>
+                <Flex
+                    key={session.displayName}
+                    gap="size-100"
+                    alignItems="center"
+                    UNSAFE_className="ai-config-row"
+                >
+                    <Text UNSAFE_className="ai-config-name">{session.displayName}</Text>
                     {session.needsAuth && (
                         <Text
                             data-testid="session-mcp-needs-auth"
