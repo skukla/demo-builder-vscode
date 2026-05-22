@@ -193,6 +193,11 @@ export function AiConfigurationTab({ projectPath }: AiConfigurationTabProps): Re
                     </Text>
                 )}
 
+                <div
+                    className={`ai-config-refreshable ${isBusy ? 'refreshing' : ''}`}
+                    data-testid="ai-config-refreshable"
+                >
+
                 {/* ─── Skills row ──────────────────────────────────────────── */}
                 <SectionRow
                     sectionId={SECTION_IDS.skills}
@@ -256,6 +261,7 @@ export function AiConfigurationTab({ projectPath }: AiConfigurationTabProps): Re
                             : 'demo-builder is not registered in ~/.claude.json. Click Register to add it.'}
                     </Text>
                 </SectionRow>
+                </div>
             </Flex>
         </View>
     );

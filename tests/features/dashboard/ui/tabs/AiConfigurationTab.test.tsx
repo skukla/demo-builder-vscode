@@ -561,7 +561,7 @@ describe('AiConfigurationTab', () => {
     // ─── useAsyncOperation integration ────────────────────────────────────────
 
     describe('useAsyncOperation', () => {
-        it('Refresh button is disabled while inspect-mcp is in flight', async () => {
+        it('Other action buttons are disabled while inspect-mcp is in flight (cross-blocking)', async () => {
             // Initial verify resolves; refresh request is left pending until we resolve it.
             let resolveInspect: ((value: unknown) => void) | undefined;
             const inspectPromise = new Promise(res => { resolveInspect = res; });
@@ -572,10 +572,14 @@ describe('AiConfigurationTab', () => {
 
             await renderTab();
             const refresh = screen.getByRole('button', { name: /refresh/i });
+            const regenerate = screen.getByRole('button', { name: /regenerate ai files/i });
             await act(async () => { fireEvent.click(refresh); });
 
-            // After clicking, while inspect-mcp is still pending, the button is disabled
-            expect(refresh).toBeDisabled();
+            // The active Refresh button switches to Spectrum's isPending state
+            // (the visual spinner is Spectrum's internal contract — we don't
+            // assert on it here). What we DO assert: peer action buttons are
+            // disabled so the user can't dispatch concurrent ops.
+            expect(regenerate).toBeDisabled();
 
             // Resolve so cleanup is happy
             await act(async () => {
