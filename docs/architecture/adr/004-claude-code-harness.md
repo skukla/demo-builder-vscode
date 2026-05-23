@@ -98,7 +98,7 @@ The harness setting (`demoBuilder.ai.harness`) lets users force one path:
 
 ## Open Questions
 
-None affecting the harness decision. Two implementation items are tracked in [docs/deferred/README.md](../../deferred/README.md):
+None affecting the harness decision. Two implementation items are tracked in [`.rptc/backlog/`](../../../.rptc/backlog/README.md):
 
 1. **Structural baseline** — codebase-wide measurement after Cycle D.
 2. **Legacy soft-deprecation cleanup** — downstream of the baseline; ~30 inventoried items.

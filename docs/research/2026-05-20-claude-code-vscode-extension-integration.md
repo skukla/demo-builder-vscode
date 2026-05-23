@@ -212,7 +212,7 @@ As of 2026-05-21, the marketplace ships v2.1.145 (per the marketplace listing in
 |---|---|---|
 | A — Two launch pathways | Cycle D `OpenInClaudeCommand` | `demoBuilder.ai.harness` setting drives URI vs. terminal selection; extension detection via `vscode.extensions.getExtension('anthropic.claude-code')` |
 | B — Possible global MCP path bug | Cycle B `ensureGlobalMcpRegistration` | Writes to `~/.claude.json` (the documented canonical path); the legacy `~/.claude/.mcp.json` write was dropped per the "no soft deprecation" rule |
-| C — `.claude/mcp.json` redundancy | Deferred (low priority) | `mcpConfigWriter` continues to write both `.mcp.json` and `.claude/mcp.json` as a defensive mirror. Cost of two writes ≪ cost of a regression if Anthropic resumes reading the inner path. Empirical removal would happen during the structural baseline pass — see `docs/deferred/2026-05-21-legacy-soft-deprecation.md` |
+| C — `.claude/mcp.json` redundancy | Deferred (low priority) | `mcpConfigWriter` continues to write both `.mcp.json` and `.claude/mcp.json` as a defensive mirror. Cost of two writes ≪ cost of a regression if Anthropic resumes reading the inner path. Empirical removal would happen during the structural baseline pass — see `.rptc/backlog/2026-05-21-legacy-soft-deprecation.md` |
 | D — URI handler version dependency | Accepted | No runtime gate; older versions no-op silently. Update channel keeps users fresh |
 
 ### Other Cycle D Phase 1 findings (for future readers of the plan)
