@@ -150,6 +150,8 @@ const WEBVIEW_ENTRIES = {
     configure:    'src/features/dashboard/ui/configure/index.tsx',
     sidebar:      'src/features/sidebar/ui/index.tsx',
     projectsList: 'src/features/projects-dashboard/ui/index.tsx',
+    // Standalone AI surface (Batch E1) — webview behind `demoBuilder.openAi`.
+    aiOverview:   'src/features/dashboard/ui/aiSurface/index.tsx',
 };
 
 async function runWebviewBuild() {

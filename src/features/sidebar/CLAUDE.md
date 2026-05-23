@@ -189,7 +189,7 @@ tests/features/sidebar/
 - **projects-dashboard** - Main content when sidebar shows projects context
 - **project-creation** - Wizard that updates sidebar context
 - **dashboard** - Project detail screen
-- **ai** - AI Configuration nav item opens the Configure screen in `ai-setup` mode (legacy route identifier), rendering `AiConfigurationTab` from `@/features/dashboard/ui/tabs/AiConfigurationTab`
+- **ai** - AI nav item routes to `demoBuilder.openAi`, which opens the standalone AI surface (`AiOverviewScreen`)
 
 ## Package.json Configuration
 

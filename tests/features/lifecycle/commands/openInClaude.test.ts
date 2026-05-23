@@ -609,4 +609,88 @@ describe('OpenInClaudeCommand', () => {
             expect(createArg.cwd).toBe('/p/state');
         });
     });
+
+    // ------------------------------------------------------------------------
+    // Prompt argument (Batch E2)
+    // ------------------------------------------------------------------------
+
+    describe('prompt argument (Batch E2)', () => {
+        it('URI includes the prompt query parameter when called with { prompt }', async () => {
+            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute({ prompt: 'foo' });
+
+            expect(mocks.openExternalMock).toHaveBeenCalledTimes(1);
+            const uriArg = mocks.openExternalMock.mock.calls[0][0];
+            expect(String(uriArg)).toBe('vscode://anthropic.claude-code/open?prompt=foo');
+        });
+
+        it('URL-encodes a prompt with spaces and special characters', async () => {
+            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            const promptText = 'has spaces & special=chars';
+            await command.execute({ prompt: promptText });
+
+            expect(mocks.openExternalMock).toHaveBeenCalledTimes(1);
+            const uriArg = mocks.openExternalMock.mock.calls[0][0];
+            expect(String(uriArg)).toBe(
+                `vscode://anthropic.claude-code/open?prompt=${encodeURIComponent(promptText)}`,
+            );
+        });
+
+        it('URI is the bare open URL when called with { project } only (no prompt)', async () => {
+            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute({ project: makeProject() as Project });
+
+            expect(mocks.openExternalMock).toHaveBeenCalledTimes(1);
+            const uriArg = mocks.openExternalMock.mock.calls[0][0];
+            expect(String(uriArg)).toBe('vscode://anthropic.claude-code/open');
+        });
+
+        it('URI is the bare open URL when called with no argument', async () => {
+            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute();
+
+            expect(mocks.openExternalMock).toHaveBeenCalledTimes(1);
+            const uriArg = mocks.openExternalMock.mock.calls[0][0];
+            expect(String(uriArg)).toBe('vscode://anthropic.claude-code/open');
+        });
+
+        it('terminal-mode ignores the prompt (existing terminal launch behavior preserved)', async () => {
+            const mocks = setupVscodeMocks({ harness: 'terminal', extensionInstalled: false });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute({ prompt: 'add a hero block', project: makeProject() as Project });
+
+            expect(mocks.openExternalMock).not.toHaveBeenCalled();
+            expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude');
+        });
+    });
 });

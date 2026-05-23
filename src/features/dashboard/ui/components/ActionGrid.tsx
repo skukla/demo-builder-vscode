@@ -17,6 +17,7 @@ import {
     ActionButton,
     Text,
 } from '@adobe/react-spectrum';
+import MagicWand from '@spectrum-icons/workflow/MagicWand';
 import Code from '@spectrum-icons/workflow/Code';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
@@ -76,6 +77,8 @@ export interface ActionGridProps {
     handleOpenDevConsole: () => void;
     /** Handler for Open in Claude Code button */
     handleOpenInClaude: () => void;
+    /** Handler for AI (Batch E3) — opens the standalone AI surface */
+    handleOpenAi: () => void;
     /** Handler for Delete button */
     handleDeleteProject: () => void;
 }
@@ -109,6 +112,7 @@ export function ActionGrid({
     handleViewComponents,
     handleOpenDevConsole,
     handleOpenInClaude,
+    handleOpenAi,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
     return (
@@ -212,6 +216,17 @@ export function ActionGrid({
                     <Text UNSAFE_className="icon-label">Sync Storefront</Text>
                 </ActionButton>
             )}
+
+            {/* AI — standalone AI surface (Batch E3). Position: between Sync Storefront and Configure. */}
+            <ActionButton
+                onPress={handleOpenAi}
+                isQuiet
+                UNSAFE_className="dashboard-action-button"
+                aria-label="AI"
+            >
+                <MagicWand size="L" />
+                <Text UNSAFE_className="icon-label">AI</Text>
+            </ActionButton>
 
             {/* Configure */}
             <ActionButton

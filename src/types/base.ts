@@ -9,6 +9,18 @@ import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries
 import type { ServiceDefinition } from './components';
 
 /**
+ * AiPrompt - A user-saved AI prompt (Batch F3)
+ *
+ * Per-project saved prompts the user can create, edit, duplicate, and delete.
+ * Persisted on `Project.aiPrompts`.
+ */
+export interface AiPrompt {
+    id: string;
+    title: string;
+    prompt: string;
+}
+
+/**
  * Project - Core project definition
  */
 export interface Project {
@@ -86,6 +98,8 @@ export interface Project {
             version: string;
             lastUpdated: string; // ISO date string
         }>;
+    /** User-saved AI prompts (Batch F3) */
+    aiPrompts?: AiPrompt[];
     // Aliases for compatibility
     createdAt?: Date;
     updatedAt?: Date;

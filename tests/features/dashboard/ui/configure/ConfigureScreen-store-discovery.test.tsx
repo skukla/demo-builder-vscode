@@ -94,10 +94,6 @@ jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
     ),
 }));
 
-jest.mock('@/features/dashboard/ui/tabs/AiConfigurationTab', () => ({
-    AiConfigurationTab: () => <div data-testid="ai-setup-tab" />,
-}));
-
 jest.mock('@/core/ui/components/navigation', () => ({
     NavigationPanel: () => <div data-testid="navigation-panel" />,
     NavigationSection: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

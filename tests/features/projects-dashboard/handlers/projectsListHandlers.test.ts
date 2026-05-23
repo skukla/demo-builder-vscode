@@ -105,13 +105,17 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'openInClaude')).toBe(true);
         });
 
-        it('should have exactly 21 handlers', () => {
+        it('should include openAi handler (E3)', () => {
+            expect(hasHandler(projectsListHandlers, 'openAi')).toBe(true);
+        });
+
+        it('should have exactly 22 handlers', () => {
             // Given: projectsListHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(projectsListHandlers);
 
-            // Then: Exactly 21 handlers (20 prior + openInClaude from D4)
-            expect(types).toHaveLength(21);
+            // Then: Exactly 22 handlers (21 prior + openAi from E3)
+            expect(types).toHaveLength(22);
         });
 
         it('should have handlers as functions', () => {

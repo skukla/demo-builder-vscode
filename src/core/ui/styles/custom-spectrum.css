@@ -2480,44 +2480,12 @@ button[class*="spectrum-Button"][disabled],
     overflow-x: hidden !important;
 }
 
-/* Configure screen tabs — propagate flex height through Spectrum's
-   Tabs wrapper so children using `h-full` resolve against a finite
-   height. Without this, `.container-form` and AiConfigurationTab
-   cannot scroll. The DOM Spectrum renders (per @react-spectrum/tabs
-   source) is:
-     <div class="spectrum-TabsPanel configure-tabs">     ← Tabs root
-       <TabList>...</TabList>
-       <div class="spectrum-TabsPanel-tabpanel flex-1 min-h-0 overflow-hidden" role="tabpanel">
-         {Item content}
-       </div>
-     </div>
-   We need to make the Tabs root a flex column that fills its parent,
-   AND make the tabpanel itself a flex column with a finite height
-   so its children inherit a constrained height. */
-.configure-tabs {
-    flex: 1 !important;
-    min-height: 0 !important;
-    height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-}
+/* AI surface — drill-down row typography reuses the wizard's existing
+   utility classes (.text-sm, .font-semibold, .text-gray-700) for
+   name/description. Only the unique pieces live here: the source
+   classification badge pill and the row separator. */
 
-.configure-tabs [role="tabpanel"] {
-    flex: 1 !important;
-    min-height: 0 !important;
-    height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-}
-
-/* AI Configuration tab — drill-down row typography reuses the
-   wizard's existing utility classes (.text-sm, .font-semibold,
-   .text-gray-700) for name/description. Only the unique pieces
-   live here: the source-classification badge pill and the
-   row separator. */
-
-.ai-config-source-badge {
+.ai-surface-source-badge {
     display: inline-block;
     padding: 2px 8px;
     font-size: 10px !important;
@@ -2529,7 +2497,7 @@ button[class*="spectrum-Button"][disabled],
     color: var(--spectrum-global-color-gray-800) !important;
 }
 
-.ai-config-row + .ai-config-row {
+.ai-surface-row + .ai-surface-row {
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid var(--spectrum-global-color-gray-200);
@@ -2538,31 +2506,47 @@ button[class*="spectrum-Button"][disabled],
 /* Two-column row used by skills + tool entries — name + badge on
    the left, description on the right, with the left column
    vertically centered against the (often taller) description. */
-.ai-config-two-col {
+.ai-surface-two-col {
     display: grid !important;
     grid-template-columns: minmax(160px, 220px) 1fr;
     column-gap: 24px;
     align-items: center;
 }
 
-/* AI Configuration sidebar (Configure right-column when on AI tab) —
-   constrained sidebar width so the CTA + text reads as a sidebar,
-   not a full-page banner. */
-.ai-config-sidebar {
+/* AI surface sidebar (right-column) — constrained sidebar width so the
+   CTA + text reads as a sidebar, not a full-page banner. */
+.ai-surface-sidebar {
     max-width: 280px !important;
 }
 
-/* AI Configuration content fade — mirrors the wizard's
+/* AI surface content fade — mirrors the wizard's
    .list-refresh-container.refreshing pattern (200ms opacity fade
    + pointer-events: none) so the user gets a visible "data is
    refreshing" cue without toast notifications or button spinners. */
-.ai-config-refreshable {
+.ai-surface-refreshable {
     transition: opacity 200ms ease-in-out !important;
 }
 
-.ai-config-refreshable.refreshing {
+.ai-surface-refreshable.refreshing {
     opacity: 0.5 !important;
     pointer-events: none !important;
+}
+
+/* AI prompt card (Batch E2) — clickable card in the AI Overview sidebar
+   that launches Claude Code with the prompt pre-filled. Subtle outline,
+   rounded corners, hover state. Matches the wizard's existing aesthetic. */
+.ai-prompt-card {
+    transition: background 120ms ease-in-out, border-color 120ms ease-in-out;
+}
+
+.ai-prompt-card:hover {
+    background: var(--spectrum-global-color-gray-100) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+}
+
+.ai-prompt-card:focus-visible {
+    outline: 2px solid var(--spectrum-semantic-cta-color-default) !important;
+    outline-offset: 2px !important;
 }
 
 /* ===========================================

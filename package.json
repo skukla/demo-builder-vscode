@@ -63,6 +63,11 @@
         "category": "Demo Builder"
       },
       {
+        "command": "demoBuilder.openAi",
+        "title": "AI",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.resetAll",
         "title": "Reset All (Dev Only)",
         "category": "Demo Builder"

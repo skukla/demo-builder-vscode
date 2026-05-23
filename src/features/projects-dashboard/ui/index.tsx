@@ -360,6 +360,18 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
+    // Handle Open AI (Batch E3) - dispatches to the `demoBuilder.openAi` command
+    // via the dashboard handler bridge. Mirrors handleOpenInClaudeCode exactly.
+    const handleOpenAiForProject = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('openAi', {
+                projectPath: project.path,
+            });
+        } catch (error) {
+            console.error('Failed to open AI for project:', error);
+        }
+    }, []);
+
     // Handle view mode override - saves to backend for session persistence
     const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
         setInitialViewMode(mode);
@@ -381,12 +393,13 @@ const ProjectsDashboardApp: React.FC = () => {
         onCopyPath: handleCopyPath,
         onExport: handleExportProject,
         onOpenInClaudeCode: handleOpenInClaudeCode,
+        onOpenAi: handleOpenAiForProject,
         onDelete: handleDeleteProject,
     }), [
         handleStartDemo, handleStopDemo, handleOpenBrowser, handleOpenLiveSite,
         handleOpenDaLive, handleResetProject, handleRepublishContent, handleEditProject,
         handleRenameProject, handleCopyPath, handleExportProject,
-        handleOpenInClaudeCode, handleDeleteProject,
+        handleOpenInClaudeCode, handleOpenAiForProject, handleDeleteProject,
     ]);
 
     return (

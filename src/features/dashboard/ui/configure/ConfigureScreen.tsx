@@ -1,5 +1,4 @@
 import {
-    Heading,
     Text,
     Form,
     Button,
@@ -7,14 +6,8 @@ import {
     Link,
     Flex,
     TextField,
-    Tabs,
-    TabList,
-    TabPanels,
-    Item,
-    Divider,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { AiConfigurationTab } from '../tabs/AiConfigurationTab';
 import { useFieldFocusTracking } from './hooks/useFieldFocusTracking';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
@@ -55,12 +48,6 @@ interface ConfigureScreenProps {
     componentsData: ComponentsData;
     existingEnvValues?: Record<string, Record<string, string>>;
     existingProjectNames?: string[];
-    /**
-     * Which tab to show initially.
-     * - `'configure'` (default): configuration form
-     * - `'ai-setup'`: AI Configuration tab (legacy identifier kept for routing)
-     */
-    activeView?: 'configure' | 'ai-setup';
 }
 
 interface ComponentData {
@@ -145,7 +132,6 @@ export function ConfigureScreen({
     componentsData,
     existingEnvValues,
     existingProjectNames = [],
-    activeView = 'configure',
 }: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -217,13 +203,8 @@ export function ConfigureScreen({
         isStoreGroup,
     } = useStoreDiscovery();
 
-    // The AI Configuration view (activeView === 'ai-setup') short-circuits rendering below.
-    // Feed the store hooks empty inputs so they stay inert — no autoDetectKey, no
-    // background fetch, no sync message — while still honoring the rules of hooks.
-    const isConfigureView = activeView !== 'ai-setup';
-
     const { autoDetectKey, forceFetch } = useAutoStoreDetect({
-        configs: isConfigureView ? componentConfigs : {},
+        configs: componentConfigs,
         orgId: project.adobe?.organization,
         fetchStores,
         hasStoreData,
@@ -234,9 +215,8 @@ export function ConfigureScreen({
     // The `discover-store-structure` handler reads credentials from this cache, so fresh
     // URL / username / password edits must propagate before auto-detect fires.
     useEffect(() => {
-        if (!isConfigureView) return;
         webviewClient.postMessage('sync-component-configs', componentConfigs);
-    }, [componentConfigs, isConfigureView]);
+    }, [componentConfigs]);
 
     // Delegate field focus tracking and auto-scrolling to extracted hook
     useFieldFocusTracking({
@@ -493,13 +473,6 @@ export function ConfigureScreen({
     // Can save if no validation errors (env vars and project name)
     const canSave = !hasEntries(validationErrors) && !projectNameError;
 
-    // Tab state — "configuration" or "ai-setup". Default from activeView prop
-    // (sidebar can deep-link to AI Configuration via activeView='ai-setup').
-    const [selectedTab, setSelectedTab] = useState<string>(
-        activeView === 'ai-setup' ? 'ai-setup' : 'configuration',
-    );
-    const isConfigTab = selectedTab === 'configuration';
-
     return (
         <div
             ref={containerRef}
@@ -513,7 +486,7 @@ export function ConfigureScreen({
                     subtitle={projectName}
                 />
 
-                {/* Content — tabbed: Configuration | AI Configuration */}
+                {/* Content */}
                 <TwoColumnLayout
                     leftMaxWidth="800px"
                     leftPadding="size-300"
@@ -521,153 +494,89 @@ export function ConfigureScreen({
                     gap={0}
                     leftContent={
                         <div className="flex-column h-full">
-                            <Tabs
-                                selectedKey={selectedTab}
-                                onSelectionChange={(key) => setSelectedTab(String(key))}
-                                UNSAFE_className="configure-tabs"
-                            >
-                                <TabList>
-                                    <Item key="configuration">Configuration</Item>
-                                    <Item key="ai-setup">AI Configuration</Item>
-                                </TabList>
-                                <TabPanels UNSAFE_className="flex-1 min-h-0 overflow-hidden">
-                                    <Item key="configuration">
-                                        <div className="flex-column h-full">
-                                            <Form UNSAFE_className="container-form">
-                                                {/* Project Name Field */}
-                                                <ConfigSection
-                                                    id="project-info"
-                                                    label="Project"
-                                                    showDivider={false}
-                                                >
-                                                    <TextField
-                                                        label="Project Name"
-                                                        value={projectName}
-                                                        onChange={handleProjectNameChange}
-                                                        isRequired
-                                                        width="100%"
-                                                        validationState={getValidationState(!!projectNameError, projectNameTouched)}
-                                                        errorMessage={projectNameError}
-                                                        description="Lowercase letters, numbers, and hyphens only. Must start with a letter."
-                                                    />
-                                                </ConfigSection>
+                            <Form UNSAFE_className="container-form">
+                                {/* Project Name Field */}
+                                <ConfigSection
+                                    id="project-info"
+                                    label="Project"
+                                    showDivider={false}
+                                >
+                                    <TextField
+                                        label="Project Name"
+                                        value={projectName}
+                                        onChange={handleProjectNameChange}
+                                        isRequired
+                                        width="100%"
+                                        validationState={getValidationState(!!projectNameError, projectNameTouched)}
+                                        errorMessage={projectNameError}
+                                        description="Lowercase letters, numbers, and hyphens only. Must start with a letter."
+                                    />
+                                </ConfigSection>
 
-                                            {serviceGroups.length === 0 ? (
-                                                <Text UNSAFE_className="text-gray-600">
-                                                    No components requiring configuration were found.
-                                                </Text>
-                                            ) : (
-                                                <>
-                                                    {serviceGroups.map((group, index) => (
-                                                        <ConfigSection
-                                                            key={group.id}
-                                                            id={group.id}
-                                                            label={group.label}
-                                                            showDivider={index > 0}
-                                                            footer={group.id === 'adobe-assets' ? (
-                                                                <Flex marginTop="size-200">
-                                                                    <Text UNSAFE_className="text-gray-600 text-sm">
-                                                                        Universal Editor settings are configured in{' '}
-                                                                        <Link
-                                                                            onPress={() => webviewClient.postMessage('open-eds-settings')}
-                                                                            UNSAFE_className="cursor-pointer"
-                                                                        >
-                                                                            Extension Settings
-                                                                        </Link>
-                                                                    </Text>
-                                                                </Flex>
-                                                            ) : undefined}
-                                                        >
-                                                            {group.fields.map(field => (
-                                                                <StoreConfigFieldRow
-                                                                    key={field.key}
-                                                                    field={field}
-                                                                    group={group}
-                                                                    autoDetectKey={autoDetectKey}
-                                                                    isFetching={isFetching}
-                                                                    hasStoreData={hasStoreData}
-                                                                    fetchError={fetchError}
-                                                                    isStoreGroup={isStoreGroup}
-                                                                    getFieldValue={getFieldValue}
-                                                                    updateField={updateField}
-                                                                    validationErrors={validationErrors}
-                                                                    touchedFields={touchedFields}
-                                                                    normalizeUrlField={normalizeUrlField}
-                                                                    getWebsiteItems={getWebsiteItems}
-                                                                    getStoreGroupItems={getStoreGroupItems}
-                                                                    getStoreViewItems={getStoreViewItems}
-                                                                    componentConfigs={componentConfigs}
-                                                                    onRefresh={forceFetch}
-                                                                />
-                                                            ))}
-                                                        </ConfigSection>
-                                                    ))}
-                                                </>
-                                            )}
-                                            </Form>
-                                        </div>
-                                    </Item>
-                                    <Item key="ai-setup">
-                                        <AiConfigurationTab projectPath={project.path} />
-                                    </Item>
-                                </TabPanels>
-                            </Tabs>
+                                {serviceGroups.length === 0 ? (
+                                    <Text UNSAFE_className="text-gray-600">
+                                        No components requiring configuration were found.
+                                    </Text>
+                                ) : (
+                                    <>
+                                        {serviceGroups.map((group, index) => (
+                                            <ConfigSection
+                                                key={group.id}
+                                                id={group.id}
+                                                label={group.label}
+                                                showDivider={index > 0}
+                                                footer={group.id === 'adobe-assets' ? (
+                                                    <Flex marginTop="size-200">
+                                                        <Text UNSAFE_className="text-gray-600 text-sm">
+                                                            Universal Editor settings are configured in{' '}
+                                                            <Link
+                                                                onPress={() => webviewClient.postMessage('open-eds-settings')}
+                                                                UNSAFE_className="cursor-pointer"
+                                                            >
+                                                                Extension Settings
+                                                            </Link>
+                                                        </Text>
+                                                    </Flex>
+                                                ) : undefined}
+                                            >
+                                                {group.fields.map(field => (
+                                                    <StoreConfigFieldRow
+                                                        key={field.key}
+                                                        field={field}
+                                                        group={group}
+                                                        autoDetectKey={autoDetectKey}
+                                                        isFetching={isFetching}
+                                                        hasStoreData={hasStoreData}
+                                                        fetchError={fetchError}
+                                                        isStoreGroup={isStoreGroup}
+                                                        getFieldValue={getFieldValue}
+                                                        updateField={updateField}
+                                                        validationErrors={validationErrors}
+                                                        touchedFields={touchedFields}
+                                                        normalizeUrlField={normalizeUrlField}
+                                                        getWebsiteItems={getWebsiteItems}
+                                                        getStoreGroupItems={getStoreGroupItems}
+                                                        getStoreViewItems={getStoreViewItems}
+                                                        componentConfigs={componentConfigs}
+                                                        onRefresh={forceFetch}
+                                                    />
+                                                ))}
+                                            </ConfigSection>
+                                        ))}
+                                    </>
+                                )}
+                            </Form>
                         </div>
                     }
                     rightContent={
-                        isConfigTab ? (
-                            <NavigationPanel
-                                sections={navigationSections}
-                                activeSection={activeSection}
-                                activeField={activeField}
-                                expandedSections={expandedNavSections}
-                                onToggleSection={toggleNavSection}
-                                onNavigateToField={navigateToField}
-                            />
-                        ) : (
-                            <View
-                                data-testid="ai-config-sidebar"
-                                UNSAFE_className="ai-config-sidebar"
-                            >
-                                <Heading level={3} marginBottom="size-300">
-                                    Use in Claude Code
-                                </Heading>
-
-                                <View marginTop="size-200" marginBottom="size-200">
-                                    <Text UNSAFE_className="text-xs font-semibold text-gray-700 text-uppercase letter-spacing-05">
-                                        Overview
-                                    </Text>
-                                    <View marginTop="size-100">
-                                        <Text UNSAFE_className="text-sm text-gray-700">
-                                            Skills and MCP servers above load automatically when you open this project in Claude Code.
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                <Divider size="S" />
-
-                                <View marginTop="size-300">
-                                    <Flex direction="column" gap="size-200" alignItems="start">
-                                        <Button
-                                            variant="accent"
-                                            onPress={() => webviewClient.postMessage('openInClaude')}
-                                        >
-                                            Open in Claude Code
-                                        </Button>
-                                        <Link
-                                            onPress={() =>
-                                                webviewClient.postMessage('openExternal', {
-                                                    url: 'https://github.com/skukla/demo-builder-vscode/blob/master/docs/architecture/adr/004-claude-code-harness.md',
-                                                })
-                                            }
-                                            UNSAFE_className="cursor-pointer text-sm"
-                                        >
-                                            Learn more about AI integration
-                                        </Link>
-                                    </Flex>
-                                </View>
-                            </View>
-                        )
+                        <NavigationPanel
+                            sections={navigationSections}
+                            activeSection={activeSection}
+                            activeField={activeField}
+                            expandedSections={expandedNavSections}
+                            onToggleSection={toggleNavSection}
+                            onNavigateToField={navigateToField}
+                        />
                     }
                 />
 

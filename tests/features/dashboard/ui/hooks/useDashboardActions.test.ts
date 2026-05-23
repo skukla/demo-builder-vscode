@@ -79,6 +79,7 @@ describe('useDashboardActions', () => {
             expect(result.current.handleConfigure).toBeDefined();
             expect(result.current.handleOpenDevConsole).toBeDefined();
             expect(result.current.handleOpenInClaude).toBeDefined();
+            expect(result.current.handleOpenAi).toBeDefined();
             expect(result.current.handleDeleteProject).toBeDefined();
             expect(result.current.handleNavigateBack).toBeDefined();
             expect(result.current.handleViewComponents).toBeDefined();
@@ -96,6 +97,7 @@ describe('useDashboardActions', () => {
             expect(typeof result.current.handleConfigure).toBe('function');
             expect(typeof result.current.handleOpenDevConsole).toBe('function');
             expect(typeof result.current.handleOpenInClaude).toBe('function');
+            expect(typeof result.current.handleOpenAi).toBe('function');
             expect(typeof result.current.handleDeleteProject).toBe('function');
             expect(typeof result.current.handleNavigateBack).toBe('function');
             expect(typeof result.current.handleViewComponents).toBe('function');
@@ -262,6 +264,29 @@ describe('useDashboardActions', () => {
             expect(calls[0]).toHaveLength(1);
         });
 
+        it('should send openAi message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleOpenAi();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('openAi');
+        });
+
+        it('should send openAi message without payload', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleOpenAi();
+            });
+
+            // Verify called with exactly 1 argument (no payload) — mirrors openInClaude shape
+            const calls = mockPostMessage.mock.calls.filter((c) => c[0] === 'openAi');
+            expect(calls).toHaveLength(1);
+            expect(calls[0]).toHaveLength(1);
+        });
+
         it('should send deleteProject message', () => {
             const { result } = renderActionsHook();
 
@@ -318,6 +343,7 @@ describe('useDashboardActions', () => {
             expect(result.current.handleConfigure).toBe(initialHandlers.handleConfigure);
             expect(result.current.handleOpenDevConsole).toBe(initialHandlers.handleOpenDevConsole);
             expect(result.current.handleOpenInClaude).toBe(initialHandlers.handleOpenInClaude);
+            expect(result.current.handleOpenAi).toBe(initialHandlers.handleOpenAi);
             expect(result.current.handleDeleteProject).toBe(initialHandlers.handleDeleteProject);
             expect(result.current.handleNavigateBack).toBe(initialHandlers.handleNavigateBack);
             expect(result.current.handleViewComponents).toBe(initialHandlers.handleViewComponents);

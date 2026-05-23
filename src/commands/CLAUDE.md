@@ -147,7 +147,7 @@ comm.on('continue-step', async (payload) => {
 |--------|-----------|
 | `overview` | `projectDashboard.execute()` |
 | `configure` | `configureProject.execute()` |
-| `ai-setup` | `configureProject.execute()` (AI Configuration tab renders in Configure screen; the `ai-setup` identifier is the stable wire-level route) |
+| `ai` | `openAi.execute()` (standalone AI surface) |
 | `updates` | `checkUpdates.execute()` |
 
 **Note**: This command is intentionally omitted from `package.json` contributions. It is an internal sidebar-routing command, not a user-facing command palette entry. The sidebar sends `demoBuilder.navigate` messages; the command dispatches to the appropriate webview.

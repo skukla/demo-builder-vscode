@@ -56,16 +56,6 @@ jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
     ),
 }));
 
-// Mock AiConfigurationTab (tested separately; keep configure screen tests focused)
-jest.mock('@/features/dashboard/ui/tabs/AiConfigurationTab', () => ({
-    AiConfigurationTab: ({ projectPath }: any) => (
-        <div data-testid="ai-setup-tab">
-            <h3>AI Configuration</h3>
-            <span>{projectPath}</span>
-        </div>
-    ),
-}));
-
 // Mock store discovery hooks & row — tested separately in ConfigureScreen-store-discovery.test.tsx.
 // Here we just need them to render benignly so the existing rendering assertions still pass.
 jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
@@ -280,85 +270,23 @@ describe('ConfigureScreen - Rendering', () => {
         });
     });
 
-    describe('AI Configuration View', () => {
-        // AI Configuration is a standalone view accessed via the sidebar nav item (activeView='ai-setup').
-        // It must NOT appear inside the default 'configure' view — rendering it there breaks the
-        // two-column flex layout by squeezing TwoColumnLayout's vertical space.
+    describe('AI Configuration View (removed in Batch E4)', () => {
+        // The AI Configuration tab was removed in Batch E4. The standalone
+        // AI surface (ShowAiCommand → AiOverviewScreen) replaced it. These
+        // assertions guard against regressions that would re-introduce the
+        // tab inside Configure.
 
-        it('does not render AiConfigurationTab in the default configure view even when extensionDistPath is provided', () => {
+        it('does not render an AI tab or AI sidebar inside Configure', () => {
             renderWithProvider(
                 <ConfigureScreen
                     project={mockProject as any}
                     componentsData={mockComponentsData}
-                    extensionDistPath="/ext/dist"
                 />
             );
 
             expect(screen.queryByTestId('ai-setup-tab')).not.toBeInTheDocument();
-        });
-
-        it('renders AiConfigurationTab when activeView is "ai-setup" and extensionDistPath is provided', () => {
-            renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                    extensionDistPath="/ext/dist"
-                    activeView="ai-setup"
-                />
-            );
-
-            expect(screen.getByTestId('ai-setup-tab')).toBeInTheDocument();
-        });
-
-        it('passes projectPath to AiConfigurationTab in the ai-setup view', () => {
-            renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                    extensionDistPath="/ext/dist"
-                    activeView="ai-setup"
-                />
-            );
-
-            expect(screen.getByText('/test/path')).toBeInTheDocument();
-        });
-
-        it('renders AiConfigurationTab even without extensionDistPath (tab is always available)', () => {
-            renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                    activeView="ai-setup"
-                />
-            );
-
-            // AI Configuration is now a tab, not gated on extensionDistPath
-            expect(screen.getByTestId('ai-setup-tab')).toBeInTheDocument();
-        });
-
-        it('renders the AI Configuration sidebar (right column) when on the ai-setup view', () => {
-            renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                    activeView="ai-setup"
-                />
-            );
-
-            expect(screen.getByTestId('ai-config-sidebar')).toBeInTheDocument();
-            expect(screen.getByText('Use in Claude Code')).toBeInTheDocument();
-            expect(screen.getByText('Open in Claude Code')).toBeInTheDocument();
-        });
-
-        it('does NOT render the AI Configuration sidebar on the Configuration view', () => {
-            renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
-            );
-
             expect(screen.queryByTestId('ai-config-sidebar')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('ai-surface-sidebar')).not.toBeInTheDocument();
         });
     });
 

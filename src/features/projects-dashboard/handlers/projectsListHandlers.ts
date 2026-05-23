@@ -29,6 +29,7 @@ import {
     handleSetViewModeOverride,
     handleCopyProjectPath,
     handleOpenInClaudeForProject,
+    handleOpenAiForProject,
 } from './dashboardHandlers';
 import { defineHandlers } from '@/types/handlers';
 
@@ -85,4 +86,7 @@ export const projectsListHandlers = defineHandlers({
 
     // Open in Claude Code (CLI harness) for a specific project (D4)
     'openInClaude': handleOpenInClaudeForProject,
+
+    // Open AI surface for a specific project (E3)
+    'openAi': handleOpenAiForProject,
 });

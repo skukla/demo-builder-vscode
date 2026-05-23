@@ -298,6 +298,17 @@ export const handleOpenInClaude: MessageHandler = async (context) => {
 };
 
 /**
+ * Handle 'openAi' message - Open the standalone AI surface for the current project
+ *
+ * Delegates to the `demoBuilder.openAi` command, which mounts the
+ * AiOverviewScreen webview. Routed from the project dashboard's AI tile.
+ */
+export const handleOpenAi: MessageHandler = async (_context) => {
+    await vscode.commands.executeCommand('demoBuilder.openAi');
+    return { success: true };
+};
+
+/**
  * Handle 'openDevConsole' message - Open Adobe Developer Console
  */
 export const handleOpenDevConsole: MessageHandler = async (context) => {
@@ -534,6 +545,7 @@ export const dashboardHandlers = defineHandlers({
     'configure': handleConfigure,
     'openDevConsole': handleOpenDevConsole,
     'openInClaude': handleOpenInClaude,
+    'openAi': handleOpenAi,
     'navigateBack': handleNavigateBack,
     'viewComponents': handleViewComponents,
 

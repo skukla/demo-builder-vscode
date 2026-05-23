@@ -184,6 +184,7 @@ function getProjectDetailNavItems(activeId: string): NavItem[] {
         { id: 'overview', label: 'Overview', active: activeId === 'overview' },
         { id: 'configure', label: 'Configure', active: activeId === 'configure' },
         { id: 'updates', label: 'Updates', active: activeId === 'updates' },
-        { id: 'ai-setup', label: 'AI Configuration', active: activeId === 'ai-setup' },
+        // Batch E3: rename "AI Configuration" → "AI"; target id 'ai' routes to demoBuilder.openAi
+        { id: 'ai', label: 'AI', active: activeId === 'ai' },
     ];
 }

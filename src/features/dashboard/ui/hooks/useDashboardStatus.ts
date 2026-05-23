@@ -58,6 +58,30 @@ export interface StatusDisplay {
 }
 
 /**
+ * AI Ready badge state — derived from `verify-ai-setup` response.
+ *
+ * Combines all 7 AI-setup signals (file checks + inventory inspectors +
+ * global MCP registration) into a single 4-color badge. See the
+ * "AI Ready badge state" section in the AI surface redesign plan.
+ */
+export interface AiReadyState {
+    label: 'AI Ready';
+    color: 'gray' | 'green' | 'yellow' | 'red';
+    text: 'Verifying' | 'Ready' | 'Setup incomplete' | 'Broken';
+}
+
+/** Minimum shape we read from the verify-ai-setup handler response. */
+interface VerifyAiSetupResponse {
+    success: boolean;
+    checks?: Array<{ name: string; status: 'ok' | 'warning' | 'error' }>;
+    inventory?: {
+        skillsError?: string;
+        mcpsError?: string;
+    };
+    globalMcpRegistration?: 'registered' | 'declined' | 'unregistered';
+}
+
+/**
  * EDS storefront status values
  */
 export type EdsStorefrontStatus = 'published' | 'stale' | 'update-declined' | 'not-published';
@@ -96,6 +120,8 @@ export interface UseDashboardStatusReturn {
     status: ProjectStatus['status'] | undefined;
     /** Current mesh status value */
     meshStatus: MeshStatus | undefined;
+    /** Derived AI Ready badge state */
+    aiReady: AiReadyState;
 }
 
 /** Mesh statuses that indicate a user-initiated operation is in progress (preserve during updates) */
@@ -121,8 +147,11 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
     const [isRunning, setIsRunning] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const [verifyResult, setVerifyResult] = useState<VerifyAiSetupResponse | null>(null);
+    const [verifyFailed, setVerifyFailed] = useState(false);
     // Track whether status was requested (prevent StrictMode double-request)
     const statusRequestedRef = useRef(false);
+    const verifyRequestedRef = useRef(false);
 
     useEffect(() => {
         // Guard against StrictMode double-request (only send message once)
@@ -171,6 +200,30 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         return () => {
             unsubscribeStatus();
             unsubscribeMesh();
+        };
+    }, []);
+
+    // Fetch the AI setup verification once on mount. Guards against StrictMode
+    // double-fetch using a ref. The badge stays in 'Verifying' (gray) until
+    // this resolves.
+    useEffect(() => {
+        if (verifyRequestedRef.current) return;
+        verifyRequestedRef.current = true;
+        let cancelled = false;
+        webviewClient
+            .request<VerifyAiSetupResponse>('verify-ai-setup', {})
+            .then(result => {
+                if (!cancelled) {
+                    setVerifyResult(result);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setVerifyFailed(true);
+                }
+            });
+        return () => {
+            cancelled = true;
         };
     }, []);
 
@@ -260,6 +313,38 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         return { color: 'gray', text: 'Unknown' };
     }, [meshStatus, meshMessage, hasMesh, projectStatus, initialMeshStatus]);
 
+    // Derive AI Ready badge state from the verify response. The plan defines
+    // four colors:
+    //   gray:   verify hasn't returned yet (initial)
+    //   red:    any of 4 file checks failed
+    //   yellow: files OK BUT (not registered globally OR inventory inspector errored)
+    //   green:  all 7 signals pass
+    const aiReady = useMemo<AiReadyState>(() => {
+        if (!verifyResult) {
+            // Verify failed — surface as 'Setup incomplete' rather than leaving
+            // the badge stuck on gray indefinitely.
+            if (verifyFailed) {
+                return { label: 'AI Ready', color: 'yellow', text: 'Setup incomplete' };
+            }
+            return { label: 'AI Ready', color: 'gray', text: 'Verifying' };
+        }
+
+        const checks = verifyResult.checks ?? [];
+        const anyCheckFailed = checks.some(c => c.status !== 'ok');
+        if (anyCheckFailed) {
+            return { label: 'AI Ready', color: 'red', text: 'Broken' };
+        }
+
+        const inv = verifyResult.inventory ?? {};
+        const hasInventoryError = Boolean(inv.skillsError ?? inv.mcpsError);
+        const isRegistered = verifyResult.globalMcpRegistration === 'registered';
+        if (hasInventoryError || !isRegistered) {
+            return { label: 'AI Ready', color: 'yellow', text: 'Setup incomplete' };
+        }
+
+        return { label: 'AI Ready', color: 'green', text: 'Ready' };
+    }, [verifyResult, verifyFailed]);
+
     return {
         projectStatus,
         isRunning,
@@ -270,5 +355,6 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         displayName,
         status,
         meshStatus,
+        aiReady,
     };
 }

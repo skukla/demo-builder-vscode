@@ -39,7 +39,6 @@ interface ConfigureInitialData {
     };
     existingEnvValues: Record<string, Record<string, string>>;
     existingProjectNames: string[];
-    activeView?: 'configure' | 'ai-setup';
 }
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
@@ -70,7 +69,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         return 'Loading project configuration...';
     }
 
-    public async execute(options?: { activeView?: 'configure' | 'ai-setup' }): Promise<void> {
+    public async execute(): Promise<void> {
         try {
             // Get current project
             const project = await this.stateManager.getCurrentProject();
@@ -78,9 +77,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 await this.showWarning('No project found to configure.');
                 return;
             }
-
-            // Store requested view so getInitialData() can include it
-            this._requestedActiveView = options?.activeView;
 
             // Create or reveal the webview panel
             await this.createOrRevealPanel();
@@ -90,14 +86,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 await this.initializeCommunication();
             }
 
-            this.logger.debug(`[Configure] Opened configuration for project: ${project.name}${options?.activeView ? ` (view: ${options.activeView})` : ''}`);
+            this.logger.debug(`[Configure] Opened configuration for project: ${project.name}`);
         } catch (error) {
             await this.showError('Failed to open configuration', error as Error);
         }
     }
-
-    /** Active view requested via execute() options — forwarded to webview as initial data. */
-    private _requestedActiveView?: 'configure' | 'ai-setup';
 
     protected async getWebviewContent(): Promise<string> {
         if (!this.panel) {
@@ -161,7 +154,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             componentsData,
             existingEnvValues,
             existingProjectNames,
-            activeView: this._requestedActiveView,
         };
     }
 

@@ -131,6 +131,122 @@ describe('ProjectActionsMenu', () => {
         });
     });
 
+    describe('Open AI action (Batch E3)', () => {
+        it('should render Open AI menu item when onOpenAi is provided', () => {
+            const project = createMockProject({ name: 'Test' });
+            const actions: ProjectActions = {
+                onOpenAi: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={project}
+                    actions={actions}
+                />,
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            menuButton.click();
+
+            expect(screen.getByText('Open AI')).toBeInTheDocument();
+        });
+
+        it('should NOT render Open AI menu item when callback is omitted', () => {
+            const project = createMockProject({ name: 'Test' });
+            const actions: ProjectActions = {
+                onDelete: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={project}
+                    actions={actions}
+                />,
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            menuButton.click();
+
+            expect(screen.queryByText('Open AI')).not.toBeInTheDocument();
+        });
+
+        it('should invoke onOpenAi with the project when item is selected', () => {
+            const project = createMockProject({ name: 'AI Target Project' });
+            const actions: ProjectActions = {
+                onOpenAi: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={project}
+                    actions={actions}
+                />,
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            menuButton.click();
+
+            const aiItem = screen.getByText('Open AI');
+            aiItem.click();
+
+            expect(actions.onOpenAi).toHaveBeenCalledWith(project);
+            expect(actions.onOpenAi).toHaveBeenCalledTimes(1);
+        });
+
+        it('should render Open AI for EDS projects as well', () => {
+            // EDS project: storefrontPath set marks it as EDS via isEdsProject typeGuard
+            const project = createMockProject({
+                name: 'EDS AI Project',
+                storefrontPath: 'eds-storefront',
+            } as any);
+            const actions: ProjectActions = {
+                onOpenAi: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={project}
+                    actions={actions}
+                />,
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            menuButton.click();
+
+            expect(screen.getByText('Open AI')).toBeInTheDocument();
+        });
+
+        it('should place Open AI adjacent to Open in Claude Code (same group, before Delete)', () => {
+            const project = createMockProject({ name: 'Test' });
+            const actions: ProjectActions = {
+                onOpenAi: jest.fn(),
+                onOpenInClaudeCode: jest.fn(),
+                onDelete: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={project}
+                    actions={actions}
+                />,
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            menuButton.click();
+
+            const menuItems = screen.getAllByRole('menuitem');
+            const labels = menuItems.map((item) => item.textContent ?? '');
+
+            const aiIdx = labels.findIndex((l) => l.includes('Open AI'));
+            const claudeIdx = labels.findIndex((l) => l.includes('Open in Claude Code'));
+            const deleteIdx = labels.findIndex((l) => l.includes('Delete'));
+
+            expect(aiIdx).toBeGreaterThanOrEqual(0);
+            expect(claudeIdx).toBeGreaterThanOrEqual(0);
+            expect(deleteIdx).toBeGreaterThanOrEqual(0);
+            // Open AI and Open in Claude Code both sit before Delete (same group)
+            expect(aiIdx).toBeLessThan(deleteIdx);
+            expect(claudeIdx).toBeLessThan(deleteIdx);
+            // Adjacent: difference is 1
+            expect(Math.abs(aiIdx - claudeIdx)).toBe(1);
+        });
+    });
+
     describe('Open in Claude Code action', () => {
         it('should render Open in Claude Code menu item when onOpenInClaudeCode is provided', () => {
             const project = createMockProject({ name: 'Test' });

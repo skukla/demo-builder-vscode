@@ -7,6 +7,7 @@ import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
@@ -177,6 +178,16 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             comm.onStreaming(messageType, async (data: unknown) => {
                 const context = this.createHandlerContext();
                 return dispatchHandler(dashboardHandlers, context, messageType, data);
+            });
+        }
+
+        // Register the AI handlers as well so the dashboard hook can call
+        // `verify-ai-setup` to populate the AI Ready badge state.
+        const aiMessageTypes = getRegisteredTypes(aiHandlers);
+        for (const messageType of aiMessageTypes) {
+            comm.onStreaming(messageType, async (data: unknown) => {
+                const context = this.createHandlerContext();
+                return dispatchHandler(aiHandlers, context, messageType, data);
             });
         }
     }

@@ -96,6 +96,7 @@ describe('ActionGrid', () => {
         handleViewComponents: jest.fn(),
         handleOpenDevConsole: jest.fn(),
         handleOpenInClaude: jest.fn(),
+        handleOpenAi: jest.fn(),
         handleDeleteProject: jest.fn(),
     };
 
@@ -207,6 +208,20 @@ describe('ActionGrid', () => {
             expect(claudeButton).not.toBeDisabled();
         });
 
+        it('should render AI button (Batch E3)', () => {
+            render(<ActionGrid {...defaultProps} />);
+
+            expect(screen.getByText('AI')).toBeInTheDocument();
+        });
+
+        it('should attach the AI tile to a clickable button element', () => {
+            render(<ActionGrid {...defaultProps} />);
+
+            const aiButton = screen.getByText('AI').closest('button');
+            expect(aiButton).toBeInTheDocument();
+            expect(aiButton).not.toBeDisabled();
+        });
+
         it('should render Delete button', () => {
             render(<ActionGrid {...defaultProps} />);
 
@@ -312,6 +327,15 @@ describe('ActionGrid', () => {
             expect(defaultProps.handleOpenInClaude).toHaveBeenCalled();
         });
 
+        it('should call handleOpenAi when AI tile clicked (Batch E3)', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('AI'));
+
+            expect(defaultProps.handleOpenAi).toHaveBeenCalled();
+        });
+
         it('should call handleDeleteProject when Delete clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);
@@ -341,12 +365,12 @@ describe('ActionGrid', () => {
     });
 
     describe('Grid Structure', () => {
-        it('should render exactly 9 action buttons (Start/Stop are mutually exclusive)', () => {
+        it('should render exactly 10 action buttons (Start/Stop are mutually exclusive)', () => {
             render(<ActionGrid {...defaultProps} />);
 
             const buttons = screen.getAllByRole('button');
-            // 9 buttons: Start OR Stop (exclusive) + Open + Logs + Deploy Mesh + Configure + Components + Dev Console + Open in Claude Code + Delete
-            expect(buttons).toHaveLength(9);
+            // 10 buttons: Start OR Stop (exclusive) + Open + Logs + Deploy Mesh + AI + Configure + Components + Dev Console + Open in Claude Code + Delete
+            expect(buttons).toHaveLength(10);
         });
 
         it('should render Open in Claude Code after Dev Console (placement check)', () => {
@@ -361,6 +385,21 @@ describe('ActionGrid', () => {
             expect(claudeIdx).toBeGreaterThanOrEqual(0);
             // Open in Claude Code sits alongside Dev Console / Delete (after Dev Console)
             expect(claudeIdx).toBeGreaterThan(devConsoleIdx);
+        });
+
+        it('should position AI tile before Configure (Batch E3 placement)', () => {
+            render(<ActionGrid {...defaultProps} />);
+
+            const buttons = screen.getAllByRole('button');
+            // Use exact label match (closest non-whitespace text) — AI tile renders "AI"
+            const labels = buttons.map((b) => (b.textContent ?? '').trim());
+            const aiIdx = labels.findIndex((l) => l === 'AI');
+            const configureIdx = labels.findIndex((l) => l === 'Configure');
+
+            expect(aiIdx).toBeGreaterThanOrEqual(0);
+            expect(configureIdx).toBeGreaterThanOrEqual(0);
+            // Per plan: AI sits between Sync Storefront and Configure — i.e. before Configure
+            expect(aiIdx).toBeLessThan(configureIdx);
         });
     });
 

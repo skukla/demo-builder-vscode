@@ -22,6 +22,7 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {
         postMessage: jest.fn(),
         onMessage: jest.fn(() => jest.fn()), // Return unsubscribe function
+        request: jest.fn(() => new Promise(() => {})), // Never resolve by default
     },
 }));
 

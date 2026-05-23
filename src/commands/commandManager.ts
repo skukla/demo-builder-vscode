@@ -10,6 +10,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state';
 import { openUrl } from '@/core/utils/browserUtils';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { getBookmarkletSetupPageUrl } from '@/features/eds/ui/helpers/bookmarkletSetupPage';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
@@ -224,6 +225,17 @@ export class CommandManager {
             await openInClaude.execute(project);
         });
 
+        // AI (standalone surface — Batch E1)
+        // Harness-agnostic webview that replaces the AI Configuration tab inside Configure.
+        const openAi = new ShowAiCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.openAi', async () => {
+            await openAi.execute();
+        });
+
         // Navigate — internal routing command for sidebar nav clicks.
         // Intentionally omitted from package.json contributions (not user-facing).
         this.registerCommand('demoBuilder.navigate', async (...args: unknown[]) => {
@@ -235,8 +247,9 @@ export class CommandManager {
                 case 'configure':
                     await configureProject.execute();
                     break;
-                case 'ai-setup':
-                    await configureProject.execute({ activeView: 'ai-setup' });
+                case 'ai':
+                    // Standalone AI surface.
+                    await openAi.execute();
                     break;
                 case 'updates':
                     await checkUpdates.execute();

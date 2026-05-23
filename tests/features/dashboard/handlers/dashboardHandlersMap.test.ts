@@ -50,6 +50,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'configure')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'openDevConsole')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'openInClaude')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'openAi')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'navigateBack')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'viewComponents')).toBe(true);
         });
@@ -82,14 +83,14 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(true);
         });
 
-        it('should have exactly 19 handlers', () => {
+        it('should have exactly 20 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 19 handlers
-            // 2 init + 2 lifecycle + 10 navigation + 1 mesh + 1 syncStorefront + 1 auth + 1 project + 1 reset = 19
-            expect(types).toHaveLength(19);
+            // Then: Exactly 20 handlers
+            // 2 init + 2 lifecycle + 11 navigation + 1 mesh + 1 syncStorefront + 1 auth + 1 project + 1 reset = 20
+            expect(types).toHaveLength(20);
         });
 
         it('should have handlers as functions', () => {

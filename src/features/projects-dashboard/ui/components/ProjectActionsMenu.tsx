@@ -12,6 +12,7 @@
  */
 
 import { Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum';
+import MagicWand from '@spectrum-icons/workflow/MagicWand';
 import Copy from '@spectrum-icons/workflow/Copy';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
@@ -57,6 +58,7 @@ export interface ProjectActions {
     onCopyPath?: (project: Project) => void;
     onExport?: (project: Project) => void;
     onOpenInClaudeCode?: (project: Project) => void;
+    onOpenAi?: (project: Project) => void;
     onDelete?: (project: Project) => void;
 }
 
@@ -73,6 +75,7 @@ const ICON_MAP: Record<string, React.ReactElement> = {
     republish: <Globe size="S" />,
     export: <Export size="S" />,
     claudeCode: <Wrench size="S" />,
+    ai: <MagicWand size="S" />,
     delete: <Delete size="S" />,
 };
 
@@ -116,6 +119,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onCopyPath,
         onExport,
         onOpenInClaudeCode,
+        onOpenAi,
         onDelete,
     } = actions;
 
@@ -136,8 +140,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         copyPath: onCopyPath,
         export: onExport,
         openInClaudeCode: onOpenInClaudeCode,
+        openAi: onOpenAi,
         delete: onDelete,
-    }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename,  onCopyPath, onExport, onOpenInClaudeCode, onDelete]);
+    }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename,  onCopyPath, onExport, onOpenInClaudeCode, onOpenAi, onDelete]);
 
     const handleMenuAction = useCallback((key: React.Key) => {
         actionMap[String(key)]?.(project);
@@ -217,11 +222,15 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         if (onOpenInClaudeCode) {
             items.push({ key: 'openInClaudeCode', label: 'Open in Claude Code', icon: 'claudeCode' });
         }
+        // Open AI (standalone AI surface, Batch E3) — adjacent to Open in Claude Code
+        if (onOpenAi) {
+            items.push({ key: 'openAi', label: 'Open AI', icon: 'ai' });
+        }
         if (onDelete) {
             items.push({ key: 'delete', label: 'Delete', icon: 'delete' });
         }
         return items;
-    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename,  onCopyPath, onExport, onOpenInClaudeCode, onDelete]);
+    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename,  onCopyPath, onExport, onOpenInClaudeCode, onOpenAi, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {

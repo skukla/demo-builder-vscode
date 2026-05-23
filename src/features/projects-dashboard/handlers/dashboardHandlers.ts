@@ -661,6 +661,33 @@ export const handleOpenInClaudeForProject: MessageHandler<{ projectPath: string 
 };
 
 /**
+ * Open a specific project in the standalone AI surface — E3 home-grid menu wiring.
+ *
+ * Loads the project for the given path and dispatches `demoBuilder.openAi`
+ * with the project as the first argument. Mirrors `handleOpenInClaudeForProject`.
+ */
+export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    if (!payload?.projectPath) {
+        return { success: false, error: 'Project path is required' };
+    }
+
+    const project = await context.stateManager.loadProjectFromPath(
+        payload.projectPath,
+        undefined,
+        { persistAfterLoad: false },
+    );
+    if (!project) {
+        return { success: false, error: 'Project not found' };
+    }
+
+    await vscode.commands.executeCommand('demoBuilder.openAi', project);
+    return { success: true };
+};
+
+/**
  * Open EDS live site in browser
  *
  * Opens in incognito/private browsing mode to ensure a clean session

@@ -9,6 +9,7 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {
         postMessage: jest.fn(),
         onMessage: jest.fn().mockReturnValue(() => {}),
+        request: jest.fn(() => new Promise(() => {})),
     },
 }));
 

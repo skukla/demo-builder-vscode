@@ -10,6 +10,7 @@ import {
     handleCreateProject,
     handleCopyProjectPath,
     handleOpenInClaudeForProject,
+    handleOpenAiForProject,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import {
     createMockProject,
@@ -484,6 +485,53 @@ describe('dashboardHandlers', () => {
             const vscode = require('vscode');
 
             const result = await handleOpenInClaudeForProject(context as any, {
+                projectPath: '/nonexistent/path',
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/not found/i);
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('handleOpenAiForProject (E3)', () => {
+        it('should dispatch demoBuilder.openAi with the loaded project', async () => {
+            const project = createMockProject({ name: 'AI Target' });
+            const context = createMockHandlerContext([project]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenAiForProject(context as any, {
+                projectPath: project.path,
+            });
+
+            expect(result.success).toBe(true);
+            expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(
+                project.path,
+                undefined,
+                { persistAfterLoad: false },
+            );
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder.openAi',
+                project,
+            );
+        });
+
+        it('should return error when projectPath is missing', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenAiForProject(context as any, {} as any);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/path is required/i);
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+        });
+
+        it('should return error when project cannot be loaded', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenAiForProject(context as any, {
                 projectPath: '/nonexistent/path',
             });
 

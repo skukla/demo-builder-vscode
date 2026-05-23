@@ -50,9 +50,6 @@ describe('SOP: Inline Styles', () => {
         'GitHubRepoSelectionStep.tsx': 'Fixed height container prevents modal resize during status recheck',
 
         // Store structure listbox container
-
-        // AI configuration tab (Cycle D — supersedes AiSetupTab)
-        'AiConfigurationTab.tsx': 'Spectrum UNSAFE_style for inline section/row styling',
     };
 
     /**

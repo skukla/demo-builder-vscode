@@ -107,11 +107,6 @@ jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
     }),
 }));
 
-// Mock AiConfigurationTab
-jest.mock('@/features/dashboard/ui/tabs/AiConfigurationTab', () => ({
-    AiConfigurationTab: () => <div data-testid="ai-setup-tab" />,
-}));
-
 const renderWithProvider = (ui: React.ReactElement) => {
     return render(
         <Provider theme={defaultTheme} colorScheme="light">

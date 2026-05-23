@@ -3,6 +3,10 @@
  *
  * Tests for the Configure screen handler map.
  * Verifies handler registration and individual handler behavior.
+ *
+ * Batch E4: AI handlers (verify-ai-setup, inspect-mcp, regenerate-ai-files,
+ * register-global-mcp, openInClaude) moved to aiHandlers.ts; their tests live
+ * in aiHandlers.test.ts.
  */
 
 // Mock timeoutConfig before imports (transitive dependency)
@@ -25,20 +29,6 @@ jest.mock('@/core/validation', () => ({
 jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
     discoverStoreStructure: jest.fn(),
     extractTenantId: jest.fn(),
-}));
-
-// Mock AI feature barrel (verify + inventory + cache controls)
-jest.mock('@/features/ai', () => ({
-    verifyAiSetup: jest.fn(),
-    inspectAllServers: jest.fn().mockResolvedValue([]),
-    clearMcpCache: jest.fn(),
-}));
-
-// Mock AI context file generator + global MCP registration helpers
-jest.mock('@/features/project-creation/services', () => ({
-    generateAIContextFiles: jest.fn(),
-    registerGlobalMcp: jest.fn().mockResolvedValue(undefined),
-    GLOBAL_MCP_REG_STATE_KEY: 'demoBuilder.ai.globalMcpRegistration',
 }));
 
 // Mock vscode
@@ -67,13 +57,8 @@ import {
     handleGetComponentsData,
     handleOpenExternal,
     handleOpenEdsSettings,
-    handleVerifyAiSetup,
-    handleRegenerateAiFiles,
 } from '@/features/dashboard/handlers/configureHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
-import { handleInspectMcp, handleRegisterGlobalMcp } from '@/features/dashboard/handlers/configureHandlers';
-import { generateAIContextFiles, registerGlobalMcp } from '@/features/project-creation/services';
 import type { HandlerContext } from '@/types/handlers';
 
 // ==========================================================
@@ -139,23 +124,19 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'discover-store-structure')).toBe(true);
             expect(hasHandler(configureHandlers, 'sync-component-configs')).toBe(true);
             expect(hasHandler(configureHandlers, 'create-workspace-credential')).toBe(true);
-            expect(hasHandler(configureHandlers, 'verify-ai-setup')).toBe(true);
-            expect(hasHandler(configureHandlers, 'inspect-mcp')).toBe(true);
-            expect(hasHandler(configureHandlers, 'regenerate-ai-files')).toBe(true);
-            expect(hasHandler(configureHandlers, 'openInClaude')).toBe(true);
         });
 
-        it('should have exactly 12 handlers', () => {
+        it('should have exactly 7 handlers', () => {
             const types = getRegisteredTypes(configureHandlers);
-            expect(types).toHaveLength(12);
+            expect(types).toHaveLength(7);
         });
 
-        it('should include register-global-mcp (Cycle D)', () => {
-            expect(hasHandler(configureHandlers, 'register-global-mcp')).toBe(true);
-        });
-
-        it('should include openInClaude for the AI Configuration sidebar CTA', () => {
-            expect(hasHandler(configureHandlers, 'openInClaude')).toBe(true);
+        it('should NOT include AI handlers (they live in aiHandlers.ts)', () => {
+            expect(hasHandler(configureHandlers, 'verify-ai-setup')).toBe(false);
+            expect(hasHandler(configureHandlers, 'inspect-mcp')).toBe(false);
+            expect(hasHandler(configureHandlers, 'regenerate-ai-files')).toBe(false);
+            expect(hasHandler(configureHandlers, 'register-global-mcp')).toBe(false);
+            expect(hasHandler(configureHandlers, 'openInClaude')).toBe(false);
         });
 
         it('should have all handlers as functions', () => {
@@ -220,219 +201,6 @@ describe('configureHandlers', () => {
                 'demoBuilder.daLive',
             );
             expect(result.success).toBe(true);
-        });
-    });
-
-    describe('handleVerifyAiSetup', () => {
-        it('calls verifyAiSetup with project.path from stateManager and extensionDistPath from context', async () => {
-            const mockResult = { status: 'ok', checks: [] };
-            (verifyAiSetup as jest.Mock).mockResolvedValue(mockResult);
-
-            const context = createMockContext();
-            const result = await handleVerifyAiSetup(context);
-
-            expect(verifyAiSetup).toHaveBeenCalledWith(
-                '/projects/test', // from stateManager.getCurrentProject().path
-                expect.stringContaining('mock/extension/path'), // derived from context.extensionPath
-            );
-            // Handler wraps verifier output in HandlerResponse shape (adds success: true)
-            // and the Cycle D addition: globalMcpRegistration from persisted globalState
-            // (here `undefined` → 'unregistered').
-            expect(result).toEqual({ success: true, ...mockResult, globalMcpRegistration: 'unregistered' });
-        });
-
-        it('exposes persisted globalMcpRegistration state from globalState', async () => {
-            const mockResult = { status: 'ok', checks: [] };
-            (verifyAiSetup as jest.Mock).mockResolvedValue(mockResult);
-
-            const context = createMockContext({
-                context: {
-                    extensionPath: '/mock/extension/path',
-                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-                    globalState: {
-                        get: jest.fn().mockReturnValue('registered'),
-                        update: jest.fn(),
-                        keys: jest.fn().mockReturnValue([]),
-                    },
-                    subscriptions: [],
-                } as unknown as HandlerContext['context'],
-            });
-            const result = await handleVerifyAiSetup(context);
-
-            expect(result).toEqual({
-                success: true,
-                ...mockResult,
-                globalMcpRegistration: 'registered',
-            });
-        });
-
-        it('returns error when stateManager has no current project', async () => {
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(null),
-                } as unknown as HandlerContext['stateManager'],
-            });
-            const result = await handleVerifyAiSetup(context);
-
-            expect(verifyAiSetup).not.toHaveBeenCalled();
-            expect(result).toMatchObject({ success: false });
-        });
-
-        it('propagates errors from verifyAiSetup', async () => {
-            (verifyAiSetup as jest.Mock).mockRejectedValue(new Error('fs error'));
-
-            const context = createMockContext();
-            await expect(
-                handleVerifyAiSetup(context),
-            ).rejects.toThrow('fs error');
-        });
-    });
-
-    describe('handleInspectMcp', () => {
-        beforeEach(() => {
-            (clearMcpCache as jest.Mock).mockClear();
-            (inspectAllServers as jest.Mock).mockClear().mockResolvedValue([]);
-        });
-
-        it('clears the full cache and re-inspects when no serverId is provided', async () => {
-            (inspectAllServers as jest.Mock).mockResolvedValueOnce([
-                { id: 'demo-builder', status: 'ok', tools: [{ name: 't', description: 'd' }] },
-            ]);
-            const mockProject = { name: 'p', path: '/projects/p', stack: 'paas' };
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            const result = await handleInspectMcp(context);
-
-            expect(clearMcpCache).toHaveBeenCalledWith(undefined);
-            expect(inspectAllServers).toHaveBeenCalledWith('/projects/p');
-            expect(result).toMatchObject({
-                success: true,
-                mcps: [{ id: 'demo-builder', status: 'ok' }],
-            });
-        });
-
-        it('treats an empty-string serverId as "clear all"', async () => {
-            const mockProject = { name: 'p', path: '/projects/p', stack: 'paas' };
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            await handleInspectMcp(context, { serverId: '' });
-
-            // Empty string normalizes to undefined so the cache is fully cleared,
-            // not a no-op delete of the empty-key entry.
-            expect(clearMcpCache).toHaveBeenCalledWith(undefined);
-        });
-
-        it('clears a single serverId when provided in the payload', async () => {
-            const mockProject = { name: 'p', path: '/projects/p', stack: 'paas' };
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            await handleInspectMcp(context, { serverId: 'demo-builder' });
-
-            expect(clearMcpCache).toHaveBeenCalledWith('demo-builder');
-        });
-
-        it('uses server-side project.path (ignores any path the webview might supply)', async () => {
-            const mockProject = { name: 'p', path: '/safe/path', stack: 'paas' };
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            await handleInspectMcp(context);
-
-            expect(inspectAllServers).toHaveBeenCalledWith('/safe/path');
-        });
-
-        it('returns project-not-found error when no current project is loaded', async () => {
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(null),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            const result = await handleInspectMcp(context);
-
-            expect(clearMcpCache).not.toHaveBeenCalled();
-            expect(inspectAllServers).not.toHaveBeenCalled();
-            expect(result).toMatchObject({ success: false });
-        });
-    });
-
-    describe('handleRegenerateAiFiles', () => {
-        it('calls generateAIContextFiles using server-side project.path (ignores payload)', async () => {
-            (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
-            const mockProject = { name: 'Test Project', path: '/projects/test', stack: 'paas' };
-
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            // Pass a different path in payload — it should be ignored in favour of project.path
-            const result = await handleRegenerateAiFiles(context, { projectPath: '/attacker/path' });
-
-            expect(generateAIContextFiles).toHaveBeenCalledWith(
-                '/projects/test', // project.path from state, not payload
-                mockProject,
-                '/mock/extension/path',
-            );
-            expect(result).toEqual({ success: true });
-        });
-
-        it('returns error when project is not found', async () => {
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(null),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            const result = await handleRegenerateAiFiles(context, { projectPath: '/projects/test' });
-
-            expect(generateAIContextFiles).not.toHaveBeenCalled();
-            expect(result).toMatchObject({ success: false });
-        });
-    });
-
-    describe('handleRegisterGlobalMcp', () => {
-        it('calls registerGlobalMcp with the extension dist path and sets globalState to "registered"', async () => {
-            const update = jest.fn().mockResolvedValue(undefined);
-            const context = createMockContext({
-                context: {
-                    extensionPath: '/mock/extension/path',
-                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-                    globalState: {
-                        get: jest.fn(),
-                        update,
-                        keys: jest.fn().mockReturnValue([]),
-                    },
-                    subscriptions: [],
-                } as unknown as HandlerContext['context'],
-            });
-
-            const result = await handleRegisterGlobalMcp(context);
-
-            expect(registerGlobalMcp).toHaveBeenCalledWith(
-                expect.stringContaining('mock/extension/path'),
-            );
-            expect(update).toHaveBeenCalledWith(
-                'demoBuilder.ai.globalMcpRegistration',
-                'registered',
-            );
-            expect(result).toEqual({ success: true });
         });
     });
 });

@@ -199,7 +199,7 @@ describe('Sidebar', () => {
             expect(backButton).toBeInTheDocument();
         });
 
-        it('should render AI Configuration nav item in configure context', () => {
+        it('should render AI nav item in configure context (Batch E3 rename)', () => {
             renderWithProvider(
                 <Sidebar
                     context={createConfigureContext()}
@@ -208,7 +208,26 @@ describe('Sidebar', () => {
                 />
             );
 
-            expect(screen.getByText('AI Configuration')).toBeInTheDocument();
+            // Batch E3 renames "AI Configuration" to "AI"
+            expect(screen.getByText('AI')).toBeInTheDocument();
+            // The legacy label should no longer be present
+            expect(screen.queryByText('AI Configuration')).not.toBeInTheDocument();
+        });
+
+        it('should dispatch ai target when AI nav item clicked (Batch E3)', () => {
+            const onNavigate = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createConfigureContext()}
+                    onNavigate={onNavigate}
+                    onCreateProject={jest.fn()}
+                />
+            );
+
+            fireEvent.click(screen.getByText('AI'));
+
+            // Sidebar's onNavigate receives the target id 'ai' for the new entry point
+            expect(onNavigate).toHaveBeenCalledWith('ai');
         });
     });
 

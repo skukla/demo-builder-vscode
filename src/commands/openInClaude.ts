@@ -24,6 +24,13 @@ const FIRST_TIP_KEY = 'demoBuilder.ai.firstClaudeOpenTipShown';
 const TERMINAL_NAME = 'Claude Code';
 
 /**
+ * Argument shape accepted by `OpenInClaudeCommand.execute`. Supports the legacy
+ * positional `Project` arg for backwards compatibility and the new
+ * `{ project?, prompt? }` payload introduced in Batch E2.
+ */
+export type OpenInClaudeArg = Project | { project?: Project; prompt?: string };
+
+/**
  * OpenInClaudeCommand — opens the Claude Code (CLI) harness for the current project.
  *
  * Drives off the `demoBuilder.ai.harness` setting (Cycle B). Two launch pathways:
@@ -47,10 +54,13 @@ export class OpenInClaudeCommand extends BaseCommand {
     /**
      * Execute the Open in Claude Code action for the given (or current) project.
      *
-     * @param project Optional project to scope the terminal cwd to. When omitted,
-     *                falls back to `StateManager.getCurrentProject()`.
+     * @param arg Either a `Project` (legacy positional form) or a payload of
+     *            `{ project?, prompt? }` (Batch E2). When `prompt` is provided,
+     *            the URI handler launches with `?prompt=<encoded>` so Claude
+     *            Code opens with the prompt pre-filled in its input.
      */
-    public async execute(project?: Project): Promise<void> {
+    public async execute(arg?: OpenInClaudeArg): Promise<void> {
+        const { project, prompt } = normalizeArg(arg);
         const target = project ?? (await this.stateManager.getCurrentProject() ?? undefined);
 
         const harness = this.getHarness();
@@ -78,14 +88,14 @@ export class OpenInClaudeCommand extends BaseCommand {
                     return;
                 }
                 this.logger.info('[Open in Claude] launching via extension URI handler (forced by harness setting)');
-                await this.launchViaUri(target);
+                await this.launchViaUri(target, prompt);
                 return;
             }
 
             // harness === 'auto'
             if (extensionInstalled) {
                 this.logger.info('[Open in Claude] launching via extension URI handler (auto-detected)');
-                await this.launchViaUri(target);
+                await this.launchViaUri(target, prompt);
             } else {
                 this.logger.info('[Open in Claude] launching via terminal (extension not installed)');
                 await this.launchTerminal(target);
@@ -111,9 +121,16 @@ export class OpenInClaudeCommand extends BaseCommand {
         return vscode.extensions.getExtension(CLAUDE_CODE_EXTENSION_ID) !== undefined;
     }
 
-    /** Launch Claude Code via the extension's documented URI handler. */
-    private async launchViaUri(project: Project | undefined): Promise<void> {
-        const opened = await vscode.env.openExternal(vscode.Uri.parse(CLAUDE_CODE_URI));
+    /**
+     * Launch Claude Code via the extension's documented URI handler. When
+     * `prompt` is provided, appends `?prompt=<encoded>` so Claude Code opens
+     * with the prompt pre-filled in its input.
+     */
+    private async launchViaUri(project: Project | undefined, prompt?: string): Promise<void> {
+        const uri = prompt
+            ? `${CLAUDE_CODE_URI}?prompt=${encodeURIComponent(prompt)}`
+            : CLAUDE_CODE_URI;
+        const opened = await vscode.env.openExternal(vscode.Uri.parse(uri));
         if (!opened) {
             this.logger.warn('[Open in Claude] vscode.env.openExternal returned false');
             await vscode.window.showWarningMessage(
@@ -165,4 +182,28 @@ export class OpenInClaudeCommand extends BaseCommand {
             'Got it',
         );
     }
+}
+
+/**
+ * Normalize the polymorphic execute argument into `{ project, prompt }`.
+ *
+ * Accepts:
+ *   - `undefined` → both undefined
+ *   - A `Project` (legacy positional form, identified by a `path` property)
+ *   - A `{ project?, prompt? }` payload (Batch E2)
+ */
+function normalizeArg(arg: OpenInClaudeArg | undefined): {
+    project: Project | undefined;
+    prompt: string | undefined;
+} {
+    if (arg === undefined || arg === null) {
+        return { project: undefined, prompt: undefined };
+    }
+    // A bare Project is distinguished by having a `path` and lacking the
+    // payload shape's `prompt`/`project` keys.
+    if (typeof arg === 'object' && 'path' in arg) {
+        return { project: arg as Project, prompt: undefined };
+    }
+    const payload = arg as { project?: Project; prompt?: string };
+    return { project: payload.project, prompt: payload.prompt };
 }

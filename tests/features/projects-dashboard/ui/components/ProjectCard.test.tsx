@@ -291,4 +291,62 @@ describe('ProjectCard', () => {
             expect(screen.queryByText('Open in Claude Code')).not.toBeInTheDocument();
         });
     });
+
+    describe('Open AI wiring (Batch E3)', () => {
+        it('should expose Open AI menu item when actions.onOpenAi is provided', () => {
+            const project = createMockProject({ name: 'AI Wired Project' });
+            const onOpenAi = jest.fn();
+            renderWithProvider(
+                <ProjectCard
+                    project={project}
+                    onSelect={jest.fn()}
+                    actions={{ onOpenAi }}
+                />
+            );
+
+            // Open the kebab menu
+            const menuButton = screen.getByLabelText('More actions');
+            fireEvent.click(menuButton);
+
+            expect(screen.getByText('Open AI')).toBeInTheDocument();
+        });
+
+        it('should invoke onOpenAi with the row project when item is selected', () => {
+            const project = createMockProject({ name: 'AI Dispatch Project' });
+            const onOpenAi = jest.fn();
+            renderWithProvider(
+                <ProjectCard
+                    project={project}
+                    onSelect={jest.fn()}
+                    actions={{ onOpenAi }}
+                />
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            fireEvent.click(menuButton);
+
+            const aiItem = screen.getByText('Open AI');
+            fireEvent.click(aiItem);
+
+            expect(onOpenAi).toHaveBeenCalledWith(project);
+            expect(onOpenAi).toHaveBeenCalledTimes(1);
+        });
+
+        it('should NOT render Open AI when actions.onOpenAi is omitted', () => {
+            const project = createMockProject({ name: 'No AI Wire Project' });
+            renderWithProvider(
+                <ProjectCard
+                    project={project}
+                    onSelect={jest.fn()}
+                    actions={{ onCopyPath: jest.fn() }}
+                />
+            );
+
+            const menuButton = screen.queryByLabelText('More actions');
+            if (menuButton) {
+                fireEvent.click(menuButton);
+            }
+            expect(screen.queryByText('Open AI')).not.toBeInTheDocument();
+        });
+    });
 });
