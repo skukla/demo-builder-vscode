@@ -267,7 +267,7 @@ describe('aiContextWriter', () => {
                 expect(result).not.toContain('Block Libraries');
             });
 
-            it('marks block libraries as read-only sources (Cycle B Step 6k)', () => {
+            it('marks block libraries as read-only sources', () => {
                 const installedLibraries: InstalledBlockLibrary[] = [
                     {
                         name: 'Isle5 Block Collection',
@@ -285,7 +285,7 @@ describe('aiContextWriter', () => {
             });
         });
 
-        describe('component repositories (Cycle B Step 6i)', () => {
+        describe('component repositories', () => {
             it('lists every component instance that has a githubRepo', () => {
                 const project = makeEdsProject({
                     componentInstances: {

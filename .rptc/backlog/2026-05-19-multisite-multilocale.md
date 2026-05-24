@@ -1,9 +1,13 @@
 # Multi-Locale Storefront — Implementation Plan (Phase 1)
 
-**Captured**: 2026-05-19
-**Origin**: Scope refinement from `/rptc:research` sessions on multisite/multi-locale
-**Status**: Draft plan — iterating before implementation begins
-**Research base**: `2026-05-19-multisite-multillocale-research.md`
+## Provenance
+
+- **Captured**: 2026-05-19 from `/rptc:research` sessions on multisite/multi-locale
+- **Status**: Draft plan — iterating before implementation begins
+- **Research base**: [`docs/research/2026-05-19-multisite-multillocale-research.md`](../../docs/research/2026-05-19-multisite-multillocale-research.md) — underlying research artifact this plan refines
+- **Architecture seam**: [ADR-003: Multisite Architecture Seam](../../docs/architecture/adr/003-multisite-architecture-seam.md) — accepted; documents where the single-environment assumption is encoded so this plan can scope concretely
+- **Superseded predecessors** (deleted 2026-05-23 on migration to backlog): 2026-03-25 design / implementation-roadmap / UX-spec series in `docs/research/`. Git history preserves them
+- **Moved to backlog**: 2026-05-23
 
 ---
 
@@ -424,3 +428,20 @@ These are not implementation tasks but inform how the system works and where its
 - **Transactional split:** ACO handles catalog only (product listing, PDP, search). Cart, checkout, and account continue hitting the PaaS/ACCS `commerce-core-endpoint`. Multi-locale ACO storefronts maintain two parallel header patterns in `config.json`.
 - **Platform limits (relevant for planning):** 50 Catalog Sources per ACO instance; 100 Catalog Variations base (Catalog Views × Price Books). A 5-locale × 3-brand setup with separate price books per brand = 45 variations — within limits. These are not Demo Builder concerns but customers planning large deployments should be aware.
 - **DA.live and store-switcher are backend-agnostic.** The locale folder structure, `#nolocal` store-switcher pattern, and Config Service PDP path mappings are identical for PaaS and ACO projects.
+
+---
+
+## Kickoff prompt
+
+```
+/rptc:feat "Execute the multi-locale storefront Phase 1 plan at
+.rptc/backlog/2026-05-19-multisite-multilocale.md. Re-confirm the
+user-approved scope decisions with the maintainer first (the plan was
+last edited 2026-05-19 — verify ACO-on-PaaS/ACCS specifics and the
+store-switcher provisioning approach before implementation begins).
+Implement the wizard Business Structure step redesign first, then
+per-locale config generation. Standing rule: do not encode new
+single-environment assumptions — see ADR-003 for the documented seam.
+Phase 2 (repoless multi-brand, separate DA.live site per locale) is
+out of scope for this cycle."
+```

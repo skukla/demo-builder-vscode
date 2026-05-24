@@ -30,6 +30,7 @@ import {
     handleCopyProjectPath,
     handleOpenInClaudeForProject,
     handleOpenAiForProject,
+    handleSetProjectPinned,
 } from './dashboardHandlers';
 import { defineHandlers } from '@/types/handlers';
 
@@ -89,4 +90,7 @@ export const projectsListHandlers = defineHandlers({
 
     // Open AI surface for a specific project (E3)
     'openAi': handleOpenAiForProject,
+
+    // Pin / unpin a project — pinned projects sort first on the dashboard
+    'setProjectPinned': handleSetProjectPinned,
 });

@@ -470,7 +470,7 @@ async function updateCommitShaWithRollback(
  *
  * - `disabled`: record the upstream SHA in `syncDisabledMarker` and skip both
  *   the file re-install and the `commitSha` bump. The storefront stays at the
- *   install-time commit; the AI Configuration tab (Cycle D) interprets the
+ *   install-time commit; the AI Configuration tab interprets the
  *   marker as "Sync disabled — N commits behind upstream".
  * - `ask`: prompt the user. "Update" continues as if `enabled`; "Skip"
  *   continues as if `disabled`; dialog dismissal aborts the per-library
@@ -479,11 +479,11 @@ async function updateCommitShaWithRollback(
  *   commit path used during project creation (`installBlockCollections`), then
  *   bump `commitSha` on success. Clears any previous `syncDisabledMarker`.
  *
- * NOTE: The re-install overwrites any local edits to block files. The plan's
- * Step 6h also calls for a 3-way merge when local edits exist; that requires
- * upstream-fetching infrastructure that Cycle B Step 6L (B7) introduces. Until
- * the 3-way merge ships, users should commit/promote local block edits BEFORE
- * accepting a library update (or set `syncBehavior` to `disabled`).
+ * NOTE: The re-install overwrites any local edits to block files. A 3-way
+ * merge when local edits exist will require upstream-fetching infrastructure
+ * not yet in place. Until the 3-way merge ships, users should commit/promote
+ * local block edits BEFORE accepting a library update (or set `syncBehavior`
+ * to `disabled`).
  */
 async function applyBlockLibraryUpdate(
     item: BlockLibraryUpdateItem,

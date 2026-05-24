@@ -5,7 +5,7 @@
  * routes and the handler implementations themselves — the standalone AI
  * surface wires these up directly via `dispatchHandler`.
  *
- * Batch E4: the function bodies live HERE (previously in `configureHandlers.ts`
+ * the function bodies live HERE (previously in `configureHandlers.ts`
  * during the E1–E3 transition). `configureHandlers.ts` no longer references
  * any AI handler.
  *
@@ -136,11 +136,12 @@ export async function handleRegenerateAiFiles(
 }
 
 // ==========================================================
-// F3: AI prompt CRUD handlers
+// AI prompt CRUD handlers
 // ==========================================================
 
 /**
  * Validate an AiPrompt payload — guards against missing fields and empty values.
+ * The `pinned` field is optional and defaults to false when absent.
  */
 function isValidPromptPayload(prompt: unknown): prompt is AiPrompt {
     if (!prompt || typeof prompt !== 'object') return false;
@@ -153,12 +154,50 @@ function isValidPromptPayload(prompt: unknown): prompt is AiPrompt {
 }
 
 /**
+ * Insert a prompt into the list, keeping the array in "pinned-first" order.
+ *
+ * Policy controls where unpinned prompts land:
+ *   - `'end-of-list'` (for newly created prompts): appended to the bottom.
+ *     Preserves the user's existing manual order; new prompts queue up at
+ *     the end of the unpinned section.
+ *   - `'pin-boundary'` (for prompts whose pin state just flipped to false):
+ *     inserted immediately after the last pinned item. Minimizes the visual
+ *     jump when a user unpins — the prompt stays near where it was rather
+ *     than skipping to the bottom of the list.
+ *
+ * Pinned prompts always go to the end of the pinned section regardless of
+ * policy — that part is symmetric.
+ */
+type UnpinnedInsertionPolicy = 'end-of-list' | 'pin-boundary';
+
+function insertIntoSection(
+    list: AiPrompt[],
+    prompt: AiPrompt,
+    policy: UnpinnedInsertionPolicy = 'end-of-list',
+): AiPrompt[] {
+    if (prompt.pinned) {
+        const firstUnpinnedIdx = list.findIndex(p => !p.pinned);
+        if (firstUnpinnedIdx === -1) return [...list, prompt];
+        return [...list.slice(0, firstUnpinnedIdx), prompt, ...list.slice(firstUnpinnedIdx)];
+    }
+    if (policy === 'pin-boundary') {
+        const firstUnpinnedIdx = list.findIndex(p => !p.pinned);
+        if (firstUnpinnedIdx === -1) return [...list, prompt];
+        return [...list.slice(0, firstUnpinnedIdx), prompt, ...list.slice(firstUnpinnedIdx)];
+    }
+    return [...list, prompt];
+}
+
+/**
  * Handle save-ai-prompt — create or update a single AI prompt.
  *
- * If `prompt.id` matches an existing entry, that entry is replaced; otherwise
- * the prompt is appended. Persists via `stateManager.saveProject`. The webview
- * MUST NOT supply a project path — server-side `getCurrentProject` is the only
- * source of truth.
+ * Keeps the array in "pinned-first" order:
+ *   - New prompt → appended to end of its pin-group
+ *   - Existing prompt, pin state unchanged → replaced in place
+ *   - Existing prompt, pin state changed → removed and re-inserted at end of new group
+ *
+ * Persists via `stateManager.saveProject`. The webview MUST NOT supply a
+ * project path — server-side `getCurrentProject` is the only source of truth.
  */
 export async function handleSaveAiPrompt(
     context: HandlerContext,
@@ -174,9 +213,25 @@ export async function handleSaveAiPrompt(
     const incoming = payload.prompt;
     const existing = project.aiPrompts ?? [];
     const idx = existing.findIndex(p => p.id === incoming.id);
-    const updated: AiPrompt[] = idx >= 0
-        ? existing.map((p, i) => (i === idx ? incoming : p))
-        : [...existing, incoming];
+
+    let updated: AiPrompt[];
+    if (idx < 0) {
+        // New prompt — FIFO into its section. Preserves existing manual order.
+        updated = insertIntoSection(existing, incoming, 'end-of-list');
+    } else {
+        const wasPinned = Boolean(existing[idx].pinned);
+        const isPinned = Boolean(incoming.pinned);
+        if (wasPinned === isPinned) {
+            updated = existing.map((p, i) => (i === idx ? incoming : p));
+        } else {
+            // Pin state changed — re-position across the group boundary, but
+            // for unpinning, land just past the boundary so the prompt
+            // doesn't visually leap to the bottom of the list.
+            const without = existing.filter((_, i) => i !== idx);
+            updated = insertIntoSection(without, incoming, 'pin-boundary');
+        }
+    }
+
     await context.stateManager.saveProject({ ...project, aiPrompts: updated });
     return { success: true, aiPrompts: updated };
 }

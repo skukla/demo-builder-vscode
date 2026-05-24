@@ -1,9 +1,12 @@
 /**
- * AiOverviewScreen Tests (Batch F4 — Centered single-column with modal drill-down)
+ * AiOverviewScreen Tests
  *
- * F4 uses PageLayout + .page-container-padded for the centered single-column
- * body (same pattern as projects-dashboard). The skills inventory drill-down
- * is opened from a quiet "View installed skills" link via InstalledSkillsModal.
+ * Centered single-column body using PageLayout + .page-container-padded
+ * (matches projects-dashboard). The skills inventory drill-down opens from
+ * a quiet "View installed skills (N)" link via InstalledSkillsModal, which
+ * carries the Regenerate AI files action in its footer. Opening the modal
+ * triggers a background inspect-mcp + verify-ai-setup refresh — there is
+ * no standalone Refresh control on the surface.
  */
 
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
@@ -53,16 +56,6 @@ jest.mock('@/core/ui/components/layout', () => ({
             <div data-testid="footer-right">{rightContent}</div>
         </div>
     ),
-}));
-
-jest.mock('@/features/project-creation/config/ai-prompts.json', () => ({
-    prompts: [
-        { id: 'add-hero-block', title: 'Add a hero block', prompt: 'Add a hero block to the homepage with a CTA.' },
-        { id: 'update-commerce-url', title: 'Update Commerce URL', prompt: 'Update the Commerce URL for this project.' },
-        { id: 'inspect-block-library', title: 'Inspect the block library', prompt: 'Show me what is in my block library.' },
-        { id: 'sync-storefront', title: 'Sync storefront changes', prompt: 'Sync my block edits back to GitHub.' },
-        { id: 'customize-product-card', title: 'Customize a product card', prompt: 'Customize the product-card block to show stock status.' },
-    ],
 }));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -147,7 +140,7 @@ async function renderScreen(opts: {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe('AiOverviewScreen (Batch F4)', () => {
+describe('AiOverviewScreen', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
@@ -201,19 +194,22 @@ describe('AiOverviewScreen (Batch F4)', () => {
             expect(within(body).queryByTestId('ai-installed-skills-list')).not.toBeInTheDocument();
         });
 
-        it('renders the PromptGrid in the body', async () => {
+        it('renders the PromptGrid in the body (no curated section after G1)', async () => {
             await renderScreen();
             const body = screen.getByTestId('page-layout-body');
-            expect(within(body).getByText(/suggested prompts/i)).toBeInTheDocument();
-            const cards = within(body).getAllByTestId('ai-prompt-card');
-            expect(cards.length).toBe(5);
+            expect(within(body).queryByText(/suggested prompts/i)).not.toBeInTheDocument();
+            // With no user prompts, only the "+ New prompt" tile renders.
+            expect(within(body).getByTestId('ai-new-prompt-tile')).toBeInTheDocument();
+            expect(within(body).queryAllByTestId('ai-prompt-card').length).toBe(0);
         });
 
-        it('renders Refresh and Regenerate buttons inline above the grid', async () => {
+        it('does NOT render a Refresh or Regenerate button in the body', async () => {
+            // Both actions moved off the surface: Refresh is implicit on modal
+            // open; Regenerate lives in the modal footer.
             await renderScreen();
             const body = screen.getByTestId('page-layout-body');
-            expect(within(body).getByRole('button', { name: /refresh/i })).toBeInTheDocument();
-            expect(within(body).getByRole('button', { name: /regenerate ai files/i })).toBeInTheDocument();
+            expect(within(body).queryByRole('button', { name: /^refresh$/i })).not.toBeInTheDocument();
+            expect(within(body).queryByRole('button', { name: /regenerate ai files/i })).not.toBeInTheDocument();
         });
 
         it('renders the quiet "View installed skills (N)" link beneath the grid', async () => {
@@ -266,51 +262,74 @@ describe('AiOverviewScreen (Batch F4)', () => {
         });
     });
 
-    describe('prompt launch (carried forward)', () => {
-        it('clicking a prompt card dispatches openInClaude with the prompt payload', async () => {
-            const { webviewClient } = await renderScreen();
+    describe('user prompt launch', () => {
+        it('clicking a user prompt card dispatches openInClaude with the prompt payload', async () => {
+            const { webviewClient } = await renderScreen({
+                projectOverrides: {
+                    aiPrompts: [
+                        { id: 'u1', title: 'My launchable', prompt: 'Body to launch' },
+                    ],
+                } as Partial<Project>,
+            });
             const body = screen.getByTestId('page-layout-body');
             const cards = within(body).getAllByTestId('ai-prompt-card');
             await act(async () => {
                 fireEvent.click(cards[0]);
             });
             expect(webviewClient.postMessage).toHaveBeenCalledWith('openInClaude', {
-                prompt: 'Add a hero block to the homepage with a CTA.',
+                prompt: 'Body to launch',
             });
         });
     });
 
-    describe('refresh and regenerate actions (carried forward)', () => {
-        it('Refresh button calls inspect-mcp then verify-ai-setup', async () => {
+    describe('inventory refresh and Regenerate action', () => {
+        it('opening the installed-skills modal triggers a background inspect-mcp + verify-ai-setup', async () => {
             const { webviewClient } = await renderScreen();
-            const refresh = screen.getByRole('button', { name: /refresh/i });
+            // Clear the initial verify call so we only observe the modal-open refresh.
+            (webviewClient.request as jest.Mock).mockClear();
+
             await act(async () => {
-                fireEvent.click(refresh);
+                fireEvent.click(screen.getByTestId('ai-installed-skills-trigger'));
                 jest.runAllTimers();
                 await Promise.resolve();
                 await Promise.resolve();
             });
+
             const requestCalls = (webviewClient.request as jest.Mock).mock.calls.map(c => c[0]);
             expect(requestCalls).toContain('inspect-mcp');
             expect(requestCalls.filter(t => t === 'verify-ai-setup').length).toBeGreaterThanOrEqual(1);
         });
 
-        it('Regenerate AI Files button calls regenerate-ai-files then verify-ai-setup', async () => {
+        it('Regenerate AI files action in the modal calls regenerate-ai-files then verify-ai-setup', async () => {
             const { webviewClient } = await renderScreen();
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('ai-installed-skills-trigger'));
+            });
+            // Drain microtasks so the modal-open background refresh completes
+            // and isBusy clears before we attempt to click Regenerate.
+            await act(async () => {
+                jest.runAllTimers();
+                await Promise.resolve();
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+
             const regen = screen.getByRole('button', { name: /regenerate ai files/i });
+            (webviewClient.request as jest.Mock).mockClear();
             await act(async () => {
                 fireEvent.click(regen);
                 jest.runAllTimers();
                 await Promise.resolve();
                 await Promise.resolve();
             });
+
             const requestCalls = (webviewClient.request as jest.Mock).mock.calls.map(c => c[0]);
             expect(requestCalls).toContain('regenerate-ai-files');
             expect(requestCalls.filter(t => t === 'verify-ai-setup').length).toBeGreaterThanOrEqual(1);
         });
     });
 
-    describe('user prompts CRUD (Batch F3)', () => {
+    describe('user prompts CRUD', () => {
         function makeProjectWithUserPrompts(): Project {
             return makeProject({
                 aiPrompts: [
@@ -325,12 +344,12 @@ describe('AiOverviewScreen (Batch F4)', () => {
                 { id: 'u1', title: 'My first user prompt', prompt: 'Do thing one' },
             ] } as Partial<Project> });
             expect(screen.getByText('My first user prompt')).toBeInTheDocument();
-            expect(screen.getByText(/your prompts/i)).toBeInTheDocument();
+            expect(screen.queryAllByTestId('ai-prompt-card').length).toBe(1);
         });
 
-        it('renders only the curated section + "+ New" tile when aiPrompts is undefined', async () => {
+        it('renders only the "+ New" tile when aiPrompts is undefined', async () => {
             await renderScreen();
-            expect(screen.queryByText(/your prompts/i)).not.toBeInTheDocument();
+            expect(screen.queryAllByTestId('ai-prompt-card').length).toBe(0);
             expect(screen.getByTestId('ai-new-prompt-tile')).toBeInTheDocument();
         });
 

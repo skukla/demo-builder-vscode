@@ -208,7 +208,7 @@ describe('ActionGrid', () => {
             expect(claudeButton).not.toBeDisabled();
         });
 
-        it('should render AI button (Batch E3)', () => {
+        it('should render AI button', () => {
             render(<ActionGrid {...defaultProps} />);
 
             expect(screen.getByText('AI')).toBeInTheDocument();
@@ -327,7 +327,7 @@ describe('ActionGrid', () => {
             expect(defaultProps.handleOpenInClaude).toHaveBeenCalled();
         });
 
-        it('should call handleOpenAi when AI tile clicked (Batch E3)', async () => {
+        it('should call handleOpenAi when AI tile clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);
 
@@ -387,7 +387,7 @@ describe('ActionGrid', () => {
             expect(claudeIdx).toBeGreaterThan(devConsoleIdx);
         });
 
-        it('should position AI tile before Configure (Batch E3 placement)', () => {
+        it('should position AI tile before Configure', () => {
             render(<ActionGrid {...defaultProps} />);
 
             const buttons = screen.getAllByRole('button');

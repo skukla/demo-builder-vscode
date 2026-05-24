@@ -1,10 +1,9 @@
 /**
  * updateExecutor.performAddonUpdates — syncBehavior policy
  *
- * Tests the Cycle B Step 6h fix: `performAddonUpdates` now respects the
- * `demoBuilder.blockLibraries.syncBehavior` setting and actually re-installs
- * block files (via `installBlockCollections`) instead of silently bumping
- * `commitSha`.
+ * `performAddonUpdates` respects the `demoBuilder.blockLibraries.syncBehavior`
+ * setting and actually re-installs block files (via `installBlockCollections`)
+ * instead of silently bumping `commitSha`.
  */
 
 import * as vscode from 'vscode';
@@ -107,7 +106,7 @@ function makeCtx(saveImpl?: () => Promise<void>): {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-describe('performAddonUpdates — block library syncBehavior policy (Cycle B Step 6h)', () => {
+describe('performAddonUpdates — block library syncBehavior policy', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         installMock.mockResolvedValue({ success: true, blocksCount: 1, blockIds: ['hero'] });

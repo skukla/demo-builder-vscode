@@ -1,5 +1,5 @@
 /**
- * ProjectDashboardScreen - AI Ready Badge Tests (Batch F1)
+ * ProjectDashboardScreen - AI Ready Badge Tests
  *
  * Verifies the new third StatusCard badge "AI Ready" is rendered alongside
  * Frontend + API Mesh on the project dashboard header.

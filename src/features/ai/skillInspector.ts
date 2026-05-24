@@ -1,5 +1,5 @@
 /**
- * Skill Inspector (Cycle C Step 9)
+ * Skill Inspector
  *
  * Walks `<project>/.claude/skills/` and returns a `SkillInventoryEntry[]`.
  * Classifies each skill by where it lives on disk:

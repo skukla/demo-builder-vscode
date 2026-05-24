@@ -1,5 +1,5 @@
 /**
- * PromptEditDialog Tests (Batch F3)
+ * PromptEditDialog Tests
  *
  * The PromptEditDialog is a Modal wrapper used in two modes:
  *   - 'create' — fields empty, Save generates a new id
@@ -46,7 +46,7 @@ function getSaveButton(): HTMLElement {
     return screen.getByRole('button', { name: /^save$/i });
 }
 
-describe('PromptEditDialog (Batch F3)', () => {
+describe('PromptEditDialog', () => {
     describe('create mode', () => {
         it('renders title and prompt fields empty', () => {
             renderDialog({ mode: 'create' });

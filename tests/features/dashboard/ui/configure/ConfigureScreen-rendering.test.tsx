@@ -270,11 +270,11 @@ describe('ConfigureScreen - Rendering', () => {
         });
     });
 
-    describe('AI Configuration View (removed in Batch E4)', () => {
-        // The AI Configuration tab was removed in Batch E4. The standalone
-        // AI surface (ShowAiCommand → AiOverviewScreen) replaced it. These
-        // assertions guard against regressions that would re-introduce the
-        // tab inside Configure.
+    describe('AI Configuration View (removed)', () => {
+        // The AI Configuration tab was removed. The standalone AI surface
+        // (ShowAiCommand → AiOverviewScreen) replaced it. These assertions
+        // guard against regressions that would re-introduce the tab inside
+        // Configure.
 
         it('does not render an AI tab or AI sidebar inside Configure', () => {
             renderWithProvider(

@@ -1,28 +1,25 @@
 /**
- * PromptGrid (Batch F2 + F3)
+ * PromptGrid
  *
- * The left-column primary content of the AI surface. Renders curated AI
- * prompts as a responsive grid of `<PromptCard>`s under a "Suggested
- * prompts" heading. In Batch F3 a real "Your prompts" section is rendered
- * for user-saved prompts plus a "+ New prompt" tile.
+ * Renders the user's saved AI prompts as a responsive grid of `<PromptCard>`s,
+ * ending with a "+ New prompt" tile. A search input (the same `SearchHeader`
+ * used by the projects dashboard) lets users narrow the grid by typing.
  *
- * Composition: uses the shared `GridLayout` to keep the grid responsive
- * and respect Spectrum design tokens. No new UI primitives.
+ * Ordering: pinned items first, alphabetical within each pin-group.
+ * Filtering is non-destructive — it only hides cards from the rendered set;
+ * the persisted prompt list is untouched.
  */
 
 import { Text, View } from '@adobe/react-spectrum';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { GridLayout } from '@/core/ui/components/layout/GridLayout';
+import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import type { AiPrompt } from '@/types/base';
 import { PromptCard } from './PromptCard';
 
 export interface PromptGridProps {
-    /** Curated prompts shown under "Suggested prompts". */
-    curatedPrompts: AiPrompt[];
-    /** User-saved prompts shown under "Your prompts". */
+    /** User-saved prompts in their persisted order. */
     userPrompts: AiPrompt[];
-    /** Called when a curated card is clicked, with the prompt text. */
-    onLaunch: (prompt: string) => void;
     /** Called when a user card body is clicked. */
     onLaunchUser: (prompt: AiPrompt) => void;
     /** Kebab action — open edit dialog for the prompt id. */
@@ -31,6 +28,8 @@ export interface PromptGridProps {
     onDuplicate: (id: string) => void;
     /** Kebab action — delete the prompt by id. */
     onDelete: (id: string) => void;
+    /** Kebab action — toggle pinned state, called with the next value. */
+    onPinToggle: (id: string, nextPinned: boolean) => void;
     /** Called when the "+ New prompt" tile is clicked. */
     onNew: () => void;
 }
@@ -50,26 +49,46 @@ const STYLE_NEW_TILE = {
     color: 'inherit',
 } as const;
 
+/**
+ * Sort prompts pinned-first, alphabetical (case-insensitive) within each group.
+ * Stable across renders for the same input.
+ */
+function sortPinnedFirst(prompts: AiPrompt[]): AiPrompt[] {
+    return [...prompts].sort((a, b) => {
+        const aPinned = a.pinned ? 1 : 0;
+        const bPinned = b.pinned ? 1 : 0;
+        if (aPinned !== bPinned) return bPinned - aPinned;
+        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+    });
+}
+
 export function PromptGrid({
-    curatedPrompts,
     userPrompts,
-    onLaunch,
     onLaunchUser,
     onEdit,
     onDuplicate,
     onDelete,
+    onPinToggle,
     onNew,
 }: PromptGridProps): React.ReactElement {
-    const handleLaunch = useCallback(
-        (prompt: string) => () => onLaunch(prompt),
-        [onLaunch],
-    );
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Filter is non-destructive: matches against title + prompt body, case-insensitive.
+    const filteredPrompts = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) return userPrompts;
+        return userPrompts.filter(p =>
+            p.title.toLowerCase().includes(query) ||
+            p.prompt.toLowerCase().includes(query),
+        );
+    }, [userPrompts, searchQuery]);
+
+    const sortedPrompts = useMemo(() => sortPinnedFirst(filteredPrompts), [filteredPrompts]);
 
     const handleLaunchUser = useCallback(
         (userPrompt: AiPrompt) => () => onLaunchUser(userPrompt),
         [onLaunchUser],
     );
-
     const handleEdit = useCallback((id: string) => () => onEdit(id), [onEdit]);
     const handleDuplicate = useCallback(
         (id: string) => () => onDuplicate(id),
@@ -79,56 +98,48 @@ export function PromptGrid({
         (id: string) => () => onDelete(id),
         [onDelete],
     );
-
-    const hasUserPrompts = userPrompts.length > 0;
+    const handlePinToggle = useCallback(
+        (id: string) => (nextPinned: boolean) => onPinToggle(id, nextPinned),
+        [onPinToggle],
+    );
 
     return (
         <View>
-            <Text UNSAFE_className="text-xs font-semibold text-gray-700 text-uppercase letter-spacing-05">
-                Suggested prompts
-            </Text>
-            <View marginTop="size-150">
-                <GridLayout columns={3} gap="size-200">
-                    {curatedPrompts.map(prompt => (
-                        <PromptCard
-                            key={prompt.id}
-                            prompt={prompt}
-                            onLaunch={handleLaunch(prompt.prompt)}
-                        />
-                    ))}
-                </GridLayout>
+            <View marginBottom="size-200">
+                <SearchHeader
+                    searchQuery={searchQuery}
+                    onSearchQueryChange={setSearchQuery}
+                    searchPlaceholder="Search prompts..."
+                    totalCount={userPrompts.length}
+                    filteredCount={filteredPrompts.length}
+                    itemNoun="prompt"
+                    // Prompts are loaded synchronously with the page — no
+                    // separate loading state to gate the count on.
+                    hasLoadedOnce={true}
+                />
             </View>
-
-            <View marginTop="size-300">
-                {hasUserPrompts && (
-                    <Text UNSAFE_className="text-xs font-semibold text-gray-700 text-uppercase letter-spacing-05">
-                        Your prompts
-                    </Text>
-                )}
-                <View marginTop={hasUserPrompts ? 'size-150' : 'size-0'}>
-                    <GridLayout columns={3} gap="size-200">
-                        {userPrompts.map(prompt => (
-                            <PromptCard
-                                key={prompt.id}
-                                prompt={prompt}
-                                isUserPrompt
-                                onLaunch={handleLaunchUser(prompt)}
-                                onEdit={handleEdit(prompt.id)}
-                                onDuplicate={handleDuplicate(prompt.id)}
-                                onDelete={handleDelete(prompt.id)}
-                            />
-                        ))}
-                        <button
-                            type="button"
-                            data-testid="ai-new-prompt-tile"
-                            onClick={onNew}
-                            style={STYLE_NEW_TILE}
-                        >
-                            <Text UNSAFE_className="text-sm">+ New prompt</Text>
-                        </button>
-                    </GridLayout>
-                </View>
-            </View>
+            <GridLayout columns={3} gap="size-200">
+                {sortedPrompts.map(prompt => (
+                    <PromptCard
+                        key={prompt.id}
+                        prompt={prompt}
+                        isUserPrompt
+                        onLaunch={handleLaunchUser(prompt)}
+                        onEdit={handleEdit(prompt.id)}
+                        onDuplicate={handleDuplicate(prompt.id)}
+                        onDelete={handleDelete(prompt.id)}
+                        onPinToggle={handlePinToggle(prompt.id)}
+                    />
+                ))}
+                <button
+                    type="button"
+                    data-testid="ai-new-prompt-tile"
+                    onClick={onNew}
+                    style={STYLE_NEW_TILE}
+                >
+                    <Text UNSAFE_className="text-sm">+ New prompt</Text>
+                </button>
+            </GridLayout>
         </View>
     );
 }

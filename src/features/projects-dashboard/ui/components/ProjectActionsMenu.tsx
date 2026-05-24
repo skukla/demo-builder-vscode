@@ -19,6 +19,8 @@ import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
 import Globe from '@spectrum-icons/workflow/Globe';
 import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
+import PinOff from '@spectrum-icons/workflow/PinOff';
+import PinOn from '@spectrum-icons/workflow/PinOn';
 import Play from '@spectrum-icons/workflow/Play';
 import Rename from '@spectrum-icons/workflow/Rename';
 import Revert from '@spectrum-icons/workflow/Revert';
@@ -59,6 +61,11 @@ export interface ProjectActions {
     onExport?: (project: Project) => void;
     onOpenInClaudeCode?: (project: Project) => void;
     onOpenAi?: (project: Project) => void;
+    /**
+     * Toggle the project's pinned status. The caller flips the boolean
+     * based on the project's current `pinned` field.
+     */
+    onPinToggle?: (project: Project) => void;
     onDelete?: (project: Project) => void;
 }
 
@@ -76,6 +83,8 @@ const ICON_MAP: Record<string, React.ReactElement> = {
     export: <Export size="S" />,
     claudeCode: <Wrench size="S" />,
     ai: <MagicWand size="S" />,
+    pinOn: <PinOn size="S" />,
+    pinOff: <PinOff size="S" />,
     delete: <Delete size="S" />,
 };
 
@@ -120,6 +129,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onExport,
         onOpenInClaudeCode,
         onOpenAi,
+        onPinToggle,
         onDelete,
     } = actions;
 
@@ -141,8 +151,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         export: onExport,
         openInClaudeCode: onOpenInClaudeCode,
         openAi: onOpenAi,
+        pinToggle: onPinToggle,
         delete: onDelete,
-    }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename,  onCopyPath, onExport, onOpenInClaudeCode, onOpenAi, onDelete]);
+    }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenInClaudeCode, onOpenAi, onPinToggle, onDelete]);
 
     const handleMenuAction = useCallback((key: React.Key) => {
         actionMap[String(key)]?.(project);
@@ -222,15 +233,24 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         if (onOpenInClaudeCode) {
             items.push({ key: 'openInClaudeCode', label: 'Open in Claude Code', icon: 'claudeCode' });
         }
-        // Open AI (standalone AI surface, Batch E3) — adjacent to Open in Claude Code
+        // Open AI (standalone AI surface) — adjacent to Open in Claude Code
         if (onOpenAi) {
             items.push({ key: 'openAi', label: 'Open AI', icon: 'ai' });
+        }
+        // Pin / Unpin — toggle the project's pinned status. Label and
+        // icon flip based on the current state.
+        if (onPinToggle) {
+            items.push({
+                key: 'pinToggle',
+                label: project.pinned ? 'Unpin' : 'Pin',
+                icon: project.pinned ? 'pinOff' : 'pinOn',
+            });
         }
         if (onDelete) {
             items.push({ key: 'delete', label: 'Delete', icon: 'delete' });
         }
         return items;
-    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename,  onCopyPath, onExport, onOpenInClaudeCode, onOpenAi, onDelete]);
+    }, [isEds, isRunning, project.pinned, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenInClaudeCode, onOpenAi, onPinToggle, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {

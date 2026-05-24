@@ -2,14 +2,14 @@
  * AI Setup Verifier — backs the Configure screen's AI Configuration tab.
  *
  * Verifies that a project's AI context files are present and valid:
- * - AGENTS.md: exists and non-empty (the real AI context file since Cycle A.2;
- *   `CLAUDE.md` and `.claude/CLAUDE.md` are one-line pointers to it)
+ * - AGENTS.md: exists and non-empty (the real AI context file; `CLAUDE.md`
+ *   and `.claude/CLAUDE.md` are one-line pointers to it)
  * - .claude/mcp.json: exists, valid JSON, has mcpServers key
  * - mcp-binary: dist/mcp-server.js present at extension dist path
  * - skill-files: at least one .md in .claude/skills/
  *
- * Cycle C adds an `inventory` payload populated in parallel with the checks:
- * skills, project-level MCPs (with their tools), and session-level MCPs.
+ * An `inventory` payload is populated in parallel with the checks: skills,
+ * project-level MCPs (with their tools), and session-level MCPs.
  *
  * Pure fs/promises — no VS Code imports, easily unit-tested.
  */
@@ -34,10 +34,10 @@ export interface AiVerificationResult {
     status: 'ok' | 'warning' | 'error';
     checks: AiCheckResult[];
     /**
-     * Cycle C inventory payload — populated alongside the existing checks.
-     * Each inspector failing produces an empty slot rather than failing the
-     * whole call; the surrounding `status` still reflects the file-presence
-     * checks above.
+     * Inventory payload — populated alongside the file-presence checks. Each
+     * inspector failing produces an empty slot rather than failing the whole
+     * call; the surrounding `status` still reflects the file-presence checks
+     * above.
      */
     inventory: AiInventory;
 }
@@ -97,10 +97,10 @@ function errorMessage(reason: unknown): string {
 // ─── Individual checks ────────────────────────────────────────────────────────
 
 async function checkAgentsMd(projectPath: string): Promise<AiCheckResult> {
-    // AGENTS.md is the real AI-context file since Cycle A.2 — CLAUDE.md
-    // (root and .claude/) are one-line pointers to it. Checking the pointer
-    // would report 'ok' on a healthy project even if AGENTS.md were missing,
-    // and warn 'empty' on every project (the pointer is one line by design).
+    // AGENTS.md is the real AI-context file — CLAUDE.md (root and .claude/)
+    // are one-line pointers to it. Checking the pointer would report 'ok' on
+    // a healthy project even if AGENTS.md were missing, and warn 'empty' on
+    // every project (the pointer is one line by design).
     const filePath = path.join(projectPath, 'AGENTS.md');
     try {
         const content = await fsPromises.readFile(filePath, 'utf-8');

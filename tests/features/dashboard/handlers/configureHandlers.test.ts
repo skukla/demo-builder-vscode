@@ -4,7 +4,7 @@
  * Tests for the Configure screen handler map.
  * Verifies handler registration and individual handler behavior.
  *
- * Batch E4: AI handlers (verify-ai-setup, inspect-mcp, regenerate-ai-files,
+ * AI handlers (verify-ai-setup, inspect-mcp, regenerate-ai-files,
  * register-global-mcp, openInClaude) moved to aiHandlers.ts; their tests live
  * in aiHandlers.test.ts.
  */

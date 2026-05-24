@@ -49,6 +49,10 @@ describe('SOP: Inline Styles', () => {
         // Modal/dialog layout stability
         'GitHubRepoSelectionStep.tsx': 'Fixed height container prevents modal resize during status recheck',
 
+        // Pin indicators for projects (single-property style for inline icon color)
+        'ProjectCard.tsx': 'Inline color/flex style for the inline pin indicator next to project name',
+        'ProjectRow.tsx': 'Inline color/flex style for the inline pin indicator next to project name',
+
         // Store structure listbox container
     };
 

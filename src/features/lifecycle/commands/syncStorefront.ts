@@ -3,7 +3,7 @@
  *
  * Dashboard tile + command-palette entry that runs the same storefront sync
  * the Demo Builder MCP `sync_storefront` tool runs — both call into the
- * vscode-free `storefrontSyncService` (Cycle B Step 6L).
+ * vscode-free `storefrontSyncService`.
  *
  * What this wrapper adds on top of the service:
  *   1. Token discovery via `GitHubTokenService` (the MCP path reads env vars
@@ -15,8 +15,6 @@
  *      `PollingService.pollUntilCondition` until markers clear; cancel
  *      runs `git rebase --abort` programmatically. The user never sees a
  *      terminal — all merge-editor work happens in VS Code's built-in UI.
- *
- * Cycle B Steps 6m + 6n.
  */
 
 import * as childProcess from 'child_process';

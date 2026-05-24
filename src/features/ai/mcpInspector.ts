@@ -1,5 +1,5 @@
 /**
- * MCP Inspector (Cycle C Step 10)
+ * MCP Inspector
  *
  * Reads `<project>/.claude/mcp.json`, spawns each declared server as a stdio
  * subprocess via the @modelcontextprotocol/sdk client, calls `tools/list`
@@ -12,8 +12,8 @@
  *
  * The cache key is the server id (the key in `mcpServers`). Config changes
  * (command, args, env) require an explicit `clearMcpCache(id)` from the
- * `inspect-mcp` handler — Cycle C does not introduce config-change
- * invalidation since the 5-minute TTL keeps the staleness window short.
+ * `inspect-mcp` handler — there is no automatic config-change invalidation;
+ * the 5-minute TTL keeps the staleness window short.
  *
  * Pure stdlib + SDK + cache utils — no VS Code coupling.
  */

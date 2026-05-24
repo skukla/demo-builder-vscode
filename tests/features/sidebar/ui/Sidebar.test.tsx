@@ -199,7 +199,7 @@ describe('Sidebar', () => {
             expect(backButton).toBeInTheDocument();
         });
 
-        it('should render AI nav item in configure context (Batch E3 rename)', () => {
+        it('should render AI nav item in configure context', () => {
             renderWithProvider(
                 <Sidebar
                     context={createConfigureContext()}
@@ -208,13 +208,13 @@ describe('Sidebar', () => {
                 />
             );
 
-            // Batch E3 renames "AI Configuration" to "AI"
+            // Nav item is labelled "AI", not "AI Configuration"
             expect(screen.getByText('AI')).toBeInTheDocument();
             // The legacy label should no longer be present
             expect(screen.queryByText('AI Configuration')).not.toBeInTheDocument();
         });
 
-        it('should dispatch ai target when AI nav item clicked (Batch E3)', () => {
+        it('should dispatch ai target when AI nav item clicked', () => {
             const onNavigate = jest.fn();
             renderWithProvider(
                 <Sidebar

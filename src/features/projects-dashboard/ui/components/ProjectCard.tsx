@@ -9,6 +9,7 @@
  */
 
 import { Flex, Text } from '@adobe/react-spectrum';
+import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useCallback, useMemo } from 'react';
 import { ProjectActionsMenu } from './ProjectActionsMenu';
 import type { ProjectActions } from './ProjectActionsMenu';
@@ -82,11 +83,27 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             onKeyDown={handleKeyDown}
             className="project-card-spectrum"
         >
-            {/* Header Row: Name + More Menu */}
-            <Flex alignItems="center" justifyContent="space-between">
-                <Text UNSAFE_className="project-card-spectrum-name">
-                    {project.name}
-                </Text>
+            {/* Header Row: Pin indicator (when pinned) + Name + More Menu */}
+            <Flex alignItems="center" justifyContent="space-between" gap="size-100">
+                <Flex alignItems="center" gap="size-75" minWidth={0}>
+                    {project.pinned && (
+                        <span
+                            data-testid="project-card-pin-indicator"
+                            aria-label="Pinned"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                flex: '0 0 auto',
+                                color: 'var(--spectrum-global-color-gray-700)',
+                            }}
+                        >
+                            <PinOn size="XS" />
+                        </span>
+                    )}
+                    <Text UNSAFE_className="project-card-spectrum-name">
+                        {project.name}
+                    </Text>
+                </Flex>
                 <ProjectActionsMenu
                     project={project}
                     isRunning={isRunning}

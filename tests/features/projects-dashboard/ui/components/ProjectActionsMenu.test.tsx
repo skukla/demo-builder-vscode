@@ -131,7 +131,7 @@ describe('ProjectActionsMenu', () => {
         });
     });
 
-    describe('Open AI action (Batch E3)', () => {
+    describe('Open AI action', () => {
         it('should render Open AI menu item when onOpenAi is provided', () => {
             const project = createMockProject({ name: 'Test' });
             const actions: ProjectActions = {

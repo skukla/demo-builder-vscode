@@ -1,5 +1,5 @@
 /**
- * skillInspector tests (Cycle C Step 9)
+ * skillInspector tests
  *
  * Walks `<project>/.claude/skills/` and returns a `SkillInventoryEntry[]`.
  * - Top-level `add-component.md` / `sync-changes.md` / `update-credentials.md` → 'demo-builder'

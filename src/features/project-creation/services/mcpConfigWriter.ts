@@ -159,7 +159,7 @@ export async function registerGlobalMcp(extensionDistPath: string): Promise<void
  * remembers the choice via `globalState`. Subsequent calls no-op once the
  * state is set, so this is safe to call after every project completion.
  *
- * The AI Configuration tab (Cycle D) exposes a `[Register]` button that calls
+ * The AI Configuration tab exposes a `[Register]` button that calls
  * `registerGlobalMcp` directly, bypassing the consent prompt for users who
  * opted out earlier.
  */

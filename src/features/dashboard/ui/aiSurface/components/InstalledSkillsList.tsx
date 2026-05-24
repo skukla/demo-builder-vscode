@@ -1,5 +1,5 @@
 /**
- * InstalledSkillsList (Batch F4)
+ * InstalledSkillsList
  *
  * Compact, inline list of installed skills grouped by source domain.
  * Replaces the F2 InstalledSkillsDialog — the user wants confirmation

@@ -9,15 +9,21 @@ import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries
 import type { ServiceDefinition } from './components';
 
 /**
- * AiPrompt - A user-saved AI prompt (Batch F3)
+ * AiPrompt - A user-saved AI prompt
  *
- * Per-project saved prompts the user can create, edit, duplicate, and delete.
- * Persisted on `Project.aiPrompts`.
+ * Per-project saved prompts the user can create, edit, duplicate, delete,
+ * pin, and reorder. Persisted on `Project.aiPrompts` (per-project scope)
+ * and `demoBuilder.ai.globalPrompts` setting (global scope, future G3).
+ *
+ * Order in the persisted array IS the rendered order. Pinned prompts sort
+ * before unpinned within their scope.
  */
 export interface AiPrompt {
     id: string;
     title: string;
     prompt: string;
+    /** When true, sort before unpinned prompts within the same scope. */
+    pinned?: boolean;
 }
 
 /**
@@ -98,8 +104,14 @@ export interface Project {
             version: string;
             lastUpdated: string; // ISO date string
         }>;
-    /** User-saved AI prompts (Batch F3) */
+    /** User-saved AI prompts */
     aiPrompts?: AiPrompt[];
+    /**
+     * Pinned projects sort first on the projects dashboard (alphabetical
+     * within the pinned and unpinned groups). Set per-project via the
+     * Pin/Unpin kebab item.
+     */
+    pinned?: boolean;
     // Aliases for compatibility
     createdAt?: Date;
     updatedAt?: Date;

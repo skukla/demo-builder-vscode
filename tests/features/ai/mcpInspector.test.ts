@@ -1,5 +1,5 @@
 /**
- * mcpInspector tests (Cycle C Step 10)
+ * mcpInspector tests
  *
  * Reads `<project>/.claude/mcp.json`, spawns each declared server via the
  * @modelcontextprotocol/sdk Client + StdioClientTransport, calls tools/list

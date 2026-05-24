@@ -9,7 +9,7 @@
  * it depends on private notification/deployment methods. Same mixed pattern
  * as the Wizard (simple handlers in map, complex middleware inline).
  *
- * Batch E4: AI-related handlers (`verify-ai-setup`, `inspect-mcp`,
+ * AI-related handlers (`verify-ai-setup`, `inspect-mcp`,
  * `regenerate-ai-files`, `register-global-mcp`, `openInClaude`) now live
  * in `aiHandlers.ts` and are routed by the standalone AI surface.
  *

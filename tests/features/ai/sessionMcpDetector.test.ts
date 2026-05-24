@@ -1,5 +1,5 @@
 /**
- * sessionMcpDetector tests (Cycle C Step 11)
+ * sessionMcpDetector tests
  *
  * Reads `~/.claude.json::claudeAiMcpEverConnected` cross-referenced with
  * `~/.claude/mcp-needs-auth-cache.json` and returns SessionMcpEntry[].

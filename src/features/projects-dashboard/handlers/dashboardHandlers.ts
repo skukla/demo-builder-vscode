@@ -79,9 +79,15 @@ export const handleGetProjects: MessageHandler = async (
             }
         }
 
-        // Sort alphabetically by name for deterministic ordering
-        // (mtime-based scanner order is unstable after mesh enrichment writes)
-        projects.sort((a, b) => a.name.localeCompare(b.name));
+        // Pinned projects first, then alphabetical within each group.
+        // (mtime-based scanner order is unstable after mesh enrichment writes,
+        // so we always re-sort to make the rendered order deterministic.)
+        projects.sort((a, b) => {
+            const aPinned = a.pinned ? 1 : 0;
+            const bPinned = b.pinned ? 1 : 0;
+            if (aPinned !== bPinned) return bPinned - aPinned;
+            return a.name.localeCompare(b.name);
+        });
 
         // Include config in response (avoids race condition with init message)
         // Session override takes precedence over VS Code setting
@@ -1037,5 +1043,50 @@ export const handleCopyProjectPath: MessageHandler<{ projectPath: string }> = as
     } catch (error) {
         context.logger.error('Failed to copy project path', error instanceof Error ? error : undefined);
         return { success: false, error: 'Failed to copy project path' };
+    }
+};
+
+// ============================================================================
+// Project Pinning
+// ============================================================================
+
+/**
+ * Set the pinned flag on a project.
+ *
+ * Pinned projects render first on the projects dashboard (alphabetical
+ * within the pinned and unpinned groups). The flag is persisted to the
+ * project's `.demo-builder.json` manifest via `stateManager.saveProject`.
+ */
+export const handleSetProjectPinned: MessageHandler<{ projectPath: string; pinned: boolean }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string; pinned: boolean },
+): Promise<HandlerResponse> => {
+    if (!payload?.projectPath || typeof payload.pinned !== 'boolean') {
+        return { success: false, error: 'projectPath and pinned (boolean) are required' };
+    }
+
+    try {
+        validateProjectPath(payload.projectPath);
+    } catch {
+        return { success: false, error: 'Invalid project path' };
+    }
+
+    try {
+        const project = await context.stateManager.loadProjectFromPath(
+            payload.projectPath,
+            undefined,
+            { persistAfterLoad: false },
+        );
+        if (!project) {
+            return { success: false, error: 'Project not found' };
+        }
+        // Use saveProjectConfigOnly — saveProject would replace currentProject
+        // and fire onProjectChanged, side effects we don't want from the
+        // home-screen kebab.
+        await context.stateManager.saveProjectConfigOnly({ ...project, pinned: payload.pinned });
+        return { success: true };
+    } catch (error) {
+        context.logger.error('Failed to set project pinned state', error instanceof Error ? error : undefined);
+        return { success: false, error: 'Failed to set project pinned state' };
     }
 };

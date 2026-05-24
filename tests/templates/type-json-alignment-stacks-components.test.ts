@@ -30,8 +30,8 @@ const COMPONENT_DEFINITION_FIELDS = new Set([
     'requiresDeployment', 'metadata', 'addonFor', 'category', 'hidden',
     'dataRepository', 'installPath', 'configDefaults', 'contentSource', 'frontend',
     'backend', 'requiredComponents', 'optionalComponents', 'requiredEnvVars',
-    // Cycle B: per-frontend Adobe skill bundle (typed at
-    // RawComponentDefinition.aiSkillBundle in src/types/components.ts)
+    // Per-frontend Adobe skill bundle (typed at RawComponentDefinition.aiSkillBundle
+    // in src/types/components.ts)
     'aiSkillBundle',
 ]);
 

@@ -1,5 +1,5 @@
 /**
- * PromptCard Tests (Batch F2)
+ * PromptCard Tests
  *
  * Extracted from the inline PromptCard inside AiOverviewScreen. A card
  * renders a curated prompt's title + prompt text, and clicking the card
@@ -31,7 +31,7 @@ function renderCard(props: Partial<React.ComponentProps<typeof PromptCard>> = {}
     return { ...utils, ...merged };
 }
 
-describe('PromptCard (Batch F2)', () => {
+describe('PromptCard', () => {
     it('renders the prompt title', () => {
         renderCard();
         expect(screen.getByText('Add a hero block')).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('PromptCard (Batch F2)', () => {
         expect(screen.getByText('Sync my block edits back to GitHub.')).toBeInTheDocument();
     });
 
-    describe('user-prompt kebab menu (Batch F3)', () => {
+    describe('user-prompt kebab menu', () => {
         const USER_PROMPT = {
             id: 'user-1',
             title: 'My prompt',
@@ -169,6 +169,69 @@ describe('PromptCard (Batch F2)', () => {
             const card = screen.getByTestId('ai-prompt-card');
             fireEvent.click(card);
             expect(onLaunch).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('pin indicator and pin kebab item (G2)', () => {
+        const USER_PROMPT = {
+            id: 'user-1',
+            title: 'My prompt',
+            prompt: 'Do something specific.',
+        };
+
+        const ALL_HANDLERS = {
+            isUserPrompt: true as const,
+            onEdit: jest.fn(),
+            onDuplicate: jest.fn(),
+            onDelete: jest.fn(),
+            onPinToggle: jest.fn(),
+        };
+
+        it('does NOT render the pin indicator when prompt.pinned is undefined', () => {
+            renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS });
+            expect(screen.queryByTestId('ai-prompt-pin-indicator')).not.toBeInTheDocument();
+        });
+
+        it('renders the pin indicator when prompt.pinned is true', () => {
+            renderCard({ prompt: { ...USER_PROMPT, pinned: true }, ...ALL_HANDLERS });
+            expect(screen.getByTestId('ai-prompt-pin-indicator')).toBeInTheDocument();
+        });
+
+        it('shows "Pin" menu item when prompt is unpinned', () => {
+            renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS });
+            screen.getByLabelText(/more actions/i).click();
+            expect(screen.getByText('Pin')).toBeInTheDocument();
+            expect(screen.queryByText('Unpin')).not.toBeInTheDocument();
+        });
+
+        it('shows "Unpin" menu item when prompt is pinned', () => {
+            renderCard({ prompt: { ...USER_PROMPT, pinned: true }, ...ALL_HANDLERS });
+            screen.getByLabelText(/more actions/i).click();
+            expect(screen.getByText('Unpin')).toBeInTheDocument();
+            expect(screen.queryByText('Pin')).not.toBeInTheDocument();
+        });
+
+        it('clicking Pin invokes onPinToggle with true', () => {
+            const onPinToggle = jest.fn();
+            renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS, onPinToggle });
+            screen.getByLabelText(/more actions/i).click();
+            screen.getByText('Pin').click();
+            expect(onPinToggle).toHaveBeenCalledWith(true);
+        });
+
+        it('clicking Unpin invokes onPinToggle with false', () => {
+            const onPinToggle = jest.fn();
+            renderCard({ prompt: { ...USER_PROMPT, pinned: true }, ...ALL_HANDLERS, onPinToggle });
+            screen.getByLabelText(/more actions/i).click();
+            screen.getByText('Unpin').click();
+            expect(onPinToggle).toHaveBeenCalledWith(false);
+        });
+
+        it('does NOT show "Move up" or "Move down" menu items (replaced by drag-and-drop)', () => {
+            renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS });
+            screen.getByLabelText(/more actions/i).click();
+            expect(screen.queryByText('Move up')).not.toBeInTheDocument();
+            expect(screen.queryByText('Move down')).not.toBeInTheDocument();
         });
     });
 });

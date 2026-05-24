@@ -56,7 +56,7 @@ export interface UseDashboardActionsReturn {
     handleOpenDevConsole: () => void;
     /** Open the project in the Claude Code (CLI) harness */
     handleOpenInClaude: () => void;
-    /** Open the AI surface for the project (Batch E3) */
+    /** Open the AI surface for the project */
     handleOpenAi: () => void;
     /** Delete the project */
     handleDeleteProject: () => void;

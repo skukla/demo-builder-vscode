@@ -1,5 +1,5 @@
 /**
- * PromptEditDialog (Batch F3)
+ * PromptEditDialog
  *
  * Modal wrapper around a small form (title TextField + prompt TextArea).
  * Used in two modes:

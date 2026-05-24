@@ -1,5 +1,5 @@
 /**
- * ShowAiCommand Tests (Batch E1)
+ * ShowAiCommand Tests
  *
  * Tests for the new standalone AI surface webview command.
  * Mirrors the ConfigureProjectWebviewCommand test pattern.
@@ -45,7 +45,7 @@ jest.mock('@/features/dashboard/handlers/aiHandlers', () => ({
     },
 }));
 
-describe('ShowAiCommand (Batch E1)', () => {
+describe('ShowAiCommand', () => {
     let command: ShowAiCommand;
     let mockContext: vscode.ExtensionContext;
     let mockStateManager: jest.Mocked<StateManager>;

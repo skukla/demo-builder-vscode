@@ -584,6 +584,7 @@ button[class*="spectrum-Button"][disabled],
 
 /* Page body section spacing */
 .page-body-section {
+    padding-top: 24px !important;
     padding-bottom: 16px !important;
 }
 

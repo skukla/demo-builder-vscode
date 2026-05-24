@@ -292,7 +292,7 @@ describe('ProjectCard', () => {
         });
     });
 
-    describe('Open AI wiring (Batch E3)', () => {
+    describe('Open AI wiring', () => {
         it('should expose Open AI menu item when actions.onOpenAi is provided', () => {
             const project = createMockProject({ name: 'AI Wired Project' });
             const onOpenAi = jest.fn();

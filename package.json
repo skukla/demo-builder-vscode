@@ -258,7 +258,10 @@
                   "description": "Discovery service App Builder action URL"
                 }
               },
-              "required": ["orgName", "serviceUrl"]
+              "required": [
+                "orgName",
+                "serviceUrl"
+              ]
             },
             "default": [
               {
@@ -413,6 +416,7 @@
     "@adobe/aio-lib-console": "^5.4.2",
     "@adobe/aio-lib-ims": "^7.0.2",
     "@adobe/react-spectrum": "^3.46.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
     "@octokit/core": "^6.1.6",
     "@octokit/plugin-retry": "^7.2.1",
     "@types/uuid": "^10.0.0",
@@ -428,7 +432,6 @@
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
     "yaml": "^2.3.4",
-    "@modelcontextprotocol/sdk": "1.29.0",
     "zod": "^3.23.0"
   }
 }

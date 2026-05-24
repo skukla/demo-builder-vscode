@@ -17,7 +17,7 @@ jest.mock('fs/promises', () => ({
     readdir: jest.fn(),
 }));
 
-// Cycle C inspectors — mocked so the file-presence checks remain the focus
+// Inventory inspectors — mocked so the file-presence checks remain the focus
 // of this suite. Per-inspector behavior has dedicated test files.
 jest.mock('@/features/ai/skillInspector', () => ({
     inspectSkills: jest.fn().mockResolvedValue([]),
@@ -271,7 +271,7 @@ describe('verifyAiSetup', () => {
         });
     });
 
-    describe('inventory payload (Cycle C)', () => {
+    describe('inventory payload', () => {
         it('includes an inventory object on every successful response', async () => {
             setupAllOk();
 

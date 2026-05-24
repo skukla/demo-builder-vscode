@@ -1,5 +1,5 @@
 /**
- * Session MCP Detector (Cycle C Step 11)
+ * Session MCP Detector
  *
  * Detects Adobe MCPs the user has connected through Claude Code's catalog
  * (the `mcp__claude_ai_*` runtime tool prefixes the agent sees inside a

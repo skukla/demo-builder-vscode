@@ -1,11 +1,11 @@
 /**
  * Skills Writer Tests
  *
- * After the AI layer pivot (Cycle A), this writer emits only three
- * Demo-Builder-specific procedural skills. EDS storefront skills come from
- * Adobe's official `@adobe-commerce/commerce-extensibility-tools` package
- * (installed via Cycle B). MCP-usage skills are no longer needed because
- * external MCPs come from Claude Code's session-level catalog.
+ * After the AI layer pivot, this writer emits only three Demo-Builder-specific
+ * procedural skills. EDS storefront skills come from Adobe's official
+ * `@adobe-commerce/commerce-extensibility-tools` package. MCP-usage skills are
+ * no longer needed because external MCPs come from Claude Code's session-level
+ * catalog.
  */
 
 import * as path from 'path';
@@ -226,7 +226,7 @@ describe('skillsWriter', () => {
         });
     });
 
-    describe('removed skills (Cycle A trim)', () => {
+    describe('removed skills', () => {
         it('does not write add-block.md (Adobe extensibility tools provide this)', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
@@ -309,7 +309,7 @@ describe('skillsWriter', () => {
         });
     });
 
-    describe('Adobe skill bundle copy (Cycle B Step 6b)', () => {
+    describe('Adobe skill bundle copy', () => {
         it('copies each skill folder from the bundle to .claude/skills/<prefix>-<skill>/', async () => {
             mockAdobeSkillBundle({
                 'block-developer': ['SKILL.md'],

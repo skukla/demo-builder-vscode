@@ -1,5 +1,5 @@
 /**
- * InstalledSkillsList Tests (Batch F4)
+ * InstalledSkillsList Tests
  *
  * Verifies the inline replacement for InstalledSkillsDialog:
  *   - Skills are grouped by source (demo-builder → adobe → unknown)

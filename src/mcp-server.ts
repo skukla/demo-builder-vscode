@@ -311,9 +311,9 @@ export const toolHandlers = {
         }
 
         // Tokens come from environment when running standalone (Claude Code launches
-        // the MCP server). The extension can write them into the spawn env via
-        // Cycle D's launch wiring. Absence is fine: git falls back to ambient auth
-        // and the Helix step is skipped.
+        // the MCP server). The extension can write them into the spawn env via the
+        // launch wiring. Absence is fine: git falls back to ambient auth and the
+        // Helix step is skipped.
         const githubToken = process.env.GITHUB_TOKEN || process.env.DEMO_BUILDER_GITHUB_TOKEN || undefined;
         const daLiveToken = process.env.DA_LIVE_IMS_TOKEN || process.env.DEMO_BUILDER_DA_LIVE_TOKEN || undefined;
 

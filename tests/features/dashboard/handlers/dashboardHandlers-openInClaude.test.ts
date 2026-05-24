@@ -1,5 +1,5 @@
 /**
- * Dashboard Handlers — handleOpenInClaude (Cycle D — Batch D2)
+ * Dashboard Handlers — handleOpenInClaude
  *
  * Coverage:
  *  - Dispatches the demoBuilder.openInClaude command with the current project

@@ -77,7 +77,7 @@ export interface ActionGridProps {
     handleOpenDevConsole: () => void;
     /** Handler for Open in Claude Code button */
     handleOpenInClaude: () => void;
-    /** Handler for AI (Batch E3) — opens the standalone AI surface */
+    /** Handler for AI — opens the standalone AI surface */
     handleOpenAi: () => void;
     /** Handler for Delete button */
     handleDeleteProject: () => void;
@@ -217,7 +217,7 @@ export function ActionGrid({
                 </ActionButton>
             )}
 
-            {/* AI — standalone AI surface (Batch E3). Position: between Sync Storefront and Configure. */}
+            {/* AI — standalone AI surface. Position: between Sync Storefront and Configure. */}
             <ActionButton
                 onPress={handleOpenAi}
                 isQuiet

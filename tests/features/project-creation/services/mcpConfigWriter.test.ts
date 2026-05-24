@@ -6,7 +6,7 @@
  * - .mcp.json (Claude Code project-scope config at project root)
  * - .claude/settings.json (PostToolUse hooks)
  *
- * After the AI layer pivot (Cycle A), the writer emits only the demo-builder
+ * After the AI layer pivot, the writer emits only the demo-builder
  * MCP entry. External MCPs (da-live, adobe-commerce-dev, etc.) come from
  * Claude Code's session-level catalog — not project config. Cursor and Codex
  * pick up `.mcp.json` natively and need no per-tool file.
@@ -255,7 +255,7 @@ describe('generateClaudeSettings', () => {
         expect(command).toContain('"AI: sync files"');
     });
 
-    describe('PostToolUse hook hardening (Cycle B Step 6g)', () => {
+    describe('PostToolUse hook hardening', () => {
         it('uses jq as the primary JSON parser', () => {
             const project = makeEdsProject();
             const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
@@ -435,7 +435,7 @@ describe('writeMcpConfigs', () => {
     });
 });
 
-// ─── Global MCP registration (Cycle B Step 6d) ──────────────────────────────
+// ─── Global MCP registration ────────────────────────────────────────────────
 
 const GLOBAL_CLAUDE_CONFIG_PATH = path.join(os.homedir(), '.claude.json');
 const GLOBAL_MCP_REG_STATE_KEY = 'demoBuilder.ai.globalMcpRegistration';

@@ -1,9 +1,8 @@
 /**
  * aiHandlers Tests
  *
- * Tests for the standalone AI surface handler map. After Batch E4 the handler
- * function bodies live in `aiHandlers.ts` (previously in `configureHandlers.ts`
- * during the E1–E3 transition).
+ * Tests for the standalone AI surface handler map. The handler function bodies
+ * live in `aiHandlers.ts`.
  */
 
 // Mock timeoutConfig before imports (transitive dependency)
@@ -145,15 +144,15 @@ describe('aiHandlers', () => {
             expect(hasHandler(aiHandlers, 'openInClaude')).toBe(true);
         });
 
-        it('should include save-ai-prompt (F3)', () => {
+        it('should include save-ai-prompt', () => {
             expect(hasHandler(aiHandlers, 'save-ai-prompt')).toBe(true);
         });
 
-        it('should include delete-ai-prompt (F3)', () => {
+        it('should include delete-ai-prompt', () => {
             expect(hasHandler(aiHandlers, 'delete-ai-prompt')).toBe(true);
         });
 
-        it('should include list-ai-prompts (F3)', () => {
+        it('should include list-ai-prompts', () => {
             expect(hasHandler(aiHandlers, 'list-ai-prompts')).toBe(true);
         });
 
@@ -426,10 +425,10 @@ describe('aiHandlers', () => {
     });
 
     // ==========================================================
-    // F3: AI prompt CRUD handlers
+    // AI prompt CRUD handlers
     // ==========================================================
 
-    describe('handleSaveAiPrompt (F3)', () => {
+    describe('handleSaveAiPrompt', () => {
         it('appends a new prompt to project.aiPrompts when id is not already present', async () => {
             const saveProject = jest.fn().mockResolvedValue(undefined);
             const project = { name: 'p', path: '/projects/p', aiPrompts: [] as unknown[] };
@@ -534,7 +533,7 @@ describe('aiHandlers', () => {
         });
     });
 
-    describe('handleDeleteAiPrompt (F3)', () => {
+    describe('handleDeleteAiPrompt', () => {
         it('removes the prompt with the matching id and persists', async () => {
             const saveProject = jest.fn().mockResolvedValue(undefined);
             const project = {
@@ -597,7 +596,7 @@ describe('aiHandlers', () => {
         });
     });
 
-    describe('handleListAiPrompts (F3)', () => {
+    describe('handleListAiPrompts', () => {
         it('returns the project.aiPrompts array', async () => {
             const prompts = [
                 { id: 'a', title: 'A', prompt: 'a' },
@@ -644,4 +643,125 @@ describe('aiHandlers', () => {
             expect(result.success).toBe(false);
         });
     });
+
+    describe('handleSaveAiPrompt — pin-aware ordering (G2)', () => {
+        function makeContext(aiPrompts: unknown[]) {
+            const saveProject = jest.fn().mockResolvedValue(undefined);
+            const project = { name: 'p', path: '/projects/p', aiPrompts };
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(project),
+                    saveProject,
+                } as unknown as HandlerContext['stateManager'],
+            });
+            return { context, saveProject };
+        }
+
+        it('inserts a new pinned prompt before existing unpinned prompts', async () => {
+            const { context, saveProject } = makeContext([
+                { id: 'a', title: 'A', prompt: 'a' },
+                { id: 'b', title: 'B', prompt: 'b' },
+            ]);
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'c', title: 'C', prompt: 'c', pinned: true },
+            });
+            const saved = saveProject.mock.calls[0][0];
+            expect(saved.aiPrompts).toEqual([
+                { id: 'c', title: 'C', prompt: 'c', pinned: true },
+                { id: 'a', title: 'A', prompt: 'a' },
+                { id: 'b', title: 'B', prompt: 'b' },
+            ]);
+        });
+
+        it('inserts a new pinned prompt at end of existing pinned section', async () => {
+            const { context, saveProject } = makeContext([
+                { id: 'p1', title: 'P1', prompt: 'p1', pinned: true },
+                { id: 'a', title: 'A', prompt: 'a' },
+            ]);
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'p2', title: 'P2', prompt: 'p2', pinned: true },
+            });
+            const saved = saveProject.mock.calls[0][0];
+            expect(saved.aiPrompts).toEqual([
+                { id: 'p1', title: 'P1', prompt: 'p1', pinned: true },
+                { id: 'p2', title: 'P2', prompt: 'p2', pinned: true },
+                { id: 'a', title: 'A', prompt: 'a' },
+            ]);
+        });
+
+        it('moves a prompt to the pinned section when pin state flips true', async () => {
+            const { context, saveProject } = makeContext([
+                { id: 'a', title: 'A', prompt: 'a' },
+                { id: 'b', title: 'B', prompt: 'b' },
+                { id: 'c', title: 'C', prompt: 'c' },
+            ]);
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'b', title: 'B', prompt: 'b', pinned: true },
+            });
+            const saved = saveProject.mock.calls[0][0];
+            expect(saved.aiPrompts).toEqual([
+                { id: 'b', title: 'B', prompt: 'b', pinned: true },
+                { id: 'a', title: 'A', prompt: 'a' },
+                { id: 'c', title: 'C', prompt: 'c' },
+            ]);
+        });
+
+        it('lands a newly-unpinned prompt just past the pinned boundary (minimal visual jump)', async () => {
+            const { context, saveProject } = makeContext([
+                { id: 'p1', title: 'P1', prompt: 'p1', pinned: true },
+                { id: 'p2', title: 'P2', prompt: 'p2', pinned: true },
+                { id: 'a', title: 'A', prompt: 'a' },
+                { id: 'b', title: 'B', prompt: 'b' },
+            ]);
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'p1', title: 'P1', prompt: 'p1', pinned: false },
+            });
+            const saved = saveProject.mock.calls[0][0];
+            // p1 was at position 0 (pinned). After unpin, it sits at the very
+            // top of the unpinned section (position 1) — just past p2 (the
+            // remaining pinned item) — rather than jumping to the bottom.
+            expect(saved.aiPrompts).toEqual([
+                { id: 'p2', title: 'P2', prompt: 'p2', pinned: true },
+                { id: 'p1', title: 'P1', prompt: 'p1', pinned: false },
+                { id: 'a', title: 'A', prompt: 'a' },
+                { id: 'b', title: 'B', prompt: 'b' },
+            ]);
+        });
+
+        it('lands an unpinned-from-only-pinned prompt at top of all-unpinned list', async () => {
+            // Unpinning the sole pinned item should leave it at the top —
+            // no other pinned items remain, so the boundary is at position 0.
+            const { context, saveProject } = makeContext([
+                { id: 'p1', title: 'P1', prompt: 'p1', pinned: true },
+                { id: 'a', title: 'A', prompt: 'a' },
+                { id: 'b', title: 'B', prompt: 'b' },
+            ]);
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'p1', title: 'P1', prompt: 'p1', pinned: false },
+            });
+            const saved = saveProject.mock.calls[0][0];
+            expect(saved.aiPrompts).toEqual([
+                { id: 'p1', title: 'P1', prompt: 'p1', pinned: false },
+                { id: 'a', title: 'A', prompt: 'a' },
+                { id: 'b', title: 'B', prompt: 'b' },
+            ]);
+        });
+
+        it('replaces in place when pin state is unchanged', async () => {
+            const { context, saveProject } = makeContext([
+                { id: 'a', title: 'A', prompt: 'a' },
+                { id: 'b', title: 'B', prompt: 'b' },
+            ]);
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'a', title: 'A2', prompt: 'a2' },
+            });
+            const saved = saveProject.mock.calls[0][0];
+            // Position 0 preserved; only fields changed.
+            expect(saved.aiPrompts).toEqual([
+                { id: 'a', title: 'A2', prompt: 'a2' },
+                { id: 'b', title: 'B', prompt: 'b' },
+            ]);
+        });
+    });
+
 });

@@ -19,7 +19,7 @@ interface AiOverviewInitialData {
 }
 
 /**
- * ShowAiCommand — opens the standalone AI surface (Batch E1).
+ * ShowAiCommand — opens the standalone AI surface.
  *
  * Mirrors the ConfigureProjectWebviewCommand shape: a singleton webview panel
  * wired up to the new `aiHandlers` map. The AI surface is harness-agnostic —

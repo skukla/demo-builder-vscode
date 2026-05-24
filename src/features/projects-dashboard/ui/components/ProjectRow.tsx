@@ -8,6 +8,7 @@
 
 import { Flex, Text } from '@adobe/react-spectrum';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
+import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useCallback, useMemo } from 'react';
 import { ProjectActionsMenu } from './ProjectActionsMenu';
 import type { ProjectActions } from './ProjectActionsMenu';
@@ -76,9 +77,22 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
             className="project-row"
         >
             <Flex alignItems="center" justifyContent="space-between" width="100%">
-                {/* Left: Status dot + Name + Components */}
+                {/* Left: Status dot + Pin (when pinned) + Name + Components */}
                 <Flex alignItems="center" gap="size-150">
                     <StatusDot variant={statusVariant} size={8} />
+                    {project.pinned && (
+                        <span
+                            data-testid="project-row-pin-indicator"
+                            aria-label="Pinned"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                color: 'var(--spectrum-global-color-gray-700)',
+                            }}
+                        >
+                            <PinOn size="XS" />
+                        </span>
+                    )}
                     <Text UNSAFE_className="project-row-name">
                         {project.name}
                     </Text>

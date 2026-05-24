@@ -5,10 +5,16 @@
  * (PageLayout + PageHeader + PageFooter) with a single, centered
  * content column that matches the projects-dashboard layout.
  *
- * Body (Batch F4 — single-column with modal drill-down):
- *   - Inline Refresh + Regenerate buttons above the PromptGrid.
+ * Body:
  *   - PromptGrid of curated + user-saved prompts.
- *   - Quiet "View installed skills" link triggers InstalledSkillsModal.
+ *   - Quiet "View installed skills (N)" link beneath the grid opens
+ *     InstalledSkillsModal, which carries the Regenerate AI files
+ *     action in its footer.
+ *
+ * Inventory freshness: opening the skills modal triggers a background
+ * MCP re-inspection + verify, so the modal renders fresh data every
+ * time. No standalone Refresh control on the surface — opening the
+ * modal IS the refresh gesture.
  *
  * Composition notes:
  *   - No new UI primitives. PageLayout + .page-container-padded for the
@@ -30,7 +36,6 @@ import { PageFooter, PageHeader, PageLayout } from '@/core/ui/components/layout'
 import { useAsyncOperation } from '@/core/ui/hooks/useAsyncOperation';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { AiCheckResult } from '@/features/ai/aiSetupVerifier';
-import aiPromptsConfig from '@/features/project-creation/config/ai-prompts.json';
 import type { AiInventory } from '@/types/ai';
 import type { AiPrompt, Project } from '@/types/base';
 
@@ -48,8 +53,6 @@ interface VerifyAiSetupResponse {
     inventory: AiInventory;
     globalMcpRegistration?: GlobalMcpRegistrationStateValue;
 }
-
-const CONFIGURED_PROMPTS: AiPrompt[] = (aiPromptsConfig as { prompts: AiPrompt[] }).prompts;
 
 /**
  * Generate an id for a duplicated prompt. Prefers `crypto.randomUUID` when
@@ -103,13 +106,6 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [project.path]);
 
-    const handleRefresh = useCallback(async (): Promise<void> => {
-        await refreshOp.execute(async () => {
-            await webviewClient.request('inspect-mcp', {});
-        });
-        await runVerify();
-    }, [refreshOp, runVerify]);
-
     const handleRegenerate = useCallback(async (): Promise<void> => {
         await regenerateOp.execute(async () => {
             await webviewClient.request('regenerate-ai-files', { projectPath: project.path });
@@ -121,19 +117,24 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
         webviewClient.postMessage('cancel');
     }, []);
 
-    const handlePromptLaunch = useCallback((prompt: string) => {
-        webviewClient.postMessage('openInClaude', { prompt });
-    }, []);
-
     const handleOpenSkillsModal = useCallback(() => {
         setSkillsModalOpen(true);
-    }, []);
+        // Background re-inspect + verify so the modal shows fresh data. The
+        // modal renders current state immediately; it updates silently when
+        // verify completes. Opening IS refreshing — no standalone Refresh action.
+        void (async () => {
+            await refreshOp.execute(async () => {
+                await webviewClient.request('inspect-mcp', {});
+            });
+            await runVerify();
+        })();
+    }, [refreshOp, runVerify]);
 
     const handleCloseSkillsModal = useCallback(() => {
         setSkillsModalOpen(false);
     }, []);
 
-    // ─── F3: user prompt CRUD ────────────────────────────────────────────────
+    // ─── User prompt CRUD ────────────────────────────────────────────────────
 
     const handleNewPrompt = useCallback(() => {
         setEditTarget(null);
@@ -191,6 +192,18 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
         }
     }, []);
 
+    const handlePinTogglePrompt = useCallback(async (id: string, nextPinned: boolean): Promise<void> => {
+        const target = userPrompts.find(p => p.id === id);
+        if (!target) return;
+        const response = await webviewClient.request<SavePromptResponse>(
+            'save-ai-prompt',
+            { prompt: { ...target, pinned: nextPinned } },
+        );
+        if (response?.success && Array.isArray(response.aiPrompts)) {
+            setUserPrompts(response.aiPrompts);
+        }
+    }, [userPrompts]);
+
     const handleLaunchUserPrompt = useCallback((prompt: AiPrompt) => {
         webviewClient.postMessage('openInClaude', { prompt: prompt.prompt });
     }, []);
@@ -222,26 +235,15 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
                 backgroundColor="var(--spectrum-global-color-gray-50)"
             >
                 <div className="page-container-padded page-body-section">
-                    <Flex direction="column" gap="size-300">
-                        {/* Refresh + Regenerate above the grid */}
-                        <Flex gap="size-100" justifyContent="end">
-                            <Button variant="secondary" isQuiet isDisabled={isBusy} onPress={handleRefresh}>
-                                Refresh
-                            </Button>
-                            <Button variant="secondary" isQuiet isDisabled={isBusy} onPress={handleRegenerate}>
-                                Regenerate AI Files
-                            </Button>
-                        </Flex>
-
-                        {/* Primary content — curated prompt grid + user prompts */}
+                    <Flex direction="column" gap="size-400">
+                        {/* Primary content — user-saved prompt library */}
                         <PromptGrid
-                            curatedPrompts={CONFIGURED_PROMPTS}
                             userPrompts={userPrompts}
-                            onLaunch={handlePromptLaunch}
                             onLaunchUser={handleLaunchUserPrompt}
                             onEdit={handleEditPrompt}
                             onDuplicate={handleDuplicatePrompt}
                             onDelete={handleDeletePrompt}
+                            onPinToggle={handlePinTogglePrompt}
                             onNew={handleNewPrompt}
                         />
 
@@ -259,18 +261,20 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
                 </div>
             </PageLayout>
 
-            {/* Installed skills drill-down modal */}
+            {/* Installed skills drill-down modal — carries the Regenerate action */}
             {skillsModalOpen && (
                 <DialogContainer onDismiss={handleCloseSkillsModal}>
                     <InstalledSkillsModal
                         skills={inventory.skills}
                         hasError={Boolean(inventory.skillsError)}
                         onClose={handleCloseSkillsModal}
+                        onRegenerate={handleRegenerate}
+                        isBusy={isBusy}
                     />
                 </DialogContainer>
             )}
 
-            {/* F3: User prompt create/edit dialog */}
+            {/* User prompt create/edit dialog */}
             {editDialogOpen && (
                 <DialogContainer onDismiss={handleCloseEditDialog}>
                     <PromptEditDialog

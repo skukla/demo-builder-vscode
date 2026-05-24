@@ -1,5 +1,5 @@
 /**
- * Capability Statements (Batch E2)
+ * Capability Statements
  *
  * Pure helper that converts a list of skill inventory entries into a list of
  * user-facing capability statements. The output drives the AI Overview screen's

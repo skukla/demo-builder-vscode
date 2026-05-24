@@ -1,8 +1,10 @@
 /**
- * InstalledSkillsModal Tests (Batch F4)
+ * InstalledSkillsModal Tests
  *
- * Thin wrapper: confirms the modal renders the grouped list inside the
- * shared Modal chrome and that the Close button dismisses via onClose.
+ * The modal wraps the grouped skills list inside the shared Modal chrome and
+ * exposes the project's one AI maintenance action — Regenerate AI files — as
+ * a footer action button. (Refresh is implicit: the parent re-inspects on
+ * modal open.)
  */
 
 import { render, screen, fireEvent, act } from '@testing-library/react';
@@ -22,56 +24,121 @@ function makeSkill(overrides: Partial<SkillInventoryEntry> = {}): SkillInventory
     };
 }
 
-function renderModal(skills: SkillInventoryEntry[], onClose = jest.fn(), hasError = false) {
-    return render(
-        <Provider theme={defaultTheme}>
-            <DialogContainer onDismiss={onClose}>
-                <InstalledSkillsModal skills={skills} hasError={hasError} onClose={onClose} />
-            </DialogContainer>
-        </Provider>,
-    );
+interface RenderOptions {
+    skills?: SkillInventoryEntry[];
+    onClose?: () => void;
+    onRegenerate?: () => void | Promise<void>;
+    isBusy?: boolean;
+    hasError?: boolean;
+}
+
+function renderModal(opts: RenderOptions = {}) {
+    const onClose = opts.onClose ?? jest.fn();
+    const onRegenerate = opts.onRegenerate ?? jest.fn();
+    return {
+        onClose,
+        onRegenerate,
+        ...render(
+            <Provider theme={defaultTheme}>
+                <DialogContainer onDismiss={onClose}>
+                    <InstalledSkillsModal
+                        skills={opts.skills ?? [makeSkill({ name: 'add-component', path: '/a' })]}
+                        hasError={opts.hasError ?? false}
+                        onClose={onClose}
+                        onRegenerate={onRegenerate}
+                        isBusy={opts.isBusy ?? false}
+                    />
+                </DialogContainer>
+            </Provider>,
+        ),
+    };
 }
 
 describe('InstalledSkillsModal', () => {
     it('renders the "Installed skills" heading', () => {
-        renderModal([makeSkill({ name: 'add-component', path: '/a' })]);
+        renderModal();
         expect(screen.getByRole('heading', { name: /installed skills/i })).toBeInTheDocument();
     });
 
     it('renders the grouped skills list inside the modal', () => {
-        renderModal([
-            makeSkill({ name: 'add-component', source: 'demo-builder', path: '/a' }),
-            makeSkill({ name: 'adobe-skill', source: 'adobe', path: '/b' }),
-        ]);
+        renderModal({
+            skills: [
+                makeSkill({ name: 'add-component', source: 'demo-builder', path: '/a' }),
+                makeSkill({ name: 'adobe-skill', source: 'adobe', path: '/b' }),
+            ],
+        });
         expect(screen.getByTestId('ai-installed-skills-list')).toBeInTheDocument();
         expect(screen.getByTestId('ai-skill-group-demo-builder')).toBeInTheDocument();
         expect(screen.getByTestId('ai-skill-group-adobe')).toBeInTheDocument();
     });
 
     it('does NOT render skill descriptions', () => {
-        renderModal([
-            makeSkill({
-                name: 'add-component',
-                description: 'Adds a component to a project.',
-                path: '/a',
-                source: 'demo-builder',
-            }),
-        ]);
+        renderModal({
+            skills: [
+                makeSkill({
+                    name: 'add-component',
+                    description: 'Adds a component to a project.',
+                    path: '/a',
+                    source: 'demo-builder',
+                }),
+            ],
+        });
         expect(screen.queryByText('Adds a component to a project.')).not.toBeInTheDocument();
     });
 
     it('renders the error row when hasError is true', () => {
-        renderModal([], jest.fn(), true);
+        renderModal({ skills: [], hasError: true });
         expect(screen.getByTestId('ai-installed-skills-error')).toBeInTheDocument();
     });
 
     it('clicking Close fires onClose', async () => {
-        const onClose = jest.fn();
-        renderModal([makeSkill({ name: 'add-component', path: '/a' })], onClose);
+        const { onClose } = renderModal();
         const closeButton = screen.getByRole('button', { name: /close/i });
         await act(async () => {
             fireEvent.click(closeButton);
         });
         expect(onClose).toHaveBeenCalled();
+    });
+
+    describe('Regenerate AI files action', () => {
+        it('renders the Regenerate AI files action button in the footer', () => {
+            renderModal();
+            expect(screen.getByRole('button', { name: /regenerate ai files/i })).toBeInTheDocument();
+        });
+
+        it('does NOT render a Refresh action button (refresh is implicit on modal open)', () => {
+            renderModal();
+            expect(screen.queryByRole('button', { name: /^refresh$/i })).not.toBeInTheDocument();
+        });
+
+        it('clicking Regenerate AI files fires onRegenerate', async () => {
+            const { onRegenerate } = renderModal();
+            const regenButton = screen.getByRole('button', { name: /regenerate ai files/i });
+            await act(async () => {
+                fireEvent.click(regenButton);
+            });
+            expect(onRegenerate).toHaveBeenCalled();
+        });
+
+        it('Regenerate is disabled when isBusy is true', () => {
+            renderModal({ isBusy: true });
+            const regenButton = screen.getByRole('button', { name: /regenerate ai files/i });
+            expect(regenButton).toHaveAttribute('aria-disabled', 'true');
+        });
+
+        it('Regenerate is enabled when isBusy is false', () => {
+            renderModal({ isBusy: false });
+            const regenButton = screen.getByRole('button', { name: /regenerate ai files/i });
+            expect(regenButton).not.toHaveAttribute('aria-disabled', 'true');
+        });
+
+        it('does not call onRegenerate when clicked while isBusy is true', async () => {
+            const { onRegenerate } = renderModal({ isBusy: true });
+            const regenButton = screen.getByRole('button', { name: /regenerate ai files/i });
+            await act(async () => {
+                fireEvent.click(regenButton);
+            });
+            expect(onRegenerate).not.toHaveBeenCalled();
+        });
     });
 });

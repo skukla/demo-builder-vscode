@@ -360,7 +360,7 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
-    // Handle Open AI (Batch E3) - dispatches to the `demoBuilder.openAi` command
+    // Handle Open AI - dispatches to the `demoBuilder.openAi` command
     // via the dashboard handler bridge. Mirrors handleOpenInClaudeCode exactly.
     const handleOpenAiForProject = useCallback(async (project: Project) => {
         try {
@@ -371,6 +371,23 @@ const ProjectsDashboardApp: React.FC = () => {
             console.error('Failed to open AI for project:', error);
         }
     }, []);
+
+    // Toggle pinned on a project; the backend persists it to .demo-builder.json
+    // and the next render picks up the new sort order.
+    const handlePinToggle = useCallback(async (project: Project) => {
+        try {
+            const response = await webviewClient.request<{ success: boolean }>('setProjectPinned', {
+                projectPath: project.path,
+                pinned: !project.pinned,
+            });
+            if (response?.success) {
+                // Re-fetch so the sort order + pin indicator update.
+                await fetchProjects(true);
+            }
+        } catch (error) {
+            console.error('Failed to toggle project pinned state:', error);
+        }
+    }, [fetchProjects]);
 
     // Handle view mode override - saves to backend for session persistence
     const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
@@ -394,12 +411,13 @@ const ProjectsDashboardApp: React.FC = () => {
         onExport: handleExportProject,
         onOpenInClaudeCode: handleOpenInClaudeCode,
         onOpenAi: handleOpenAiForProject,
+        onPinToggle: handlePinToggle,
         onDelete: handleDeleteProject,
     }), [
         handleStartDemo, handleStopDemo, handleOpenBrowser, handleOpenLiveSite,
         handleOpenDaLive, handleResetProject, handleRepublishContent, handleEditProject,
         handleRenameProject, handleCopyPath, handleExportProject,
-        handleOpenInClaudeCode, handleOpenAiForProject, handleDeleteProject,
+        handleOpenInClaudeCode, handleOpenAiForProject, handlePinToggle, handleDeleteProject,
     ]);
 
     return (

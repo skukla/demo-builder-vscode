@@ -64,8 +64,8 @@ describe('generateAIContextFiles', () => {
         const project = makeProject();
         await expect(generateAIContextFiles('/projects/test', project, '/ext/path')).resolves.toBeUndefined();
 
-        // No settings argument — writeMcpConfigs takes only the three positional args
-        // after Cycle A. External MCPs come from Claude Code's session-level catalog.
+        // No settings argument — writeMcpConfigs takes only the three positional
+        // args. External MCPs come from Claude Code's session-level catalog.
         expect(writeMcpConfigs).toHaveBeenCalledWith('/projects/test', project, '/ext/path/dist');
     });
 
@@ -73,8 +73,8 @@ describe('generateAIContextFiles', () => {
         const project = makeProject();
         await expect(generateAIContextFiles('/projects/test', project, '/ext/path')).resolves.toBeUndefined();
 
-        // After Cycle A, writeSkillFiles takes only projectPath and project.
-        // SkillsSettings is gone — the writer always emits the same three skills.
+        // writeSkillFiles takes only projectPath and project — SkillsSettings is
+        // gone, and the writer always emits the same three skills.
         expect(writeSkillFiles).toHaveBeenCalledWith('/projects/test', project);
     });
 

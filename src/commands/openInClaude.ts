@@ -25,15 +25,15 @@ const TERMINAL_NAME = 'Claude Code';
 
 /**
  * Argument shape accepted by `OpenInClaudeCommand.execute`. Supports the legacy
- * positional `Project` arg for backwards compatibility and the new
- * `{ project?, prompt? }` payload introduced in Batch E2.
+ * positional `Project` arg for backwards compatibility and the
+ * `{ project?, prompt? }` payload.
  */
 export type OpenInClaudeArg = Project | { project?: Project; prompt?: string };
 
 /**
  * OpenInClaudeCommand — opens the Claude Code (CLI) harness for the current project.
  *
- * Drives off the `demoBuilder.ai.harness` setting (Cycle B). Two launch pathways:
+ * Drives off the `demoBuilder.ai.harness` setting. Two launch pathways:
  *
  *   1. **URI launch** (`vscode://anthropic.claude-code/open`) when the Claude Code
  *      VS Code extension is installed. The URI handler opens Claude Code in the
@@ -55,7 +55,7 @@ export class OpenInClaudeCommand extends BaseCommand {
      * Execute the Open in Claude Code action for the given (or current) project.
      *
      * @param arg Either a `Project` (legacy positional form) or a payload of
-     *            `{ project?, prompt? }` (Batch E2). When `prompt` is provided,
+     *            `{ project?, prompt? }`. When `prompt` is provided,
      *            the URI handler launches with `?prompt=<encoded>` so Claude
      *            Code opens with the prompt pre-filled in its input.
      */
@@ -190,7 +190,7 @@ export class OpenInClaudeCommand extends BaseCommand {
  * Accepts:
  *   - `undefined` → both undefined
  *   - A `Project` (legacy positional form, identified by a `path` property)
- *   - A `{ project?, prompt? }` payload (Batch E2)
+ *   - A `{ project?, prompt? }` payload
  */
 function normalizeArg(arg: OpenInClaudeArg | undefined): {
     project: Project | undefined;

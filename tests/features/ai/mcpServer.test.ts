@@ -829,7 +829,7 @@ describe('toolHandlers.listBlocks', () => {
         expect(JSON.parse(result)).toEqual([{ name: 'hero' }]);
     });
 
-    describe('originLibrary cross-reference (Cycle B Step 6j)', () => {
+    describe('originLibrary cross-reference', () => {
         it('attaches originLibrary metadata when the block came from an installed library', async () => {
             mockManifestWithBlockLibraries([
                 {

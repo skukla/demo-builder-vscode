@@ -1,5 +1,5 @@
 /**
- * OpenInClaudeCommand tests (Cycle D — Batch D2)
+ * OpenInClaudeCommand tests
  *
  * Coverage:
  *  - 3 harness modes (`auto`, `extension`, `terminal`) × extension installed / not-installed
@@ -611,10 +611,10 @@ describe('OpenInClaudeCommand', () => {
     });
 
     // ------------------------------------------------------------------------
-    // Prompt argument (Batch E2)
+    // Prompt argument
     // ------------------------------------------------------------------------
 
-    describe('prompt argument (Batch E2)', () => {
+    describe('prompt argument', () => {
         it('URI includes the prompt query parameter when called with { prompt }', async () => {
             const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
             const command = new OpenInClaudeCommand(

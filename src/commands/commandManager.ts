@@ -225,8 +225,7 @@ export class CommandManager {
             await openInClaude.execute(project);
         });
 
-        // AI (standalone surface — Batch E1)
-        // Harness-agnostic webview that replaces the AI Configuration tab inside Configure.
+        // AI — harness-agnostic standalone webview surface.
         const openAi = new ShowAiCommand(
             this.context,
             this.stateManager,

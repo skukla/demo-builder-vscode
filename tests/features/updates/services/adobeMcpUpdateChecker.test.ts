@@ -1,5 +1,5 @@
 /**
- * AdobeMcpUpdateChecker tests (Cycle D Step 17)
+ * AdobeMcpUpdateChecker tests
  *
  * Compares the storefront's installed @adobe-commerce/commerce-extensibility-tools
  * version (read from node_modules/.../package.json) against the latest GitHub

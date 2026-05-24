@@ -1,5 +1,5 @@
 /**
- * Capability Statements Tests (Batch E2)
+ * Capability Statements Tests
  *
  * Pure helper that derives user-facing capability statements from a list of
  * SkillInventoryEntry. The output should:
@@ -25,7 +25,7 @@ function makeSkill(overrides: Partial<SkillInventoryEntry> = {}): SkillInventory
     };
 }
 
-describe('deriveCapabilityStatements (Batch E2)', () => {
+describe('deriveCapabilityStatements', () => {
     it('returns an empty array for empty input', () => {
         expect(deriveCapabilityStatements([])).toEqual([]);
     });

@@ -141,7 +141,6 @@ describe('CommandManager', () => {
             commandManager.registerCommands();
 
             // Verify registerCommand was called 23 times (resetAll excluded - dev mode only)
-            // Batch E1 adds demoBuilder.openAi
             expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(23);
 
             // Verify all commands are registered (in order of registration)
@@ -180,7 +179,7 @@ describe('CommandManager', () => {
             });
         });
 
-        it('should register demoBuilder.openAi command (Batch E1)', () => {
+        it('should register demoBuilder.openAi command', () => {
             commandManager.registerCommands();
 
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
@@ -225,7 +224,7 @@ describe('CommandManager', () => {
 
             await navigateHandler({ target: 'ai-setup' });
 
-            // The legacy 'ai-setup' route was removed in Batch E4 — neither command runs.
+            // The legacy 'ai-setup' route was removed — neither command runs.
             expect(configureInstance.execute).not.toHaveBeenCalled();
             expect(aiInstance.execute).not.toHaveBeenCalled();
         });
