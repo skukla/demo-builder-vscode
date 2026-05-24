@@ -14,8 +14,12 @@ export interface ProjectsGridProps {
     projects: Project[];
     /** Path of the currently running project (if any) */
     runningProjectPath?: string;
-    /** Callback when a project is selected */
-    onSelectProject: (project: Project) => void;
+    /**
+     * Callback when a project is selected. `opts.forceNewWindow=true` rides
+     * along on shift/cmd-click so the parent can open the project in a new
+     * VS Code window.
+     */
+    onSelectProject: (project: Project, opts?: { forceNewWindow?: boolean }) => void;
     /** Bundled action callbacks passed to each card's menu */
     actions?: ProjectActions;
 }

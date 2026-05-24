@@ -127,6 +127,9 @@ jest.mock('@/features/project-creation/services', () => ({
     generateEnvironmentFiles: jest.fn().mockResolvedValue(undefined),
     finalizeProject: jest.fn().mockResolvedValue(undefined),
     sendCompletionAndCleanup: jest.fn().mockResolvedValue(undefined),
+    generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
+    openProjectAsWorkspace: jest.fn().mockResolvedValue(undefined),
+    ensureGlobalMcpRegistration: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('Executor - EDS Standard Flow', () => {

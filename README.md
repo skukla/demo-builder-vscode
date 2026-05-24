@@ -75,13 +75,21 @@ Each project has an **Open in Claude Code** action in two places:
 - The project dashboard (under the action grid)
 - The project card kebab menu on the home screen
 
-Clicking it launches Claude Code based on the `demoBuilder.ai.harness` setting:
+Clicking it launches Claude Code based on two settings:
 
-| Setting | Behavior |
+- **`demoBuilder.ai.engine`** — which AI tool. Currently only `claude-code` is supported; reserved for future engines (e.g. Codex).
+- **`demoBuilder.ai.surface`** — how Demo Builder launches the configured engine:
+
+| `surface` | Behavior |
 |---|---|
-| `auto` (default) | URI handler if `anthropic.claude-code` is installed, terminal fallback otherwise |
-| `extension` | URI handler only; clear error if the extension is missing |
-| `terminal` | Force terminal launch with `claude` in the project directory |
+| `extension` (default) | Launch the Claude Code VS Code extension's chat panel via its URI handler, with the prompt pre-filled when applicable. If the extension is not installed, a recovery dialog offers "Install Claude Code Extension" or "Switch to Terminal Mode." |
+| `terminal` | Launch `claude --continue` in a VS Code integrated terminal rooted at the project. The "Claude Code" terminal is reused across launches (one terminal per project per window). For prompt clicks, the prompt is copied to your clipboard so you can paste it into Claude with one keystroke. |
+
+The first time you activate the extension with `surface='extension'` but no Claude Code extension installed, a one-time setup dialog asks you to pick — install the extension for the chat panel UX, or switch to terminal.
+
+### Prompt clicks anchor the project as the VS Code workspace
+
+When you click a prompt from the AI surface, Demo Builder checks whether VS Code's workspace is already the project. If not, it briefly reloads the window with the project as the workspace before launching Claude Code — so the chat panel sees per-project skills, `.mcp.json` MCPs, and `AGENTS.md`. This happens automatically; you click once and the prompt is delivered with full project context.
 
 ### AI Configuration tab
 

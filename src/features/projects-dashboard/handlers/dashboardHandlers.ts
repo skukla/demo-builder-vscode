@@ -113,13 +113,28 @@ export const handleGetProjects: MessageHandler = async (
 };
 
 /**
- * Select a project by path
+ * Select a project by path.
  *
- * Loads the project and sets it as the current project.
+ * Loads the project, sets it as the current project, and anchors the VS Code
+ * workspace to the project root so that Claude Code (and any other workspace-
+ * scoped tooling) reads `.claude/skills/`, `.mcp.json`, and `AGENTS.md` from
+ * the right cwd.
+ *
+ * Behavior:
+ *   - workspace already matches project + `forceNewWindow` falsy → just navigate
+ *     to the project dashboard webview (no reload).
+ *   - workspace differs (or no workspace) + `forceNewWindow` falsy → reopen the
+ *     current window with the project as workspace. The extension reactivates;
+ *     globalState carries `currentProject` across, so the dashboard surfaces
+ *     automatically. We skip the explicit `showProjectDashboard` call because
+ *     the reload makes it racy and unnecessary.
+ *   - `forceNewWindow: true` (shift/cmd-click) → open the project in a NEW
+ *     VS Code window; the current window is left alone (still on the projects
+ *     list).
  */
-export const handleSelectProject: MessageHandler<{ projectPath: string }> = async (
+export const handleSelectProject: MessageHandler<{ projectPath: string; forceNewWindow?: boolean }> = async (
     context: HandlerContext,
-    payload?: { projectPath: string },
+    payload?: { projectPath: string; forceNewWindow?: boolean },
 ): Promise<HandlerResponse> => {
     try {
         if (!payload?.projectPath) {
@@ -156,17 +171,53 @@ export const handleSelectProject: MessageHandler<{ projectPath: string }> = asyn
         await context.stateManager.saveProject(project);
         context.logger.info(`Selected project: ${project.name}`);
 
-        // Navigate to project dashboard
-        await BaseWebviewCommand.startWebviewTransition();
-        try {
-            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
-        } catch (navError) {
-            context.logger.error(
-                'Failed to navigate to dashboard',
-                navError instanceof Error ? navError : undefined,
-            );
-        } finally {
-            BaseWebviewCommand.endWebviewTransition();
+        const forceNewWindow = payload.forceNewWindow === true;
+        const currentWorkspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        const workspaceMatches = currentWorkspace === project.path;
+
+        if (forceNewWindow || !workspaceMatches) {
+            // Open the project folder as a workspace. `forceNewWindow=false`
+            // replaces the current window's workspace (VS Code shows its native
+            // unsaved-changes prompt if needed). `forceNewWindow=true` spawns
+            // a new window and leaves the current one alone.
+            //
+            // When replacing the current window, mark a webview transition so
+            // the outgoing dashboard's dispose() skips its projects-list
+            // auto-reopen — otherwise we'd briefly flash that panel before the
+            // reload completes. New-window opens don't reload us, so no flag.
+            if (!forceNewWindow) {
+                await BaseWebviewCommand.startWebviewTransition();
+            }
+            try {
+                await vscode.commands.executeCommand(
+                    'vscode.openFolder',
+                    vscode.Uri.file(project.path),
+                    forceNewWindow,
+                );
+            } catch (openError) {
+                context.logger.error(
+                    'Failed to open project folder as workspace',
+                    openError instanceof Error ? openError : undefined,
+                );
+                if (!forceNewWindow) {
+                    BaseWebviewCommand.endWebviewTransition();
+                }
+            }
+            // No endWebviewTransition() on the success path — the window is
+            // reloading; this extension instance is going away.
+        } else {
+            // Already in the right workspace — just surface the dashboard webview.
+            await BaseWebviewCommand.startWebviewTransition();
+            try {
+                await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+            } catch (navError) {
+                context.logger.error(
+                    'Failed to navigate to dashboard',
+                    navError instanceof Error ? navError : undefined,
+                );
+            } finally {
+                BaseWebviewCommand.endWebviewTransition();
+            }
         }
 
         return {

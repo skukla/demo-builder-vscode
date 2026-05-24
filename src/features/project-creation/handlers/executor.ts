@@ -24,6 +24,7 @@ import {
     finalizeProject,
     sendCompletionAndCleanup,
     generateAIContextFiles,
+    openProjectAsWorkspace,
     ensureEdsContent,
     ensureGlobalMcpRegistration,
     type ComponentDefinitionEntry,
@@ -450,6 +451,13 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             err instanceof Error ? err : undefined,
         );
     }
+
+    // Phase 7: Anchor the project as the current window's VS Code workspace.
+    // From here forward "Open in Claude Code" launches the chat panel into the
+    // right cwd, so per-project skills, MCPs, and AGENTS.md load. The window
+    // reloads as a side effect, so this is the last meaningful step — anything
+    // after would be cut off by the reload.
+    await openProjectAsWorkspace(projectPath, context.logger);
 }
 
 // ============================================================================

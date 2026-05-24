@@ -29,8 +29,12 @@ export interface ProjectRowProps {
     project: Project;
     /** Whether the project demo is currently running */
     isRunning?: boolean;
-    /** Callback when the row is selected */
-    onSelect: (project: Project) => void;
+    /**
+     * Callback when the row is selected. The optional `opts` carries modifier
+     * intent — `forceNewWindow: true` indicates the user wants to open the
+     * project in a new VS Code window (shift-click or cmd-click convention).
+     */
+    onSelect: (project: Project, opts?: { forceNewWindow?: boolean }) => void;
     /** Bundled action callbacks for the kebab menu */
     actions?: ProjectActions;
 }
@@ -44,15 +48,26 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
     onSelect,
     actions = {},
 }) => {
-    const handleClick = useCallback(() => {
-        onSelect(project);
-    }, [project, onSelect]);
+    const handleClick = useCallback(
+        (e: React.MouseEvent) => {
+            if (e.shiftKey || e.metaKey) {
+                onSelect(project, { forceNewWindow: true });
+            } else {
+                onSelect(project);
+            }
+        },
+        [project, onSelect],
+    );
 
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                onSelect(project);
+                if (e.shiftKey) {
+                    onSelect(project, { forceNewWindow: true });
+                } else {
+                    onSelect(project);
+                }
             }
         },
         [project, onSelect],

@@ -277,20 +277,29 @@
       {
         "title": "AI",
         "properties": {
-          "demoBuilder.ai.harness": {
+          "demoBuilder.ai.engine": {
             "type": "string",
             "enum": [
-              "auto",
+              "claude-code"
+            ],
+            "enumDescriptions": [
+              "Anthropic's Claude Code (CLI + VS Code extension)."
+            ],
+            "default": "claude-code",
+            "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
+          },
+          "demoBuilder.ai.surface": {
+            "type": "string",
+            "enum": [
               "extension",
               "terminal"
             ],
             "enumDescriptions": [
-              "Use the Claude Code VS Code extension when installed; fall back to a terminal launch otherwise",
-              "Always launch via the Claude Code VS Code extension (errors if not installed)",
-              "Always launch claude in a VS Code integrated terminal"
+              "Launch the engine's official VS Code extension. For Claude Code: chat panel via `vscode://anthropic.claude-code/open`, with prompts pre-filled in the input. Missing-extension is a configuration error; the user is prompted to install or switch to terminal.",
+              "Launch the engine's CLI in a VS Code integrated terminal rooted at the project. For Claude Code: `claude --continue` with prompt-on-clipboard handoff. No chat panel; full project context."
             ],
-            "default": "auto",
-            "description": "How Open in Claude Code launches Claude: auto-detects the Claude Code VS Code extension by default, or forces extension/terminal."
+            "default": "extension",
+            "description": "How Demo Builder launches the configured AI engine. The chat panel UX requires the workspace to be the project — selecting a project from the Demo Builder dashboard arranges that."
           }
         }
       }

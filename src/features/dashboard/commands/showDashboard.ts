@@ -1,4 +1,5 @@
 import * as fsPromises from 'fs/promises';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
@@ -16,6 +17,44 @@ import type { DemoPackage } from '@/types/demoPackages';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import type { Stack, StacksConfig } from '@/types/stacks';
 import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
+
+/** Absolute path to the Demo Builder projects directory (`~/.demo-builder/projects`). */
+const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
+
+/**
+ * Decide whether closing the project dashboard should auto-reopen the projects
+ * list as a safety net.
+ *
+ * Returns true only when:
+ *   1. The current workspace folder is anchored to a Demo Builder project
+ *      (i.e. a subdirectory of `~/.demo-builder/projects/`), AND
+ *   2. No webview transition is in progress.
+ *
+ * Condition 2 keeps us out of the way when the user is intentionally
+ * navigating — e.g. tile-clicking another project triggers a workspace switch
+ * via `vscode.openFolder`, which reloads the window and fires the dashboard's
+ * dispose() during teardown. Auto-reopening the projects list at that moment
+ * would briefly flash before the reload completes. Callers signal this by
+ * passing `transitionInProgress=true`.
+ *
+ * The path check uses `path.relative` rather than a string prefix so that
+ * path-traversal attempts (`.../projects/../../etc/passwd`) and the base
+ * directory itself both correctly return false.
+ */
+export function shouldAutoReopenProjectsList(
+    workspaceFolderPath: string | undefined,
+    transitionInProgress: boolean = false,
+): boolean {
+    if (transitionInProgress) return false;
+    if (!workspaceFolderPath) return false;
+    const rel = path.relative(DEMO_BUILDER_PROJECTS_BASE, workspaceFolderPath);
+    // rel is empty when paths are equal (base itself — no project subdir).
+    // rel starts with '..' when path is outside the base (including traversal).
+    if (rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) {
+        return false;
+    }
+    return true;
+}
 
 /**
  * Command to show the "Project Dashboard" after project creation

@@ -23,6 +23,12 @@ export const ProgressLocation = {
     SourceControl: 1,
 };
 
+export const ConfigurationTarget = {
+    Global: 1,
+    Workspace: 2,
+    WorkspaceFolder: 3,
+};
+
 export const Uri = {
     file: jest.fn((path: string) => ({
         fsPath: path,

@@ -126,17 +126,23 @@ const ProjectsDashboardApp: React.FC = () => {
         fetchProjects(true);
     }, [fetchProjects]);
 
-    // Handle project selection
-    const handleSelectProject = useCallback(async (project: Project) => {
-        try {
-            await webviewClient.postMessage('selectProject', {
-                projectPath: project.path,
-            });
-            // Navigation to project detail will be handled by extension
-        } catch (error) {
-            console.error('Failed to select project:', error);
-        }
-    }, []);
+    // Handle project selection. The optional `opts.forceNewWindow` rides along
+    // when the user shift/cmd-clicked the tile — the backend opens the project
+    // as a new VS Code window's workspace instead of replacing the current one.
+    const handleSelectProject = useCallback(
+        async (project: Project, opts?: { forceNewWindow?: boolean }) => {
+            try {
+                await webviewClient.postMessage('selectProject', {
+                    projectPath: project.path,
+                    ...(opts?.forceNewWindow ? { forceNewWindow: true } : {}),
+                });
+                // Navigation to project detail (or window reload) handled by the extension.
+            } catch (error) {
+                console.error('Failed to select project:', error);
+            }
+        },
+        [],
+    );
 
     // Handle create project
     const handleCreateProject = useCallback(async () => {

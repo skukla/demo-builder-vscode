@@ -43,15 +43,15 @@ type SidebarContext =
     | { type: 'configure'; project: Project };       // Configure
 ```
 
-### Projects Context
-- Header: "Demo Builder"
-- Navigation: Projects (active)
-- No back button
-
-### Project Detail Context
-- Header: Project name
-- Navigation: Overview, Configure, Updates, AI Configuration
-- Back button: "← Projects"
+### Projects, ProjectsList, and Project Contexts
+- Renders the `UtilityBar` only (Tools / Help / Settings).
+- No back-to-Projects link in the sidebar.
+- Back navigation in project context lives in the **Project Dashboard
+  webview's header** ("All Projects" button), not in the sidebar.
+- Safety net: when the user closes the Project Dashboard tab inside a
+  project workspace, the projects list webview auto-reopens as a new tab so
+  the user keeps a Demo Builder navigation surface (see
+  `src/features/dashboard/commands/showDashboard.ts::dispose`).
 
 ### Wizard Context
 - Header: "NEW DEMO"
@@ -59,9 +59,8 @@ type SidebarContext =
 - Back button: "← Cancel"
 
 ### Configure Context
-- Header: Project name
-- Navigation: Overview, Configure (active), Updates, AI Configuration
-- Back button: "← Projects"
+- Renders the `UtilityBar` only (same as project context).
+- Back navigation lives in the Configure webview's header.
 
 ## Components
 

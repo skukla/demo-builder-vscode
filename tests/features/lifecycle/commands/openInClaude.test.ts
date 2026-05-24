@@ -2,12 +2,13 @@
  * OpenInClaudeCommand tests
  *
  * Coverage:
- *  - 3 harness modes (`auto`, `extension`, `terminal`) × extension installed / not-installed
+ *  - 2 surfaces (`extension`, `terminal`) × extension installed / not-installed
+ *  - Missing-extension error dialog (Install / Switch to Terminal actions)
  *  - First-tip globalState behavior (write BEFORE message; once-only)
- *  - Terminal creation (name 'Claude Code', cwd = project.path, sendText('claude'), show())
- *  - Missing project.path surfaces an error
- *  - StepLogger action-level logging at each branch
- *  - vscode.env.openExternal resolving to `false` surfaces a warning (no terminal fallback)
+ *  - Terminal find-or-spawn behavior + `claude --continue` on spawn
+ *  - Clipboard handoff for prompt + terminal surface
+ *  - Workspace-mismatch warning (extension surface only, once-ever)
+ *  - vscode.env.openExternal resolving to `false` surfaces a warning
  */
 
 import * as vscode from 'vscode';
@@ -78,19 +79,36 @@ function makeProject(overrides: Partial<Project> = {}): Partial<Project> {
 
 /**
  * Sets up the vscode mock surface required for OpenInClaudeCommand:
- *  - vscode.workspace.getConfiguration('demoBuilder.ai').get('harness') -> harnessMode
+ *  - vscode.workspace.getConfiguration('demoBuilder.ai').get('engine'/'surface')
  *  - vscode.extensions.getExtension(id) -> ext if id matches and installed, else undefined
  *  - vscode.env.openExternal -> opens
  *  - vscode.window.createTerminal -> terminal
+ *  - vscode.window.terminals -> list of existing terminals (for find-or-spawn)
+ *  - vscode.env.clipboard.writeText -> clipboard handoff
  *
  * Returns the per-test jest mocks so individual tests can assert behavior.
  */
 function setupVscodeMocks(opts: {
-    harness: 'auto' | 'extension' | 'terminal';
+    surface: 'extension' | 'terminal';
+    /** Engine setting. Defaults to `'claude-code'` (the only currently-supported engine). */
+    engine?: 'claude-code';
     extensionInstalled: boolean;
     openExternalResult?: boolean;
+    /**
+     * Workspace folder path to expose via `vscode.workspace.workspaceFolders[0]`.
+     * Defaults to `/projects/demo` (matches the default mock project path) so
+     * existing tests that assume workspace = project keep their URI-launch
+     * expectations.
+     */
+    workspaceFolderPath?: string | null;
+    /**
+     * Existing terminals to expose via `vscode.window.terminals`. Defaults to
+     * `[]` (no existing terminals; spawn a fresh one).
+     */
+    existingTerminals?: Array<{ name: string; exitStatus?: { code: number } | undefined }>;
 }): {
-    getHarnessMock: jest.Mock;
+    getConfigMock: jest.Mock;
+    configUpdateMock: jest.Mock;
     getExtensionMock: jest.Mock;
     openExternalMock: jest.Mock;
     createTerminalMock: jest.Mock;
@@ -99,11 +117,25 @@ function setupVscodeMocks(opts: {
     showInformationMessageMock: jest.Mock;
     showErrorMessageMock: jest.Mock;
     showWarningMessageMock: jest.Mock;
+    clipboardWriteMock: jest.Mock;
+    existingTerminalShowMocks: jest.Mock[];
 } {
-    const getHarnessMock = jest.fn().mockReturnValue(opts.harness);
+    // Default workspace = project.path so existing tests still URI-launch
+    const wsPath = opts.workspaceFolderPath === undefined ? '/projects/demo' : opts.workspaceFolderPath;
+    (vscode.workspace as unknown as { workspaceFolders: { uri: { fsPath: string } }[] | undefined }).workspaceFolders =
+        wsPath === null ? undefined : [{ uri: { fsPath: wsPath } }];
+
+    // Configuration mock — dispatches on the key name so `get('engine')` and
+    // `get('surface')` return different values.
+    const getConfigMock = jest.fn((key: string, defaultValue?: unknown) => {
+        if (key === 'engine') return opts.engine ?? 'claude-code';
+        if (key === 'surface') return opts.surface;
+        return defaultValue;
+    });
+    const configUpdateMock = jest.fn().mockResolvedValue(undefined);
     (vscode.workspace.getConfiguration as jest.Mock).mockImplementation((section: string) => {
         if (section === 'demoBuilder.ai') {
-            return { get: getHarnessMock };
+            return { get: getConfigMock, update: configUpdateMock };
         }
         return { get: jest.fn() };
     });
@@ -134,6 +166,27 @@ function setupVscodeMocks(opts: {
     createTerminalMock.mockReset();
     createTerminalMock.mockReturnValue(terminal);
 
+    // Mock existing terminals (for find-or-spawn behavior)
+    const existingTerminalShowMocks: jest.Mock[] = [];
+    const terminalsList = (opts.existingTerminals ?? []).map(t => {
+        const showMock = jest.fn();
+        existingTerminalShowMocks.push(showMock);
+        return {
+            name: t.name,
+            exitStatus: t.exitStatus,
+            show: showMock,
+            sendText: jest.fn(),
+            dispose: jest.fn(),
+        };
+    });
+    (vscode.window as unknown as { terminals: unknown[] }).terminals = terminalsList;
+
+    // Mock clipboard
+    const clipboardWriteMock = jest.fn().mockResolvedValue(undefined);
+    (vscode.env as unknown as { clipboard: { writeText: jest.Mock } }).clipboard = {
+        writeText: clipboardWriteMock,
+    };
+
     const showInformationMessageMock = vscode.window.showInformationMessage as jest.Mock;
     showInformationMessageMock.mockReset();
     showInformationMessageMock.mockResolvedValue(undefined);
@@ -147,7 +200,8 @@ function setupVscodeMocks(opts: {
     showWarningMessageMock.mockResolvedValue(undefined);
 
     return {
-        getHarnessMock,
+        getConfigMock,
+        configUpdateMock,
         getExtensionMock,
         openExternalMock,
         createTerminalMock,
@@ -156,6 +210,8 @@ function setupVscodeMocks(opts: {
         showInformationMessageMock,
         showErrorMessageMock,
         showWarningMessageMock,
+        clipboardWriteMock,
+        existingTerminalShowMocks,
     };
 }
 
@@ -169,51 +225,12 @@ describe('OpenInClaudeCommand', () => {
     });
 
     // ------------------------------------------------------------------------
-    // Harness=auto
+    // Surface=extension
     // ------------------------------------------------------------------------
 
-    describe("harness='auto'", () => {
+    describe("surface='extension'", () => {
         it('URI launches when extension is installed', async () => {
-            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
-            const globalState = makeGlobalState();
-            const command = new OpenInClaudeCommand(
-                makeContext(globalState),
-                makeStateManager(makeProject()) as never,
-                makeLogger() as never,
-            );
-
-            await command.execute(makeProject() as Project);
-
-            expect(mocks.openExternalMock).toHaveBeenCalledTimes(1);
-            const uriArg = mocks.openExternalMock.mock.calls[0][0];
-            expect(String(uriArg)).toBe('vscode://anthropic.claude-code/open');
-            expect(mocks.createTerminalMock).not.toHaveBeenCalled();
-        });
-
-        it('falls back to terminal launch when extension is NOT installed', async () => {
-            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: false });
-            const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
-                makeLogger() as never,
-            );
-
-            await command.execute(makeProject() as Project);
-
-            expect(mocks.openExternalMock).not.toHaveBeenCalled();
-            expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
-            expect(mocks.terminalShowMock).toHaveBeenCalled();
-            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude');
-        });
-    });
-
-    // ------------------------------------------------------------------------
-    // Harness=extension
-    // ------------------------------------------------------------------------
-
-    describe("harness='extension'", () => {
-        it('URI launches when extension is installed', async () => {
-            const mocks = setupVscodeMocks({ harness: 'extension', extensionInstalled: true });
+            const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -226,8 +243,9 @@ describe('OpenInClaudeCommand', () => {
             expect(mocks.createTerminalMock).not.toHaveBeenCalled();
         });
 
-        it("shows an error (no fallback) when extension is NOT installed", async () => {
-            const mocks = setupVscodeMocks({ harness: 'extension', extensionInstalled: false });
+        it("shows an error dialog with Install + Switch actions when extension is NOT installed", async () => {
+            const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: false });
+            mocks.showErrorMessageMock.mockResolvedValueOnce(undefined); // user dismisses
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -237,12 +255,27 @@ describe('OpenInClaudeCommand', () => {
             await command.execute(makeProject() as Project);
 
             expect(mocks.showErrorMessageMock).toHaveBeenCalled();
+            const args = mocks.showErrorMessageMock.mock.calls[0];
+            const message = args[0] as string;
+            const actionButtons = args.slice(1) as string[];
+            expect(message.toLowerCase()).toMatch(/claude code/);
+            expect(actionButtons).toEqual(
+                expect.arrayContaining([
+                    expect.stringMatching(/install/i),
+                    expect.stringMatching(/terminal/i),
+                ]),
+            );
+            // No launch happened (user dismissed)
             expect(mocks.openExternalMock).not.toHaveBeenCalled();
             expect(mocks.createTerminalMock).not.toHaveBeenCalled();
         });
 
-        it("error message mentions the harness setting hint when extension is missing", async () => {
-            const mocks = setupVscodeMocks({ harness: 'extension', extensionInstalled: false });
+        it("Install action opens the marketplace entry for the Claude Code extension", async () => {
+            const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: false });
+            mocks.showErrorMessageMock.mockResolvedValueOnce('Install Claude Code Extension');
+            const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
+            executeCommandMock.mockResolvedValue(undefined);
+
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -251,19 +284,109 @@ describe('OpenInClaudeCommand', () => {
 
             await command.execute(makeProject() as Project);
 
-            const errorText = mocks.showErrorMessageMock.mock.calls[0][0] as string;
-            expect(errorText).toMatch(/claude code/i);
-            expect(errorText.toLowerCase()).toContain('terminal');
+            expect(executeCommandMock).toHaveBeenCalledWith('extension.open', 'anthropic.claude-code');
+        });
+
+        it("Switch to Terminal Mode action updates the setting AND launches the terminal", async () => {
+            const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: false });
+            mocks.showErrorMessageMock.mockResolvedValueOnce('Switch to Terminal Mode');
+
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(mocks.configUpdateMock).toHaveBeenCalledWith(
+                'surface',
+                'terminal',
+                expect.anything(),
+            );
+            // Terminal launches after the switch
+            expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --continue');
         });
     });
 
     // ------------------------------------------------------------------------
-    // Harness=terminal
+    // Workspace anchoring (extension-mode mismatch warning)
     // ------------------------------------------------------------------------
 
-    describe("harness='terminal'", () => {
+    describe('workspace anchoring', () => {
+        it('extension mode shows a one-time mismatch warning when workspace !== project, then URI-launches anyway', async () => {
+            const mocks = setupVscodeMocks({
+                surface: 'extension',
+                extensionInstalled: true,
+                workspaceFolderPath: '/some/other/repo',
+            });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            // Warning toast surfaces the trade-off the user implicitly accepted
+            expect(mocks.showWarningMessageMock).toHaveBeenCalled();
+            const warningText = mocks.showWarningMessageMock.mock.calls[0][0] as string;
+            expect(warningText.toLowerCase()).toMatch(/(workspace|project context)/);
+
+            // URI launch still happens — user explicitly forced extension mode
+            expect(mocks.openExternalMock).toHaveBeenCalledTimes(1);
+            expect(mocks.createTerminalMock).not.toHaveBeenCalled();
+        });
+
+        it('extension mode does NOT warn when workspace === project.path', async () => {
+            const mocks = setupVscodeMocks({
+                surface: 'extension',
+                extensionInstalled: true,
+                workspaceFolderPath: '/projects/demo',
+            });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(mocks.showWarningMessageMock).not.toHaveBeenCalled();
+            expect(mocks.openExternalMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('extension mode warning fires only once ever (persistent globalState — matches first-tip pattern)', async () => {
+            const mocks = setupVscodeMocks({
+                surface: 'extension',
+                extensionInstalled: true,
+                workspaceFolderPath: '/some/other/repo',
+            });
+            const globalState = makeGlobalState();
+            const command = new OpenInClaudeCommand(
+                makeContext(globalState),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+            await command.execute(makeProject() as Project);
+
+            // Only one warning across two invocations
+            expect(mocks.showWarningMessageMock).toHaveBeenCalledTimes(1);
+            // Both URI launches still happen
+            expect(mocks.openExternalMock).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    // ------------------------------------------------------------------------
+    // Surface=terminal
+    // ------------------------------------------------------------------------
+
+    describe("surface='terminal'", () => {
         it('forces terminal launch even when extension is installed', async () => {
-            const mocks = setupVscodeMocks({ harness: 'terminal', extensionInstalled: true });
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: true });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -274,11 +397,11 @@ describe('OpenInClaudeCommand', () => {
 
             expect(mocks.openExternalMock).not.toHaveBeenCalled();
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
-            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude');
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --continue');
         });
 
         it('forces terminal launch when extension is NOT installed', async () => {
-            const mocks = setupVscodeMocks({ harness: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -289,6 +412,130 @@ describe('OpenInClaudeCommand', () => {
 
             expect(mocks.openExternalMock).not.toHaveBeenCalled();
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('uses `claude --continue` instead of plain `claude`', async () => {
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --continue');
+        });
+    });
+
+    // ------------------------------------------------------------------------
+    // Terminal find-or-spawn
+    // ------------------------------------------------------------------------
+
+    describe('terminal find-or-spawn', () => {
+        it('reuses an existing live "Claude Code" terminal instead of spawning a new one', async () => {
+            const mocks = setupVscodeMocks({
+                surface: 'terminal',
+                extensionInstalled: false,
+                existingTerminals: [{ name: 'Claude Code', exitStatus: undefined }],
+            });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            // Did NOT spawn a new terminal
+            expect(mocks.createTerminalMock).not.toHaveBeenCalled();
+            // Focused the existing one
+            expect(mocks.existingTerminalShowMocks[0]).toHaveBeenCalled();
+            // Did NOT re-run claude in the existing terminal
+            expect(mocks.terminalSendTextMock).not.toHaveBeenCalled();
+        });
+
+        it('spawns a new terminal if the only matching terminal has exited', async () => {
+            const mocks = setupVscodeMocks({
+                surface: 'terminal',
+                extensionInstalled: false,
+                existingTerminals: [{ name: 'Claude Code', exitStatus: { code: 0 } }],
+            });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --continue');
+        });
+
+        it('ignores terminals with non-matching names', async () => {
+            const mocks = setupVscodeMocks({
+                surface: 'terminal',
+                extensionInstalled: false,
+                existingTerminals: [{ name: 'bash', exitStatus: undefined }, { name: 'zsh', exitStatus: undefined }],
+            });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    // ------------------------------------------------------------------------
+    // Terminal + prompt: clipboard handoff
+    // ------------------------------------------------------------------------
+
+    describe('terminal mode + prompt: clipboard handoff', () => {
+        it('writes the prompt to the clipboard before launching the terminal', async () => {
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute({ project: makeProject() as Project, prompt: 'do the thing' });
+
+            expect(mocks.clipboardWriteMock).toHaveBeenCalledWith('do the thing');
+        });
+
+        it('shows a "Prompt copied to clipboard" info toast in terminal mode + prompt', async () => {
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute({ project: makeProject() as Project, prompt: 'do the thing' });
+
+            expect(mocks.showInformationMessageMock).toHaveBeenCalled();
+            const message = mocks.showInformationMessageMock.mock.calls[0][0] as string;
+            expect(message.toLowerCase()).toMatch(/clipboard/);
+            expect(message.toLowerCase()).toMatch(/paste/);
+        });
+
+        it('does NOT write clipboard when no prompt is provided', async () => {
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(mocks.clipboardWriteMock).not.toHaveBeenCalled();
         });
     });
 
@@ -300,7 +547,7 @@ describe('OpenInClaudeCommand', () => {
         const TIP_KEY = 'demoBuilder.ai.firstClaudeOpenTipShown';
 
         it('first successful URI launch sets globalState BEFORE showing the tip', async () => {
-            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
             const globalState = makeGlobalState();
             const command = new OpenInClaudeCommand(
                 makeContext(globalState),
@@ -320,7 +567,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('subsequent URI launches do NOT show the tip again', async () => {
-            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
             const globalState = makeGlobalState({ [TIP_KEY]: true });
             const command = new OpenInClaudeCommand(
                 makeContext(globalState),
@@ -335,7 +582,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('terminal launches do NOT show the URI-launch tip', async () => {
-            const mocks = setupVscodeMocks({ harness: 'terminal', extensionInstalled: true });
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: true });
             const globalState = makeGlobalState();
             const command = new OpenInClaudeCommand(
                 makeContext(globalState),
@@ -350,7 +597,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('two URI launches in quick succession only show the tip once (race-safe)', async () => {
-            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
             const globalState = makeGlobalState();
             const command = new OpenInClaudeCommand(
                 makeContext(globalState),
@@ -367,7 +614,7 @@ describe('OpenInClaudeCommand', () => {
 
         it('first-tip is NOT set when URI launch fails (openExternal returns false)', async () => {
             const mocks = setupVscodeMocks({
-                harness: 'auto',
+                surface: 'extension',
                 extensionInstalled: true,
                 openExternalResult: false,
             });
@@ -392,7 +639,7 @@ describe('OpenInClaudeCommand', () => {
 
     describe('terminal behavior', () => {
         it("creates a terminal named 'Claude Code' with cwd = project.path", async () => {
-            const mocks = setupVscodeMocks({ harness: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
             const project = makeProject({ path: '/projects/demo' });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
@@ -409,8 +656,8 @@ describe('OpenInClaudeCommand', () => {
             expect(createArg).toMatchObject({ name: 'Claude Code', cwd: '/projects/demo' });
         });
 
-        it('calls term.show() before sendText("claude")', async () => {
-            const mocks = setupVscodeMocks({ harness: 'terminal', extensionInstalled: false });
+        it('calls term.show() before sendText("claude --continue")', async () => {
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -425,7 +672,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('surfaces an error when project.path is missing (no terminal created)', async () => {
-            const mocks = setupVscodeMocks({ harness: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
             const project = makeProject({ path: '' });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
@@ -440,7 +687,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('surfaces an error when no project is provided (no terminal created)', async () => {
-            const mocks = setupVscodeMocks({ harness: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(null) as never,
@@ -459,8 +706,8 @@ describe('OpenInClaudeCommand', () => {
     // ------------------------------------------------------------------------
 
     describe('logging', () => {
-        it('logs the harness mode chosen', async () => {
-            setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+        it('logs the engine and surface chosen', async () => {
+            setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
@@ -474,11 +721,11 @@ describe('OpenInClaudeCommand', () => {
                 ...logger.info.mock.calls,
                 ...logger.debug.mock.calls,
             ].flat().join(' ');
-            expect(allLogs).toMatch(/harness/i);
+            expect(allLogs).toMatch(/surface/i);
         });
 
         it('logs project.name in the launch path', async () => {
-            setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
             const logger = makeLogger();
             const project = makeProject({ name: 'my-demo-project' });
             const command = new OpenInClaudeCommand(
@@ -497,7 +744,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('logs at extension-detection branch', async () => {
-            setupVscodeMocks({ harness: 'auto', extensionInstalled: false });
+            setupVscodeMocks({ surface: 'extension', extensionInstalled: false });
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
@@ -524,7 +771,7 @@ describe('OpenInClaudeCommand', () => {
     describe('error surfaces', () => {
         it('shows a warning when openExternal returns false (does NOT fall back to terminal)', async () => {
             const mocks = setupVscodeMocks({
-                harness: 'auto',
+                surface: 'extension',
                 extensionInstalled: true,
                 openExternalResult: false,
             });
@@ -542,7 +789,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('logs and surfaces a user-visible error when openExternal throws', async () => {
-            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
             mocks.openExternalMock.mockRejectedValueOnce(new Error('boom'));
 
             const logger = makeLogger();
@@ -564,7 +811,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('logs and surfaces an error when createTerminal throws', async () => {
-            const mocks = setupVscodeMocks({ harness: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
             mocks.createTerminalMock.mockImplementationOnce(() => {
                 throw new Error('terminal denied');
             });
@@ -592,7 +839,7 @@ describe('OpenInClaudeCommand', () => {
 
     describe('project resolution', () => {
         it('falls back to StateManager.getCurrentProject() when invoked without a project argument', async () => {
-            const mocks = setupVscodeMocks({ harness: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
             const project = makeProject({ name: 'from-state', path: '/p/state' });
             const stateManager = makeStateManager(project);
             const command = new OpenInClaudeCommand(
@@ -616,7 +863,7 @@ describe('OpenInClaudeCommand', () => {
 
     describe('prompt argument', () => {
         it('URI includes the prompt query parameter when called with { prompt }', async () => {
-            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -631,7 +878,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('URL-encodes a prompt with spaces and special characters', async () => {
-            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -649,7 +896,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('URI is the bare open URL when called with { project } only (no prompt)', async () => {
-            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -664,7 +911,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('URI is the bare open URL when called with no argument', async () => {
-            const mocks = setupVscodeMocks({ harness: 'auto', extensionInstalled: true });
+            const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -678,8 +925,8 @@ describe('OpenInClaudeCommand', () => {
             expect(String(uriArg)).toBe('vscode://anthropic.claude-code/open');
         });
 
-        it('terminal-mode ignores the prompt (existing terminal launch behavior preserved)', async () => {
-            const mocks = setupVscodeMocks({ harness: 'terminal', extensionInstalled: false });
+        it('terminal-mode hands the prompt off via the clipboard (rather than URI args)', async () => {
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -688,9 +935,13 @@ describe('OpenInClaudeCommand', () => {
 
             await command.execute({ prompt: 'add a hero block', project: makeProject() as Project });
 
+            // URI handler never used in terminal mode
             expect(mocks.openExternalMock).not.toHaveBeenCalled();
+            // Prompt copied to clipboard
+            expect(mocks.clipboardWriteMock).toHaveBeenCalledWith('add a hero block');
+            // Terminal spawned with --continue (prompt NOT injected via sendText)
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
-            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude');
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --continue');
         });
     });
 });

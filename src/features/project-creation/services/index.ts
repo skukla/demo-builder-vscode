@@ -25,6 +25,7 @@ export {
     finalizeProject,
     sendCompletionAndCleanup,
     generateAIContextFiles,
+    openProjectAsWorkspace,
     type FinalizationContext,
 } from './projectFinalizationService';
 

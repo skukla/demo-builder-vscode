@@ -476,7 +476,7 @@ try {
 - AI Configuration tab in Configure screen — verifies AI files, inspects skills and MCP servers and session MCPs, manages global MCP registration, and regenerates AI context files (Cycle D)
 - Claude Code (CLI) as the primary AI harness — see [ADR-004](adr/004-claude-code-harness.md)
 - `@adobe-commerce/commerce-extensibility-tools` skill bundle installed per EDS project; updates surfaced by `AdobeMcpUpdateChecker` (Cycle B + D)
-- `demoBuilder.ai.harness` setting + `OpenInClaudeCommand` + dashboard tile + project-card menu item (Cycle B + D)
+- `demoBuilder.ai.engine` + `demoBuilder.ai.surface` settings + `OpenInClaudeCommand` + dashboard tile + project-card menu item + AI surface prompt cards (workspace-anchor + pending-prompt mechanism for prompt clicks)
 - AI inventory backend (`skillInspector`, `mcpInspector`, `sessionMcpDetector`, `gatherInventory`) consumed by the AI Configuration tab (Cycle C)
 
 ### Near-term (3-6 months)

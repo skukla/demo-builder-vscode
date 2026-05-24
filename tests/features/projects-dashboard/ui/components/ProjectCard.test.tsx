@@ -207,6 +207,56 @@ describe('ProjectCard', () => {
 
             expect(onSelect).toHaveBeenCalledWith(project);
         });
+
+        it('passes forceNewWindow=true when shift-clicked', () => {
+            const project = createMockProject({ name: 'Shift Click' });
+            const onSelect = jest.fn();
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={onSelect} />
+            );
+
+            fireEvent.click(screen.getByRole('button'), { shiftKey: true });
+
+            expect(onSelect).toHaveBeenCalledWith(project, { forceNewWindow: true });
+        });
+
+        it('passes forceNewWindow=true when cmd-clicked (metaKey)', () => {
+            const project = createMockProject({ name: 'Cmd Click' });
+            const onSelect = jest.fn();
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={onSelect} />
+            );
+
+            fireEvent.click(screen.getByRole('button'), { metaKey: true });
+
+            expect(onSelect).toHaveBeenCalledWith(project, { forceNewWindow: true });
+        });
+
+        it('does NOT pass forceNewWindow on plain click', () => {
+            const project = createMockProject({ name: 'Plain Click' });
+            const onSelect = jest.fn();
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={onSelect} />
+            );
+
+            fireEvent.click(screen.getByRole('button'));
+
+            // Called with the project as the only positional arg (no opts)
+            expect(onSelect).toHaveBeenCalledWith(project);
+        });
+
+        it('passes forceNewWindow=true when Shift+Enter is pressed', () => {
+            const project = createMockProject({ name: 'Shift Enter' });
+            const onSelect = jest.fn();
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={onSelect} />
+            );
+
+            const card = screen.getByRole('button');
+            fireEvent.keyDown(card, { key: 'Enter', shiftKey: true });
+
+            expect(onSelect).toHaveBeenCalledWith(project, { forceNewWindow: true });
+        });
     });
 
     describe('accessibility', () => {
