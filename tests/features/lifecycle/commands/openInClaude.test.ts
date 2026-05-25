@@ -1176,6 +1176,62 @@ describe('OpenInClaudeCommand', () => {
     // Cross-surface flag behavior
     // ------------------------------------------------------------------------
 
+    describe('AI onboarding completion flag', () => {
+        const AI_ONBOARDING_COMPLETED_KEY = 'demoBuilder.ai.onboardingCompleted';
+
+        it('sets the flag after both offers settle (terminal-surface launch)', async () => {
+            setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const globalState = makeGlobalState();
+            const command = new OpenInClaudeCommand(
+                makeContext(globalState),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(globalState.update).toHaveBeenCalledWith(AI_ONBOARDING_COMPLETED_KEY, true);
+        });
+
+        it('sets the flag after both offers settle (extension-surface launch)', async () => {
+            setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
+            const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
+            executeCommandMock.mockClear();
+            executeCommandMock.mockResolvedValue(undefined);
+            const globalState = makeGlobalState();
+            const command = new OpenInClaudeCommand(
+                makeContext(globalState),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(globalState.update).toHaveBeenCalledWith(AI_ONBOARDING_COMPLETED_KEY, true);
+        });
+
+        it('flag-write happens BEFORE the launch (so the AI dashboard reflects completion immediately after the launch returns)', async () => {
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const globalState = makeGlobalState();
+            const command = new OpenInClaudeCommand(
+                makeContext(globalState),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            const updateCalls = (globalState.update as jest.Mock).mock.calls;
+            const onboardingIdx = updateCalls.findIndex(c => c[0] === AI_ONBOARDING_COMPLETED_KEY);
+            expect(onboardingIdx).toBeGreaterThanOrEqual(0);
+            const onboardingOrder = (globalState.update as jest.Mock).mock.invocationCallOrder[onboardingIdx];
+            // Terminal spawn is the launch — its createTerminal call comes
+            // after the onboarding flag write.
+            const createTerminalOrder = mocks.createTerminalMock.mock.invocationCallOrder[0];
+            expect(onboardingOrder).toBeLessThan(createTerminalOrder);
+        });
+    });
+
     describe('cross-surface dock-offer flag', () => {
         it('terminal launch sets the dock-offer flag; subsequent extension-surface click does NOT re-show', async () => {
             // First call — terminal surface, accept the dock offer

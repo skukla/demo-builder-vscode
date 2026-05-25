@@ -45,6 +45,16 @@ const DOCK_OFFER_SHOWN_KEY = 'demoBuilder.ai.firstClaudeOpenTipShown';
 const EXTENSION_AVAILABLE_OFFER_SHOWN_KEY = 'demoBuilder.ai.extensionAvailableOfferShown';
 
 /**
+ * globalState key tracking whether the user has completed AI onboarding —
+ * settled both the surface and layout selections via the offer toasts. Set
+ * in `execute()` once both offers have run (or skipped because no choice
+ * was needed). Read by `handleVerifyAiSetup` so the AI dashboard can hide
+ * extension-specific affordances (e.g. the "Browse Claude sessions" link)
+ * for fresh-state users who haven't engaged with the AI flow yet.
+ */
+export const AI_ONBOARDING_COMPLETED_KEY = 'demoBuilder.ai.onboardingCompleted';
+
+/**
  * globalState key tracking whether the Claude Code sessions browser has been
  * auto-opened once on first AI dashboard mount. Consumed by `aiHandlers`
  * (`handleMarkSessionsBrowserAutoShown` writes it; `handleVerifyAiSetup` reads
@@ -148,6 +158,13 @@ export class OpenInClaudeCommand extends BaseCommand {
             // chosen location. Surface decision (above) is settled first;
             // layout choice flows from it. Once-ever via DOCK_OFFER_SHOWN_KEY.
             await this.maybeOfferDockToRight(surface);
+
+            // Both selections are now settled (answered or skipped because no
+            // choice was needed). Mark onboarding complete so the AI dashboard
+            // can surface extension-specific affordances (e.g. the
+            // "Browse Claude sessions" link). Idempotent re-write — fine to
+            // hit every click; globalState writes are cheap.
+            await this.context.globalState.update(AI_ONBOARDING_COMPLETED_KEY, true);
 
             if (surface === 'terminal') {
                 this.logger.info('[Open in Claude] launching via terminal');
@@ -569,6 +586,7 @@ export async function resetAiOnboardingState(context: vscode.ExtensionContext): 
     await context.globalState.update(MISMATCH_WARNING_KEY, undefined);
     await context.globalState.update(FIRST_LAUNCH_DIALOG_SHOWN_KEY, undefined);
     await context.globalState.update(SESSIONS_BROWSER_AUTO_SHOWN_KEY, undefined);
+    await context.globalState.update(AI_ONBOARDING_COMPLETED_KEY, undefined);
     await context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
 
     // AI user-settings — back to package.json defaults

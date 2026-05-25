@@ -14,7 +14,10 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
+import {
+    AI_ONBOARDING_COMPLETED_KEY,
+    PENDING_CLAUDE_LAUNCH_KEY,
+} from '@/commands/openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
 import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
 import {
@@ -56,19 +59,24 @@ export async function handleVerifyAiSetup(
     const globalMcpRegistration: GlobalMcpRegistrationState | 'unregistered' =
         persisted ?? 'unregistered';
 
-    // AI surface needs one additional capability field:
-    //   - extensionInstalled: gates the "Browse Claude sessions" affordance
-    // The sessions-browser auto-open is no longer a webview-side concern —
-    // it fires from the extension-surface launch path when appropriate so
-    // a terminal-surface user never sees the extension's sessions browser
-    // open unexpectedly (mixed-surface UX).
+    // AI surface needs two capability / onboarding-state fields:
+    //   - extensionInstalled: gates extension-specific affordances
+    //   - onboardingCompleted: set in openInClaude.execute() once both the
+    //     extension-detected offer and dock-to-right offer have settled.
+    //     Used to gate the "Browse Claude sessions" link so a fresh-state
+    //     user doesn't see extension UI before engaging with the AI flow.
     const extensionInstalled = vscode.extensions.getExtension('anthropic.claude-code') !== undefined;
+    const onboardingCompleted = context.context.globalState.get<boolean>(
+        AI_ONBOARDING_COMPLETED_KEY,
+        false,
+    );
 
     return {
         success: true,
         ...result,
         globalMcpRegistration,
         extensionInstalled,
+        onboardingCompleted,
     };
 }
 

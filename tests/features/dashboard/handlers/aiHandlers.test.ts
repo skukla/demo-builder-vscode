@@ -309,6 +309,39 @@ describe('aiHandlers', () => {
 
             expect(result).toMatchObject({ success: true, extensionInstalled: false });
         });
+
+        // onboardingCompleted reads the AI_ONBOARDING_COMPLETED_KEY flag,
+        // which openInClaude.execute() sets after both onboarding offers have
+        // settled. Gates the "Browse Claude sessions" link so a fresh-state
+        // user doesn't see extension UI before engaging with the AI flow.
+        describe('onboardingCompleted', () => {
+            beforeEach(() => {
+                (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
+            });
+
+            it('is true when the AI_ONBOARDING_COMPLETED_KEY flag is set', async () => {
+                const getMock = jest.fn((key: string, fallback?: unknown) => {
+                    if (key === 'demoBuilder.ai.onboardingCompleted') return true;
+                    return fallback;
+                });
+                const context = createMockContext({
+                    context: {
+                        extensionPath: '/mock/extension/path',
+                        secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
+                        globalState: { get: getMock, update: jest.fn(), keys: jest.fn().mockReturnValue([]) },
+                        subscriptions: [],
+                    } as unknown as HandlerContext['context'],
+                });
+                const result = await handleVerifyAiSetup(context);
+                expect(getMock).toHaveBeenCalledWith('demoBuilder.ai.onboardingCompleted', false);
+                expect(result).toMatchObject({ onboardingCompleted: true });
+            });
+
+            it('is false when the flag is unset (fresh state)', async () => {
+                const result = await handleVerifyAiSetup(createMockContext());
+                expect(result).toMatchObject({ onboardingCompleted: false });
+            });
+        });
     });
 
     describe('handleInspectMcp', () => {

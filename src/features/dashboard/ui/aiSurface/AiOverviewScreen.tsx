@@ -53,6 +53,13 @@ interface VerifyAiSetupResponse {
     globalMcpRegistration?: GlobalMcpRegistrationStateValue;
     /** Whether the Claude Code extension is installed (gate for sessions UI). */
     extensionInstalled?: boolean;
+    /**
+     * Whether the user has finished AI onboarding (made both surface +
+     * layout selections, or had no choice to make). Gates extension-only
+     * affordances so a fresh-state user doesn't see extension UI before
+     * they've engaged with the AI flow.
+     */
+    onboardingCompleted?: boolean;
 }
 
 /**
@@ -224,6 +231,12 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
     };
 
     const extensionInstalled = verifyResult?.extensionInstalled === true;
+    const onboardingCompleted = verifyResult?.onboardingCompleted === true;
+    // Extension-specific affordances (like Browse Claude sessions) are
+    // hidden until the user has made both onboarding selections — surface
+    // and layout. Otherwise a fresh-state user sees extension UI before
+    // they've actually engaged with the AI flow.
+    const showExtensionAffordances = extensionInstalled && onboardingCompleted;
 
     const isBusy =
         verifyOp.isExecuting ||
@@ -269,7 +282,7 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
                             >
                                 {`View installed skills (${inventory.skills.length})`}
                             </Link>
-                            {extensionInstalled && (
+                            {showExtensionAffordances && (
                                 <Link
                                     data-testid="ai-browse-sessions-trigger"
                                     onPress={handleBrowseSessions}

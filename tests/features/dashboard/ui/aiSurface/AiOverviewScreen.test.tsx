@@ -110,6 +110,8 @@ async function renderScreen(opts: {
     inventory?: AiInventory;
     status?: 'ok' | 'warning' | 'error';
     extensionInstalled?: boolean;
+    /** Default true so existing tests (which assume the user has engaged) keep passing. */
+    onboardingCompleted?: boolean;
     /**
      * Override the response for specific request types. Used in handful of
      * cases where the default verify-ai-setup response shape is wrong for
@@ -127,6 +129,7 @@ async function renderScreen(opts: {
         inventory: opts.inventory ?? makeFullInventory(),
         globalMcpRegistration: 'registered',
         extensionInstalled: opts.extensionInstalled ?? false,
+        onboardingCompleted: opts.onboardingCompleted ?? true,
     };
     webviewClient.request.mockImplementation((type: string) => {
         if (opts.requestOverrides && type in opts.requestOverrides) {
@@ -623,19 +626,25 @@ describe('AiOverviewScreen', () => {
     });
 
     describe('Browse Claude sessions link', () => {
-        it('renders the link when extensionInstalled is true', async () => {
-            await renderScreen({ extensionInstalled: true });
+        it('renders the link when extensionInstalled AND onboardingCompleted are both true', async () => {
+            await renderScreen({ extensionInstalled: true, onboardingCompleted: true });
             expect(screen.getByTestId('ai-browse-sessions-trigger')).toBeInTheDocument();
         });
 
         it('does NOT render the link when extensionInstalled is false', async () => {
-            await renderScreen({ extensionInstalled: false });
+            await renderScreen({ extensionInstalled: false, onboardingCompleted: true });
+            expect(screen.queryByTestId('ai-browse-sessions-trigger')).not.toBeInTheDocument();
+        });
+
+        it('does NOT render the link when onboarding has not been completed (even with extension installed)', async () => {
+            await renderScreen({ extensionInstalled: true, onboardingCompleted: false });
             expect(screen.queryByTestId('ai-browse-sessions-trigger')).not.toBeInTheDocument();
         });
 
         it('clicking the link dispatches browseClaudeSessions via postMessage', async () => {
             const { webviewClient } = await renderScreen({
                 extensionInstalled: true,
+                onboardingCompleted: true,
             });
             (webviewClient.postMessage as jest.Mock).mockClear();
             await act(async () => {
