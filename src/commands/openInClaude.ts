@@ -491,7 +491,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         this.logger.info('[Open in Claude] extension-detected offer shown');
 
         const choice = await vscode.window.showInformationMessage(
-            'The Claude Code extension is installed. Want to use it for AI prompts? You\'ll get a chat panel UI with persistent sessions, instead of a terminal REPL. You can change this anytime from Settings.',
+            'The Claude Code extension is installed. Want to use it for AI prompts? You\'ll get a chat panel UI with persistent sessions, instead of a terminal session. You can change this anytime from Settings.',
             USE_EXTENSION_ACTION_LABEL,
             STAY_IN_TERMINAL_ACTION_LABEL,
             OPEN_SETTINGS_ACTION_LABEL,
