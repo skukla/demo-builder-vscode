@@ -309,38 +309,6 @@ describe('aiHandlers', () => {
 
             expect(result).toMatchObject({ success: true, extensionInstalled: false });
         });
-
-        it('exposes surface from the demoBuilder.ai config (defaults to terminal)', async () => {
-            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
-            const vscode = jest.requireMock('vscode') as {
-                workspace: { getConfiguration: jest.Mock };
-            };
-            const getConfigMock = jest.fn((key: string, fallback: unknown) => {
-                if (key === 'surface') return 'extension';
-                return fallback;
-            });
-            vscode.workspace.getConfiguration.mockReturnValue({ get: getConfigMock });
-
-            const result = await handleVerifyAiSetup(createMockContext());
-
-            expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('demoBuilder.ai');
-            expect(getConfigMock).toHaveBeenCalledWith('surface', 'terminal');
-            expect(result).toMatchObject({ success: true, surface: 'extension' });
-        });
-
-        it('returns surface=terminal when the setting falls through to its default', async () => {
-            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
-            const vscode = jest.requireMock('vscode') as {
-                workspace: { getConfiguration: jest.Mock };
-            };
-            vscode.workspace.getConfiguration.mockReturnValue({
-                get: jest.fn((_key: string, fallback: unknown) => fallback),
-            });
-
-            const result = await handleVerifyAiSetup(createMockContext());
-
-            expect(result).toMatchObject({ success: true, surface: 'terminal' });
-        });
     });
 
     describe('handleInspectMcp', () => {

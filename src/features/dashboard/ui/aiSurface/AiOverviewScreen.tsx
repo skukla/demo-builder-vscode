@@ -26,8 +26,6 @@ import {
     DialogContainer,
     Flex,
     Link,
-    Text,
-    View,
 } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import { InstalledSkillsModal } from './components/InstalledSkillsModal';
@@ -36,7 +34,6 @@ import { PromptGrid } from './components/PromptGrid';
 import { PageFooter, PageHeader, PageLayout } from '@/core/ui/components/layout';
 import { useAsyncOperation } from '@/core/ui/hooks/useAsyncOperation';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { Surface } from '@/commands/openInClaude';
 import type { AiCheckResult } from '@/features/ai/aiSetupVerifier';
 import type { AiInventory } from '@/types/ai';
 import type { AiPrompt, Project } from '@/types/base';
@@ -56,22 +53,7 @@ interface VerifyAiSetupResponse {
     globalMcpRegistration?: GlobalMcpRegistrationStateValue;
     /** Whether the Claude Code extension is installed (gate for sessions UI). */
     extensionInstalled?: boolean;
-    /** Whether the sessions browser auto-open has already fired once for this workspace. */
-    sessionsBrowserAutoShown?: boolean;
-    /** User intent: launch via the extension URI handler or via a terminal. */
-    surface?: Surface;
 }
-
-const CONTRACT_NOTE_EXTENSION =
-    'Each prompt click opens Claude Code in a new conversation with the prompt pre-filled. '
-    + 'The session appears in the sessions browser after you send the first message. '
-    + 'To continue an existing session with a Demo Builder prompt, use the prompt card’s '
-    + 'Copy prompt action and paste into the active chat.';
-
-const CONTRACT_NOTE_TERMINAL =
-    'Each prompt click sends a new prompt to your Claude terminal session. '
-    + 'The first click starts the session; subsequent clicks continue it. '
-    + 'The prompt is on your clipboard — paste (Cmd+V) into the terminal at the Claude prompt to send it.';
 
 /**
  * Generate an id for a duplicated prompt. Prefers `crypto.randomUUID` when
@@ -242,9 +224,6 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
     };
 
     const extensionInstalled = verifyResult?.extensionInstalled === true;
-    const surface: Surface = verifyResult?.surface ?? 'terminal';
-    const contractNoteText =
-        surface === 'extension' ? CONTRACT_NOTE_EXTENSION : CONTRACT_NOTE_TERMINAL;
 
     const isBusy =
         verifyOp.isExecuting ||
@@ -268,18 +247,6 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
             >
                 <div className="page-container-padded page-body-section">
                     <Flex direction="column" gap="size-400">
-                        {/* Surface-aware multi-click contract note: explains what happens
-                            when the user clicks a prompt card, which differs between the
-                            extension and terminal surfaces. */}
-                        <View>
-                            <Text
-                                data-testid="ai-multi-click-contract"
-                                UNSAFE_className="text-xs text-gray-700"
-                            >
-                                {contractNoteText}
-                            </Text>
-                        </View>
-
                         {/* Primary content — user-saved prompt library */}
                         <PromptGrid
                             userPrompts={userPrompts}

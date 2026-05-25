@@ -110,12 +110,10 @@ async function renderScreen(opts: {
     inventory?: AiInventory;
     status?: 'ok' | 'warning' | 'error';
     extensionInstalled?: boolean;
-    surface?: 'extension' | 'terminal';
     /**
-     * Override the response for specific request types. Useful for testing
-     * the auto-open's success-gated branch by returning success=false for
-     * 'browseClaudeSessions' while keeping the standard verify-ai-setup
-     * response for other types.
+     * Override the response for specific request types. Used in handful of
+     * cases where the default verify-ai-setup response shape is wrong for
+     * the test.
      */
     requestOverrides?: Record<string, unknown>;
 } = {}) {
@@ -129,7 +127,6 @@ async function renderScreen(opts: {
         inventory: opts.inventory ?? makeFullInventory(),
         globalMcpRegistration: 'registered',
         extensionInstalled: opts.extensionInstalled ?? false,
-        surface: opts.surface ?? 'terminal',
     };
     webviewClient.request.mockImplementation((type: string) => {
         if (opts.requestOverrides && type in opts.requestOverrides) {
@@ -655,25 +652,6 @@ describe('AiOverviewScreen', () => {
     // dashboard's mount effect — so a terminal-surface user never sees the
     // extension's sessions browser open unexpectedly. The auto-open tests
     // live in tests/features/lifecycle/commands/openInClaude.test.ts.
-
-    describe('multi-click contract note', () => {
-        it('renders the note above the prompt grid', async () => {
-            await renderScreen({ surface: 'terminal' });
-            expect(screen.getByTestId('ai-multi-click-contract')).toBeInTheDocument();
-        });
-
-        it('mentions "new conversation" when surface is extension', async () => {
-            await renderScreen({ surface: 'extension' });
-            const note = screen.getByTestId('ai-multi-click-contract');
-            expect(note.textContent ?? '').toMatch(/new conversation/i);
-        });
-
-        it('mentions "clipboard" when surface is terminal', async () => {
-            await renderScreen({ surface: 'terminal' });
-            const note = screen.getByTestId('ai-multi-click-contract');
-            expect(note.textContent ?? '').toMatch(/clipboard/i);
-        });
-    });
 
     describe('copyAiPrompt wiring through PromptCard', () => {
         it('clicking the "Copy prompt" kebab item dispatches copyAiPrompt with the prompt body', async () => {
