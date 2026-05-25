@@ -14,7 +14,7 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
+import { PENDING_CLAUDE_LAUNCH_KEY, SESSIONS_BROWSER_AUTO_SHOWN_KEY, type Surface } from '@/commands/openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
 import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
 import {
@@ -55,7 +55,29 @@ export async function handleVerifyAiSetup(
     const persisted = context.context.globalState.get<GlobalMcpRegistrationState>(GLOBAL_MCP_REG_STATE_KEY);
     const globalMcpRegistration: GlobalMcpRegistrationState | 'unregistered' =
         persisted ?? 'unregistered';
-    return { success: true, ...result, globalMcpRegistration };
+
+    // AI surface needs three additional capability / preference fields:
+    //   - extensionInstalled: gates the "Browse Claude sessions" affordance
+    //   - sessionsBrowserAutoShown: gates the one-time auto-open on mount
+    //   - surface: drives the wording of the multi-click contract note
+    // All three are derived from VS Code state (extensions, globalState, configuration).
+    const extensionInstalled = vscode.extensions.getExtension('anthropic.claude-code') !== undefined;
+    const sessionsBrowserAutoShown = context.context.globalState.get<boolean>(
+        SESSIONS_BROWSER_AUTO_SHOWN_KEY,
+        false,
+    );
+    const surface = vscode.workspace
+        .getConfiguration('demoBuilder.ai')
+        .get<Surface>('surface', 'terminal');
+
+    return {
+        success: true,
+        ...result,
+        globalMcpRegistration,
+        extensionInstalled,
+        sessionsBrowserAutoShown,
+        surface,
+    };
 }
 
 /**
@@ -339,6 +361,99 @@ export async function handleListAiPrompts(
 }
 
 // ==========================================================
+// Surface-agnostic kebab + sessions browser handlers
+// ==========================================================
+
+/**
+ * Handle copyAiPrompt — copy a prompt body to the system clipboard.
+ *
+ * Surface-agnostic (works whether the user is on extension or terminal). The
+ * intended workflow is "load a session in the Claude Code sessions browser →
+ * copy prompt → paste into the chat input" — a one-extra-click affordance for
+ * continuing an existing session that the URI handler can't do natively.
+ *
+ * Logs the prompt NAME only — never the body — to keep prompt content out of
+ * the debug log channel (prompts can contain sensitive context).
+ */
+export async function handleCopyAiPrompt(
+    context: HandlerContext,
+    payload?: { prompt?: string; name?: string },
+): Promise<HandlerResponse> {
+    const prompt = payload?.prompt;
+    if (typeof prompt !== 'string' || prompt.length === 0) {
+        return { success: false, error: 'Invalid prompt payload', code: ErrorCode.CONFIG_INVALID };
+    }
+    await vscode.env.clipboard.writeText(prompt);
+    void vscode.window.showInformationMessage('Prompt copied to clipboard');
+    const name = payload?.name ?? '';
+    context.logger.info(`[handleCopyAiPrompt] prompt copied to clipboard (name=${name})`);
+    return { success: true };
+}
+
+/**
+ * Handle browseClaudeSessions — focus the Claude Code sessions browser view.
+ *
+ * Tries the container-focus command first (works when the user hasn't dragged
+ * the view out of its default container). Falls back to the auto-generated
+ * `<viewId>.focus` command if the container variant throws. If both fail, the
+ * sessions browser is genuinely unavailable (e.g. the extension version pre-
+ * dates the sessions browser feature, or it's behind a feature flag) — surface
+ * a friendly toast so the user knows the click didn't get lost.
+ *
+ * Gates on `vscode.extensions.getExtension('anthropic.claude-code')` — the
+ * webview-side gate should already hide the affordance, but a defensive
+ * server-side check protects against stale UI state.
+ */
+export async function handleBrowseClaudeSessions(
+    context: HandlerContext,
+): Promise<HandlerResponse> {
+    if (!vscode.extensions.getExtension('anthropic.claude-code')) {
+        context.logger.warn(
+            '[handleBrowseClaudeSessions] extension not installed; ignoring browse request',
+        );
+        return { success: false, error: 'Claude Code extension not installed' };
+    }
+    try {
+        await vscode.commands.executeCommand('workbench.view.extension.claude-sessions-sidebar');
+        context.logger.info('[handleBrowseClaudeSessions] sessions browser focus command executed');
+        return { success: true };
+    } catch (primaryError) {
+        const primaryMessage = primaryError instanceof Error ? primaryError.message : String(primaryError);
+        context.logger.warn(
+            `[handleBrowseClaudeSessions] primary focus command failed; trying fallback (${primaryMessage})`,
+        );
+        try {
+            await vscode.commands.executeCommand('claudeVSCodeSessionsList.focus');
+            context.logger.info('[handleBrowseClaudeSessions] sessions browser focus command executed');
+            return { success: true };
+        } catch {
+            context.logger.warn(
+                '[handleBrowseClaudeSessions] both focus commands failed; extension may have sessions browser disabled',
+            );
+            void vscode.window.showInformationMessage(
+                'Claude Code sessions browser unavailable in this version of the extension.',
+            );
+            return { success: false, error: 'sessions browser unavailable' };
+        }
+    }
+}
+
+/**
+ * Handle markSessionsBrowserAutoShown — set the globalState flag indicating
+ * the AI dashboard has already auto-opened the sessions browser once.
+ *
+ * Called from the AI surface after the one-time auto-open fires on first
+ * mount. Lightweight write — no other side effects.
+ */
+export async function handleMarkSessionsBrowserAutoShown(
+    context: HandlerContext,
+): Promise<HandlerResponse> {
+    await context.context.globalState.update(SESSIONS_BROWSER_AUTO_SHOWN_KEY, true);
+    context.logger.debug('[handleMarkSessionsBrowserAutoShown] flag written');
+    return { success: true };
+}
+
+// ==========================================================
 // Handler Map
 // ==========================================================
 
@@ -351,4 +466,7 @@ export const aiHandlers = defineHandlers({
     'save-ai-prompt': handleSaveAiPrompt,
     'delete-ai-prompt': handleDeleteAiPrompt,
     'list-ai-prompts': handleListAiPrompts,
+    'copyAiPrompt': handleCopyAiPrompt,
+    'browseClaudeSessions': handleBrowseClaudeSessions,
+    'markSessionsBrowserAutoShown': handleMarkSessionsBrowserAutoShown,
 });

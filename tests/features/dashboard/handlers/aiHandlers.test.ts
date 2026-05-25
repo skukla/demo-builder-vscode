@@ -49,6 +49,9 @@ jest.mock('@/features/project-creation/services', () => ({
 jest.mock('vscode', () => ({
     env: {
         openExternal: jest.fn().mockResolvedValue(undefined),
+        clipboard: {
+            writeText: jest.fn().mockResolvedValue(undefined),
+        },
     },
     Uri: {
         parse: jest.fn((url: string) => ({ toString: () => url })),
@@ -57,8 +60,17 @@ jest.mock('vscode', () => ({
     commands: {
         executeCommand: jest.fn().mockResolvedValue(undefined),
     },
+    extensions: {
+        getExtension: jest.fn(),
+    },
+    window: {
+        showInformationMessage: jest.fn().mockResolvedValue(undefined),
+    },
     workspace: {
         workspaceFolders: undefined as { uri: { fsPath: string } }[] | undefined,
+        getConfiguration: jest.fn(() => ({
+            get: jest.fn((_key: string, fallback: unknown) => fallback),
+        })),
     },
 }));
 
@@ -72,6 +84,9 @@ import {
     handleSaveAiPrompt,
     handleDeleteAiPrompt,
     handleListAiPrompts,
+    handleCopyAiPrompt,
+    handleBrowseClaudeSessions,
+    handleMarkSessionsBrowserAutoShown,
 } from '@/features/dashboard/handlers/aiHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
@@ -83,11 +98,20 @@ import type { HandlerContext } from '@/types/handlers';
 // ==========================================================
 
 function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext {
+    // Honor the (key, defaultValue) overload — matches the real VS Code Memento.
+    // Bare jest.fn() returns undefined for ALL args, which breaks code that
+    // relies on the default; this mock falls back to the supplied default when
+    // the second arg is present.
+    const memento = {
+        get: jest.fn((_key: string, defaultValue?: unknown) => defaultValue),
+        update: jest.fn(),
+        keys: jest.fn().mockReturnValue([]),
+    };
     return {
         context: {
             extensionPath: '/mock/extension/path',
             secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-            globalState: { get: jest.fn(), update: jest.fn(), keys: jest.fn().mockReturnValue([]) },
+            globalState: memento,
             subscriptions: [],
         },
         logger: {
@@ -133,9 +157,9 @@ describe('aiHandlers', () => {
             expect(typeof aiHandlers).toBe('object');
         });
 
-        it('should have exactly 8 handlers', () => {
+        it('should have exactly 11 handlers', () => {
             const types = getRegisteredTypes(aiHandlers);
-            expect(types).toHaveLength(8);
+            expect(types).toHaveLength(11);
         });
 
         it('should include verify-ai-setup', () => {
@@ -170,6 +194,18 @@ describe('aiHandlers', () => {
             expect(hasHandler(aiHandlers, 'list-ai-prompts')).toBe(true);
         });
 
+        it('should include copyAiPrompt', () => {
+            expect(hasHandler(aiHandlers, 'copyAiPrompt')).toBe(true);
+        });
+
+        it('should include browseClaudeSessions', () => {
+            expect(hasHandler(aiHandlers, 'browseClaudeSessions')).toBe(true);
+        });
+
+        it('should include markSessionsBrowserAutoShown', () => {
+            expect(hasHandler(aiHandlers, 'markSessionsBrowserAutoShown')).toBe(true);
+        });
+
         it('should have all values as functions', () => {
             const types = getRegisteredTypes(aiHandlers);
             for (const type of types) {
@@ -186,6 +222,9 @@ describe('aiHandlers', () => {
             expect(aiHandlers['save-ai-prompt']).toBe(handleSaveAiPrompt);
             expect(aiHandlers['delete-ai-prompt']).toBe(handleDeleteAiPrompt);
             expect(aiHandlers['list-ai-prompts']).toBe(handleListAiPrompts);
+            expect(aiHandlers['copyAiPrompt']).toBe(handleCopyAiPrompt);
+            expect(aiHandlers['browseClaudeSessions']).toBe(handleBrowseClaudeSessions);
+            expect(aiHandlers['markSessionsBrowserAutoShown']).toBe(handleMarkSessionsBrowserAutoShown);
         });
     });
 
@@ -201,7 +240,11 @@ describe('aiHandlers', () => {
                 '/projects/test',
                 expect.stringContaining('mock/extension/path'),
             );
-            expect(result).toEqual({ success: true, ...mockResult, globalMcpRegistration: 'unregistered' });
+            expect(result).toMatchObject({
+                success: true,
+                ...mockResult,
+                globalMcpRegistration: 'unregistered',
+            });
         });
 
         it('exposes persisted globalMcpRegistration state from globalState', async () => {
@@ -222,7 +265,7 @@ describe('aiHandlers', () => {
             });
             const result = await handleVerifyAiSetup(context);
 
-            expect(result).toEqual({
+            expect(result).toMatchObject({
                 success: true,
                 ...mockResult,
                 globalMcpRegistration: 'registered',
@@ -246,6 +289,91 @@ describe('aiHandlers', () => {
 
             const context = createMockContext();
             await expect(handleVerifyAiSetup(context)).rejects.toThrow('fs error');
+        });
+
+        it('reports extensionInstalled=true when the Claude Code extension is present', async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
+            const vscode = jest.requireMock('vscode') as {
+                extensions: { getExtension: jest.Mock };
+            };
+            vscode.extensions.getExtension.mockReturnValue({ id: 'anthropic.claude-code' });
+
+            const result = await handleVerifyAiSetup(createMockContext());
+
+            expect(vscode.extensions.getExtension).toHaveBeenCalledWith('anthropic.claude-code');
+            expect(result).toMatchObject({ success: true, extensionInstalled: true });
+        });
+
+        it('reports extensionInstalled=false when the Claude Code extension is not installed', async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
+            const vscode = jest.requireMock('vscode') as {
+                extensions: { getExtension: jest.Mock };
+            };
+            vscode.extensions.getExtension.mockReturnValue(undefined);
+
+            const result = await handleVerifyAiSetup(createMockContext());
+
+            expect(result).toMatchObject({ success: true, extensionInstalled: false });
+        });
+
+        it('exposes sessionsBrowserAutoShown from globalState (true when flag set)', async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
+            const getMock = jest.fn((key: string, fallback?: unknown) => {
+                if (key === 'demoBuilder.ai.sessionsBrowserAutoShown') return true;
+                return fallback;
+            });
+            const context = createMockContext({
+                context: {
+                    extensionPath: '/mock/extension/path',
+                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
+                    globalState: { get: getMock, update: jest.fn(), keys: jest.fn().mockReturnValue([]) },
+                    subscriptions: [],
+                } as unknown as HandlerContext['context'],
+            });
+
+            const result = await handleVerifyAiSetup(context);
+
+            expect(getMock).toHaveBeenCalledWith('demoBuilder.ai.sessionsBrowserAutoShown', false);
+            expect(result).toMatchObject({ success: true, sessionsBrowserAutoShown: true });
+        });
+
+        it('exposes sessionsBrowserAutoShown=false when the flag is unset', async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
+            const result = await handleVerifyAiSetup(createMockContext());
+
+            expect(result).toMatchObject({ success: true, sessionsBrowserAutoShown: false });
+        });
+
+        it('exposes surface from the demoBuilder.ai config (defaults to terminal)', async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
+            const vscode = jest.requireMock('vscode') as {
+                workspace: { getConfiguration: jest.Mock };
+            };
+            const getConfigMock = jest.fn((key: string, fallback: unknown) => {
+                if (key === 'surface') return 'extension';
+                return fallback;
+            });
+            vscode.workspace.getConfiguration.mockReturnValue({ get: getConfigMock });
+
+            const result = await handleVerifyAiSetup(createMockContext());
+
+            expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('demoBuilder.ai');
+            expect(getConfigMock).toHaveBeenCalledWith('surface', 'terminal');
+            expect(result).toMatchObject({ success: true, surface: 'extension' });
+        });
+
+        it('returns surface=terminal when the setting falls through to its default', async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
+            const vscode = jest.requireMock('vscode') as {
+                workspace: { getConfiguration: jest.Mock };
+            };
+            vscode.workspace.getConfiguration.mockReturnValue({
+                get: jest.fn((_key: string, fallback: unknown) => fallback),
+            });
+
+            const result = await handleVerifyAiSetup(createMockContext());
+
+            expect(result).toMatchObject({ success: true, surface: 'terminal' });
         });
     });
 
@@ -920,6 +1048,181 @@ describe('aiHandlers', () => {
                 { id: 'a', title: 'A2', prompt: 'a2' },
                 { id: 'b', title: 'B', prompt: 'b' },
             ]);
+        });
+    });
+
+    // ==========================================================
+    // Surface-agnostic kebab + sessions browser handlers
+    // ==========================================================
+
+    describe('handleCopyAiPrompt', () => {
+        it('writes the prompt body to the system clipboard and shows a confirmation toast', async () => {
+            const vscode = jest.requireMock('vscode') as {
+                env: { clipboard: { writeText: jest.Mock } };
+                window: { showInformationMessage: jest.Mock };
+            };
+            const context = createMockContext();
+
+            const result = await handleCopyAiPrompt(context, {
+                prompt: 'Build a hero block',
+                name: 'Hero Block Generator',
+            });
+
+            expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith('Build a hero block');
+            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+                expect.stringContaining('Prompt copied to clipboard'),
+            );
+            expect(result).toEqual({ success: true });
+        });
+
+        it('logs the prompt name only — never the prompt body', async () => {
+            const context = createMockContext();
+            const loggerInfo = context.logger.info as jest.Mock;
+
+            await handleCopyAiPrompt(context, {
+                prompt: 'SECRET_BODY_should_not_appear_in_logs',
+                name: 'Hero Block Generator',
+            });
+
+            expect(loggerInfo).toHaveBeenCalledWith(
+                expect.stringContaining('[handleCopyAiPrompt] prompt copied'),
+            );
+            const logged = loggerInfo.mock.calls.map((c) => String(c[0])).join('\n');
+            expect(logged).toContain('Hero Block Generator');
+            expect(logged).not.toContain('SECRET_BODY_should_not_appear_in_logs');
+        });
+
+        it('still copies and reports success when name is omitted', async () => {
+            const vscode = jest.requireMock('vscode') as {
+                env: { clipboard: { writeText: jest.Mock } };
+            };
+            const context = createMockContext();
+
+            const result = await handleCopyAiPrompt(context, { prompt: 'Quick prompt' });
+
+            expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith('Quick prompt');
+            expect(result).toEqual({ success: true });
+        });
+    });
+
+    describe('handleBrowseClaudeSessions', () => {
+        it('returns success when the primary container-focus command succeeds', async () => {
+            const vscode = jest.requireMock('vscode') as {
+                commands: { executeCommand: jest.Mock };
+                extensions: { getExtension: jest.Mock };
+            };
+            vscode.extensions.getExtension.mockReturnValue({ id: 'anthropic.claude-code' });
+            vscode.commands.executeCommand.mockResolvedValueOnce(undefined);
+
+            const context = createMockContext();
+            const result = await handleBrowseClaudeSessions(context);
+
+            expect(vscode.extensions.getExtension).toHaveBeenCalledWith('anthropic.claude-code');
+            expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(1);
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'workbench.view.extension.claude-sessions-sidebar',
+            );
+            expect(context.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('[handleBrowseClaudeSessions] sessions browser focus command executed'),
+            );
+            expect(result).toEqual({ success: true });
+        });
+
+        it('falls back to claudeVSCodeSessionsList.focus when the primary command throws', async () => {
+            const vscode = jest.requireMock('vscode') as {
+                commands: { executeCommand: jest.Mock };
+                extensions: { getExtension: jest.Mock };
+            };
+            vscode.extensions.getExtension.mockReturnValue({ id: 'anthropic.claude-code' });
+            vscode.commands.executeCommand
+                .mockRejectedValueOnce(new Error('container missing'))
+                .mockResolvedValueOnce(undefined);
+
+            const context = createMockContext();
+            const result = await handleBrowseClaudeSessions(context);
+
+            expect(vscode.commands.executeCommand).toHaveBeenNthCalledWith(
+                1,
+                'workbench.view.extension.claude-sessions-sidebar',
+            );
+            expect(vscode.commands.executeCommand).toHaveBeenNthCalledWith(
+                2,
+                'claudeVSCodeSessionsList.focus',
+            );
+            expect(context.logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('[handleBrowseClaudeSessions] primary focus command failed'),
+            );
+            expect(result).toEqual({ success: true });
+        });
+
+        it('returns success: false and shows a toast when both focus commands throw', async () => {
+            const vscode = jest.requireMock('vscode') as {
+                commands: { executeCommand: jest.Mock };
+                extensions: { getExtension: jest.Mock };
+                window: { showInformationMessage: jest.Mock };
+            };
+            vscode.extensions.getExtension.mockReturnValue({ id: 'anthropic.claude-code' });
+            vscode.commands.executeCommand
+                .mockRejectedValueOnce(new Error('primary fail'))
+                .mockRejectedValueOnce(new Error('fallback fail'));
+
+            const context = createMockContext();
+            const result = await handleBrowseClaudeSessions(context);
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(2);
+            const warnMock = context.logger.warn as jest.Mock;
+            expect(warnMock).toHaveBeenCalledWith(
+                expect.stringContaining('[handleBrowseClaudeSessions] primary focus command failed'),
+            );
+            expect(warnMock).toHaveBeenCalledWith(
+                expect.stringContaining('[handleBrowseClaudeSessions] both focus commands failed'),
+            );
+            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+                expect.stringContaining('sessions browser unavailable'),
+            );
+            expect(result).toMatchObject({ success: false });
+        });
+
+        it('returns success: false without invoking any commands when the extension is not installed', async () => {
+            const vscode = jest.requireMock('vscode') as {
+                commands: { executeCommand: jest.Mock };
+                extensions: { getExtension: jest.Mock };
+            };
+            vscode.extensions.getExtension.mockReturnValue(undefined);
+
+            const context = createMockContext();
+            const result = await handleBrowseClaudeSessions(context);
+
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+            expect(context.logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('[handleBrowseClaudeSessions] extension not installed'),
+            );
+            expect(result).toMatchObject({ success: false });
+        });
+    });
+
+    describe('handleMarkSessionsBrowserAutoShown', () => {
+        it('writes the SESSIONS_BROWSER_AUTO_SHOWN_KEY flag to globalState', async () => {
+            const update = jest.fn().mockResolvedValue(undefined);
+            const context = createMockContext({
+                context: {
+                    extensionPath: '/mock/extension/path',
+                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
+                    globalState: { get: jest.fn(), update, keys: jest.fn().mockReturnValue([]) },
+                    subscriptions: [],
+                } as unknown as HandlerContext['context'],
+            });
+
+            const result = await handleMarkSessionsBrowserAutoShown(context);
+
+            expect(update).toHaveBeenCalledWith(
+                'demoBuilder.ai.sessionsBrowserAutoShown',
+                true,
+            );
+            expect(context.logger.debug).toHaveBeenCalledWith(
+                expect.stringContaining('[handleMarkSessionsBrowserAutoShown] flag written'),
+            );
+            expect(result).toEqual({ success: true });
         });
     });
 

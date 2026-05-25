@@ -75,17 +75,42 @@ Each project has an **Open in Claude Code** action in two places:
 - The project dashboard (under the action grid)
 - The project card kebab menu on the home screen
 
-Clicking it launches Claude Code based on two settings:
+Clicking it launches Claude Code based on these settings:
 
 - **`demoBuilder.ai.engine`** — which AI tool. Currently only `claude-code` is supported; reserved for future engines (e.g. Codex).
-- **`demoBuilder.ai.surface`** — how Demo Builder launches the configured engine:
+- **`demoBuilder.ai.surface`** — how Demo Builder launches the configured engine. **Terminal is the baseline** (no VS Code extension required); the Claude Code extension is offered as a convenience layer when detected.
 
 | `surface` | Behavior |
 |---|---|
-| `extension` (default) | Launch the Claude Code VS Code extension's chat panel via its URI handler, with the prompt pre-filled when applicable. If the extension is not installed, a recovery dialog offers "Install Claude Code Extension" or "Switch to Terminal Mode." |
-| `terminal` | Launch `claude --continue` in a VS Code integrated terminal rooted at the project. The "Claude Code" terminal is reused across launches (one terminal per project per window). For prompt clicks, the prompt is copied to your clipboard so you can paste it into Claude with one keystroke. |
+| `terminal` (default) | Launch `claude --continue` in a VS Code integrated terminal rooted at the project. The "Claude Code" terminal is reused across launches (one terminal per project per window). For prompt clicks, the prompt is copied to your clipboard so you can paste it into Claude with one keystroke. Works for anyone with the `claude` CLI installed. |
+| `extension` | Launch the Claude Code VS Code extension's chat panel via its URI handler, with the prompt pre-filled when applicable. If you explicitly pick this surface but the extension is missing, a recovery dialog offers "Install Claude Code Extension" or "Switch to Terminal Mode." |
 
-The first time you activate the extension with `surface='extension'` but no Claude Code extension installed, a one-time setup dialog asks you to pick — install the extension for the chat panel UX, or switch to terminal.
+**Capability-aware offer**: the first time you click a prompt while on terminal mode AND the Claude Code extension is installed, Demo Builder offers a one-time switch to the extension surface — "Use the Extension" or "Stay in Terminal." Decline and you stay on the CLI; accept and the current click resolves via the chat panel.
+
+- **`demoBuilder.ai.dockToRight`** — boolean, default `false`. Dock the AI experience to the right side of VS Code, consistently across both surfaces. When `true`, the extension chat panel docks to the right secondary sidebar (Demo Builder syncs `claudeCode.preferredLocation = 'sidebar'` for you), and terminals open as editor tabs beside your code. Set via the one-time "Dock to right side?" toast on first launch, or in settings.
+
+### Recommended layout for AI workflows
+
+**Extension surface (chat panel UX)**
+
+- One prompt click = one new Claude conversation. Each chat appears in the sessions browser **after you send the first message** — until then it's a draft.
+- To continue an existing session with a Demo Builder prompt, use the prompt card's **Copy prompt** kebab action, then paste into the open chat input. The Claude Code URI handler doesn't support injecting text into existing sessions.
+- The sessions browser is independent of the chat panel — drag them to any layout you prefer. Demo Builder surfaces the browser via a **Browse Claude sessions** link on the AI dashboard (visible whenever the extension is installed).
+
+**Terminal surface (CLI UX)**
+
+- One prompt click = one new prompt to your active Claude terminal session. The first click starts the session via `claude --continue`; subsequent clicks reuse the same terminal and refresh the clipboard with the new prompt. Paste at the Claude prompt to send.
+- To browse past sessions, run `claude --resume` directly in your terminal — Claude Code's CLI exposes an interactive picker.
+- The **Browse Claude sessions** link on the AI dashboard is still available if the extension is also installed (you can use the extension's session browser to view, then switch back to the terminal for sending).
+- Demo Builder logs ("Demo Builder: User Logs" and "Demo Builder: Debug Logs") live in VS Code's bottom Output panel regardless of where your Claude terminal lives — you can have Claude as an editor tab on the right and still see logs streaming below.
+
+**CLI ↔ extension session storage is shared** at `~/.claude/projects/<encoded-cwd>/` (the cwd path with non-alphanumeric chars replaced by `-`, e.g. `/Users/me/proj` → `-Users-me-proj`). Sessions created in either surface appear in the other's listing:
+
+| CLI command | Extension UI equivalent |
+|---|---|
+| `claude` | Sessions browser "+ New session" |
+| `claude --continue` | "Open last session" (extension default for prompt clicks) |
+| `claude --resume` | Sessions browser (visual picker) |
 
 ### Prompt clicks anchor the project as the VS Code workspace
 

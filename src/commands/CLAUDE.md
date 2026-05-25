@@ -167,19 +167,22 @@ comm.on('continue-step', async (payload) => {
 
 **Command ID**: `demoBuilder.openInClaude`
 
-**Behavior** — driven by two settings:
+**Behavior** — driven by three settings:
 
 - **`demoBuilder.ai.engine`** — which AI tool. Currently `'claude-code'` only; reserved for future engines (e.g. Codex).
-- **`demoBuilder.ai.surface`** — how the engine is launched:
+- **`demoBuilder.ai.surface`** — how the engine is launched. **Terminal is the baseline** (no VS Code extension required); the extension surface is offered when Demo Builder detects the engine's VS Code extension is installed.
+- **`demoBuilder.ai.dockToRight`** — boolean (default `false`). Single position preference applied across both surfaces. When `true`, the extension chat panel docks to the right secondary sidebar and terminals open as editor tabs beside the active editor. Demo Builder atomically syncs `claudeCode.preferredLocation` to keep the extension's native setting aligned.
 
 | `surface` | Behavior |
 |---------|----------|
-| `extension` (default) | URI handler (`vscode://anthropic.claude-code/open`) when the `anthropic.claude-code` extension is installed. Missing-extension surfaces a recovery dialog: `INSTALL_ACTION_LABEL` ("Install Claude Code Extension" — opens the marketplace) or `SWITCH_TO_TERMINAL_ACTION_LABEL` ("Switch to Terminal Mode" — updates the setting + retries the launch). |
-| `terminal` | Find-or-spawn the "Claude Code" terminal at `project.path`; on spawn, runs `claude --continue`. Reuses an existing live terminal (matched by name + `exitStatus === undefined`) instead of duplicating. For prompt clicks, writes the prompt to the clipboard before launching + shows a "paste it into Claude" info toast. |
+| `terminal` (default) | Find-or-spawn the "Claude Code" terminal at `project.path`; on spawn, runs `claude --continue`. Reuses an existing live terminal (matched by name + `exitStatus === undefined`) instead of duplicating. When `dockToRight=true`, spawns the terminal as an editor tab beside the active editor; otherwise spawns in the bottom panel. For prompt clicks, writes the prompt to the clipboard before launching + shows a "paste it into Claude" info toast. |
+| `extension` | URI handler (`vscode://anthropic.claude-code/open`) when the `anthropic.claude-code` extension is installed. Missing-extension (with explicit user choice of `'extension'`) surfaces a recovery dialog: `INSTALL_ACTION_LABEL` ("Install Claude Code Extension" — opens the marketplace) or `SWITCH_TO_TERMINAL_ACTION_LABEL` ("Switch to Terminal Mode" — updates the setting + retries the launch). |
 
-**First-tip behavior**: On the first successful URI launch, sets `globalState.demoBuilder.ai.firstClaudeOpenTipShown = true` BEFORE showing a one-time tip about dragging the Claude Code panel to the secondary side bar.
+**Unified dock-to-right offer toast** (`maybeOfferDockToRight`): Fires once after the first successful launch on either surface, gated by `DOCK_OFFER_SHOWN_KEY` (which reuses the legacy `FIRST_TIP_KEY` string value so existing users who already saw the old drag-to-sidebar tip don't re-see the new toast). Surface-aware body wording. "Dock to right side" atomically writes BOTH `demoBuilder.ai.dockToRight = true` AND `claudeCode.preferredLocation = 'sidebar'` (try/catch with rollback if the second write fails). "Keep current layout" or dismissal writes neither.
 
-**First-launch setup dialog**: On activation, if `surface='extension'` (the default) AND the Claude Code extension is not installed AND `FIRST_LAUNCH_DIALOG_SHOWN_KEY` is unset, `maybeShowFirstLaunchDialog` (exported from `openInClaude.ts`, called from `extension.ts:activate`) surfaces an info dialog with the same Install / Switch-to-Terminal actions. Fires once ever; no repeat prompts.
+**Capability-aware extension-detected offer toast** (`maybeOfferExtensionSurface`): Fires once when `surface='terminal'` AND the Claude Code extension is installed AND `EXTENSION_AVAILABLE_OFFER_SHOWN_KEY` is unset. Two buttons — "Use the Extension" writes `surface='extension'` and resolves the current click via the URI path; "Stay in Terminal" leaves the setting unchanged and proceeds via terminal.
+
+**First-launch setup dialog** (now narrower scope): On activation, if the user has *explicitly* chosen `surface='extension'` (not the default state — since the default is now `'terminal'`) AND the Claude Code extension is not installed AND `FIRST_LAUNCH_DIALOG_SHOWN_KEY` is unset, `maybeShowFirstLaunchDialog` (exported from `openInClaude.ts`, called from `extension.ts:activate`) surfaces an info dialog with the Install / Switch-to-Terminal actions. Fires once ever; no repeat prompts.
 
 **Workspace-mismatch warning** (`surface='extension'` only): When `workspaceFolders[0]?.uri.fsPath !== project.path`, surfaces a one-time-ever warning toast explaining the chat panel will miss per-project skills/MCPs/AGENTS.md. The prompt-click path bypasses this via the pending-prompt mechanism below.
 

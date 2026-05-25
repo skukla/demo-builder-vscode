@@ -26,15 +26,17 @@ import {
     DialogContainer,
     Flex,
     Link,
+    Text,
     View,
 } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { InstalledSkillsModal } from './components/InstalledSkillsModal';
 import { PromptEditDialog } from './components/PromptEditDialog';
 import { PromptGrid } from './components/PromptGrid';
 import { PageFooter, PageHeader, PageLayout } from '@/core/ui/components/layout';
 import { useAsyncOperation } from '@/core/ui/hooks/useAsyncOperation';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { Surface } from '@/commands/openInClaude';
 import type { AiCheckResult } from '@/features/ai/aiSetupVerifier';
 import type { AiInventory } from '@/types/ai';
 import type { AiPrompt, Project } from '@/types/base';
@@ -52,7 +54,24 @@ interface VerifyAiSetupResponse {
     checks: AiCheckResult[];
     inventory: AiInventory;
     globalMcpRegistration?: GlobalMcpRegistrationStateValue;
+    /** Whether the Claude Code extension is installed (gate for sessions UI). */
+    extensionInstalled?: boolean;
+    /** Whether the sessions browser auto-open has already fired once for this workspace. */
+    sessionsBrowserAutoShown?: boolean;
+    /** User intent: launch via the extension URI handler or via a terminal. */
+    surface?: Surface;
 }
+
+const CONTRACT_NOTE_EXTENSION =
+    'Each prompt click opens Claude Code in a new conversation with the prompt pre-filled. '
+    + 'The session appears in the sessions browser after you send the first message. '
+    + 'To continue an existing session with a Demo Builder prompt, use the prompt card’s '
+    + 'Copy prompt action and paste into the active chat.';
+
+const CONTRACT_NOTE_TERMINAL =
+    'Each prompt click sends a new prompt to your Claude terminal session. '
+    + 'The first click starts the session; subsequent clicks continue it. '
+    + 'The prompt is on your clipboard — paste (Cmd+V) into the terminal at the Claude prompt to send it.';
 
 /**
  * Generate an id for a duplicated prompt. Prefers `crypto.randomUUID` when
@@ -105,6 +124,29 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
         void runVerify();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [project.path]);
+
+    // One-time sessions-browser auto-open: when the verify response arrives,
+    // if the Claude Code extension is present AND the workspace-scoped flag
+    // is unset, focus the sessions browser and — only on success — tell the
+    // backend to set the flag. If the focus command fails (e.g., extension
+    // version lacks the sessions browser container), leave the flag unset so
+    // the user gets another chance next time. autoOpenFiredRef guards against
+    // re-firing on subsequent renders (e.g., when the skills modal refreshes
+    // verify).
+    const autoOpenFiredRef = useRef(false);
+    useEffect(() => {
+        if (autoOpenFiredRef.current) return;
+        if (!verifyResult) return;
+        if (!verifyResult.extensionInstalled) return;
+        if (verifyResult.sessionsBrowserAutoShown) return;
+        autoOpenFiredRef.current = true;
+        void (async () => {
+            const result = await webviewClient.request<{ success: boolean }>('browseClaudeSessions');
+            if (result?.success) {
+                webviewClient.postMessage('markSessionsBrowserAutoShown');
+            }
+        })();
+    }, [verifyResult]);
 
     const handleRegenerate = useCallback(async (): Promise<void> => {
         await regenerateOp.execute(async () => {
@@ -208,11 +250,24 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
         webviewClient.postMessage('openInClaude', { prompt: prompt.prompt });
     }, []);
 
+    const handleCopyPrompt = useCallback((promptBody: string) => {
+        webviewClient.postMessage('copyAiPrompt', { prompt: promptBody });
+    }, []);
+
+    const handleBrowseSessions = useCallback(() => {
+        webviewClient.postMessage('browseClaudeSessions');
+    }, []);
+
     const inventory: AiInventory = verifyResult?.inventory ?? {
         skills: [],
         mcps: [],
         sessionMcps: [],
     };
+
+    const extensionInstalled = verifyResult?.extensionInstalled === true;
+    const surface: Surface = verifyResult?.surface ?? 'terminal';
+    const contractNoteText =
+        surface === 'extension' ? CONTRACT_NOTE_EXTENSION : CONTRACT_NOTE_TERMINAL;
 
     const isBusy =
         verifyOp.isExecuting ||
@@ -236,6 +291,18 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
             >
                 <div className="page-container-padded page-body-section">
                     <Flex direction="column" gap="size-400">
+                        {/* Surface-aware multi-click contract note: explains what happens
+                            when the user clicks a prompt card, which differs between the
+                            extension and terminal surfaces. */}
+                        <View>
+                            <Text
+                                data-testid="ai-multi-click-contract"
+                                UNSAFE_className="text-xs text-gray-700"
+                            >
+                                {contractNoteText}
+                            </Text>
+                        </View>
+
                         {/* Primary content — user-saved prompt library */}
                         <PromptGrid
                             userPrompts={userPrompts}
@@ -245,10 +312,12 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
                             onDelete={handleDeletePrompt}
                             onPinToggle={handlePinTogglePrompt}
                             onNew={handleNewPrompt}
+                            onCopy={handleCopyPrompt}
                         />
 
-                        {/* Quiet trigger for the installed-skills drill-down */}
-                        <View>
+                        {/* Quiet triggers row: installed-skills drill-down + (when the
+                            Claude Code extension is installed) the sessions browser. */}
+                        <Flex direction="row" gap="size-300" alignItems="center">
                             <Link
                                 data-testid="ai-installed-skills-trigger"
                                 onPress={handleOpenSkillsModal}
@@ -256,7 +325,16 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
                             >
                                 {`View installed skills (${inventory.skills.length})`}
                             </Link>
-                        </View>
+                            {extensionInstalled && (
+                                <Link
+                                    data-testid="ai-browse-sessions-trigger"
+                                    onPress={handleBrowseSessions}
+                                    UNSAFE_className="cursor-pointer text-sm"
+                                >
+                                    Browse Claude sessions
+                                </Link>
+                            )}
+                        </Flex>
                     </Flex>
                 </div>
             </PageLayout>

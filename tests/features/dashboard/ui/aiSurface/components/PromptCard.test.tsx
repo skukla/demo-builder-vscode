@@ -234,4 +234,41 @@ describe('PromptCard', () => {
             expect(screen.queryByText('Move down')).not.toBeInTheDocument();
         });
     });
+
+    describe('Copy prompt kebab item', () => {
+        const USER_PROMPT = {
+            id: 'user-1',
+            title: 'My prompt',
+            prompt: 'Do something specific.',
+        };
+
+        const ALL_HANDLERS = {
+            isUserPrompt: true as const,
+            onEdit: jest.fn(),
+            onDuplicate: jest.fn(),
+            onDelete: jest.fn(),
+            onPinToggle: jest.fn(),
+        };
+
+        it('shows a "Copy prompt" menu item in the kebab', () => {
+            renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS, onCopy: jest.fn() });
+            screen.getByLabelText(/more actions/i).click();
+            expect(screen.getByText('Copy prompt')).toBeInTheDocument();
+        });
+
+        it('clicking "Copy prompt" invokes onCopy with the prompt body', () => {
+            const onCopy = jest.fn();
+            renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS, onCopy });
+            screen.getByLabelText(/more actions/i).click();
+            screen.getByText('Copy prompt').click();
+            expect(onCopy).toHaveBeenCalledTimes(1);
+            expect(onCopy).toHaveBeenCalledWith('Do something specific.');
+        });
+
+        it('does NOT render "Copy prompt" when onCopy is not provided', () => {
+            renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS });
+            screen.getByLabelText(/more actions/i).click();
+            expect(screen.queryByText('Copy prompt')).not.toBeInTheDocument();
+        });
+    });
 });

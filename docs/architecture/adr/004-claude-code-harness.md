@@ -279,3 +279,88 @@ warning unnecessary.
 - `src/extension.ts` — `replayPendingClaudeLaunch` and `migrateHarnessSetting`
   helpers; `maybeShowFirstLaunchDialog` invocation; all gated by the
   activation-time Activity Bar focus.
+
+## Amendment (2026-05-25): Terminal as Baseline + Unified Dock-to-Right
+
+### What changed
+
+The prior amendment treated the extension surface as the default and framed
+missing-extension as a configuration error. End-user testing surfaced two
+issues with that framing:
+
+1. New users without the Claude Code extension hit a recovery dialog on first
+   launch, treating the absence as a problem rather than the baseline.
+2. Each surface had its own positioning concerns — the extension had
+   `claudeCode.preferredLocation`; the terminal had nothing equivalent — and
+   switching surfaces lost the user's layout preference.
+
+### Resolution
+
+**Terminal becomes the baseline surface.** `demoBuilder.ai.surface` default
+flips from `'extension'` to `'terminal'`. The Claude Code extension is
+reframed as a *convenience layer* Demo Builder detects and offers, not an
+expected dependency. The recovery dialog (`maybeShowFirstLaunchDialog`) now
+fires only when the user has *explicitly* chosen `'extension'` AND the
+extension is missing — a real intent mismatch, not the default state.
+
+**A capability-aware offer toast surfaces the extension when detected.**
+`maybeOfferExtensionSurface` fires once when `surface='terminal'` AND the
+Claude Code extension is installed AND
+`EXTENSION_AVAILABLE_OFFER_SHOWN_KEY` is unset. The user picks "Use the
+Extension" (writes `surface='extension'`, the current click resolves via
+URI) or "Stay in Terminal" (settings unchanged, click proceeds via CLI).
+
+**A single position preference drives both surfaces.** New setting
+`demoBuilder.ai.dockToRight` (boolean, default `false`). When `true`, the
+extension chat panel docks to the right secondary sidebar and terminals
+open as editor tabs beside the active editor. Demo Builder atomically
+syncs `claudeCode.preferredLocation` (via try/catch with rollback) so the
+extension natively respects the preference. One toast
+(`maybeOfferDockToRight`, surface-aware wording) replaces the prior
+surface-specific dock tips, sharing a single flag
+(`DOCK_OFFER_SHOWN_KEY` — same string value as the legacy
+`FIRST_TIP_KEY`, so users who saw the old tip don't re-see the new toast).
+
+**Two-layer gate model for AI affordances.** Gate 1: `surface` controls
+launch behavior. Gate 2: `isClaudeCodeExtensionInstalled()` controls
+visibility of extension-specific UI (Browse Claude sessions link;
+sessions browser auto-open). The gates are intentionally orthogonal — a
+`surface='terminal'` user with the extension installed gets the
+sessions browser link too (they can browse via the extension while sending
+via the CLI).
+
+### What this supersedes from the prior amendment
+
+The 2026-05-24b amendment described `surface='extension'` as the default and
+positioned missing-extension as the conflict case. Both framings are
+reversed: `'terminal'` is the default; missing-extension is normal; the
+extension is offered when detected.
+
+The recovery dialog and migration logic are preserved but their scope
+narrows. The mismatch warning (`MISMATCH_WARNING_KEY`) still fires for the
+explicit-intent case on the no-prompt "Open in Claude Code" tile path.
+
+### Files
+
+- `package.json` — `demoBuilder.ai.surface` default flipped to `'terminal'`;
+  new `demoBuilder.ai.dockToRight` boolean setting.
+- `src/commands/openInClaude.ts` — `DOCK_OFFER_SHOWN_KEY` constant (renamed
+  from `FIRST_TIP_KEY`, same string value); `maybeOfferDockToRight`
+  helper with atomic dual-setting write + rollback;
+  `maybeOfferExtensionSurface` helper; `launchTerminal` reads
+  `dockToRight` to choose location; `SESSIONS_BROWSER_AUTO_SHOWN_KEY`
+  constant colocated with the other AI globalState keys.
+- `src/core/base/baseCommand.ts` — `createTerminal(name, cwd?, location?)`
+  signature extended with optional location passthrough.
+- `src/features/dashboard/handlers/aiHandlers.ts` — three new handlers
+  (`copyAiPrompt`, `browseClaudeSessions`,
+  `markSessionsBrowserAutoShown`); `handleVerifyAiSetup` response
+  extended with `extensionInstalled`, `sessionsBrowserAutoShown`,
+  `surface`.
+- `src/features/dashboard/ui/aiSurface/components/PromptCard.tsx` — kebab
+  "Copy prompt" item; distinct icon (Spectrum `Copy` for the new action,
+  `Duplicate` for the existing Duplicate item).
+- `src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx` — "Browse
+  Claude sessions" link gated by extension presence; one-time
+  auto-open on first mount gated on browse success; surface-aware
+  multi-click contract note above the prompt grid.

@@ -610,8 +610,11 @@ export const Menu: React.FC<any> = ({ children, items, onAction, ...props }) => 
             );
         });
     } else {
-        // Static children pattern - children are Item elements
+        // Static children pattern - children are Item elements.
+        // Skip falsy children (e.g. `{cond ? <Item /> : null}`) to match React's
+        // real rendering, where false/null are valid no-op children.
         content = React.Children.map(children, (child: any) => {
+            if (!child) return null;
             const key = getOriginalKey(child.key);
             // Get the text content for the menu item name
             const itemText = child.props?.textValue || child.props?.children;

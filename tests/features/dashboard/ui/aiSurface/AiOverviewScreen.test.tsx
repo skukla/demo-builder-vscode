@@ -109,16 +109,35 @@ async function renderScreen(opts: {
     projectOverrides?: Partial<Project>;
     inventory?: AiInventory;
     status?: 'ok' | 'warning' | 'error';
+    extensionInstalled?: boolean;
+    sessionsBrowserAutoShown?: boolean;
+    surface?: 'extension' | 'terminal';
+    /**
+     * Override the response for specific request types. Useful for testing
+     * the auto-open's success-gated branch by returning success=false for
+     * 'browseClaudeSessions' while keeping the standard verify-ai-setup
+     * response for other types.
+     */
+    requestOverrides?: Record<string, unknown>;
 } = {}) {
     const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
         webviewClient: { request: jest.Mock; postMessage: jest.Mock; onMessage: jest.Mock };
     };
-    webviewClient.request.mockResolvedValue({
+    const defaultVerifyResponse = {
         success: true,
         status: opts.status ?? 'ok',
         checks: [],
         inventory: opts.inventory ?? makeFullInventory(),
         globalMcpRegistration: 'registered',
+        extensionInstalled: opts.extensionInstalled ?? false,
+        sessionsBrowserAutoShown: opts.sessionsBrowserAutoShown ?? true,
+        surface: opts.surface ?? 'terminal',
+    };
+    webviewClient.request.mockImplementation((type: string) => {
+        if (opts.requestOverrides && type in opts.requestOverrides) {
+            return Promise.resolve(opts.requestOverrides[type]);
+        }
+        return Promise.resolve(defaultVerifyResponse);
     });
 
     const project = makeProject(opts.projectOverrides);
@@ -605,6 +624,148 @@ describe('AiOverviewScreen', () => {
 
             expect(screen.queryByText('My first user prompt')).not.toBeInTheDocument();
             expect(screen.getByText('My second user prompt')).toBeInTheDocument();
+        });
+    });
+
+    describe('Browse Claude sessions link', () => {
+        it('renders the link when extensionInstalled is true', async () => {
+            await renderScreen({ extensionInstalled: true });
+            expect(screen.getByTestId('ai-browse-sessions-trigger')).toBeInTheDocument();
+        });
+
+        it('does NOT render the link when extensionInstalled is false', async () => {
+            await renderScreen({ extensionInstalled: false });
+            expect(screen.queryByTestId('ai-browse-sessions-trigger')).not.toBeInTheDocument();
+        });
+
+        it('clicking the link dispatches browseClaudeSessions via postMessage', async () => {
+            const { webviewClient } = await renderScreen({
+                extensionInstalled: true,
+                sessionsBrowserAutoShown: true,
+            });
+            (webviewClient.postMessage as jest.Mock).mockClear();
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('ai-browse-sessions-trigger'));
+            });
+            const calls = (webviewClient.postMessage as jest.Mock).mock.calls;
+            const browseCalls = calls.filter(c => c[0] === 'browseClaudeSessions');
+            expect(browseCalls.length).toBe(1);
+        });
+    });
+
+    describe('Sessions browser auto-open on first mount', () => {
+        it('auto-fires browseClaudeSessions via request and marks shown only after success', async () => {
+            const { webviewClient } = await renderScreen({
+                extensionInstalled: true,
+                sessionsBrowserAutoShown: false,
+            });
+            await act(async () => {
+                jest.runAllTimers();
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+            const requestCalls = (webviewClient.request as jest.Mock).mock.calls;
+            const browseRequest = requestCalls.filter(c => c[0] === 'browseClaudeSessions');
+            const postCalls = (webviewClient.postMessage as jest.Mock).mock.calls;
+            const mark = postCalls.filter(c => c[0] === 'markSessionsBrowserAutoShown');
+            expect(browseRequest.length).toBe(1);
+            expect(mark.length).toBe(1);
+        });
+
+        it('does NOT mark shown when browseClaudeSessions returns success=false', async () => {
+            const { webviewClient } = await renderScreen({
+                extensionInstalled: true,
+                sessionsBrowserAutoShown: false,
+                requestOverrides: {
+                    browseClaudeSessions: { success: false, error: 'sessions browser unavailable' },
+                },
+            });
+            await act(async () => {
+                jest.runAllTimers();
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+            const postCalls = (webviewClient.postMessage as jest.Mock).mock.calls;
+            const mark = postCalls.filter(c => c[0] === 'markSessionsBrowserAutoShown');
+            expect(mark.length).toBe(0);
+        });
+
+        it('does NOT auto-fire when sessionsBrowserAutoShown is true', async () => {
+            const { webviewClient } = await renderScreen({
+                extensionInstalled: true,
+                sessionsBrowserAutoShown: true,
+            });
+            await act(async () => {
+                jest.runAllTimers();
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+            const requestCalls = (webviewClient.request as jest.Mock).mock.calls;
+            const browse = requestCalls.filter(c => c[0] === 'browseClaudeSessions');
+            expect(browse.length).toBe(0);
+        });
+
+        it('does NOT auto-fire when extensionInstalled is false (regardless of flag)', async () => {
+            const { webviewClient } = await renderScreen({
+                extensionInstalled: false,
+                sessionsBrowserAutoShown: false,
+            });
+            await act(async () => {
+                jest.runAllTimers();
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+            const requestCalls = (webviewClient.request as jest.Mock).mock.calls;
+            const postCalls = (webviewClient.postMessage as jest.Mock).mock.calls;
+            const browse = requestCalls.filter(c => c[0] === 'browseClaudeSessions');
+            const mark = postCalls.filter(c => c[0] === 'markSessionsBrowserAutoShown');
+            expect(browse.length).toBe(0);
+            expect(mark.length).toBe(0);
+        });
+    });
+
+    describe('multi-click contract note', () => {
+        it('renders the note above the prompt grid', async () => {
+            await renderScreen({ surface: 'terminal' });
+            expect(screen.getByTestId('ai-multi-click-contract')).toBeInTheDocument();
+        });
+
+        it('mentions "new conversation" when surface is extension', async () => {
+            await renderScreen({ surface: 'extension' });
+            const note = screen.getByTestId('ai-multi-click-contract');
+            expect(note.textContent ?? '').toMatch(/new conversation/i);
+        });
+
+        it('mentions "clipboard" when surface is terminal', async () => {
+            await renderScreen({ surface: 'terminal' });
+            const note = screen.getByTestId('ai-multi-click-contract');
+            expect(note.textContent ?? '').toMatch(/clipboard/i);
+        });
+    });
+
+    describe('copyAiPrompt wiring through PromptCard', () => {
+        it('clicking the "Copy prompt" kebab item dispatches copyAiPrompt with the prompt body', async () => {
+            const { webviewClient } = await renderScreen({
+                projectOverrides: {
+                    aiPrompts: [
+                        { id: 'u1', title: 'Copy me', prompt: 'This is the body' },
+                    ],
+                } as Partial<Project>,
+            });
+            (webviewClient.postMessage as jest.Mock).mockClear();
+
+            const kebab = screen.getByLabelText(/more actions/i);
+            await act(async () => {
+                kebab.click();
+            });
+            await act(async () => {
+                screen.getByText('Copy prompt').click();
+            });
+
+            const calls = (webviewClient.postMessage as jest.Mock).mock.calls;
+            const copyCalls = calls.filter(c => c[0] === 'copyAiPrompt');
+            expect(copyCalls.length).toBe(1);
+            expect(copyCalls[0][1]).toEqual(expect.objectContaining({ prompt: 'This is the body' }));
         });
     });
 });

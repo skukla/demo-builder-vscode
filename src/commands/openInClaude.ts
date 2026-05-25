@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
+import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import type { Project } from '@/types/base';
 
 /**
@@ -19,7 +20,7 @@ export type Engine = 'claude-code';
  *   `?prompt=` pre-fill.
  * - `terminal`: Launch the engine's CLI in a VS Code integrated terminal at the
  *   project root. For Claude Code that's `claude --continue` plus clipboard
- *   handoff for prompts.
+ *   handoff for prompts. This is the baseline surface (no extension dependency).
  */
 export type Surface = 'extension' | 'terminal';
 
@@ -29,13 +30,34 @@ const CLAUDE_CODE_EXTENSION_ID = 'anthropic.claude-code';
 /** URI handler exposed by the Claude Code extension (v2.1.72+). */
 const CLAUDE_CODE_URI = 'vscode://anthropic.claude-code/open';
 
-/** globalState key tracking whether the first-time "drag-to-sidebar" tip has been shown. */
-const FIRST_TIP_KEY = 'demoBuilder.ai.firstClaudeOpenTipShown';
+/**
+ * globalState key tracking whether the unified dock-to-right offer toast has
+ * been shown. The underlying string is preserved from the legacy `FIRST_TIP_KEY`
+ * so existing users who already saw the old drag-to-sidebar tip won't see the
+ * new toast either — the new toast supersedes the old tip's purpose.
+ */
+const DOCK_OFFER_SHOWN_KEY = 'demoBuilder.ai.firstClaudeOpenTipShown';
+
+/**
+ * globalState key tracking whether the "extension installed; want to use it?"
+ * offer has been shown. Fires once-ever per workspace; user choice writes the
+ * surface setting and routes the current click accordingly.
+ */
+const EXTENSION_AVAILABLE_OFFER_SHOWN_KEY = 'demoBuilder.ai.extensionAvailableOfferShown';
+
+/**
+ * globalState key tracking whether the Claude Code sessions browser has been
+ * auto-opened once on first AI dashboard mount. Consumed by `aiHandlers`
+ * (`handleMarkSessionsBrowserAutoShown` writes it; `handleVerifyAiSetup` reads
+ * it). Colocated here with the other AI-feature globalState keys so feature
+ * code does not need to reach into `extension.ts`.
+ */
+export const SESSIONS_BROWSER_AUTO_SHOWN_KEY = 'demoBuilder.ai.sessionsBrowserAutoShown';
 
 /**
  * globalState key tracking whether the workspace-mismatch warning has been
  * shown for the `surface='extension'` case. Fires once ever (persistent
- * globalState) — same pattern as the first-tip key.
+ * globalState).
  */
 const MISMATCH_WARNING_KEY = 'demoBuilder.ai.extensionMismatchWarningShown';
 
@@ -61,6 +83,14 @@ const TERMINAL_NAME = 'Claude Code';
 export const INSTALL_ACTION_LABEL = 'Install Claude Code Extension';
 export const SWITCH_TO_TERMINAL_ACTION_LABEL = 'Switch to Terminal Mode';
 
+/** Dock-offer toast action labels. */
+const DOCK_ACTION_LABEL = 'Dock to right side';
+const KEEP_LAYOUT_ACTION_LABEL = 'Keep current layout';
+
+/** Extension-detected offer toast action labels. */
+const USE_EXTENSION_ACTION_LABEL = 'Use the Extension';
+const STAY_IN_TERMINAL_ACTION_LABEL = 'Stay in Terminal';
+
 /**
  * Argument shape accepted by `OpenInClaudeCommand.execute`. Supports the legacy
  * positional `Project` arg for backwards compatibility and the
@@ -68,26 +98,19 @@ export const SWITCH_TO_TERMINAL_ACTION_LABEL = 'Switch to Terminal Mode';
  */
 export type OpenInClaudeArg = Project | { project?: Project; prompt?: string };
 
+/** Terminal launch location label used in the spawn log line. */
+type TerminalLocationLabel = 'panel' | 'editor-beside';
+
 /**
  * OpenInClaudeCommand — opens Claude Code for the current project.
  *
- * Reads two settings:
- *   - `demoBuilder.ai.engine` (currently always `'claude-code'`; reserved for
- *     future engines like Codex).
- *   - `demoBuilder.ai.surface` — the launch surface:
- *       * `extension` — URI launch via the Claude Code VS Code extension.
- *         Pre-fills prompts in the chat panel input. Missing-extension is a
- *         configuration error: a dialog blocks the action with two recovery
- *         affordances.
- *       * `terminal` — Find-or-spawn the "Claude Code" terminal at
- *         `project.path`; on spawn, run `claude --continue` so multi-prompt
- *         clicks chain into one conversation. When a prompt is provided,
- *         write it to the clipboard so the user can paste it with one
- *         keystroke.
- *
- * First successful URI launch shows a one-time drag-to-sidebar tip via globalState.
- * The globalState write happens BEFORE the `showInformationMessage` call so a
- * quick second invocation does not double-fire the tip.
+ * Driven by three settings: `demoBuilder.ai.engine` (the AI tool, currently
+ * always `'claude-code'`); `demoBuilder.ai.surface` (`'extension'` or
+ * `'terminal'`, default `'terminal'` — the baseline experience that works
+ * without any VS Code extension installed); and `demoBuilder.ai.dockToRight`
+ * (boolean, single source of truth for "dock the AI experience to the right
+ * side" — applies to both surfaces and is kept in sync with
+ * `claudeCode.preferredLocation`).
  */
 export class OpenInClaudeCommand extends BaseCommand {
     /**
@@ -103,10 +126,24 @@ export class OpenInClaudeCommand extends BaseCommand {
         const target = project ?? (await this.stateManager.getCurrentProject() ?? undefined);
 
         const engine = this.getEngine();
-        const surface = this.getSurface();
+        let surface = this.getSurface();
         this.logger.info(`[Open in Claude] engine=${engine} surface=${surface} project=${target?.name ?? '<none>'}`);
 
         try {
+            // Gate 2: when intent is terminal AND capability adds the extension
+            // option, offer the upgrade path before launching. User choice may
+            // change the surface for this click.
+            if (
+                surface === 'terminal'
+                && this.isClaudeCodeExtensionInstalled()
+                && !this.isExtensionOfferShown()
+            ) {
+                const userChose = await this.maybeOfferExtensionSurface();
+                if (userChose === 'extension') {
+                    surface = 'extension';
+                }
+            }
+
             if (surface === 'terminal') {
                 this.logger.info('[Open in Claude] launching via terminal');
                 await this.launchTerminal(target, prompt);
@@ -127,9 +164,7 @@ export class OpenInClaudeCommand extends BaseCommand {
             if (!workspaceMatches) {
                 // User chose the extension surface but workspace is not the
                 // project. URI launch will inherit the wrong cwd. Warn once
-                // ever so they understand why context is missing. (Prompt-click
-                // flows bypass this via the pending-prompt + reload mechanism
-                // in aiHandlers + extension.ts:activate.)
+                // ever so they understand why context is missing.
                 await this.maybeShowMismatchWarning();
             }
             this.logger.info('[Open in Claude] launching via extension URI handler');
@@ -146,22 +181,36 @@ export class OpenInClaudeCommand extends BaseCommand {
 
     /**
      * Read `demoBuilder.ai.engine` (defaults to `'claude-code'`, the only
-     * currently-supported engine). Reserved for future engines like Codex.
+     * currently-supported engine).
      */
     private getEngine(): Engine {
         const config = vscode.workspace.getConfiguration('demoBuilder.ai');
         return config.get<Engine>('engine', 'claude-code');
     }
 
-    /** Read `demoBuilder.ai.surface` (defaults to `'extension'`). */
+    /**
+     * Read `demoBuilder.ai.surface` (defaults to `'terminal'` — the baseline
+     * experience that works without any VS Code extension installed).
+     */
     private getSurface(): Surface {
         const config = vscode.workspace.getConfiguration('demoBuilder.ai');
-        return config.get<Surface>('surface', 'extension');
+        return config.get<Surface>('surface', 'terminal');
+    }
+
+    /** Read `demoBuilder.ai.dockToRight` (defaults to `false`). */
+    private getDockToRight(): boolean {
+        const config = vscode.workspace.getConfiguration('demoBuilder.ai');
+        return config.get<boolean>('dockToRight', false);
     }
 
     /** Detect whether the Claude Code VS Code extension is installed. */
     private isClaudeCodeExtensionInstalled(): boolean {
         return vscode.extensions.getExtension(CLAUDE_CODE_EXTENSION_ID) !== undefined;
+    }
+
+    /** Whether the extension-detected offer has already been shown to the user. */
+    private isExtensionOfferShown(): boolean {
+        return this.context.globalState.get<boolean>(EXTENSION_AVAILABLE_OFFER_SHOWN_KEY, false);
     }
 
     /**
@@ -186,6 +235,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         project: Project | undefined,
         prompt: string | undefined,
     ): Promise<void> {
+        this.logger.info('[Open in Claude] recovery dialog shown (extension surface, extension missing)');
         const choice = await vscode.window.showErrorMessage(
             'Claude Code VS Code extension is not installed. Install it from the marketplace, ' +
             'or switch to terminal mode to launch claude in a VS Code integrated terminal.',
@@ -193,16 +243,18 @@ export class OpenInClaudeCommand extends BaseCommand {
             SWITCH_TO_TERMINAL_ACTION_LABEL,
         );
         if (choice === INSTALL_ACTION_LABEL) {
+            this.logger.info('[Open in Claude] recovery dialog outcome: install-extension');
             await vscode.commands.executeCommand('extension.open', CLAUDE_CODE_EXTENSION_ID);
             return;
         }
         if (choice === SWITCH_TO_TERMINAL_ACTION_LABEL) {
+            this.logger.info('[Open in Claude] recovery dialog outcome: switch-to-terminal');
             const config = vscode.workspace.getConfiguration('demoBuilder.ai');
             await config.update('surface', 'terminal', vscode.ConfigurationTarget.Global);
-            this.logger.info('[Open in Claude] user switched surface to terminal; launching terminal');
             await this.launchTerminal(project, prompt);
+            return;
         }
-        // Dismissed without picking: no action.
+        this.logger.info('[Open in Claude] recovery dialog outcome: dismissed');
     }
 
     /**
@@ -238,7 +290,7 @@ export class OpenInClaudeCommand extends BaseCommand {
             : CLAUDE_CODE_URI;
         const opened = await vscode.env.openExternal(vscode.Uri.parse(uri));
         if (!opened) {
-            this.logger.warn('[Open in Claude] vscode.env.openExternal returned false');
+            this.logger.warn('[Open in Claude] openExternal returned false (URI launch silent failure)');
             await vscode.window.showWarningMessage(
                 'Could not open Claude Code via the extension. Try again, or change ' +
                 '`demoBuilder.ai.surface` to `terminal`.',
@@ -246,7 +298,7 @@ export class OpenInClaudeCommand extends BaseCommand {
             return;
         }
         this.logger.info(`[Open in Claude] URI launch succeeded for ${project?.name ?? '<no project>'}`);
-        await this.maybeShowFirstTip();
+        this.maybeOfferDockToRight('extension');
     }
 
     /**
@@ -257,10 +309,9 @@ export class OpenInClaudeCommand extends BaseCommand {
      * and a toast surfaces ("Prompt copied — paste it into Claude") so the
      * user can hand off the prompt with one keystroke.
      *
-     * `claude --continue` matches the extension URI handler's behavior of
-     * focusing the existing chat — multi-prompt clicks chain into one
-     * conversation. The CLI starts a fresh session gracefully when no prior
-     * session exists in that cwd.
+     * Terminal location: when `demoBuilder.ai.dockToRight === true`, new
+     * spawns open as editor tabs beside the active editor via
+     * `{ viewColumn: ViewColumn.Beside }`. Otherwise default panel placement.
      */
     private async launchTerminal(project: Project | undefined, prompt?: string): Promise<void> {
         if (!project || !project.path) {
@@ -285,47 +336,111 @@ export class OpenInClaudeCommand extends BaseCommand {
         );
         if (existing) {
             existing.show();
-            this.logger.info(`[Open in Claude] focused existing terminal for ${project.name}`);
+            this.logger.info(`[Open in Claude] terminal reused (project=${project.name})`);
             return;
         }
 
-        const terminal = this.createTerminal(TERMINAL_NAME, project.path);
+        const dockToRight = this.getDockToRight();
+        const locationLabel: TerminalLocationLabel = dockToRight ? 'editor-beside' : 'panel';
+        const location = dockToRight
+            ? { viewColumn: vscode.ViewColumn.Beside }
+            : undefined;
+        const terminal = this.createTerminal(TERMINAL_NAME, project.path, location);
         terminal.show();
         terminal.sendText('claude --continue');
-        this.logger.info(`[Open in Claude] terminal spawned for ${project.name} at ${project.path}`);
+        this.logger.info(
+            `[Open in Claude] terminal spawned (project=${project.name}, location=${locationLabel})`,
+        );
+        this.maybeOfferDockToRight('terminal');
     }
 
     /**
-     * Show the one-time drag-to-sidebar tip on the first successful URI launch.
-     *
-     * IMPORTANT: globalState is updated BEFORE the message is shown so a quick
-     * second invocation doesn't double-fire while the first message is still open.
+     * One-time unified dock-to-right offer toast on a successful launch.
+     * Both surfaces share the same flag and the same setting
+     * (`demoBuilder.ai.dockToRight`); the toast body wording adapts to which
+     * surface just launched. Uses the shared `showOneTimeTip` helper, which
+     * marks the flag BEFORE the toast displays (race-safe). Accepting writes
+     * BOTH `demoBuilder.ai.dockToRight = true` AND
+     * `claudeCode.preferredLocation = 'sidebar'` so the extension natively
+     * respects the preference.
      */
-    private async maybeShowFirstTip(): Promise<void> {
-        const already = this.context.globalState.get<boolean>(FIRST_TIP_KEY, false);
-        if (already) {
+    private maybeOfferDockToRight(launchContext: Surface): void {
+        if (this.getDockToRight()) {
+            // User already chose docked layout — nothing to offer.
             return;
         }
-        await this.context.globalState.update(FIRST_TIP_KEY, true);
-        this.logger.debug('[Open in Claude] showing first-time drag-to-sidebar tip');
-        vscode.window.showInformationMessage(
-            'Tip: You can drag the Claude Code panel to the sidebar to keep it visible while you work.',
-            'Got it',
+
+        const body = launchContext === 'extension'
+            ? 'Claude Code opened as an editor tab. Dock it to the right side — the chat panel becomes a persistent surface alongside your sessions list. You can drag the title bar to a different position at any time.'
+            : 'Claude opened in the bottom panel terminal. Dock it to the right side — future Claude terminals will open as editor tabs beside your code, closer to a chat-panel layout. You can drag any terminal tab to reposition at any time.';
+
+        const shown = showOneTimeTip(this.context.globalState, {
+            stateKey: DOCK_OFFER_SHOWN_KEY,
+            message: body,
+            actions: [DOCK_ACTION_LABEL, KEEP_LAYOUT_ACTION_LABEL],
+            onAction: (choice: string) => {
+                if (choice === DOCK_ACTION_LABEL) {
+                    this.logger.info('[Open in Claude] dock offer outcome: accepted');
+                    this.logger.debug('[Open in Claude] dock offer accepted; writing dockToRight=true and claudeCode.preferredLocation=sidebar');
+                    const aiConfig = vscode.workspace.getConfiguration('demoBuilder.ai');
+                    const claudeConfig = vscode.workspace.getConfiguration('claudeCode');
+                    void aiConfig.update('dockToRight', true, vscode.ConfigurationTarget.Global);
+                    void claudeConfig.update('preferredLocation', 'sidebar', vscode.ConfigurationTarget.Global);
+                } else if (choice === KEEP_LAYOUT_ACTION_LABEL) {
+                    this.logger.info('[Open in Claude] dock offer outcome: kept-current');
+                }
+            },
+        });
+
+        if (shown) {
+            this.logger.info(`[Open in Claude] dock offer shown (context=${launchContext})`);
+        }
+    }
+
+    /**
+     * Surface the "extension installed; want to use it?" offer toast when the
+     * user is on terminal surface but the Claude Code extension is present.
+     * Returns the user's chosen surface for this click so the caller can
+     * re-dispatch via the correct launch path.
+     *
+     * The flag is set BEFORE the toast displays (race-safe). Accepting writes
+     * `demoBuilder.ai.surface = 'extension'` globally.
+     */
+    private async maybeOfferExtensionSurface(): Promise<Surface> {
+        await this.context.globalState.update(EXTENSION_AVAILABLE_OFFER_SHOWN_KEY, true);
+        this.logger.info('[Open in Claude] extension-detected offer shown');
+
+        const choice = await vscode.window.showInformationMessage(
+            'The Claude Code extension is installed. Want to use it for AI prompts? You\'ll get a chat panel UI with persistent sessions, instead of a terminal REPL. You can switch back anytime in settings (`demoBuilder.ai.surface`).',
+            USE_EXTENSION_ACTION_LABEL,
+            STAY_IN_TERMINAL_ACTION_LABEL,
         );
+
+        if (choice === USE_EXTENSION_ACTION_LABEL) {
+            this.logger.info('[Open in Claude] extension offer outcome: use-extension');
+            this.logger.debug('[Open in Claude] writing surface=extension after user accepted extension offer');
+            const config = vscode.workspace.getConfiguration('demoBuilder.ai');
+            await config.update('surface', 'extension', vscode.ConfigurationTarget.Global);
+            return 'extension';
+        }
+        if (choice === STAY_IN_TERMINAL_ACTION_LABEL) {
+            this.logger.info('[Open in Claude] extension offer outcome: stay-in-terminal');
+            return 'terminal';
+        }
+        this.logger.info('[Open in Claude] extension offer outcome: dismissed');
+        return 'terminal';
     }
 }
 
 /**
- * Show the first-launch setup dialog when `surface='extension'` (the default)
- * but the Claude Code extension is not installed. Asks the user to pick a path
- * once at activation; the choice persists via `FIRST_LAUNCH_DIALOG_SHOWN_KEY`.
+ * Show the first-launch setup dialog when the user has explicitly chosen
+ * `surface='extension'` but the Claude Code extension is not installed.
+ * Fires once-ever via `FIRST_LAUNCH_DIALOG_SHOWN_KEY`. With the default surface
+ * now `'terminal'`, this dialog only fires for users who actively opted into
+ * the extension surface (real intent mismatch). Exported for `extension.ts`.
  *
- * Exported so `extension.ts:activate()` can call it after registrations.
- *
- * Side effects:
- *   - "Install Claude Code Extension" → opens the marketplace.
- *   - "Switch to Terminal Mode" → updates the `demoBuilder.ai.surface` setting.
- *   - Dismissal → no setting change; flag still set so we don't re-prompt.
+ * Actions: "Install" opens the marketplace; "Switch to Terminal Mode" writes
+ * the setting; dismissal leaves the setting but still sets the flag.
  */
 export async function maybeShowFirstLaunchDialog(
     context: vscode.ExtensionContext,
@@ -335,9 +450,9 @@ export async function maybeShowFirstLaunchDialog(
         return;
     }
     const config = vscode.workspace.getConfiguration('demoBuilder.ai');
-    const surface = config.get<Surface>('surface', 'extension');
+    const surface = config.get<Surface>('surface', 'terminal');
     if (surface !== 'extension') {
-        // User has already chosen terminal — nothing to nudge.
+        // Default surface or explicit terminal — no recovery needed.
         await context.globalState.update(FIRST_LAUNCH_DIALOG_SHOWN_KEY, true);
         return;
     }
@@ -349,8 +464,9 @@ export async function maybeShowFirstLaunchDialog(
     // Mark shown BEFORE asking so concurrent activations don't double-fire.
     await context.globalState.update(FIRST_LAUNCH_DIALOG_SHOWN_KEY, true);
     const choice = await vscode.window.showInformationMessage(
-        'Claude Code is the AI engine. Pick how Demo Builder should launch it: ' +
-        'the Claude Code VS Code extension (chat panel inside VS Code) or a terminal running the `claude` CLI.',
+        'You\'ve chosen the Claude Code extension surface for AI prompts, but the ' +
+        'Claude Code VS Code extension is not installed. Install it to continue, or ' +
+        'switch to terminal mode.',
         INSTALL_ACTION_LABEL,
         SWITCH_TO_TERMINAL_ACTION_LABEL,
     );

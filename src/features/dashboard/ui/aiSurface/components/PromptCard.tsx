@@ -20,8 +20,9 @@ import {
     Text,
     View,
 } from '@adobe/react-spectrum';
+import Copy from '@spectrum-icons/workflow/Copy';
 import Delete from '@spectrum-icons/workflow/Delete';
-import Duplicate from '@spectrum-icons/workflow/Copy';
+import Duplicate from '@spectrum-icons/workflow/Duplicate';
 import Edit from '@spectrum-icons/workflow/Edit';
 import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
 import PinOff from '@spectrum-icons/workflow/PinOff';
@@ -47,6 +48,8 @@ export interface PromptCardProps {
     onDelete?: () => void;
     /** Kebab action: toggle pinned state. Called with the next pinned value. */
     onPinToggle?: (nextPinned: boolean) => void;
+    /** Kebab action: copy prompt body to clipboard. Called with the prompt body. */
+    onCopy?: (promptBody: string) => void;
 }
 
 const STYLE_PROMPT_CARD = {
@@ -111,18 +114,22 @@ const STYLE_BODY_CLAMP = {
 
 interface PromptKebabProps {
     isPinned: boolean;
+    promptBody: string;
     onEdit: () => void;
     onDuplicate: () => void;
     onDelete: () => void;
     onPinToggle: (nextPinned: boolean) => void;
+    onCopy?: (promptBody: string) => void;
 }
 
 function PromptKebab({
     isPinned,
+    promptBody,
     onEdit,
     onDuplicate,
     onDelete,
     onPinToggle,
+    onCopy,
 }: PromptKebabProps): React.ReactElement {
     const handleAction = useCallback(
         (key: React.Key) => {
@@ -136,12 +143,15 @@ function PromptKebab({
                 case 'duplicate':
                     onDuplicate();
                     break;
+                case 'copy':
+                    if (onCopy) onCopy(promptBody);
+                    break;
                 case 'delete':
                     onDelete();
                     break;
             }
         },
-        [isPinned, onPinToggle, onEdit, onDuplicate, onDelete],
+        [isPinned, promptBody, onPinToggle, onEdit, onDuplicate, onDelete, onCopy],
     );
 
     // Stop click propagation so opening the kebab doesn't trigger card launch.
@@ -169,6 +179,12 @@ function PromptKebab({
                         <Duplicate size="S" />
                         <Text>Duplicate</Text>
                     </Item>
+                    {onCopy ? (
+                        <Item key="copy" textValue="Copy prompt">
+                            <Copy size="S" />
+                            <Text>Copy prompt</Text>
+                        </Item>
+                    ) : null}
                     <Item key="delete" textValue="Delete">
                         <Delete size="S" />
                         <Text>Delete</Text>
@@ -187,6 +203,7 @@ export function PromptCard({
     onDuplicate,
     onDelete,
     onPinToggle,
+    onCopy,
 }: PromptCardProps): React.ReactElement {
     const handleClick = useCallback(() => onLaunch(), [onLaunch]);
     const isPinned = Boolean(prompt.pinned);
@@ -238,10 +255,12 @@ export function PromptCard({
             {cardButton}
             <PromptKebab
                 isPinned={isPinned}
+                promptBody={prompt.prompt}
                 onEdit={onEdit}
                 onDuplicate={onDuplicate}
                 onDelete={onDelete}
                 onPinToggle={handlePinToggle}
+                onCopy={onCopy}
             />
         </div>
     );

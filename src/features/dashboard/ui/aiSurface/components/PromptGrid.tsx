@@ -32,6 +32,8 @@ export interface PromptGridProps {
     onPinToggle: (id: string, nextPinned: boolean) => void;
     /** Called when the "+ New prompt" tile is clicked. */
     onNew: () => void;
+    /** Kebab action — copy the prompt body to clipboard. Optional. */
+    onCopy?: (promptBody: string) => void;
 }
 
 const STYLE_NEW_TILE = {
@@ -70,6 +72,7 @@ export function PromptGrid({
     onDelete,
     onPinToggle,
     onNew,
+    onCopy,
 }: PromptGridProps): React.ReactElement {
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -129,6 +132,7 @@ export function PromptGrid({
                         onDuplicate={handleDuplicate(prompt.id)}
                         onDelete={handleDelete(prompt.id)}
                         onPinToggle={handlePinToggle(prompt.id)}
+                        onCopy={onCopy}
                     />
                 ))}
                 <button

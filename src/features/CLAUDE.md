@@ -135,7 +135,7 @@ features/my-feature/
 **Key Services:**
 - `dashboardHandlers` - Handler map for project dashboard messages
 - `configureHandlers` - Handler map for Configure screen messages (cancel, components data, store discovery)
-- `aiHandlers` - Handler map for the standalone AI surface (verify-ai-setup, inspect-mcp, regenerate-ai-files, register-global-mcp, openInClaude)
+- `aiHandlers` - Handler map for the standalone AI surface, 11 handlers: verify-ai-setup (returns inventory + globalMcpRegistration + extensionInstalled + sessionsBrowserAutoShown + surface), inspect-mcp, regenerate-ai-files, register-global-mcp, save-ai-prompt, delete-ai-prompt, list-ai-prompts, openInClaude, copyAiPrompt (clipboard write for the kebab Copy prompt action), browseClaudeSessions (focus the Claude Code extension's sessions browser with a fallback command), markSessionsBrowserAutoShown (writes the one-time auto-open flag to globalState)
 - `AiSetupTab` - React tab component for the Configure screen that runs AI context file health checks and regeneration
 - Dashboard state management
 - Component browser integration
