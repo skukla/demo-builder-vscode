@@ -110,7 +110,6 @@ async function renderScreen(opts: {
     inventory?: AiInventory;
     status?: 'ok' | 'warning' | 'error';
     extensionInstalled?: boolean;
-    sessionsBrowserAutoShown?: boolean;
     surface?: 'extension' | 'terminal';
     /**
      * Override the response for specific request types. Useful for testing
@@ -130,7 +129,6 @@ async function renderScreen(opts: {
         inventory: opts.inventory ?? makeFullInventory(),
         globalMcpRegistration: 'registered',
         extensionInstalled: opts.extensionInstalled ?? false,
-        sessionsBrowserAutoShown: opts.sessionsBrowserAutoShown ?? true,
         surface: opts.surface ?? 'terminal',
     };
     webviewClient.request.mockImplementation((type: string) => {
@@ -641,7 +639,6 @@ describe('AiOverviewScreen', () => {
         it('clicking the link dispatches browseClaudeSessions via postMessage', async () => {
             const { webviewClient } = await renderScreen({
                 extensionInstalled: true,
-                sessionsBrowserAutoShown: true,
             });
             (webviewClient.postMessage as jest.Mock).mockClear();
             await act(async () => {
@@ -653,76 +650,11 @@ describe('AiOverviewScreen', () => {
         });
     });
 
-    describe('Sessions browser auto-open on first mount', () => {
-        it('auto-fires browseClaudeSessions via request and marks shown only after success', async () => {
-            const { webviewClient } = await renderScreen({
-                extensionInstalled: true,
-                sessionsBrowserAutoShown: false,
-            });
-            await act(async () => {
-                jest.runAllTimers();
-                await Promise.resolve();
-                await Promise.resolve();
-            });
-            const requestCalls = (webviewClient.request as jest.Mock).mock.calls;
-            const browseRequest = requestCalls.filter(c => c[0] === 'browseClaudeSessions');
-            const postCalls = (webviewClient.postMessage as jest.Mock).mock.calls;
-            const mark = postCalls.filter(c => c[0] === 'markSessionsBrowserAutoShown');
-            expect(browseRequest.length).toBe(1);
-            expect(mark.length).toBe(1);
-        });
-
-        it('does NOT mark shown when browseClaudeSessions returns success=false', async () => {
-            const { webviewClient } = await renderScreen({
-                extensionInstalled: true,
-                sessionsBrowserAutoShown: false,
-                requestOverrides: {
-                    browseClaudeSessions: { success: false, error: 'sessions browser unavailable' },
-                },
-            });
-            await act(async () => {
-                jest.runAllTimers();
-                await Promise.resolve();
-                await Promise.resolve();
-            });
-            const postCalls = (webviewClient.postMessage as jest.Mock).mock.calls;
-            const mark = postCalls.filter(c => c[0] === 'markSessionsBrowserAutoShown');
-            expect(mark.length).toBe(0);
-        });
-
-        it('does NOT auto-fire when sessionsBrowserAutoShown is true', async () => {
-            const { webviewClient } = await renderScreen({
-                extensionInstalled: true,
-                sessionsBrowserAutoShown: true,
-            });
-            await act(async () => {
-                jest.runAllTimers();
-                await Promise.resolve();
-                await Promise.resolve();
-            });
-            const requestCalls = (webviewClient.request as jest.Mock).mock.calls;
-            const browse = requestCalls.filter(c => c[0] === 'browseClaudeSessions');
-            expect(browse.length).toBe(0);
-        });
-
-        it('does NOT auto-fire when extensionInstalled is false (regardless of flag)', async () => {
-            const { webviewClient } = await renderScreen({
-                extensionInstalled: false,
-                sessionsBrowserAutoShown: false,
-            });
-            await act(async () => {
-                jest.runAllTimers();
-                await Promise.resolve();
-                await Promise.resolve();
-            });
-            const requestCalls = (webviewClient.request as jest.Mock).mock.calls;
-            const postCalls = (webviewClient.postMessage as jest.Mock).mock.calls;
-            const browse = requestCalls.filter(c => c[0] === 'browseClaudeSessions');
-            const mark = postCalls.filter(c => c[0] === 'markSessionsBrowserAutoShown');
-            expect(browse.length).toBe(0);
-            expect(mark.length).toBe(0);
-        });
-    });
+    // The one-time sessions-browser auto-open is now fired from the
+    // extension-surface launch path (see openInClaude.ts), not from the AI
+    // dashboard's mount effect — so a terminal-surface user never sees the
+    // extension's sessions browser open unexpectedly. The auto-open tests
+    // live in tests/features/lifecycle/commands/openInClaude.test.ts.
 
     describe('multi-click contract note', () => {
         it('renders the note above the prompt grid', async () => {

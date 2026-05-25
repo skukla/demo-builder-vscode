@@ -14,7 +14,7 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { PENDING_CLAUDE_LAUNCH_KEY, SESSIONS_BROWSER_AUTO_SHOWN_KEY, type Surface } from '@/commands/openInClaude';
+import { PENDING_CLAUDE_LAUNCH_KEY, type Surface } from '@/commands/openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
 import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
 import {
@@ -56,16 +56,14 @@ export async function handleVerifyAiSetup(
     const globalMcpRegistration: GlobalMcpRegistrationState | 'unregistered' =
         persisted ?? 'unregistered';
 
-    // AI surface needs three additional capability / preference fields:
+    // AI surface needs two additional capability / preference fields:
     //   - extensionInstalled: gates the "Browse Claude sessions" affordance
-    //   - sessionsBrowserAutoShown: gates the one-time auto-open on mount
     //   - surface: drives the wording of the multi-click contract note
-    // All three are derived from VS Code state (extensions, globalState, configuration).
+    // The sessions-browser auto-open is no longer a webview-side concern —
+    // it fires from the extension-surface launch path when appropriate so
+    // a terminal-surface user never sees the extension's sessions browser
+    // open unexpectedly (mixed-surface UX).
     const extensionInstalled = vscode.extensions.getExtension('anthropic.claude-code') !== undefined;
-    const sessionsBrowserAutoShown = context.context.globalState.get<boolean>(
-        SESSIONS_BROWSER_AUTO_SHOWN_KEY,
-        false,
-    );
     const surface = vscode.workspace
         .getConfiguration('demoBuilder.ai')
         .get<Surface>('surface', 'terminal');
@@ -75,7 +73,6 @@ export async function handleVerifyAiSetup(
         ...result,
         globalMcpRegistration,
         extensionInstalled,
-        sessionsBrowserAutoShown,
         surface,
     };
 }
@@ -438,21 +435,6 @@ export async function handleBrowseClaudeSessions(
     }
 }
 
-/**
- * Handle markSessionsBrowserAutoShown — set the globalState flag indicating
- * the AI dashboard has already auto-opened the sessions browser once.
- *
- * Called from the AI surface after the one-time auto-open fires on first
- * mount. Lightweight write — no other side effects.
- */
-export async function handleMarkSessionsBrowserAutoShown(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
-    await context.context.globalState.update(SESSIONS_BROWSER_AUTO_SHOWN_KEY, true);
-    context.logger.debug('[handleMarkSessionsBrowserAutoShown] flag written');
-    return { success: true };
-}
-
 // ==========================================================
 // Handler Map
 // ==========================================================
@@ -468,5 +450,4 @@ export const aiHandlers = defineHandlers({
     'list-ai-prompts': handleListAiPrompts,
     'copyAiPrompt': handleCopyAiPrompt,
     'browseClaudeSessions': handleBrowseClaudeSessions,
-    'markSessionsBrowserAutoShown': handleMarkSessionsBrowserAutoShown,
 });

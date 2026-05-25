@@ -86,7 +86,6 @@ import {
     handleListAiPrompts,
     handleCopyAiPrompt,
     handleBrowseClaudeSessions,
-    handleMarkSessionsBrowserAutoShown,
 } from '@/features/dashboard/handlers/aiHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
@@ -157,9 +156,9 @@ describe('aiHandlers', () => {
             expect(typeof aiHandlers).toBe('object');
         });
 
-        it('should have exactly 11 handlers', () => {
+        it('should have exactly 10 handlers', () => {
             const types = getRegisteredTypes(aiHandlers);
-            expect(types).toHaveLength(11);
+            expect(types).toHaveLength(10);
         });
 
         it('should include verify-ai-setup', () => {
@@ -202,10 +201,6 @@ describe('aiHandlers', () => {
             expect(hasHandler(aiHandlers, 'browseClaudeSessions')).toBe(true);
         });
 
-        it('should include markSessionsBrowserAutoShown', () => {
-            expect(hasHandler(aiHandlers, 'markSessionsBrowserAutoShown')).toBe(true);
-        });
-
         it('should have all values as functions', () => {
             const types = getRegisteredTypes(aiHandlers);
             for (const type of types) {
@@ -224,7 +219,6 @@ describe('aiHandlers', () => {
             expect(aiHandlers['list-ai-prompts']).toBe(handleListAiPrompts);
             expect(aiHandlers['copyAiPrompt']).toBe(handleCopyAiPrompt);
             expect(aiHandlers['browseClaudeSessions']).toBe(handleBrowseClaudeSessions);
-            expect(aiHandlers['markSessionsBrowserAutoShown']).toBe(handleMarkSessionsBrowserAutoShown);
         });
     });
 
@@ -314,34 +308,6 @@ describe('aiHandlers', () => {
             const result = await handleVerifyAiSetup(createMockContext());
 
             expect(result).toMatchObject({ success: true, extensionInstalled: false });
-        });
-
-        it('exposes sessionsBrowserAutoShown from globalState (true when flag set)', async () => {
-            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
-            const getMock = jest.fn((key: string, fallback?: unknown) => {
-                if (key === 'demoBuilder.ai.sessionsBrowserAutoShown') return true;
-                return fallback;
-            });
-            const context = createMockContext({
-                context: {
-                    extensionPath: '/mock/extension/path',
-                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-                    globalState: { get: getMock, update: jest.fn(), keys: jest.fn().mockReturnValue([]) },
-                    subscriptions: [],
-                } as unknown as HandlerContext['context'],
-            });
-
-            const result = await handleVerifyAiSetup(context);
-
-            expect(getMock).toHaveBeenCalledWith('demoBuilder.ai.sessionsBrowserAutoShown', false);
-            expect(result).toMatchObject({ success: true, sessionsBrowserAutoShown: true });
-        });
-
-        it('exposes sessionsBrowserAutoShown=false when the flag is unset', async () => {
-            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
-            const result = await handleVerifyAiSetup(createMockContext());
-
-            expect(result).toMatchObject({ success: true, sessionsBrowserAutoShown: false });
         });
 
         it('exposes surface from the demoBuilder.ai config (defaults to terminal)', async () => {
@@ -1198,31 +1164,6 @@ describe('aiHandlers', () => {
                 expect.stringContaining('[handleBrowseClaudeSessions] extension not installed'),
             );
             expect(result).toMatchObject({ success: false });
-        });
-    });
-
-    describe('handleMarkSessionsBrowserAutoShown', () => {
-        it('writes the SESSIONS_BROWSER_AUTO_SHOWN_KEY flag to globalState', async () => {
-            const update = jest.fn().mockResolvedValue(undefined);
-            const context = createMockContext({
-                context: {
-                    extensionPath: '/mock/extension/path',
-                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-                    globalState: { get: jest.fn(), update, keys: jest.fn().mockReturnValue([]) },
-                    subscriptions: [],
-                } as unknown as HandlerContext['context'],
-            });
-
-            const result = await handleMarkSessionsBrowserAutoShown(context);
-
-            expect(update).toHaveBeenCalledWith(
-                'demoBuilder.ai.sessionsBrowserAutoShown',
-                true,
-            );
-            expect(context.logger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('[handleMarkSessionsBrowserAutoShown] flag written'),
-            );
-            expect(result).toEqual({ success: true });
         });
     });
 

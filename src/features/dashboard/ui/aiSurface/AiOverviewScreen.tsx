@@ -29,7 +29,7 @@ import {
     Text,
     View,
 } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { InstalledSkillsModal } from './components/InstalledSkillsModal';
 import { PromptEditDialog } from './components/PromptEditDialog';
 import { PromptGrid } from './components/PromptGrid';
@@ -124,29 +124,6 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
         void runVerify();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [project.path]);
-
-    // One-time sessions-browser auto-open: when the verify response arrives,
-    // if the Claude Code extension is present AND the workspace-scoped flag
-    // is unset, focus the sessions browser and — only on success — tell the
-    // backend to set the flag. If the focus command fails (e.g., extension
-    // version lacks the sessions browser container), leave the flag unset so
-    // the user gets another chance next time. autoOpenFiredRef guards against
-    // re-firing on subsequent renders (e.g., when the skills modal refreshes
-    // verify).
-    const autoOpenFiredRef = useRef(false);
-    useEffect(() => {
-        if (autoOpenFiredRef.current) return;
-        if (!verifyResult) return;
-        if (!verifyResult.extensionInstalled) return;
-        if (verifyResult.sessionsBrowserAutoShown) return;
-        autoOpenFiredRef.current = true;
-        void (async () => {
-            const result = await webviewClient.request<{ success: boolean }>('browseClaudeSessions');
-            if (result?.success) {
-                webviewClient.postMessage('markSessionsBrowserAutoShown');
-            }
-        })();
-    }, [verifyResult]);
 
     const handleRegenerate = useCallback(async (): Promise<void> => {
         await regenerateOp.execute(async () => {
