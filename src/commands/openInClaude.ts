@@ -513,6 +513,35 @@ export async function maybeShowFirstLaunchDialog(
 }
 
 /**
+ * Reset all AI-related state back to factory defaults. Clears the one-time
+ * toast flags AND the AI user-settings AND the `claudeCode.preferredLocation`
+ * sync that Demo Builder may have written. Used by the dev-only Reset All
+ * command so the first-run AI experience can be tested repeatedly.
+ *
+ * Idempotent — safe to call when nothing was previously set.
+ */
+export async function resetAiOnboardingState(context: vscode.ExtensionContext): Promise<void> {
+    // One-time toast / dialog flags
+    await context.globalState.update(DOCK_OFFER_SHOWN_KEY, undefined);
+    await context.globalState.update(EXTENSION_AVAILABLE_OFFER_SHOWN_KEY, undefined);
+    await context.globalState.update(MISMATCH_WARNING_KEY, undefined);
+    await context.globalState.update(FIRST_LAUNCH_DIALOG_SHOWN_KEY, undefined);
+    await context.globalState.update(SESSIONS_BROWSER_AUTO_SHOWN_KEY, undefined);
+    await context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
+
+    // AI user-settings — back to package.json defaults
+    const aiConfig = vscode.workspace.getConfiguration('demoBuilder.ai');
+    await aiConfig.update('dockToRight', undefined, vscode.ConfigurationTarget.Global);
+    await aiConfig.update('surface', undefined, vscode.ConfigurationTarget.Global);
+
+    // The extension's preferredLocation that Demo Builder syncs when the user
+    // accepts the dock toast. Reset so first-run defaults apply again. Users
+    // who set this independently can re-set it via Settings.
+    const claudeConfig = vscode.workspace.getConfiguration('claudeCode');
+    await claudeConfig.update('preferredLocation', undefined, vscode.ConfigurationTarget.Global);
+}
+
+/**
  * Normalize the polymorphic execute argument into `{ project, prompt }`.
  *
  * Accepts:

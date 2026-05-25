@@ -5,6 +5,7 @@ import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
 import { OpenInClaudeCommand } from './openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
+import { ResetAiOnboardingCommand } from '@/core/commands/ResetAiOnboardingCommand';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state';
@@ -266,6 +267,19 @@ export class CommandManager {
                 this.logger,
             );
             this.registerCommand('demoBuilder.resetAll', () => resetAll.execute());
+
+            // Scoped: reset only AI onboarding state (flags + AI settings).
+            // Doesn't touch projects, Adobe auth, or other state — for iterating
+            // on the first-run AI launch experience.
+            const resetAiOnboarding = new ResetAiOnboardingCommand(
+                this.context,
+                this.stateManager,
+                this.logger,
+            );
+            this.registerCommand(
+                'demoBuilder.resetAiOnboarding',
+                () => resetAiOnboarding.execute(),
+            );
         }
 
         // Diagnostics

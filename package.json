@@ -73,6 +73,11 @@
         "category": "Demo Builder"
       },
       {
+        "command": "demoBuilder.resetAiOnboarding",
+        "title": "Reset AI Onboarding (Dev Only)",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.setRecommendedZoom",
         "title": "Set Recommended Zoom (120%)",
         "category": "Demo Builder"

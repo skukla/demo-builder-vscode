@@ -2,6 +2,7 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { resetAiOnboardingState } from '@/commands/openInClaude';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { LAST_UPDATE_CHECK_VERSION } from '@/core/constants';
@@ -83,6 +84,16 @@ export class ResetAllCommand extends BaseCommand {
                 this.logger.info('Cleared global state (update check version)');
             } catch (error) {
                 this.logger.warn('Failed to clear global state:', error as Error);
+            }
+
+            // 5b. Reset AI onboarding state — clears all the one-time toast
+            // flags + AI user-settings + the synced claudeCode.preferredLocation
+            // so the first-run AI launch experience can be tested again.
+            try {
+                await resetAiOnboardingState(this.context);
+                this.logger.info('Reset AI onboarding state (toast flags + AI settings)');
+            } catch (error) {
+                this.logger.warn('Failed to reset AI onboarding state:', error as Error);
             }
 
             /**
