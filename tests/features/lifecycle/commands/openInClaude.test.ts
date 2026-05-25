@@ -256,9 +256,10 @@ const DOCK_OFFER_KEY = 'demoBuilder.ai.firstClaudeOpenTipShown';
 const EXTENSION_OFFER_KEY = 'demoBuilder.ai.extensionAvailableOfferShown';
 
 const DOCK_ACTION_LABEL = 'Dock to right side';
-const KEEP_LAYOUT_ACTION_LABEL = 'Keep current layout';
+const USE_DEFAULT_LAYOUT_ACTION_LABEL = 'Use default';
 const USE_EXTENSION_ACTION_LABEL = 'Use the Extension';
 const STAY_IN_TERMINAL_ACTION_LABEL = 'Stay in Terminal';
+const OPEN_SETTINGS_ACTION_LABEL = 'Open Settings';
 
 // ----------------------------------------------------------------------------
 // Tests
@@ -617,11 +618,13 @@ describe('OpenInClaudeCommand', () => {
             );
             expect(dockCall).toBeDefined();
             const body = String(dockCall![0]).toLowerCase();
+            // Predictive wording — references the chat panel and the right-dock option
+            expect(body).toMatch(/chat panel/);
+            expect(body).toMatch(/right/);
             expect(body).toMatch(/editor tab/);
-            expect(body).toMatch(/right side/);
             // Has both buttons
             const buttons = dockCall!.slice(1).map(String);
-            expect(buttons).toEqual(expect.arrayContaining([DOCK_ACTION_LABEL, KEEP_LAYOUT_ACTION_LABEL]));
+            expect(buttons).toEqual(expect.arrayContaining([DOCK_ACTION_LABEL, USE_DEFAULT_LAYOUT_ACTION_LABEL]));
         });
 
         it('clicking "Dock to right side" writes BOTH dockToRight=true AND preferredLocation=sidebar atomically', async () => {
@@ -648,9 +651,9 @@ describe('OpenInClaudeCommand', () => {
             );
         });
 
-        it('clicking "Keep current layout" writes NEITHER setting', async () => {
+        it('clicking "Use default" writes dockToRight=false explicitly (persists choice) and leaves claudeCode.preferredLocation alone', async () => {
             const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
-            mocks.showInformationMessageMock.mockResolvedValueOnce(KEEP_LAYOUT_ACTION_LABEL);
+            mocks.showInformationMessageMock.mockResolvedValueOnce(USE_DEFAULT_LAYOUT_ACTION_LABEL);
 
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
@@ -660,9 +663,15 @@ describe('OpenInClaudeCommand', () => {
 
             await command.execute(makeProject() as Project);
 
-            // configUpdate may have been called for unrelated reasons — but NOT for dockToRight
-            const dockUpdateCall = mocks.configUpdateMock.mock.calls.find(c => c[0] === 'dockToRight');
-            expect(dockUpdateCall).toBeUndefined();
+            // dockToRight=false is written explicitly — persists the user's intent
+            // so a future package.json default flip wouldn't override their choice.
+            expect(mocks.configUpdateMock).toHaveBeenCalledWith(
+                'dockToRight',
+                false,
+                vscode.ConfigurationTarget.Global,
+            );
+            // We do NOT touch claudeCode.preferredLocation — user may have set it
+            // for their own reasons; "use default" only writes our own setting.
             expect(mocks.claudeCodeUpdateMock).not.toHaveBeenCalled();
         });
 
@@ -720,33 +729,32 @@ describe('OpenInClaudeCommand', () => {
             expect(dockCalls.length).toBe(1);
         });
 
-        it('dock toast does NOT fire when openExternal returns false (preserves test #5 contract)', async () => {
+        it('dock toast fires BEFORE openExternal so the launch lands at the chosen location', async () => {
             const mocks = setupVscodeMocks({
                 surface: 'extension',
                 extensionInstalled: true,
-                openExternalResult: false,
             });
-            const globalState = makeGlobalState();
+            // User picks "Use default" — covers the fire-before-launch order
+            mocks.showInformationMessageMock.mockResolvedValueOnce(USE_DEFAULT_LAYOUT_ACTION_LABEL);
             const command = new OpenInClaudeCommand(
-                makeContext(globalState),
+                makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never,
             );
 
             await command.execute(makeProject() as Project);
 
-            // Dock toast did NOT fire (URI launch failed)
-            const dockCall = mocks.showInformationMessageMock.mock.calls.find(c =>
+            // Dock toast fired
+            const dockCallIdx = mocks.showInformationMessageMock.mock.calls.findIndex(c =>
                 c.slice(1).some(b => String(b) === DOCK_ACTION_LABEL),
             );
-            expect(dockCall).toBeUndefined();
-
-            // Flag NOT set
-            const flagUpdate = (globalState.update as jest.Mock).mock.calls.find(c => c[0] === DOCK_OFFER_KEY);
-            expect(flagUpdate).toBeUndefined();
-
-            // User-visible warning fired
-            expect(mocks.showWarningMessageMock).toHaveBeenCalled();
+            expect(dockCallIdx).toBeGreaterThanOrEqual(0);
+            // openExternal also fired (the launch happened after the toast)
+            expect(mocks.openExternalMock).toHaveBeenCalled();
+            // Ordering: dock toast resolved before openExternal was invoked
+            const dockOrder = mocks.showInformationMessageMock.mock.invocationCallOrder[dockCallIdx];
+            const openExternalOrder = mocks.openExternalMock.mock.invocationCallOrder[0];
+            expect(dockOrder).toBeLessThan(openExternalOrder);
         });
 
         it('does NOT fire when dockToRight is already true', async () => {
@@ -790,9 +798,12 @@ describe('OpenInClaudeCommand', () => {
             );
             expect(dockCall).toBeDefined();
             const body = String(dockCall![0]).toLowerCase();
+            // Predictive wording — references the terminal and bottom-panel default
+            expect(body).toMatch(/terminal/);
             expect(body).toMatch(/bottom panel/);
+            expect(body).toMatch(/right/);
             const buttons = dockCall!.slice(1).map(String);
-            expect(buttons).toEqual(expect.arrayContaining([DOCK_ACTION_LABEL, KEEP_LAYOUT_ACTION_LABEL]));
+            expect(buttons).toEqual(expect.arrayContaining([DOCK_ACTION_LABEL, USE_DEFAULT_LAYOUT_ACTION_LABEL]));
         });
 
         it('terminal launch sets the dock-offer flag BEFORE showing the toast', async () => {
@@ -844,7 +855,9 @@ describe('OpenInClaudeCommand', () => {
             );
         });
 
-        it('dock toast does NOT fire when an existing terminal is reused (only on spawn)', async () => {
+        it('dock toast fires regardless of reuse-vs-spawn (gated by flag, not by launch outcome)', async () => {
+            // Pre-existing terminal: launch will reuse, not spawn. The dock toast
+            // still fires because it's a layout preference asked once-ever via flag.
             const mocks = setupVscodeMocks({
                 surface: 'terminal',
                 extensionInstalled: false,
@@ -861,7 +874,7 @@ describe('OpenInClaudeCommand', () => {
             const dockCall = mocks.showInformationMessageMock.mock.calls.find(c =>
                 c.slice(1).some(b => String(b) === DOCK_ACTION_LABEL),
             );
-            expect(dockCall).toBeUndefined();
+            expect(dockCall).toBeDefined();
         });
     });
 
@@ -1098,6 +1111,65 @@ describe('OpenInClaudeCommand', () => {
             expect(mocks.openExternalMock).not.toHaveBeenCalled();
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
         });
+
+        it('"Open Settings" opens the demoBuilder.ai.surface settings filter without changing the surface', async () => {
+            const mocks = setupVscodeMocks({
+                surface: 'terminal',
+                extensionInstalled: true,
+            });
+            mocks.showInformationMessageMock.mockResolvedValueOnce(OPEN_SETTINGS_ACTION_LABEL);
+            const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
+            executeCommandMock.mockClear();
+            executeCommandMock.mockResolvedValue(undefined);
+
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            // executeCommand was called to open settings with the surface filter
+            expect(executeCommandMock).toHaveBeenCalledWith(
+                'workbench.action.openSettings',
+                'demoBuilder.ai.surface',
+            );
+            // Surface was NOT changed
+            const surfaceWriteCall = mocks.configUpdateMock.mock.calls.find(c => c[0] === 'surface');
+            expect(surfaceWriteCall).toBeUndefined();
+            // Click falls through with current surface — terminal launches
+            expect(mocks.openExternalMock).not.toHaveBeenCalled();
+            expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('toast offers Open Settings as a third action with title-case wording', async () => {
+            const mocks = setupVscodeMocks({
+                surface: 'terminal',
+                extensionInstalled: true,
+            });
+            mocks.showInformationMessageMock.mockResolvedValueOnce(STAY_IN_TERMINAL_ACTION_LABEL);
+
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            const calls = mocks.showInformationMessageMock.mock.calls;
+            const extensionOfferCall = calls.find(c =>
+                typeof c[0] === 'string' && c[0].includes('The Claude Code extension is installed'),
+            );
+            expect(extensionOfferCall).toBeDefined();
+            // Three action labels are passed after the message
+            expect(extensionOfferCall).toContain(USE_EXTENSION_ACTION_LABEL);
+            expect(extensionOfferCall).toContain(STAY_IN_TERMINAL_ACTION_LABEL);
+            expect(extensionOfferCall).toContain(OPEN_SETTINGS_ACTION_LABEL);
+            // Body no longer references the raw setting key
+            expect(extensionOfferCall![0]).not.toMatch(/demoBuilder\.ai\.surface/);
+        });
     });
 
     // ------------------------------------------------------------------------
@@ -1275,9 +1347,9 @@ describe('OpenInClaudeCommand', () => {
             expect(allInfo).toMatch(/\[Open in Claude\] dock offer outcome: accepted/);
         });
 
-        it('logs the dock offer outcome=kept-current when user clicks Keep current layout', async () => {
+        it('logs the dock offer outcome=use-default when user clicks Use default', async () => {
             const mocks = setupVscodeMocks({ surface: 'extension', extensionInstalled: true });
-            mocks.showInformationMessageMock.mockResolvedValueOnce(KEEP_LAYOUT_ACTION_LABEL);
+            mocks.showInformationMessageMock.mockResolvedValueOnce(USE_DEFAULT_LAYOUT_ACTION_LABEL);
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
@@ -1288,7 +1360,7 @@ describe('OpenInClaudeCommand', () => {
             await command.execute(makeProject() as Project);
 
             const allInfo = logger.info.mock.calls.flat().join(' ');
-            expect(allInfo).toMatch(/\[Open in Claude\] dock offer outcome: kept-current/);
+            expect(allInfo).toMatch(/\[Open in Claude\] dock offer outcome: use-default/);
         });
 
         it('logs the extension offer outcome=use-extension when user accepts', async () => {

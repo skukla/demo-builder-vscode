@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
-import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import type { Project } from '@/types/base';
 
 /**
@@ -85,11 +84,12 @@ export const SWITCH_TO_TERMINAL_ACTION_LABEL = 'Switch to Terminal Mode';
 
 /** Dock-offer toast action labels. */
 const DOCK_ACTION_LABEL = 'Dock to right side';
-const KEEP_LAYOUT_ACTION_LABEL = 'Keep current layout';
+const USE_DEFAULT_LAYOUT_ACTION_LABEL = 'Use default';
 
 /** Extension-detected offer toast action labels. */
 const USE_EXTENSION_ACTION_LABEL = 'Use the Extension';
 const STAY_IN_TERMINAL_ACTION_LABEL = 'Stay in Terminal';
+const OPEN_SETTINGS_ACTION_LABEL = 'Open Settings';
 
 /**
  * Argument shape accepted by `OpenInClaudeCommand.execute`. Supports the legacy
@@ -143,6 +143,11 @@ export class OpenInClaudeCommand extends BaseCommand {
                     surface = 'extension';
                 }
             }
+
+            // Layout question fires BEFORE launch so the launch lands at the
+            // chosen location. Surface decision (above) is settled first;
+            // layout choice flows from it. Once-ever via DOCK_OFFER_SHOWN_KEY.
+            await this.maybeOfferDockToRight(surface);
 
             if (surface === 'terminal') {
                 this.logger.info('[Open in Claude] launching via terminal');
@@ -298,7 +303,6 @@ export class OpenInClaudeCommand extends BaseCommand {
             return;
         }
         this.logger.info(`[Open in Claude] URI launch succeeded for ${project?.name ?? '<no project>'}`);
-        this.maybeOfferDockToRight('extension');
     }
 
     /**
@@ -351,49 +355,64 @@ export class OpenInClaudeCommand extends BaseCommand {
         this.logger.info(
             `[Open in Claude] terminal spawned (project=${project.name}, location=${locationLabel})`,
         );
-        this.maybeOfferDockToRight('terminal');
     }
 
     /**
-     * One-time unified dock-to-right offer toast on a successful launch.
-     * Both surfaces share the same flag and the same setting
-     * (`demoBuilder.ai.dockToRight`); the toast body wording adapts to which
-     * surface just launched. Uses the shared `showOneTimeTip` helper, which
-     * marks the flag BEFORE the toast displays (race-safe). Accepting writes
-     * BOTH `demoBuilder.ai.dockToRight = true` AND
+     * One-time unified dock-to-right offer toast fired BEFORE launch so the
+     * launch lands at the chosen location instead of moving afterward. Both
+     * surfaces share the same flag (`DOCK_OFFER_SHOWN_KEY`) and setting
+     * (`demoBuilder.ai.dockToRight`); body wording predicts the choice rather
+     * than reacting to a placement that already happened.
+     *
+     * Cannot reuse the shared `showOneTimeTip` helper here because that
+     * helper is fire-and-forget by design; this question must block the
+     * launch so we know where to put it. Race protection: the flag is set
+     * BEFORE `showInformationMessage` is awaited, so concurrent calls don't
+     * double-fire.
+     *
+     * Both action buttons write the setting explicitly so the user's choice
+     * survives a future package.json default change. Accepting also syncs
      * `claudeCode.preferredLocation = 'sidebar'` so the extension natively
-     * respects the preference.
+     * respects the docked preference.
      */
-    private maybeOfferDockToRight(launchContext: Surface): void {
+    private async maybeOfferDockToRight(launchContext: Surface): Promise<void> {
         if (this.getDockToRight()) {
             // User already chose docked layout — nothing to offer.
             return;
         }
+        const alreadyShown = this.context.globalState.get<boolean>(DOCK_OFFER_SHOWN_KEY, false);
+        if (alreadyShown) {
+            return;
+        }
+        // Set the flag BEFORE awaiting the toast so a concurrent click can't
+        // re-fire while this one is pending.
+        await this.context.globalState.update(DOCK_OFFER_SHOWN_KEY, true);
+        this.logger.info(`[Open in Claude] dock offer shown (context=${launchContext})`);
 
         const body = launchContext === 'extension'
-            ? 'Claude Code opened as an editor tab. Dock it to the right side — the chat panel becomes a persistent surface alongside your sessions list. You can drag the title bar to a different position at any time.'
-            : 'Claude opened in the bottom panel terminal. Dock it to the right side — future Claude terminals will open as editor tabs beside your code, closer to a chat-panel layout. You can drag any terminal tab to reposition at any time.';
+            ? 'Where should the Claude Code chat panel open? Docking to the right keeps it visible alongside your code; otherwise it opens as an editor tab.'
+            : 'Where should the Claude terminal open? Docking to the right opens it as an editor tab beside your code; otherwise it opens in the bottom panel.';
 
-        const shown = showOneTimeTip(this.context.globalState, {
-            stateKey: DOCK_OFFER_SHOWN_KEY,
-            message: body,
-            actions: [DOCK_ACTION_LABEL, KEEP_LAYOUT_ACTION_LABEL],
-            onAction: (choice: string) => {
-                if (choice === DOCK_ACTION_LABEL) {
-                    this.logger.info('[Open in Claude] dock offer outcome: accepted');
-                    this.logger.debug('[Open in Claude] dock offer accepted; writing dockToRight=true and claudeCode.preferredLocation=sidebar');
-                    const aiConfig = vscode.workspace.getConfiguration('demoBuilder.ai');
-                    const claudeConfig = vscode.workspace.getConfiguration('claudeCode');
-                    void aiConfig.update('dockToRight', true, vscode.ConfigurationTarget.Global);
-                    void claudeConfig.update('preferredLocation', 'sidebar', vscode.ConfigurationTarget.Global);
-                } else if (choice === KEEP_LAYOUT_ACTION_LABEL) {
-                    this.logger.info('[Open in Claude] dock offer outcome: kept-current');
-                }
-            },
-        });
+        const choice = await vscode.window.showInformationMessage(
+            body,
+            DOCK_ACTION_LABEL,
+            USE_DEFAULT_LAYOUT_ACTION_LABEL,
+        );
 
-        if (shown) {
-            this.logger.info(`[Open in Claude] dock offer shown (context=${launchContext})`);
+        const aiConfig = vscode.workspace.getConfiguration('demoBuilder.ai');
+        if (choice === DOCK_ACTION_LABEL) {
+            this.logger.info('[Open in Claude] dock offer outcome: accepted');
+            this.logger.debug('[Open in Claude] dock offer accepted; writing dockToRight=true and claudeCode.preferredLocation=sidebar');
+            const claudeConfig = vscode.workspace.getConfiguration('claudeCode');
+            await aiConfig.update('dockToRight', true, vscode.ConfigurationTarget.Global);
+            await claudeConfig.update('preferredLocation', 'sidebar', vscode.ConfigurationTarget.Global);
+        } else if (choice === USE_DEFAULT_LAYOUT_ACTION_LABEL) {
+            this.logger.info('[Open in Claude] dock offer outcome: use-default');
+            // Persist the explicit choice (not just the flag) so a future
+            // default-flip wouldn't override the user's intent.
+            await aiConfig.update('dockToRight', false, vscode.ConfigurationTarget.Global);
+        } else {
+            this.logger.info('[Open in Claude] dock offer outcome: dismissed');
         }
     }
 
@@ -404,16 +423,19 @@ export class OpenInClaudeCommand extends BaseCommand {
      * re-dispatch via the correct launch path.
      *
      * The flag is set BEFORE the toast displays (race-safe). Accepting writes
-     * `demoBuilder.ai.surface = 'extension'` globally.
+     * `demoBuilder.ai.surface = 'extension'` globally. "Open Settings" jumps
+     * to the relevant setting filter; the click falls through with the
+     * current surface so the launch still happens.
      */
     private async maybeOfferExtensionSurface(): Promise<Surface> {
         await this.context.globalState.update(EXTENSION_AVAILABLE_OFFER_SHOWN_KEY, true);
         this.logger.info('[Open in Claude] extension-detected offer shown');
 
         const choice = await vscode.window.showInformationMessage(
-            'The Claude Code extension is installed. Want to use it for AI prompts? You\'ll get a chat panel UI with persistent sessions, instead of a terminal REPL. You can switch back anytime in settings (`demoBuilder.ai.surface`).',
+            'The Claude Code extension is installed. Want to use it for AI prompts? You\'ll get a chat panel UI with persistent sessions, instead of a terminal REPL. You can change this anytime from Settings.',
             USE_EXTENSION_ACTION_LABEL,
             STAY_IN_TERMINAL_ACTION_LABEL,
+            OPEN_SETTINGS_ACTION_LABEL,
         );
 
         if (choice === USE_EXTENSION_ACTION_LABEL) {
@@ -422,6 +444,15 @@ export class OpenInClaudeCommand extends BaseCommand {
             const config = vscode.workspace.getConfiguration('demoBuilder.ai');
             await config.update('surface', 'extension', vscode.ConfigurationTarget.Global);
             return 'extension';
+        }
+        if (choice === OPEN_SETTINGS_ACTION_LABEL) {
+            this.logger.info('[Open in Claude] extension offer outcome: open-settings');
+            void vscode.commands.executeCommand(
+                'workbench.action.openSettings',
+                'demoBuilder.ai.surface',
+            );
+            // Surface is unchanged; click falls through with current value.
+            return 'terminal';
         }
         if (choice === STAY_IN_TERMINAL_ACTION_LABEL) {
             this.logger.info('[Open in Claude] extension offer outcome: stay-in-terminal');
