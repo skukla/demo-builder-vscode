@@ -52,6 +52,13 @@ export interface PromptCardProps {
     onCopy?: (promptBody: string) => void;
 }
 
+/**
+ * Fixed card height. Exported so sibling tiles in the same grid (e.g. the
+ * "+ New prompt" tile in PromptGrid) can match it exactly, preventing
+ * empty-state vs populated-state height drift.
+ */
+export const PROMPT_CARD_HEIGHT = '108px';
+
 const STYLE_PROMPT_CARD = {
     // Flex column lets us anchor the title row at the top and the body
     // directly under it, giving every card the same content baseline even
@@ -62,7 +69,7 @@ const STYLE_PROMPT_CARD = {
     // Fixed height (not minHeight) — every card is identical regardless of
     // prompt length. Title clamps to 1 line, body clamps to 3 lines, so all
     // content fits within this box.
-    height: '108px',
+    height: PROMPT_CARD_HEIGHT,
     overflow: 'hidden',
     textAlign: 'left' as const,
     // Right padding reserves room for the absolutely-positioned kebab so a

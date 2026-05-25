@@ -15,7 +15,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { GridLayout } from '@/core/ui/components/layout/GridLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import type { AiPrompt } from '@/types/base';
-import { PromptCard } from './PromptCard';
+import { PromptCard, PROMPT_CARD_HEIGHT } from './PromptCard';
 
 export interface PromptGridProps {
     /** User-saved prompts in their persisted order. */
@@ -41,7 +41,11 @@ const STYLE_NEW_TILE = {
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    minHeight: '64px',
+    // Fixed height matches PromptCard so the tile is identical in size
+    // whether the grid is empty or already contains prompts. minHeight would
+    // let the tile shrink when alone in the grid and stretch when sharing a
+    // row with populated cards — visible inconsistency.
+    height: PROMPT_CARD_HEIGHT,
     padding: '10px 12px',
     border: '1px dashed var(--spectrum-global-color-gray-400)',
     borderRadius: '4px',
@@ -49,6 +53,7 @@ const STYLE_NEW_TILE = {
     cursor: 'pointer',
     font: 'inherit',
     color: 'inherit',
+    boxSizing: 'border-box' as const,
 } as const;
 
 /**
