@@ -96,6 +96,17 @@ export const PENDING_CLAUDE_LAUNCH_KEY = 'demoBuilder.ai.pendingClaudeLaunch';
 /** Terminal name displayed in the integrated terminals dropdown. */
 const TERMINAL_NAME = 'Claude Code';
 
+/**
+ * Default delay (ms) before the spawn-case prompt injection fires. `claude
+ * --continue` must reach its input-ready REPL first (it loads prior session
+ * history and initializes MCP servers), and there is no public VS Code or
+ * Claude signal for "TUI ready" — terminal shell integration reports the shell
+ * command's start/end, not an app's internal readiness. So this is a tuned
+ * heuristic; the clipboard write in `launchTerminal` is the guaranteed fallback
+ * for starts slower than this. Overridable via `demoBuilder.ai.spawnInjectDelayMs`.
+ */
+const DEFAULT_SPAWN_INJECT_DELAY_MS = 2500;
+
 /** Dialog action labels — exported so the activation handler can reuse them. */
 export const INSTALL_ACTION_LABEL = 'Install Claude Code Extension';
 export const SWITCH_TO_TERMINAL_ACTION_LABEL = 'Switch to Terminal Mode';
@@ -231,6 +242,17 @@ export class OpenInClaudeCommand extends BaseCommand {
     private getDockToRight(): boolean {
         const config = vscode.workspace.getConfiguration('demoBuilder.ai');
         return config.get<boolean>('dockToRight', false);
+    }
+
+    /**
+     * Read `demoBuilder.ai.spawnInjectDelayMs` (defaults to
+     * {@link DEFAULT_SPAWN_INJECT_DELAY_MS}). Falls back to the default for a
+     * negative or non-finite hand-edited value so the timer stays sane.
+     */
+    private getSpawnInjectDelayMs(): number {
+        const config = vscode.workspace.getConfiguration('demoBuilder.ai');
+        const value = config.get<number>('spawnInjectDelayMs', DEFAULT_SPAWN_INJECT_DELAY_MS);
+        return Number.isFinite(value) && value >= 0 ? value : DEFAULT_SPAWN_INJECT_DELAY_MS;
     }
 
     /**
@@ -517,7 +539,7 @@ export class OpenInClaudeCommand extends BaseCommand {
      * where the delay is wrong (MCP confirmation prompt, slow disk, etc.).
      */
     private scheduleSpawnInject(terminal: vscode.Terminal, prompt: string): void {
-        const SPAWN_INJECT_DELAY_MS = 800;
+        const delayMs = this.getSpawnInjectDelayMs();
         const handle = setTimeout(() => {
             if (terminal.exitStatus !== undefined) {
                 this.logger.debug('[Open in Claude] spawn-inject skipped: terminal exited');
@@ -525,8 +547,8 @@ export class OpenInClaudeCommand extends BaseCommand {
             }
             terminal.show();
             this.injectPromptViaBracketedPaste(prompt);
-            this.logger.debug('[Open in Claude] spawn-inject fired after delay');
-        }, SPAWN_INJECT_DELAY_MS);
+            this.logger.debug(`[Open in Claude] spawn-inject fired after ${delayMs}ms delay`);
+        }, delayMs);
         // Don't hold the Node event loop open just for a UX-timing timer. If
         // VS Code is shutting down, the inject is moot.
         if (typeof (handle as NodeJS.Timeout).unref === 'function') {

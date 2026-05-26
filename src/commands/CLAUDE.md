@@ -167,11 +167,12 @@ comm.on('continue-step', async (payload) => {
 
 **Command ID**: `demoBuilder.openInClaude`
 
-**Behavior** — driven by three settings:
+**Behavior** — driven by four settings:
 
 - **`demoBuilder.ai.engine`** — which AI tool. Currently `'claude-code'` only; reserved for future engines (e.g. Codex).
 - **`demoBuilder.ai.surface`** — how the engine is launched. **Terminal is the baseline** (no VS Code extension required); the extension surface is offered when Demo Builder detects the engine's VS Code extension is installed.
 - **`demoBuilder.ai.dockToRight`** — boolean (default `false`). Single position preference applied across both surfaces. When `true`, the extension chat panel docks to the right secondary sidebar and terminals open as editor tabs beside the active editor. Demo Builder atomically syncs `claudeCode.preferredLocation` to keep the extension's native setting aligned.
+- **`demoBuilder.ai.spawnInjectDelayMs`** — number (default `2500`). Terminal surface only: delay before a clicked prompt is auto-pasted into a freshly spawned terminal, giving `claude --continue` time to reach its input-ready REPL. The clipboard write is the guaranteed fallback for slower starts.
 
 | `surface` | Behavior |
 |---------|----------|

@@ -115,6 +115,11 @@ function setupVscodeMocks(opts: {
      */
     dockToRight?: boolean;
     /**
+     * Value of the `demoBuilder.ai.spawnInjectDelayMs` setting. When omitted,
+     * the production default applies (mock returns the caller's defaultValue).
+     */
+    spawnInjectDelayMs?: number;
+    /**
      * Value of the `claudeCode.preferredLocation` setting (read-only here;
      * tests assert writes via `claudeCodeUpdateMock`). Defaults to `'panel'`.
      */
@@ -145,6 +150,9 @@ function setupVscodeMocks(opts: {
         if (key === 'engine') return opts.engine ?? 'claude-code';
         if (key === 'surface') return opts.surface;
         if (key === 'dockToRight') return opts.dockToRight ?? false;
+        if (key === 'spawnInjectDelayMs') {
+            return opts.spawnInjectDelayMs ?? defaultValue;
+        }
         return defaultValue;
     });
     const configUpdateMock = jest.fn().mockResolvedValue(undefined);
@@ -589,7 +597,7 @@ describe('OpenInClaudeCommand', () => {
         const PASTE_START = '[200~';
         const PASTE_END = '[201~';
         const CLIPBOARD_TIP_KEY = 'demoBuilder.ai.clipboardFallbackTipShown';
-        const SPAWN_INJECT_DELAY_MS = 800;
+        const DEFAULT_SPAWN_INJECT_DELAY_MS = 2500;
 
         // The spawn-case uses setTimeout for the delayed inject. Fake timers
         // let us advance time deterministically without leaking real timers.
@@ -628,7 +636,7 @@ describe('OpenInClaudeCommand', () => {
             expect(mocks.createTerminalMock).not.toHaveBeenCalled();
         });
 
-        it('spawn case: injects the prompt after a delay (waits for claude to bootstrap)', async () => {
+        it('spawn case: injects after the default delay (~2.5s), and not at the old 800ms point', async () => {
             setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
             const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
             executeCommandMock.mockClear();
@@ -638,24 +646,55 @@ describe('OpenInClaudeCommand', () => {
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never,
             );
+            const findInject = () => executeCommandMock.mock.calls.find(c =>
+                c[0] === 'workbench.action.terminal.sendSequence',
+            );
 
             await command.execute({ project: makeProject() as Project, prompt: 'spawn-time prompt' });
 
-            // No inject yet — the spawn-inject is scheduled, not fired
-            let sendSequenceCall = executeCommandMock.mock.calls.find(c =>
-                c[0] === 'workbench.action.terminal.sendSequence',
-            );
-            expect(sendSequenceCall).toBeUndefined();
+            // Not fired immediately — the inject is scheduled.
+            expect(findInject()).toBeUndefined();
 
-            // Advance past the delay
-            jest.advanceTimersByTime(SPAWN_INJECT_DELAY_MS);
+            // The old 800ms point is now too early: claude --continue is still
+            // bootstrapping, so the inject must NOT have fired yet.
+            jest.advanceTimersByTime(800);
+            expect(findInject()).toBeUndefined();
 
-            sendSequenceCall = executeCommandMock.mock.calls.find(c =>
-                c[0] === 'workbench.action.terminal.sendSequence',
-            );
-            expect(sendSequenceCall).toBeDefined();
-            const payload = sendSequenceCall![1] as { text: string };
+            // Fires once the full default delay elapses.
+            jest.advanceTimersByTime(DEFAULT_SPAWN_INJECT_DELAY_MS - 800);
+            const call = findInject();
+            expect(call).toBeDefined();
+            const payload = call![1] as { text: string };
             expect(payload.text).toBe(PASTE_START + 'spawn-time prompt' + PASTE_END);
+        });
+
+        it('spawn case: honors a configured spawnInjectDelayMs override', async () => {
+            setupVscodeMocks({
+                surface: 'terminal',
+                extensionInstalled: false,
+                spawnInjectDelayMs: 1200,
+            });
+            const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
+            executeCommandMock.mockClear();
+            executeCommandMock.mockResolvedValue(undefined);
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+            const findInject = () => executeCommandMock.mock.calls.find(c =>
+                c[0] === 'workbench.action.terminal.sendSequence',
+            );
+
+            await command.execute({ project: makeProject() as Project, prompt: 'configured prompt' });
+
+            // Nothing fires before the configured delay elapses.
+            jest.advanceTimersByTime(1199);
+            expect(findInject()).toBeUndefined();
+
+            // Fires exactly at the configured delay.
+            jest.advanceTimersByTime(1);
+            expect(findInject()).toBeDefined();
         });
 
         it('spawn case: skips inject if the terminal has exited before the delay fires', async () => {
@@ -678,7 +717,7 @@ describe('OpenInClaudeCommand', () => {
             spawnedTerminal.exitStatus = { code: 0 };
 
             // Advance past the delay — inject should be skipped
-            jest.advanceTimersByTime(SPAWN_INJECT_DELAY_MS);
+            jest.advanceTimersByTime(DEFAULT_SPAWN_INJECT_DELAY_MS);
 
             const sendSequenceCall = executeCommandMock.mock.calls.find(c =>
                 c[0] === 'workbench.action.terminal.sendSequence',
