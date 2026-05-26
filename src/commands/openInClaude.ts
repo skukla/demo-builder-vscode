@@ -64,6 +64,14 @@ export const AI_ONBOARDING_COMPLETED_KEY = 'demoBuilder.ai.onboardingCompleted';
 export const SESSIONS_BROWSER_AUTO_SHOWN_KEY = 'demoBuilder.ai.sessionsBrowserAutoShown';
 
 /**
+ * globalState key tracking whether the soft "prompt sent to Claude; clipboard
+ * fallback available" tip has been shown. Fires once-ever on the first
+ * terminal-mode prompt click so the user learns the contract (auto-insert
+ * with clipboard fallback) without repeated noise.
+ */
+const CLIPBOARD_FALLBACK_TIP_SHOWN_KEY = 'demoBuilder.ai.clipboardFallbackTipShown';
+
+/**
  * globalState key tracking whether the workspace-mismatch warning has been
  * shown for the `surface='extension'` case. Fires once ever (persistent
  * globalState).
@@ -368,9 +376,12 @@ export class OpenInClaudeCommand extends BaseCommand {
      * Launch `claude --continue` in an integrated terminal at `project.path`,
      * reusing an existing "Claude Code" terminal if one is still alive.
      *
-     * When `prompt` is provided, the prompt is written to the clipboard first
-     * and a toast surfaces ("Prompt copied — paste it into Claude") so the
-     * user can hand off the prompt with one keystroke.
+     * When `prompt` is provided, the prompt is auto-inserted into the active
+     * claude REPL via bracketed-paste escape sequences (preserves multi-line,
+     * doesn't auto-submit — user reviews and hits Enter). The clipboard is
+     * always written too as a silent fallback for the spawn-case edge where
+     * claude is blocked on an MCP server confirmation prompt and the inject
+     * lands in the wrong UI.
      *
      * Terminal location: when `demoBuilder.ai.dockToRight === true`, new
      * spawns open as editor tabs beside the active editor via
@@ -385,13 +396,11 @@ export class OpenInClaudeCommand extends BaseCommand {
             return;
         }
 
+        // Clipboard fallback — always write so the user has a safety net.
+        // Silent unless the one-time tip toast hasn't yet shown.
         if (prompt) {
             await vscode.env.clipboard.writeText(prompt);
-            this.logger.debug('[Open in Claude] prompt copied to clipboard for terminal handoff');
-            // Fire-and-forget toast — don't block launch on user dismissal.
-            vscode.window.showInformationMessage(
-                'Prompt copied to clipboard — paste it into Claude.',
-            );
+            this.logger.debug('[Open in Claude] prompt copied to clipboard (silent fallback)');
         }
 
         const existing = vscode.window.terminals.find(t =>
@@ -400,6 +409,11 @@ export class OpenInClaudeCommand extends BaseCommand {
         if (existing) {
             existing.show();
             this.logger.info(`[Open in Claude] terminal reused (project=${project.name})`);
+            if (prompt) {
+                // Reuse case: claude is already at its REPL — inject immediately.
+                this.injectPromptViaBracketedPaste(prompt);
+                this.maybeShowClipboardFallbackTip();
+            }
             return;
         }
 
@@ -413,6 +427,72 @@ export class OpenInClaudeCommand extends BaseCommand {
         terminal.sendText('claude --continue');
         this.logger.info(
             `[Open in Claude] terminal spawned (project=${project.name}, location=${locationLabel})`,
+        );
+
+        if (prompt) {
+            // Spawn case: claude is bootstrapping. Wait for it to reach the
+            // REPL before injecting. If claude is blocked on an MCP server
+            // confirmation prompt during this window, the injection lands as
+            // harmless garbage in the MCP UI and the user falls back to the
+            // clipboard. Fire-and-forget — execute() should not block on this.
+            this.scheduleSpawnInject(terminal, prompt);
+            this.maybeShowClipboardFallbackTip();
+        }
+    }
+
+    /**
+     * Inject the prompt into the active terminal via bracketed-paste escape
+     * sequences (CSI 200~ / CSI 201~). Bracketed-paste tells the receiving
+     * REPL (claude ≥ 2.1.108) that the input is pasted content — preserves
+     * multi-line and does not auto-submit. The user reviews and hits Enter.
+     */
+    private injectPromptViaBracketedPaste(prompt: string): void {
+        const PASTE_START = '[200~';
+        const PASTE_END = '[201~';
+        void vscode.commands.executeCommand('workbench.action.terminal.sendSequence', {
+            text: PASTE_START + prompt + PASTE_END,
+        });
+    }
+
+    /**
+     * Spawn-case prompt injection: wait for claude to bootstrap, then inject.
+     * Skip if the terminal has exited in the meantime. The delay is a
+     * pragmatic compromise — VS Code's public API offers no signal for
+     * "TUI is ready" (see research/ADR). The clipboard fallback covers cases
+     * where the delay is wrong (MCP confirmation prompt, slow disk, etc.).
+     */
+    private scheduleSpawnInject(terminal: vscode.Terminal, prompt: string): void {
+        const SPAWN_INJECT_DELAY_MS = 2500;
+        const handle = setTimeout(() => {
+            if (terminal.exitStatus !== undefined) {
+                this.logger.debug('[Open in Claude] spawn-inject skipped: terminal exited');
+                return;
+            }
+            terminal.show();
+            this.injectPromptViaBracketedPaste(prompt);
+            this.logger.debug('[Open in Claude] spawn-inject fired after delay');
+        }, SPAWN_INJECT_DELAY_MS);
+        // Don't hold the Node event loop open just for a UX-timing timer. If
+        // VS Code is shutting down, the inject is moot.
+        if (typeof (handle as NodeJS.Timeout).unref === 'function') {
+            (handle as NodeJS.Timeout).unref();
+        }
+    }
+
+    /**
+     * Show the soft "prompt sent; clipboard fallback available" tip once-ever
+     * so the user learns the contract without repeated notifications. Flag is
+     * set BEFORE the toast shows (race-safe).
+     */
+    private maybeShowClipboardFallbackTip(): void {
+        const already = this.context.globalState.get<boolean>(
+            CLIPBOARD_FALLBACK_TIP_SHOWN_KEY,
+            false,
+        );
+        if (already) return;
+        void this.context.globalState.update(CLIPBOARD_FALLBACK_TIP_SHOWN_KEY, true);
+        void vscode.window.showInformationMessage(
+            'Prompt sent to Claude. Also on your clipboard if you need to paste.',
         );
     }
 
@@ -587,6 +667,7 @@ export async function resetAiOnboardingState(context: vscode.ExtensionContext): 
     await context.globalState.update(FIRST_LAUNCH_DIALOG_SHOWN_KEY, undefined);
     await context.globalState.update(SESSIONS_BROWSER_AUTO_SHOWN_KEY, undefined);
     await context.globalState.update(AI_ONBOARDING_COMPLETED_KEY, undefined);
+    await context.globalState.update(CLIPBOARD_FALLBACK_TIP_SHOWN_KEY, undefined);
     await context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
 
     // AI user-settings — back to package.json defaults
