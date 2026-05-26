@@ -589,7 +589,7 @@ describe('OpenInClaudeCommand', () => {
         const PASTE_START = '[200~';
         const PASTE_END = '[201~';
         const CLIPBOARD_TIP_KEY = 'demoBuilder.ai.clipboardFallbackTipShown';
-        const SPAWN_INJECT_DELAY_MS = 2500;
+        const SPAWN_INJECT_DELAY_MS = 800;
 
         // The spawn-case uses setTimeout for the delayed inject. Fake timers
         // let us advance time deterministically without leaking real timers.

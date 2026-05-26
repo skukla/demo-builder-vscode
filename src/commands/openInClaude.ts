@@ -462,7 +462,7 @@ export class OpenInClaudeCommand extends BaseCommand {
      * where the delay is wrong (MCP confirmation prompt, slow disk, etc.).
      */
     private scheduleSpawnInject(terminal: vscode.Terminal, prompt: string): void {
-        const SPAWN_INJECT_DELAY_MS = 2500;
+        const SPAWN_INJECT_DELAY_MS = 800;
         const handle = setTimeout(() => {
             if (terminal.exitStatus !== undefined) {
                 this.logger.debug('[Open in Claude] spawn-inject skipped: terminal exited');
